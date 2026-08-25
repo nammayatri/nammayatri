@@ -219,6 +219,7 @@ data TransporterConfigT f = TransporterConfigT
     isGstPanLinkCheckRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMLBasedDynamicPricingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
+    isStrongNameCheckRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     kaptureQueue :: B.C f Kernel.Prelude.Text,

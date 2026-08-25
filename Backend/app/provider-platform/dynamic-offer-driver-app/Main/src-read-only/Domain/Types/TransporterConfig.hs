@@ -222,6 +222,7 @@ data TransporterConfig = TransporterConfig
     isGstPanLinkCheckRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMLBasedDynamicPricingEnabled :: Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,
+    isStrongNameCheckRequired :: Kernel.Prelude.Bool,
     issueBreachConfig :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachConfig],
     kaptureDisposition :: Kernel.Prelude.Text,
     kaptureQueue :: Kernel.Prelude.Text,
