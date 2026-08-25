@@ -17,6 +17,7 @@
 module SharedLogic.FRFSPassConfirm
   ( confirmPassCoveredLegs,
     confirmPassCoveredLegsOfJourney,
+    confirmOne,
   )
 where
 
@@ -32,6 +33,7 @@ import Kernel.Prelude
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.FRFSFareCalculator (mkCategoryPriceItemFromQuoteCategories, mkFareParameters)
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils (getAllJourneyFrfsBookings)
 import qualified SharedLogic.FRFSUtils as FRFSUtils
@@ -99,7 +101,7 @@ confirmOne booking = do
   let validTill = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
   mbClaimed <- FRFSUtils.claimBookingForConfirm booking.id validTill
   case mbClaimed of
-    Nothing -> logInfo $ "FRFSPassConfirm: leg no longer NEW, skipping bookingId=" <> booking.id.getId
+    Nothing -> logInfo $ "FRFSPassConfirm: not claiming leg (already confirming, or a payment webhook holds the booking) bookingId=" <> booking.id.getId
     Just latest -> do
       -- Everything past the claim runs under this, because the claim has already moved the booking
       -- to CONFIRMING: a throw from any of the lookups below -- rider, quote categories, decrypt --
@@ -112,6 +114,14 @@ confirmOne booking = do
         let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
         mRiderNumber <- mapM decrypt rider.mobileNumber
         void $ QFRFSTicketBooking.updateOnInitDone (Just True) latest.id
+        -- The pass path never calls init, and on_init is the only other writer of totalPrice, so a
+        -- reprice would otherwise leave the previous quantity's fare on the row for recon/settlement.
+        -- Carried on the record too, not just written: the CRIS confirm builds chargeableAmount from
+        -- booking.totalPrice (ExternalAPI/Subway/CRIS/BookJourney.hs:277), so passing the pre-update
+        -- record would quote the operator the previous quantity's fare.
+        let repricedTotal = (mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)).totalPrice
+            repriced = latest {DFRFSTicketBooking.totalPrice = repricedTotal}
+        void $ QFRFSTicketBooking.updateTotalPriceById repricedTotal latest.id
         logInfo $ "FRFSPassConfirm: confirming pass-covered leg bookingId=" <> latest.id.getId
         -- CallExternalBPP.confirm returns Left for an error it handled, but THROWS on a transport
         -- or decode failure -- and confirmLeg's withTryCatch swallows that, so the two writes below
@@ -123,7 +133,7 @@ confirmOne booking = do
         -- OnConfirm sets CONFIRMED unconditionally, so a late on_confirm still wins and debits the
         -- pass. The trip is only debited there, so nothing is lost on this path either way.
         confirmResp <-
-          withTryCatch "FRFSPassConfirm:bppConfirm" (CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) latest quoteCategories Nothing) >>= \case
+          withTryCatch "FRFSPassConfirm:bppConfirm" (CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) repriced quoteCategories repriced.isSingleMode) >>= \case
             Right resp -> pure resp
             Left err -> pure (Left ("BPP confirm threw: " <> show err))
         case confirmResp of
@@ -138,3 +148,4 @@ confirmOne booking = do
           logError $ "FRFSPassConfirm: leg failed after the claim bookingId=" <> latest.id.getId <> " err=" <> show err
           void $ QFRFSTicketBooking.updateFailureReasonById (Just ("Pass leg confirm failed: " <> show err)) latest.id
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED latest.id
+      FRFSUtils.releasePaymentSuccessLock latest.id

@@ -923,11 +923,11 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId True
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId True
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -1276,7 +1276,7 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
                 )
                 freshCategories
         -- Staging booking is created + confirmed; if confirmation fails the old booking is left untouched.
-        eStatusRes <- withTryCatch "FRFSReschedule:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) stagingQuote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) Nothing Nothing (Just (RescheduleCtx oldBooking.id (mbOldPayment <&> (.id)))) Nothing)
+        eStatusRes <- withTryCatch "FRFSReschedule:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) stagingQuote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) Nothing Nothing (Just (RescheduleCtx oldBooking.id (mbOldPayment <&> (.id)))) Nothing False)
         statusRes <- case eStatusRes of
           Right r -> pure r
           Left err -> do
