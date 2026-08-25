@@ -330,8 +330,13 @@ services:
       # Host networking, so 5434 is the published Postgres port. Unset this and
       # the three search endpoints fall back to mock-google.
       PG_URL: "postgres://postgres:root@localhost:5434/atlas_dev"
+      # Where profile photographs live. A named volume rather than a bind mount:
+      # these are the only user-created files this stack keeps outside Postgres,
+      # and a bind mount under the repo would put faces in git.
+      AVATAR_DIR: "/data/avatars"
     volumes:
       - ./maps-shim:/app:ro
+      - avatars:/data/avatars
     depends_on:
       postgres:
         condition: service_healthy
@@ -539,3 +544,8 @@ volumes:
   # Same reasoning for the map tiles: built once by ./tiles-prepare.sh.
   ny-tiles-data:
     external: true
+  # Profile photographs. Small -- a full pilot is a few megabytes -- but the one
+  # thing here that cannot be rebuilt from anything: a driver's face exists only
+  # because he took it. `backup.sh` skips the place index because that IS
+  # rebuildable; this is the opposite case.
+  avatars:

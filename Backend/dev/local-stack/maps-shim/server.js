@@ -21,6 +21,8 @@
 
 const http = require('http');
 const fleet = require('./fleet');
+const avatars = require('./avatars');
+const rating = require('./rating');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -385,6 +387,66 @@ http.createServer((req, res) => {
       pool,
       riderUrl: RIDER_URL,
       token: req.headers.token || '',
+    });
+  }
+
+  // A passenger's own star rating, for her own profile screen. Here rather
+  // than on the rider backend because it is not on the rider backend:
+  // `GET /v2/profile` returns eight fields and no rating, and the number a
+  // driver gives her is written to the *provider* schema. See rating.js.
+  //
+  // A driver's is here too, for a narrower reason: his own profile route
+  // returns the average and not how many people gave it, and the string
+  // `totalRatings` is not in the binary at all.
+  //
+  //   GET /rating/phone/{number}     what her own profile screen shows
+  //   GET /rating/driver/{driverId}  what his does
+  if (url.pathname.startsWith('/rating/')) {
+    if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
+    const [, , kind, ...rest] = url.pathname.split('/');
+    const who = decodeURIComponent(rest.join('/'));
+    if (kind === 'phone') return rating.serveForPhone(pool, who, res);
+    if (kind === 'driver') return rating.serveForDriver(pool, who, res);
+    return send(res, 404, { error: 'no such rating' });
+  }
+
+  // Profile photographs. Nothing to do with Google either -- see avatars.js for
+  // why the backend cannot hold an image and why passengers are keyed by a
+  // hash of their number rather than by an id.
+  //
+  //   PUT    /avatar/driver/{driverId}   the driver's own, by his person id
+  //   PUT    /avatar/phone/{number}      a passenger's own, by her number
+  //   GET    /avatar/driver/{driverId}   what a passenger sees on an offer
+  //   GET    /avatar/plate/{plate}       ...and on every screen after it
+  //   GET    /avatar/ride/{rideId}       what a driver sees of his passenger
+  //   DELETE either of the PUT forms     back to the initial
+  if (url.pathname.startsWith('/avatar/')) {
+    const [, , kind, ...rest] = url.pathname.split('/');
+    const value = decodeURIComponent(rest.join('/'));
+
+    if (kind === 'ride' && req.method === 'GET') {
+      return avatars.serveForRide(value, pool, res);
+    }
+    // By the car, for every passenger screen after the booking: those
+    // carry a plate and no driver id. See avatars.js.
+    if (kind === 'plate' && req.method === 'GET') {
+      return avatars.serveForPlate(value, pool, res);
+    }
+
+    // A passenger's key is a database lookup rather than a hash -- see
+    // avatars.js -- so this is async where the driver's is not.
+    const resolve =
+      kind === 'driver'
+        ? Promise.resolve(avatars.driverKey(value))
+        : kind === 'phone'
+          ? avatars.keyForPhone(pool, value)
+          : Promise.resolve(null);
+
+    return resolve.then((key) => {
+      if (req.method === 'GET') return avatars.serve(key, res);
+      if (req.method === 'PUT') return avatars.store(key, req, res);
+      if (req.method === 'DELETE') return avatars.remove(key, res);
+      return send(res, 405, { error: 'method not allowed' });
     });
   }
 
