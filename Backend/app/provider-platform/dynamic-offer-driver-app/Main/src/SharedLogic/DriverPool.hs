@@ -1132,7 +1132,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           let thresholded = case driverPoolCfg.actualDistanceThreshold of
                 Nothing -> NE.toList drvPoolWithDist
                 Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) drvPoolWithDist) (NE.sortOn (.driverId) chunkPool)
-          withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) thresholded
+          withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig thresholded
 
     mkSpecialZoneQueueActualDistanceResult dpr = do
       DriverPoolWithActualDistResult
@@ -1171,9 +1171,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
       haveScheduled = isJust driverInfo.latestScheduledBooking
       avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideConfig.avgSpeedKmph
   if
-      -- the new ride is itself scheduled: interval feasibility against the driver's committed set (Case 2);
-      -- the arms below assume an ad-hoc ride running now (Case 1) and stay unchanged
-      | currentSearchInfo.searchTry.isScheduled -> scheduledCandidateFilter now driverInfo
+      -- these arms assume an ad-hoc ride running now; the self-scheduled candidate path is batched upstream in applyScheduledRideFilter
       | haveScheduled && isIntercity -> return False
       | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
       | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
@@ -1203,22 +1201,6 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
           (_, _, _) -> return False
       | otherwise -> return True
   where
-    -- no commitment -> surface; else cap on holds + feasibility vs committed set (in-progress counts as a predecessor)
-    scheduledCandidateFilter now driverInfo
-      | not (isJust driverInfo.latestScheduledBooking) && driverInfo.onRide /= Just True = return True
-      | otherwise = do
-        committed <- SBOC.getDriverCommittedRides (cast driverInfo.driverId)
-        if SBOC.countActiveHolds committed >= transporterConfig.scheduledRideConfig.maxHoldsPerDriver
-          then return False
-          else do
-            let candidate =
-                  SBOC.ScheduledCandidate
-                    { candidateStart = currentSearchInfo.searchTry.startTime,
-                      candidateEnd = addUTCTime (maybe 0 Kernel.Utils.Common.secondsToNominalDiffTime currentSearchInfo.estimatedDuration) currentSearchInfo.searchTry.startTime,
-                      candidatePickup = currentSearchInfo.pickupLocation,
-                      candidateDrop = currentSearchInfo.dropLocation
-                    }
-            SBOC.isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate (SBOC.mkCommittedIntervals now Nothing committed)
     canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
     canTakeRental mbLatestScheduledBooking now minimumScheduledBookingLeadTimeInSecs =
       case mbLatestScheduledBooking of
@@ -1233,6 +1215,56 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
         Just latestScheduledBooking ->
           let timeDifference = diffUTCTime latestScheduledBooking now
            in timeDifference < scheduledRideFilterExclusionThresholdInSecs
+
+-- | Pool-level scheduled-ride filter. For a self-scheduled search the candidate is identical for every driver,
+-- so we batch the committed-set feasibility across the whole pool (≤2 OSRM /table calls) instead of per-driver
+-- point-to-point calls. Every other case falls back to the per-driver scheduledRideFilter unchanged.
+applyScheduledRideFilter ::
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) =>
+  DST.CurrentSearchInfo ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Bool ->
+  DTC.TransporterConfig ->
+  [DriverPoolWithActualDistResult] ->
+  m [DriverPoolWithActualDistResult]
+applyScheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isIntercity transporterConfig pool
+  | currentSearchInfo.searchTry.isScheduled = scheduledSearchBatch
+  | otherwise = filterM (scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isIntercity transporterConfig) pool
+  where
+    scheduledSearchBatch = do
+      now <- getCurrentTime
+      let candidate =
+            SBOC.ScheduledCandidate
+              { candidateStart = currentSearchInfo.searchTry.startTime,
+                candidateEnd = addUTCTime (maybe 0 Kernel.Utils.Common.secondsToNominalDiffTime currentSearchInfo.estimatedDuration) currentSearchInfo.searchTry.startTime,
+                candidatePickup = currentSearchInfo.pickupLocation,
+                candidateDrop = currentSearchInfo.dropLocation
+              }
+      -- one batched read of committed rides for all non-fresh drivers (fresh-driver + hold-cap checks stay cheap and pure); only the feasibility distance work is batched
+      committedByDriver <- SBOC.getDriverCommittedRidesForDrivers [cast dp.driverPoolResult.driverId | dp <- pool, not (isFreshDriver dp)]
+      let classified = map (classifyForBatch now transporterConfig committedByDriver) pool
+          needsFeasibility = [(idx, intervals) | (idx, Right intervals) <- zip [0 :: Int ..] classified]
+      verdicts <- SBOC.batchIsCandidateFeasible merchantId merchantOpCityId transporterConfig candidate needsFeasibility
+      let verdictByIdx = Map.fromList verdicts
+          keep idx cls = case cls of
+            Left decided -> decided
+            Right _ -> Map.findWithDefault False idx verdictByIdx
+      pure [dp | (idx, dp, cls) <- zip3 [0 :: Int ..] pool classified, keep idx cls]
+
+-- | Fresh driver = no committed hold and not on-ride; such drivers surface without any DB or feasibility work.
+isFreshDriver :: DriverPoolWithActualDistResult -> Bool
+isFreshDriver dp = not (isJust dp.driverPoolResult.latestScheduledBooking) && dp.driverPoolResult.onRide /= Just True
+
+-- | Pure classification over the pre-fetched committed rides: fresh -> Left True (surface); at hold cap -> Left False; otherwise Right its committed intervals for the batched feasibility check.
+classifyForBatch :: UTCTime -> DTC.TransporterConfig -> SBOC.CommittedRidesByDriver -> DriverPoolWithActualDistResult -> Either Bool [SBOC.CommittedInterval]
+classifyForBatch now transporterConfig committedByDriver dp
+  | isFreshDriver dp = Left True
+  | SBOC.countActiveHolds committed >= transporterConfig.scheduledRideConfig.maxHoldsPerDriver = Left False
+  | otherwise = Right (SBOC.mkCommittedIntervals now Nothing committed)
+  where
+    committed = Map.findWithDefault [] (cast dp.driverPoolResult.driverId) committedByDriver
 
 -- | Extract on-ride drivers from pre-fetched pool results and convert to DriverPoolResultCurrentlyOnRide.
 -- On-ride eligibility (forwardBatchingEnabled, hasRideStarted, tripCategory) is already filtered
@@ -1298,7 +1330,7 @@ calculateDriverCurrentlyOnRideWithActualDist CalculateDriverPoolReq {..} onRideD
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
             (Nothing, _) -> filter (filterFunc thresholdRadius) driverPoolWithActualDist
             (Just threshold, _) -> filter (filterFunc threshold) driverPoolWithActualDist
-      filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
+      filtDriverPoolWithActualDist <- applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig filtDriverPoolWithActualDist'
       return filtDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
