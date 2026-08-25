@@ -186,8 +186,11 @@ endRideTransaction ::
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
+  Maybe DFP.FareRecomputeCapConfig ->
+  Maybe DFP.FareChargeConfig ->
+  Maybe DFP.FareChargeConfig ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
+endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
@@ -207,6 +210,16 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
+  -- mbCapConfig/mbVatChargeConfig/mbTollTaxChargeConfig come in as arguments,
+  -- sourced from the same 'recalculateFareForDistance' call (further up this same
+  -- synchronous end-ride flow, before this transaction was forked) that locked in
+  -- this ride's fare policy in the first place -- the exact fare policy 'ride'
+  -- itself now points to via 'finalFarePolicyId'. Passing them through directly
+  -- avoids round-tripping through a cache (by-quote-id, TTL'd, no DB fallback of
+  -- its own) or re-reading the ride row: both were unreliable — the cache is a
+  -- best-effort entry that can miss non-deterministically, and the ride row was
+  -- read (via 'findRideById'/'rideOld') before 'recalculateFareForDistance' ever
+  -- wrote 'finalFarePolicyId' to it, so it never carried a useful value here.
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId.getId
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
@@ -245,7 +258,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
-  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
+  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig
 
   -- Driver operating-city migration on relocation is handled by kafka-consumers'
   -- RIDE_EVENTS_CONSUMER (Processor.RideEvents.Handlers.handleDriverCityMigration), off the
@@ -292,9 +305,12 @@ processEndRideFinance ::
   Id DP.Driver ->
   DI.DriverInformation ->
   TransporterConfig ->
+  Maybe DFP.FareRecomputeCapConfig ->
+  Maybe DFP.FareChargeConfig ->
+  Maybe DFP.FareChargeConfig ->
   m ()
-processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
-  let (walletFinanceEnabled, totalFare, mbFareCap) = settlementTotalFareWithCap merchant thresholdConfig booking ride.fare
+processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig = do
+  let (walletFinanceEnabled, totalFare, mbFareCap) = settlementTotalFareWithCap merchant thresholdConfig booking mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig newFareParams ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),

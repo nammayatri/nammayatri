@@ -67,7 +67,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet (applyFareRecomputeBuffer, getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
+import SharedLogic.Finance.Wallet (getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -151,7 +151,12 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
               Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
-        when (balance + existingBookingHold - otherPrepaidOfferHolds < applyFareRecomputeBuffer transporterConfig.driverWalletConfig rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
+            fareSumTotal = FC.fareSum booking.fareParams Nothing
+            fareScale = case booking.fareParams.bufferedFare of
+              Just bf | fareSumTotal > 0 -> bf.getHighPrecMoney / fareSumTotal.getHighPrecMoney
+              _ -> 1
+            bufferedRideFare = HighPrecMoney (rideFare.getHighPrecMoney * fareScale)
+        when (balance + existingBookingHold - otherPrepaidOfferHolds < bufferedRideFare + threshold) $ throwError (InvalidRequest "Low balance.")
         _ <-
           createPrepaidHold
             counterpartyType
