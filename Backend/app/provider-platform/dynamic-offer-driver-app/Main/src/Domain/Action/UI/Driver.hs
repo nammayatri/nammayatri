@@ -375,6 +375,7 @@ data DriverInformationRes = DriverInformationRes
     operatingCityName :: Text,
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
     email :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Centesimal,
@@ -514,6 +515,7 @@ data DriverEntityRes = DriverEntityRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
     email :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Centesimal,
@@ -705,6 +707,14 @@ validateUpdateDriverReq UpdateDriverReq {..} =
     [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
       validateField "middleName" middleName $ InMaybe P.middleName,
       validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name
+    ]
+
+validateUpdateDriverReqWithLooseCheck :: Validate UpdateDriverReq
+validateUpdateDriverReqWithLooseCheck UpdateDriverReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
+      validateField "middleName" middleName $ InMaybe P.nameWithNumber,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber
     ]
 
 type UpdateDriverRes = DriverInformationRes
@@ -1374,6 +1384,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
         middleName = person.middleName,
         lastName = person.lastName,
         mobileNumber = decMobNum,
+        mobileCountryCode = person.mobileCountryCode,
         email = person.email,
         linkedVehicle = makeVehicleAPIEntity mbDefaultServiceTier <$> vehicleMB,
         active = driverInfo.active,
@@ -1486,7 +1497,9 @@ updateDriver ::
   UpdateDriverReq ->
   m UpdateDriverRes
 updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
-  runRequestValidation validateUpdateDriverReq req
+  transporterConfig' <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let validateFn = if transporterConfig'.isStrongNameCheckRequired then validateUpdateDriverReq else validateUpdateDriverReqWithLooseCheck
+  runRequestValidation validateFn req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deploymentVersion <- asks (.version)
   cloudType <- asks (.cloudType)

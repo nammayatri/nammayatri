@@ -201,7 +201,7 @@ isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCN
         pure $
           (null normalizedPrefixList || prefixMatchedResult normalizedRCNumber normalizedPrefixList)
             && isLegacyCertNumFormatValid
-  validateByRegex "RC" documentVerificationConfig normalizedRCNumber fallbackCheck
+  validateByRegex "RC" transporterConfig documentVerificationConfig normalizedRCNumber fallbackCheck
 
 verifyRC ::
   Bool ->

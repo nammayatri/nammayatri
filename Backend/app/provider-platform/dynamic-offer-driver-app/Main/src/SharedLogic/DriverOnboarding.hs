@@ -1006,17 +1006,20 @@ matchesRegexSafely documentType input regexPattern = do
       logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
       pure Nothing
 
-validateByRegex :: OnboardingFlow m r => Text -> ODC.DocumentVerificationConfig -> Text -> m Bool -> m Bool
-validateByRegex documentType config input fallback = do
+validateByRegex :: OnboardingFlow m r => Text -> DTC.TransporterConfig -> ODC.DocumentVerificationConfig -> Text -> m Bool -> m Bool
+validateByRegex documentType transporterConfig config input fallback = do
   let regexRules = getRegexRulesFromDocumentConfig config
-  if null regexRules
-    then fallback
-    else do
-      regexResults <- mapM (matchesRegexSafely documentType input) regexRules
-      let validRegexResults = mapMaybe (\x -> x) regexResults
-      if null validRegexResults
+  if not transporterConfig.preProcessDocumentIdentifiers
+    then pure True
+    else
+      if null regexRules
         then fallback
-        else pure (or validRegexResults)
+        else do
+          regexResults <- mapM (matchesRegexSafely documentType input) regexRules
+          let validRegexResults = mapMaybe (\x -> x) regexResults
+          if null validRegexResults
+            then fallback
+            else pure (or validRegexResults)
 
 imageS3Lock :: Text -> Text
 imageS3Lock path = "image-s3-lock-" <> path

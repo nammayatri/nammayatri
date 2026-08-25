@@ -1094,3 +1094,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distanc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pre_process_document_identifiers boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_check_required boolean  default true;
