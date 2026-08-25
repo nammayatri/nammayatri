@@ -34,6 +34,15 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
     saveSapJournalEntries,
     formatSAPDate,
     formatSAPTime,
+
+    -- * Declarative JV posting
+    JVLeg (..),
+    JVSpec (..),
+    postJV,
+
+    -- * Journal entry transaction writer
+    JournalTxnRowFields (..),
+    saveJournalEntryTransactions,
   )
 where
 
@@ -60,10 +69,12 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.JournalEntryTransaction as JET
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.SapJournalEntry.Interface (SapJournalEntryInput (..))
 import qualified Lib.Finance.SapJournalEntry.Service as SapJournalEntryService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.JournalEntryTransaction as QJETExtra
 import qualified Lib.Finance.Storage.Queries.SapJournalEntry as QSJE
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
@@ -632,3 +643,117 @@ handleSAPResponse label req result txnType txnCount mId mocid periodStart period
         (sapEntryId, sapBatchId) <- saveSapJournalEntries req (Just resp) SJE.SUCCESS txnType txnCount mId mocid periodStart periodEnd Nothing currency
         saveTransactionAction sapEntryId sapBatchId
         pure True
+
+-- ---------------------------------------------------------------------------
+-- Declarative JV posting
+-- ---------------------------------------------------------------------------
+
+-- | One GL leg of a journal voucher.
+data JVLeg = JVLeg
+  { accountKey :: Text,
+    direction :: PostingDirection,
+    amount :: HighPrecMoney
+  }
+
+-- | One JV event: legs + label + txn count + success callback.
+data JVSpec m = JVSpec
+  { label :: Text,
+    legs :: [JVLeg],
+    txnCount :: Int,
+    saveRows :: Id SJE.SapJournalEntry -> Text -> m () -- called on SUCCESS with (sapEntryId, batchId)
+  }
+
+-- | Build items for each leg, skip if all zero, post to SAP and persist.
+postJV ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    Finance.HasActorInfo m r,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  SAPConfig.SAPServiceConfig ->
+  Text ->
+  SAPDispatchJobParams ->
+  Currency ->
+  SJE.TransactionType ->
+  JVSpec m ->
+  m Bool
+postJV sapCfg token params currency txnType spec = do
+  let SAPDispatchJobParams
+        { merchantId = mId,
+          merchantOperatingCityId = mocid,
+          maxApiRetries = maxRetries,
+          startTime = fromTime,
+          endTime = toTime
+        } = params
+  bId <- getNextBatchId
+  items <-
+    forM (zip [1 :: Int ..] spec.legs) $ \(itemNum, leg) ->
+      mkItem bId (show itemNum) leg.accountKey sapCfg.accountMapping leg.direction leg.amount currency
+  let filtered = filterZeroItems items
+  if null filtered
+    then do
+      logInfo $ "No non-zero items for " <> spec.label <> ", skipping"
+      pure True
+    else do
+      logInfo $ "Dispatching " <> spec.label <> " to SAP, txnCount=" <> show spec.txnCount
+      req <- buildJournalRequestFromItems sapCfg spec.label fromTime filtered
+      logInfo $ "SAP journal entry request body = " <> show req
+      result <- callSAPWithRetry sapCfg token req spec.label maxRetries
+      handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.saveRows
+
+-- ---------------------------------------------------------------------------
+-- Journal Entry Transaction persistence (individual source transactions)
+-- ---------------------------------------------------------------------------
+
+-- | Per-row fields that vary between journal_entry_transaction writers.
+data JournalTxnRowFields = JournalTxnRowFields
+  { debitAmount :: HighPrecMoney,
+    creditAmount :: HighPrecMoney,
+    description :: Text,
+    referenceId :: Maybe Text,
+    referenceType :: Maybe JET.ReferenceType,
+    transactionType :: SJE.TransactionType,
+    status :: Text
+  }
+
+saveJournalEntryTransactions ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id SJE.SapJournalEntry ->
+  Text ->
+  Currency ->
+  (row -> JournalTxnRowFields) ->
+  [row] ->
+  m ()
+saveJournalEntryTransactions mId mocId sapEntryId batchId currency projectRow rows = do
+  now <- getCurrentTime
+  aInfo <- asks (.actorInfo)
+  forM_ rows $ \row -> do
+    let fields = projectRow row
+    txnId <- generateGUID
+    QJETExtra.create
+      JET.JournalEntryTransaction
+        { id = Id txnId,
+          debitAmount = fields.debitAmount,
+          creditAmount = fields.creditAmount,
+          currency,
+          description = fields.description,
+          referenceId = fields.referenceId,
+          referenceType = fields.referenceType,
+          sapJournalEntryId = sapEntryId,
+          sapBatchId = batchId,
+          transactionType = fields.transactionType,
+          status = fields.status,
+          merchantId = mId.getId,
+          merchantOperatingCityId = mocId.getId,
+          createdAt = now,
+          updatedAt = now,
+          createdBy = aInfo.actorType,
+          createdById = aInfo.actorId,
+          updatedBy = aInfo.actorType,
+          updatedById = aInfo.actorId
+        }
