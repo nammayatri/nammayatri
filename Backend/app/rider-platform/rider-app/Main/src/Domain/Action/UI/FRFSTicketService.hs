@@ -1280,12 +1280,24 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
         finalStatus <- getFrfsBookingStatusWithActor (Just personId, merchantId) statusRes.bookingId
         if finalStatus.status == DFRFSTicketBooking.CONFIRMED
           then do
-            QJourneyLeg.updateLegSearchId (Just freshSearchId.getId) oldLeg.id
-            eCleanup <- withTryCatch "FRFSReschedule:completeReschedule" (FRFSReschedule.completeReschedule oldBooking.id statusRes.bookingId)
-            case eCleanup of
-              Left err -> logError $ "FRFSReschedule: completeReschedule failed after leg switch (manual cleanup needed) oldBookingId=" <> oldBooking.id.getId <> ": " <> show err
-              Right () -> pure ()
-            pure finalStatus
+            stagingBookingForLeg <- QFRFSTicketBooking.findById statusRes.bookingId >>= fromMaybeM (InvalidRequest "Staging booking not found for leg data refresh")
+            eLegRefresh <-
+              withTryCatch "FRFSReschedule:refreshJourneyLegData" $
+                FRFSReschedule.refreshJourneyLegDataOnReschedule oldLeg freshSearchId stagingBookingForLeg req.tripId newRouteCode newFromCode newToCode integratedBppConfig
+            case eLegRefresh of
+              Right () -> do
+                eCleanup <- withTryCatch "FRFSReschedule:completeReschedule" (FRFSReschedule.completeReschedule oldBooking.id statusRes.bookingId)
+                case eCleanup of
+                  Left err -> logError $ "FRFSReschedule: completeReschedule failed after leg refresh (manual cleanup needed) oldBookingId=" <> oldBooking.id.getId <> ": " <> show err
+                  Right () -> pure ()
+                pure finalStatus
+              Left err -> do
+                logError $ "FRFSReschedule: journey-leg data refresh failed, rolling back to keep original booking oldBookingId=" <> oldBooking.id.getId <> ": " <> show err
+                res <- withTryCatch "FRFSReschedule:rollbackAfterRefreshFail" (FRFSReschedule.rollbackFailedReschedule statusRes.bookingId)
+                case res of
+                  Left rbErr -> logError $ "FRFSReschedule: rollbackFailedReschedule failed after refresh failure (manual cleanup needed) stagingBookingId=" <> statusRes.bookingId.getId <> ": " <> show rbErr
+                  Right () -> pure ()
+                throwError $ InvalidRequest "Reschedule could not be completed, your original booking is unchanged."
           else do
             res <- withTryCatch "FRFSReschedule:rollbackFailedReschedule" (FRFSReschedule.rollbackFailedReschedule statusRes.bookingId)
             case res of

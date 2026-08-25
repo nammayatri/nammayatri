@@ -1,5 +1,6 @@
 module SharedLogic.FRFSReschedule where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified Data.Time as Time
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
@@ -11,7 +12,11 @@ import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.RouteDetails as DRouteDetails
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.MultiModal.Interface.Types (MultiModalStopDetails (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -23,6 +28,7 @@ import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -34,7 +40,11 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
+import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 
 validateRescheduleEligibility ::
   (ServiceFlow m r, HasShortDurationRetryCfg r c) =>
@@ -65,6 +75,8 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
     throwError $ InvalidRequest "Maximum number of reschedules exceeded for this booking"
   pastWindow <- isPastRescheduleWindow oldBooking (fromMaybe (Seconds 1800) vst.maxRescheduleTimeAfterStart)
   when pastWindow $ throwError $ InvalidRequest "Reschedule window has passed for this booking"
+  when (oldBooking.finalBoardedVehicleNumberSource == Just DJourneyLeg.UserActivated) $
+    throwError $ InvalidRequest "Cannot reschedule a trip you have already boarded"
   -- When the rider moves to a different boarding/alighting stop, it must stay within the same cluster as the
   -- original (nearby-equivalent stop). Same-stop reschedules (trip-only) skip this. Fare is enforced separately.
   let stopsChanged = newFromCode /= oldBooking.fromStationCode || newToCode /= oldBooking.toStationCode
@@ -84,9 +96,10 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
       >>= fromMaybeM (RiderConfigNotFound oldBooking.merchantOperatingCityId.getId)
   let tzDiff = secondsToNominalDiffTime riderConfig.timeDiffFromUtc
       todayLocal = Time.utctDay (Time.addUTCTime tzDiff now)
-      lastAllowedDayLocal = Time.addDays (fromIntegral (fromMaybe 0 vst.maxRescheduleDaysAhead)) todayLocal
+      oldTripDayLocal = maybe todayLocal (Time.utctDay . Time.addUTCTime tzDiff) oldBooking.startTime
+      lastAllowedDayLocal = Time.addDays (fromIntegral (fromMaybe 0 vst.maxRescheduleDaysAhead)) oldTripDayLocal
       windowEndUtc = Time.addUTCTime (negate tzDiff) (Time.UTCTime (Time.addDays 1 lastAllowedDayLocal) 0)
-  when (newTripStart < now || newTripStart >= windowEndUtc) $
+  when (newTripStart >= windowEndUtc) $
     throwError $ InvalidRequest "Selected trip is outside the allowed reschedule window"
 
 getNewTripStartTime ::
@@ -97,12 +110,26 @@ getNewTripStartTime ::
   Text ->
   DIBC.IntegratedBPPConfig ->
   m UTCTime
-getNewTripStartTime tripId routeCode boardingStopCode alightingStopCode integratedBppConfig = do
+getNewTripStartTime tripId routeCode boardingStopCode alightingStopCode integratedBppConfig =
+  fst <$> getNewTripStopEtas tripId routeCode boardingStopCode alightingStopCode integratedBppConfig
+
+-- | (boardingUtc, alightingUtc) for the new trip's from/to stops, from the live GIMS bus-trip-schedule.
+-- Also enforces travel order (alighting must come after boarding). Used both for the window validation and
+-- for the post-swap data migration (refreshJourneyLegDataOnReschedule).
+getNewTripStopEtas ::
+  (ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  DIBC.IntegratedBPPConfig ->
+  m (UTCTime, UTCTime)
+getNewTripStopEtas tripId routeCode boardingStopCode alightingStopCode integratedBppConfig = do
   let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-  eSchedule <- withTryCatch "FRFSReschedule:getNewTripStartTime" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBppConfig)
+  eSchedule <- withTryCatch "FRFSReschedule:getNewTripStopEtas" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBppConfig)
   schedule <- case eSchedule of
     Left err -> do
-      logError $ "FRFSReschedule:getNewTripStartTime failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
+      logError $ "FRFSReschedule:getNewTripStopEtas failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
       throwError $ InvalidRequest "Could not verify the selected trip schedule, please try again"
     Right s -> pure s
   let allEtas = concatMap (.eta) schedule
@@ -114,7 +141,153 @@ getNewTripStartTime tripId routeCode boardingStopCode alightingStopCode integrat
       & fromMaybeM (InvalidRequest "Selected trip does not stop at the destination station")
   when (alightingEta.arrivalTimeUnix <= boardingEta.arrivalTimeUnix) $
     throwError $ InvalidRequest "Selected trip does not serve the boarding and destination stations in travel order"
-  pure $ FRFSUtils.unixToUTC boardingEta.arrivalTimeUnix
+  pure (FRFSUtils.unixToUTC boardingEta.arrivalTimeUnix, FRFSUtils.unixToUTC alightingEta.arrivalTimeUnix)
+
+-- | Post-swap data migration: after the staging booking confirms, the leg/route/journey rows still hold the
+-- OLD trip's search id, timing, stops, vehicle and tracking. This repoints them to the new trip so
+-- booking-info / listV2 reflect it. Called on the CONFIRMED (success) path. All-or-nothing: the three writes
+-- are snapshotted first and restored on a mid-sequence failure, then the error is rethrown so the caller can
+-- roll back the staging booking and keep the rider on the (still-coherent) original booking.
+refreshJourneyLegDataOnReschedule ::
+  (ServiceFlow m r, HasShortDurationRetryCfg r c, HasBAPMetrics m r, EncFlow m r) =>
+  DJourneyLeg.JourneyLeg ->
+  Id DFRFSSearch.FRFSSearch ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  DIBC.IntegratedBPPConfig ->
+  m ()
+refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRouteCode newFromCode newToCode integratedBppConfig = do
+  (boardingT, alightingT) <- getNewTripStopEtas tripId newRouteCode newFromCode newToCode integratedBppConfig
+  now <- getCurrentTime
+  let legDuration = Just . Seconds . round $ diffUTCTime alightingT boardingT
+  let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< stagingBooking.routeStationsJson
+      mbRouteStation = listToMaybe =<< mbRouteStations
+  routeLiveInfo <-
+    case (mbRouteStation, stagingBooking.vehicleNumber) of
+      (Just routeStation, Just vehicleNumber) -> JourneyUtils.getLiveRouteInfo integratedBppConfig vehicleNumber routeStation.code
+      _ -> return Nothing
+  mbTrip <-
+    case mbRouteStation of
+      Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+      Nothing -> return Nothing
+  let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newFromCode >>= (.platformCode)
+      toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newToCode >>= (.platformCode)
+      fromStopDetail =
+        MultiModalStopDetails
+          { stopCode = Just newFromCode,
+            platformCode = fromStopPlatformCode,
+            name = stagingBooking.fromStationName,
+            gtfsId = Just newFromCode
+          }
+      toStopDetail =
+        MultiModalStopDetails
+          { stopCode = Just newToCode,
+            platformCode = toStopPlatformCode,
+            name = stagingBooking.toStationName,
+            gtfsId = Just newToCode
+          }
+  -- Snapshot the pre-refresh rows FIRST. The three writes below (journey_leg, route_details, journey) are not
+  -- one transaction, so a mid-sequence DB failure could leave the leg repointed to the new search while
+  -- route_details still hold the old trip. Since the caller keeps the OLD booking on failure, that half-applied
+  -- state would corrupt the retained booking -- so on any write failure we restore all three to these snapshots.
+  -- (All GIMS/compute failures happen above, before any write, so they can never produce a partial state.)
+  oldRouteDetails <- QRouteDetails.findAllByJourneyLegId Nothing Nothing oldLeg.id.getId
+  mbOldJourney <- QJourney.findByPrimaryKey oldLeg.journeyId
+  when (isNothing mbOldJourney) $
+    logWarning $ "FRFSReschedule:refreshJourneyLegDataOnReschedule journey not found journeyId=" <> oldLeg.journeyId.getId
+  let -- (1) journey_leg columns: repoint search + new-trip timing + the NEW trip's boarded-vehicle/tracking + stops.
+      newLeg =
+        oldLeg
+          { DJourneyLeg.legSearchId = Just newSearchId.getId,
+            DJourneyLeg.multimodalSearchRequestId = Just newSearchId.getId,
+            DJourneyLeg.legPricingId = Just stagingBooking.quoteId.getId,
+            DJourneyLeg.duration = legDuration,
+            DJourneyLeg.fromArrivalTime = Just boardingT,
+            DJourneyLeg.fromDepartureTime = Just boardingT,
+            DJourneyLeg.toArrivalTime = Just alightingT,
+            DJourneyLeg.toDepartureTime = Just alightingT,
+            DJourneyLeg.fromStopDetails = Just fromStopDetail,
+            DJourneyLeg.toStopDetails = Just toStopDetail,
+            DJourneyLeg.finalBoardedBusNumber = stagingBooking.vehicleNumber,
+            DJourneyLeg.finalBoardedBusNumberSource = routeLiveInfo <&> \_ -> DJourneyLeg.UserSpotBooked,
+            DJourneyLeg.finalBoardedDepotNo = routeLiveInfo >>= (.depot),
+            DJourneyLeg.finalBoardedScheduleNo = routeLiveInfo >>= (.scheduleNo),
+            DJourneyLeg.finalBoardedWaybillId = routeLiveInfo >>= (.waybillId),
+            DJourneyLeg.finalBoardedBusServiceTierType = routeLiveInfo <&> (.serviceType),
+            DJourneyLeg.userBookedBusServiceTierType = mbRouteStation >>= (.vehicleServiceTier) <&> (._type),
+            DJourneyLeg.busConductorId = routeLiveInfo >>= (.busConductorId),
+            DJourneyLeg.busDriverId = routeLiveInfo >>= (.busDriverId),
+            DJourneyLeg.busTagNumber = routeLiveInfo >>= (.busTagNumber),
+            DJourneyLeg.busLocationData = stagingBooking.busLocationData,
+            DJourneyLeg.changedBusesInSequence = Nothing,
+            DJourneyLeg.updatedAt = now
+          }
+      -- (2) route_details: in-place refresh -- timing + tracking always; route/stop identity to the NEW trip.
+      -- These feed getLegRouteInfo -> LegRouteInfo (legStartTime/legEndTime, stop ETAs, tracking).
+      mkNewRouteDetail rd =
+        rd
+          { DRouteDetails.routeCode = Just newRouteCode,
+            DRouteDetails.routeGtfsId = mbRouteStation <&> (.code),
+            DRouteDetails.routeShortName = mbRouteStation <&> (.shortName),
+            DRouteDetails.routeLongName = mbRouteStation <&> (.longName),
+            DRouteDetails.routeColorCode = mbRouteStation >>= (.color),
+            DRouteDetails.routeColorName = mbRouteStation >>= (.color),
+            DRouteDetails.agencyName = Just integratedBppConfig.agencyKey,
+            DRouteDetails.agencyGtfsId = Just integratedBppConfig.feedKey,
+            DRouteDetails.fromStopCode = Just newFromCode,
+            DRouteDetails.toStopCode = Just newToCode,
+            DRouteDetails.fromStopGtfsId = Just newFromCode,
+            DRouteDetails.toStopGtfsId = Just newToCode,
+            DRouteDetails.fromStopName = stagingBooking.fromStationName,
+            DRouteDetails.toStopName = stagingBooking.toStationName,
+            DRouteDetails.fromStopPlatformCode = fromStopPlatformCode,
+            DRouteDetails.toStopPlatformCode = toStopPlatformCode,
+            DRouteDetails.startLocationLat = maybe rd.startLocationLat (.lat) stagingBooking.fromStationPoint,
+            DRouteDetails.startLocationLon = maybe rd.startLocationLon (.lon) stagingBooking.fromStationPoint,
+            DRouteDetails.endLocationLat = maybe rd.endLocationLat (.lat) stagingBooking.toStationPoint,
+            DRouteDetails.endLocationLon = maybe rd.endLocationLon (.lon) stagingBooking.toStationPoint,
+            DRouteDetails.fromArrivalTime = Just boardingT,
+            DRouteDetails.fromDepartureTime = Just boardingT,
+            DRouteDetails.toArrivalTime = Just alightingT,
+            DRouteDetails.toDepartureTime = Just alightingT,
+            DRouteDetails.legStartTime = Just boardingT,
+            DRouteDetails.legEndTime = Just alightingT,
+            DRouteDetails.trackingStatus = Nothing,
+            DRouteDetails.trackingStatusLastUpdatedAt = Just now,
+            DRouteDetails.updatedAt = now
+          }
+      -- (3) journey row: start/end/duration reflect the new trip
+      mkNewJourney journey =
+        journey
+          { DJourney.startTime = Just boardingT,
+            DJourney.endTime = Just alightingT,
+            DJourney.estimatedDuration = Just . Seconds . round $ diffUTCTime alightingT boardingT,
+            DJourney.updatedAt = now
+          }
+  eWrite <-
+    withTryCatch "FRFSReschedule:refreshJourneyLegDataOnReschedule:writes" $ do
+      QJourneyLeg.updateByPrimaryKey newLeg
+      forM_ oldRouteDetails (QRouteDetails.updateByPrimaryKey . mkNewRouteDetail)
+      whenJust mbOldJourney (QJourney.updateByPrimaryKey . mkNewJourney)
+  -- (4) invalidate the legSearchId -> journeyId cache for both the old and the new search (either outcome)
+  let clearCaches = whenJust oldLeg.legSearchId CQJourneyLeg.clearCache >> CQJourneyLeg.clearCache newSearchId.getId
+  case eWrite of
+    Right () -> do
+      clearCaches
+      logInfo $ "FRFSReschedule:refreshJourneyLegDataOnReschedule done journeyLegId=" <> oldLeg.id.getId <> " newSearchId=" <> newSearchId.getId
+    Left err -> do
+      logError $ "FRFSReschedule:refreshJourneyLegDataOnReschedule write failed, restoring old leg/route/journey journeyLegId=" <> oldLeg.id.getId <> ": " <> show err
+      -- Best-effort restore to the exact pre-refresh rows so the retained old booking stays coherent.
+      void $
+        withTryCatch "FRFSReschedule:refreshJourneyLegDataOnReschedule:restore" $ do
+          QJourneyLeg.updateByPrimaryKey oldLeg
+          forM_ oldRouteDetails QRouteDetails.updateByPrimaryKey
+          whenJust mbOldJourney QJourney.updateByPrimaryKey
+      clearCaches
+      throwError $ InternalError $ "refreshJourneyLegDataOnReschedule failed and old leg data was restored: " <> show err
 
 isPastRescheduleWindow ::
   MonadFlow m =>
@@ -372,8 +545,19 @@ rollbackFailedReschedule ::
   m ()
 rollbackFailedReschedule stagingBookingId = do
   stagingBooking <- QFRFSTicketBooking.findById stagingBookingId >>= fromMaybeM (InvalidRequest "Staging booking not found while rolling back reschedule")
-  whenJust ((,) <$> stagingBooking.tripId <*> stagingBooking.holdId) $ \(tripId, holdId) ->
-    SeatBooking.releaseHold tripId holdId
+  -- Release the staging booking's seats. If it already reached CONFIRMED, onConfirm converted the hold to a
+  -- confirmed reservation (hold meta deleted, seat bits retained) -- so releaseHold would be a no-op and the
+  -- seat would leak; release the confirmed seats instead. Otherwise the seats are still held, so drop the hold.
+  if stagingBooking.status == DFRFSTicketBookingStatus.CONFIRMED
+    then do
+      stagingCats <- QFRFSQuoteCategory.findAllByQuoteId stagingBooking.quoteId
+      let stagingSeatIds = concat (mapMaybe (.seatIds) stagingCats)
+      case (stagingBooking.tripId, stagingBooking.fromStopIdx, stagingBooking.toStopIdx) of
+        (Just tripId, Just fromIdx, Just toIdx)
+          | not (null stagingSeatIds) -> SeatBooking.releaseConfirmedSeats tripId stagingSeatIds fromIdx toIdx
+        _ -> pure ()
+    else whenJust ((,) <$> stagingBooking.tripId <*> stagingBooking.holdId) $ \(tripId, holdId) ->
+      SeatBooking.releaseHold tripId holdId
   whenJust stagingBooking.parentBookingId $ \oldBookingId -> do
     mbOldBooking <- QFRFSTicketBooking.findById oldBookingId
     whenJust mbOldBooking $ \oldBooking -> do
