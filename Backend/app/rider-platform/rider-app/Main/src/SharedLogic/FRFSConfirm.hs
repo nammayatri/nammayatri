@@ -53,6 +53,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -96,8 +97,8 @@ data RescheduleCtx = RescheduleCtx
     oldFrfsPaymentId :: Maybe (Id DFRFSTicketBookingPayment.FRFSTicketBookingPayment)
   }
 
-confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
-confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId = do
+confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
+confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
   Hedis.withWaitAndLockMasterCloudCrossAppRedis (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $ do
     quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
     mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
@@ -318,14 +319,76 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                       totalPrice = fareParameters.totalPrice
                       mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
+                  mbResolved <- resolvePassForFare rider quote.vehicleType (fromMaybe now booking.startTime) mbNewServiceTierType fareParameters mbPurchasedPassPaymentId
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
                   void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.serviceTierType = mbNewServiceTierType}
+                  -- Persist the re-priced total, not just carry it on the returned record: the status
+                  -- response is built from a re-read of this row, and on_init -- the only other writer
+                  -- of totalPrice -- is an async callback that has not landed yet, so the row would
+                  -- otherwise still hold the previous quantity's fare.
+                  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice booking.id
+                  let mbPassOption = snd <$> mbResolved
+                      resolvedType = DFRFSTicketBooking.PassOverride <$ mbPassOption
+                      resolvedAmount = (.overriddenTotalPrice.amount) <$> mbPassOption
+                      resolvedEntityId = (.purchasedPassPaymentId.getId) <$> mbPassOption
+                      -- A pass resolved -> stamp it. No pass and the caller is authoritative (the rider's
+                      -- own confirm) -> clear a now-stale override. No pass and NOT authoritative (on_select
+                      -- and other internal re-entries call with Nothing) -> keep the existing override, so a
+                      -- partial-pass booking is not silently stripped and billed full fare.
+                      (overrideType', overriddenAmount', overrideAppliedEntityId') =
+                        if isJust mbPassOption || passSelectionAuthoritative
+                          then (resolvedType, resolvedAmount, resolvedEntityId)
+                          else (booking.overrideType, booking.overriddenAmount, booking.overrideAppliedEntityId)
+                  when (overrideType' /= booking.overrideType || overriddenAmount' /= booking.overriddenAmount || overrideAppliedEntityId' /= booking.overrideAppliedEntityId) $
+                    QFRFSTicketBooking.updatePassOverrideById overrideType' overriddenAmount' overrideAppliedEntityId' booking.id
+                  return $
+                    booking
+                      { DFRFSTicketBooking.quoteId = quote.id,
+                        DFRFSTicketBooking.bppItemId = quote.bppItemId,
+                        DFRFSTicketBooking.bookingAuthCode = mBookAuthCode,
+                        DFRFSTicketBooking.totalPrice = totalPrice,
+                        DFRFSTicketBooking.serviceTierType = mbNewServiceTierType,
+                        DFRFSTicketBooking.overrideType = overrideType',
+                        DFRFSTicketBooking.overriddenAmount = overriddenAmount',
+                        DFRFSTicketBooking.overrideAppliedEntityId = overrideAppliedEntityId'
+                      }
                 else return booking
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
+
+    resolvePassForFare ::
+      (CallExternalBPP.FRFSConfirmFlow m r c) =>
+      Domain.Types.Person.Person ->
+      Spec.VehicleCategory ->
+      UTCTime ->
+      Maybe Spec.ServiceTierType ->
+      FRFSUtils.FRFSFareParameters ->
+      Maybe (Id DPPP.PurchasedPassPayment) ->
+      m (Maybe (FRFSPassOverride.ApplicablePass, FRFSPassOverride.PassOption))
+    resolvePassForFare rider vehicleType bookingStartTime mbServiceTierType fareParameters mbPassPaymentId = do
+      let mbAdultUnitPriceForOverride =
+            find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
+      case (mbPassPaymentId, mbAdultUnitPriceForOverride) of
+        (Just paymentId, Nothing) -> do
+          logWarning $ "FRFSConfirm: pass selected but no ADULT price item to price the override against purchasedPassPaymentId=" <> paymentId.getId
+          throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
+        (Nothing, _) -> pure Nothing
+        (Just paymentId, Just adultUnitPriceForOverride) -> do
+          resolved <-
+            FRFSPassOverride.resolvePassOverride
+              integratedBppConfig
+              rider
+              vehicleType
+              bookingStartTime
+              mbServiceTierType
+              adultUnitPriceForOverride
+              (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems)
+              paymentId
+          when (isNothing resolved) $
+            throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
+          pure resolved
 
     validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
     validateQuota fromIdx toIdx mbSeat =
@@ -375,35 +438,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 pure (fromMaybe now mbLegDepartureTime)
           _ -> pure (fromMaybe now mbLegDepartureTime)
 
-      -- No fallback to totalPrice: that is the quantity-multiplied order total, and handing it to
-      -- resolvePassOverride as a UNIT price mis-values the override. The offer side
-      -- (Lib.JourneyModule.Types) offers no pass at all when there is no ADULT item, so treating it
-      -- as "no override applicable" here is what keeps the two sides agreeing.
-      let mbAdultUnitPriceForOverride =
-            find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
-      mbResolved <-
-        case (mbPurchasedPassPaymentId', mbAdultUnitPriceForOverride) of
-          (Just paymentId, Nothing) -> do
-            -- Rejected rather than silently ignored, matching the "not applicable" throw below:
-            -- honouring the request without the override would charge the rider the full fare
-            -- having been told a pass applied.
-            logWarning $ "FRFSConfirm: pass selected but no ADULT price item to price the override against purchasedPassPaymentId=" <> paymentId.getId
-            throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
-          (Nothing, _) -> pure Nothing
-          (Just paymentId, Just adultUnitPriceForOverride) -> do
-            resolved <-
-              FRFSPassOverride.resolvePassOverride
-                integratedBppConfig
-                rider
-                quote'.vehicleType
-                bookingStartTime
-                mbServiceTierType
-                adultUnitPriceForOverride
-                (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems)
-                paymentId
-            when (isNothing resolved) $
-              throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
-            pure resolved
+      mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId'
 
       -- Stamped on the insert, not patched in afterwards: a status read hitting the replica in
       -- between would see a booking that is neither payable nor pass-covered and reject it.
@@ -568,12 +603,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                   chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
               pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
-postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId = do
+postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
   when (null selectedQuoteCategories) $ throwError $ NoSelectedCategoryFound quote.id.getId
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed) <- confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId
+  (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed) <- confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative
   (mbJourneyId, _) <- getAllJourneyFrfsBookings dConfirmRes
   when (isNothing mbJourneyId) $ do
     when (isNothing mbRescheduleCtx) $ do
@@ -592,7 +627,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   -- SharedLogic.FRFSPassConfirm, driven either by the journey's payment success or -- when no leg is
   -- payable at all -- by Lib.JourneyModule.Base once every leg is confirmed. Confirming a leg here
   -- would issue a ticket and spend a pass trip before the rider has paid for the journey's other legs.
-  if isFullyPassCovered && dConfirmRes.status == DFRFSTicketBooking.NEW && isNothing mbJourneyId
+  if isFullyPassCovered && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED] && isNothing mbJourneyId
     then do
       bapConfig <-
         getOneConfig
@@ -602,54 +637,90 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
       let validTillPass = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
           mRiderNamePass = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
       mRiderNumberPass <- mapM decrypt rider.mobileNumber
-      -- dConfirmRes.status in the guard above is a snapshot taken before confirmAndUpsertBooking's
-      -- lock was released, so it cannot decide this on its own: two concurrent confirms for one
-      -- searchId would both read NEW and both call the BPP, issuing two tickets and debiting the
-      -- pass twice at on_confirm. claimBookingForConfirm re-reads under a lock and is the only
-      -- thing allowed to make the NEW -> CONFIRMING transition -- the same claim the journey path
-      -- uses, so the two cannot drift.
       mbClaimed <- FRFSUtils.claimBookingForConfirm dConfirmRes.id validTillPass
       case mbClaimed of
-        Nothing -> logInfo $ "FRFSConfirm: pass-covered booking no longer NEW, skipping inline confirm bookingId=" <> dConfirmRes.id.getId
+        Nothing -> logInfo $ "FRFSConfirm: not claiming for inline confirm (already confirming, or a payment webhook holds the booking) bookingId=" <> dConfirmRes.id.getId
         Just claimedBooking -> do
-          void $ QFRFSTicketBooking.updateOnInitDone (Just True) claimedBooking.id
-          -- The booking is CONFIRMING by now. CallExternalBPP.confirm returns Left for an error it
-          -- handled but THROWS on a transport or decode failure, and a throw here skips both writes
-          -- below and escapes as a 5xx, leaving the booking CONFIRMING with an empty
-          -- failure_reason. Nothing sweeps that: this branch requires isNothing mbJourneyId, so no
-          -- CheckMultimodalConfirmFail job is scheduled, and with no payment row none of the
-          -- payment-driven paths touch it either -- only the rider polling status past validTill
-          -- would ever resolve it. Fold a throw into the same Left path instead.
-          confirmResp <-
-            withTryCatch "FRFSConfirm:passCoveredBppConfirm" (CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderNamePass, mRiderNumberPass) claimedBooking updatedQuoteCategories isSingleMode) >>= \case
-              Right resp -> pure resp
-              Left err -> pure (Left ("BPP confirm threw: " <> show err))
-          case confirmResp of
+          -- Everything past the claim runs under this: the booking is already CONFIRMING, so a throw
+          -- from any write or lookup below would leave it CONFIRMING with an empty failure_reason and
+          -- nothing to resolve it -- no payment row, and CheckMultimodalConfirmFail is only scheduled
+          -- on payment success, which never comes for a fully covered booking. Same wrapper the
+          -- journey path uses in FRFSPassConfirm.
+          afterClaim <- withTryCatch "FRFSConfirm:passCoveredAfterClaim" $ do
+            -- Carried on the record too, not just written: the CRIS confirm builds chargeableAmount
+            -- from booking.totalPrice, so the pre-update record would quote the operator the
+            -- previous quantity's fare.
+            let repricedBooking = claimedBooking {DFRFSTicketBooking.totalPrice = fareParameters.totalPrice}
+            void $ QFRFSTicketBooking.updateTotalPriceById fareParameters.totalPrice claimedBooking.id
+            void $ QFRFSTicketBooking.updateOnInitDone (Just True) claimedBooking.id
+            confirmResp <-
+              withTryCatch "FRFSConfirm:passCoveredBppConfirm" (CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderNamePass, mRiderNumberPass) repricedBooking updatedQuoteCategories isSingleMode) >>= \case
+                Right resp -> pure resp
+                Left err -> pure (Left ("BPP confirm threw: " <> show err))
+            case confirmResp of
+              Left err -> do
+                void $ QFRFSTicketBooking.updateFailureReasonById (Just err) claimedBooking.id
+                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED claimedBooking.id
+              Right _ -> pure ()
+          case afterClaim of
+            Right () -> pure ()
             Left err -> do
-              void $ QFRFSTicketBooking.updateFailureReasonById (Just err) claimedBooking.id
+              logError $ "FRFSConfirm: pass-covered confirm failed after the claim bookingId=" <> claimedBooking.id.getId <> " err=" <> show err
+              void $ QFRFSTicketBooking.updateFailureReasonById (Just ("Pass confirm failed: " <> show err)) claimedBooking.id
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED claimedBooking.id
-            Right _ -> pure ()
-    else when isMultiInitAllowed $ do
-      case mbRescheduleCtx of
-        Just ctx -> do
-          -- Load-bearing: rewrite the reused payment's categories to the new seats BEFORE the staging
-          -- confirm reads them (confirm resolves seats from findAllByPaymentId first). A fully pass-covered
-          -- reschedule has no reused payment (oldFrfsPaymentId = Nothing) and confirms via the pass path,
-          -- so there is nothing to sync — only APPROVED still applies as the multi-init marker.
-          whenJust ctx.oldFrfsPaymentId $ \oldFrfsPaymentId ->
-            FRFSReschedule.syncPaymentCategories oldFrfsPaymentId updatedQuoteCategories
-          void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED dConfirmRes.id
-        Nothing -> do
-          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-          let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
-          mRiderNumber <- mapM decrypt rider.mobileNumber
-          let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
-          void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
-          let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
-          when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
-            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
-          CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' updatedQuoteCategories mbEnableOffer
-  frfsBookingStatus (dConfirmRes.riderId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler dConfirmRes updatedQuoteCategories fareParameters routeStations stations merchantOperatingCity) dConfirmRes rider (\_ _ -> pure ())
+          FRFSUtils.releasePaymentSuccessLock claimedBooking.id
+    else do
+      -- Only the standalone reprice case: a single-leg journey (the synthetic journey buildJourneyAndLeg
+      -- creates for a lone FRFS booking) whose sole leg is fully pass-covered, and which is still in a
+      -- confirmable state. A genuine multimodal journey has >1 leg, or a leg with no booking row yet
+      -- (a deferred, still-payable leg dropped by getAllJourneyFrfsBookings' mapMaybeM), and is left to
+      -- the existing deferred path (Base.hs / FRFSStatus on payment success) exactly as before. The
+      -- status guard mirrors the sibling branch's isMultiInitAllowed set and stops a re-confirm of an
+      -- already CONFIRMING/CONFIRMED/terminal booking from being reset to NEW and ticketed twice.
+      journeyFullyCovered <-
+        if isFullyPassCovered
+          && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
+          && isNothing mbRescheduleCtx
+          then case mbJourneyId of
+            Nothing -> pure False
+            Just journeyId -> do
+              legs <- QJourneyLeg.getJourneyLegs journeyId
+              (_, allJourneyBookings) <- getAllJourneyFrfsBookings dConfirmRes
+              pure $
+                length legs == 1
+                  && length allJourneyBookings == 1
+                  && all (FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
+          else pure False
+      if journeyFullyCovered
+        then do
+          logInfo $ "FRFSConfirm: single pass-covered leg, confirming inline bookingId=" <> dConfirmRes.id.getId
+          -- confirmOne claims first and does every write inside its own guarded section, so a claim
+          -- that loses to a payment webhook leaves the row untouched. Going through it directly also
+          -- avoids the PAYMENT_PENDING -> NEW reset that confirmPassCoveredLegs' status == NEW filter
+          -- would otherwise require -- a transition a concurrent poll can observe.
+          FRFSPassConfirm.confirmOne dConfirmRes
+        else when isMultiInitAllowed $ do
+          case mbRescheduleCtx of
+            Just ctx -> do
+              -- Load-bearing: rewrite the reused payment's categories to the new seats BEFORE the staging
+              -- confirm reads them (confirm resolves seats from findAllByPaymentId first). A fully pass-covered
+              -- reschedule has no reused payment (oldFrfsPaymentId = Nothing) and confirms via the pass path,
+              -- so there is nothing to sync — only APPROVED still applies as the multi-init marker.
+              whenJust ctx.oldFrfsPaymentId $ \oldFrfsPaymentId ->
+                FRFSReschedule.syncPaymentCategories oldFrfsPaymentId updatedQuoteCategories
+              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED dConfirmRes.id
+            Nothing -> do
+              bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+              let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
+              mRiderNumber <- mapM decrypt rider.mobileNumber
+              let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
+              void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
+              let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
+              when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
+                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
+              CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' updatedQuoteCategories mbEnableOffer
+  latestConfirmRes <- QFRFSTicketBooking.findById dConfirmRes.id >>= fromMaybeM (InvalidRequest $ "Invalid booking id " <> dConfirmRes.id.getId)
+  frfsBookingStatus (latestConfirmRes.riderId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler latestConfirmRes updatedQuoteCategories fareParameters routeStations stations merchantOperatingCity) latestConfirmRes rider (\_ _ -> pure ())
   where
     withPaymentStatusResponseHandler ::
       CallExternalBPP.FRFSConfirmFlow m r c =>

@@ -210,7 +210,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                       transactions <- HQPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
-                      isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (FRFSUtils.frfsPaymentSuccessLockKey bookingId) FRFSUtils.paymentSuccessLockTtlSec
                       if isLockAcquired
                         then do
                           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
@@ -364,7 +364,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       [FRFSQuoteCategory.FRFSQuoteCategory] ->
       m (Maybe FRFSTicketService.FRFSTicketBookingStatusAPIRes)
     buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories = do
-      if paymentBookingStatus == FRFSTicketService.SUCCESS && maybe False (/= paymentBooking.id.getId) booking.frfsTicketBookingPaymentIdForTicketGeneration
+      let ticketBookingPaymentIdMatched = booking.frfsTicketBookingPaymentIdForTicketGeneration == Just paymentBooking.id.getId
+          fulfilledByPass = isJust booking.overrideType && booking.status `elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]
+          alreadyFulfilled = isJust booking.frfsTicketBookingPaymentIdForTicketGeneration || fulfilledByPass
+      if paymentBookingStatus == FRFSTicketService.SUCCESS && not ticketBookingPaymentIdMatched && alreadyFulfilled
         then do
           QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
           response <-
@@ -381,8 +384,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           return $ Just response
         else return Nothing
 
-    mkPaymentSuccessLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
-    mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 
     buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking
       -- An external order has no session of ours behind it, so there is no payload to return and
