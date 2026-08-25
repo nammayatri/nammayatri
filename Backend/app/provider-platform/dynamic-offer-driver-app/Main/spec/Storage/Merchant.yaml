@@ -919,14 +919,21 @@ TransporterConfig:
     PickupStallTerminalAction:
       enum: "REALLOCATE_RIDE,RECORD_ONLY"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
+    PickupNudgeChannel:
+      enum: "OVERLAY,CHAT_MESSAGE"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupStallStage:
       afterFaultSec: Int
       overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       terminalAction: Maybe PickupStallTerminalAction
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupDarkStage:
       afterDarkSec: Int
       overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
@@ -2207,6 +2214,7 @@ MerchantPushNotification:
     title: Text
     body: Text
     language: Language
+    audioUrl: Maybe Text
     fcmNotificationType: FCMNotificationType
     fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant

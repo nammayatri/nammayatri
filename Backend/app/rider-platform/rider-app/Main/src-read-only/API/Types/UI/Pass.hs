@@ -152,12 +152,14 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
 
 data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     endDate :: Data.Time.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     passCode :: Data.Text.Text,
     passName :: Data.Maybe.Maybe Data.Text.Text,
     passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
+    purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     refunds :: [RefundAPIEntity],
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType
