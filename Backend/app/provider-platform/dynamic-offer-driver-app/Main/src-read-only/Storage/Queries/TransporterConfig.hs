@@ -384,6 +384,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.scheduledRideAvgSpeedKmph scheduledRideAvgSpeedKmph,
       Se.Set Beam.scheduledRideFilterExclusionThresholdHours (Kernel.Prelude.Just $ Kernel.Types.Common.getHours scheduledRideFilterExclusionThresholdHours),
       Se.Set Beam.scheduledRideJobRescheduleTime (Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds scheduledRideJobRescheduleTime),
+      Se.Set Beam.scheduledRideOpenToAllThresholdMinutes scheduledRideOpenToAllThresholdMinutes,
       Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
       Se.Set Beam.searchRepeatLimit searchRepeatLimit,
       Se.Set Beam.sendMembershipIdInProfile sendMembershipIdInProfile,

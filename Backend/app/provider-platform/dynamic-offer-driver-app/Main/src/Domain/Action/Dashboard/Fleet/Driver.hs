@@ -4970,10 +4970,10 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
               possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
           cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-          let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
+          let allServiceTiers = nub $ (.serviceTierType) <$> cityServiceTiers
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
           -- Fleet sees all scheduled bookings; no location/reachability filter (unlike driver app listScheduledBookings)
-          scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allVehicleVariants Nothing transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
+          scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allServiceTiers Nothing transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
           bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking Nothing) (catMaybes scheduledBookings)
           fleetBookings <- mapM convertToFleetScheduledBooking (catMaybes bookings)
 

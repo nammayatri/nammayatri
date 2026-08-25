@@ -56,6 +56,7 @@ import qualified Tools.Notifications as Notify
 
 data AllocatorJobType
   = SendSearchRequestToDriver
+  | SendScheduledSearchRequestToDriver
   | UnblockDriver
   | UnblockAirportDriver
   | UnblockSoftBlockedDriver
@@ -116,6 +117,7 @@ instance JobProcessor AllocatorJobType where
   type MerchantOperatingCityType AllocatorJobType = DMOC.MerchantOperatingCity
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
+  restoreAnyJobInfo SSendScheduledSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendScheduledSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
   restoreAnyJobInfo SUnblockAirportDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockAirportDriver jobData
   restoreAnyJobInfo SUnblockSoftBlockedDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockSoftBlockedDriver jobData
@@ -213,6 +215,10 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
+instance JobInfoProcessor 'SendScheduledSearchRequestToDriver
+
+type instance JobContent 'SendScheduledSearchRequestToDriver = SendSearchRequestToDriverJobData
 
 newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
   { driverId :: Id DP.Driver

@@ -4,6 +4,7 @@ module Storage.Queries.Person.GetNearestDrivers
     processCandidatesChunk,
     buildDriverResult,
     isTierEligibleForDriver,
+    scheduledTierEligibleForDriver,
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
@@ -94,6 +95,8 @@ data NearestDriversReq = NearestDriversReq
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
     isInterCity :: Bool,
+    isScheduled :: Bool,
+    scheduledOpenToAll :: Bool,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
@@ -102,6 +105,7 @@ data NearestDriversReq = NearestDriversReq
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
+    minWalletAmountForScheduledRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     taxConfig :: DTC.TaxConfig,
     isValueAddNP :: Bool,
@@ -216,6 +220,17 @@ isTierEligibleForDriver now driverTag tierConfigs tier =
     Nothing -> True
     Just _ -> Yudhishthira.elemTagNameValue (LYT.TagNameValue ("Cohort#" <> show tier)) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
 
+-- | Whether the driver is eligible for a scheduled booking of the given tier: not a scheduled ride
+-- at all, within the R4 open-to-all threshold, or the tier's configured eligibility tags intersect
+-- the driver's (already expiry-filtered) tags. A tier with no configured eligibility tags is open.
+scheduledTierEligibleForDriver :: Bool -> Bool -> [Text] -> HashMap.HashMap ServiceTierType DVST.VehicleServiceTier -> ServiceTierType -> Bool
+scheduledTierEligibleForDriver isScheduled scheduledOpenToAll driverTagTexts cityServiceTiersHashMap tier =
+  not isScheduled
+    || scheduledOpenToAll -- R4: within open-to-all threshold, eligibility is dropped
+    || case HashMap.lookup tier cityServiceTiersHashMap >>= (.scheduleBookingListEligibilityTags) of
+      Just reqTags@(_ : _) -> not . null $ DL.intersect driverTagTexts reqTags
+      _ -> True
+
 buildDriverResult ::
   NearestDriversReq ->
   HashMap.HashMap (Id Person.Driver) DPD.DriverPoolData ->
@@ -257,10 +272,14 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   let availableCityTiers = (.serviceTierType) <$> filter (\vst -> dpd.variant `elem` vst.allowedVehicleVariant) cityServiceTiers
   let selectedDriverServiceTiers = removeSoftBlockedTiers $ DL.intersect dpd.selectedServiceTiers availableCityTiers
   let selectedDriverServiceTiers' = filter (isTierEligibleForDriver now dpd.driverTag cityServiceTiersHashMap) selectedDriverServiceTiers
+  -- Filter expired tags before matching so a stale (expired) tag can't grant scheduled eligibility,
+  -- consistent with isTierEligibleForDriver above.
+  let driverTagTexts = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' now (fromMaybe [] dpd.driverTag)
   let matchingTiers =
-        if null serviceTiers
-          then selectedDriverServiceTiers'
-          else filter (`elem` selectedDriverServiceTiers') serviceTiers
+        filter (scheduledTierEligibleForDriver isScheduled scheduledOpenToAll driverTagTexts cityServiceTiersHashMap) $
+          if null serviceTiers
+            then selectedDriverServiceTiers'
+            else filter (`elem` selectedDriverServiceTiers') serviceTiers
   guard $ not $ null matchingTiers
   Just $ mapMaybe (mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) matchingTiers
 
@@ -368,9 +387,12 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
         _ -> Nothing
-  if isNothing cashRequirement && isNothing airportRequirement
+      -- Scheduled-ride minimum wallet balance, folded into this pass so the candidate list is
+      -- filtered once (combined with the cash/airport gates) rather than in a second traversal.
+      applyScheduledGate = isScheduled && not scheduledOpenToAll
+  if isNothing cashRequirement && isNothing airportRequirement && not applyScheduledGate
     then pure afterPrepaid
-    else filterM (passesLiabilityGates cashRequirement airportRequirement) afterPrepaid
+    else filterM (passesLiabilityGates cashRequirement airportRequirement applyScheduledGate) afterPrepaid
   where
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
@@ -380,19 +402,27 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
       pure $ maybe False (>= required) mbBalance
 
-    passesLiabilityGates cashReq airportReq r = do
-      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
-          cashAccount = (cashCp, cashOwner)
-          airportAccount = (counterpartyDriver, r.driverId.getId)
-      case (cashReq, airportReq) of
-        (Nothing, Nothing) -> pure True
-        (Just c, Nothing) -> checkBalance cashAccount c
-        (Nothing, Just a) -> checkBalance airportAccount a
-        (Just c, Just a)
-          | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
-          | otherwise -> do
-            cashOk <- checkBalance cashAccount c
-            if cashOk then checkBalance airportAccount a else pure False
+    passesLiabilityGates cashReq airportReq applyScheduledGate r = do
+      -- Scheduled-ride wallet gate first (short-circuits the cash/airport balance fetches on failure).
+      scheduledOk <-
+        if applyScheduledGate
+          then hasMinWalletBalance counterpartyDriver minWalletAmountForScheduledRides r.driverId.getId
+          else pure True
+      if not scheduledOk
+        then pure False
+        else do
+          let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
+              cashAccount = (cashCp, cashOwner)
+              airportAccount = (counterpartyDriver, r.driverId.getId)
+          case (cashReq, airportReq) of
+            (Nothing, Nothing) -> pure True
+            (Just c, Nothing) -> checkBalance cashAccount c
+            (Nothing, Just a) -> checkBalance airportAccount a
+            (Just c, Just a)
+              | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
+              | otherwise -> do
+                cashOk <- checkBalance cashAccount c
+                if cashOk then checkBalance airportAccount a else pure False
 
 shouldCheckCashWallet :: Maybe MP.PaymentInstrument -> Bool
 shouldCheckCashWallet = \case
