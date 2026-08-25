@@ -77,13 +77,24 @@ types:
     # Redis: ...:Window:TimeBound:<weekday>:<start>-<end> for this config's
     # active peak at request time; Nothing if unbounded or outside peak
     timeBoundValidRideCount: Maybe Int
-    # Count that applies to the selected config (use for milestone progress)
+    # Count that applies to the selected config (use for milestone progress).
+    # For unscoped RidesCompleted / cohort milestones this is the count to show.
     progressValidRideCount: Int
+    # Per-config current ride count for scoped milestones
+    # (RidesCompletedOnServiceTier / RidesCompletedInSpecialLocation /
+    #  RidesCompletedInSpecialLocationPickupDrop).
+    # One entry per selected scoped config — match by id to the config item and
+    # compare rideCount against its ridesThreshold. Empty for unscoped-only setups.
+    scopedRideCounts: [DriverIncentiveScopedRideCount]
     # From DriverIncentiveMetrics Redis JSON blob (day / active timebound window)
     ridesCompleted: Int
     totalEarnings: Int
     totalTripDistanceMeters: Int
     totalRideTimeSeconds: Int
+
+  DriverIncentiveScopedRideCount:
+    id: Id CoinsConfig
+    rideCount: Int
 
 apis:
   - GET:
