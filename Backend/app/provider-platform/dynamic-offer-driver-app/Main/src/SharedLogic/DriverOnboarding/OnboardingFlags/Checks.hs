@@ -364,15 +364,38 @@ guardActorScope verb target actor
     checkFleetScope fleetOwnerId = case target of
       TargetDriver personId -> do
         mbAssoc <- QFDA.findByDriverIdAndFleetOwnerIdWithStatus personId fleetOwnerId.getId
-        when (isNothing mbAssoc) $ throwError DriverNotPartOfFleet
+        when (isNothing mbAssoc) $ do
+          -- Why the driver is out of scope decides what the caller may offer. The other fleet
+          -- is never named.
+          otherAssocs <- QFDA.findAllByDriverIdWithStatus personId
+          if not (null otherAssocs)
+            then throwError DriverInAnotherFleet
+            else do
+              -- Only the unplaced one is takeable: checkDriver refuses LinkToFleet for a
+              -- driver who is already enabled.
+              mbDriverInfo <- DIQuery.findById (cast personId)
+              throwError $
+                if maybe False (.enabled) mbDriverInfo
+                  then DriverActiveWithoutFleet
+                  else DriverOnboardingWithoutFleet
       TargetVehicle registrationNo -> do
         mbRc <- RCQuery.findLastVehicleRCFleet' registrationNo fleetOwnerId.getId
-        when (isNothing mbRc) $ throwError VehicleNotPartOfFleet
+        when (isNothing mbRc) $
+          RCQuery.findLastVehicleRCWrapper registrationNo >>= throwError . outOfScopeVehicleError registrationNo
       TargetVehicleById rcId -> do
         mbRc <- RCQuery.findById rcId
-        unless (((.fleetOwnerId) =<< mbRc) == Just fleetOwnerId.getId) $ throwError VehicleNotPartOfFleet
+        unless (((.fleetOwnerId) =<< mbRc) == Just fleetOwnerId.getId) $
+          throwError (outOfScopeVehicleError rcId.getId mbRc)
       TargetFleetOwner otherFleetOwnerId ->
         unless (otherFleetOwnerId == fleetOwnerId) $ throwError (InvalidFleetOwner otherFleetOwnerId.getId)
+    -- Mirrors verifyRC, which rejects only a DIFFERENT owner: a flat refusal would forbid a claim
+    -- the write allows. `Just _` is never the caller's own fleet -- this runs only once the scope
+    -- check found no row of theirs for this plate.
+    outOfScopeVehicleError :: Text -> Maybe DVRC.VehicleRegistrationCertificate -> FleetErrors
+    outOfScopeVehicleError identifier = \case
+      Nothing -> VehicleNotFoundForNumber identifier
+      Just rc | isNothing rc.fleetOwnerId -> VehicleUnclaimed
+      Just _ -> VehicleBelongsToAnotherFleet
 
 guardFleetVehicleRelations :: OnboardingFlow m r => ActionVerb -> GuardTarget -> Actor -> m ()
 guardFleetVehicleRelations verb target actor

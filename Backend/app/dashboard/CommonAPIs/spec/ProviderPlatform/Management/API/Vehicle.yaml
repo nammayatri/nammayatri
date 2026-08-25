@@ -22,6 +22,26 @@ apis:
         - requestorId: Text
       response:
         type: VehicleListRes
+  - GET: # VehicleInfoAPI
+      endpoint: /info
+      auth: ApiAuthV2
+      query:
+        - vehicleNumber: Text
+      response:
+        type: VehicleListItem
+      migrate:
+        capability: city-operations.vehicle.read
+      helperApi:
+        - GET:
+            endpoint: /info/{fleetOwnerId}/{mbFleet}
+            auth: ApiAuthV2
+            query:
+              - vehicleNumber: Text
+            params:
+              fleetOwnerId: Text
+              mbFleet: Bool
+            response:
+              type: VehicleListItem
 
 types:
   VehicleListRes:

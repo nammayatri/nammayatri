@@ -5,7 +5,6 @@ module API.Types.ProviderPlatform.Management.Endpoints.Vehicle where
 
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -36,7 +35,7 @@ data VehicleListRes = VehicleListRes {totalItems :: Kernel.Prelude.Int, summary 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("vehicle" :> GetVehicleList)
+type API = ("vehicle" :> (GetVehicleList :<|> GetVehicleInfoHelper))
 
 type GetVehicleList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
@@ -61,23 +60,29 @@ type GetVehicleList =
            VehicleListRes
   )
 
-newtype VehicleAPIs = VehicleAPIs {getVehicleList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient VehicleListRes}
+type GetVehicleInfo = ("info" :> QueryParam "vehicleNumber" Kernel.Prelude.Text :> Get '[JSON] VehicleListItem)
+
+type GetVehicleInfoHelper =
+  ( "info" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> Capture "mbFleet" Kernel.Prelude.Bool :> QueryParam "vehicleNumber" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           VehicleListItem
+  )
+
+data VehicleAPIs = VehicleAPIs
+  { getVehicleList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient VehicleListRes,
+    getVehicleInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient VehicleListItem
+  }
 
 mkVehicleAPIs :: (Client EulerHS.Types.EulerClient API -> VehicleAPIs)
 mkVehicleAPIs vehicleClient = (VehicleAPIs {..})
   where
-    getVehicleList = vehicleClient
+    getVehicleList :<|> getVehicleInfo = vehicleClient
 
 data VehicleUserActionType
   = GET_VEHICLE_LIST
+  | GET_VEHICLE_INFO
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
-
-instance ToJSON VehicleUserActionType where
-  toJSON GET_VEHICLE_LIST = Data.Aeson.String "GET_VEHICLE_LIST"
-
-instance FromJSON VehicleUserActionType where
-  parseJSON (Data.Aeson.String "GET_VEHICLE_LIST") = pure GET_VEHICLE_LIST
-  parseJSON _ = fail "GET_VEHICLE_LIST expected"
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(Data.Singletons.TH.genSingletons [''VehicleUserActionType])

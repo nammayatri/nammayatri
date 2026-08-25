@@ -337,6 +337,16 @@ exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text 
 exemptCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment True mId city driver requestorId (DCommon.mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq Nothing False
 
 ---------------------------------------------------------------------
+
+-- | Both driver lookups filter on @role = DRIVER@, so a fleet owner's number would otherwise read
+--   as "no such person" -- a free number, inviting a driver to be created over them.
+throwOnMissingDriver :: Id DM.Merchant -> DbHash -> Text -> Flow a
+throwOnMissingDriver merchantId mobileNumberDbHash searched = do
+  mbAnyPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileNumberDbHash merchantId
+  case mbAnyPerson of
+    Just person -> throwError $ PersonExistsWithDifferentRole (show person.role)
+    Nothing -> throwError $ PersonDoesNotExist searched
+
 getDriverInfo ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -374,10 +384,12 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
       (_, _, Just mobileNumber) -> do
         mobileNumberDbHash <- getDbHash mobileNumber
         let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
-        person <-
+        mbDriverPerson <-
           B.runInReplica $
             QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER
-              >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+        person <- case mbDriverPerson of
+          Just p -> pure p
+          Nothing -> throwOnMissingDriver merchant.id mobileNumberDbHash (mobileCountryCode <> mobileNumber)
         pure $ SGuard.TargetDriver person.id
       _ -> throwError FleetSearchParamNotSupported
     SGuard.guardOnboardingAction transporterConfig (SGuard.ActorFleet (Id fleetOwnerId)) SGuard.View target
@@ -385,9 +397,10 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
-      B.runInReplica $
-        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing Nothing
-          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      mbDriver <-
+        B.runInReplica $
+          QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing Nothing
+      maybe (throwOnMissingDriver merchant.id mobileNumberDbHash (mobileCountryCode <> mobileNumber)) pure mbDriver
     (Nothing, Just vehicleNumber, Nothing, Nothing, Nothing, Nothing) -> do
       B.runInReplica $
         QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing Nothing Nothing
