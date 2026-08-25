@@ -1035,7 +1035,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
       let hasProfilePicture = isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      photoRequired <- isPhotoRequired purchasedPassPayment
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (hasProfilePicture || not photoRequired) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -1159,6 +1160,20 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
             >>= Sms.checkSmsResult
 
+-- A pass that asks for no documents must never park in PhotoPending: the pass list hides
+-- non-Active tourist passes, so such a pass goes invisible and the rider can never reach
+-- the screen that would attach the photo releasing it. Unknown pass row (or a legacy
+-- payment with no passId) keeps the old behaviour.
+isPhotoRequired ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m Bool
+isPhotoRequired purchasedPassPayment =
+  maybe
+    (pure True)
+    (fmap (maybe True (elem DPass.ProfilePicture . (.documentsRequired))) . CQPass.findById)
+    purchasedPassPayment.passId
+
 updatePurchasedPass ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -1188,6 +1203,8 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
       [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
       today
 
+  photoRequired <- maybe (pure True) isPhotoRequired (listToMaybe latestPayments)
+
   case listToMaybe latestPayments of
     Just firstPayment ->
       let newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
@@ -1201,7 +1218,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
 
           newStatus
             | firstPayment.endDate < today = DPurchasedPass.Expired
-            | not hasPhoto = DPurchasedPass.PhotoPending
+            | not hasPhoto && photoRequired = DPurchasedPass.PhotoPending
             | firstPayment.startDate <= today = DPurchasedPass.Active
             | otherwise = DPurchasedPass.PreBooked
 
