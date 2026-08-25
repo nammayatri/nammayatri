@@ -25,6 +25,7 @@ data CityRes = CityRes
     state :: Context.IndianState,
     location :: LatLong,
     supportNumber :: Maybe Text,
+    supportEmails :: Maybe [Text],
     language :: Language,
     country :: Context.Country,
     countryDialCode :: Text,

@@ -29,6 +29,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
     stdCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supportEmails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
