@@ -25,12 +25,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOpCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
   findAllWithKV
     [ Se.And
@@ -41,7 +41,7 @@ findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
 
 findAllByMerchantOpCityIdAndMessageKeyAndTripCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId key tripCategory = do
   findAllWithKV
     [ Se.And
@@ -60,7 +60,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.body body,
+    [ Se.Set Beam.audioUrl audioUrl,
+      Se.Set Beam.body body,
       Se.Set Beam.fcmNotificationType fcmNotificationType,
       Se.Set Beam.fcmSubCategory fcmSubCategory,
       Se.Set Beam.key key,
@@ -78,7 +79,8 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
     pure $
       Just
         Domain.Types.MerchantPushNotification.MerchantPushNotification
-          { body = body,
+          { audioUrl = audioUrl,
+            body = body,
             fcmNotificationType = fcmNotificationType,
             fcmSubCategory = fcmSubCategory,
             id = Kernel.Types.Id.Id id,
@@ -95,7 +97,8 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
 instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotification.MerchantPushNotification where
   toTType' (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
     Beam.MerchantPushNotificationT
-      { Beam.body = body,
+      { Beam.audioUrl = audioUrl,
+        Beam.body = body,
         Beam.fcmNotificationType = fcmNotificationType,
         Beam.fcmSubCategory = fcmSubCategory,
         Beam.id = Kernel.Types.Id.getId id,

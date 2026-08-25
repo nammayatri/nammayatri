@@ -1917,6 +1917,59 @@ sendPickupInstructionNotification merchantOpCityId driver entityData = do
   -- Send notification
   FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
 
+-- | System-originated in-ride chat message (pickup-stall nudges etc.): the driver app
+-- renders it as a "System" bubble in the ride chat thread and auto-plays audioUrl,
+-- falling back to on-device TTS of the body. Copy and audio resolve per city + driver
+-- language from merchant_push_notification (with ENGLISH fallback), so the same key
+-- speaks every configured language. Reuses the FCM_CHAT_MESSAGE notification type —
+-- the app tells this apart from the legacy call-failure nudge (which shares the type)
+-- by the presence of the structured entity payload.
+data SystemChatMessageEntityData = SystemChatMessageEntityData
+  { messageKey :: Text,
+    message :: Text,
+    audioUrl :: Maybe Text,
+    rideId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
+sendSystemChatMessage ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  Text ->
+  Id DRide.Ride ->
+  m ()
+sendSystemChatMessage merchantOpCityId driver messageKey rideId = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
+  case mbMerchantPN of
+    Nothing -> logWarning $ "No merchant_push_notification row found for system chat message key: " <> messageKey
+    Just merchantPN -> do
+      fcmConfig <- findFCMConfigWithFallback merchantOpCityId driver.id
+      let entityData =
+            SystemChatMessageEntityData
+              { messageKey = messageKey,
+                message = merchantPN.body,
+                audioUrl = merchantPN.audioUrl,
+                rideId = rideId.getId
+              }
+          title = FCM.FCMNotificationTitle merchantPN.title
+          body = FCMNotificationBody merchantPN.body
+          notificationData =
+            FCM.FCMData
+              { fcmNotificationType = FCM.FCM_CHAT_MESSAGE,
+                fcmShowNotification = FCM.SHOW,
+                fcmEntityType = FCM.Person,
+                fcmEntityIds = getId driver.id,
+                fcmEntityData = entityData,
+                fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FCM_CHAT_MESSAGE Nothing,
+                fcmOverlayNotificationJSON = Nothing,
+                fcmNotificationId = Nothing
+              }
+      FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
+
 data PickupZoneRequestEntityData = PickupZoneRequestEntityData
   { requestId :: Text,
     gateName :: Text,

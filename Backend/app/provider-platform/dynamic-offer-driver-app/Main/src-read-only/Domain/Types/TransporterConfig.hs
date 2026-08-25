@@ -521,7 +521,10 @@ data PayoutFeeConfig = PayoutFeeConfig
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PickupDarkStage = PickupDarkStage {afterDarkSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupDarkStage = PickupDarkStage {afterDarkSec :: Kernel.Prelude.Int, channel :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupNudgeChannel, overlayKey :: Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data PickupNudgeChannel = OVERLAY | CHAT_MESSAGE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
@@ -535,7 +538,12 @@ data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallStage = PickupStallStage {afterFaultSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text, terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction}
+data PickupStallStage = PickupStallStage
+  { afterFaultSec :: Kernel.Prelude.Int,
+    channel :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupNudgeChannel,
+    overlayKey :: Kernel.Prelude.Text,
+    terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

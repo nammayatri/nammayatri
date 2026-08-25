@@ -179,7 +179,7 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                         logInfo $ pickupTickLog rideId (Nothing :: Maybe Double) state' darkSpanSec
                         case listToMaybe (drop state'.firedDarkStageCount cfg.darkStages) of
                           Just stage | darkSpanSec >= stage.afterDarkSec -> do
-                            sendStallOverlay ride.merchantOperatingCityId driverId (stage.overlayKey <> "_" <> situation)
+                            sendStallNudge ride stage.channel (stage.overlayKey <> "_" <> situation)
                             saveState state' {firedDarkStageCount = state'.firedDarkStageCount + 1}
                           _ -> saveState state'
                         return rescheduleResult
@@ -229,7 +229,7 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                             logInfo $ pickupTickLog rideId (Just currentDistance) state' accrualSec
                             case listToMaybe (drop state'.firedStageCount cfg.stages) of
                               Just stage | state'.faultSeconds >= stage.afterFaultSec -> do
-                                sendStallOverlay ride.merchantOperatingCityId driverId (stage.overlayKey <> "_" <> situation)
+                                sendStallNudge ride stage.channel (stage.overlayKey <> "_" <> situation)
                                 case stage.terminalAction of
                                   Nothing -> do
                                     saveState state' {firedStageCount = state'.firedStageCount + 1}
@@ -264,6 +264,19 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
         <> show st.detourCreditUsedSec
         <> " darkSince="
         <> show st.darkSince
+
+    -- Delivery channel per stage: the classic full-screen overlay, or a system chat
+    -- message rendered in the ride chat thread with auto-played audio (copy + audio
+    -- resolved per driver language from merchant_push_notification).
+    sendStallNudge ride channel nudgeKey =
+      case fromMaybe DTC.OVERLAY channel of
+        DTC.OVERLAY -> sendStallOverlay ride.merchantOperatingCityId ride.driverId nudgeKey
+        DTC.CHAT_MESSAGE -> sendStallChatMessage ride nudgeKey
+
+    sendStallChatMessage ride nudgeKey = do
+      mbDriver <- QP.findById ride.driverId
+      whenJust mbDriver $ \driver ->
+        TN.sendSystemChatMessage ride.merchantOperatingCityId driver nudgeKey ride.id
 
     sendStallOverlay merchantOpCityId driverId overlayKey = do
       mbDriver <- QP.findById driverId
