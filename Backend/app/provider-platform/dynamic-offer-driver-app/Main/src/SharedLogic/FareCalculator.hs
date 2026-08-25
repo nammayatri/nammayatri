@@ -1135,14 +1135,33 @@ withBufferedFare farePolicy fareParams =
 -- | Every component raised to its own configured ceiling, summed by 'fareSum'
 --   so nothing is missed. A component with no configured cap contributes its
 --   plain estimate: its growth is unbounded and so unknowable here.
+--
+--   'govtCharges' is a derived component (a % of other components, see
+--   'pureGstBaseComponents'), not itself independently cappable -- so it's not
+--   part of 'rebuildWithComponents's per-component pass. But it still needs
+--   room in the ceiling: since its taxable base can grow up to its own
+--   allowance, the tax on that growth must be budgeted for too, or the real
+--   final tax (correctly rescaled at recompute time by 'applyPerComponentCaps')
+--   can end up exceeding a ceiling that only ever priced tax at the estimate.
+--   Scaled here by the same estimate-to-buffered ratio the underlying GST base
+--   is allowed to grow by -- the estimate-time counterpart of the
+--   estimate-to-recomputed 'gstScale' 'applyPerComponentCaps' computes later.
 bufferedFareTotal :: FareRecomputeCapConfig -> FareParameters -> HighPrecMoney
 bufferedFareTotal capConfig fareParams =
-  fareSum (rebuildWithComponents buffered fareParams) Nothing
+  fareSum scaledParams Nothing
   where
     srcMap = buildComponentMap fareParams
     buffered component =
       let estimate = componentAmount srcMap component
        in maybe estimate (\strategy -> estimate + capAllowance strategy estimate) (lookupCapStrategy capConfig component)
+    bufferedParams = rebuildWithComponents buffered fareParams
+    gstBaseComponents = pureGstBaseComponents fareParams.fareParametersDetails
+    gstBaseEstimate = sum (map (componentAmount srcMap) gstBaseComponents)
+    gstBaseBuffered = sum (map buffered gstBaseComponents)
+    gstScale
+      | gstBaseEstimate.getHighPrecMoney > 0 = gstBaseBuffered.getHighPrecMoney / gstBaseEstimate.getHighPrecMoney
+      | otherwise = 1
+    scaledParams = bufferedParams {govtCharges = (\g -> HighPrecMoney (g.getHighPrecMoney * gstScale)) <$> fareParams.govtCharges}
 
 -- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
 --

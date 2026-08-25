@@ -656,7 +656,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
     -- we need to store fareParams only when they changed
-    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId baseFareParams thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig
+    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId rideFareParams thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
@@ -1023,55 +1023,31 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       putDiffMetric merchantId fareDiff distanceDiff
       return (recalcDistance, finalFare, Just finalFareParams, farePolicy.fareRecomputeCapConfig, farePolicy.vatChargeConfig, farePolicy.tollTaxChargeConfig)
 
--- | Cap the recomputed fare at the buffered estimate when the booking opted in,
---   absorbing the excess into fare components; returns the final fare and params.
+-- | Cap the recomputed fare at the buffered estimate when the booking opted in;
+--   returns the final fare and params. Relies entirely on per-component capping --
+--   whoever configures 'FareRecomputeCapConfig' is responsible for giving every
+--   component that can actually grow during recompute a cap strategy, so the sum
+--   of capped components never exceeds 'bufferedFare' (which was built from the
+--   same per-component caps in the first place, see 'bufferedFareTotal'). No
+--   fare-component draining/absorption fallback: if a fare policy leaves a
+--   growable component uncapped, that's a config gap to fix, not something to
+--   paper over here by shrinking an unrelated component. 'breached' is kept purely
+--   as an observability tripwire for that config-gap scenario.
 capRecomputedFare :: (Log m, Monad m) => DFP.FullFarePolicy -> SRB.Booking -> FareParameters -> m (HighPrecMoney, FareParameters)
 capRecomputedFare farePolicy booking fareParams = do
   let recomputedFare = Fare.fareSum fareParams Nothing
       capApplies = fromMaybe False farePolicy.fareRecomputeCapEnabled
-      perComponentCappedParams = case (capApplies, farePolicy.fareRecomputeCapConfig) of
+      finalFareParams = case (capApplies, farePolicy.fareRecomputeCapConfig) of
         (True, Just capConfig) -> Fare.applyPerComponentCaps (Fare.CapContext capConfig farePolicy.vatChargeConfig farePolicy.tollTaxChargeConfig) booking.fareParams fareParams
         _ -> fareParams
-      perComponentCappedFare = Fare.fareSum perComponentCappedParams Nothing
-      -- Per-component capping only bounds components with a configured cap
-      -- strategy — several fareSum contributors (govtCharges, driverSelectedFare,
-      -- paymentProcessingFee, cardCharge, conditionalCharges, parkingChargeTax,
-      -- SlabDetails platformFee/sgst/cgst) have no per-component mapping at all
-      -- and can still push the total past the booking's buffered ceiling. Total
-      -- backstop: drain any residual excess out of 'driverSelectedFare' then
-      -- 'paymentProcessingFee' (each floored at 0) rather than 'govtCharges' --
-      -- neither has a 'FareChargeComponent' constructor at all (see
-      -- 'FarePolicy.FareChargeComponent'), so neither can ever be part of any
-      -- fare policy's taxable base; draining them can never desync 'govtCharges'
-      -- from the tax = rate * base it was actually computed against, the way
-      -- draining govtCharges directly would. So the invariant finalFare <=
-      -- bufferedFare holds whenever there's enough headroom in these two to
-      -- absorb it. If there isn't, give up rather than silently overcharge past
-      -- the ceiling (or desync the tax line to force it), and log a BREACH so
-      -- it's visible.
-      (finalFareParams, breached) = case (capApplies, booking.fareParams.bufferedFare) of
-        (True, Just bufferedCeiling)
-          | perComponentCappedFare > bufferedCeiling ->
-            let excess = perComponentCappedFare - bufferedCeiling
-                currentDriverSelectedFare = fromMaybe 0 perComponentCappedParams.driverSelectedFare
-                drainedFromDriverSelectedFare = min excess (max 0 currentDriverSelectedFare)
-                remainingExcess = excess - drainedFromDriverSelectedFare
-                currentPaymentProcessingFee = fromMaybe 0 perComponentCappedParams.paymentProcessingFee
-                drainedFromPaymentProcessingFee = min remainingExcess (max 0 currentPaymentProcessingFee)
-                absorbedParams =
-                  perComponentCappedParams
-                    { driverSelectedFare = Just (currentDriverSelectedFare - drainedFromDriverSelectedFare),
-                      paymentProcessingFee = Just (currentPaymentProcessingFee - drainedFromPaymentProcessingFee)
-                    }
-             in (absorbedParams, Fare.fareSum absorbedParams Nothing > bufferedCeiling)
-        _ -> (perComponentCappedParams, False)
       finalFare = Fare.fareSum finalFareParams Nothing
+      breached = capApplies && maybe False (finalFare >) booking.fareParams.bufferedFare
   when (capApplies && finalFare < recomputedFare) $
     logTagInfo "Fare recompute cap" $
       "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " for booking " <> booking.id.getId
   when breached $
     logTagError "Fare recompute cap BREACH" $
-      "Per-component cap plus driverSelectedFare/paymentProcessingFee absorption still left fare " <> show finalFare <> " above buffered ceiling " <> maybe "N/A" show booking.fareParams.bufferedFare <> " for booking " <> booking.id.getId
+      "Per-component cap left fare " <> show finalFare <> " above buffered ceiling " <> maybe "N/A" show booking.fareParams.bufferedFare <> " for booking " <> booking.id.getId <> " -- a component without a configured cap strategy grew past its estimate; the fare policy needs a cap for it."
   pure (finalFare, finalFareParams)
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
