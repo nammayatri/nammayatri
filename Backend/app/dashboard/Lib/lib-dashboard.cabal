@@ -44,6 +44,7 @@ library
       Domain.Action.Dashboard.Transaction
       Domain.Types.AccessMatrix
       Domain.Types.Capability
+      Domain.Types.DeletedUser
       Domain.Types.Entity
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
@@ -63,6 +64,7 @@ library
       Storage.Beam.Capability
       Storage.Beam.CapabilityEndpoint
       Storage.Beam.Common
+      Storage.Beam.DeletedUser
       Storage.Beam.Entity
       Storage.Beam.Merchant
       Storage.Beam.MerchantAccess
@@ -79,6 +81,7 @@ library
       Storage.Queries.AccessMatrix
       Storage.Queries.Capability
       Storage.Queries.CapabilityEndpoint
+      Storage.Queries.DeletedUser
       Storage.Queries.Entity
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
