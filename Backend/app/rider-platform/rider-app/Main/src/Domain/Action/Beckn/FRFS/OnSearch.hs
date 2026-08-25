@@ -43,7 +43,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
 import qualified Domain.Types.Trip as DTripTypes
-import EulerHS.Prelude (comparing, toStrict)
+import EulerHS.Prelude (comparing, toStrict, (<|>))
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
