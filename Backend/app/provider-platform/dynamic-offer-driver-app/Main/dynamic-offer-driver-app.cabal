@@ -215,6 +215,7 @@ library
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
+      Domain.Action.Dashboard.Management.OnboardingConfig
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
@@ -1077,6 +1078,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.OnboardingConfig
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue

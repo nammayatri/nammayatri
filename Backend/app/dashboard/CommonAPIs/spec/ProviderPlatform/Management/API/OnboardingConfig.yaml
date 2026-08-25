@@ -1,0 +1,149 @@
+imports:
+  DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  DocumentVerificationConfigAPIEntity: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  DocumentOnboardingStageAPIEntity: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  VehicleCategory: Domain.Types.VehicleCategory
+
+module: OnboardingConfig
+
+apis:
+  - GET:
+      endpoint: /get
+      auth: ApiAuthV2
+      response:
+        type: OnboardingConfigRes
+      migrate:
+        capability: city-config.onboarding.read
+
+  - POST:
+      endpoint: /clone
+      auth: ApiAuthV2
+      request:
+        type: CloneConfigReq
+      response:
+        type: CloneConfigRes
+      migrate:
+        capability: city-config.onboarding.read
+
+  - POST:
+      endpoint: /apply
+      auth: ApiAuthV2
+      request:
+        type: ApplyConfigReq
+      response:
+        type: ApplyConfigRes
+      migrate:
+        capability: city-config.onboarding.write
+
+types:
+
+  IssueSeverity:
+    - enum: BLOCKING, WARNING
+    - derive: "HttpInstance"
+
+  ConfigSection:
+    - enum: DRIVER_DOCUMENTS, FLEET_OWNER_DOCUMENTS, FLEET_BUSINESS_DOCUMENTS, STAGES
+    - derive: "HttpInstance, Bounded, Enum"
+
+  ChangeKind:
+    - enum: ADDED, REMOVED, MODIFIED
+    - derive: "HttpInstance"
+
+  # DocumentVerificationConfigAPIEntity has no vehicleCategory field -- the read API encodes it
+  # by grouping (DocumentVerificationConfigList has separate cabs / autos / bikes fields). The
+  # category is part of the document primary key, so the builder has to carry it somehow; one
+  # wrapper is cheaper than nine list fields, and it matches how role is encoded below.
+  DriverDocumentGroup:
+    - vehicleCategory: VehicleCategory
+    - documents: [DocumentVerificationConfigAPIEntity]
+
+  # DocumentOnboardingStageAPIEntity has no documentCategory field, but documentCategory is
+  # part of the stage primary key -- and stages exist per category (Driver / Vehicle / Fleet).
+  # Grouping keeps every category reachable; a flat list can only ever address one of them.
+  StageGroup:
+    - documentCategory: DocumentCategory
+    - stages: [DocumentOnboardingStageAPIEntity]
+
+  OnboardingConfig:
+    - driverDocuments: [DriverDocumentGroup]
+    - fleetOwnerDocuments: [DocumentVerificationConfigAPIEntity]
+    - fleetBusinessDocuments: [DocumentVerificationConfigAPIEntity]
+    - stages: [StageGroup]
+
+
+  OnboardingConfigRes:
+    - merchantOperatingCityId: Text
+    - cityName: Text
+    - config: OnboardingConfig
+    - enums: [EnumCatalog]
+    - fieldPolicies: [FieldPolicy]
+
+  EnumCatalog:
+    - name: Text
+    - values: [Text]
+
+  FieldPolicy:
+    - section: ConfigSection
+    - field: Text
+    - editable: Bool
+    - reason: Maybe Text
+
+  CloneConfigReq:
+    - sourceMerchantShortId: Text
+    - sourceCity: Text
+    - sections: [ConfigSection]
+    - documentTypes: [DocumentType]
+    - derive: "'HideSecrets"
+
+  CloneConfigRes:
+    - sourceMerchantShortId: Text
+    - sourceCity: Text
+    - sections: [ConfigSection]
+    - config: OnboardingConfig
+
+  ValidationIssue:
+    - severity: IssueSeverity
+    - code: Text
+    - section: ConfigSection
+    - identifier: Maybe Text
+    - field: Maybe Text
+    - message: Text
+
+  ConfigChange:
+    - kind: ChangeKind
+    - section: ConfigSection
+    - identifier: Text
+    - field: Maybe Text
+    - before: Maybe Text
+    - after: Maybe Text
+
+  ApplyConfigReq:
+    - config: OnboardingConfig
+    - changeNote: Maybe Text
+    - derive: "'HideSecrets"
+
+  ApplyConfigRes:
+    - appliedAt: UTCTime
+    - changes: [ConfigChange]
+    - issues: [ValidationIssue]
+
+# ───────────────────────────── DEFERRED ─────────────────────────────
+# Left out of v1 on purpose; each is additive and needs no change to the above.
+#
+#   GET  /cities              city list + config status (the dashboard already has a city picker)
+#   GET  /templates           country templates to seed a new city from
+#   GET  /draft               server-side draft persistence
+#   POST /draft/save
+#   POST /draft/submit        draft -> review -> publish gate, with a third
+#   POST /draft/approve       capability (city-config.onboarding.publish) so ops
+#   POST /draft/reject        can draft but not approve
+#   GET  /revisions           publish history
+#   GET  /diff                compare two published versions
+#   POST /rollback            restore a previous version (ConfigPilot's actionChange Revert
+#                             already covers this per config type)
+#
+# Also deferred from the config itself, since these are engineer-territory and rarely change:
+#   transporter_config      onboarding flags (identical across both existing cities today)
+#   merchant_service_config Stripe returnUrls
+#   merchant_message        consent deeplink copy

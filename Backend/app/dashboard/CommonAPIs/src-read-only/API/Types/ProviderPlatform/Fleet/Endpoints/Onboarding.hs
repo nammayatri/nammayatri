@@ -54,7 +54,7 @@ data DocumentApplicableType
   = FLEET
   | INDIVIDUAL
   | FLEET_AND_INDIVIDUAL
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentCategory
@@ -63,13 +63,13 @@ data DocumentCategory
   | Permission
   | Training
   | Fleet
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentFlowGrouping
   = COMMON
   | STANDARD
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentMetadata
@@ -189,7 +189,7 @@ data FieldType
   | FieldArray
   | FieldDate
   | FieldYear
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text}

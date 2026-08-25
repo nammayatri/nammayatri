@@ -6,6 +6,8 @@ module Domain.Action.Dashboard.Fleet.Onboarding
     castStatusRes,
     postOnboardingVerify,
     getOnboardingGetReferralDetails,
+    castDocumentVerificationConfigAPIEntity,
+    castOnboardingStageAPIEntity,
   )
 where
 

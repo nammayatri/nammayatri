@@ -209,6 +209,7 @@ types:
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training,Fleet"
+    derive: "Bounded, Enum"
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
   # FieldObject: children in `fields` become a nested object under `requestKey`.
@@ -239,6 +240,7 @@ types:
     imageUrl: Maybe Text
   DocumentApplicableType:
     enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
+    derive: "Bounded, Enum"
   StatusRes:
     driverDocuments: [DocumentStatusItem]
     vehicleDocuments: [VehicleDocumentItem]
