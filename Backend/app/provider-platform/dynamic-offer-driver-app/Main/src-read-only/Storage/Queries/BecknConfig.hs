@@ -71,6 +71,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.onUpdateTTLSec onUpdateTTLSec,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
+      Se.Set Beam.sendOndcCancellationCodes sendOndcCancellationCodes,
       Se.Set Beam.settlementType settlementType,
       Se.Set Beam.settlementWindow settlementWindow,
       Se.Set Beam.staticTermsUrl (Kernel.Prelude.fmap showBaseUrl staticTermsUrl),

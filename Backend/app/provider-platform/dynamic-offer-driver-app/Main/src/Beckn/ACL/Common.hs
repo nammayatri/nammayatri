@@ -250,14 +250,45 @@ tfContact phoneNum =
 
 mkReason :: Maybe Text -> Maybe Text -> Maybe Spec.Reason
 mkReason mbCode mbShortDesc =
-  mbCode <&> \code ->
-    Spec.Reason
-      { reasonDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just code,
-                descriptorName = Nothing,
-                descriptorShortDesc = mbShortDesc,
-                descriptorLongDesc = Nothing
-              }
-      }
+  if isNothing mbCode && isNothing mbShortDesc
+    then Nothing
+    else
+      Just $
+        Spec.Reason
+          { reasonDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = mbCode,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = mbShortDesc,
+                    descriptorLongDesc = Nothing
+                  }
+          }
+
+ondcCancellationReason :: Text -> (Maybe Text, Maybe Text)
+ondcCancellationReason = \case
+  "DRIVER_CANCEL_CUSTOMER_NO_SHOW" -> (Just "012", Just "Customer did not show up")
+  "DRIVER_CANCEL_PASSENGER_UNREACHABLE" -> (Just "014", Just "Passenger unreachable after multiple attempts")
+  "DRIVER_CANCEL_INVALID_BOOKING" -> (Just "013", Just "Incorrect, duplicate or cancelled booking")
+  "DRIVER_CANCEL_SAFETY_OR_MISCONDUCT" -> (Just "017", Just "Customer misconduct or safety concern")
+  "DRIVER_CANCEL_UNSAFE_RIDE_REQUEST" -> (Nothing, Just "Unsafe or non-compliant ride request")
+  "DRIVER_CANCEL_EMERGENCY_OR_UNFORESEEN" -> (Nothing, Just "Accident, medical emergency or unforeseen event")
+  "DRIVER_CANCEL_VEHICLE_BREAKDOWN" -> (Just "016", Just "Vehicle breakdown or mechanical issue")
+  "DRIVER_CANCEL_LOCATION_INACCESSIBLE" -> (Just "015", Just "Stopped by traffic officials")
+  "SYSTEM_CANCEL_NO_DRIVERS_AVAILABLE" -> (Just "011", Just "No drivers available")
+  "ONDC_TECHNICAL_CANCELLATION" -> (Just "000", Just "Technical cancellation")
+  "ONDC_DRIVER_NOT_MOVING" -> (Just "001", Just "Driver was not moving")
+  "ONDC_DRIVER_NOT_REACHABLE" -> (Just "002", Just "Customer was unable to contact the driver")
+  "ONDC_DRIVER_ASKED_TO_CANCEL" -> (Just "003", Just "Driver asked the customer to cancel")
+  "ONDC_INCORRECT_PICKUP_LOCATION" -> (Just "004", Just "Pickup location was incorrect")
+  "ONDC_BOOKED_BY_MISTAKE" -> (Just "005", Just "Customer booked the ride by mistake")
+  "ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE" -> (Just "006", Just "Safety concern with the driver or ride")
+  "ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT" -> (Just "007", Just "Vehicle appeared unsafe or non-compliant")
+  _ -> (Nothing, Nothing)
+
+mkCancellationReason :: Bool -> Maybe Text -> Maybe Text -> Maybe Spec.Reason
+mkCancellationReason sendOndcCodes mbInternalCode mbLegacyShortDesc
+  | not sendOndcCodes = mkReason mbInternalCode mbLegacyShortDesc
+  | otherwise = case ondcCancellationReason <$> mbInternalCode of
+    Nothing -> Nothing
+    Just (mbCode, mbShortDesc) -> mkReason mbCode mbShortDesc

@@ -5140,8 +5140,11 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            ondcCancellationReasonId = Nothing,
             distanceUnit = oldBooking.distanceUnit,
-            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
+            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
   RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner transporterConfig oldDriver
 

@@ -32,6 +32,7 @@ data BecknConfig = BecknConfig
     onUpdateTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
+    sendOndcCancellationCodes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     staticTermsUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,

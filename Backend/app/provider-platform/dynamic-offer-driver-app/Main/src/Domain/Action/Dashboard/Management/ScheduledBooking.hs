@@ -276,6 +276,7 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
   unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
     throwError (BookingNotFound transactionId)
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (InvalidRequest "No driver assigned to this booking")
+  now <- getCurrentTime
   let bookingCReason =
         DBCReason.BookingCancellationReason
           { driverId = Just ride.driverId,
@@ -287,8 +288,11 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            ondcCancellationReasonId = Nothing,
             distanceUnit = booking.distanceUnit,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
   cancelRideImpl ride.id DRide.Dashboard bookingCReason True Nothing False
   pure APISuccess.Success
