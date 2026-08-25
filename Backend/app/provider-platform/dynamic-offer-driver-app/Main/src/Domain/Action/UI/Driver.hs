@@ -2852,6 +2852,15 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   --------- to crub up cases related to double debit ----------
   successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
+  unless (null allPaidFeeNotMarkedCleared) $
+    logInfo $
+      "clearDriverDues: double-debit guard force-cleared driverFeeIds="
+        <> show (map (.getId) allPaidFeeNotMarkedCleared)
+        <> " driverId="
+        <> personId.getId
+        <> " serviceName="
+        <> show serviceName
+        <> " -- NOTE: this path does not call updatePaymentStatus, so DriverInformation.subscribed is not recomputed here"
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
