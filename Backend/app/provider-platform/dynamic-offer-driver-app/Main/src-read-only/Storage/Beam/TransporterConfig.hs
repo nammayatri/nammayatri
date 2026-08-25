@@ -365,8 +365,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))

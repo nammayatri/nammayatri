@@ -87,7 +87,17 @@ data FareParameters = FareParameters
     cancellationTax :: Maybe HighPrecMoney,
     parkingChargeTaxExclusive :: Maybe HighPrecMoney,
     parkingChargeTax :: Maybe HighPrecMoney,
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    -- | This estimate raised to its per-component fare-recompute ceiling,
+    -- computed once in 'calculateFareParameters' when the fare policy has
+    -- 'fareRecomputeCapEnabled' and a cap config. Used to size holds and
+    -- balance checks at offer/accept time, where only a single figure is
+    -- available and the component breakdown has been summed away.
+    --
+    -- NOTE: read this only off a booking's/estimate's params. The same
+    -- function also runs on end-ride recompute, where this value is derived
+    -- from recomputed amounts and is meaningless as a ceiling.
+    bufferedFare :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

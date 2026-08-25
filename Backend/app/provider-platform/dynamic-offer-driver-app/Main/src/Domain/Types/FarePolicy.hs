@@ -25,6 +25,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
+import qualified Data.List as DL
 import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Domain.Types as DTC
@@ -87,6 +88,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     fareRecomputeCapEnabled :: Maybe Bool,
+    fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     vatChargeConfig :: Maybe FareChargeConfig,
@@ -190,7 +192,13 @@ data FareChargeComponent
   | -- VAT components
     RideVatComponent
   | TollVatComponent
-  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  | -- Components not covered by any of the above (added for per-component fare-recompute capping)
+    DriverAllowanceComponent
+  | AirportConvenienceFeeComponent
+  | ReturnFeeChargeComponent
+  | BoothChargeComponent
+  | RideExtraTimeFareComponent
+  deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 -- | Configuration for a charge (VAT, commission, or toll tax)
@@ -211,6 +219,129 @@ data FareChargeConfig = FareChargeConfig
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+-- | The ceiling a component may reach, from its estimate alone.
+--
+-- 'PercentCap' and 'FixedCap' both express the *allowance* — how much a
+-- component may grow beyond its estimate — not the final capped value:
+--   capped estimate = estimate + capAllowance strategy estimate
+--
+-- 'Frozen' components cannot grow past their estimate at all (allowance 0).
+-- 'Derived' components (GST) are not capped independently — GST already
+-- accounts for the buffer on its taxable base, so no separate buffer is
+-- required; its final value is recomputed from the capped base instead.
+data CapStrategy
+  = PercentCap PercentCapCfg
+  | FixedCap FixedCapCfg
+  | Frozen
+  | Derived
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | Allowance = estimate * percent / 100, clamped to [minCapAmount, maxCapAmount]
+-- when those bounds are configured. Example: distance fare estimate = 2500,
+-- percent = 10 (raw allowance 250), maxCapAmount = 100 -> capped estimate = 2600,
+-- not 2750 -- the bound clamps the allowance, not the final fare.
+data PercentCapCfg = PercentCapCfg
+  { percent :: Double,
+    minCapAmount :: Maybe HighPrecMoney,
+    maxCapAmount :: Maybe HighPrecMoney
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | Allowance is this flat amount regardless of the component's estimate size
+-- (e.g. waiting charge, toll: often estimated at 0, so a percentage would give
+-- no headroom -- a fixed rupee buffer is used instead). No min/max: a constant
+-- has nothing to clamp.
+newtype FixedCapCfg = FixedCapCfg
+  { amount :: HighPrecMoney
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | One cap rule, applied to a group of components -- mirrors 'FareChargeConfig's
+-- {value, appliesOn} shape rather than a per-component map, so admins can grant
+-- the same strategy to several components (e.g. TimeBasedFareComponent and
+-- DistBasedFareComponent both under the same PercentCap) in one entry.
+data FareRecomputeCap = FareRecomputeCap
+  { strategy :: CapStrategy,
+    appliesOn :: [FareChargeComponent]
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | Per-fare-policy (per service tier) recompute-cap configuration. A component
+-- with no matching rule here is left unconfigured -- pass-through, unbounded --
+-- per the agreed "not all components need a configured buffer" behaviour.
+newtype FareRecomputeCapConfig = FareRecomputeCapConfig
+  { caps :: [FareRecomputeCap]
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | The configured strategy for a component, if any rule in the config applies to it.
+lookupCapStrategy :: FareRecomputeCapConfig -> FareChargeComponent -> Maybe CapStrategy
+lookupCapStrategy capConfig component =
+  strategy <$> KP.find (\cap -> component `KP.elem` cap.appliesOn) capConfig.caps
+
+-- | Validate a parsed cap config before it's persisted (dashboard/CSV upsert).
+-- Nothing downstream catches these — 'lookupCapStrategy' resolves an overlapping
+-- component by silently taking the first matching rule in list order, and
+-- 'capAllowance' silently lets 'maxCapAmount' win over a misconfigured
+-- 'minCapAmount' -- so a bad config authored via CSV would otherwise apply
+-- with no feedback to the person who wrote it.
+validateFareRecomputeCapConfig :: FareRecomputeCapConfig -> Either Text ()
+validateFareRecomputeCapConfig capConfig = do
+  KP.mapM_ validateCap capConfig.caps
+  validateNoOverlap (KP.concatMap (.appliesOn) capConfig.caps)
+  where
+    validateCap cap = case cap.strategy of
+      PercentCap cfg -> do
+        KP.when (cfg.percent < 0) $ Left $ "Fare recompute cap: percent must be >= 0, got " <> KP.show cfg.percent
+        KP.when (cfg.percent > 100) $ Left $ "Fare recompute cap: percent must be <= 100, got " <> KP.show cfg.percent
+        validateNonNegative "minCapAmount" cfg.minCapAmount
+        validateNonNegative "maxCapAmount" cfg.maxCapAmount
+        case (cfg.minCapAmount, cfg.maxCapAmount) of
+          (Just minAmt, Just maxAmt) ->
+            KP.when (minAmt > maxAmt) $
+              Left $ "Fare recompute cap: minCapAmount (" <> KP.show minAmt <> ") must not exceed maxCapAmount (" <> KP.show maxAmt <> ")"
+          _ -> Right ()
+      FixedCap cfg -> validateNonNegative "amount" (Just cfg.amount)
+      Frozen -> Right ()
+      Derived -> Right ()
+
+    validateNonNegative label = KP.maybe (Right ()) $ \amt ->
+      KP.when (amt < 0) $ Left $ "Fare recompute cap: " <> label <> " must be >= 0, got " <> KP.show amt
+
+    -- Components appearing under more than one cap rule are ambiguous: 'lookupCapStrategy'
+    -- would silently pick whichever rule comes first in the list, ignoring the rest.
+    validateNoOverlap allComponents =
+      let duplicates = DL.nub (KP.filter (\c -> KP.length (KP.filter (== c) allComponents) > 1) allComponents)
+       in KP.unless (KP.null duplicates) $
+            Left $ "Fare recompute cap: component(s) appear in more than one cap rule (ambiguous -- first match wins): " <> KP.show duplicates
+
+-- | How much a component's estimate may grow under its configured strategy.
+-- See 'CapStrategy' for what each constructor means.
+capAllowance :: CapStrategy -> HighPrecMoney -> HighPrecMoney
+capAllowance capStrategy estimate = case capStrategy of
+  Frozen -> 0
+  Derived -> 0
+  FixedCap cfg -> cfg.amount
+  PercentCap cfg ->
+    let rawAllowance = estimate * realToFrac cfg.percent / 100
+        flooredAllowance = maybe rawAllowance (`max` rawAllowance) cfg.minCapAmount
+     in maybe flooredAllowance (`min` flooredAllowance) cfg.maxCapAmount
+
+-- | Ceiling = estimate + allowance. Used both to size allocation-time buffers
+-- (the estimate raised to its ceiling) and to cap the recomputed value at
+-- end-ride (recomputed value clamped to this ceiling) -- the same configured
+-- strategy drives both, per the business requirement that one configured
+-- value serves as "buffer for ride allocation AND max cap of fare recompute".
+capByStrategy :: Maybe CapStrategy -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+capByStrategy Nothing _ recomputedValue = recomputedValue -- unconfigured: pass through, unbounded
+capByStrategy (Just capStrategy) estimate recomputedValue =
+  min recomputedValue (estimate + capAllowance capStrategy estimate)
+
 data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
@@ -227,6 +358,7 @@ data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
 $(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+$(mkBeamInstancesForJSON ''FareRecomputeCapConfig)
 $(mkBeamInstancesForEnum ''PlatformFeeMethods)
 
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
@@ -258,6 +390,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     fareRecomputeCapEnabled :: Maybe Bool,
+    fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     congestionChargePerMin :: Maybe Double,
     dpVersion :: Maybe Text,
     mbSupplyDemandRatioToLoc :: Maybe Double,

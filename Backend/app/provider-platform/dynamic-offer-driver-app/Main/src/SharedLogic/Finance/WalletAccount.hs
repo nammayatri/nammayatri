@@ -25,7 +25,6 @@ module SharedLogic.Finance.WalletAccount
     computeTdsRateReason,
     estimateWalletDeductions,
     walletReferenceStatutoryHold,
-    applyFareRecomputeBuffer,
     cashWalletCheckEnabled,
     estimateBufferedStatutoryDeductions,
     shouldCheckCashWallet,
@@ -160,19 +159,19 @@ estimateWalletDeductions mbTdsRate baseFare =
 walletReferenceStatutoryHold :: Text
 walletReferenceStatutoryHold = "StatutoryDeductionHold"
 
-applyFareRecomputeBuffer :: DTC.DriverWalletConfig -> HighPrecMoney -> HighPrecMoney
-applyFareRecomputeBuffer dwc fare =
-  fare + fare * realToFrac (fromMaybe 0 dwc.fareRecomputeBufferPercent) / 100 + fromMaybe 0 dwc.fareRecomputeBufferAmount
-
 cashWalletCheckEnabled :: DTC.DriverWalletConfig -> Bool
 cashWalletCheckEnabled dwc = dwc.enableDriverWallet && isJust dwc.minWalletAmountForCashRides
 
-estimateBufferedStatutoryDeductions :: DTC.DriverWalletConfig -> DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
-estimateBufferedStatutoryDeductions dwc taxConfig mbFare govtCharges_ tollCharges_ parkingCharge_ =
+-- | Statutory deductions (GST + TDS) the driver would owe if the fare grew to
+--   its ceiling. 'mbBufferedFare' is 'FareParameters.bufferedFare', computed
+--   per component in 'calculateFareParameters'; absent means the fare policy
+--   has no cap configured, so the raw fare is used and nothing is buffered.
+estimateBufferedStatutoryDeductions :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
+estimateBufferedStatutoryDeductions taxConfig mbFare mbBufferedFare govtCharges_ tollCharges_ parkingCharge_ =
   case mbFare of
     Nothing -> 0
     Just fare ->
-      let bufferedFare = applyFareRecomputeBuffer dwc fare
+      let bufferedFare = fromMaybe fare mbBufferedFare
           fareScale = if fare > 0 then bufferedFare.getHighPrecMoney / fare.getHighPrecMoney else 1
           gstAmount = HighPrecMoney ((fromMaybe 0 govtCharges_).getHighPrecMoney * fareScale)
           tollAmount = fromMaybe 0 tollCharges_
@@ -209,10 +208,10 @@ makePrepaidOfferHoldsKey ownerId = "PrepaidOfferHolds:" <> ownerId
 
 -- | Statutory deductions for an offer, computed from the base fare: the gross is
 --   base + govt + toll + parking, buffered per the wallet config.
-estimateOfferDeductions :: DTC.DriverWalletConfig -> DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
-estimateOfferDeductions dwc taxConfig mbBaseFare govtCharges tollCharges parkingCharge =
+estimateOfferDeductions :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
+estimateOfferDeductions taxConfig mbBaseFare mbBufferedFare govtCharges tollCharges parkingCharge =
   let mbGross = (\bf -> bf + fromMaybe 0 govtCharges + fromMaybe 0 tollCharges + fromMaybe 0 parkingCharge) <$> mbBaseFare
-   in estimateBufferedStatutoryDeductions dwc taxConfig mbGross govtCharges tollCharges parkingCharge
+   in estimateBufferedStatutoryDeductions taxConfig mbGross mbBufferedFare govtCharges tollCharges parkingCharge
 
 -- | Total live wallet offer holds, excluding the given search try's own hold
 --   (used when that hold is about to convert into a real ledger hold).
