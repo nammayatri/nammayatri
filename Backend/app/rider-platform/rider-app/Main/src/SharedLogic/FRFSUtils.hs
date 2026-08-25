@@ -1224,17 +1224,22 @@ updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
 counterCancellationRefundTag :: Text
 counterCancellationRefundTag = "COUNTER_CANCELLATION_REFUND"
 
+cancellationRefundTag :: Text
+cancellationRefundTag = "CANCELLATION_REFUND"
+
 -- | Books a counter-cancellation refund as one negative offsetting recon row per ticket, leaving the original rows' settlement untouched.
 -- These rows enter the daily settlement/order book like any other recon entry (PENDING), so the clawback settles in the run of the day the on_cancel arrived, not the original booking's day.
-createCounterCancelReconEntries ::
+createCancellationReconEntries ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DFRFSTicketStatus.FRFSTicketStatus ->
+  Text ->
   DFRFSTicketBooking.FRFSTicketBooking ->
   BecknConfig ->
   HighPrecMoney ->
   Maybe Text ->
   FRFSFareParameters ->
   m ()
-createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fareParameters = do
+createCancellationReconEntries reconTicketStatus reconMessage booking bapConfig refundAmount mRiderNumber fareParameters = do
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
   unless (null tickets) $ do
     now <- getCurrentTime
@@ -1272,8 +1277,8 @@ createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fare
             Recon.settlementReferenceNumber = Nothing,
             Recon.settlementDate = Nothing,
             Recon.differenceAmount = Nothing,
-            Recon.message = Just counterCancellationRefundTag,
-            Recon.ticketStatus = Just DFRFSTicketStatus.COUNTER_CANCELLED,
+            Recon.message = Just reconMessage,
+            Recon.ticketStatus = Just reconTicketStatus,
             Recon.providerId = booking.providerId,
             Recon.providerName = booking.providerName,
             Recon.entityType = Just Recon.FRFS_TICKET_BOOKING,
