@@ -250,7 +250,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure driverInfo.enabledReasonFlag
   let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else driverInfo.approved == Just True
       bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
-      derivedShouldEnable = consentGateOk && (bypassDocGates || (verifiedToWrite && allEnablingDocsValid && approvedGateOk))
+      derivedShouldEnable = bypassDocGates || (consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk)
       shouldEnable = derivedShouldEnable || (driverInfo.enabled && not mutationAllowed)
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
