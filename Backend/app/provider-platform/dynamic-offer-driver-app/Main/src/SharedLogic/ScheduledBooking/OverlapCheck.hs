@@ -115,7 +115,7 @@ isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate comm
         Just candidateDrop -> legFeasible candidateDrop candidate.candidateEnd successor.intervalPickup successor.intervalStart
   where
     buffer = transporterConfig.scheduleRideBufferTime
-    avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideAvgSpeedKmph
+    avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideConfig.avgSpeedKmph
     legFeasible fromPos fromEnd toPos toStart =
       if addUTCTime buffer fromEnd > toStart
         then pure False -- even a zero-length deadhead cannot make it
@@ -146,5 +146,5 @@ earliestRemainingScheduledHold mbExcludeBookingId pairs =
 -- | New latest_scheduled_booking after releasing a hold; single-slot short-circuits to Nothing (no fetch).
 nextScheduledHoldAfterRelease :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> Id DP.Person -> Id DRB.Booking -> m (Maybe (UTCTime, LatLong))
 nextScheduledHoldAfterRelease transporterConfig driverId releasedBookingId
-  | transporterConfig.maxScheduledHoldsPerDriver <= 1 = pure Nothing
+  | transporterConfig.scheduledRideConfig.maxHoldsPerDriver <= 1 = pure Nothing
   | otherwise = earliestRemainingScheduledHold (Just releasedBookingId) <$> getDriverCommittedRides driverId

@@ -26,6 +26,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     driverWalletConfig' <- Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId driverWalletConfig
     knowledgeCenterSopTypes' <- Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId knowledgeCenterSopTypes
+    scheduledRideConfig' <- Storage.Queries.Transformers.TransporterConfig.parseScheduledRideConfig merchantOperatingCityId scheduledRideConfig
     subscriptionConfig' <- Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId subscriptionConfig
     taxConfig' <- Storage.Queries.Transformers.TransporterConfig.parseTaxConfig merchantOperatingCityId taxConfig
     pure $
@@ -242,10 +243,8 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             mandateValidity = mandateValidity,
             maxAllowedDocSizeInMB = maxAllowedDocSizeInMB,
             maxAllowedVideoDocSizeInMB = maxAllowedVideoDocSizeInMB,
-            maxBookingWindow = maxBookingWindow,
             maxNumberOfLuggages = maxNumberOfLuggages,
             maxPayoutReferralForADay = maxPayoutReferralForADay,
-            maxScheduledHoldsPerDriver = fromMaybe 1 maxScheduledHoldsPerDriver,
             mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
             mediaFileUrlPattern = mediaFileUrlPattern,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -253,7 +252,6 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             meterRideBulkLocUpdateBatchSize = fromMaybe 4 meterRideBulkLocUpdateBatchSize,
             metricsDistanceBucketsKm = metricsDistanceBucketsKm,
             minBaseFare = minBaseFare,
-            minBookingWindow = minBookingWindow,
             minDistanceForStopFcm = fromMaybe 100 minDistanceForStopFcm,
             minLocationAccuracy = minLocationAccuracy,
             minRidesForCancellationScore = minRidesForCancellationScore,
@@ -313,7 +311,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             sameRiderDriverRideCountThreshold = fromMaybe 2 sameRiderDriverRideCountThreshold,
             schedulePayoutForDay = schedulePayoutForDay,
             scheduleRideBufferTime = Kernel.Utils.Common.secondsToNominalDiffTime scheduleRideBufferTime,
-            scheduledRideAvgSpeedKmph = scheduledRideAvgSpeedKmph,
+            scheduledRideConfig = scheduledRideConfig',
             scheduledRideFilterExclusionThresholdHours = fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours),
             scheduledRideJobRescheduleTime = Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRideJobRescheduleTime),
             scheduledRideOpenToAllThresholdMinutes = scheduledRideOpenToAllThresholdMinutes,
@@ -581,10 +579,8 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.mandateValidity = mandateValidity,
         Beam.maxAllowedDocSizeInMB = maxAllowedDocSizeInMB,
         Beam.maxAllowedVideoDocSizeInMB = maxAllowedVideoDocSizeInMB,
-        Beam.maxBookingWindow = maxBookingWindow,
         Beam.maxNumberOfLuggages = maxNumberOfLuggages,
         Beam.maxPayoutReferralForADay = maxPayoutReferralForADay,
-        Beam.maxScheduledHoldsPerDriver = Just maxScheduledHoldsPerDriver,
         Beam.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
         Beam.mediaFileUrlPattern = mediaFileUrlPattern,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -592,7 +588,6 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.meterRideBulkLocUpdateBatchSize = Just meterRideBulkLocUpdateBatchSize,
         Beam.metricsDistanceBucketsKm = metricsDistanceBucketsKm,
         Beam.minBaseFare = minBaseFare,
-        Beam.minBookingWindow = minBookingWindow,
         Beam.minDistanceForStopFcm = Just minDistanceForStopFcm,
         Beam.minLocationAccuracy = minLocationAccuracy,
         Beam.minRidesForCancellationScore = minRidesForCancellationScore,
@@ -652,7 +647,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.sameRiderDriverRideCountThreshold = Just sameRiderDriverRideCountThreshold,
         Beam.schedulePayoutForDay = schedulePayoutForDay,
         Beam.scheduleRideBufferTime = Kernel.Utils.Common.nominalDiffTimeToSeconds scheduleRideBufferTime,
-        Beam.scheduledRideAvgSpeedKmph = scheduledRideAvgSpeedKmph,
+        Beam.scheduledRideConfig = (Just . Data.Aeson.toJSON) scheduledRideConfig,
         Beam.scheduledRideFilterExclusionThresholdHours = Kernel.Prelude.Just $ Kernel.Types.Common.getHours scheduledRideFilterExclusionThresholdHours,
         Beam.scheduledRideJobRescheduleTime = Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds scheduledRideJobRescheduleTime,
         Beam.scheduledRideOpenToAllThresholdMinutes = scheduledRideOpenToAllThresholdMinutes,

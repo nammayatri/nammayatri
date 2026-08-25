@@ -2408,7 +2408,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
       let activeHolds = SBOC.countActiveHolds committed
       -- trigger on any commitment (hold or in-progress); cap counts holds only, in-progress enters feasibility as a predecessor
       unless (null committed) $ do
-        when (activeHolds >= schedulingCfg.maxScheduledHoldsPerDriver) $
+        when (activeHolds >= schedulingCfg.scheduledRideConfig.maxHoldsPerDriver) $
           throwError ScheduledRideOverlapConflict
         now <- getCurrentTime
         feasibleRes <-
@@ -3367,7 +3367,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               else do
                 committed <- SBOC.getDriverCommittedRides personId
                 pure $
-                  if SBOC.countActiveHolds committed >= transporterConfig.maxScheduledHoldsPerDriver
+                  if SBOC.countActiveHolds committed >= transporterConfig.scheduledRideConfig.maxHoldsPerDriver
                     then Nothing
                     else Just committed
           case mbCommittedForBoard of

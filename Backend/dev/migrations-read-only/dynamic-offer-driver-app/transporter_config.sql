@@ -1122,3 +1122,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_open_to_all_threshold_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_config json  default '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1}' :: json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN min_booking_window;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_booking_window;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN scheduled_ride_avg_speed_kmph;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_scheduled_holds_per_driver;

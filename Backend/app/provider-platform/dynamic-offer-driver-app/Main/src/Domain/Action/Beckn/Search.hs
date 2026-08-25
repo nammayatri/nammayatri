@@ -999,7 +999,7 @@ validateRequest merchant sReq = do
       reserveRideEstimate = sReq.reserveRideEstimate
       numberOfLuggages = sReq.numberOfLuggages
   when possibleTripOption.isScheduled $
-    case SWV.validateScheduledBookingWindow transporterConfig.minBookingWindow transporterConfig.maxBookingWindow now sReq.pickupTime of
+    case SWV.validateScheduledBookingWindow transporterConfig.scheduledRideConfig.minLeadTime transporterConfig.scheduledRideConfig.maxLeadTime now sReq.pickupTime of
       Left err -> throwError err
       Right () -> pure ()
   whenJust numberOfLuggages $ \n ->
@@ -1062,7 +1062,7 @@ validateScheduledBookingWindowForSearch merchantOpCityId sReq = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   now <- getCurrentTime
   when (isScheduledForSearch transporterConfig now sReq) $
-    case SWV.validateScheduledBookingWindow transporterConfig.minBookingWindow transporterConfig.maxBookingWindow now sReq.pickupTime of
+    case SWV.validateScheduledBookingWindow transporterConfig.scheduledRideConfig.minLeadTime transporterConfig.scheduledRideConfig.maxLeadTime now sReq.pickupTime of
       Left err -> throwError err
       Right () -> pure ()
 

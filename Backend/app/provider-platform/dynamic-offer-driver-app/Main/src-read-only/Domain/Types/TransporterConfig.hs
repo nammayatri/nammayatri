@@ -239,10 +239,8 @@ data TransporterConfig = TransporterConfig
     mandateValidity :: Kernel.Prelude.Int,
     maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAllowedVideoDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    maxBookingWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     maxNumberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxPayoutReferralForADay :: Kernel.Prelude.Int,
-    maxScheduledHoldsPerDriver :: Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -250,7 +248,6 @@ data TransporterConfig = TransporterConfig
     meterRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
     metricsDistanceBucketsKm :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     minBaseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    minBookingWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     minDistanceForStopFcm :: Kernel.Types.Common.HighPrecMeters,
     minLocationAccuracy :: Kernel.Prelude.Double,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -310,7 +307,7 @@ data TransporterConfig = TransporterConfig
     sameRiderDriverRideCountThreshold :: Kernel.Prelude.Int,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
-    scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    scheduledRideConfig :: Domain.Types.TransporterConfig.ScheduledRideConfig,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideOpenToAllThresholdMinutes :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
@@ -556,6 +553,14 @@ data PickupStallStage = PickupStallStage
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ScheduledRideConfig = ScheduledRideConfig
+  { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    maxHoldsPerDriver :: Kernel.Prelude.Int,
+    maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
