@@ -198,6 +198,16 @@ findAllByEnabledAtInWindow merchantOpCityId from to = do
         ]
     ]
 
+updateApprovalVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Maybe Bool -> Maybe Bool -> m ()
+updateApprovalVerifiedState (Id driverId) isApproved isVerified = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.updatedAt now]
+        <> ([Se.Set BeamDI.approved isApproved | isJust isApproved])
+        <> ([Se.Set BeamDI.verified (fromJust isVerified) | isJust isVerified])
+    )
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
 updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Driver -> Bool -> Maybe Bool -> Maybe Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified isApproved = do
   now <- getCurrentTime
@@ -706,7 +716,7 @@ updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlo
 updateSubscription subscribed driverId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDI.subscribed subscribed, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+  LTSSync.syncDriverPoolDataToLTSWithLongWait (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.subscribed = LTSSync.Set subscribed}
 
 updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()

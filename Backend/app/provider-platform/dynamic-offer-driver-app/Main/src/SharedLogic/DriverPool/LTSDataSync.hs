@@ -1,5 +1,6 @@
 module SharedLogic.DriverPool.LTSDataSync
   ( syncDriverPoolDataToLTS,
+    syncDriverPoolDataToLTSWithLongWait,
     DriverPoolDataUpdate (..),
     SetField (..),
     set,
@@ -184,6 +185,38 @@ syncDriverPoolDataToLTS driverId update = do
             DPD.setDriverPoolDataByCloud deploymentCloudType merged
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+-- | Merge a partial DB-authoritative update into LTS using a longer lock wait.
+-- Subscription toggles directly affect dispatch eligibility; waiting longer avoids
+-- dropping the merge during contention with active/onRide/mode syncs.
+syncDriverPoolDataToLTSWithLongWait ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    Log m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Driver ->
+  DriverPoolDataUpdate ->
+  m ()
+syncDriverPoolDataToLTSWithLongWait driverId update = do
+  deploymentCloudType <- asks (.cloudType)
+  now <- getClockTimeInMs
+  Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 10 10 $ do
+    mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+    case mbExisting of
+      Just existing -> do
+        let merged = applyUpdate now update existing
+        cleanupOldCloudKey deploymentCloudType existing merged
+        DPD.setDriverPoolDataByCloud deploymentCloudType merged
+      Nothing -> do
+        mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+        case mbExisting' of
+          Just existing' -> do
+            let merged = applyUpdate now update existing'
+            cleanupOldCloudKey deploymentCloudType existing' merged
+            DPD.setDriverPoolDataByCloud deploymentCloudType merged
+          Nothing ->
+            logError $ "syncDriverPoolDataToLTSWithLongWait: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
 
 -- | When a driver's cloudType changes, the key in the old cloud becomes orphaned.
 -- Delete it so reads don't return stale data.
