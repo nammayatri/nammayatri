@@ -829,3 +829,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_route_cache_read boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_async boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_resolve_place_name_on_select boolean ;
