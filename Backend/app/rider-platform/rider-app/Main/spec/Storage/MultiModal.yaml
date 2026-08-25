@@ -249,6 +249,7 @@ JourneyLeg:
     sequenceNumber: Int
     multimodalSearchRequestId: Maybe Text
     finalBoardedBusNumberSource: Maybe BusBoardingMethod
+    boardingConfirmedDespiteDistance: Maybe Bool
     finalBoardedDepotNo: Maybe Text
     finalBoardedWaybillId: Maybe Text
     finalBoardedScheduleNo: Maybe Text

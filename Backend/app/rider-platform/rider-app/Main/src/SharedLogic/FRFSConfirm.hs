@@ -1000,6 +1000,7 @@ buildJourneyAndLeg booking fareParameters = do
               changedBusesInSequence = Nothing,
               finalBoardedBusNumber = booking.vehicleNumber,
               finalBoardedBusNumberSource = routeLiveInfo <&> \_ -> DJL.UserSpotBooked,
+              boardingConfirmedDespiteDistance = Nothing,
               finalBoardedDepotNo = routeLiveInfo >>= (.depot),
               finalBoardedScheduleNo = routeLiveInfo >>= (.scheduleNo),
               finalBoardedWaybillId = routeLiveInfo >>= (.waybillId),

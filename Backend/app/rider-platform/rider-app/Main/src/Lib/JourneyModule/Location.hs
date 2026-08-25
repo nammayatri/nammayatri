@@ -92,3 +92,12 @@ getLastThreePoints journeyId = do
   points <- lRange (makeLocationRedisKey journeyId) 0 (-1)
   let thirtySecondsAgo = 30
   return (take 3 $ filter (\ApiTypes.RiderLocationReq {..} -> diffUTCTime currentTime currTime <= intToNominalDiffTime thirtySecondsAgo) points)
+
+-- | Like 'getLastThreePoints' but without the fixed count cap or its own age filter -- callers that
+-- pick a single best point out of the set (e.g. closest-in-time-to-some-other-timestamp) benefit from
+-- a larger candidate pool and should apply their own recency bound rather than inherit this one; the
+-- hardcoded 3-points/30s in 'getLastThreePoints' is tuned for its own caller's movement-delta
+-- heuristic, not a general "how much history is enough" answer. Still naturally bounded by
+-- 'addPoint's own lTrim (last 10 points) and 6h TTL.
+getAllPoints :: (HedisFlow m env) => Id Journey -> m [ApiTypes.RiderLocationReq]
+getAllPoints journeyId = lRange (makeLocationRedisKey journeyId) 0 (-1)

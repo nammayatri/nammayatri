@@ -1824,6 +1824,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
         finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),
         finalBoardedBusNumberSource = mbFinalBoardedBusData >>= (.updateSource),
+        boardingConfirmedDespiteDistance = Nothing,
         osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
         osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),
         straightLineEntrance = chooseGate (gates >>= (.straightLineEntrance)) (leg.entrance),

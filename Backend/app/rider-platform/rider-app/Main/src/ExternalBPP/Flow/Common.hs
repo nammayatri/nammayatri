@@ -359,6 +359,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 changedBusesInSequence = Nothing,
                 finalBoardedBusNumber = Nothing,
                 finalBoardedBusNumberSource = Nothing,
+                boardingConfirmedDespiteDistance = Nothing,
                 finalBoardedDepotNo = Nothing,
                 finalBoardedScheduleNo = Nothing,
                 finalBoardedWaybillId = Nothing,
