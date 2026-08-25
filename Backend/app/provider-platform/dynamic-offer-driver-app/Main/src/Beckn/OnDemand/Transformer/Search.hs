@@ -151,6 +151,8 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
         -- The Beckn path never carries a shadow search; only the internal sync_search
         -- endpoint sets this, after building the request.
         isShadowSearch = False,
+        -- Only the internal sync path carries one; a gateway search shares with nobody.
+        parentTransactionId = Nothing,
         ..
       }
 

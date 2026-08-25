@@ -118,10 +118,13 @@ searchV2Sync ::
   Text ->
   -- | isShadowSearch: pricing a better-route-point suggestion rather than the real search
   Bool ->
+  -- | The parent search, when this is a shadow: both are then priced against one set of
+  -- dynamic-pricing inputs.
+  Maybe Text ->
   API.SearchReqV2 ->
   m API.SyncSearchRes
-searchV2Sync bppUrl bppMerchantId token isShadowSearch req = do
-  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) (Just isShadowSearch) req
+searchV2Sync bppUrl bppMerchantId token isShadowSearch mbParentTransactionId req = do
+  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) (Just isShadowSearch) mbParentTransactionId req
   callAPI bppUrl cl "internalSyncSearch" internalSyncSearchAPI
     >>= fromEitherM (ExternalAPICallError (Just "INTERNAL_SYNC_SEARCH_FAILED") bppUrl)
 
