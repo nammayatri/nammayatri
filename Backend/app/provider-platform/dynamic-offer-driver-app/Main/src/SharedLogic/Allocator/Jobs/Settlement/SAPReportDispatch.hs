@@ -24,7 +24,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.SAP.Config as SAPConfig
-import Kernel.External.SAP.Types (SAPJournalHeader (..), SAPJournalItem (..), SAPJournalRequest (..))
+import Kernel.External.SAP.Types (SAPJournalItem, SAPJournalRequest)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -34,7 +34,6 @@ import qualified Lib.Finance.Domain.Types.JournalEntryTransaction as JET
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.Finance.Storage.Queries.JournalEntryTransaction as QJETExtra
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
@@ -208,40 +207,10 @@ buildJournalRequest ::
   Currency ->
   m SAPJournalRequest
 buildJournalRequest sapCfg entryType amount fromTime currency = do
-  now <- getCurrentTime
-  let reqDate = formatSAPDate now
-      reqTime = formatSAPTime now
-      postingDate = formatSAPDate fromTime
-      acctMap = sapCfg.accountMapping
+  let acctMap = sapCfg.accountMapping
   bId <- getNextBatchId
-  items <- filterZeroItems <$> buildItems entryType acctMap bId currency amount
-  let header =
-        SAPJournalHeader
-          { msgtyp = Nothing,
-            batchId = bId,
-            requestDate = reqDate,
-            requestTime = reqTime,
-            headerdesc = show entryType,
-            bukrs = sapCfg.bukrs,
-            blart = sapCfg.blart,
-            budat = postingDate,
-            bldat = postingDate,
-            attrName1 = Nothing,
-            attrValue1 = Nothing,
-            attrName2 = Nothing,
-            attrValue2 = Nothing,
-            attrName3 = Nothing,
-            attrValue3 = Nothing,
-            attrName4 = Nothing,
-            attrValue4 = Nothing,
-            attrName5 = Nothing,
-            attrValue5 = Nothing,
-            belnr = Nothing,
-            gjahr = Nothing,
-            message = Nothing,
-            items = items
-          }
-  pure SAPJournalRequest {headers = [header]}
+  items <- buildItems entryType acctMap bId currency amount
+  buildJournalRequestFromItems sapCfg (show entryType) fromTime items
 
 -- ---------------------------------------------------------------------------
 -- Item builders per entry type
@@ -326,51 +295,17 @@ buildSubscriptionJournalRequest ::
   Currency ->
   m SAPJournalRequest
 buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency = do
-  now <- getCurrentTime
-  let reqDate = formatSAPDate now
-      reqTime = formatSAPTime now
-      postingDate = formatSAPDate fromTime
-      acctMap = sapCfg.accountMapping
+  let acctMap = sapCfg.accountMapping
   bId <- getNextBatchId
-  filteredItems <-
-    filterZeroItems
-      <$> sequence
-        [ mkItem bId "1" "PG_CLEARING A/C" acctMap Debit totals.grossAmount currency,
-          mkItem bId "2" "DEFERRED_REVENUE A/C" acctMap Credit totals.netAmount currency,
-          mkItem bId "3" "CGST_PAYABLE A/C" acctMap Credit totals.cgst currency,
-          mkItem bId "4" "SGST_PAYABLE A/C" acctMap Credit totals.sgst currency,
-          mkItem bId "5" "IGST_PAYABLE A/C" acctMap Credit totals.igst currency
-        ]
-  let header =
-        SAPJournalHeader
-          { msgtyp = Nothing,
-            batchId = bId,
-            requestDate = reqDate,
-            requestTime = reqTime,
-            headerdesc = show entryType,
-            bukrs = sapCfg.bukrs,
-            blart = sapCfg.blart,
-            budat = postingDate,
-            bldat = postingDate,
-            attrName1 = Nothing,
-            attrValue1 = Nothing,
-            attrName2 = Nothing,
-            attrValue2 = Nothing,
-            attrName3 = Nothing,
-            attrValue3 = Nothing,
-            attrName4 = Nothing,
-            attrValue4 = Nothing,
-            attrName5 = Nothing,
-            attrValue5 = Nothing,
-            belnr = Nothing,
-            gjahr = Nothing,
-            message = Nothing,
-            items = filteredItems
-          }
-      debit = totals.grossAmount
-      credit = totals.netAmount + totals.cgst + totals.sgst + totals.igst
-  assertDebitEqualsCredit "SubscriptionPurchase" bId debit credit
-  pure SAPJournalRequest {headers = [header]}
+  items <-
+    sequence
+      [ mkItem bId "1" "PG_CLEARING A/C" acctMap Debit totals.grossAmount currency,
+        mkItem bId "2" "DEFERRED_REVENUE A/C" acctMap Credit totals.netAmount currency,
+        mkItem bId "3" "CGST_PAYABLE A/C" acctMap Credit totals.cgst currency,
+        mkItem bId "4" "SGST_PAYABLE A/C" acctMap Credit totals.sgst currency,
+        mkItem bId "5" "IGST_PAYABLE A/C" acctMap Credit totals.igst currency
+      ]
+  buildJournalRequestFromItems sapCfg (show entryType) fromTime items
 
 -- ---------------------------------------------------------------------------
 -- SAP Journal Entry persistence
@@ -411,33 +346,17 @@ saveSubscriptionTransactions ::
   Currency ->
   [SubscriptionTransactionRow] ->
   m ()
-saveSubscriptionTransactions mId mocId sapEntryId batchId currency rows = do
-  now <- getCurrentTime
-  aInfo <- asks (.actorInfo)
-  forM_ rows $ \row -> do
-    txnId <- generateGUID
-    QJETExtra.create
-      JET.JournalEntryTransaction
-        { id = Id txnId,
-          debitAmount = row.debitAmount,
-          creditAmount = row.creditAmount,
-          currency,
-          description = "Subscription Purchase",
-          referenceId = Just row.subscriptionId,
-          referenceType = Just JET.SubscriptionPurchase,
-          sapJournalEntryId = sapEntryId,
-          sapBatchId = batchId,
-          transactionType = SJE.SubscriptionPurchase,
-          status = row.status,
-          merchantId = mId.getId,
-          merchantOperatingCityId = mocId.getId,
-          createdAt = now,
-          updatedAt = now,
-          createdBy = aInfo.actorType,
-          createdById = aInfo.actorId,
-          updatedBy = aInfo.actorType,
-          updatedById = aInfo.actorId
-        }
+saveSubscriptionTransactions mId mocId sapEntryId batchId currency =
+  saveJournalEntryTransactions mId mocId sapEntryId batchId currency $ \row ->
+    JournalTxnRowFields
+      { debitAmount = row.debitAmount,
+        creditAmount = row.creditAmount,
+        description = "Subscription Purchase",
+        referenceId = Just row.subscriptionId,
+        referenceType = Just JET.SubscriptionPurchase,
+        transactionType = SJE.SubscriptionPurchase,
+        status = row.status
+      }
 
 savePGSettlementTransactions ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
@@ -448,33 +367,17 @@ savePGSettlementTransactions ::
   Currency ->
   [PGSettlementTransactionRow] ->
   m ()
-savePGSettlementTransactions mId mocId sapEntryId batchId currency rows = do
-  now <- getCurrentTime
-  aInfo <- asks (.actorInfo)
-  forM_ rows $ \row -> do
-    txnId <- generateGUID
-    QJETExtra.create
-      JET.JournalEntryTransaction
-        { id = Id txnId,
-          debitAmount = row.amount,
-          creditAmount = row.amount,
-          currency,
-          description = show row.txnType,
-          referenceId = row.subscriptionPurchaseId,
-          referenceType = JET.SubscriptionPurchase <$ row.subscriptionPurchaseId,
-          sapJournalEntryId = sapEntryId,
-          sapBatchId = batchId,
-          transactionType = pgTxnTypeToSJE row.txnType,
-          status = row.txnStatus,
-          merchantId = mId.getId,
-          merchantOperatingCityId = mocId.getId,
-          createdAt = now,
-          updatedAt = now,
-          createdBy = aInfo.actorType,
-          createdById = aInfo.actorId,
-          updatedBy = aInfo.actorType,
-          updatedById = aInfo.actorId
-        }
+savePGSettlementTransactions mId mocId sapEntryId batchId currency =
+  saveJournalEntryTransactions mId mocId sapEntryId batchId currency $ \row ->
+    JournalTxnRowFields
+      { debitAmount = row.amount,
+        creditAmount = row.amount,
+        description = show row.txnType,
+        referenceId = row.subscriptionPurchaseId,
+        referenceType = JET.SubscriptionPurchase <$ row.subscriptionPurchaseId,
+        transactionType = pgTxnTypeToSJE row.txnType,
+        status = row.txnStatus
+      }
 
 pgTxnTypeToSJE :: PgDom.TxnType -> SJE.TransactionType
 pgTxnTypeToSJE t = case t of
