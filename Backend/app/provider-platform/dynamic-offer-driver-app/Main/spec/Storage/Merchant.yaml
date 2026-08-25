@@ -357,6 +357,7 @@ MerchantOperatingCity:
     countryDialCode: Maybe Text
     location: LatLong
     supportNumber: Maybe Text
+    supportEmails: Maybe [Text]
     language: Language
     currency: Currency
     distanceUnit: DistanceUnit
@@ -368,6 +369,7 @@ MerchantOperatingCity:
     currency: character varying(255)
     lat: double precision
     lon: double precision
+    supportEmails: "text[]"
   default:
     country: "'India'"
     language: "'ENGLISH'"

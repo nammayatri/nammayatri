@@ -36,6 +36,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
             merchantShortId = Kernel.Types.Id.ShortId merchantShortId,
             state = state,
             stdCode = stdCode,
+            supportEmails = supportEmails,
             supportNumber = supportNumber
           }
 
@@ -57,5 +58,6 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
         Beam.merchantShortId = Kernel.Types.Id.getShortId merchantShortId,
         Beam.state = state,
         Beam.stdCode = stdCode,
+        Beam.supportEmails = supportEmails,
         Beam.supportNumber = supportNumber
       }
