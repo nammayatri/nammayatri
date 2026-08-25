@@ -1365,6 +1365,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
     isDriverNameMandatoryInBulkUpload: Bool
+    isStrongNameCheckRequired: Bool
     onboardingDocsCountLimit: Maybe Int
     defaultOnboardingAs: Maybe OnboardingAs
     localPoliceNumbers: Maybe [Text]
@@ -1516,6 +1517,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
     isDriverNameMandatoryInBulkUpload: Maybe Bool
+    isStrongNameCheckRequired: Maybe Bool
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
@@ -1618,6 +1620,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: Just isStrongNameCheckRequired|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     pickupStallMonitoringConfig: Data.Aeson.toJSON <$> pickupStallMonitoringConfig|E
@@ -1737,6 +1740,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: fromMaybe True isStrongNameCheckRequired|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       cancellationRateSlabConfig|E
@@ -2005,6 +2009,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     isDriverNameMandatoryInBulkUpload: "true"
+    isStrongNameCheckRequired: "true"
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
     deactivateRCOnUnlink: "true"
