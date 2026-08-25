@@ -184,7 +184,7 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Maybe DFP.FareRecomputeCapConfig -> Maybe DFP.FareChargeConfig -> Maybe DFP.FareChargeConfig -> m (),
+    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
     getFarePolicyByEstOrQuoteId :: Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
     getFarePolicyOnEndRide :: Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
@@ -445,29 +445,29 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           mkPoint locUpd = (LatLong locUpd.lat locUpd.lon, fromMaybe nowTs locUpd.ts)
           accLoc = NE.filter (\locUpd -> maybe True (< 50) locUpd.acc) res.loc
       pure (toList $ fmap mkPoint res.loc, map mkPoint accLoc)
-    (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig) <-
+    (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
           res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
-          (chargeableDistance, finalFare, mbUpdatedFareParams, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig) <-
+          (chargeableDistance, finalFare, mbUpdatedFareParams) <-
             case res of
               Left err -> do
                 logTagError "recalculateFareForDistance" $ "Failed to recalculate fare : " <> show err
-                return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, Nothing, Nothing, Nothing)
+                return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
               Right response -> return response
 
-          pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig)
+          pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
         _ -> do
-          withFallback (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, rideOld, Nothing, Nothing, Nothing, Nothing, Nothing) $ do
+          withFallback (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, rideOld, Nothing, Nothing) $ do
             if DTC.isOdometerReadingsRequired booking.tripCategory
               then do
                 case mbOdometer of
                   Just odometer -> do
                     unless (odometer.value >= maybe 0 (.value) rideOld.startOdometerReading) $ throwError InvalidEndOdometerReading
                     let odometerCalculatedDistance = Meters $ round (odometer.value - maybe 0 (.value) rideOld.startOdometerReading) * 1000
-                    (recalcDistance, finalFare, mbUpdatedFareParams, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig) <- recalculateFareForDistance handle booking rideOld odometerCalculatedDistance thresholdConfig False tripEndPoint
-                    pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig)
+                    (recalcDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld odometerCalculatedDistance thresholdConfig False tripEndPoint
+                    pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
                   Nothing -> throwError $ OdometerReadingRequired (show booking.tripCategory)
               else do
                 -- here we update the current ride, so below we fetch the updated version
@@ -558,14 +558,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
-                (chargeableDistance, finalFare, mbUpdatedFareParams, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig) <-
+                (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
                     then recalculateFareForDistance handle booking ride (fromMaybe (roundToIntegral ride.traveledDistance) (bool (Just $ roundToIntegral ride.traveledDistance) booking.estimatedDistance distanceCalculationFailed)) thresholdConfig False tripEndPoint
                     else
                       if distanceCalculationFailed
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
-                pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed, mbCapConfig, mbVatChargeConfig, mbTollTaxChargeConfig)
+                pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     rawDiscountAmount <-
       if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
@@ -656,7 +656,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
     -- we need to store fareParams only when they changed
-    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId baseFareParams thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig
+    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId rideFareParams thresholdConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
@@ -893,13 +893,7 @@ determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
 tripCategoriesForNoRecalc :: [DTC.TripCategory]
 tripCategoriesForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
 
--- | Alongside the recomputed distance/fare/fare-params, also returns the fare
---   policy's own fare-recompute-cap-related configs (cap config, VAT charge
---   config, toll-tax charge config) so callers can settle against them
---   directly -- this is the exact fare policy locked in for this ride (also
---   persisted via 'QRide.updateFinalFarePolicyId' below), not something a
---   caller has to round-trip through the ride row to recover.
-recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters, Maybe DFP.FareRecomputeCapConfig, Maybe DFP.FareChargeConfig, Maybe DFP.FareChargeConfig)
+recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   tripEndTime <- getCurrentTime
   let merchantId = booking.providerId
@@ -923,7 +917,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
   QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
   if farePolicy.disableRecompute == Just True
-    then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, farePolicy.fareRecomputeCapConfig, farePolicy.vatChargeConfig, farePolicy.tollTaxChargeConfig)
+    then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
@@ -972,6 +966,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
         calculateFareParameters
           Fare.CalculateFareParametersParams
             { farePolicy = farePolicy',
+              computationPhase = Fare.FCRecompute,
+              mbCapConfig = farePolicy.fareRecomputeCapConfig,
+              mbEstimateFareParams = Just booking.fareParams,
               actualDistance = Just recalcDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
@@ -1004,15 +1001,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType
             }
-      -- 'calculateFareParameters' always attaches a 'bufferedFare', but on this
-      -- (end-ride recompute) path it's derived from the already-recomputed
-      -- amounts and is meaningless as a ceiling (see the field's doc comment).
-      -- Blank it before it's used further and persisted, so a ride's own
-      -- fare_parameters row never carries a value that looks like a ceiling
-      -- but isn't one -- 'capRecomputedFare' itself doesn't read it (it caps
-      -- against 'booking.fareParams.bufferedFare', the real estimate-time one).
-      let fareParams' = fareParams {bufferedFare = Nothing}
-      (finalFare, finalFareParams) <- capRecomputedFare farePolicy booking fareParams'
+      finalFare <- checkRecomputedFareCeiling booking fareParams
       let distanceDiff = recalcDistance - oldDistance
           fareDiff = finalFare - estimatedFare
       logTagInfo "Fare recalculation" $
@@ -1021,58 +1010,16 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric merchantId fareDiff distanceDiff
-      return (recalcDistance, finalFare, Just finalFareParams, farePolicy.fareRecomputeCapConfig, farePolicy.vatChargeConfig, farePolicy.tollTaxChargeConfig)
+      return (recalcDistance, finalFare, Just fareParams)
 
--- | Cap the recomputed fare at the buffered estimate when the booking opted in,
---   absorbing the excess into fare components; returns the final fare and params.
-capRecomputedFare :: (Log m, Monad m) => DFP.FullFarePolicy -> SRB.Booking -> FareParameters -> m (HighPrecMoney, FareParameters)
-capRecomputedFare farePolicy booking fareParams = do
-  let recomputedFare = Fare.fareSum fareParams Nothing
-      capApplies = fromMaybe False farePolicy.fareRecomputeCapEnabled
-      perComponentCappedParams = case (capApplies, farePolicy.fareRecomputeCapConfig) of
-        (True, Just capConfig) -> Fare.applyPerComponentCaps (Fare.CapContext capConfig farePolicy.vatChargeConfig farePolicy.tollTaxChargeConfig) booking.fareParams fareParams
-        _ -> fareParams
-      perComponentCappedFare = Fare.fareSum perComponentCappedParams Nothing
-      -- Per-component capping only bounds components with a configured cap
-      -- strategy — several fareSum contributors (govtCharges, driverSelectedFare,
-      -- paymentProcessingFee, cardCharge, conditionalCharges, parkingChargeTax,
-      -- SlabDetails platformFee/sgst/cgst) have no per-component mapping at all
-      -- and can still push the total past the booking's buffered ceiling. Total
-      -- backstop: drain any residual excess out of 'driverSelectedFare' then
-      -- 'paymentProcessingFee' (each floored at 0) rather than 'govtCharges' --
-      -- neither has a 'FareChargeComponent' constructor at all (see
-      -- 'FarePolicy.FareChargeComponent'), so neither can ever be part of any
-      -- fare policy's taxable base; draining them can never desync 'govtCharges'
-      -- from the tax = rate * base it was actually computed against, the way
-      -- draining govtCharges directly would. So the invariant finalFare <=
-      -- bufferedFare holds whenever there's enough headroom in these two to
-      -- absorb it. If there isn't, give up rather than silently overcharge past
-      -- the ceiling (or desync the tax line to force it), and log a BREACH so
-      -- it's visible.
-      (finalFareParams, breached) = case (capApplies, booking.fareParams.bufferedFare) of
-        (True, Just bufferedCeiling)
-          | perComponentCappedFare > bufferedCeiling ->
-            let excess = perComponentCappedFare - bufferedCeiling
-                currentDriverSelectedFare = fromMaybe 0 perComponentCappedParams.driverSelectedFare
-                drainedFromDriverSelectedFare = min excess (max 0 currentDriverSelectedFare)
-                remainingExcess = excess - drainedFromDriverSelectedFare
-                currentPaymentProcessingFee = fromMaybe 0 perComponentCappedParams.paymentProcessingFee
-                drainedFromPaymentProcessingFee = min remainingExcess (max 0 currentPaymentProcessingFee)
-                absorbedParams =
-                  perComponentCappedParams
-                    { driverSelectedFare = Just (currentDriverSelectedFare - drainedFromDriverSelectedFare),
-                      paymentProcessingFee = Just (currentPaymentProcessingFee - drainedFromPaymentProcessingFee)
-                    }
-             in (absorbedParams, Fare.fareSum absorbedParams Nothing > bufferedCeiling)
-        _ -> (perComponentCappedParams, False)
-      finalFare = Fare.fareSum finalFareParams Nothing
-  when (capApplies && finalFare < recomputedFare) $
-    logTagInfo "Fare recompute cap" $
-      "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " for booking " <> booking.id.getId
-  when breached $
-    logTagError "Fare recompute cap BREACH" $
-      "Per-component cap plus driverSelectedFare/paymentProcessingFee absorption still left fare " <> show finalFare <> " above buffered ceiling " <> maybe "N/A" show booking.fareParams.bufferedFare <> " for booking " <> booking.id.getId
-  pure (finalFare, finalFareParams)
+checkRecomputedFareCeiling :: (Log m, Monad m) => SRB.Booking -> FareParameters -> m HighPrecMoney
+checkRecomputedFareCeiling booking fareParams = do
+  let finalFare = Fare.fareSum fareParams Nothing
+  whenJust booking.fareParams.bufferedFare $ \ceiling' ->
+    when (finalFare > ceiling') $
+      logTagError "Fare recompute cap BREACH" $
+        "Recomputed fare " <> show finalFare <> " above buffered ceiling " <> show ceiling' <> " for booking " <> booking.id.getId <> " -- a component without a configured cap strategy grew past its estimate; the fare policy needs a cap for it."
+  pure finalFare
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
@@ -1115,7 +1062,7 @@ isDownwardRecomputeEnabledForRide booking thresholdConfig =
   booking.tripCategory `notElem` tripCategoriesForNoRecalc || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters, Maybe DFP.FareRecomputeCapConfig, Maybe DFP.FareChargeConfig, Maybe DFP.FareChargeConfig)
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
@@ -1167,7 +1114,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       TN.sendOverlay booking.merchantOperatingCityId driver $ TN.mkOverlayReq overlay
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters, Maybe DFP.FareRecomputeCapConfig, Maybe DFP.FareChargeConfig, Maybe DFP.FareChargeConfig)
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation

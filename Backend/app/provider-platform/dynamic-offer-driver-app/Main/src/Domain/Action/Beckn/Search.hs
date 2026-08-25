@@ -782,6 +782,9 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
     FC.calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
+          computationPhase = FCEstimate,
+          mbCapConfig = Nothing,
+          mbEstimateFareParams = Nothing,
           actualDistance = Just dist,
           rideTime = pickupTime,
           returnTime,
@@ -877,6 +880,9 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
     let params =
           CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
+              computationPhase = FCEstimate,
+              mbCapConfig = Nothing,
+              mbEstimateFareParams = Nothing,
               actualDistance = Just dist,
               rideTime = startTime,
               returnTime,

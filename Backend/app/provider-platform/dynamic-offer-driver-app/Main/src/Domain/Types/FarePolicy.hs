@@ -87,7 +87,6 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
-    fareRecomputeCapEnabled :: Maybe Bool,
     fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
@@ -219,16 +218,6 @@ data FareChargeConfig = FareChargeConfig
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
--- | The ceiling a component may reach, from its estimate alone.
---
--- 'PercentCap' and 'FixedCap' both express the *allowance* — how much a
--- component may grow beyond its estimate — not the final capped value:
---   capped estimate = estimate + capAllowance strategy estimate
---
--- 'Frozen' components cannot grow past their estimate at all (allowance 0).
--- 'Derived' components (GST) are not capped independently — GST already
--- accounts for the buffer on its taxable base, so no separate buffer is
--- required; its final value is recomputed from the capped base instead.
 data CapStrategy
   = PercentCap PercentCapCfg
   | FixedCap FixedCapCfg
@@ -237,10 +226,6 @@ data CapStrategy
   deriving stock (Show, Read, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
--- | Allowance = estimate * percent / 100, clamped to [minCapAmount, maxCapAmount]
--- when those bounds are configured. Example: distance fare estimate = 2500,
--- percent = 10 (raw allowance 250), maxCapAmount = 100 -> capped estimate = 2600,
--- not 2750 -- the bound clamps the allowance, not the final fare.
 data PercentCapCfg = PercentCapCfg
   { percent :: Double,
     minCapAmount :: Maybe HighPrecMoney,
@@ -249,20 +234,12 @@ data PercentCapCfg = PercentCapCfg
   deriving stock (Show, Read, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
--- | Allowance is this flat amount regardless of the component's estimate size
--- (e.g. waiting charge, toll: often estimated at 0, so a percentage would give
--- no headroom -- a fixed rupee buffer is used instead). No min/max: a constant
--- has nothing to clamp.
 newtype FixedCapCfg = FixedCapCfg
   { amount :: HighPrecMoney
   }
   deriving stock (Show, Read, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
--- | One cap rule, applied to a group of components -- mirrors 'FareChargeConfig's
--- {value, appliesOn} shape rather than a per-component map, so admins can grant
--- the same strategy to several components (e.g. TimeBasedFareComponent and
--- DistBasedFareComponent both under the same PercentCap) in one entry.
 data FareRecomputeCap = FareRecomputeCap
   { strategy :: CapStrategy,
     appliesOn :: [FareChargeComponent]
@@ -270,9 +247,6 @@ data FareRecomputeCap = FareRecomputeCap
   deriving stock (Show, Read, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
--- | Per-fare-policy (per service tier) recompute-cap configuration. A component
--- with no matching rule here is left unconfigured -- pass-through, unbounded --
--- per the agreed "not all components need a configured buffer" behaviour.
 newtype FareRecomputeCapConfig = FareRecomputeCapConfig
   { caps :: [FareRecomputeCap]
   }
@@ -284,12 +258,6 @@ lookupCapStrategy :: FareRecomputeCapConfig -> FareChargeComponent -> Maybe CapS
 lookupCapStrategy capConfig component =
   strategy <$> KP.find (\cap -> component `KP.elem` cap.appliesOn) capConfig.caps
 
--- | Validate a parsed cap config before it's persisted (dashboard/CSV upsert).
--- Nothing downstream catches these — 'lookupCapStrategy' resolves an overlapping
--- component by silently taking the first matching rule in list order, and
--- 'capAllowance' silently lets 'maxCapAmount' win over a misconfigured
--- 'minCapAmount' -- so a bad config authored via CSV would otherwise apply
--- with no feedback to the person who wrote it.
 validateFareRecomputeCapConfig :: FareRecomputeCapConfig -> Either Text ()
 validateFareRecomputeCapConfig capConfig = do
   KP.mapM_ validateCap capConfig.caps
@@ -332,11 +300,6 @@ capAllowance capStrategy estimate = case capStrategy of
         flooredAllowance = maybe rawAllowance (`max` rawAllowance) cfg.minCapAmount
      in maybe flooredAllowance (`min` flooredAllowance) cfg.maxCapAmount
 
--- | Ceiling = estimate + allowance. Used both to size allocation-time buffers
--- (the estimate raised to its ceiling) and to cap the recomputed value at
--- end-ride (recomputed value clamped to this ceiling) -- the same configured
--- strategy drives both, per the business requirement that one configured
--- value serves as "buffer for ride allocation AND max cap of fare recompute".
 capByStrategy :: Maybe CapStrategy -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
 capByStrategy Nothing _ recomputedValue = recomputedValue -- unconfigured: pass through, unbounded
 capByStrategy (Just capStrategy) estimate recomputedValue =
@@ -389,7 +352,6 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
-    fareRecomputeCapEnabled :: Maybe Bool,
     fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     congestionChargePerMin :: Maybe Double,
     dpVersion :: Maybe Text,

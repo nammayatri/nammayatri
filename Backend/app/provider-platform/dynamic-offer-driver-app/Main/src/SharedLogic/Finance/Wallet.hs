@@ -190,7 +190,7 @@ module SharedLogic.Finance.Wallet
     reserveWalletForCashRide,
     cashWalletCheckEnabled,
     shouldCheckCashWallet,
-    settlementTotalFareWithCap,
+    settlementWalletFinanceEnabled,
   )
 where
 
@@ -201,8 +201,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.FareParameters as DFare
-import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -997,24 +995,9 @@ addPrepaidOfferHold = addOfferHoldAtKey . makePrepaidOfferHoldsKey
 removePrepaidOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
 removePrepaidOfferHold = removeOfferHoldAtKey . makePrepaidOfferHoldsKey
 
--- | Settlement-side fare cap for end-ride money movement: the total fare to
---   settle, capped at estimate + buffer when the booking opted in. ride.fare is
---   already capped at recompute time; this is the safety net for flows that end
---   without a recompute. Returns (walletFinanceEnabled, totalFare, mbFareCap).
--- | Fallback settlement path for rides that skip the recompute-and-cap flow
---   (see 'Domain.Action.UI.Ride.EndRide.capRecomputedFare' for the primary path).
---   'newFareParams' is the final (possibly recomputed) params; the cap, when it
---   applies, is computed per component against 'booking.fareParams' (the estimate).
-settlementTotalFareWithCap :: DM.Merchant -> DTC.TransporterConfig -> SRB.Booking -> Maybe DFP.FareRecomputeCapConfig -> Maybe DFP.FareChargeConfig -> Maybe DFP.FareChargeConfig -> DFare.FareParameters -> Maybe HighPrecMoney -> (Bool, HighPrecMoney, Maybe HighPrecMoney)
-settlementTotalFareWithCap merchant transporterConfig booking mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig newFareParams mbRideFare =
-  let walletFinanceEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
-      capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
-      rawTotalFare = fromMaybe 0 mbRideFare
-      cappedTotalFare = case mbCapConfig of
-        Just capConfig -> Fare.fareSum (Fare.applyPerComponentCaps (Fare.CapContext capConfig mbVatChargeConfig mbTollTaxChargeConfig) booking.fareParams newFareParams) Nothing
-        Nothing -> rawTotalFare
-      mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
-   in (walletFinanceEnabled, fromMaybe rawTotalFare mbFareCap, mbFareCap)
+settlementWalletFinanceEnabled :: DM.Merchant -> DTC.TransporterConfig -> Bool
+settlementWalletFinanceEnabled merchant transporterConfig =
+  fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
 
 -- | Everything currently held against the wallet: PENDING ledger holds plus
 --   live Redis offer holds.
@@ -1067,28 +1050,13 @@ reserveWalletForCashRide ::
 reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearchTryId = do
   isOnline <- resolveIsOnlineFromBooking booking
   let dwc = transporterConfig.driverWalletConfig
-      -- Independent gates, same split as the driver-pool filter: the
-      -- zero-balance rule only needs the wallet feature on; the insufficiency
-
-      -- 'minWalletAmountForCashRides' being configured as before. Hold
-      -- creation itself is NOT scoped to 'cashRequirementCheckApplies' alone
-      -- (below) -- a wallet-only merchant with no threshold configured still
-      -- needs its balance reserved for this ride's GST/TDS liability, or the
-      -- zero-balance check above is just a point-in-time snapshot with
-      -- nothing stopping concurrent rides from overdrawing the same wallet.
-      zeroBalanceCheckApplies = dwc.enableDriverWallet
       cashRequirementCheckApplies = cashWalletCheckEnabled dwc
   unless isOnline $
-    when (zeroBalanceCheckApplies || cashRequirementCheckApplies) $ do
+    when cashRequirementCheckApplies $ do
       let (walletCounterpartyType, walletOwnerId) = case mbFleetOwnerId of
             Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId)
             Nothing -> (DRIVER, driver.id.getId)
           holdAmount =
-            -- The denominator must be the fare 'bufferedFare' was actually scaled
-            -- from ('fareSum fareParams' -- see 'bufferedFareTotal'), not
-            -- 'booking.estimatedFare': the two only coincide when nothing
-            -- (rounding, discounts, EDC parking exclusion) makes them diverge,
-            -- and a wrong denominator can drive fareScale below 1.
             estimateBufferedStatutoryDeductions
               transporterConfig.taxConfig
               (Just (Fare.fareSum booking.fareParams Nothing))
@@ -1101,9 +1069,9 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
         otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
         existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
         let netBalance = availableBalance + existingBookingHold - otherOfferHolds
-        when (zeroBalanceCheckApplies && netBalance <= 0) $
+        when (netBalance <= 0) $
           throwError (InvalidRequest "Zero earnings balance; not eligible for cash rides.")
-        when (cashRequirementCheckApplies && netBalance < holdAmount) $
+        when (netBalance < holdAmount) $
           throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
         when (holdAmount > 0) $ do
           _ <-

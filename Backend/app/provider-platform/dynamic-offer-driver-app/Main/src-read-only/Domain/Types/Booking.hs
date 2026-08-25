@@ -60,7 +60,6 @@ data Booking = Booking
     estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     exotelDeclinedCallStatusReceivingTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fareParams :: Domain.Types.FareParameters.FareParameters,
-    fareRecomputeCapEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     financeInvoiceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

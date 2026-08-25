@@ -314,6 +314,9 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
     Fare.calculateFareParameters
       Fare.CalculateFareParametersParams
         { farePolicy = farePolicy',
+          computationPhase = Fare.FCEstimate,
+          mbCapConfig = Nothing,
+          mbEstimateFareParams = Nothing,
           actualDistance = searchReq.estimatedDistance,
           estimatedDistance = searchReq.estimatedDistance,
           rideTime = searchReq.startTime,

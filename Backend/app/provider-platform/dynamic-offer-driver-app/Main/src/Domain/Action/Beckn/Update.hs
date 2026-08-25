@@ -246,6 +246,9 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
   let params =
         CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
+            computationPhase = FCEstimate,
+            mbCapConfig = Nothing,
+            mbEstimateFareParams = Nothing,
             actualDistance = booking.estimatedDistance,
             rideTime = booking.startTime,
             returnTime = booking.returnTime,
@@ -447,6 +450,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               FC.calculateFareParameters
                 CalculateFareParametersParams
                   { farePolicy = farePolicy',
+                    computationPhase = FCEstimate,
+                    mbCapConfig = Nothing,
+                    mbEstimateFareParams = Nothing,
                     actualDistance = Just estimatedDistance,
                     rideTime = booking.startTime,
                     returnTime = booking.returnTime,

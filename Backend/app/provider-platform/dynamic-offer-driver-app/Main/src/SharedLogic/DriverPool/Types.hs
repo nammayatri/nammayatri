@@ -448,11 +448,6 @@ data TripQuoteDetail = TripQuoteDetail
     eligibleForUpgrade :: Bool,
     commissionCharges :: Maybe HighPrecMoney,
     driverCancellationNotAllowed :: Maybe Bool,
-    -- | 'FareParameters.bufferedFare' for this tier's estimate/quote: the fare
-    -- raised to its per-component recompute ceiling. Computed once in
-    -- 'calculateFareParameters'; carried here because the pool filter and
-    -- offer holds only ever see a summed figure. 'Nothing' when the fare
-    -- policy has no cap configured.
     bufferedFare :: Maybe HighPrecMoney
   }
 

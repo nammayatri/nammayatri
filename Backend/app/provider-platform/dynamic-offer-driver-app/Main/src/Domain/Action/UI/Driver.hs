@@ -2207,6 +2207,9 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
     FC.calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = farePolicy',
+          computationPhase = FCEstimate,
+          mbCapConfig = Nothing,
+          mbEstimateFareParams = Nothing,
           actualDistance = searchReq.estimatedDistance,
           rideTime = sReqFD.startTime,
           returnTime = searchReq.returnTime,
