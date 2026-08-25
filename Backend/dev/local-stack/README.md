@@ -1814,6 +1814,42 @@ Measured on the way in, and worth keeping:
 Proven end to end afterwards: a booking made through the rider API came back
 with `driverRatings=3` on the ride, which is the number the app draws.
 
+### Showing somebody their own rating — `maps-shim/rating.js`
+
+The client asked on 2026-08-25 for both apps to show the user *their own* stars,
+with the number of people behind the average beside it. Neither number is
+reachable from the binary that ought to have it, and both refusals were
+measured rather than assumed:
+
+| Wanted | Asked of | Answer |
+|---|---|---|
+| the passenger's average | `GET /v2/profile` | eight fields — three name parts, `id`, two masked contacts, a masked device token, a WhatsApp flag. **No rating of any kind.** |
+| the driver's rater count | the driver binary | the string `totalRatings` **does not appear in the executable**. `grep -a` finds `totalEarnings` and nothing else of that shape. |
+
+And the passenger's rating could not be on the rider binary anyway: a driver
+rates her through the route *our own patch* added to the **provider**, which
+writes `atlas_driver_offer_bpp.rider_details` — a table the rider binary has
+never heard of. Bridging the two schemas inside Haskell is a field on a response
+type, which is a rebuild and new binaries. Bridging them in the shim is one
+query.
+
+```
+GET /rating/phone/{number}     -> {"rating": 4.5, "total": 3}
+GET /rating/driver/{driverId}  -> {"rating": 4.2, "total": 6}
+```
+
+The passenger route uses the join `avatars.js` already trusts: the two schemas
+agree on the phone-number hash, so her `atlas_app.person` row finds her
+`rider_details` row, matched on the **last nine digits** of the number — the app
+holds a bare NSN and the database writes the trunk zero, and an equality test
+finds nothing, silently. The driver route is a `count(*)` over the `rating`
+table, because he has no running count the way she now does.
+
+**Neither ever 404s and neither ever throws.** An unrated person is the normal
+state — the route that rates passengers went live the day before — so "nobody
+has rated you" and "the network failed" answer identically, and both apps draw
+*Nouveau*. That also means the apps ship safely **before** this route does.
+
 ## Choosing a driver — the fleet, the car, and the shortlist
 
 Until August the passenger compared a first name, a star and a price. He could
@@ -2089,6 +2125,62 @@ python3 probe-shortlist.py   # two searches, one shortlisted; reads who was
 Measured 2026-08-23 against the live stack: control asked 4 drivers, a
 shortlist of one asked exactly that one.
 
+## Driver subscriptions — decided 2026-08-25, not yet built
+
+The revenue model, settled with the client, and the research behind the gateway
+choice. Nothing here is implemented; it is recorded so the next person does not
+re-derive it.
+
+**The model.** Passengers keep paying drivers in **cash** — the app never
+touches that money. Drivers pay **us** 3 000 DA a month. No CCP (*"cannot be
+automated, no API"*), no cash. Receipts are not required but must be
+*generatable*.
+
+**The gateway: Chargily Pay v2** (`dev.chargily.com/pay-v2/introduction`, full
+page index at `/llms.txt`, Node SDK, OpenAPI spec). Base URLs
+`https://pay.chargily.net/test/api/v2` and `https://pay.chargily.net/api/v2`.
+
+Their free *Startup* plan is **0% commission** up to 300 000 DZD and 300
+transactions a month. At 3 000 DA that is **exactly 100 drivers with no fees at
+all**; *Comfort* is 1.25% (min 12,5, max 1 250 DZD) unlimited, *Supreme* 2.5%.
+Extra payouts beyond the free ones cost 1.5%, minimum 150 DZD. No plan has a
+monthly cost.
+
+**The constraint that decides the design: there is no recurring billing.** The
+API has customers, products, prices, checkouts, payment links, webhooks and
+balance — and no subscriptions. Nor could it have: CIB and Edahabia have no
+card-on-file debit, so **no** Algerian gateway can charge a driver
+automatically. A "monthly subscription" is therefore **pay-then-extend**: he
+presses pay, a webhook writes `paid_until = +30d`, and a notification goes out
+three days before it lapses. Nobody is ever charged without acting.
+
+**Where it goes: maps-shim.** The backend still has nowhere to record a payment
+— no plan, fee, subscription, invoice, mandate or order table in either schema,
+and none of those words in the binary. The shim is already Node with a Postgres
+pool and already publishes two routes of its own, so the gateway, the
+subscription table and the webhook all land there. **No rebuild.**
+
+The one piece that *is* a rebuild is the client's answer to a lapsed driver:
+*"we leave it on. However no request appear unless he is the only one in the
+area."* That is a dispatch-pool change. It must also be **visible in the app** —
+a driver whose rides quietly stop concludes the app is broken and rings the
+office, not that he owes 3 000 DA.
+
+**Two traps to design against**, from their reference:
+
+- The webhook signature is an **HMAC-SHA256 of the raw body**, in a header
+  called `signature`. Computed over a re-serialised parse it never matches, and
+  the failure looks like a Chargily bug.
+- Webhooks are retried. Without storing the applied `checkout_id` and ignoring
+  a repeat, one retry is a free month.
+
+**What blocks what.** Test Mode needs no domain, no documents and no
+verification, so the whole flow can be built and proven on the current host —
+`api.169-58-139-65.sslip.io` is public HTTPS with a real certificate, which is
+all a webhook needs. **Live Mode** needs account verification, whose document
+list Chargily does not publish, and realistically a domain we own: the current
+hostname contains the VPS's own IP address, so it dies the day the box moves.
+
 ## Backups — `./backup.sh`
 
 ```bash
@@ -2271,7 +2363,15 @@ edge/                  nginx + TLS, the public face
 auth-guard/            the OTP lock, in front of both backends: brute-force limits
                        on /v2/, and on /ui/ the per-driver code that retires 7891
   driver-codes.json    salted hashes, gitignored, in the backup set
-maps-shim/             Google Places/geocoding, answered from Postgres
+maps-shim/             Google Places/geocoding, answered from Postgres —
+                       and, because the backend can hold neither, the two
+                       things it cannot: profile photographs and a person's
+                       own rating
+  server.js            the router;  /directions, /place/*, /geocode
+  fleet.js             /fleet/nearby — cars on the passenger's map
+  avatars.js           /avatar/{driver,phone,ride,plate}
+  rating.js            /rating/{phone,driver} — see "Showing somebody their
+                       own rating"
 geocoder/              place-index build;  places.csv gitignored
 demo-map/              the map on :8025 (nginx conf + page)
   site/areas.geojson   exported from the DB by setup.sh (gitignored)
