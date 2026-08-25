@@ -765,6 +765,7 @@ library
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonExtra
+      Storage.Queries.PersonPTStatsExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra

@@ -78,4 +78,5 @@ PersonPTStats:
       where: id
 
   extraOperations:
+    - EXTRA_QUERY_FILE
     - GENERATE_INDEXES
