@@ -1,7 +1,5 @@
 module SharedLogic.FRFSCancel where
 
-import qualified BecknV2.FRFS.Enums as Spec
-import qualified BecknV2.FRFS.Utils as FRFSUtils
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
@@ -25,7 +23,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
@@ -34,10 +31,8 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PersonPTStats as SPUS
-import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
-import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -86,11 +81,6 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
   unless (booking.status `elem` [DFRFSTicketBooking.CANCELLED, DFRFSTicketBooking.COUNTER_CANCELLED]) $ do
-    -- Must be fetched before any state mutation: on a config miss this has to fail while the callback is still retryable,
-    -- otherwise the booking is left cancelled and the idempotency guard above blocks the retry from ever writing recon rows.
-    bapConfig <-
-      getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
-        >>= fromMaybeM (InternalError "Beckn Config not found")
     if isCounterCancellation
       then do
         void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
@@ -111,7 +101,6 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
         whenJust mbPaymentBooking $ \paymentBooking ->
           void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
-        updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical

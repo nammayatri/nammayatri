@@ -285,7 +285,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
         return bookingApiResp
     DFRFSTicketBooking.CANCELLED -> do
-      FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
