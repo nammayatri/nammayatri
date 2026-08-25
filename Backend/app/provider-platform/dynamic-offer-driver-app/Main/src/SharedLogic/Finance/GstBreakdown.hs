@@ -45,14 +45,11 @@ computeGstBreakdownForRideOwner gstBreakup fromLocation ride mbFleetInfoCached m
       "GST breakdown: missing counterparty addressState for pickupLocationId="
         <> fromLocation.id.getId
         <> "; falling back to intra-state CGST/SGST"
-  let pickupAddress = fromLocation.address
   pure $
-    computeGstBreakdownByPlace
+    computeGstBreakdownByState
       gstBreakup
       mbResidenceState
-      pickupAddress.state
-      Nothing
-      pickupAddress.city
+      fromLocation.address.state
       totalGst
 
 -- | Subscription / prepaid GST: counterparty residence proof vs platform PoB (merchant operating city).
@@ -77,33 +74,29 @@ computeGstBreakdownForPerson gstBreakup merchantOperatingCity personId isFleetOw
       "GST breakdown: missing counterparty addressState for merchantOpCityId="
         <> merchantOperatingCity.id.getId
         <> "; falling back to intra-state CGST/SGST"
-  let (supplierState, supplierCity) = (Just $ show merchantOperatingCity.state, Just $ show merchantOperatingCity.city)
+  let supplierState = Just $ show merchantOperatingCity.state
   pure $
-    computeGstBreakdownByPlace
+    computeGstBreakdownByState
       gstBreakup
       supplierState
       mbReceiverState
-      supplierCity
-      Nothing
       totalGst
 
--- | Determine GST jurisdiction by comparing supplier vs receiver place
---   (state first; city fallback when either state is missing), then split the total GST.
---   Falls back to intra-state CGST/SGST when place cannot be compared.
-computeGstBreakdownByPlace ::
+-- | Determine GST jurisdiction by comparing supplier vs receiver state,
+--   then split the total GST.
+--   Falls back to intra-state CGST/SGST when states cannot be compared.
+computeGstBreakdownByState ::
   DTC.GstBreakup ->
   Maybe Text -> -- supplier state
   Maybe Text -> -- receiver state
-  Maybe Text -> -- supplier city
-  Maybe Text -> -- receiver city
   HighPrecMoney -> -- totalGst
   Maybe Finance.GstAmountBreakdown
-computeGstBreakdownByPlace gstBreakup supplierState receiverState supplierCity receiverCity =
+computeGstBreakdownByState gstBreakup supplierState receiverState =
   Finance.computeGstBreakdownFromRates (toGstRateBreakup jurisdiction gstBreakup)
   where
     jurisdiction =
       fromMaybe Finance.IntraState $
-        Finance.compareIndianPlace supplierState receiverState supplierCity receiverCity
+        Finance.compareIndianState supplierState receiverState
 
 -- | Determine GST jurisdiction by comparing the first 2 characters (state code)
 --   of the seller and buyer GSTINs, then split the total GST accordingly.
