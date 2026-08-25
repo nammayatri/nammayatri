@@ -977,6 +977,12 @@ data FleetErrors
   | DriverNotFleetDriver
   | DriverHasNoActiveFleetAssociation
   | DriverAlreadyLinkedWithFleet
+  | DriverInAnotherFleet
+  | DriverOnboardingWithoutFleet
+  | DriverActiveWithoutFleet
+  | VehicleUnclaimed
+  | VehicleNotFoundForNumber Text
+  | PersonExistsWithDifferentRole Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -994,6 +1000,12 @@ instance IsBaseError FleetErrors where
     DriverNotFleetDriver -> Just "Driver is not onboarded as a FLEET_DRIVER"
     DriverHasNoActiveFleetAssociation -> Just "Driver has no active fleet association"
     DriverAlreadyLinkedWithFleet -> Just "Driver is enabled and already linked with an active fleet association"
+    DriverInAnotherFleet -> Just "Driver is currently linked with another fleet"
+    DriverOnboardingWithoutFleet -> Just "Driver is still onboarding and not linked with any fleet"
+    DriverActiveWithoutFleet -> Just "Driver is already active on the platform without a fleet"
+    VehicleUnclaimed -> Just "Vehicle is not claimed by any fleet"
+    VehicleNotFoundForNumber rcNo -> Just $ "No vehicle is registered with number " <> rcNo
+    PersonExistsWithDifferentRole role -> Just $ "This number already belongs to a " <> role
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
@@ -1008,6 +1020,12 @@ instance IsHTTPError FleetErrors where
     DriverNotFleetDriver -> "DRIVER_NOT_FLEET_DRIVER"
     DriverHasNoActiveFleetAssociation -> "DRIVER_HAS_NO_ACTIVE_FLEET_ASSOCIATION"
     DriverAlreadyLinkedWithFleet -> "DRIVER_ALREADY_LINKED_WITH_FLEET"
+    DriverInAnotherFleet -> "DRIVER_IN_ANOTHER_FLEET"
+    DriverOnboardingWithoutFleet -> "DRIVER_ONBOARDING_WITHOUT_FLEET"
+    DriverActiveWithoutFleet -> "DRIVER_ACTIVE_WITHOUT_FLEET"
+    VehicleUnclaimed -> "VEHICLE_UNCLAIMED"
+    VehicleNotFoundForNumber _ -> "VEHICLE_NOT_FOUND_FOR_NUMBER"
+    PersonExistsWithDifferentRole _ -> "PERSON_EXISTS_WITH_DIFFERENT_ROLE"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
@@ -1020,6 +1038,12 @@ instance IsHTTPError FleetErrors where
     DriverNotFleetDriver -> E400
     DriverHasNoActiveFleetAssociation -> E400
     DriverAlreadyLinkedWithFleet -> E400
+    DriverInAnotherFleet -> E400
+    DriverOnboardingWithoutFleet -> E400
+    DriverActiveWithoutFleet -> E400
+    VehicleUnclaimed -> E400
+    VehicleNotFoundForNumber _ -> E400
+    PersonExistsWithDifferentRole _ -> E400
 
 instance IsAPIError FleetErrors
 

@@ -1,4 +1,4 @@
-module Domain.Action.Dashboard.Management.Vehicle (getVehicleList) where
+module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, getVehicleInfo) where
 
 import qualified API.Types.ProviderPlatform.Management.Vehicle as VehicleAPI
 import qualified Dashboard.Common as Common
@@ -17,19 +17,23 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRCA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetRCAssociationExtra as QFRCA
 import qualified Storage.Queries.OnboardingList.VehicleList as QVehicleList
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Auth ()
+import Tools.Error
 
 getVehicleList ::
   ShortId DM.Merchant ->
@@ -58,6 +62,30 @@ getVehicleList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbVehicleN
       mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
   mbCertificateNumberHash <- getDbHash `traverse` mbVehicleNumber
   rcs <- B.runInReplica $ QVehicleList.findVehicles merchant.id merchantOpCity.id limit offset scopedFleetOwnerId mbCertificateNumberHash mbVerified mbApprovalFilter mbFrom mbTo
+  vehicles <- buildVehicleListItems rcs
+  let count = length vehicles
+  let summary = Common.Summary {totalCount = 10000, count}
+  pure VehicleAPI.VehicleListRes {totalItems = count, summary, vehicles}
+  where
+    maxLimit = 50
+    defaultLimit = 10
+
+getVehicleInfo :: ShortId DM.Merchant -> Context.City -> Text -> Bool -> Maybe Text -> Flow VehicleAPI.VehicleListItem
+getVehicleInfo merchantShortId opCity fleetOwnerId mbFleet mbVehicleNumber = do
+  vehicleNumber <- fromMaybeM (InvalidRequest "vehicleNumber is required") mbVehicleNumber
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  rc <- B.runInReplica (RCQuery.findLastVehicleRCWrapper vehicleNumber) >>= fromMaybeM (VehicleNotFoundForNumber vehicleNumber)
+  -- The list query scopes to merchant and city; the point lookup does not, so scope here.
+  unless (rc.merchantId == Just merchant.id && rc.merchantOperatingCityId == Just merchantOpCity.id) $
+    throwError (VehicleNotFoundForNumber vehicleNumber)
+  when mbFleet $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+    SGuard.guardOnboardingAction transporterConfig (SGuard.ActorFleet (Id fleetOwnerId)) SGuard.View (SGuard.TargetVehicleById rc.id)
+  listToMaybe <$> buildVehicleListItems [rc] >>= fromMaybeM (VehicleNotFoundForNumber vehicleNumber)
+
+buildVehicleListItems :: [DVRC.VehicleRegistrationCertificate] -> Flow [VehicleAPI.VehicleListItem]
+buildVehicleListItems rcs = do
   let rcIds = map (.id) rcs
   fleetAssocs <- B.runInReplica $ QFRCA.findAllActiveByRcIds rcIds
   driverAssocs <- B.runInReplica $ QDRCA.findAllActiveByRcIds rcIds
@@ -69,13 +97,7 @@ getVehicleList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbVehicleN
   fleetOwnerInfos <- B.runInReplica $ QFOI.findAllByPrimaryKeys fleetOwnerIds
   let personById = HM.fromList $ map (\p -> (p.id, p)) persons
       fleetOwnerInfoById = HM.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi)) fleetOwnerInfos
-  vehicles <- mapM (buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById) rcs
-  let count = length vehicles
-  let summary = Common.Summary {totalCount = 10000, count}
-  pure VehicleAPI.VehicleListRes {totalItems = count, summary, vehicles}
-  where
-    maxLimit = 50
-    defaultLimit = 10
+  mapM (buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById) rcs
 
 approvalStatusToFilter :: Common.ApprovalStatusFilter -> Maybe Bool
 approvalStatusToFilter Common.ApprovedOnly = Just True
