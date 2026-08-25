@@ -118,6 +118,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
+import qualified Domain.Action.Dashboard.Management.Vehicle as DVehicle
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as UIDriver
@@ -259,6 +260,7 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssoc
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFODSExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
+import qualified Storage.Queries.FleetRCAssociationExtra as QFRCAE
 import Storage.Queries.FleetRcDailyStatsExtra as QFRDSExtra
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Image as QImage
@@ -5271,6 +5273,20 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
           fMob <- mapM decrypt p.mobileNumber
           pure (Just fullName, fMob)
 
+  mbFleetAssoc <- B.runInReplica $ listToMaybe <$> QFRCAE.findAllActiveByRcIds [vrc.id]
+  mbLinkedDriverAssoc <- B.runInReplica $ listToMaybe <$> DRCAE.findAllActiveByRcIds [vrc.id]
+  recentFleetInfo <- case mbFleetAssoc of
+    Nothing -> pure Nothing
+    Just fra -> do
+      mbPerson <- B.runInReplica $ QPerson.findById fra.fleetOwnerId
+      mbFoi <- B.runInReplica $ FOI.findByPrimaryKey fra.fleetOwnerId
+      DVehicle.mkAssociationInfo mbPerson mbFoi fra.associatedTill True
+  linkedDriverInfo <- case mbLinkedDriverAssoc of
+    Nothing -> pure Nothing
+    Just dra -> do
+      mbPerson <- B.runInReplica $ QPerson.findById dra.driverId
+      DVehicle.mkAssociationInfo mbPerson Nothing dra.associatedTill dra.isRcActive
+
   pure $
     Common.VehicleInfo
       { Common.vehicleNo = fromMaybe "" vrc.unencryptedCertificateNumber,
@@ -5301,6 +5317,16 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
         Common.dateOfRegistration = vrc.dateOfRegistration,
         Common.rejectReason = vrc.rejectReason,
         Common.approved = vrc.approved,
+        Common.verified = vrc.verified,
+        Common.reviewRequired = vrc.reviewRequired,
+        Common.reviewedAt = vrc.reviewedAt,
+        Common.failedRules = vrc.failedRules,
+        Common.permitExpiry = vrc.permitExpiry,
+        Common.vehicleCategory = vrc.userPassedVehicleCategory,
+        Common.createdAt = vrc.createdAt,
+        Common.updatedAt = vrc.updatedAt,
+        Common.recentFleetInfo = recentFleetInfo,
+        Common.linkedDriverInfo = linkedDriverInfo,
         Common.association =
           if isNothing mbDriverId && isNothing vrc.fleetOwnerId
             then Nothing

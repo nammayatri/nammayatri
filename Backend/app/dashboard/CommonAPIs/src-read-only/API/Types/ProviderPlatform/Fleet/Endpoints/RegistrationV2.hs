@@ -50,7 +50,7 @@ data FleetOwnerLanguageRes = FleetOwnerLanguageRes {language :: Kernel.Prelude.M
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetOwnerLoginReqV2 = FleetOwnerLoginReqV2 {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
+data FleetOwnerLoginReqV2 = FleetOwnerLoginReqV2 {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, fleetType :: Kernel.Prelude.Maybe FleetType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
