@@ -28,6 +28,7 @@ module Tools.Maps
     getDistanceForCancelRide,
     getServiceConfigForRectifyingSnapToRoadDistantPointsFailure,
     getDistanceForScheduledRides,
+    getDistancesForScheduledRides,
   )
 where
 
@@ -125,6 +126,20 @@ getDistanceForScheduledRides ::
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
+
+getDistancesForScheduledRides ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  GetDistancesReq a b ->
+  m (GetDistancesResp a b)
+getDistancesForScheduledRides = runWithServiceConfig Maps.getDistances (.getDistancesForScheduledRides)
 
 getRoutes :: (ServiceFlow m r) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getRoutes merchantId merchantOpCityId entityId req = do
