@@ -1081,18 +1081,32 @@ claimBookingForConfirm ::
 claimBookingForConfirm bookingId validTill =
   Redis.withWaitAndLockRedis (confirmClaimLockKey bookingId) confirmClaimLockTtlSec confirmClaimLockRetryDelayMicros $ do
     latest <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest $ "Invalid booking id " <> bookingId.getId)
-    if latest.status /= DFRFSTicketBooking.NEW
+    if latest.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
       then pure Nothing
       else do
-        void $ QFRFSTicketBooking.updateValidTillById validTill latest.id
-        void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
-        -- Carry the validTill we just wrote, not the stale one: ACL.buildConfirmReq falls back to
-        -- booking.validTill for the confirm TTL when bapConfig.confirmTTLSec is unset, so returning
-        -- the pre-update record would send the operator an expiry we have already replaced.
-        pure (Just latest {DFRFSTicketBooking.validTill = validTill})
+        gotPaymentLock <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.tryLockRedis (frfsPaymentSuccessLockKey bookingId) paymentSuccessLockTtlSec
+        if not gotPaymentLock
+          then pure Nothing
+          else do
+            void $ QFRFSTicketBooking.updateValidTillById validTill latest.id
+            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
+            -- Carry the validTill we just wrote, not the stale one: ACL.buildConfirmReq falls back to
+            -- booking.validTill for the confirm TTL when bapConfig.confirmTTLSec is unset, so returning
+            -- the pre-update record would send the operator an expiry we have already replaced.
+            pure (Just latest {DFRFSTicketBooking.validTill = validTill})
 
 confirmClaimLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 confirmClaimLockKey bookingId = "FRFSConfirm:claimBooking-" <> bookingId.getId
+
+frfsPaymentSuccessLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+frfsPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
+
+paymentSuccessLockTtlSec :: Int
+paymentSuccessLockTtlSec = 60
+
+releasePaymentSuccessLock :: (CacheFlow m r, EsqDBFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m ()
+releasePaymentSuccessLock bookingId =
+  Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (frfsPaymentSuccessLockKey bookingId)
 
 -- The critical section is one read and two writes, so this only has to outlive a few KV round
 -- trips. Short on purpose: a TTL that can expire mid-section stops being a lock.
