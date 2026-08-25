@@ -32,6 +32,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
+            boardingConfirmedDespiteDistance = boardingConfirmedDespiteDistance,
             busConductorId = busConductorId,
             busDriverId = busDriverId,
             busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
@@ -84,6 +85,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     Beam.JourneyLegT
       { Beam.agencyGtfsId = agency >>= (.gtfsId),
         Beam.agencyName = agency <&> (.name),
+        Beam.boardingConfirmedDespiteDistance = boardingConfirmedDespiteDistance,
         Beam.busConductorId = busConductorId,
         Beam.busDriverId = busDriverId,
         Beam.busLocationData = Just $ toJSON busLocationData,

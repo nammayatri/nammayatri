@@ -1579,7 +1579,10 @@ generateJourneyInfoResponse journey legs = do
         unifiedQRV2,
         result = Just "Success",
         isSingleMode = journey.isSingleMode,
-        offer
+        offer,
+        boardingConfirmationRequired = Nothing,
+        boardingDistanceFromBusMeters = Nothing,
+        boardingConfirmationReason = Nothing
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2

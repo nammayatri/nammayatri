@@ -835,3 +835,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_asyn
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_resolve_place_name_on_select boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_boarding_proximity_check boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_max_booking_start_drift_seconds double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_match_radius_in_meters double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds double precision ;

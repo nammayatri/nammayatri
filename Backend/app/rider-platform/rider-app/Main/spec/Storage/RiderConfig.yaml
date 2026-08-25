@@ -223,6 +223,10 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
+    enableBoardingProximityCheck: Maybe Bool
+    boardingMatchRadiusInMeters: Maybe Double
+    boardingBusPingMaxAgeSeconds: Maybe Double
+    boardingMaxBookingStartDriftSeconds: Maybe Double
     busTierSortingConfig: "Maybe [BusTierSortingConfig]"
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int

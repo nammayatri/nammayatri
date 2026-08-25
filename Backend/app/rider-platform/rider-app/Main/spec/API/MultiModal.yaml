@@ -97,6 +97,9 @@ types:
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     isSingleMode: Maybe Bool
     offer: Maybe CumulativeOfferResp
+    boardingConfirmationRequired: Maybe Bool
+    boardingDistanceFromBusMeters: Maybe Double
+    boardingConfirmationReason: Maybe Text
     derive: "Show"
 
   LegStatus:
@@ -404,6 +407,9 @@ types:
     vehicleNumber: Maybe Text
     allowUpcomingTrips: Maybe Bool
     allowClusteredStops: Maybe Bool
+    journeyId: Maybe Text
+    latLong: Maybe LatLong
+    timestamp: Maybe UTCTime
     derive: "Show"
 
   AvailableRoute:
@@ -430,7 +436,9 @@ types:
     shortName: Text
 
   OnboardedVehicleDetailsReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+    forceCheckIn: Maybe Bool
+    supportsBoardingConfirmation: Maybe Bool
 
   TowerInfo:
     networkType: Text
