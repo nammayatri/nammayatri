@@ -3,7 +3,7 @@ module Lib.Finance.Utils.GstBreakdown
     GstRateBreakup (..),
     GstRateIntraStateBreakup (..),
     GstRateInterStateBreakup (..),
-    compareIndianPlace,
+    compareIndianState,
     compareIndianGstinStateCode,
     computeGstBreakdownFromRates,
     defaultIntraStateGstBreakdown,
@@ -42,6 +42,8 @@ normalizeGeoComponent mbText =
     _ -> Nothing
 
 -- | Compare two Indian state names (case-insensitive).
+--   Returns Nothing (unknown jurisdiction) when either state is missing;
+--   state resolution must happen upstream.
 compareIndianState :: Maybe Text -> Maybe Text -> Maybe GstJurisdiction
 compareIndianState supplierState receiverState =
   case (normalizeGeoComponent supplierState, normalizeGeoComponent receiverState) of
@@ -51,25 +53,6 @@ compareIndianState supplierState receiverState =
           then IntraState
           else InterState
     _ -> Nothing
-
--- | Compare states first; fall back to city names when either state is missing.
-compareIndianPlace ::
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe GstJurisdiction
-compareIndianPlace supplierState receiverState supplierCity receiverCity =
-  case compareIndianState supplierState receiverState of
-    Just jurisdiction -> Just jurisdiction
-    Nothing ->
-      case (normalizeGeoComponent supplierCity, normalizeGeoComponent receiverCity) of
-        (Just leftCity, Just rightCity) ->
-          Just $
-            if leftCity == rightCity
-              then IntraState
-              else InterState
-        _ -> Nothing
 
 normaliseGstin :: Maybe Text -> Maybe Text
 normaliseGstin mbGstin = do
