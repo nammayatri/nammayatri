@@ -106,6 +106,7 @@ import qualified SharedLogic.OTP as SOTP
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -116,6 +117,7 @@ import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.PersonPTStats as QPersonPTStats
 import qualified Storage.Queries.PersonStats as QPersonStats
 import Text.Regex.Posix ((=~))
 import Tools.Error
@@ -323,6 +325,13 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   logInfo "[Profile.getPersonDetails] findById done"
   decPerson <- decrypt person
   logInfo "[Profile.getPersonDetails] decrypt done"
+  whenJust decPerson.mobileNumber $ \mobileNumber -> do
+    let staticPersonId = SLUtils.getPureStaticCustomerId person mobileNumber
+
+    fork "adopt person pt stats" $ do
+      staleStats <- QPersonPTStats.findAllStaleByPersonId personId staticPersonId
+      forM_ staleStats $ \row ->
+        QPersonPTStats.updateStaticPersonIdById staticPersonId row.id
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
