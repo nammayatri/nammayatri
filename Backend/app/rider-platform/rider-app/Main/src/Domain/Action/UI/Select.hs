@@ -54,6 +54,7 @@ import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.Trip as Trip
@@ -260,7 +261,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   -- Do this before anything is dispatched to the provider: from here on the address is
   -- what the driver is sent to.
   when (isJust searchRequest.parentSearchRequestId) $
-    updateSuggestedLocationAddresses personId person.merchantId searchRequest req
+    updateSuggestedLocationAddresses personId person.merchantId riderConfig searchRequest req
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
@@ -372,21 +373,30 @@ updateSuggestedLocationAddresses ::
   SelectFlow m r c =>
   Id DPerson.Person ->
   Id DM.Merchant ->
+  Maybe DRC.RiderConfig ->
   DSearchReq.SearchRequest ->
   DSelectReq ->
   m ()
-updateSuggestedLocationAddresses personId merchantId searchRequest req = do
+updateSuggestedLocationAddresses personId merchantId mbRiderConfig searchRequest req = do
   when (isJust searchRequest.betterPointWalkToPickup) $
     setAddress searchRequest.fromLocation req.suggestedPickupAddress
   whenJust ((,) <$> searchRequest.betterPointWalkFromDrop <*> searchRequest.toLocation) $ \(_, toLocation) ->
     setAddress toLocation req.suggestedDropAddress
   where
+    -- The app geocodes the markers it draws, so a name normally arrives with the selection
+    -- and nothing is looked up. Resolving one it did not send costs a map call on the
+    -- booking path, so the city has to ask for it.
+    resolvePlaceName = maybe False (fromMaybe False . (.betterPointResolvePlaceNameOnSelect)) mbRiderConfig
+
     setAddress location mbAddress = do
-      -- Falls back to the provider's name for the point. 'reverseGeocodeAddress' answers
-      -- from the place-name cache when it can and returns Nothing rather than throwing --
-      -- the parent's address is still on the location, and a worse name beats failing the
-      -- selection.
-      mbResolved <- maybe (LAE.reverseGeocodeAddress personId merchantId (LatLong location.lat location.lon)) (pure . Just) mbAddress
+      -- 'reverseGeocodeAddress' answers from the place-name cache when it can and returns
+      -- Nothing rather than throwing -- the customer's own address is still on the
+      -- location, and a worse name beats failing the selection.
+      mbResolved <- case mbAddress of
+        Just address -> pure (Just address)
+        Nothing
+          | resolvePlaceName -> LAE.reverseGeocodeAddress personId merchantId (LatLong location.lat location.lon)
+          | otherwise -> pure Nothing
       whenJust mbResolved $ \address ->
         -- Carry over what the customer attached to the ride rather than to the place: a
         -- note for the driver is about this booking, and no geocoder knows it.

@@ -46,9 +46,10 @@ syncSearch ::
   Text ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Text ->
   Search.SearchReqV2 ->
   FlowHandler Spec.OnSearchReq
-syncSearch merchantIdRaw mbToken mbIsShadowSearch reqV2 = withFlowHandlerAPI $
+syncSearch merchantIdRaw mbToken mbIsShadowSearch mbParentTransactionId reqV2 = withFlowHandlerAPI $
   withTimeAPI "syncSearch" "total" $ do
     let transporterId = Id merchantIdRaw :: Id DM.Merchant
     merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
@@ -68,7 +69,7 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch reqV2 = withFlowHandlerAPI $
       void $ Utils.validateSearchContext context transporterId moc.id
       dSearchReq' <- withTimeAPI "syncSearch" "buildSearchReqV2Raw" $ ACL.buildSearchReqV2Raw bapId bapUri reqV2 bapUri
       let isShadowSearch = fromMaybe False mbIsShadowSearch
-          dSearchReq = dSearchReq' {DSearch.isShadowSearch = isShadowSearch}
+          dSearchReq = dSearchReq' {DSearch.isShadowSearch = isShadowSearch, DSearch.parentTransactionId = mbParentTransactionId}
       msgId <- Utils.getMessageId context
       country <- Utils.getContextCountry context
 

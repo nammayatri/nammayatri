@@ -32,6 +32,7 @@ data RiderConfigT f = RiderConfigT
     betterPointMaxOffRouteDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     betterPointMaxWalkPctOfRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     betterPointMinSavingPctOfRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    betterPointResolvePlaceNameOnSelect :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     betterPointWalkAversion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     blockedUntilInMins :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
