@@ -794,23 +794,24 @@ extractGtfsPage req =
       let desc = loc.locationDescriptor
           (lat, lon) = parseGtfsGps loc.locationGps
       pure API.FRFSGtfsStopAPI {code = code, name = desc >>= (.descriptorName), lat = lat, lon = lon}
-    routeCodeOf f = do
-      let tags = fromMaybe [] f.fulfillmentTags
-      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
-      pure $ T.strip rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" tags)
+    routeIdTag f = T.strip <$> SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" (fromMaybe [] f.fulfillmentTags)
+    routeIdTagWithDirection f =
+      (\rid -> rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" (fromMaybe [] f.fulfillmentTags))) <$> routeIdTag f
+    routeCodeFor f
+      | f.fulfillmentType == Just "ROUTE" = f.fulfillmentId <|> routeIdTagWithDirection f
+      | otherwise = routeIdTagWithDirection f
     toRoute f = do
-      let tags = fromMaybe [] f.fulfillmentTags
-      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
-      code <- routeCodeOf f
+      code <- routeCodeFor f
+      let shortName = fromMaybe code (routeIdTag f)
       pure
         API.FRFSGtfsRouteAPI
           { code = code,
-            shortName = T.strip rid,
+            shortName = shortName,
             vehicleType = f.fulfillmentVehicle >>= (.vehicleCategory),
             variant = f.fulfillmentVehicle >>= (.vehicleVariant)
           }
     toRouteStops f =
-      case routeCodeOf f of
+      case routeCodeFor f of
         Nothing -> []
         Just code ->
           mapMaybe
