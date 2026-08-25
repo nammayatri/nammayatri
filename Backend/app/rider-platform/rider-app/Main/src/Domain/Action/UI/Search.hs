@@ -771,6 +771,7 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
 buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed = do
   let searchMode =
