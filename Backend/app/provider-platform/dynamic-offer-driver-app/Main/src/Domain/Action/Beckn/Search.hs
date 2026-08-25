@@ -183,7 +183,11 @@ data DSearchReq = DSearchReq
     -- select/init resolve through estimate.requestId -- but it is a second search for one
     -- customer intent, so it must not fire search/estimate events, add namma tags, or feed
     -- demand hotspots. Always False on the Beckn path.
-    isShadowSearch :: Bool
+    isShadowSearch :: Bool,
+    -- | The search this one shadows, when it is a walk-and-save suggestion. Its dynamic
+    -- pricing inputs are shared with that search so both are priced against the same
+    -- congestion -- see 'dynamicPricingInputsKey'.
+    parentTransactionId :: Maybe Text
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -280,6 +284,13 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let merchantId' = merchant.id
   Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity)
   sessiontoken <- generateGUIDText
+  -- A shadow reuses what the customer's own search published, so the suggestion is not
+  -- charged congestion that search escaped. The customer's search only publishes -- it
+  -- never consumes -- so a shadow can never decide the price of the real ride.
+  let dpInputsSharing = case sReq.parentTransactionId of
+        Just parentTxnId | sReq.isShadowSearch -> Just (ConsumeDpInputs parentTxnId)
+        Just ownTxnId -> Just (PublishDpInputs ownTxnId)
+        Nothing -> Nothing
   let fromLocGeohashh = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (sReq.pickupLocation.lat, sReq.pickupLocation.lon)
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation
   fromLocation <- withTimeAPI "search" "buildFromLocation" $ buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
@@ -324,7 +335,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOpCityId) -- TODO: isn't used much, so fo
   (_, mbVersion) <- withTimeAPI "search" "getAppDynamicLogic" $ getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea

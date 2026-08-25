@@ -12,6 +12,7 @@ module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
 import Control.Applicative ((<|>))
+import qualified Control.Concurrent
 import Data.Aeson as A
 import Data.Coerce (coerce)
 import qualified Data.Geohash as Geohash
@@ -191,8 +192,8 @@ isDynamicPricingTripCategory :: DTC.TripCategory -> Bool
 isDynamicPricingTripCategory (DTC.OneWay v) = v /= MeterRide
 isDynamicPricingTripCategory _ = False
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> m FarePoliciesProduct
-getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions = do
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> m FarePoliciesProduct
+getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions mbDpInputsSharing = do
   let searchSources = FareProduct.getSearchSources isDashboard
   allFareProducts <- withTimeAPI "farePolicy" "getAllFareProducts" $ FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId tripCategory
   let mbResolvedSpecialZoneId = ((.getId) <$> mbFromSpecialLocationId) <|> SL.pickupSpecialZoneIdFromArea allFareProducts.area
@@ -216,7 +217,24 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         let geohash = fromMaybe (fromMaybe "" $ T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (fromlocaton.lat, fromlocaton.lon)) mbFromLocGeohash
             vehicleCategories = map (\(_, mbItem) -> maybe Nothing (.vehicleCategory) mbItem) resolvedFareProducts
             qarRadius = fromMaybe 5.0 transporterConfig.qarCalRadiusInKm
-        withTimeAPI "farePolicy" "buildDynamicPricingInputs" $ buildDynamicPricingInputs now fromlocaton qarRadius (mkDropQARConfig transporterConfig mbToLocation) geohash mbToLocGeohash distance.getMeters merchantOpCityId.getId vehicleCategories
+            build = withTimeAPI "farePolicy" "buildDynamicPricingInputs" $ buildDynamicPricingInputs now fromlocaton qarRadius (mkDropQARConfig transporterConfig mbToLocation) geohash mbToLocGeohash distance.getMeters merchantOpCityId.getId vehicleCategories
+        -- Absent a sharing mode this is just 'build' with no Redis involved, which is
+        -- every search that has no walk-and-save suggestion attached to it.
+        case mbDpInputsSharing of
+          Nothing -> build
+          Just (PublishDpInputs ownTxnId) -> do
+            inputs <- build
+            Hedis.withCrossAppRedis $ Hedis.setExp (dynamicPricingInputsKey ownTxnId) inputs dynamicPricingInputsTtl
+            pure inputs
+          Just (ConsumeDpInputs parentTxnId) ->
+            waitForPublishedDpInputs parentTxnId dynamicPricingInputsWaitAttempts >>= \case
+              Just inputs -> pure inputs
+              -- The customer's search never published -- it was slow, failed, or never went
+              -- through the path that publishes. Pricing on our own inputs keeps the
+              -- suggestion, at the cost of it possibly disagreeing on congestion.
+              Nothing -> do
+                logWarning $ "dynamic_pricing: no published inputs for parent " <> parentTxnId <> "; pricing shadow on its own"
+                build
       _ -> pure []
   baseVariantFareAmountCar <- withTimeAPI "farePolicy" "getBaseVariantFarePolicy" $ getBaseVariantFarePolicy transporterConfig (Just fromlocaton) mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions allFareProducts.specialLocationName mbResolvedSpecialZoneId dpInputsList
   farePolicies <- withTimeAPI "farePolicy" "getFullFarePolicies" $ catMaybes <$> mapConcurrently (\(fareProduct, mbVehicleServiceTierItem) -> getFullFarePolicy (Just fromlocaton) mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar mbAppDynamicLogicVersion allFareProducts.specialLocationName mbResolvedSpecialZoneId fareProduct configsInExperimentVersions dpInputsList (Just transporterConfig) (Just mbVehicleServiceTierItem)) resolvedFareProducts
@@ -1033,6 +1051,41 @@ data DynamicPricingInputs = DynamicPricingInputs
     mbRainStatus :: Maybe Text,
     toss :: Int
   }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+-- | How a search relates to the dynamic-pricing inputs of the customer intent it belongs to.
+--
+-- A walk-and-save shadow moves the drop, and half these inputs are read from Redis keys
+-- derived from the drop -- supplyDemandRatioToLoc and the drop-side QAR. Left to itself a
+-- shadow can be charged congestion the customer's own search was not, on a shorter ride,
+-- which reads to the customer as the suggestion inventing a surcharge.
+--
+-- Deliberately asymmetric. The customer's own search always prices on its own inputs and
+-- merely publishes them; only a shadow consumes. Sharing one key symmetrically would let a
+-- shadow that happened to arrive first decide the price of the real ride -- making the
+-- actual journey dearer because we offered a suggestion, which is far worse than the
+-- inconsistency being fixed.
+data DpInputsSharing
+  = -- | The customer's own search: compute, then publish under its own transaction id.
+    PublishDpInputs Text
+  | -- | A shadow: reuse what the search named here published.
+    ConsumeDpInputs Text
+
+dynamicPricingInputsKey :: Text -> Text
+dynamicPricingInputsKey transactionId = "dpInputs:txn:" <> transactionId
+
+-- Held for the life of a search: congestion moves with real demand, so this must not
+-- outlive the search whose price it is fixing.
+dynamicPricingInputsTtl :: Int
+dynamicPricingInputsTtl = 1800
+
+-- The parent and its shadows are dispatched together, so a shadow can arrive while the
+-- parent is still computing. Wait briefly rather than racing it.
+dynamicPricingInputsWaitAttempts :: Int
+dynamicPricingInputsWaitAttempts = 10
+
+dynamicPricingInputsWaitIntervalMicros :: Int
+dynamicPricingInputsWaitIntervalMicros = 100000
 
 -- vehicleCategory-independent inputs: congestion (geohash+distanceBin), rain
 -- (geohash) and the per-request random toss. Fetched once per search.
@@ -1111,6 +1164,23 @@ resolveDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocG
 -- Deduped resolution for a whole search: the shared part is fetched once and
 -- the per-category part once per distinct vehicleCategory. The result is a
 -- lookup list passed into 'getCongestionChargeMultiplierFromModel'' per tier.
+
+-- | Polls for the parent's published inputs. Bounded: a shadow must not hold the provider
+-- response open waiting on a search that may never publish.
+waitForPublishedDpInputs ::
+  (MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Int ->
+  m (Maybe [(Maybe DVC.VehicleCategory, DynamicPricingInputs)])
+waitForPublishedDpInputs parentTxnId attemptsLeft
+  | attemptsLeft <= 0 = pure Nothing
+  | otherwise =
+    Hedis.withCrossAppRedis (Hedis.safeGet (dynamicPricingInputsKey parentTxnId)) >>= \case
+      Just inputs -> pure (Just inputs)
+      Nothing -> do
+        liftIO $ Control.Concurrent.threadDelay dynamicPricingInputsWaitIntervalMicros
+        waitForPublishedDpInputs parentTxnId (attemptsLeft - 1)
+
 buildDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->

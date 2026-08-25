@@ -405,7 +405,10 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
       fork "search cabs" $
         void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-      mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+      -- Publishes this search's dynamic-pricing inputs when a suggestion exists, so the
+      -- shadow prices on the same congestion instead of its own drop's.
+      let mbDpPublishKey = mbSuggestedBuild $> dSearchRes.searchRequest.id.getId
+      mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey
       -- Both searches were dispatched together; only now do we join on the suggestion, so
       -- its latency overlaps the real search's instead of adding to it.
       inlineResults <- case (mbQuotesRes, suggestedAwaitable) of
@@ -449,6 +452,9 @@ priceSuggestedSearch parentRes suggestedRes alternatives = do
               parentRes.merchant.driverOfferMerchantId
               parentRes.merchant.driverOfferApiKey
               True
+              -- Priced against the customer's own search's dynamic-pricing inputs, so a
+              -- suggestion is never charged congestion that search escaped.
+              (Just parentRes.searchRequest.id.getId)
               becknReq
           )
           "betterRoutePoint.bppSyncSearch"
@@ -511,10 +517,10 @@ awaitSuggestedSearch dSearchRes awaitable =
       logError $ "better_route_point: shadow search fork failed for txn " <> dSearchRes.searchRequest.id.getId <> ": " <> e
       pure Nothing
 
-awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
-awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 = do
+awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Maybe Text -> Flow (Maybe DQuote.GetQuotesRes)
+awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey = do
   let txnId = dSearchRes.searchRequest.id.getId
-  awaitable <- awaitableFork "syncSearchDispatch" $ trySyncSearch dSearchRes becknTaxiReqV2
+  awaitable <- awaitableFork "syncSearchDispatch" $ trySyncSearch dSearchRes becknTaxiReqV2 mbDpPublishKey
   L.await (Just syncSearchTimeoutMicros) awaitable >>= \case
     Right r -> pure r
     Left AwaitingTimeout -> do
@@ -524,13 +530,13 @@ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 = do
       logError $ "sync_search fork failed for txn " <> txnId <> ": " <> e
       pure Nothing
 
-trySyncSearch :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
-trySyncSearch dSearchRes becknTaxiReqV2 = do
+trySyncSearch :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Maybe Text -> Flow (Maybe DQuote.GetQuotesRes)
+trySyncSearch dSearchRes becknTaxiReqV2 mbDpPublishKey = do
   let txnId = dSearchRes.searchRequest.id.getId
       bppUrl = dSearchRes.merchant.driverOfferBaseUrl
       bppMerchantId = dSearchRes.merchant.driverOfferMerchantId
       token = dSearchRes.merchant.driverOfferApiKey
-  eRes <- withTryCatch "syncSearchDispatch" $ withTimeAPI "rideSearch" "bppSyncSearch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token False becknTaxiReqV2
+  eRes <- withTryCatch "syncSearchDispatch" $ withTimeAPI "rideSearch" "bppSyncSearch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token False mbDpPublishKey becknTaxiReqV2
   case eRes of
     Right onSearchReq -> do
       logInfo $ "sync_search succeeded for txn " <> txnId <> "; processing inline"
