@@ -123,6 +123,7 @@ RiderConfig:
     seatBookingCleanupTtl: Maybe Int
     distanceWeightage: Int
     isAvoidToll: Bool
+    enableRouteCacheRead: Maybe Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     passExpiryReminderDays: Maybe Int

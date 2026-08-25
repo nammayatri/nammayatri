@@ -88,6 +88,7 @@ data SearchRequestT f = SearchRequestT
     riderId :: B.C f Kernel.Prelude.Text,
     riderPreferredOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderPreferredOption.RiderPreferredOption),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    routeCacheUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode),
     selectedPaymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),

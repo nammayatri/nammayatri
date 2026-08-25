@@ -1,0 +1,55 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  RouteInfo: Kernel.External.Maps.Interface.Types
+  Value: Data.Aeson
+
+CachedRouteResponse:
+  tableName: cached_route_response
+
+  fields:
+    id: Id CachedRouteResponse
+    riderId: Id Person
+    pickupGeohash: Text
+    dropGeohash: Text
+    hourOfDay: Int
+    avoidToll: Maybe Bool
+    distance: Maybe Meters
+    duration: Maybe Seconds
+    routes: "[RouteInfo]"
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    routes: Maybe Value
+
+  sqlType:
+    routes: "json"
+
+  toTType:
+    routes: Just $ toJSON routes|E
+
+  fromTType:
+    routes: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< routes)|E
+
+  constraints:
+    id: PrimaryKey
+    riderId: "CompositeSecondaryKey routeCacheKeyGroup"
+    pickupGeohash: "CompositeSecondaryKey routeCacheKeyGroup"
+    dropGeohash: "CompositeSecondaryKey routeCacheKeyGroup"
+    hourOfDay: "CompositeSecondaryKey routeCacheKeyGroup"
+    avoidToll: "CompositeSecondaryKey routeCacheKeyGroup"
+
+  queries:
+    findByRiderIdAndGeohashAndHourAndToll:
+      kvFunction: findOneWithKV
+      where:
+        and: [riderId, pickupGeohash, dropGeohash, hourOfDay, avoidToll]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

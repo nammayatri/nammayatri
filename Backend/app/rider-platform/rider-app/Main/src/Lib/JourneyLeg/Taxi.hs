@@ -106,6 +106,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 verifyBeforeCancellingOldBooking = Just True,
                 numberOfLuggages = Nothing,
                 doMultimodalSearch = Just True,
+                shouldCacheRoute = Nothing,
                 city = Nothing,
                 ..
               }

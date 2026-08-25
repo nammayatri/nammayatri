@@ -281,7 +281,8 @@ mkBackendHandle merchantId mocId ctx =
           subscriptionId = Nothing,
           verifyBeforeCancellingOldBooking = Nothing,
           numberOfLuggages = Nothing,
-          doMultimodalSearch = Nothing
+          doMultimodalSearch = Nothing,
+          shouldCacheRoute = Nothing
         }
 
     rentalSearchReq origin now =
