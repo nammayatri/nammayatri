@@ -1835,8 +1835,26 @@ query.
 
 ```
 GET /rating/phone/{number}     -> {"rating": 4.5, "total": 3}
-GET /rating/driver/{driverId}  -> {"rating": 4.2, "total": 6}
+GET /rating/driver/{driverId}  -> {"rating": 4.2, "total": 6, "rides": 148}
 ```
+
+`rides` was added on 2026-08-25, when the client asked that a passenger
+choosing between offers see how much each driver has driven. Nothing on the
+offer carries it and a sixth field on `vehicleDesc` would be a rebuild for one
+integer, so it is a `count(*)` over his COMPLETED rides.
+
+**Counted, never inferred from `total`.** Most rides are never rated — measured
+here, Yacine has 15 rides and Karim 14, against 6 and 5 ratings — so showing the
+rating count as experience would undersell every driver by roughly half. And
+`rating: null` does **not** imply `rides: 0`: the first version of that handler
+returned early on a null rating, which would have hidden the ride count of every
+driver nobody has rated yet, who are exactly the drivers a passenger needs a
+second number for.
+
+`probe-driver-rides.py` checks every driver against the database. It also
+found, by accident, that **33 rapid requests trip `limit_req burst=20`** on this
+location — worth knowing and not worth changing: the offer screen makes one
+request per offer and there are never more than five.
 
 The passenger route uses the join `avatars.js` already trusts: the two schemas
 agree on the phone-number hash, so her `atlas_app.person` row finds her

@@ -65,6 +65,9 @@ function send(res, status, body) {
 async function serveForPhone(pool, phone, res) {
   const digits = String(phone || '').replace(/\D/g, '');
   if (!pool || digits.length < 9) return send(res, 200, { rating: null, total: 0 });
+  /* `rides` is deliberately absent here: it exists for the passenger's offer
+     list, which is about drivers. A passenger's own ride count is on her own
+     backend, and nothing has asked for it. */
 
   try {
     const q = await pool.query(
@@ -97,9 +100,9 @@ async function serveForPhone(pool, phone, res) {
 }
 
 /**
- * GET /rating/driver/{driverId} -> {"rating": 4.5, "total": 6}
+ * GET /rating/driver/{driverId} -> {"rating": 4.5, "total": 6, "rides": 148}
  *
- * ── Why the driver's own API cannot answer this ─────────────────────────────
+ * ── Why the driver's own API cannot answer any of this ──────────────────────
  * `GET /ui/driver/profile` returns his average and not how many people gave
  * it. Measured rather than assumed: the deployed driver binary does not contain
  * the string `totalRatings` **anywhere** — `grep -a` over the executable finds
@@ -108,33 +111,53 @@ async function serveForPhone(pool, phone, res) {
  *
  * A driver has no running count either, unlike a passenger: his average is
  * rebuilt from the `rating` table by `calculateAverageRating`, so the count is
- * a `count(*)` over the same rows. That is this query. See passenger-rating.sql
- * for why passengers were given the three columns instead.
+ * a `count(*)` over the same rows. See passenger-rating.sql for why passengers
+ * were given three columns instead.
+ *
+ * ── `rides` is for the passenger's offer list, not for him ──────────────────
+ * Added 2026-08-25: the client asked that a passenger choosing between offers
+ * see how many rides each driver has completed. Nothing about the offer carries
+ * it, and adding a sixth field to `vehicleDesc` would be a backend rebuild for
+ * one integer. It is a `count(*)` over his COMPLETED rides.
+ *
+ * **Counted here and never inferred from the rating count.** They are different
+ * numbers and the gap between them is the interesting part: most rides are
+ * never rated, so a driver with 148 rides and 6 ratings is normal, and showing
+ * 6 as his experience would badly undersell him.
+ *
+ * ── rating null does not mean rides zero ────────────────────────────────────
+ * The early return this used to have bailed out whenever `rating` was null,
+ * which would have hidden the ride count of every driver nobody has rated yet
+ * — the exact drivers a passenger most needs a second number for.
  */
 async function serveForDriver(pool, driverId, res) {
+  const none = { rating: null, total: 0, rides: 0 };
   if (!pool || !/^[0-9a-fA-F-]{8,64}$/.test(String(driverId || ''))) {
-    return send(res, 200, { rating: null, total: 0 });
+    return send(res, 200, none);
   }
   try {
     const q = await pool.query(
-      `SELECT p.rating, count(r.id) AS total
+      `SELECT p.rating,
+              (SELECT count(*) FROM atlas_driver_offer_bpp.rating r
+                WHERE r.driver_id = p.id)                            AS total,
+              (SELECT count(*) FROM atlas_driver_offer_bpp.ride rd
+                WHERE rd.driver_id = p.id AND rd.status = 'COMPLETED') AS rides
          FROM atlas_driver_offer_bpp.person p
-         LEFT JOIN atlas_driver_offer_bpp.rating r ON r.driver_id = p.id
-        WHERE p.id = $1
-        GROUP BY p.rating`,
+        WHERE p.id = $1`,
       [String(driverId)],
     );
     const row = q.rows[0];
-    if (!row || row.rating === null || row.rating === undefined) {
-      return send(res, 200, { rating: null, total: 0 });
-    }
+    if (!row) return send(res, 200, none);
+
     return send(res, 200, {
-      rating: Number(row.rating),
+      // Null stays null. A driver nobody has rated is "Nouveau", never zero.
+      rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
       total: Number(row.total || 0),
+      rides: Number(row.rides || 0),
     });
   } catch (e) {
     console.error('[rating] driver lookup', e.message);
-    return send(res, 200, { rating: null, total: 0 });
+    return send(res, 200, none);
   }
 }
 
