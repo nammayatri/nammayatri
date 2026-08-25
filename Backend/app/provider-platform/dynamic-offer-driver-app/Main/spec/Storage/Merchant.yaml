@@ -926,12 +926,14 @@ TransporterConfig:
       afterFaultSec: Int
       overlayKey: Text
       channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       terminalAction: Maybe PickupStallTerminalAction
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupDarkStage:
       afterDarkSec: Int
       overlayKey: Text
       channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int

@@ -1928,9 +1928,15 @@ data SystemChatMessageEntityData = SystemChatMessageEntityData
   { messageKey :: Text,
     message :: Text,
     audioUrl :: Maybe Text,
-    rideId :: Text
+    rideId :: Text,
+    -- quick replies offered under the system bubble (and on the background chat
+    -- overlay): suggestion keys or plain text, capped at 3; empty = show none
+    chatSuggestions :: [Text]
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+maxSystemChatSuggestions :: Int
+maxSystemChatSuggestions = 3
 
 sendSystemChatMessage ::
   ( CacheFlow m r,
@@ -1941,8 +1947,9 @@ sendSystemChatMessage ::
   Person ->
   Text ->
   Id DRide.Ride ->
+  [Text] ->
   m ()
-sendSystemChatMessage merchantOpCityId driver messageKey rideId = do
+sendSystemChatMessage merchantOpCityId driver messageKey rideId chatSuggestions' = do
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH driver.language) Nothing
   case mbMerchantPN of
     Nothing -> logWarning $ "No merchant_push_notification row found for system chat message key: " <> messageKey
@@ -1953,7 +1960,8 @@ sendSystemChatMessage merchantOpCityId driver messageKey rideId = do
               { messageKey = messageKey,
                 message = merchantPN.body,
                 audioUrl = merchantPN.audioUrl,
-                rideId = rideId.getId
+                rideId = rideId.getId,
+                chatSuggestions = take maxSystemChatSuggestions chatSuggestions'
               }
           title = FCM.FCMNotificationTitle merchantPN.title
           body = FCMNotificationBody merchantPN.body
