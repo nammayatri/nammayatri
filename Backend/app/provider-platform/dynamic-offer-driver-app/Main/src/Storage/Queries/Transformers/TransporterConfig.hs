@@ -3,6 +3,7 @@ module Storage.Queries.Transformers.TransporterConfig
     parseFieldM,
     parseFieldWithDefaultM,
     parseAnalyticsConfig,
+    parseScheduledRideConfig,
     parseDriverWalletConfig,
     parseSubscriptionConfig,
     parseTaxConfig,
@@ -47,6 +48,19 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
             useDbForEarningAndMetrics = False
           }
   parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def parseAnalyticsConfigWithDefault mbVal
+
+$(mkFieldParserWithDefault ''ScheduledRideConfig)
+
+parseScheduledRideConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m ScheduledRideConfig
+parseScheduledRideConfig merchantOperatingCityId mbVal = do
+  let def =
+        ScheduledRideConfig
+          { minLeadTime = Nothing,
+            maxLeadTime = Nothing,
+            avgSpeedKmph = Nothing,
+            maxHoldsPerDriver = 1
+          }
+  parseFieldWithDefaultM "transporterConfig" "scheduledRideConfig" merchantOperatingCityId def parseScheduledRideConfigWithDefault mbVal
 
 $(mkFieldParserWithDefault ''DriverWalletConfig)
 

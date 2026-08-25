@@ -1169,7 +1169,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
   let minimumScheduledBookingLeadTimeInSecs = KP.intToNominalDiffTime (transporterConfig.minmRentalAndScheduledBookingLeadTimeHours.getHours * 3600)
       scheduledRideFilterExclusionThresholdInSecs = KP.intToNominalDiffTime (transporterConfig.scheduledRideFilterExclusionThresholdHours.getHours * 3600)
       haveScheduled = isJust driverInfo.latestScheduledBooking
-      avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideAvgSpeedKmph
+      avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideConfig.avgSpeedKmph
   if
       -- the new ride is itself scheduled: interval feasibility against the driver's committed set (Case 2);
       -- the arms below assume an ad-hoc ride running now (Case 1) and stay unchanged
@@ -1208,7 +1208,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
       | not (isJust driverInfo.latestScheduledBooking) && driverInfo.onRide /= Just True = return True
       | otherwise = do
         committed <- SBOC.getDriverCommittedRides (cast driverInfo.driverId)
-        if SBOC.countActiveHolds committed >= transporterConfig.maxScheduledHoldsPerDriver
+        if SBOC.countActiveHolds committed >= transporterConfig.scheduledRideConfig.maxHoldsPerDriver
           then return False
           else do
             let candidate =

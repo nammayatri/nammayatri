@@ -24,11 +24,14 @@ WHERE dpc.merchant_operating_city_id = moc.id
 -- -----------------------------------------------------------------------------
 -- min/max advance-booking window in SECONDS. Both are TBD by MSIL — values below
 -- are placeholders. Leave a column NULL to disable that bound.
--- NOTE: keep min_booking_window >= schedule_ride_buffer_time (default 1800) so a
+-- NOTE: keep minLeadTime >= schedule_ride_buffer_time (default 1800) so a
 -- scheduled-classified booking below the floor is rejected, not downgraded to instant.
+-- min/max lead now live inside the grouped scheduled_ride_config json column; the
+-- merge preserves the other keys (avgSpeedKmph / maxHoldsPerDriver from the SWS-4 script).
 UPDATE atlas_driver_offer_bpp.transporter_config tc
-SET min_booking_window = 1800,        -- REPLACE (e.g. 30 min) — TBD by MSIL
-    max_booking_window = 172800       -- REPLACE (e.g. 2 days) — TBD by MSIL
+SET scheduled_ride_config =
+      (COALESCE(tc.scheduled_ride_config::jsonb, '{}'::jsonb)
+        || jsonb_build_object('minLeadTime', 1800, 'maxLeadTime', 172800))::json  -- REPLACE min/max lead (seconds) — TBD by MSIL
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
 WHERE tc.merchant_operating_city_id = moc.id
   AND moc.merchant_short_id = 'MSIL_PARTNER';
