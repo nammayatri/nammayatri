@@ -62,6 +62,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             forceOnlineLedger = Nothing,
             maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
+            minWalletAmountForScheduledRides = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,

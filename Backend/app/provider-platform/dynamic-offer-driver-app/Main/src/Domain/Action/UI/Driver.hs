@@ -333,6 +333,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.Person.GetNearestDrivers (scheduledTierEligibleForDriver)
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
@@ -3253,20 +3254,28 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) Nothing Nothing Nothing personId cityId
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
-              let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
-              let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
-              if scheduleEnabled
-                then do
-                  let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
-                      tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                      limit = fromMaybe 10 mbLimit
-                      offset = fromMaybe 0 mbOffset
-                      safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-                  scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
-                  bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
-                  let sortedBookings = sortBookingsByDistance (catMaybes bookings)
-                  return $ ScheduledBookingRes sortedBookings
-                else return $ ScheduledBookingRes []
+              walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides personId.getId
+              now <- getCurrentTime
+              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
+              let cityServiceTierByType = HM.fromList $ (\serviceTier -> (serviceTier.serviceTierType, serviceTier)) <$> cityServiceTiers
+                  driverActiveTags = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag)
+                  tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+                  limit = fromMaybe 10 mbLimit
+                  offset = fromMaybe 0 mbOffset
+                  safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+                  -- R4: still-unassigned scheduled bookings within the open-to-all threshold are shown to everyone.
+                  isWithinOpenToAllWindow scheduledBooking =
+                    DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes scheduledBooking.startTime now
+                  -- Driver's tags must match the eligibility tags configured on this booking's service tier.
+                  isDriverTagEligibleForTier scheduledBooking =
+                    scheduledTierEligibleForDriver True False driverActiveTags cityServiceTierByType scheduledBooking.vehicleServiceTier
+                  isBookingVisibleToDriver scheduledBooking =
+                    (isDriverTagEligibleForTier scheduledBooking && walletOk)
+                      || isWithinOpenToAllWindow scheduledBooking
+              scheduledBookings <- getScheduledBookings from cityId availableServiceTiers (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
+              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (filter isBookingVisibleToDriver (catMaybes scheduledBookings))
+              let sortedBookings = sortBookingsByDistance (catMaybes bookings)
+              return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS person = do
@@ -3325,9 +3334,11 @@ parseMember member = do
 returnFilteredBookings :: UTCTime -> [BS.ByteString] -> Maybe LatLong -> Maybe [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
 returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset limit = do
   let parsedRes = mapMaybe (parseMember . decodeUtf8) res
+      -- Dual-read (service-tier + legacy variant keys) can surface the same booking twice; dedupe
+      -- booking ids (keeping first occurrence) before applying the limit and the hash-set fetch.
       nearbyBookings = case mbDLoc of
-        Just dLoc -> take (fromIntegral limit) $ filterNearbyBookings now dLoc parsedRes mbPossibleServiceTierTypes
-        Nothing -> take (fromIntegral limit) $ map (\(id, _, _, _, _) -> id) parsedRes
+        Just dLoc -> take (fromIntegral limit) $ nub $ filterNearbyBookings now dLoc parsedRes mbPossibleServiceTierTypes
+        Nothing -> take (fromIntegral limit) $ nub $ map (\(id, _, _, _, _) -> id) parsedRes
   if not $ null nearbyBookings
     then Redis.hmGet redisKeyForHset nearbyBookings
     else pure []
@@ -3362,14 +3373,14 @@ mkBreakupItem currency title valueInText = do
 -- For today: queries two windows (30min-2hrs with safelimit, 2hrs-midnight with limit), skips next 30min.
 -- For future days: queries full 24-hour window from midnight to midnight with limit.
 -- Uses local time for Redis keys/scores, converts to UTC for distance filtering.
-getScheduledBookings :: Day -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-getScheduledBookings from mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
+getScheduledBookings :: Day -> Id DMOC.MerchantOperatingCity -> [ServiceTierType] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+getScheduledBookings from mocCityId serviceTiers mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       localNow = addUTCTime timeDiff now
       isToday = utctDay now >= from
       referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
-      redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories vehicleVariants
+      redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories serviceTiers
       redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
       queryTimeRange startTime endTime off lim =
         concat <$> mapM (\key -> Redis.zRangeByScoreByCount key (calculateSortedSetScore startTime) (calculateSortedSetScore endTime) off lim) redisKeys
@@ -3398,6 +3409,20 @@ acceptScheduledBookingWithPreFetched ::
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking = do
   upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
   unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
+  -- R2 safety net: enforce the scheduled-ride minimum wallet balance on accept, unless the booking
+  -- is within the R4 open-to-all threshold (eligibility dropped for everyone near pickup).
+  nowT <- getCurrentTime
+  let scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT
+  unless scheduledOpenToAll $ do
+    walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides driver.id.getId
+    unless walletOk $ throwError (InvalidRequest "Insufficient wallet balance to accept scheduled ride")
+    -- Schedule-tag eligibility gate: reuse the same predicate the dispatch path applies, so a
+    -- tag-excluded driver can't accept directly what they'd never be offered.
+    cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing
+    let cityServiceTiersHashMap = HM.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
+        driverTagTexts = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' nowT (fromMaybe [] driver.driverTag)
+    unless (scheduledTierEligibleForDriver True scheduledOpenToAll driverTagTexts cityServiceTiersHashMap booking.vehicleServiceTier) $
+      throwError (InvalidRequest "Driver is not eligible for this scheduled booking")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking
   pure Success

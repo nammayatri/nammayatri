@@ -1038,6 +1038,7 @@ TransporterConfig:
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
+      minWalletAmountForScheduledRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
@@ -1281,6 +1282,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: NominalDiffTime
     minmRentalAndScheduledBookingLeadTimeHours: Hours
     scheduledRideFilterExclusionThresholdHours: Hours
+    scheduledRideOpenToAllThresholdMinutes: Maybe Minutes
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
     variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
@@ -1768,6 +1770,7 @@ TransporterConfig:
     fraudAuthCountWindow: json
     stripeStatusRefreshCountWindow: json
     authIpBlockedUntilInMins: integer
+    scheduledRideOpenToAllThresholdMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint

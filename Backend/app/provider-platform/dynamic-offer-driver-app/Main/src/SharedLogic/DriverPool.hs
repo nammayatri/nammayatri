@@ -15,6 +15,7 @@
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
+    isScheduledOpenToAll,
     calculateDriverPoolWithActualDist,
     calculateDriverCurrentlyOnRideWithActualDist,
     filterOnRideDriversFromPool,
@@ -883,6 +884,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
+    isScheduled :: Bool,
+    scheduledPickupTime :: Maybe UTCTime,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
@@ -891,6 +894,10 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     excludeDriverIds :: [Id DP.Driver],
     prevAttemptedDriverIds :: [Id DP.Driver]
   }
+
+isScheduledOpenToAll :: Maybe Minutes -> UTCTime -> UTCTime -> Bool
+isScheduledOpenToAll mbThresholdMinutes pickupTime now =
+  maybe False (\n -> let remaining = diffUTCTime pickupTime now in remaining >= 0 && remaining <= fromIntegral (n.getMinutes * 60)) mbThresholdMinutes
 
 calculateDriverPool ::
   ( BeamFlow m r,
@@ -915,6 +922,8 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
   let coord = getCoordinates pickup
   enableLtsPoolData <- asks (.enableLtsPoolDataForPooling)
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
+  -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
+  let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers
@@ -926,6 +935,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
             vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
+            minWalletAmountForScheduledRides = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides,
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
@@ -1004,6 +1014,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
   let coord = getCoordinates pickup
   enableLtsPoolData <- asks (.enableLtsPoolDataForPooling)
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
+  -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
+  let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
   let ltsReq =
         QPG.NearestDriversReq
           { fromLocLatLong = coord,
@@ -1013,6 +1025,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
             vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
+            minWalletAmountForScheduledRides = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides,
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
@@ -1025,6 +1038,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             merchantId,
             isRental,
             isInterCity,
+            isScheduled,
+            scheduledOpenToAll,
             currentRideTripCategoryValidForForwardBatching,
             govtCharges,
             tollCharges,

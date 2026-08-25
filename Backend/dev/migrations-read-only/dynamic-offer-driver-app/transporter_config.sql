@@ -1087,3 +1087,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN drop_qar_cal_ra
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_open_to_all_threshold_minutes integer ;
