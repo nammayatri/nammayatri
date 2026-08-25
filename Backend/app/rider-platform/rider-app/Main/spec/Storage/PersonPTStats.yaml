@@ -41,29 +41,20 @@ PersonPTStats:
 
   constraints:
     id: PrimaryKey
-    personId: "!SecondaryKey"
     staticPersonId: "!SecondaryKey"
 
   extraIndexes:
     - columns: [staticPersonId, vehicleType, vehicleServiceTierType, productType, passTypeId]
     - columns: [staticPersonId]
-    - columns: [personId]
 
   queries:
     findAllByStaticPersonId:
       kvFunction: findAllWithKV
       where: staticPersonId
-    findAllByPersonId:
-      kvFunction: findAllWithKV
-      where: personId
     findByDimensions:
       kvFunction: findOneWithKV
       where:
         and: [staticPersonId, vehicleType, vehicleServiceTierType, productType, passTypeId]
-    findByPersonIdAndDimensions:
-      kvFunction: findOneWithKV
-      where:
-        and: [personId, vehicleType, vehicleServiceTierType, productType, passTypeId]
     updateCounts:
       kvFunction: updateOneWithKV
       params: [ticketCount, purchaseCount, lastPurchasedAt, personId]
@@ -71,10 +62,6 @@ PersonPTStats:
     updatePersonIdById:
       kvFunction: updateOneWithKV
       params: [personId]
-      where: id
-    updateStaticPersonIdById:
-      kvFunction: updateOneWithKV
-      params: [staticPersonId]
       where: id
 
   extraOperations:

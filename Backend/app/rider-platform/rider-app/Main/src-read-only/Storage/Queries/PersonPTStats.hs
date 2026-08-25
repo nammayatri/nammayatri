@@ -24,9 +24,6 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PersonPTStats.PersonPTStats] -> m ())
 createMany = traverse_ create
 
-findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.PersonPTStats.PersonPTStats])
-findAllByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
-
 findAllByStaticPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.PersonPTStats.PersonPTStats])
 findAllByStaticPersonId staticPersonId = do findAllWithKV [Se.Is Beam.staticPersonId $ Se.Eq staticPersonId]
 
@@ -37,20 +34,6 @@ findByDimensions staticPersonId vehicleType vehicleServiceTierType productType p
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.staticPersonId $ Se.Eq staticPersonId,
-          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
-          Se.Is Beam.vehicleServiceTierType $ Se.Eq vehicleServiceTierType,
-          Se.Is Beam.productType $ Se.Eq productType,
-          Se.Is Beam.passTypeId $ Se.Eq (Kernel.Types.Id.getId <$> passTypeId)
-        ]
-    ]
-
-findByPersonIdAndDimensions ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> Domain.Types.PersonPTStats.FRFSProductType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> m (Maybe Domain.Types.PersonPTStats.PersonPTStats))
-findByPersonIdAndDimensions personId vehicleType vehicleServiceTierType productType passTypeId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType,
           Se.Is Beam.vehicleServiceTierType $ Se.Eq vehicleServiceTierType,
           Se.Is Beam.productType $ Se.Eq productType,
@@ -76,11 +59,6 @@ updatePersonIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Typ
 updatePersonIdById personId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.personId (Kernel.Types.Id.getId personId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateStaticPersonIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PersonPTStats.PersonPTStats -> m ())
-updateStaticPersonIdById staticPersonId id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.staticPersonId staticPersonId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PersonPTStats.PersonPTStats -> m (Maybe Domain.Types.PersonPTStats.PersonPTStats))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -135,19 +135,6 @@ findRow ev =
     ev.vehicleServiceTierType
     ev.productType
     ev.passTypeId
-    >>= \case
-      Just row -> pure (Just row)
-      Nothing -> do
-        mbLegacyRow <-
-          QPersonPTStats.findByPersonIdAndDimensions
-            ev.personId
-            ev.vehicleType
-            ev.vehicleServiceTierType
-            ev.productType
-            ev.passTypeId
-        forM mbLegacyRow $ \row -> do
-          QPersonPTStats.updateStaticPersonIdById ev.staticPersonId row.id
-          pure row
 
 -- | Keyed on staticPersonId, the same identity findRow reads by. Locking on
 -- personId instead would let two accounts sharing a phone update one row under

@@ -140,26 +140,18 @@ fetchUsageRows ::
   Person.Person ->
   m [DPUS.PersonPTStats]
 fetchUsageRows person = do
-  mbStaticPersonId <-
-    forM person.mobileNumber $ \encPhone ->
-      SLUtils.getPureStaticCustomerId person <$> decrypt encPhone
-  case mbStaticPersonId of
-    Nothing -> QPersonPTStats.findAllByPersonId person.id
-    Just staticPersonId -> do
-      byStaticPersonId <- QPersonPTStats.findAllByStaticPersonId staticPersonId
-      byPersonId <- QPersonPTStats.findAllByPersonId person.id
-      let adoptedIds = map (.id) byStaticPersonId
-          rows = byStaticPersonId <> filter (\row -> row.id `notElem` adoptedIds) byPersonId
-      reconcileKeys staticPersonId rows
-      pure rows
-  where
-    reconcileKeys staticPersonId rows = do
-      let needsAdopting = filter (\row -> row.staticPersonId /= staticPersonId) rows
-          needsRepointing = filter (\row -> row.personId /= person.id) rows
-      unless (null needsAdopting && null needsRepointing) $
-        fork "reconcile person pt stats keys" $ do
-          forM_ needsAdopting $ \row -> QPersonPTStats.updateStaticPersonIdById staticPersonId row.id
-          forM_ needsRepointing $ \row -> QPersonPTStats.updatePersonIdById person.id row.id
+  -- Same fallback as the write path, so reads and writes agree on the key.
+  staticPersonId <-
+    maybe
+      (pure person.id.getId)
+      (\encPhone -> SLUtils.getPureStaticCustomerId person <$> decrypt encPhone)
+      person.mobileNumber
+  rows <- QPersonPTStats.findAllByStaticPersonId staticPersonId
+  let staleRows = filter (\row -> row.personId /= person.id) rows
+  unless (null staleRows) $
+    fork "repoint person usage stats" $
+      forM_ staleRows $ \row -> QPersonPTStats.updatePersonIdById person.id row.id
+  pure rows
 
 mkInput :: UTCTime -> [DPUS.PersonPTStats] -> OfferSegmentContext -> OfferSegmentInput
 mkInput now rows ctx =
