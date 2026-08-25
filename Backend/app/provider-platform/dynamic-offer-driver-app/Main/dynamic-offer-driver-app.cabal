@@ -591,6 +591,7 @@ library
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.LedgerAdjustment
+      SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation.EntitySync

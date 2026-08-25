@@ -34,7 +34,9 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
+import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
+import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as DLE
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementInvoiceMapping as QTdsMap
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as QTdsReq
@@ -42,6 +44,7 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified SharedLogic.FareCalculator as SFC
+import SharedLogic.Finance.LedgerAdjustmentCast
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
@@ -148,6 +151,79 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = Ac
   pure Success
 
 --------------------------------------------------------------------------------
+-- Category handlers
+--------------------------------------------------------------------------------
+
+-- | Per-category dispatch: expected direction, submit-time validation, checker
+--   post action and reject side effect, all defined in one place per category.
+data CategoryHandlers = CategoryHandlers
+  { expectedDirection :: DLA.AdjustmentDirection,
+    validateCategory ::
+      DM.Merchant ->
+      DMOC.MerchantOperatingCity ->
+      DTC.TransporterConfig ->
+      Id DP.Person ->
+      DLA.AdjustmentDirection ->
+      API.SubmitLedgerAdjustmentReq ->
+      Flow (),
+    postCategory :: PostLedgerAdjustment,
+    rejectSideEffect :: RejectLedgerAdjustmentSideEffect
+  }
+
+categoryHandlers :: DLA.AdjustmentCategory -> CategoryHandlers
+categoryHandlers category = case category of
+  DLA.RideRelatedCredit -> mkCategoryHandlers DLA.Credit validateRideRelated postRideRelatedAdjustment
+  DLA.RideRelatedDebit -> mkCategoryHandlers DLA.Debit validateRideRelated postRideRelatedAdjustment
+  DLA.PayoutRelatedCredit -> mkCategoryHandlers DLA.Credit validatePayoutRelated postPayoutRelatedAdjustment
+  DLA.PayoutRelatedDebit -> mkCategoryHandlers DLA.Debit validatePayoutRelated postPayoutRelatedAdjustment
+  DLA.TdsReimbursementCredit ->
+    CategoryHandlers
+      { expectedDirection = DLA.Credit,
+        validateCategory = validateTdsReimbursement,
+        postCategory = postTdsReimbursementAdjustment,
+        rejectSideEffect = rejectTdsReimbursementSideEffect
+      }
+  -- Debit kept in enum for chart symmetry; FO cert reimbursement is Credit-only for now.
+  -- On reject there is no domain sync either.
+  DLA.TdsReimbursementDebit ->
+    mkCategoryHandlers
+      DLA.Debit
+      (\_ _ _ _ _ _ -> throwError $ LedgerAdjustmentCategoryNotSupported (show category))
+      (\_transporterConfig adjustmentRequest -> unsupportedLedgerAdjustmentCategory adjustmentRequest)
+  DLA.IncentiveCredit -> mkCategoryHandlers DLA.Credit validateIncentive postIncentiveAdjustment
+  DLA.IncentiveDebit -> mkCategoryHandlers DLA.Debit validateIncentive postIncentiveAdjustment
+  DLA.MiscellaneousCredit -> mkCategoryHandlers DLA.Credit validateMiscellaneous postMiscellaneousAdjustment
+  DLA.MiscellaneousDebit -> mkCategoryHandlers DLA.Debit validateMiscellaneous postMiscellaneousAdjustment
+  DLA.TdsDeductionDebit -> mkCategoryHandlers DLA.Debit validateTdsDeduction postTdsDeductionAdjustment
+  where
+    validateRideRelated _merchant _merchantOpCity transporterConfig personId direction req = validateRideRelatedAdjustment transporterConfig personId direction req
+    validatePayoutRelated _merchant merchantOpCity _transporterConfig personId direction req = validatePayoutRelatedAdjustment merchantOpCity personId direction req
+    validateTdsReimbursement _merchant merchantOpCity _transporterConfig personId direction req = validateTdsReimbursementAdjustment merchantOpCity personId direction req
+    validateIncentive _merchant _merchantOpCity _transporterConfig personId direction req = validateIncentiveAdjustment personId direction req
+    validateMiscellaneous _merchant _merchantOpCity _transporterConfig personId direction req = validateMiscellaneousAdjustment personId direction req
+    validateTdsDeduction _merchant _merchantOpCity transporterConfig personId _direction req = validateTdsDeductionAdjustment transporterConfig personId req
+
+mkCategoryHandlers ::
+  DLA.AdjustmentDirection ->
+  ( DM.Merchant ->
+    DMOC.MerchantOperatingCity ->
+    DTC.TransporterConfig ->
+    Id DP.Person ->
+    DLA.AdjustmentDirection ->
+    API.SubmitLedgerAdjustmentReq ->
+    Flow ()
+  ) ->
+  PostLedgerAdjustment ->
+  CategoryHandlers
+mkCategoryHandlers expectedDirection validateCategory postCategory =
+  CategoryHandlers
+    { expectedDirection,
+      validateCategory,
+      postCategory,
+      rejectSideEffect = noopRejectSideEffect
+    }
+
+--------------------------------------------------------------------------------
 -- Category validation
 --------------------------------------------------------------------------------
 
@@ -160,19 +236,8 @@ validateLedgerAdjustmentCategory ::
   DLA.AdjustmentDirection ->
   API.SubmitLedgerAdjustmentReq ->
   Flow ()
-validateLedgerAdjustmentCategory _merchant merchantOpCity transporterConfig personId category direction req = case category of
-  DLA.RideRelatedCredit -> validateRideRelatedAdjustment transporterConfig personId direction req
-  DLA.RideRelatedDebit -> validateRideRelatedAdjustment transporterConfig personId direction req
-  DLA.PayoutRelatedCredit -> validatePayoutRelatedAdjustment merchantOpCity personId direction req
-  DLA.PayoutRelatedDebit -> validatePayoutRelatedAdjustment merchantOpCity personId direction req
-  DLA.TdsReimbursementCredit -> validateTdsReimbursementAdjustment merchantOpCity personId direction req
-  -- Debit kept in enum for chart symmetry; FO cert reimbursement is Credit-only for now.
-  DLA.TdsReimbursementDebit -> throwError $ LedgerAdjustmentCategoryNotSupported (show category)
-  DLA.IncentiveCredit -> validateIncentiveAdjustment personId direction req
-  DLA.IncentiveDebit -> validateIncentiveAdjustment personId direction req
-  DLA.MiscellaneousCredit -> validateMiscellaneousAdjustment personId direction req
-  DLA.MiscellaneousDebit -> validateMiscellaneousAdjustment personId direction req
-  DLA.TdsDeductionDebit -> validateTdsDeductionAdjustment transporterConfig personId req
+validateLedgerAdjustmentCategory merchant merchantOpCity transporterConfig personId category direction req =
+  (categoryHandlers category).validateCategory merchant merchantOpCity transporterConfig personId direction req
 
 validateReferenceType :: MonadFlow m => API.SubmitLedgerAdjustmentReq -> [Text] -> m ()
 validateReferenceType req allowedReferenceTypes =
@@ -417,20 +482,33 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
     unless (docId.getId == tdsRequest.documentId.getId) $
       throwError (InvalidRequest "Document id does not match the TDS reimbursement request document")
 
+  void $
+    assertTdsReimbursementClaimable tdsRequest referenceId $ do
+      payableAmount <- sumTdsCreditReceivableForRequest tdsRequest.id
+      when (abs (req.amount.amount - payableAmount) > roundingTolerance) $
+        throwError $
+          InvalidRequest $
+            "TDS reimbursement Credit amount ("
+              <> show req.amount.amount
+              <> ") must equal payable amount Σ tdsCreditReceivable ("
+              <> show payableAmount
+              <> ")"
+
+-- | Shared PENDING / idempotency / invoice-claim checks for TDS reimbursement
+--   Credit adjustments, run at submit validation and re-run at post time (TOCTOU).
+--   'afterStatusCheck' runs between the PENDING check and the idempotency checks.
+assertTdsReimbursementClaimable ::
+  DTdsReq.FinanceTdsReimbursementRequest ->
+  Text ->
+  Flow () ->
+  Flow [(DTdsMap.FinanceTdsReimbursementInvoiceMapping, FinanceInvoice.Invoice)]
+assertTdsReimbursementClaimable tdsRequest referenceId afterStatusCheck = do
   unless (tdsRequest.status == DTdsReq.PENDING) $
     throwError $
       InvalidRequest $
         "TDS reimbursement request must be PENDING for Credit adjustments; got: " <> show tdsRequest.status
 
-  payableAmount <- sumTdsCreditReceivableForRequest tdsRequest.id
-  when (abs (req.amount.amount - payableAmount) > roundingTolerance) $
-    throwError $
-      InvalidRequest $
-        "TDS reimbursement Credit amount ("
-          <> show req.amount.amount
-          <> ") must equal payable amount Σ tdsCreditReceivable ("
-          <> show payableAmount
-          <> ")"
+  afterStatusCheck
 
   postedAdjustmentEntries <- getSettledTdsReimbursementAdjustmentEntries referenceId
   unless (null postedAdjustmentEntries) $
@@ -438,6 +516,7 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
 
   mappingsWithInvoices <- TdsReimbursement.findInvoiceMappings tdsRequest.id
   TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement (Just tdsRequest.id) (snd <$> mappingsWithInvoices)
+  pure mappingsWithInvoices
 
 -- | Frozen payable from WS8 submit: Σ invoice-mapping tdsCreditReceivable.
 sumTdsCreditReceivableForRequest ::
@@ -598,73 +677,7 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
       }
 
 directionMatchesCategory :: DLA.AdjustmentCategory -> DLA.AdjustmentDirection -> Bool
-directionMatchesCategory category direction = expectedDirectionForCategory category == direction
-
-expectedDirectionForCategory :: DLA.AdjustmentCategory -> DLA.AdjustmentDirection
-expectedDirectionForCategory = \case
-  DLA.RideRelatedCredit -> DLA.Credit
-  DLA.RideRelatedDebit -> DLA.Debit
-  DLA.PayoutRelatedCredit -> DLA.Credit
-  DLA.PayoutRelatedDebit -> DLA.Debit
-  DLA.TdsReimbursementCredit -> DLA.Credit
-  DLA.TdsReimbursementDebit -> DLA.Debit
-  DLA.IncentiveCredit -> DLA.Credit
-  DLA.IncentiveDebit -> DLA.Debit
-  DLA.MiscellaneousCredit -> DLA.Credit
-  DLA.MiscellaneousDebit -> DLA.Debit
-  DLA.TdsDeductionDebit -> DLA.Debit
-
-castAdjustmentCategory :: API.AdjustmentCategory -> DLA.AdjustmentCategory
-castAdjustmentCategory = \case
-  API.RideRelatedCredit -> DLA.RideRelatedCredit
-  API.RideRelatedDebit -> DLA.RideRelatedDebit
-  API.PayoutRelatedCredit -> DLA.PayoutRelatedCredit
-  API.PayoutRelatedDebit -> DLA.PayoutRelatedDebit
-  API.TdsReimbursementCredit -> DLA.TdsReimbursementCredit
-  API.TdsReimbursementDebit -> DLA.TdsReimbursementDebit
-  API.IncentiveCredit -> DLA.IncentiveCredit
-  API.IncentiveDebit -> DLA.IncentiveDebit
-  API.MiscellaneousCredit -> DLA.MiscellaneousCredit
-  API.MiscellaneousDebit -> DLA.MiscellaneousDebit
-  API.TdsDeductionDebit -> DLA.TdsDeductionDebit
-
-toApiAdjustmentCategory :: DLA.AdjustmentCategory -> API.AdjustmentCategory
-toApiAdjustmentCategory = \case
-  DLA.RideRelatedCredit -> API.RideRelatedCredit
-  DLA.RideRelatedDebit -> API.RideRelatedDebit
-  DLA.PayoutRelatedCredit -> API.PayoutRelatedCredit
-  DLA.PayoutRelatedDebit -> API.PayoutRelatedDebit
-  DLA.TdsReimbursementCredit -> API.TdsReimbursementCredit
-  DLA.TdsReimbursementDebit -> API.TdsReimbursementDebit
-  DLA.IncentiveCredit -> API.IncentiveCredit
-  DLA.IncentiveDebit -> API.IncentiveDebit
-  DLA.MiscellaneousCredit -> API.MiscellaneousCredit
-  DLA.MiscellaneousDebit -> API.MiscellaneousDebit
-  DLA.TdsDeductionDebit -> API.TdsDeductionDebit
-
-castAdjustmentDirection :: API.AdjustmentDirection -> DLA.AdjustmentDirection
-castAdjustmentDirection = \case
-  API.Credit -> DLA.Credit
-  API.Debit -> DLA.Debit
-
-toApiAdjustmentDirection :: DLA.AdjustmentDirection -> API.AdjustmentDirection
-toApiAdjustmentDirection = \case
-  DLA.Credit -> API.Credit
-  DLA.Debit -> API.Debit
-
-castAdjustmentRequestStatus :: API.AdjustmentRequestStatus -> DLA.AdjustmentRequestStatus
-castAdjustmentRequestStatus = \case
-  API.PENDING_APPROVAL -> DLA.PENDING_APPROVAL
-  API.REJECTED -> DLA.REJECTED
-  API.POSTED -> DLA.POSTED
-  API.POST_FAILED -> DLA.POST_FAILED
-
-toApiAdjustmentRequestStatus :: DLA.AdjustmentRequestStatus -> API.AdjustmentRequestStatus
-toApiAdjustmentRequestStatus = \case
-  DLA.PENDING_APPROVAL -> API.PENDING_APPROVAL
-  DLA.REJECTED -> API.REJECTED
-  DLA.POSTED -> API.POSTED
-  DLA.POST_FAILED -> API.POST_FAILED
+directionMatchesCategory category direction = (categoryHandlers category).expectedDirection == direction
 
 ledgerAdjustmentLockKey :: Maybe Text -> Id DLA.LedgerAdjustmentRequest -> Text
 ledgerAdjustmentLockKey mbReferenceId adjustmentRequestId =
@@ -848,18 +861,7 @@ ledgerAdjustmentPostAction transporterConfig adjustmentRequest =
         <> maybe "" (("; referenceId: " <>) . show) adjustmentRequest.referenceId
         <> "; amount: "
         <> show adjustmentRequest.amount
-    case adjustmentRequest.category of
-      DLA.RideRelatedCredit -> postRideRelatedAdjustment transporterConfig adjustmentRequest
-      DLA.RideRelatedDebit -> postRideRelatedAdjustment transporterConfig adjustmentRequest
-      DLA.PayoutRelatedCredit -> postPayoutRelatedAdjustment transporterConfig adjustmentRequest
-      DLA.PayoutRelatedDebit -> postPayoutRelatedAdjustment transporterConfig adjustmentRequest
-      DLA.TdsReimbursementCredit -> postTdsReimbursementAdjustment transporterConfig adjustmentRequest
-      DLA.TdsReimbursementDebit -> unsupportedLedgerAdjustmentCategory adjustmentRequest
-      DLA.IncentiveCredit -> postIncentiveAdjustment transporterConfig adjustmentRequest
-      DLA.IncentiveDebit -> postIncentiveAdjustment transporterConfig adjustmentRequest
-      DLA.MiscellaneousCredit -> postMiscellaneousAdjustment transporterConfig adjustmentRequest
-      DLA.MiscellaneousDebit -> postMiscellaneousAdjustment transporterConfig adjustmentRequest
-      DLA.TdsDeductionDebit -> postTdsDeductionAdjustment transporterConfig adjustmentRequest
+    (categoryHandlers adjustmentRequest.category).postCategory transporterConfig adjustmentRequest
 
 type PostLedgerAdjustment =
   DTC.TransporterConfig ->
@@ -879,6 +881,67 @@ adjustment ::
 adjustment DLA.Credit fromRole toRole amount = Finance.adjustment fromRole toRole amount
 adjustment DLA.Debit fromRole toRole amount = Finance.adjustment fromRole toRole (negate amount)
 
+-- | Unwrap a 'Finance.runFinance' result for a category post; 'adjustmentName'
+--   is interpolated into the error message.
+unwrapFinanceResult :: Show err => Text -> Either err (a, b) -> Flow a
+unwrapFinanceResult adjustmentName = \case
+  Left err -> throwError $ InternalError ("Failed to create " <> adjustmentName <> " ledger adjustment: " <> show err)
+  Right (res, _) -> pure res
+
+-- | Shared tail for category posts: direction-mapped adjustment from 'fromRole'
+--   to OwnerLiability, unwrapped.
+runLedgerAdjustment ::
+  Text ->
+  Finance.FinanceCtx ->
+  Finance.AccountRole ->
+  DLA.LedgerAdjustmentRequest ->
+  Flow (Maybe (Id DLE.LedgerEntry))
+runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest = do
+  result <-
+    Finance.runFinance ctx $
+      adjustment
+        adjustmentRequest.direction
+        fromRole
+        Finance.OwnerLiability
+        adjustmentRequest.amount
+        adjustmentRequest.referenceType
+  unwrapFinanceResult adjustmentName result
+
+-- | Common post shape for adjustments without a ride context: fetch the person,
+--   run the category-specific person guard, then post with the invoice-less
+--   finance context.
+postSimpleAdjustment ::
+  Text ->
+  Finance.AccountRole ->
+  (DP.Person -> Flow ()) ->
+  PostLedgerAdjustment
+postSimpleAdjustment adjustmentName fromRole personGuard transporterConfig adjustmentRequest = do
+  person <-
+    QP.findById adjustmentRequest.personId
+      >>= fromMaybeM (PersonNotFound adjustmentRequest.personId.getId)
+  personGuard person
+  let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
+  runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest
+
+-- | Ride-scoped finance context shared by ride-related and incentive posts.
+buildRideAdjustmentCtx ::
+  DTC.TransporterConfig ->
+  DBooking.Booking ->
+  DRide.Ride ->
+  Flow Finance.FinanceCtx
+buildRideAdjustmentCtx transporterConfig booking ride = do
+  driver <-
+    QP.findById ride.driverId
+      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  Wallet.buildFinanceCtx
+    booking
+    ride
+    (Just driver)
+    Nothing
+    Nothing
+    transporterConfig
+    True
+
 postRideRelatedAdjustment :: PostLedgerAdjustment
 postRideRelatedAdjustment transporterConfig adjustmentRequest = do
   referenceId <-
@@ -891,30 +954,9 @@ postRideRelatedAdjustment transporterConfig adjustmentRequest = do
   ride <-
     QRide.findOneByBookingId booking.id
       >>= fromMaybeM (RideDoesNotExist booking.id.getId)
-  driver <-
-    QP.findById ride.driverId
-      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
 
-  ctx <-
-    Wallet.buildFinanceCtx
-      booking
-      ride
-      (Just driver)
-      Nothing
-      Nothing
-      transporterConfig
-      True
-  result <-
-    Finance.runFinance ctx $
-      adjustment
-        adjustmentRequest.direction
-        Finance.SellerExpense
-        Finance.OwnerLiability
-        adjustmentRequest.amount
-        adjustmentRequest.referenceType
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create ride ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> pure mbLedgerEntryId
+  ctx <- buildRideAdjustmentCtx transporterConfig booking ride
+  runLedgerAdjustment "ride" ctx Finance.SellerExpense adjustmentRequest
 
 postPayoutRelatedAdjustment :: PostLedgerAdjustment
 postPayoutRelatedAdjustment transporterConfig adjustmentRequest = do
@@ -928,22 +970,7 @@ postPayoutRelatedAdjustment transporterConfig adjustmentRequest = do
 
   validatePayoutRequestStatus payoutRequest
 
-  person <-
-    QP.findById adjustmentRequest.personId
-      >>= fromMaybeM (PersonNotFound adjustmentRequest.personId.getId)
-
-  let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
-  result <-
-    Finance.runFinance ctx $
-      adjustment
-        adjustmentRequest.direction
-        Finance.PlatformAsset
-        Finance.OwnerLiability
-        adjustmentRequest.amount
-        adjustmentRequest.referenceType
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create payout ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> pure mbLedgerEntryId
+  postSimpleAdjustment "payout" Finance.PlatformAsset (\_ -> pure ()) transporterConfig adjustmentRequest
 
 -- | Credit-only FO TDS-cert reimbursement post (Debit → unsupportedLedgerAdjustmentCategory).
 --   Chart: Dr GovtDirectAsset (TDS Receivable) / Cr OwnerLiability (FO wallet).
@@ -969,16 +996,7 @@ postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
     throwError (InvalidRequest "TDS reimbursement adjustments are only supported for business fleet owners")
 
   -- TOCTOU: re-check request status and credit idempotency under the wallet lock.
-  unless (tdsRequest.status == DTdsReq.PENDING) $
-    throwError $
-      InvalidRequest $
-        "TDS reimbursement request must be PENDING for Credit adjustments; got: " <> show tdsRequest.status
-  postedAdjustmentEntries <- getSettledTdsReimbursementAdjustmentEntries referenceId
-  unless (null postedAdjustmentEntries) $
-    throwError (InvalidRequest "TDS reimbursement already has a posted ledger adjustment for this request")
-
-  mappingsWithInvoices <- TdsReimbursement.findInvoiceMappings tdsRequest.id
-  TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement (Just tdsRequest.id) (snd <$> mappingsWithInvoices)
+  mappingsWithInvoices <- assertTdsReimbursementClaimable tdsRequest referenceId (pure ())
 
   let directTaxConfigs =
         [ Finance.DirectTaxConfig
@@ -1011,11 +1029,9 @@ postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
           adjustmentRequest.referenceType
       forM_ directTaxConfigs $ \cfg -> void $ Finance.recordDirectTax cfg
       pure mbLedgerEntryId
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create TDS reimbursement ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> do
-      QTdsReq.updateStatusAndRejectionReason DTdsReq.APPROVED Nothing tdsRequest.id
-      pure mbLedgerEntryId
+  mbLedgerEntryId <- unwrapFinanceResult "TDS reimbursement" result
+  QTdsReq.updateStatusAndRejectionReason DTdsReq.APPROVED Nothing tdsRequest.id
+  pure mbLedgerEntryId
 
 postIncentiveAdjustment :: PostLedgerAdjustment
 postIncentiveAdjustment transporterConfig adjustmentRequest = do
@@ -1029,77 +1045,30 @@ postIncentiveAdjustment transporterConfig adjustmentRequest = do
   booking <-
     QBooking.findById ride.bookingId
       >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  driver <-
-    QP.findById ride.driverId
-      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
 
-  ctx <-
-    Wallet.buildFinanceCtx
-      booking
-      ride
-      (Just driver)
-      Nothing
-      Nothing
-      transporterConfig
-      True
-  result <-
-    Finance.runFinance ctx {Finance.referenceId = referenceId} $
-      adjustment
-        adjustmentRequest.direction
-        Finance.OwnerExpense -- SellerAsset ??
-        Finance.OwnerLiability
-        adjustmentRequest.amount
-        adjustmentRequest.referenceType
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create incentive ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> pure mbLedgerEntryId
+  ctx <- buildRideAdjustmentCtx transporterConfig booking ride
+  runLedgerAdjustment
+    "incentive"
+    (ctx {Finance.referenceId = referenceId})
+    Finance.OwnerExpense -- SellerAsset ??
+    adjustmentRequest
 
 postMiscellaneousAdjustment :: PostLedgerAdjustment
-postMiscellaneousAdjustment transporterConfig adjustmentRequest = do
-  person <-
-    QP.findById adjustmentRequest.personId
-      >>= fromMaybeM (PersonNotFound adjustmentRequest.personId.getId)
-  unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
-    throwError (InvalidRequest "Miscellaneous adjustments are only supported for drivers and fleet owners")
-
+postMiscellaneousAdjustment =
   -- Chart: Misc Control ↔ Driver-FO Balance. SellerExpense stands in for Misc Control
   -- until a dedicated account role / subLedger exists.
-  let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
-  result <-
-    Finance.runFinance ctx $
-      adjustment
-        adjustmentRequest.direction
-        Finance.SellerExpense
-        Finance.OwnerLiability
-        adjustmentRequest.amount
-        adjustmentRequest.referenceType
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create miscellaneous ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> pure mbLedgerEntryId
+  postSimpleAdjustment "miscellaneous" Finance.SellerExpense $ \person ->
+    unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+      throwError (InvalidRequest "Miscellaneous adjustments are only supported for drivers and fleet owners")
 
 postTdsDeductionAdjustment :: PostLedgerAdjustment
-postTdsDeductionAdjustment transporterConfig adjustmentRequest = do
-  person <-
-    QP.findById adjustmentRequest.personId
-      >>= fromMaybeM (PersonNotFound adjustmentRequest.personId.getId)
-  unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
-    throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
-  let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
-
+postTdsDeductionAdjustment =
   -- Credit pair GovtDirect → OwnerLiability; Debit reverses to OwnerLiability → GovtDirect
   -- (Dr driver balance, Cr TDS payable) — same legs as EndRide TDS transfer.
   -- Only Debit category possible currently
-  result <-
-    Finance.runFinance ctx $
-      adjustment
-        adjustmentRequest.direction
-        Finance.GovtDirect
-        Finance.OwnerLiability
-        adjustmentRequest.amount
-        adjustmentRequest.referenceType
-  case result of
-    Left err -> throwError $ InternalError ("Failed to create TDS deduction ledger adjustment: " <> show err)
-    Right (mbLedgerEntryId, _) -> pure mbLedgerEntryId
+  postSimpleAdjustment "TDS deduction" Finance.GovtDirect $ \person ->
+    unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+      throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
 
 mkFinanceContextWithoutInvoice ::
   DTC.TransporterConfig ->
@@ -1204,19 +1173,8 @@ type RejectLedgerAdjustmentSideEffect =
   DLA.LedgerAdjustmentRequest -> Flow ()
 
 ledgerAdjustmentRejectSideEffect :: RejectLedgerAdjustmentSideEffect
-ledgerAdjustmentRejectSideEffect adjustmentRequest = case adjustmentRequest.category of
-  DLA.RideRelatedCredit -> noopRejectSideEffect adjustmentRequest
-  DLA.RideRelatedDebit -> noopRejectSideEffect adjustmentRequest
-  DLA.PayoutRelatedCredit -> noopRejectSideEffect adjustmentRequest
-  DLA.PayoutRelatedDebit -> noopRejectSideEffect adjustmentRequest
-  DLA.TdsReimbursementCredit -> rejectTdsReimbursementSideEffect adjustmentRequest
-  -- Debit category remains in the enum but is rejected at validate/post; no domain sync.
-  DLA.TdsReimbursementDebit -> noopRejectSideEffect adjustmentRequest
-  DLA.IncentiveCredit -> noopRejectSideEffect adjustmentRequest
-  DLA.IncentiveDebit -> noopRejectSideEffect adjustmentRequest
-  DLA.MiscellaneousCredit -> noopRejectSideEffect adjustmentRequest
-  DLA.MiscellaneousDebit -> noopRejectSideEffect adjustmentRequest
-  DLA.TdsDeductionDebit -> noopRejectSideEffect adjustmentRequest
+ledgerAdjustmentRejectSideEffect adjustmentRequest =
+  (categoryHandlers adjustmentRequest.category).rejectSideEffect adjustmentRequest
 
 noopRejectSideEffect :: RejectLedgerAdjustmentSideEffect
 noopRejectSideEffect _ = pure ()
