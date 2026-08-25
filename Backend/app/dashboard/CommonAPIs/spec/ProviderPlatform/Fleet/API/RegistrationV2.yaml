@@ -150,6 +150,7 @@ types:
   FleetOwnerLoginReqV2:
     - mobileNumber: Text
     - mobileCountryCode: Text
+    - fleetType: Maybe FleetType
   FleetOwnerLoginResV2:
     - personId: Id Person
     - recordType: NewType

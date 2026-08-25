@@ -1312,7 +1312,17 @@ data VehicleInfo = VehicleInfo
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    association :: Kernel.Prelude.Maybe AssociationDetail
+    verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    reviewedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    failedRules :: [Kernel.Prelude.Text],
+    permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    association :: Kernel.Prelude.Maybe AssociationDetail,
+    recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
+    linkedDriverInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
