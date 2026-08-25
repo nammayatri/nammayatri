@@ -34,3 +34,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN cloud_base
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN country_dial_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_operating_city ADD COLUMN support_emails text[] ;
