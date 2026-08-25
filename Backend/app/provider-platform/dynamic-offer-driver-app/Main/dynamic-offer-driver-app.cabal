@@ -89,6 +89,7 @@ library
       API.Internal.SyncSearch
       API.Internal.TollList
       API.Internal.TollUpsert
+      API.Internal.VehicleServiceTierList
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
@@ -219,6 +220,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
@@ -275,6 +277,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
+      Domain.Action.Internal.VehicleServiceTierList
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
@@ -633,6 +636,8 @@ library
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
+      SharedLogic.ScheduledBooking.OverlapCheck
+      SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
@@ -1081,6 +1086,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.ScheduledBooking
       API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue

@@ -358,10 +358,7 @@ postNammaTagTagVerify merchantShortId opCity LYT.VerifyNammaTagRequest {..} = do
         LYT.RideEnd -> do
           _ :: Domain.Types.Yudhishthira.EndRideTagData <- parseOrThrowError value
           pure ()
-        LYT.RideCancel -> do
-          _ :: Domain.Types.Yudhishthira.CancelRideTagData <- parseOrThrowError value
-          pure ()
-        _ -> throwError $ InvalidRequest $ "Only supported for Search, Cancel and EndRide event for now"
+        _ -> throwError $ InvalidRequest $ "Only supported for Search and RideEnd events for now"
 
     parseOrThrowError value =
       case A.fromJSON value of
@@ -1041,7 +1038,7 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyConfig -> do
-      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
+      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims, vehicleVariant = dimLookup "vehicleVariant" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyMilestoneConfig -> do
       cfgs <- getConfig (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, milestoneId = dimLookup "milestoneId" dims}) Nothing

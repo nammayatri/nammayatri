@@ -73,6 +73,15 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
+-- | All bookings sharing a transactionId, oldest first. A single transactionId spans
+-- multiple bookings across reallocation (bookingId changes, transactionId stays), so this
+-- is the basis for reconstructing the reallocation history for an ops/scheduled booking.
+findAllByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Booking]
+findAllByTransactionId txnId =
+  findAllWithKVAndConditionalDB
+    [Se.Is BeamB.transactionId $ Se.Eq txnId]
+    (Just (Se.Asc BeamB.createdAt))
+
 findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatuses transactionId statusList =
   findAllWithKVAndConditionalDB
@@ -249,6 +258,10 @@ cancelBookings bookingIds now =
 
 findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m HighPrecMoney
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
+
+findAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m [Booking]
+findAllByIds [] = pure []
+findAllByIds bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]
 
 findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)
 findLastCancelledByRiderId riderDetailsId =

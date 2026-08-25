@@ -22,6 +22,7 @@ module Domain.Action.Beckn.Search
     getNearestOperatingAndSourceCity,
     handler,
     validateRequest,
+    validateScheduledBookingWindowForSearch,
     buildEstimate,
     getIsInterCity,
     searchTxnDedupKey,
@@ -103,6 +104,7 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.ScheduledBooking.WindowValidation as SWV
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.SpecialZone ()
@@ -985,6 +987,10 @@ validateRequest merchant sReq = do
       isReserveRide = sReq.isReserveRide
       reserveRideEstimate = sReq.reserveRideEstimate
       numberOfLuggages = sReq.numberOfLuggages
+  when possibleTripOption.isScheduled $
+    case SWV.validateScheduledBookingWindow transporterConfig.minBookingWindow transporterConfig.maxBookingWindow now sReq.pickupTime of
+      Left err -> throwError err
+      Right () -> pure ()
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->
@@ -1036,10 +1042,23 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
     _ -> pure (False, False, Nothing)
 
+isScheduledForSearch :: DTMT.TransporterConfig -> UTCTime -> DSearchReq -> Bool
+isScheduledForSearch tConf now dsReq =
+  maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+
+validateScheduledBookingWindowForSearch :: Id DMOC.MerchantOperatingCity -> DSearchReq -> Flow ()
+validateScheduledBookingWindowForSearch merchantOpCityId sReq = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  now <- getCurrentTime
+  when (isScheduledForSearch transporterConfig now sReq) $
+    case SWV.validateScheduledBookingWindow transporterConfig.minBookingWindow transporterConfig.maxBookingWindow now sReq.pickupTime of
+      Left err -> throwError err
+      Right () -> pure ()
+
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+        if isScheduledForSearch tConf now dsReq
           then (dsReq.pickupTime, True)
           else (now, False)
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.

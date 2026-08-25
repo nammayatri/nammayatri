@@ -45,6 +45,7 @@ data DriverQuoteT f = DriverQuoteT
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    preferenceMatchScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     providerId :: B.C f Kernel.Prelude.Text,
     reactBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     requestId :: B.C f Kernel.Prelude.Text,

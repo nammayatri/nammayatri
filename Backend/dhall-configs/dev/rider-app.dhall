@@ -474,6 +474,7 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
     , dashboardToken = sec.dashboardToken
+    , driverDashboardToken = Some sec.driverDashboardToken
     , cacheConfig
     , cacheTranslationConfig
     , cacheFeedbackFormConfig

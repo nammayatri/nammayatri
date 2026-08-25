@@ -16,7 +16,12 @@ module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
     OfferRes (..),
     SuggestedEstimates (..),
+    SuggestedOption (..),
+    AlternateSuggestion (..),
+    AlternateSuggestionsRes (..),
     mkSuggestedEstimates,
+    mkSuggestedOption,
+    loadAlternateSuggestions,
     getQuotes,
     getQuotesFromInMemory,
     estimateBuildLockKey,
@@ -82,6 +87,8 @@ import qualified Kernel.Utils.Schema as S
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified SharedLogic.BetterRoutePoint as BRP
+import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
@@ -131,7 +138,77 @@ data SuggestedEstimates = SuggestedEstimates
     walkDistanceToPickup :: Maybe Meters,
     walkDistanceFromDrop :: Maybe Meters,
     -- | How much shorter the ride becomes.
+    rideDistanceSaved :: Meters,
+    -- | The other ways this ride could be reshaped, unpriced. Fares for these are only
+    -- fetched when the customer asks for one, via /rideSearch/suggestedFare.
+    alternatives :: [SuggestedOption]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- | A walk-and-save shape other than the default, described well enough to draw on a map
+-- the moment the search answers. Its fare is not here: pricing was dispatched in the
+-- background, and lands via /alternateSuggestion/{searchId}/result -- match it up by
+-- 'searchId'. Points are bare coordinates because the app names them with its own
+-- geocoder, and sends the name back when the customer selects one.
+data SuggestedOption = SuggestedOption
+  { -- | The shadow search being priced for this shape.
+    searchId :: Id SSR.SearchRequest,
+    kind :: BRP.BetterPointKind,
+    -- | True for the shape we would have picked, which only happens when the operating city
+    -- loads suggestions asynchronously -- otherwise that one is priced inline and appears as
+    -- the suggestion itself rather than among these.
+    isDefault :: Bool,
+    suggestedPickup :: Maybe LatLong,
+    suggestedDrop :: Maybe LatLong,
+    walkDistanceToPickup :: Maybe Meters,
+    walkDistanceFromDrop :: Maybe Meters,
+    rideDistanceSaved :: Meters,
+    estimatedRideDistance :: Meters,
+    estimatedRideDuration :: Maybe Seconds
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+mkSuggestedOption :: BRPC.AlternateShadow -> SuggestedOption
+mkSuggestedOption alternate =
+  let betterRoute = alternate.route
+   in SuggestedOption
+        { searchId = alternate.searchId,
+          kind = betterRoute.kind,
+          isDefault = alternate.isDefault,
+          suggestedPickup = (.point) <$> betterRoute.betterPickup,
+          suggestedDrop = (.point) <$> betterRoute.betterDrop,
+          walkDistanceToPickup = (.walkDistance) <$> betterRoute.betterPickup,
+          walkDistanceFromDrop = (.walkDistance) <$> betterRoute.betterDrop,
+          rideDistanceSaved = betterRoute.totalRideDistanceSaved,
+          estimatedRideDistance = betterRoute.newRouteDistance,
+          estimatedRideDuration = betterRoute.newRouteDuration
+        }
+
+-- | One alternate's fares, once the background dispatch has been answered.
+data AlternateSuggestion = AlternateSuggestion
+  { searchId :: Id SSR.SearchRequest,
+    kind :: BRP.BetterPointKind,
+    -- | True for the shape that would have been the suggestion, when the city loads them
+    -- asynchronously. Render this one as the recommendation.
+    isDefault :: Bool,
+    estimates :: [UEstimate.EstimateAPIEntity],
+    suggestedPickup :: Maybe DL.LocationAPIEntity,
+    suggestedDrop :: Maybe DL.LocationAPIEntity,
+    walkDistanceToPickup :: Maybe Meters,
+    walkDistanceFromDrop :: Maybe Meters,
     rideDistanceSaved :: Meters
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- | Alternates are priced in the background, so this is a poll: 'allLoaded' is False while
+-- any of them is still outstanding, and the list grows across calls.
+--
+-- 'allLoaded' means nothing further is coming, not that everything succeeded -- a shape the
+-- provider declined to price settles the same as one it answered, it is simply missing from
+-- the list. Callers should render what is there and stop polling.
+data AlternateSuggestionsRes = AlternateSuggestionsRes
+  { alternates :: [AlternateSuggestion],
+    allLoaded :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -221,7 +298,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     -- The sync path already has the suggestion in hand and overrides this field; on the
     -- polling path the shadow search has been persisting its estimates in the background
     -- since /rideSearch, so read them here.
-    mbSuggested <- loadSuggestedEstimates searchRequest
+    mbSuggested <- loadSuggestedEstimates riderConfig searchRequest
     pure res {suggestedEstimates = mbSuggested}
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
@@ -278,21 +355,32 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
 
 -- | The better-route-point suggestion for a search, if a shadow search was created for it
 -- and the BPP has answered. Absent is the normal case.
-loadSuggestedEstimates :: SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
-loadSuggestedEstimates searchRequest
-  -- A shadow never has a shadow of its own; asking would be a pointless read.
+-- | Absent when the operating city loads suggestions asynchronously: there is then no shape
+-- priced inline, and every one of them -- the default included -- is answered by
+-- 'loadAlternateSuggestions' instead.
+loadSuggestedEstimates :: Maybe DRC.RiderConfig -> SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
+loadSuggestedEstimates mbRiderConfig searchRequest
+  | maybe False (fromMaybe False . (.betterPointLoadSuggestionsAsync)) mbRiderConfig = pure Nothing
+  -- The overwhelmingly common case: no suggestion was ever found for this search, and the
+  -- flag on the row we already hold says so. A shadow never has a shadow of its own, so it
+  -- is out too -- either way, no lookup.
+  | searchRequest.hasBetterPointSuggestion /= Just True = pure Nothing
   | isJust searchRequest.parentSearchRequestId = pure Nothing
   | otherwise =
-    QSR.findByParentSearchRequestId searchRequest.id >>= \case
+    QSR.findFirstByParentSearchRequestId searchRequest.id >>= \case
       Nothing -> pure Nothing
       Just shadow -> do
         shadowEstimates <- QEstimate.findAllBySRId shadow.id
-        mkSuggestedEstimates shadow shadowEstimates
+        -- Geometry only: the alternates' fares are still being fetched in the background,
+        -- and are collected separately through 'loadAlternateSuggestions'. Absent once the
+        -- search's cached context has expired.
+        alternates <- maybe [] (.alternates) <$> BRPC.getSuggestedSearchCtx searchRequest.id
+        mkSuggestedEstimates shadow shadowEstimates (mkSuggestedOption <$> alternates)
 
 -- | Renders a shadow search's estimates for the customer. Takes the shadow search request
 -- itself, since that is what carries the moved pickup/drop and the saving.
-mkSuggestedEstimates :: SSR.SearchRequest -> [DEstimate.Estimate] -> Flow (Maybe SuggestedEstimates)
-mkSuggestedEstimates shadow estimateList = do
+mkSuggestedEstimates :: SSR.SearchRequest -> [DEstimate.Estimate] -> [SuggestedOption] -> Flow (Maybe SuggestedEstimates)
+mkSuggestedEstimates shadow estimateList alternatives = do
   -- Nothing to suggest without both a priced estimate and a saving to justify the walk.
   case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
     (Just _, Just rideDistanceSaved) -> do
@@ -309,6 +397,62 @@ mkSuggestedEstimates shadow estimateList = do
             estimates = apiEstimates,
             -- Only the end that actually moved gets a location; the other is unchanged from
             -- what the customer entered, so repeating it would imply a walk that isn't there.
+            suggestedPickup = DL.makeLocationAPIEntity shadow.fromLocation <$ shadow.betterPointWalkToPickup,
+            suggestedDrop = shadow.betterPointWalkFromDrop >> (DL.makeLocationAPIEntity <$> shadow.toLocation),
+            walkDistanceToPickup = shadow.betterPointWalkToPickup,
+            walkDistanceFromDrop = shadow.betterPointWalkFromDrop,
+            rideDistanceSaved,
+            alternatives
+          }
+    _ -> pure Nothing
+
+-- | The fares for the alternate shapes, as far as they have arrived.
+--
+-- Their shadow searches were created and dispatched during /rideSearch and never waited
+-- on, so this is a poll: an alternate the provider has not answered for yet is simply
+-- absent, and 'allLoaded' stays False until every one of them is in.
+loadAlternateSuggestions :: SSR.SearchRequest -> Flow AlternateSuggestionsRes
+loadAlternateSuggestions parent
+  -- Nothing was ever offered for this search, so nothing is still coming.
+  | parent.hasBetterPointSuggestion /= Just True =
+    pure AlternateSuggestionsRes {alternates = [], allLoaded = True}
+loadAlternateSuggestions parent = do
+  BRPC.getSuggestedSearchCtx parent.id >>= \case
+    -- No context means no suggestion was ever found for this search, or it has expired.
+    -- Either way there is nothing still coming, so this is loaded, not pending.
+    Nothing -> pure AlternateSuggestionsRes {alternates = [], allLoaded = True}
+    Just ctx -> do
+      resolved <- forM ctx.alternates $ \alternate -> runMaybeT $ do
+        shadow <- MaybeT $ QSR.findById alternate.searchId
+        estimateList <- lift $ QEstimate.findAllBySRId shadow.id
+        MaybeT $ mkAlternateSuggestion shadow alternate.route alternate.isDefault estimateList
+      -- Settled either because every shape came back with a fare, or because the background
+      -- pass has finished and whatever is missing is not coming.
+      dispatched <- BRPC.alternatesDispatched parent.id
+      let loaded = catMaybes resolved
+      pure
+        AlternateSuggestionsRes
+          { alternates = loaded,
+            allLoaded = dispatched || length loaded == length ctx.alternates
+          }
+
+mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> Bool -> [DEstimate.Estimate] -> Flow (Maybe AlternateSuggestion)
+mkAlternateSuggestion shadow route isDefault estimateList =
+  case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
+    (Just _, Just rideDistanceSaved) -> do
+      person <- QP.findById shadow.riderId >>= fromMaybeM (PersonDoesNotExist shadow.riderId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = shadow.merchantOperatingCityId.getId}) Nothing
+      let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+          isReferredRide = isJust shadow.driverIdentifier
+          language = fromMaybe Lang.ENGLISH person.language
+      providerLookup <- buildProviderLookup estimateList []
+      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      pure . Just $
+        AlternateSuggestion
+          { searchId = shadow.id,
+            kind = route.kind,
+            isDefault,
+            estimates = apiEstimates,
             suggestedPickup = DL.makeLocationAPIEntity shadow.fromLocation <$ shadow.betterPointWalkToPickup,
             suggestedDrop = shadow.betterPointWalkFromDrop >> (DL.makeLocationAPIEntity <$> shadow.toLocation),
             walkDistanceToPickup = shadow.betterPointWalkToPickup,

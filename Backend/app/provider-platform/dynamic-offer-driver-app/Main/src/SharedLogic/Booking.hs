@@ -203,15 +203,17 @@ createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
 addScheduledBookingInRedis :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DRB.Booking -> m ()
 addScheduledBookingInRedis booking = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
-      bookingLocalDay = utctDay localStartTime
-      endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
-      expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
-      vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
-      redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
-      redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
-      member = createMember booking
-      score = ceiling $ calculateSortedSetScore localStartTime
-  void $ Redis.zAddExp redisKey member score expirationSeconds
-  void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
+  -- this redis is read only by the driver board, so skip maintaining it when the board is disabled
+  unless transporterConfig.disableListScheduledBookingAPI $ do
+    localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
+        bookingLocalDay = utctDay localStartTime
+        endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
+        expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
+        vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
+        redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
+        redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
+        member = createMember booking
+        score = ceiling $ calculateSortedSetScore localStartTime
+    void $ Redis.zAddExp redisKey member score expirationSeconds
+    void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds

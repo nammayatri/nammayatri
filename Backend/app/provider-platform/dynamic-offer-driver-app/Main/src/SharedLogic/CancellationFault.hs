@@ -84,7 +84,12 @@ data FaultVerdictData = FaultVerdictData
     currentDistanceToPickup :: Maybe Meters,
     isAdvanceBooking :: Bool,
     isPickupOrDestinationEdited :: Bool,
-    pickupStallCase :: Maybe Text
+    -- pickup journey: behaviour label (REACHED_PICKUP / PROGRESSING / DETOURING /
+    -- STALLED / MOVING_AWAY / GPS_DARK, null when monitoring never ran), cumulative
+    -- hard no-progress seconds, and unresolved GPS-dark seconds at cancel time
+    pickupBehaviour :: Maybe Text,
+    pickupFaultSeconds :: Int,
+    pickupDarkSeconds :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -105,7 +110,9 @@ instance Default FaultVerdictData where
         currentDistanceToPickup = Nothing,
         isAdvanceBooking = False,
         isPickupOrDestinationEdited = False,
-        pickupStallCase = Nothing
+        pickupBehaviour = Nothing,
+        pickupFaultSeconds = 0,
+        pickupDarkSeconds = 0
       }
 
 mkFaultVerdictData :: CancellationSignals.CancellationSignals -> DCT.CancellationType -> Maybe DCancellationReason.CancellationReasonCode -> FaultVerdictData
@@ -125,7 +132,9 @@ mkFaultVerdictData signals cancelledBy reasonCode =
       currentDistanceToPickup = signals.currentDistanceToPickup,
       isAdvanceBooking = signals.isAdvanceBooking,
       isPickupOrDestinationEdited = signals.isPickupOrDestinationEdited,
-      pickupStallCase = signals.pickupStallCase
+      pickupBehaviour = signals.pickupBehaviour,
+      pickupFaultSeconds = signals.pickupFaultSeconds,
+      pickupDarkSeconds = signals.pickupDarkSeconds
     }
 
 faultVerdictKey :: Id DRide.Ride -> Text

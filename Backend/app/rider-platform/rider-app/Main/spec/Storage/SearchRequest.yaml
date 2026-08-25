@@ -117,6 +117,11 @@ SearchRequest:
     # customer select it without disturbing the real search. Never surfaced as a search of
     # its own -- only its estimates are, via suggestedEstimates on the parent's quotes.
     parentSearchRequestId: Maybe (Id SearchRequest)
+    # Set on the *parent* once a shadow has been created for it, so reading the suggestion
+    # back costs a field on a row already in hand. Without it every /rideSearch/results poll
+    # would pay a secondary-index lookup plus a Redis read to discover that this search --
+    # like almost every search -- has no suggestion at all.
+    hasBetterPointSuggestion: Maybe Bool
     betterPointWalkToPickup: Maybe Meters
     betterPointWalkFromDrop: Maybe Meters
     betterPointRideDistanceSaved: Maybe Meters
@@ -286,7 +291,7 @@ SearchRequest:
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
-    # Read back by findByParentSearchRequestId in Storage.Queries.SearchRequestExtra, so the
+    # Read back by findFirstByParentSearchRequestId in Storage.Queries.SearchRequestExtra, so the
     # forced form is required for the KV secondary-key list to include it.
     parentSearchRequestId: "!SecondaryKey"
 

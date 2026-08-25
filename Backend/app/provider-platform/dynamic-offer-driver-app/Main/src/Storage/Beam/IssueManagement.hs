@@ -15,6 +15,7 @@ import qualified IssueManagement.Storage.Beam.Issue.ChatMessage as BeamCM
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
+import qualified IssueManagement.Storage.Beam.Issue.IssueApiIntegration as BeamAI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueChat as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
@@ -24,6 +25,9 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueReport as BeamIR
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
+
+instance HasSchemaName BeamAI.IssueApiIntegrationT where
+  schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamCM.ChatMessageT where
   schemaName _ = T.pack currentSchemaName

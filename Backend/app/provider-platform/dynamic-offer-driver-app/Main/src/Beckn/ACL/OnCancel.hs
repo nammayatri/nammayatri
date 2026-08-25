@@ -21,6 +21,7 @@ where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Utils.Constructors
@@ -51,6 +52,7 @@ import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -83,6 +85,9 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
     Just _ -> pure mbRide
     Nothing -> QRide.findOneByBookingId booking.id
   mbCancellationDuesDetails <- maybe (pure Nothing) (QCDD.findByRideId . (.id)) mbRide'
+  -- consequence-matrix row that produced the charge: carries the BAP-side notification key
+  mbConsequenceRow <- maybe (pure Nothing) (QCCM.findByPrimaryKey . Id) (mbCancellationDuesDetails >>= (.cancellationConsequenceRowId))
+  let mbCustomerNotificationKey = (.customerNotificationKey) =<< mbConsequenceRow
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
@@ -93,7 +98,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   let driverName = DP.getPersonFullName =<< mbPerson
       driverGender = mbPerson <&> \p -> show p.gender -- ONDC v2.1.0: extract driver gender
   driverPhone <- maybe (pure Nothing) DP.getPersonNumber mbPerson
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
@@ -116,8 +121,9 @@ buildOnCancelReq ::
   Maybe FarePolicyD.FullFarePolicy ->
   Maybe Text ->
   Maybe DCDD.CancellationDuesDetails ->
+  Maybe Text ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey = do
   ttl <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
@@ -125,21 +131,23 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails'
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Spec.Order
-tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey = do
   Spec.Order
     { orderId = Just booking.id.getId,
-      orderTags = Nothing,
+      -- Cancellation-consequence handoff to the BAP: how the fee is collected
+      -- (matrix collectionMode, persisted on the dues row) + the rider notification key
+      orderTags = Tags.convertToTagGroup [(Tags.CANCELLATION_COLLECTION_MODE, mbCancellationDuesDetails' >>= (.cancellationCollectionMode)), (Tags.CUSTOMER_CANCELLATION_NOTIFICATION_KEY, mbCustomerNotificationKey)],
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone,
       orderCancellation = tfCancellation cancellationSource cancellationReasonCode,

@@ -115,3 +115,13 @@ validateUpdateFleetOwnerInfoReq country UpdateFleetOwnerInfoReq {..} =
       validateField "mobileCountryCode" mobileCountryCode $ InMaybe $ P.getMobileCountryCodePredicate country,
       validateField "email" email $ InMaybe P.email
     ]
+
+validateUpdateFleetOwnerInfoReqWithLooseCheck :: Context.Country -> Validate UpdateFleetOwnerInfoReq
+validateUpdateFleetOwnerInfoReqWithLooseCheck country UpdateFleetOwnerInfoReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 1 `And` MaxLength 50 `And` P.nameWithNumber,
+      validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.nameWithNumber),
+      validateField "mobileNo" mobileNo $ InMaybe $ P.getMobileNumberPredicate country,
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe $ P.getMobileCountryCodePredicate country,
+      validateField "email" email $ InMaybe P.email
+    ]

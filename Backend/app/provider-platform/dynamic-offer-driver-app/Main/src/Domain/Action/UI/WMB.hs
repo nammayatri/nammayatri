@@ -10,6 +10,7 @@ module Domain.Action.UI.WMB
     postWmbTripEnd,
     getWmbTripList,
     postFleetConsent,
+    postFleetConsentDecline,
     getFleetConfig,
     getWmbRouteDetails,
     getWmbFleetBadges,
@@ -467,6 +468,20 @@ postWmbTripRequest (_, merchantId, merchantOperatingCityId) tripTransactionId re
           appletId = maybeAppId
         }
   pure $ AlertReqResp {requestId = alertRequestId.getId}
+
+postFleetConsentDecline ::
+  ( ( Maybe (Id Person),
+      Id Merchant,
+      Id MerchantOperatingCity
+    ) ->
+    Flow APISuccess
+  )
+postFleetConsentDecline (mbDriverId, _merchantId, _merchantOperatingCityId) = do
+  driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
+  fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
+  when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot decline a driver-initiated request"
+  FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
+  pure Success
 
 postFleetConsent ::
   ( ( Maybe (Id Person),

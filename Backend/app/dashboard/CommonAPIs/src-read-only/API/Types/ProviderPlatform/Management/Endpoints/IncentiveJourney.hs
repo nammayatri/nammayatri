@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -50,6 +51,7 @@ data CreateIncentiveJourneyReq = CreateIncentiveJourneyReq
     startDate :: Kernel.Prelude.UTCTime,
     endDate :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     enabled :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
@@ -72,6 +74,7 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     startDate :: Kernel.Prelude.UTCTime,
     endDate :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     enabled :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
@@ -169,6 +172,7 @@ data UpdateIncentiveJourneyReq = UpdateIncentiveJourneyReq
     startDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     endDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)

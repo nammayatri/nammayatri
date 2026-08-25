@@ -39,9 +39,10 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Error (GenericError (InvalidRequest), TransporterError (TransporterConfigNotFound))
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.CancellationConsequence (FaultRuleRegistryEntry (..))
@@ -49,6 +50,7 @@ import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 
 getCancellationConsequenceList ::
@@ -144,6 +146,14 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
       mbDriverDeduction = toDomainDeduction <$> apiRow.driverDeduction
   whenJust mbCustomerDeduction $ validateDeduction "customerDeduction"
   whenJust mbDriverDeduction $ validateDeduction "driverDeduction"
+  -- Coin consequences fire straight from the matrix (no coin_config prerequisite any
+  -- more), so a coin row in a city without the coin feature would write coins the driver
+  -- can never see — reject at config time.
+  whenJust mbDriverDeduction $ \ded ->
+    when (isCoinConsequence ded) $ do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      unless transporterConfig.coinFeature $
+        throwError (InvalidRequest "driverDeduction: coin consequences require the coin feature (transporterConfig.coinFeature) to be enabled for this city")
   now <- getCurrentTime
   pure
     DCCM.CancellationConsequenceMatrix
@@ -202,6 +212,12 @@ toDomainDeduction = \case
   Common.MoneyDeductionAPIEntity m -> DExtra.MoneyDeduction (toDomainMoney m)
   Common.CoinAdditionAPIEntity c -> DExtra.CoinAddition {coins = c.coins, expirySeconds = c.expirySeconds}
   Common.MoneyAdditionAPIEntity m -> DExtra.MoneyAddition (toDomainMoney m)
+
+isCoinConsequence :: DExtra.ConsequenceDeduction -> Bool
+isCoinConsequence = \case
+  DExtra.CoinDeduction {} -> True
+  DExtra.CoinAddition {} -> True
+  _ -> False
 
 -- | All amounts in a deduction/addition are POSITIVE; direction lives in the constructor.
 -- Signed values are rejected so "give back" can never be smuggled in as a negative charge.

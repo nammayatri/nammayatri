@@ -1,0 +1,24 @@
+# Triggers NammaDSL code generation for:
+#   src-read-only/API/Types/UI/VehicleServiceTier.hs   -- UI wire types
+#   src-read-only/API/Action/UI/VehicleServiceTier.hs  -- Servant route type + handler glue
+# Business logic lives in:
+#   src/Domain/Action/UI/VehicleServiceTier.hs
+
+imports:
+  ServiceTierType: Domain.Types.ServiceTierType
+
+module: VehicleServiceTier
+
+types:
+  VehicleServiceTierAPIEntity:
+    serviceTierType: ServiceTierType
+    serviceTierName: Text
+    vehicleIconUrl: Maybe Text
+    derive: "Show"
+
+apis:
+  - GET:
+      endpoint: /vehicleServiceTiers
+      auth: TokenAuth
+      response:
+        type: "[VehicleServiceTierAPIEntity]"

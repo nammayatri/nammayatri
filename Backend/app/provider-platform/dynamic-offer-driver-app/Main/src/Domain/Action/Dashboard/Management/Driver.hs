@@ -860,9 +860,11 @@ postDriverUpdateByPhoneNumber merchantShortId _ phoneNumber req = do
 ---------------------------------------------------------------------
 postDriverUpdateName :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
 postDriverUpdateName merchantShortId opCity reqDriverId req = do
-  runRequestValidation Common.validateUpdateDriverNameReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let validateFn = if transporterConfig.isStrongNameCheckRequired then Common.validateUpdateDriverNameReq else Common.validateUpdateDriverNameReqWithLooseCheck
+  runRequestValidation validateFn req
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 

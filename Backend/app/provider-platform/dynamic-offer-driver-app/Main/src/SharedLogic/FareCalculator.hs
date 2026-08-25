@@ -602,7 +602,6 @@ calculateFareParametersHandler params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
-            driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,

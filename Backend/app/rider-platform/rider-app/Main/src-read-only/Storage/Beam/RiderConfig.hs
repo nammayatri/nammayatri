@@ -28,6 +28,8 @@ data RiderConfigT f = RiderConfigT
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),
+    betterPointLoadSuggestionsAsync :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    betterPointMaxOffRouteDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     betterPointMaxWalkPctOfRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     betterPointMinSavingPctOfRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     betterPointWalkAversion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

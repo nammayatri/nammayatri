@@ -27,12 +27,12 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.IncentiveJourney.IncentiveJourney]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.IncentiveJourney.IncentiveJourney])
 findByMerchantOperatingCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.createdAt) limit offset
 
 findEnabledByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.IncentiveJourney.IncentiveJourney]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.IncentiveJourney.IncentiveJourney])
 findEnabledByMerchantOperatingCityId limit offset merchantOperatingCityId enabled = do
   findAllWithOptionsKV
     [ Se.And
@@ -62,7 +62,8 @@ updateByPrimaryKey (Domain.Types.IncentiveJourney.IncentiveJourney {..}) = do
       Se.Set Beam.startDate startDate,
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -84,7 +85,8 @@ instance FromTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.Incentiv
             startDate = startDate,
             timeBounds = timeBounds,
             updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory
+            vehicleCategory = vehicleCategory,
+            vehicleVariant = vehicleVariant
           }
 
 instance ToTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.IncentiveJourney where
@@ -103,5 +105,6 @@ instance ToTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.IncentiveJ
         Beam.startDate = startDate,
         Beam.timeBounds = timeBounds,
         Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory
+        Beam.vehicleCategory = vehicleCategory,
+        Beam.vehicleVariant = vehicleVariant
       }

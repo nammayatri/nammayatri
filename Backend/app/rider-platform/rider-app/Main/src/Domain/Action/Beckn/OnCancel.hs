@@ -46,6 +46,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data OnCancelReq = BookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
@@ -53,7 +54,10 @@ data OnCancelReq = BookingCancelledReq
     cancellationFee :: Maybe PriceAPIEntity,
     cancellationFeeTax :: Maybe PriceAPIEntity,
     cancellationReasonCode :: Maybe Text,
-    fareBreakups :: [Common.DFareBreakup]
+    fareBreakups :: [Common.DFareBreakup],
+    -- BPP consequence-matrix handoff (on_cancel order tags); Nothing on old BPPs
+    collectionMode :: Maybe Text,
+    customerCancellationNotificationKey :: Maybe Text
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
@@ -64,7 +68,9 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
     cancellationFeeTax :: Maybe PriceAPIEntity,
     mbRide :: Maybe SRide.Ride,
     cancellationReasonCode :: Maybe Text,
-    fareBreakups :: [Common.DFareBreakup]
+    fareBreakups :: [Common.DFareBreakup],
+    collectionMode :: Maybe Text,
+    customerCancellationNotificationKey :: Maybe Text
   }
 
 onCancel :: ValidatedOnCancelReq -> Flow ()
@@ -79,10 +85,19 @@ onCancel ValidatedBookingCancelledReq {..} = do
   -- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).
   let immediateCharge =
         isJust cancellationFee
-          && case castedCancellationSource of
-            SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
-            _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
+          && case collectionMode of
+            -- The BPP's consequence matrix decided the collection mode (carried on the
+            -- on_cancel order tags) — it is authoritative when present.
+            Just "ImmediateCapture" -> True
+            Just "NextRideDues" -> False
+            -- Old BPP (no mode on the wire): legacy rider-config flags decide.
+            _ -> case castedCancellationSource of
+              SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
+              _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
+  -- rider push for the cancellation consequence, keyed by the matrix row's notification key
+  whenJust customerCancellationNotificationKey $ \pnKey ->
+    fork "cancellationConsequencePN" $ Notify.notifyCancellationConsequence booking.riderId booking.id.getId pnKey
   whenJust mbRide $ \ride -> do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
     SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakupEntries

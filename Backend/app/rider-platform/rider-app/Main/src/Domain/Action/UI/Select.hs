@@ -46,6 +46,8 @@ import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import Domain.Types.LocationAddress (LocationAddress)
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -58,6 +60,7 @@ import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -78,6 +81,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
@@ -143,7 +147,12 @@ data DSelectReq = DSelectReq
     billingCategory :: Maybe BillingCategory,
     preferSafetyPlus :: Maybe Bool,
     driverPreference :: Maybe [Text],
-    selectedOfferId :: Maybe Text
+    selectedOfferId :: Maybe Text,
+    -- | What the app's own geocoder calls a walk-and-save pickup/drop the customer is
+    -- selecting. Ignored for an ordinary estimate, whose locations the customer named
+    -- themselves when they searched. See 'updateSuggestedLocationAddresses'.
+    suggestedPickupAddress :: Maybe LocationAddress,
+    suggestedDropAddress :: Maybe LocationAddress
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -249,6 +258,10 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
+  -- Do this before anything is dispatched to the provider: from here on the address is
+  -- what the driver is sent to.
+  when (isJust searchRequest.parentSearchRequestId) $
+    updateSuggestedLocationAddresses personId person.merchantId searchRequest req
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
@@ -343,6 +356,42 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
     getPhoneNo :: EncFlow m r => DPerson.Person -> m (Maybe (UnencryptedItem (EncryptedHashed Text)))
     getPhoneNo person = do
       mapM decrypt person.mobileNumber
+
+-- | Names the endpoints of a walk-and-save search the customer has just committed to.
+--
+-- A shadow search's moved endpoint starts out carrying the address of the customer's own
+-- pickup or drop. That is deliberate: the point is a short walk away, so the address is
+-- close enough to show next to a fare, and naming it properly would have put a
+-- reverse-geocode on /rideSearch, which the suggestion has to stay out of the way of.
+--
+-- Selecting is where that stops being good enough — the address is about to become where a
+-- driver is sent and what the receipt says. The app geocodes the markers it draws, so it
+-- normally sends the names in with the selection; when it does not, they are resolved here.
+-- Only the end that actually moved is touched, since the other is still exactly what the
+-- customer typed.
+updateSuggestedLocationAddresses ::
+  SelectFlow m r c =>
+  Id DPerson.Person ->
+  Id DM.Merchant ->
+  DSearchReq.SearchRequest ->
+  DSelectReq ->
+  m ()
+updateSuggestedLocationAddresses personId merchantId searchRequest req = do
+  when (isJust searchRequest.betterPointWalkToPickup) $
+    setAddress searchRequest.fromLocation req.suggestedPickupAddress
+  whenJust ((,) <$> searchRequest.betterPointWalkFromDrop <*> searchRequest.toLocation) $ \(_, toLocation) ->
+    setAddress toLocation req.suggestedDropAddress
+  where
+    setAddress location mbAddress = do
+      -- Falls back to the provider's name for the point. 'reverseGeocodeAddress' answers
+      -- from the place-name cache when it can and returns Nothing rather than throwing --
+      -- the parent's address is still on the location, and a worse name beats failing the
+      -- selection.
+      mbResolved <- maybe (LAE.reverseGeocodeAddress personId merchantId (LatLong location.lat location.lon)) (pure . Just) mbAddress
+      whenJust mbResolved $ \address ->
+        -- Carry over what the customer attached to the ride rather than to the place: a
+        -- note for the driver is about this booking, and no geocoder knows it.
+        QLoc.updateAddress address {DLA.instructions = location.address.instructions, DLA.extras = location.address.extras} location.id
 
 --DEPRECATED
 selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes

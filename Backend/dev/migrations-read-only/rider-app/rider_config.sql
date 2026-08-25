@@ -818,5 +818,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_min_saving_pct_of_rid
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_approaching_notification_tiers text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_off_route_distance integer ;
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_route_cache_read boolean ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_async boolean ;

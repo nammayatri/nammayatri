@@ -30,6 +30,8 @@ data RiderConfig = RiderConfig
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
+    betterPointLoadSuggestionsAsync :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    betterPointMaxOffRouteDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     betterPointMaxWalkPctOfRide :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     betterPointMinSavingPctOfRide :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     betterPointWalkAversion :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

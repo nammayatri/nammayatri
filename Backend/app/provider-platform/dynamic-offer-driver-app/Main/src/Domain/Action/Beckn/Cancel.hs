@@ -25,7 +25,6 @@ module Domain.Action.Beckn.Cancel
 where
 
 import Data.Maybe
-import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -48,8 +47,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Types as DCT
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
@@ -60,6 +57,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
@@ -115,7 +113,11 @@ cancel req merchant booking mbActiveSearchTry = do
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
       QRide.updateStatus ride.id SRide.CANCELLED
-      when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
+      when (booking.isScheduled) $
+        -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
+        CS.withDriverScheduledHoldLock ride.driverId $ do
+          mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig ride.driverId booking.id
+          QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) ride.driverId
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
@@ -131,7 +133,7 @@ cancel req merchant booking mbActiveSearchTry = do
     -- reallocation decision: a customer forced to cancel because of the driver must still
     -- produce the driver-side consequences even when the booking reallocates.
     mbDecision <- forM mbRide $ \ride -> do
-      decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig DCT.CancellationByCustomer bookingCR.reasonCode disToPickup
+      decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
       Orchestrator.applyImmediateConsequences (Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCR.source, decision = decision}) Nothing
       pure decision
 
@@ -139,19 +141,22 @@ cancel req merchant booking mbActiveSearchTry = do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
 
-    -- Driver-fault attribution: if the pickup progress monitor had an active stall case
-    -- when the customer cancelled, count it against the driver (unless the monitor already
-    -- recorded it at a terminal stage — the ride tag marks that). Runs regardless of
-    -- whether this cancel results in reallocation: a customer forced to cancel/reallocate
-    -- because the driver never moved is exactly the case this must catch.
+    -- Driver-fault attribution: persist the pickup journey onto the ride, and if the
+    -- monitor saw the driver in a hard fault state (STALLED / MOVING_AWAY) when the
+    -- customer cancelled, count it against him. A ride with pickupBehaviour already set
+    -- means monitoring ended earlier (a terminal stage recorded the stall, or the driver
+    -- reached pickup) — don't double-record. Runs regardless of whether this cancel
+    -- results in reallocation: a customer forced to cancel/reallocate because the driver
+    -- never moved is exactly the case this must catch. Ordering: the fault verdict above
+    -- already consumed the live journey, so flushing here is safe.
     whenJust mbRide $ \ride ->
       fork "record pickup stall on customer cancel" $ do
-        let alreadyRecorded = any (\(LYT.TagNameValue t) -> PickupStall.pickupStallRideTagPrefix `Text.isPrefixOf` t) (fromMaybe [] ride.rideTags)
-        unless alreadyRecorded $ do
-          mbMonitorState :: Maybe PickupStall.PickupProgressState <- Redis.safeGet (PickupStall.pickupProgressStateKey ride.id)
-          whenJust (mbMonitorState >>= (.activeCase)) $ \stallCase -> do
-            QRide.updateRideTags (Just $ PickupStall.mkPickupStallRideTag stallCase : fromMaybe [] ride.rideTags) ride.id
-            PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id stallCase PickupStall.CustomerCancelledDriverAtFault
+        mbJourney <- PickupStall.getPickupJourney ride
+        PickupStall.flushPickupJourney ride Nothing
+        when (isNothing ride.pickupBehaviour) $
+          whenJust mbJourney $ \journey ->
+            when (journey.behaviour `elem` [SRide.STALLED, SRide.MOVING_AWAY]) $
+              PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault
 
     isReallocated <-
       case mbRide of
@@ -175,7 +180,6 @@ cancel req merchant booking mbActiveSearchTry = do
     -- (the reallocation on_cancel carries no fee term).
     chargesOutcome <- case (mbRide, mbDecision) of
       (Just ride, Just decision) -> do
-        void $ withTryCatch "updateNammaTagsOnCancel" $ updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig decision.faultVerdict
         Orchestrator.applyTerminalConsequences
           (Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCR.source, decision = decision})
           (\base gst -> createCancellationLedgerEntries booking ride base gst transporterConfig)

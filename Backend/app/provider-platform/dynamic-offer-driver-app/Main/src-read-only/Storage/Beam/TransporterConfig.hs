@@ -88,7 +88,6 @@ data TransporterConfigT f = TransporterConfigT
     cancellationFeeCycle :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
     cancellationFeeDisputeWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    cancellationFeePaymentMethodExceptions :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument]),
     cancellationFeeVendor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateSlabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -149,7 +148,6 @@ data TransporterConfigT f = TransporterConfigT
     driverPaymentCycleDuration :: B.C f Kernel.Types.Common.Seconds,
     driverPaymentCycleStartTime :: B.C f Kernel.Types.Common.Seconds,
     driverPaymentReminderInterval :: B.C f Kernel.Types.Common.Seconds,
-    driverRiderBlacklistDurationSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverSearchBlacklistDurationSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverSmsReceivingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverTimeSpentOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Seconds,
@@ -221,6 +219,7 @@ data TransporterConfigT f = TransporterConfigT
     isGstPanLinkCheckRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMLBasedDynamicPricingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
+    isStrongNameCheckRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
@@ -237,8 +236,10 @@ data TransporterConfigT f = TransporterConfigT
     mandateValidity :: B.C f Kernel.Prelude.Int,
     maxAllowedDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAllowedVideoDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxBookingWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     maxNumberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxPayoutReferralForADay :: B.C f Kernel.Prelude.Int,
+    maxScheduledHoldsPerDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     mediaFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -246,6 +247,7 @@ data TransporterConfigT f = TransporterConfigT
     meterRideBulkLocUpdateBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     metricsDistanceBucketsKm :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     minBaseFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    minBookingWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -305,6 +307,7 @@ data TransporterConfigT f = TransporterConfigT
     sameRiderDriverRideCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     schedulePayoutForDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
+    scheduledRideAvgSpeedKmph :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     scheduledRideFilterExclusionThresholdHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     scheduledRideJobRescheduleTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     scheduledRideSearchRepeatLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -344,7 +347,6 @@ data TransporterConfigT f = TransporterConfigT
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
-    validCancellationPenaltyReasons :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
@@ -363,8 +365,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)

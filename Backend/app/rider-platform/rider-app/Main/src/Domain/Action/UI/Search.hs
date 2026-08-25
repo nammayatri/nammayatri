@@ -842,6 +842,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         -- Only the better-route-point shadow built in SharedLogic.BetterRoutePointSearch
         -- sets these; a search the customer actually made is never a shadow of anything.
         parentSearchRequestId = Nothing,
+        -- Set later, by SharedLogic.BetterRoutePointSearch, if a suggestion is found.
+        hasBetterPointSuggestion = Nothing,
         betterPointWalkToPickup = Nothing,
         betterPointWalkFromDrop = Nothing,
         betterPointRideDistanceSaved = Nothing,

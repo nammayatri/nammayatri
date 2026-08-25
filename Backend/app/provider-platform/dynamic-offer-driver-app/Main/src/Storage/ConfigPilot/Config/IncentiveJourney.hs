@@ -6,6 +6,7 @@ module Storage.ConfigPilot.Config.IncentiveJourney (IncentiveJourneyDimensions (
 
 import qualified Domain.Types.IncentiveJourney as DT
 import Domain.Types.VehicleCategory as DTV
+import qualified Domain.Types.VehicleVariant as DTVV
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
@@ -19,7 +20,8 @@ data IncentiveJourneyDimensions = IncentiveJourneyDimensions
   { merchantOperatingCityId :: Text,
     journeyId :: Maybe (Id DT.IncentiveJourney),
     enabled :: Maybe Bool,
-    vehicleCategory :: Maybe DTV.VehicleCategory
+    vehicleCategory :: Maybe DTV.VehicleCategory,
+    vehicleVariant :: Maybe DTVV.VehicleVariant
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -40,7 +42,8 @@ instance ConfigDimensions IncentiveJourneyDimensions where
       (SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.journeyId) (Just . (.id)) (==),
         LCP.DimMatcher (.enabled) (Just . (.enabled)) (==),
-        LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==)
+        LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),
+        LCP.DimMatcher (.vehicleVariant) (.vehicleVariant) (==)
       ]
       Nothing
   configFallback a =

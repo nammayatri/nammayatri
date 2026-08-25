@@ -29,6 +29,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
+import qualified API.Types.ProviderPlatform.Management.ScheduledBooking
 import qualified API.Types.ProviderPlatform.Management.SearchTry
 import qualified API.Types.ProviderPlatform.Management.SosMedia
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
@@ -71,6 +72,7 @@ data ManagementUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
+  | SCHEDULED_BOOKING API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingUserActionType
   | SEARCH_TRY API.Types.ProviderPlatform.Management.SearchTry.SearchTryUserActionType
   | SOS_MEDIA API.Types.ProviderPlatform.Management.SosMedia.SosMediaUserActionType
   | SPECIAL_ZONE_QUEUE API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueUserActionType
@@ -110,6 +112,7 @@ instance Text.Show.Show ManagementUserActionType where
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
+    SCHEDULED_BOOKING e -> "SCHEDULED_BOOKING/" <> show e
     SEARCH_TRY e -> "SEARCH_TRY/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SPECIAL_ZONE_QUEUE e -> "SPECIAL_ZONE_QUEUE/" <> show e
@@ -342,6 +345,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "RIDE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( SCHEDULED_BOOKING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SCHEDULED_BOOKING/" r,
                    ( v1,
                      r2
                      ) <-

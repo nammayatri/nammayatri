@@ -49,6 +49,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.VehicleServiceTier as VehicleServiceTier
 import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
@@ -193,6 +194,7 @@ type API =
            :<|> AddBaggage.API
            :<|> ZendeskSdkToken.API
            :<|> FleetEngineToken.API
+           :<|> VehicleServiceTier.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -328,3 +330,4 @@ handler =
     :<|> AddBaggage.handler
     :<|> ZendeskSdkToken.handler
     :<|> FleetEngineToken.handler
+    :<|> VehicleServiceTier.handler

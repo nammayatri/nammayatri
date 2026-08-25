@@ -34,7 +34,6 @@ data Ride = Ride
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
-    cancellationChargesLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFaultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -98,7 +97,10 @@ data Ride = Ride
     passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupBehaviour :: Kernel.Prelude.Maybe Domain.Types.Ride.PickupBehaviour,
+    pickupDarkSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    pickupFaultSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -140,9 +142,13 @@ data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTim
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data PickupBehaviour = REACHED_PICKUP | PROGRESSING | DETOURING | STALLED | MOVING_AWAY | GPS_DARK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator | FleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 

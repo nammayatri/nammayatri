@@ -30,4 +30,4 @@ ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN merchant_id SET N
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.white_list_org ADD COLUMN supported_beckn_protocols text ;
+ALTER TABLE atlas_driver_offer_bpp.white_list_org ADD COLUMN supported_beckn_protocols text [] ;

@@ -706,7 +706,6 @@ MerchantServiceUsageConfig:
 
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   sqlType:
     getDistances: character varying(30)
     getRoutes: character varying(30)
@@ -920,22 +919,31 @@ TransporterConfig:
     PickupStallTerminalAction:
       enum: "REALLOCATE_RIDE,RECORD_ONLY"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
+    PickupNudgeChannel:
+      enum: "OVERLAY,CHAT_MESSAGE"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupStallStage:
-      afterStallSec: Int
+      afterFaultSec: Int
       overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       terminalAction: Maybe PickupStallTerminalAction
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
-    PickupStallCaseConfig:
-      stages: "[PickupStallStage]"
+    PickupDarkStage:
+      afterDarkSec: Int
+      overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
-      gracePeriodSec: Int
-      progressThresholdMeters: Int
-      badTickDebounce: Int
-      stalledConfig: Maybe PickupStallCaseConfig
-      retreatingConfig: Maybe PickupStallCaseConfig
-      locationDarkConfig: Maybe PickupStallCaseConfig
+      stages: "[PickupStallStage]"
+      darkStages: "[PickupDarkStage]"
+      progressThresholdMeters: Maybe Int
+      deviationAllowanceMeters: Maybe Int
+      detourDisplacementMeters: Maybe Int
+      detourCreditSec: Maybe Int
+      staleFixAfterSec: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
@@ -1167,6 +1175,8 @@ TransporterConfig:
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
+    maxScheduledHoldsPerDriver: Int
+    scheduledRideAvgSpeedKmph: Maybe Double
     actualRideDistanceDiffThreshold: HighPrecMeters
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
@@ -1258,8 +1268,6 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
-    cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
-    validCancellationPenaltyReasons: "Maybe [Text]"
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1326,6 +1334,8 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
+    minBookingWindow: Maybe Seconds
+    maxBookingWindow: Maybe Seconds
     issueBreachConfig: Maybe [IssueBreachConfig]
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Bool
@@ -1362,6 +1372,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
     isDriverNameMandatoryInBulkUpload: Bool
+    isStrongNameCheckRequired: Bool
     onboardingDocsCountLimit: Maybe Int
     defaultOnboardingAs: Maybe OnboardingAs
     localPoliceNumbers: Maybe [Text]
@@ -1424,7 +1435,6 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: Maybe Bool
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
-    driverRiderBlacklistDurationSeconds: Maybe Seconds
     driverLocationStalenessThresholdSeconds: Maybe Seconds
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
@@ -1491,6 +1501,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
+    maxScheduledHoldsPerDriver: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
     issueBreachConfig: Maybe Value
@@ -1513,6 +1524,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
     isDriverNameMandatoryInBulkUpload: Maybe Bool
+    isStrongNameCheckRequired: Maybe Bool
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
@@ -1590,6 +1602,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
+    maxScheduledHoldsPerDriver: Just maxScheduledHoldsPerDriver|E
     driverDrivenSearchReqExpiry:
       Kernel.Utils.Common.nominalDiffTimeToSeconds <$>
       driverDrivenSearchReqExpiry|E
@@ -1614,6 +1627,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: Just isStrongNameCheckRequired|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     pickupStallMonitoringConfig: Data.Aeson.toJSON <$> pickupStallMonitoringConfig|E
@@ -1702,6 +1716,7 @@ TransporterConfig:
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
+    maxScheduledHoldsPerDriver: fromMaybe 1 maxScheduledHoldsPerDriver|E
     driverDrivenSearchReqExpiry:
       Kernel.Utils.Common.secondsToNominalDiffTime <$>
       driverDrivenSearchReqExpiry|E
@@ -1732,6 +1747,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: fromMaybe True isStrongNameCheckRequired|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       cancellationRateSlabConfig|E
@@ -1846,8 +1862,6 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
-    cancellationFeePaymentMethodExceptions: "text[]"
-    validCancellationPenaltyReasons: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
@@ -1978,6 +1992,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
     scheduledRideSearchRepeatLimit: "10"
+    maxScheduledHoldsPerDriver: "1"
     enableScheduleReallocation: "true"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
@@ -2001,6 +2016,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     isDriverNameMandatoryInBulkUpload: "true"
+    isStrongNameCheckRequired: "true"
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
     deactivateRCOnUnlink: "true"
@@ -2031,7 +2047,6 @@ TransporterConfig:
     knowledgeCenterSopTypes: "'[]' :: json"
     allowFarePolicyUpdateBelowMinBaseFare: "true"
     driverSearchBlacklistDurationSeconds: "3600"
-    driverRiderBlacklistDurationSeconds: "3600"
     allowPanReupload: "false"
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
@@ -2041,7 +2056,6 @@ TransporterConfig:
     forceDirectCalling: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   queries:
     findByMerchantOpCityId:
       kvFunction: findOneWithKV
@@ -2075,6 +2089,8 @@ TransporterConfig:
         - checkImageExtractionForDashboard
         - searchRepeatLimit
         - scheduledRideSearchRepeatLimit
+        - maxScheduledHoldsPerDriver
+        - scheduledRideAvgSpeedKmph
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
         - defaultOnboardingAs
@@ -2098,7 +2114,6 @@ TransporterConfig:
         - areaPreferenceMinCells
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
-        - driverRiderBlacklistDurationSeconds
         - metricsDistanceBucketsKm
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
@@ -2196,6 +2211,7 @@ MerchantPushNotification:
     title: Text
     body: Text
     language: Language
+    audioUrl: Maybe Text
     fcmNotificationType: FCMNotificationType
     fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant

@@ -15,7 +15,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantPushNotification = MerchantPushNotification
-  { body :: Kernel.Prelude.Text,
+  { audioUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    body :: Kernel.Prelude.Text,
     fcmNotificationType :: Kernel.External.Notification.FCM.Types.FCMNotificationType,
     fcmSubCategory :: Kernel.Prelude.Maybe Kernel.External.Notification.Interface.Types.SubCategory,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantPushNotification.MerchantPushNotification,

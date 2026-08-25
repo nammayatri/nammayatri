@@ -17,7 +17,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal
     cancelRideTransaction,
     createCancellationLedgerEntries,
     applyCancellationLedgerAction,
-    updateNammaTagsForCancelledRide,
     -- re-exported from SharedLogic.CancellationOrchestrator for existing callers
     driverDistanceToPickup,
     buildCancellationContext,
@@ -28,11 +27,9 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
-import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
@@ -47,7 +44,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleVariant as Veh
-import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
@@ -62,23 +58,17 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Types as DCT
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.Types as LYT
-import qualified Lib.Yudhishthira.Types as Yudhishthira
-import qualified SharedLogic.Analytics as Analytics
+import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
-import qualified SharedLogic.CancellationFault as CancellationFault
 import SharedLogic.CancellationOrchestrator
-import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet
@@ -86,6 +76,8 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -105,7 +97,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -181,9 +172,10 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             (cancellationDisToPickup, _mbDriverLocation) <- getDistanceToPickup booking (Just ride)
             -- ONE decision (signals → fault verdict → consequence-matrix row) feeds every
             -- consequence below through the orchestrator; nothing re-derives it.
-            decision <- decideCancellationConsequences booking ride transporterConfig DCT.CancellationByDriver bookingCReason.reasonCode cancellationDisToPickup
+            decision <- decideCancellationConsequences booking ride transporterConfig bookingCReason.source bookingCReason.reasonCode cancellationDisToPickup
             let consequenceCtx = ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCReason.source, decision = decision}
-            void $ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig decision.faultVerdict
+            -- the decision above already consumed the live pickup journey; persist it on the ride
+            fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             mbVehicle <- QVeh.findById ride.driverId
             vehicle <- case mbVehicle of
@@ -259,7 +251,11 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
-  when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
+  when booking.isScheduled $
+    -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
+    CS.withDriverScheduledHoldLock driverId $ do
+      mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig driverId booking.id
+      QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) driverId
   void $ LF.rideDetails ride.id DRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason
@@ -267,49 +263,6 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
-
-updateNammaTagsForCancelledRide ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
-  ) =>
-  SRB.Booking ->
-  DRide.Ride ->
-  SBCR.BookingCancellationReason ->
-  DTC.TransporterConfig ->
-  Maybe CancellationFault.FaultVerdict ->
-  m [LYT.TagNameValue]
-updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig mbFaultVerdict = do
-  now <- getCurrentTime
-  callAtemptByDriver <- CancellationSignals.getCallAttemptByDriver ride.id
-  let currentTime = floor $ utcTimeToPOSIXSeconds now
-      rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
-      driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
-      bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
-      tagData =
-        TY.CancelRideTagData
-          { ride = ride{status = DRide.CANCELLED},
-            booking = booking{status = SRB.CANCELLED},
-            cancellationReason = bookingCReason,
-            merchantOperatingCityId = booking.merchantOperatingCityId,
-            faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
-            faultRule = (.rule) <$> mbFaultVerdict,
-            ..
-          }
-  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideCancel (Just booking.transactionId) tagData)
-  logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
-  let allTags = ride.rideTags <> eitherToMaybe nammaTags
-  QRide.updateRideTags allTags ride.id
-  let tags = fromMaybe [] allTags
-  when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) bookingCReason.reasonCode && validUserNoShowCancellation `notElem` tags) $
-    logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
-  Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason
-  return $ fromMaybe [] allTags
 
 -- | Create BPP-side finance ledger entries + invoice for a customer cancellation charge.
 -- Extracted so it can be called from both cancelRideTransaction (driver-cancel path)

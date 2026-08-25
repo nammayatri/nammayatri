@@ -45,6 +45,14 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
       validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name)
     ]
 
+validateUpdateDriverNameReqWithLooseCheck :: Validate UpdateDriverNameReq
+validateUpdateDriverNameReqWithLooseCheck UpdateDriverNameReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.nameWithNumber,
+      validateField "middleName" middleName $ InMaybe (MaxLength 50 `And` P.nameWithNumber),
+      validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.nameWithNumber)
+    ]
+
 instance HideSecrets ClearDriverFeeReq where
   hideSecrets = identity
 

@@ -2529,7 +2529,9 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  runRequestValidation (Common.validateUpdateFleetOwnerInfoReq merchantOpCity.country) req
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let validateFn = if transporterConfig.isStrongNameCheckRequired then Common.validateUpdateFleetOwnerInfoReq else Common.validateUpdateFleetOwnerInfoReqWithLooseCheck
+  runRequestValidation (validateFn merchantOpCity.country) req
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let mobileCountryCode =
@@ -3660,7 +3662,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   where
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc transporterConfig fleetOwner req_ = do
-      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload transporterConfig.isStrongNameCheckRequired
       let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
           fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
@@ -3677,7 +3679,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
     processDriverByOperator merchant moc transporterConfig operator req_ = do
-      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload transporterConfig.isStrongNameCheckRequired
       let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
           fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
@@ -3703,7 +3705,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
     processDriverByAdmin :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DriverDetails -> Flow (Id DP.Person)
     processDriverByAdmin merchant moc transporterConfig req_ = do
-      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
+      validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload transporterConfig.isStrongNameCheckRequired
       let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
           fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
       MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
@@ -3756,22 +3758,25 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       let countryCode = fromMaybe (P.getCountryMobileCode country) person.mobileCountryCode
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
+      mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwner.id
       withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
         (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildFleetDeepLinkAuthMessage
               { fleetOwnerName = fleetOwner.firstName,
-                fleetOwnerId = fleetOwner.id.getId
+                fleetOwnerId = fleetOwner.id.getId,
+                fleetName = fromMaybe fleetOwner.firstName ((.fleetName) =<< mbFleetOwnerInfo)
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
-validateDriverName :: Maybe Text -> Bool -> Flow ()
-validateDriverName mbDriverName isMandatory = do
+validateDriverName :: Maybe Text -> Bool -> Bool -> Flow ()
+validateDriverName mbDriverName isMandatory isStrongNameCheckRequired = do
   case mbDriverName of
     Nothing -> when isMandatory $ throwError $ InvalidRequest "Driver name is required"
     Just driverName -> do
-      result <- try (void $ runRequestValidation Common.validateUpdateDriverNameReq (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
+      let validateFn = if isStrongNameCheckRequired then Common.validateUpdateDriverNameReq else Common.validateUpdateDriverNameReqWithLooseCheck
+      result <- try (void $ runRequestValidation validateFn (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
       case result of
         Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
         Right _ -> pure ()
@@ -4668,6 +4673,15 @@ validateUpdateDriverReq Common.UpdateDriverReq {..} =
       validateField "email" email $ InMaybe P.email
     ]
 
+validateUpdateDriverReqWithLooseCheck :: Validate Common.UpdateDriverReq
+validateUpdateDriverReqWithLooseCheck Common.UpdateDriverReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.nameWithNumber,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
+      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
+      validateField "email" email $ InMaybe P.email
+    ]
+
 postDriverFleetDriverUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -4676,11 +4690,12 @@ postDriverFleetDriverUpdate ::
   Common.UpdateDriverReq ->
   Flow APISuccess
 postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
-  runRequestValidation validateUpdateDriverReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let validateFn = if transporterConfig.isStrongNameCheckRequired then validateUpdateDriverReq else validateUpdateDriverReqWithLooseCheck
+  runRequestValidation validateFn req
   let restrictMobileUpdateToDashboard = fromMaybe True transporterConfig.restrictMobileUpdateToDashboard
   let personId = cast driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -5044,11 +5059,13 @@ postDriverFleetScheduledBookingAssign ::
 postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common.AssignScheduledBookingReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  when transporterConfig.disableListScheduledBookingAPI $ throwError (InvalidRequest "Fleet scheduled booking assignment is disabled for this operating city")
   let driverPersonId = cast @Common.Driver @DP.Person driverId
   fleetDriverAssociation <- QFDAExtra.findByDriverId driverPersonId True >>= fromMaybeM (InvalidRequest "Driver not associated with fleet")
   unless (fleetDriverAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Driver does not belong to this fleet owner")
   -- Driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
-  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
   vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
   unless (booking.vehicleServiceTier `elem` vehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
   void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)

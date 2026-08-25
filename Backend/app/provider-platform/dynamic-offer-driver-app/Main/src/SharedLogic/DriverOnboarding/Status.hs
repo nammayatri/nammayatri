@@ -664,7 +664,13 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
         allRCDetails <- mapM convertRCToRCDetails allRCImgs
-        return (Just allDLDetails, Just allRCDetails)
+        let requestedRCDetails = case mbReqRegistrationNo of
+              Nothing -> allRCDetails
+              Just reqRegistrationNo ->
+                filter
+                  (\rcDetail -> SDO.normalizeDocumentIdentifier transporterConfig rcDetail.vehicleRegistrationCertNumber == SDO.normalizeDocumentIdentifier transporterConfig reqRegistrationNo)
+                  allRCDetails
+        return (Just allDLDetails, Just requestedRCDetails)
       _ -> return (Nothing, Nothing)
 
   (enabled, verified, approved, blocked, blockedReason, onboardingAs, disabledReasonFlag) <-
@@ -719,7 +725,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           else pure Nothing
       let dontAutoEnable = fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-        let allVehicleDocsVerified = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
+        let allVehicleDocsEnabled = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
             isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
             -- When separated: only check vehicle docs. When combined: check both driver and vehicle docs
@@ -727,8 +733,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             -- Vehicle activation logic depends on enablement mode
             checkToActivateRC =
               if separateEnablement
-                then (allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
-                else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
+                then (allVehicleDocsEnabled && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
+                else ((allVehicleDocsEnabled && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
         -- isActive=False means RC was explicitly deactivated — skip auto-reactivation for already-enabled drivers.
@@ -760,7 +766,12 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
                 (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
                 (_, _) -> return ()
-        if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+        if unifiedRecompute
+          then do
+            let allVehicleDocsValidForVerified = checkAllVehicleDocsValidForVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
+                derivedApproved = computeApprovedFromDocs Nothing (Right driverDocConfs) DP.DRIVER vehicleDoc.documents
+            return VehicleDocumentItem {isVerified = allVehicleDocsValidForVerified, isApproved = allVehicleDocsEnabled && derivedApproved == Just True, ..}
+          else if allVehicleDocsEnabled then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber

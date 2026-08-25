@@ -51,4 +51,4 @@ data GateConfig = GateConfig {enableIsDemandHigh :: Kernel.Prelude.Maybe Kernel.
 
 data GateType = Pickup | Drop | Parking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''GateType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''GateType)

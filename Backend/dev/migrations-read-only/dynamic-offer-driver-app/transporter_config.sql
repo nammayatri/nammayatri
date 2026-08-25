@@ -1067,6 +1067,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payo
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_avg_speed_kmph double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_scheduled_holds_per_driver integer  default 1;
+
 
 ------- SQL updates -------
 
@@ -1099,8 +1104,15 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN area_preference
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
 
-
+------- MSIL scheduled rides (SWS-1 / SWS-2) -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_booking_window integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_booking_window integer;
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pre_process_document_identifiers boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_check_required boolean  default true;

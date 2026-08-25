@@ -1,0 +1,181 @@
+imports:
+  TripCategory: Domain.Types
+  LatLong: Kernel.External.Maps.Types
+  RideStatus: Domain.Types.RideStatus
+  Driver: Dashboard.Common
+
+module: ScheduledBooking
+
+apis:
+  - GET: # ScheduledBookingListAPI
+      endpoint: /list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        assignmentStatus: AssignmentStatus
+      auth: ApiAuthV2
+      response:
+        type: ScheduledBookingListRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
+
+  - GET: # ScheduledBookingInfoAPI
+      endpoint: /{transactionId}/info
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      response:
+        type: ScheduledBookingInfoRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
+
+  - GET: # ScheduledBookingDriverDistanceAPI (on-demand live proximity of the assigned driver)
+      endpoint: /{transactionId}/driverDistance
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      response:
+        type: DriverDistanceRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
+
+  - POST: # ScheduledBookingAssignDriverAPI
+      endpoint: /{transactionId}/assign
+      name: PostScheduledBookingAssign
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      request:
+        type: AssignDriverReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{transactionId}/assign
+            name: PostScheduledBookingAssign
+            auth: ApiAuthV2
+            params:
+              transactionId: Text
+            query:
+              - requestorId: Text
+            request:
+              type: AssignDriverReq
+            response:
+              type: APISuccess
+      migrate:
+        capability: city-operations.scheduled-bookings.write
+
+  - POST: # ScheduledBookingUnassignDriverAPI
+      endpoint: /{transactionId}/unassign
+      name: PostScheduledBookingUnassign
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{transactionId}/unassign
+            name: PostScheduledBookingUnassign
+            auth: ApiAuthV2
+            params:
+              transactionId: Text
+            query:
+              - requestorId: Text
+            response:
+              type: APISuccess
+      migrate:
+        capability: city-operations.scheduled-bookings.write
+
+types:
+  ScheduledBookingListRes:
+    - totalItems: Int
+    - bookings: [ScheduledBookingListItem]
+
+  ScheduledBookingListItem:
+    - transactionId: Text
+    - bookingId: Text
+    - tripCategory: TripCategory
+    - scheduledAt: UTCTime
+    - fromLocation: LocationAPIEntity
+    - toLocation: Maybe LocationAPIEntity
+    - riderName: Maybe Text
+    - riderPhoneNo: Maybe Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - driverId: Maybe Text
+    - bookingStatus: BookingStatus
+    - rideStatus: Maybe RideStatus
+    - reallocationCount: Int
+
+  ScheduledBookingInfoRes:
+    - transactionId: Text
+    - bookingId: Text
+    - tripCategory: TripCategory
+    - scheduledAt: UTCTime
+    - fromLocation: LocationAPIEntity
+    - toLocation: Maybe LocationAPIEntity
+    - riderName: Maybe Text
+    - riderPhoneNo: Maybe Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - driverId: Maybe Text
+    - bookingStatus: BookingStatus
+    - rideStatus: Maybe RideStatus
+    - driverCurrentLocation: Maybe LatLong
+    - driverDistanceToPickup: Maybe Meters
+    - driverEtaToPickupSeconds: Maybe Int
+    - estimatedDistance: Maybe Meters
+    - estimatedDurationSeconds: Maybe Int
+    - reallocationHistory: [ReallocationEventItem]
+
+  DriverDistanceRes:
+    - assigned: Bool
+    - driverId: Maybe Text
+    - driverCurrentLocation: Maybe LatLong
+    - distanceToPickupMeters: Maybe Meters
+    - etaToPickupSeconds: Maybe Int
+    - computedAt: UTCTime
+
+  ReallocationEventItem:
+    - bookingId: Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - driverId: Maybe Text
+    - rideStatus: Maybe RideStatus
+    - bookingStatus: BookingStatus
+    - becameCurrentAt: UTCTime
+    - cancelledAt: Maybe UTCTime
+    - cancellationSource: Maybe CancellationSource
+    - driverDistToPickupAtCancel: Maybe Meters
+
+  AssignDriverReq:
+    - driverId: Id Driver
+    - clientId: Maybe Text
+    - derive: "'HideSecrets"
+
+  LocationAPIEntity:
+    - lat: Double
+    - lon: Double
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+    - fullAddress: Maybe Text
+
+  AssignmentStatus:
+    - enum: "ASSIGNED, UNASSIGNED"
+    - derive: "HttpInstance"
+
+  BookingStatus:
+    - enum: "NEW, TRIP_ASSIGNED, COMPLETED, CANCELLED, REALLOCATED"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+
+  CancellationSource:
+    - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication, ByFleetOwner"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
