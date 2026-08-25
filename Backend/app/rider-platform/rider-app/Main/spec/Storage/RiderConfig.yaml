@@ -303,6 +303,12 @@ RiderConfig:
     # /alternateSuggestion/{searchId}/result instead, which keeps the provider round trip off
     # the search's critical path at the cost of the suggestion appearing a beat later.
     betterPointLoadSuggestionsAsync: Maybe Bool
+    # Whether select may reverse-geocode a moved walk-and-save pickup/drop that the app did
+    # not name. Off by default: it is a paid map call on the booking path, and the app
+    # geocodes its own markers, so the fallback should be opted into rather than assumed.
+    # With it off an unnamed point keeps the customer's own address, which is a short walk
+    # away -- a worse name, not a wrong place.
+    betterPointResolvePlaceNameOnSelect: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

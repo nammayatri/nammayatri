@@ -82,7 +82,7 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   let mbFromLocGeohash = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (pickupLatlong.lat, pickupLatlong.lon)
   let mbToLocGeohash = T.pack <$> ((\dropLatLong -> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (dropLatLong.lat, dropLatLong.lon)) =<< mbDropLatLong)
-  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing Nothing Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions
+  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong mbDropLatLong Nothing Nothing Nothing mbFromLocGeohash mbToLocGeohash mbDistance mbDuration Nothing tripCategory configsInExperimentVersions Nothing
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId.getId Nothing Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbIsAutoRickshawAllowed = (.isAutoRickshawAllowed) <$> mbTollChargesAndNames
   let mbIsTwoWheelerAllowed = join ((.isTwoWheelerAllowed) <$> mbTollChargesAndNames)

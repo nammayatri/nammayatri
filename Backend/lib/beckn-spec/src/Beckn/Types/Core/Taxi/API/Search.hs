@@ -63,6 +63,11 @@ type SyncSearchAPI =
     :> Capture "merchantId" Text
     :> Header "token" Text
     :> QueryParam "isShadowSearch" Bool
+    -- parentTransactionId: the search a shadow belongs to. Lets the provider price both
+    -- against one set of dynamic-pricing inputs, so a suggestion is not charged congestion
+    -- the customer's own search escaped. Plain comment, not Haddock: a `-- |` between two
+    -- `:>` operators is a parse error in the Haddock-mode parser ormolu runs.
+    :> QueryParam "parentTransactionId" Text
     :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SyncSearchRes
 

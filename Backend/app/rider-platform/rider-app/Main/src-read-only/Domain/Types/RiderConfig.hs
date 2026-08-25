@@ -34,6 +34,7 @@ data RiderConfig = RiderConfig
     betterPointMaxOffRouteDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     betterPointMaxWalkPctOfRide :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     betterPointMinSavingPctOfRide :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    betterPointResolvePlaceNameOnSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     betterPointWalkAversion :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     blockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
