@@ -376,84 +376,87 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
   afterPrepaid <-
     if isPrepaidEnabled
       then case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
-        (Just fare, Just _) ->
-          filterM
-            ( \r -> do
+        (Just fare, Just _) -> do
+          let prepaidAccountFor r =
                 let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
-                    (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
-                mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-                otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
-                let bufferedFare = fromMaybe fare (Map.lookup r.serviceTier bufferedFareByTier)
-                pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= bufferedFare + threshold) mbBalance
-            )
-            results
+                    (counterpartyType, ownerId, _) = resolveOwnerAndThreshold r
+                 in (counterpartyType, ownerId, mbVehicleCategory)
+              prepaidAccountsNeeded = DL.nub (map prepaidAccountFor results)
+          prepaidBalances <-
+            fmap Map.fromList $
+              mapM
+                ( \account@(counterpartyType, ownerId, mbVehicleCategory) -> do
+                    mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
+                    otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
+                    pure (account, (mbBalance, otherPrepaidOfferHolds))
+                )
+                prepaidAccountsNeeded
+          pure $
+            flip filter results $ \r ->
+              let (_, _, threshold) = resolveOwnerAndThreshold r
+                  bufferedFare = fromMaybe fare (Map.lookup r.serviceTier bufferedFareByTier)
+               in case Map.lookup (prepaidAccountFor r) prepaidBalances of
+                    Nothing -> False
+                    Just (mbBalance, otherPrepaidOfferHolds) ->
+                      maybe False (\b -> b - otherPrepaidOfferHolds >= bufferedFare + threshold) mbBalance
         _ -> pure results
       else pure results
 
-  -- Deliberately two independent flags -- 'zeroBalanceCheckApplies' (bars a
-  -- zero/negative-balance driver from cash rides outright) only needs the
-  -- wallet feature on; 'cashCheckApplies' (the minimum-balance *threshold*
-  -- requirement) additionally needs 'minWalletAmountForCashRides' configured
-  -- (via 'cashWalletCheckEnabled'). A merchant with the wallet on but no
-  -- threshold set must still get the zero-balance rule enforced.
-  let zeroBalanceCheckApplies = driverWalletConfig.enableDriverWallet && shouldCheckCashWallet paymentInstrument
-      cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
+  let cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
       mkCashRequirement r =
         minWalletAmountForCashRides <&> \minAmt ->
           minAmt + estimateOfferDeductions taxConfig rideFare (Map.lookup r.serviceTier bufferedFareByTier) govtCharges tollCharges parkingCharge
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
         _ -> Nothing
-      -- Scheduled-ride minimum wallet balance, folded into this pass so the candidate list is
-      -- filtered once (combined with the cash/airport gates) rather than in a second traversal.
       applyScheduledGate = isScheduled && not scheduledOpenToAll
-      anyGateApplies = zeroBalanceCheckApplies || cashCheckApplies || isJust airportRequirement || applyScheduledGate
+      anyGateApplies = cashCheckApplies || isJust airportRequirement || applyScheduledGate
   if not anyGateApplies
     then pure afterPrepaid
-    else filterM (\r -> passesLiabilityGates (if cashCheckApplies then mkCashRequirement r else Nothing) zeroBalanceCheckApplies airportRequirement applyScheduledGate r) afterPrepaid
+    else do
+      let cashAccounts = [(cp, oid) | cashCheckApplies, r <- afterPrepaid, let (cp, oid, _) = resolveOwnerAndThreshold r]
+          airportAccounts = [(counterpartyDriver, r.driverId.getId) | isJust airportRequirement, r <- afterPrepaid]
+          accountsNeeded = DL.nub (cashAccounts <> airportAccounts)
+      accountBalances <-
+        fmap Map.fromList $
+          mapM
+            ( \account@(counterpartyType, ownerId) -> do
+                mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
+                otherOfferHolds <- getWalletOfferHoldTotalExcluding ownerId mbSearchTryId
+                pure (account, (mbBalance, otherOfferHolds))
+            )
+            accountsNeeded
+      filterM (\r -> passesLiabilityGates accountBalances (if cashCheckApplies then mkCashRequirement r else Nothing) airportRequirement applyScheduledGate r) afterPrepaid
   where
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
-    -- Fetches balance + holds once per account and evaluates whichever of the
-    -- zero-balance and minimum-requirement gates apply from that single read.
-    -- Previously separate 'hasPositiveCashBalance'/'checkBalance' calls
-    -- independently re-fetched the same two values when both gates applied to
-    -- the same account (the common case) -- 2x wallet lookups per candidate
-    -- driver in this filterM, and non-atomic with each other besides.
-    checkAccountGates (counterpartyType, ownerId) applyZeroBalanceGate mbRequired = do
-      mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
-      otherOfferHolds <- getWalletOfferHoldTotalExcluding ownerId mbSearchTryId
-      pure $ case mbBalance of
+    checkAccountGates accountBalances (counterpartyType, ownerId) applyZeroBalanceGate mbRequired =
+      case Map.lookup (counterpartyType, ownerId) accountBalances of
         Nothing -> False
-        Just b ->
-          let available = b - otherOfferHolds
-           in (not applyZeroBalanceGate || available > 0) && maybe True (available >=) mbRequired
+        Just (mbBalance, otherOfferHolds) ->
+          case mbBalance of
+            Nothing -> False
+            Just b ->
+              let available = b - otherOfferHolds
+               in (not applyZeroBalanceGate || available > 0) && maybe True (available >=) mbRequired
 
-    checkBalance account required = checkAccountGates account False (Just required)
+    checkBalance accountBalances account required = checkAccountGates accountBalances account False (Just required)
 
-    passesLiabilityGates cashReq applyZeroBalanceGate airportReq applyScheduledGate r = do
-      -- Scheduled-ride wallet gate first (short-circuits the cash/airport balance fetches on failure).
+    passesLiabilityGates accountBalances cashReq airportReq applyScheduledGate r = do
       scheduledOk <-
         if applyScheduledGate
           then hasMinWalletBalance counterpartyDriver minWalletAmountForScheduledRides r.driverId.getId
           else pure True
-      if not scheduledOk
-        then pure False
-        else do
-          let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
-              cashAccount = (cashCp, cashOwner)
-              airportAccount = (counterpartyDriver, r.driverId.getId)
-          case (cashReq, airportReq) of
-            (Nothing, Nothing) ->
-              if applyZeroBalanceGate then checkAccountGates cashAccount True Nothing else pure True
-            (Just c, Nothing) -> checkAccountGates cashAccount applyZeroBalanceGate (Just c)
-            (Nothing, Just a) -> do
-              zeroOk <- if applyZeroBalanceGate then checkAccountGates cashAccount True Nothing else pure True
-              if zeroOk then checkBalance airportAccount a else pure False
+      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
+          cashAccount = (cashCp, cashOwner)
+          airportAccount = (counterpartyDriver, r.driverId.getId)
+          liabilityOk = case (cashReq, airportReq) of
+            (Nothing, Nothing) -> True
+            (Just c, Nothing) -> checkAccountGates accountBalances cashAccount True (Just c)
+            (Nothing, Just a) -> checkBalance accountBalances airportAccount a
             (Just c, Just a)
-              | cashAccount == airportAccount -> checkAccountGates cashAccount applyZeroBalanceGate (Just (max c a))
-              | otherwise -> do
-                cashOk <- checkAccountGates cashAccount applyZeroBalanceGate (Just c)
-                if cashOk then checkBalance airportAccount a else pure False
+              | cashAccount == airportAccount -> checkAccountGates accountBalances cashAccount True (Just (max c a))
+              | otherwise -> checkAccountGates accountBalances cashAccount True (Just c) && checkBalance accountBalances airportAccount a
+      pure $ scheduledOk && liabilityOk

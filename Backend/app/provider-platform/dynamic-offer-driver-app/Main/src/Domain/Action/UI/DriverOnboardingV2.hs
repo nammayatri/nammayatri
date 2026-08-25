@@ -379,6 +379,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             calculateFareParameters
               CalculateFareParametersParams
                 { farePolicy = fullFarePolicy,
+                  computationPhase = FCEstimate,
+                  mbCapConfig = Nothing,
+                  mbEstimateFareParams = Nothing,
                   actualDistance = mbDistance,
                   rideTime = now,
                   waitingTime = Nothing,

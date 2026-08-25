@@ -20,6 +20,7 @@ module SharedLogic.FareCalculator
     perRideKmFareParamsSum,
     getPerMinuteRate,
     CalculateFareParametersParams (..),
+    FareComputationPhase (..),
     isNightShift,
     isNightAllowanceApplicable,
     timeZoneIST,
@@ -44,10 +45,6 @@ module SharedLogic.FareCalculator
     mkProjectFareParamsTagBreakupItemsForCancellation,
     buildComponentMap,
     componentAmount,
-    rebuildWithComponents,
-    applyPerComponentCaps,
-    CapContext (..),
-    taxComponents,
     discountApplicableComponents,
     projectFareParamsBreakup,
     clampDiscountToDiscountable,
@@ -391,10 +388,6 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
 
 -- TODO: make some tests for it
 
--- | NOTE: every component summed here should also be mapped in
---   'buildComponentMap'/'rebuildWithComponents' so it participates in
---   per-component fare-recompute capping — decide the new component's cap
---   strategy (or that it stays unconfigured) when you add a fareSum field.
 fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
 fareSum fareParams conditionalChargeCategories =
   pureFareSum
@@ -455,8 +448,12 @@ getPerMinuteRate fareParams = do
       mkPriceAPIEntity . Price.mkPrice (Just det.currency) <$> det.rideDurationFare
     _ -> Nothing
 
+data FareComputationPhase = FCEstimate | FCRecompute | FCBuffer
+  deriving (Eq, Show)
+
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
+    computationPhase :: FareComputationPhase,
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
@@ -487,7 +484,12 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     numberOfLuggages :: Maybe Int,
     govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
     pickupGateId :: Maybe Text, -- Optional airport pickup gate id; used by V2 to apply airport entry fee
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    -- | Set together, only on the 'FCRecompute'/'FCBuffer' paths: every
+    -- component is capped (or buffered) against 'mbEstimateFareParams' as it
+    -- is computed, so 'fullRideCostN' and 'govtCharges' follow automatically.
+    mbCapConfig :: Maybe FareRecomputeCapConfig,
+    mbEstimateFareParams :: Maybe FareParameters
   }
 
 calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -506,16 +508,17 @@ calculateFareParametersHandler params = do
   let nightShiftBuffer = if isJust fp.pickupBufferInSecsForNightShiftCal then fromMaybe False (isNightShiftWithPickupBuffer <$> fp.nightShiftBounds <*> Just rideTimeWithBuffer <*> Just rideEndTime) else False
   logDebug $ "NightShiftChanges : " <> "NightShiftBuffer: " <> show nightShiftBuffer
   let isNightShiftChargeIncluded = nightShiftBuffer || fromMaybe nightShiftBuffer (if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds rideTimeWithBuffer rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime)
-      (debugLogs, baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+      (debugLogs, rawBaseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+      baseFare = capComponent RideFare rawBaseFare
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, serviceCharge, platformFee, waitingCharge, notPartOfNightShiftCharge, nightShift, insuranceCharge, cardChargeOnFare and fixedCardCharge-} =
         baseFare
           + partOfNightShiftCharge
   let resultFullNightShiftCharge = if isNightShiftChargeIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing
   logDebug $ "NightShiftChanges : " <> "resultFullNightShiftCharge: " <> show resultFullNightShiftCharge
-  let resultNightShiftCharge = if nightShiftBuffer then calNightShiftCharge resultFullNightShiftCharge rideTimeWithBuffer fp.nightShiftBounds rideDur else resultFullNightShiftCharge
+  let resultNightShiftCharge = capComponentMb NightShiftChargeComponent $ if nightShiftBuffer then calNightShiftCharge resultFullNightShiftCharge rideTimeWithBuffer fp.nightShiftBounds rideDur else resultFullNightShiftCharge
   logDebug $ "NightShiftChanges : " <> "resultNightShiftCharge: " <> show resultNightShiftCharge
-  let resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
+  let resultWaitingCharge = capComponentMb WaitingCharge $ countWaitingCharge =<< waitingChargeInfo
       congestionChargeByMultiplier =
         fp.congestionChargeMultiplier <&> \case
           DFP.BaseFareAndExtraDistanceFare congestionCharge -> HighPrecMoney (fullRideCost.getHighPrecMoney * toRational congestionCharge) - fullRideCost
@@ -526,17 +529,22 @@ calculateFareParametersHandler params = do
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
       congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
-      finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
-      insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
+      finalCongestionCharge = capComponent CongestionChargeComponent $ fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
+      insuranceChargeResult = capComponentMb InsuranceChargeComponent $ countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
+      petChargesResult = capComponentMb PetChargeComponent params.petCharges
+      driverAllowanceResult = capComponentMb DriverAllowanceComponent fp.driverAllowance
+      airportConvenienceFeeResult = capComponentMb AirportConvenienceFeeComponent fp.airportConvenienceFee
+      serviceChargeResult = capComponentMb ServiceChargeComponent fp.serviceCharge
+      priorityChargesResult = capComponentMb PriorityChargeComponent fp.priorityCharges
       -- petCharges = if params.isPetRide then fp.petCharges else Nothing
-      luggageCharge = case (fp.perLuggageCharge, params.numberOfLuggages) of
+      luggageCharge = capComponentMb LuggageChargeComponent $ case (fp.perLuggageCharge, params.numberOfLuggages) of
         (Just perLuggageCharge, Just numberOfLuggages) -> Just $ perLuggageCharge * fromIntegral numberOfLuggages
         _ -> Nothing
-      returnFeeCharge = case fp.returnFee of
+      returnFeeCharge = capComponentMb ReturnFeeChargeComponent $ case fp.returnFee of
         Just (DFP.ReturnFeeFixed fee) -> Just fee
         Just (DFP.ReturnFeePercentage p) -> Just $ partOfNightShiftCharge * fromRational (toRational p / 100)
         _ -> Nothing
-      boothCharge = case fp.boothCharges of
+      boothCharge = capComponentMb BoothChargeComponent $ case fp.boothCharges of
         Just (DFP.BoothChargeFixed fee) -> Just fee
         Just (DFP.BoothChargePercentage p) -> Just $ partOfNightShiftCharge * fromRational (toRational p / 100)
         _ -> Nothing
@@ -545,19 +553,23 @@ calculateFareParametersHandler params = do
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
-          + fromMaybe 0.0 params.petCharges
-          + fromMaybe 0.0 fp.driverAllowance
-          + fromMaybe 0.0 fp.airportConvenienceFee
-          + fromMaybe 0.0 fp.serviceCharge
-          + fromMaybe 0.0 fp.priorityCharges
+          + fromMaybe 0.0 petChargesResult
+          + fromMaybe 0.0 driverAllowanceResult
+          + fromMaybe 0.0 airportConvenienceFeeResult
+          + fromMaybe 0.0 serviceChargeResult
+          + fromMaybe 0.0 priorityChargesResult
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
       govtChargesRate' = params.govtChargesRate >>= computeTotalGstRate
       govtCharges =
         HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> govtChargesRate'
       stopCharges =
-        HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
-      extraTimeFareInfo = calculateExtraTimeFare params.estimatedRideDuration fp.rideExtraTimeChargeGracePeriod fp.perMinuteRideExtraTimeCharge params.actualRideDuration
+        capComponentMb StopChargeComponent $ HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
+      extraTimeFareInfo = capComponentMb RideExtraTimeFareComponent $ calculateExtraTimeFare params.estimatedRideDuration fp.rideExtraTimeChargeGracePeriod fp.perMinuteRideExtraTimeCharge params.actualRideDuration
+      parkingChargeResult = capComponentMb ParkingChargeComponent fp.parkingCharge
+      customerExtraFeeResult = capComponentMb CustomerExtraFeeComponent params.customerExtraFee
+      customerCancellationDuesResult = capComponentMb CustomerCancellationChargeComponent params.customerCancellationDues
+      tollChargesResult = capComponentMb TollChargesComponent $ addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing)
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
@@ -569,16 +581,16 @@ calculateFareParametersHandler params = do
         FareParameters
           { id,
             driverSelectedFare = params.driverSelectedFare,
-            customerExtraFee = params.customerExtraFee,
+            customerExtraFee = customerExtraFeeResult,
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             shouldApplyPersonalDiscount = params.shouldApplyPersonalDiscount,
-            serviceCharge = fp.serviceCharge,
-            parkingCharge = fp.parkingCharge,
+            serviceCharge = serviceChargeResult,
+            parkingCharge = parkingChargeResult,
             baseFare = baseFare,
-            petCharges = params.petCharges,
-            driverAllowance = fp.driverAllowance,
-            airportConvenienceFee = fp.airportConvenienceFee,
-            priorityCharges = fp.priorityCharges,
+            petCharges = petChargesResult,
+            driverAllowance = driverAllowanceResult,
+            airportConvenienceFee = airportConvenienceFeeResult,
+            priorityCharges = priorityChargesResult,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
@@ -608,8 +620,8 @@ calculateFareParametersHandler params = do
                   (DFP.findFPAmbulanceDetailsSlabByAge (fromMaybe 0 params.vehicleAge) det.slabs & (.platformFeeInfo))
                   params.currency
                   fareParametersDetails,
-            customerCancellationDues = params.customerCancellationDues,
-            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
+            customerCancellationDues = customerCancellationDuesResult,
+            tollCharges = tollChargesResult,
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
@@ -653,6 +665,13 @@ calculateFareParametersHandler params = do
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
   where
+    estimateComponentMap = maybe Map.empty buildComponentMap params.mbEstimateFareParams
+    capComponent component value =
+      case (params.computationPhase, params.mbCapConfig) of
+        (FCRecompute, Just capConfig) -> capByStrategy (lookupCapStrategy capConfig component) (componentAmount estimateComponentMap component) value
+        (FCBuffer, Just capConfig) -> maybe value (\strategy -> value + capAllowance strategy value) (lookupCapStrategy capConfig component)
+        _ -> value
+    capComponentMb component = fmap (capComponent component)
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs
@@ -674,7 +693,7 @@ calculateFareParametersHandler params = do
               sgst = Nothing,
               cgst = Nothing,
               currency = currency,
-              distBasedFare
+              distBasedFare = capComponent AmbulanceDistBasedFareComponent distBasedFare
             }
         )
 
@@ -721,11 +740,12 @@ calculateFareParametersHandler params = do
         waitingChargeInfo,
         DFParams.InterCityDetails $
           DFParams.FParamsInterCityDetails
-            { timeFare = fareByTime_,
-              distanceFare = fareByDist_,
-              pickupCharge = deadKmFare,
-              extraDistanceFare,
-              extraTimeFare,
+            { timeFare = capComponent TimeFareComponent fareByTime_,
+              distanceFare = capComponent DistanceFareComponent fareByDist_,
+              pickupCharge = capComponent PickupChargeComponent deadKmFare,
+              extraDistanceFare = capComponent ExtraDistanceFareComponent extraDistanceFare,
+              extraTimeFare = capComponent ExtraTimeFareComponent extraTimeFare,
+              stateEntryPermitCharges = capComponentMb StateEntryPermitChargesComponent stateEntryPermitCharges,
               currency = params.currency,
               ..
             }
@@ -764,8 +784,9 @@ calculateFareParametersHandler params = do
         waitingChargeInfo,
         DFParams.RentalDetails $
           DFParams.FParamsRentalDetails
-            { timeBasedFare = fareByTime,
-              distBasedFare = fareByDist,
+            { timeBasedFare = capComponent TimeBasedFareComponent fareByTime,
+              distBasedFare = capComponent DistBasedFareComponent fareByDist,
+              deadKmFare = capComponent DeadKmFareComponent deadKmFare,
               extraDistance = Meters extraDistM,
               extraDuration = Seconds $ extraMins * 60,
               currency = params.currency,
@@ -799,8 +820,9 @@ calculateFareParametersHandler params = do
         waitingChargeInfo,
         DFParams.ProgressiveDetails $
           DFParams.FParamsProgressiveDetails
-            { extraKmFare = if extraKmFare == 0.0 then Nothing else Just extraKmFare,
-              rideDurationFare = mbRideDurationFare,
+            { extraKmFare = capComponentMb ExtraKmFareComponent $ if extraKmFare == 0.0 then Nothing else Just extraKmFare,
+              rideDurationFare = capComponentMb RideDurationFareComponent mbRideDurationFare,
+              deadKmFare = capComponent DeadKmFareComponent deadKmFare,
               ..
             }
         )
@@ -892,9 +914,10 @@ calculateFareParametersHandler params = do
           let (platformFee, cgst, sgst) = getPlatformFee platformFeeInfo'
           FParamsAmbulanceDetails {distBasedFare = det.distBasedFare, currency = det.currency, ..}
         getPlatformFee platformFeeInfo' = do
-          let baseFee = case platformFeeInfo'.platformFeeCharge of
-                ProgressivePlatformFee charge -> fullCompleteRideCost * charge
-                ConstantPlatformFee charge -> charge
+          let baseFee =
+                capComponent PlatformFeeComponent $ case platformFeeInfo'.platformFeeCharge of
+                  ProgressivePlatformFee charge -> fullCompleteRideCost * charge
+                  ConstantPlatformFee charge -> charge
               cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee
               sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
           (Just baseFee, cgst, sgst)
@@ -1112,37 +1135,12 @@ calculateFareParameters params = do
   -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
   let mbDriverWalletConfig = (.driverWalletConfig) <$> mbTransporterConfig
       fareWithGrossUp = applyPaymentChargeGrossUp mbDriverWalletConfig fareWithAirport
-  -- Record the per-component buffered ceiling for this fare. Computed here, at
-  -- the single point fare params are built, so every downstream hold and
-  -- balance check reads one consistent figure instead of re-deriving it from
-  -- whatever fragments survived (by then the breakdown has been summed away).
-  --
-  -- NOTE: this function also runs on end-ride recompute, where the resulting
-  -- bufferedFare is derived from recomputed amounts and is meaningless as a
-  -- ceiling. Harmless as long as holds only ever read a booking's/estimate's
-  -- params (see the field's doc comment).
-  pure $ withBufferedFare params.farePolicy fareWithGrossUp
-
--- | Attach 'bufferedFare' when the fare policy opts in. Both the on/off flag
---   and a cap config are required — either missing means no ceiling applies,
---   so the field stays 'Nothing' and callers fall back to unbuffered amounts.
-withBufferedFare :: FullFarePolicy -> FareParameters -> FareParameters
-withBufferedFare farePolicy fareParams =
-  case (fromMaybe False farePolicy.fareRecomputeCapEnabled, farePolicy.fareRecomputeCapConfig) of
-    (True, Just capConfig) -> fareParams {bufferedFare = Just (bufferedFareTotal capConfig fareParams)}
-    _ -> fareParams {bufferedFare = Nothing}
-
--- | Every component raised to its own configured ceiling, summed by 'fareSum'
---   so nothing is missed. A component with no configured cap contributes its
---   plain estimate: its growth is unbounded and so unknowable here.
-bufferedFareTotal :: FareRecomputeCapConfig -> FareParameters -> HighPrecMoney
-bufferedFareTotal capConfig fareParams =
-  fareSum (rebuildWithComponents buffered fareParams) Nothing
-  where
-    srcMap = buildComponentMap fareParams
-    buffered component =
-      let estimate = componentAmount srcMap component
-       in maybe estimate (\strategy -> estimate + capAllowance strategy estimate) (lookupCapStrategy capConfig component)
+  bufferedFare <- case (params.computationPhase, params.farePolicy.fareRecomputeCapConfig) of
+    (FCEstimate, Just capConfig) -> do
+      bufferedParams <- calculateFareParameters params {computationPhase = FCBuffer, mbCapConfig = Just capConfig}
+      pure $ Just (fareSum bufferedParams Nothing)
+    _ -> pure Nothing
+  pure fareWithGrossUp {bufferedFare = bufferedFare}
 
 -- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
 --
@@ -1393,8 +1391,12 @@ buildComponentMap FareParameters {..} =
             (BoothChargeComponent, maybeZero boothCharge),
             (RideExtraTimeFareComponent, maybeZero rideExtraTimeFare)
           ]
-      -- Detail map: Additional components based on fare policy type
-      detailMap = case fareParametersDetails of
+   in Map.union baseMap (detailComponentMap fareParametersDetails)
+
+detailComponentMap :: DFParams.FareParametersDetails -> ComponentMap
+detailComponentMap fareParametersDetails =
+  let maybeZero = fromMaybe 0
+   in case fareParametersDetails of
         DFParams.ProgressiveDetails det ->
           Map.fromList
             [ (DeadKmFareComponent, det.deadKmFare),
@@ -1425,230 +1427,12 @@ buildComponentMap FareParameters {..} =
           Map.fromList
             [ (PlatformFeeComponent, maybeZero det.platformFee)
             ]
-   in -- Merge base and detail maps (detail map takes precedence if key exists in both)
-      Map.union baseMap detailMap
 
 -- | Get the monetary value of a component from the component map
 -- Returns 0 if the component is not found
 componentAmount :: ComponentMap -> FareChargeComponent -> HighPrecMoney
 componentAmount mp key = Map.findWithDefault 0 key mp
 
--- | Component groups that are 'Derived' (GST) rather than independently capped —
--- see 'CapStrategy' and 'applyPerComponentCaps'.
-taxComponents :: [FareChargeComponent]
-taxComponents = [RideVatComponent, TollVatComponent]
-
--- | Write a per-component value function back into a full 'FareParameters',
--- covering both the base map and whichever trip-type detail variant applies.
--- A component with no field on this params' variant is simply not written.
--- Absent-vs-zero is collapsed to 'Nothing' for optional fields, matching
--- 'buildComponentMap's 'maybeZero' — Nothing and 0 mean the same thing here.
-rebuildWithComponents :: (FareChargeComponent -> HighPrecMoney) -> FareParameters -> FareParameters
-rebuildWithComponents f fp =
-  fp
-    { baseFare = f RideFare,
-      waitingCharge = nonZero (f WaitingCharge),
-      serviceCharge = nonZero (f ServiceChargeComponent),
-      tollCharges = nonZero (f TollChargesComponent),
-      congestionCharge = nonZero (f CongestionChargeComponent),
-      parkingCharge = nonZero (f ParkingChargeComponent),
-      petCharges = nonZero (f PetChargeComponent),
-      priorityCharges = nonZero (f PriorityChargeComponent),
-      nightShiftCharge = nonZero (f NightShiftChargeComponent),
-      insuranceCharge = nonZero (f InsuranceChargeComponent),
-      stopCharges = nonZero (f StopChargeComponent),
-      luggageCharge = nonZero (f LuggageChargeComponent),
-      customerCancellationDues = nonZero (f CustomerCancellationChargeComponent),
-      customerExtraFee = nonZero (f CustomerExtraFeeComponent),
-      -- NOTE: the top-level 'platformFee'/'sgst'/'cgst' fields are left
-      -- untouched here — they're a breakdown-only copy of the fare policy's
-      -- config value and don't feed 'fareSum' (which reads the detail-level
-      -- platformFee instead, see 'countFullFareOfParamsDetails'). Writing
-      -- 'PlatformFeeComponent' back through them would be a silent no-op on
-      -- the actual fare while corrupting that reporting field.
-      tollFareTax = nonZero (f TollVatComponent),
-      discountApplicableRideFareTax = nonZero (f RideVatComponent),
-      driverAllowance = nonZero (f DriverAllowanceComponent),
-      airportConvenienceFee = nonZero (f AirportConvenienceFeeComponent),
-      returnFeeCharge = nonZero (f ReturnFeeChargeComponent),
-      boothCharge = nonZero (f BoothChargeComponent),
-      rideExtraTimeFare = nonZero (f RideExtraTimeFareComponent),
-      fareParametersDetails = case fp.fareParametersDetails of
-        DFParams.ProgressiveDetails det ->
-          DFParams.ProgressiveDetails
-            det{deadKmFare = f DeadKmFareComponent,
-                extraKmFare = nonZero (f ExtraKmFareComponent),
-                rideDurationFare = nonZero (f RideDurationFareComponent)
-               }
-        DFParams.RentalDetails det ->
-          DFParams.RentalDetails
-            det{timeBasedFare = f TimeBasedFareComponent,
-                distBasedFare = f DistBasedFareComponent,
-                deadKmFare = f DeadKmFareComponent
-               }
-        DFParams.InterCityDetails det ->
-          DFParams.InterCityDetails
-            det{timeFare = f TimeFareComponent,
-                distanceFare = f DistanceFareComponent,
-                pickupCharge = f PickupChargeComponent,
-                extraDistanceFare = f ExtraDistanceFareComponent,
-                extraTimeFare = f ExtraTimeFareComponent,
-                stateEntryPermitCharges = nonZero (f StateEntryPermitChargesComponent)
-               }
-        DFParams.AmbulanceDetails det ->
-          DFParams.AmbulanceDetails
-            det{distBasedFare = f AmbulanceDistBasedFareComponent,
-                platformFee = nonZero (f PlatformFeeComponent)
-               }
-        DFParams.SlabDetails det ->
-          DFParams.SlabDetails det {platformFee = nonZero (f PlatformFeeComponent)}
-    }
-  where
-    nonZero v = if v == 0 then Nothing else Just v
-
--- | Components 'fullRideCostN' (the flat-rate GST base computed in
--- 'calculateFareParametersHandler', a v1 mechanism entirely independent of
--- 'FareChargeConfig'/'vatChargeConfig' -- GST and VAT are separate, additive
--- taxes here, not the same thing under two names) is built from, expressed as
--- the equivalent 'FareChargeComponent' set. 'PlatformFeeComponent' is
--- deliberately excluded even for Slab/Ambulance: their platform fee carries
--- its own separate sgst/cgst, unrelated to 'govtCharges'.
-pureGstBaseComponents :: DFParams.FareParametersDetails -> [FareChargeComponent]
-pureGstBaseComponents details =
-  [ RideFare,
-    NightShiftChargeComponent,
-    WaitingCharge,
-    CongestionChargeComponent,
-    PetChargeComponent,
-    DriverAllowanceComponent,
-    AirportConvenienceFeeComponent,
-    ServiceChargeComponent,
-    PriorityChargeComponent,
-    InsuranceChargeComponent
-  ]
-    <> detailComponents
-  where
-    detailComponents = case details of
-      DFParams.ProgressiveDetails _ -> [DeadKmFareComponent, ExtraKmFareComponent, RideDurationFareComponent]
-      DFParams.RentalDetails _ -> [TimeBasedFareComponent, DistBasedFareComponent, DeadKmFareComponent]
-      DFParams.InterCityDetails _ -> [TimeFareComponent, DistanceFareComponent, PickupChargeComponent, ExtraDistanceFareComponent, ExtraTimeFareComponent, StateEntryPermitChargesComponent]
-      DFParams.AmbulanceDetails _ -> [AmbulanceDistBasedFareComponent]
-      DFParams.SlabDetails _ -> []
-
--- | Cap every component of 'recomputedParams' at its per-component ceiling,
--- computed from 'estimateParams' (the booking's estimate) under 'capConfig'.
--- GST ('taxComponents') is not capped independently -- each is rescaled by the
--- ratio of the capped-to-uncapped value of EXACTLY the components it was
--- actually computed on -- not a single global ratio over every component. A
--- global ratio would move whenever ANY capped component changes, including
--- ones the tax was never applied to (cancellation, customer-extra-fee,
--- insurance, platform fee, ...), giving a wrong tax whenever one of those is
--- capped without the actual taxable base changing at all.
---
--- 'govtCharges' is itself a SUM of two independent, non-mutually-exclusive
--- contributions (see 'applyConfiguredCharges's 'mergedGovtCharges'): a
--- flat-rate GST portion ('pureGstBaseComponents', nothing to do with
--- 'mbVatChargeConfig') and a VAT portion from 'mbVatChargeConfig'
--- (discount-applicable + non-discount-applicable + parking, each on its own
--- base). The GST and VAT portions are reconstructed from fields that survive
--- on 'FareParameters' ('discountApplicableRideFareTax',
--- 'nonDiscountApplicableRideFareTax', 'parkingChargeTax') and each rescaled
--- independently, then recombined -- a single ratio over the merged total would
--- be wrong whenever only one of the two contributions is actually present or
--- when a capped component belongs to only one of their bases.
--- | The three fare-recompute-cap-related configs 'applyPerComponentCaps' needs,
---   bundled together because they must always be sourced from the same fare
---   policy -- a plain 3-argument call risks a caller wiring one of them from a
---   different source than the other two (e.g. a stale/different fare policy)
---   without anything catching the mismatch.
-data CapContext = CapContext
-  { capConfig :: FareRecomputeCapConfig,
-    mbVatChargeConfig :: Maybe FareChargeConfig,
-    mbTollTaxChargeConfig :: Maybe FareChargeConfig
-  }
-
-applyPerComponentCaps :: CapContext -> FareParameters -> FareParameters -> FareParameters
-applyPerComponentCaps CapContext {..} estimateParams recomputedParams =
-  let estimateMap = buildComponentMap estimateParams
-      recomputedMap = buildComponentMap recomputedParams
-      cappedValue component =
-        capByStrategy (lookupCapStrategy capConfig component) (componentAmount estimateMap component) (componentAmount recomputedMap component)
-      -- The components a configured charge was actually computed on -- mirrors
-      -- 'computeConfiguredCharge's own "empty appliesOn defaults to RideFare" rule.
-      -- That correspondence holds for the toll path ('mbTollTaxChargeConfig'),
-      -- which does go through 'computeConfiguredCharge'. It does NOT hold for the
-      -- VAT path ('mbVatChargeConfig'): 'applyConfiguredCharges' computes VAT via
-      -- 'taxableSet = maybe [] (.appliesOn) vatChargeConfig', where an empty/absent
-      -- 'appliesOn' means no VAT at all, not "defaults to RideFare". Harmless here
-      -- today only because an empty 'appliesOn' also makes the real VAT amount 0,
-      -- so whatever this returns for that case gets scaled against nothing.
-      configuredBase mbConfig = case mbConfig of
-        Just cfg | not (KP.null cfg.appliesOn) -> cfg.appliesOn
-        _ -> [RideFare]
-      -- Ratio of the capped-to-uncapped value of a specific component list.
-      baseScale components =
-        let cappedBase = sum (map cappedValue components)
-            recomputedBase = sum (map (componentAmount recomputedMap) components)
-         in if recomputedBase > 0 then cappedBase.getHighPrecMoney / recomputedBase.getHighPrecMoney else 1
-      vatAppliesOn = configuredBase mbVatChargeConfig
-      -- 'RideVatComponent' only ever holds 'discountApplicableRideFareTax' (see
-      -- 'buildComponentMap') -- restrict to its discount-applicable subset,
-      -- matching 'applyConfiguredCharges's own 'discTaxableBase'.
-      discAppBaseComponents = filter (`KP.elem` discountApplicableComponents) vatAppliesOn
-      rideVatScale = baseScale discAppBaseComponents
-      -- Matches 'applyConfiguredCharges's own 'nonDiscTaxableBase' exclusions.
-      nonDiscAppBaseComponents =
-        filter
-          (\c -> c `KP.notElem` discountApplicableComponents && c `KP.notElem` [TollChargesComponent, TollVatComponent, RideVatComponent, CustomerCancellationChargeComponent, ParkingChargeComponent])
-          vatAppliesOn
-      nonDiscVatScale = baseScale nonDiscAppBaseComponents
-      parkingVatScale = baseScale [ParkingChargeComponent]
-      tollVatScale = baseScale (configuredBase mbTollTaxChargeConfig)
-      gstScale = baseScale (pureGstBaseComponents recomputedParams.fareParametersDetails)
-      finalValue component
-        | component == RideVatComponent = HighPrecMoney ((componentAmount recomputedMap component).getHighPrecMoney * rideVatScale)
-        | component == TollVatComponent = HighPrecMoney ((componentAmount recomputedMap component).getHighPrecMoney * tollVatScale)
-        | otherwise = cappedValue component
-      nonDiscAppTax = fromMaybe 0 recomputedParams.nonDiscountApplicableRideFareTax
-      parkingTax = fromMaybe 0 recomputedParams.parkingChargeTax
-      discAppTax = fromMaybe 0 recomputedParams.discountApplicableRideFareTax
-      vatPortion = discAppTax + nonDiscAppTax + parkingTax
-      gstPortion = fromMaybe 0 recomputedParams.govtCharges - vatPortion
-      newNonDiscAppTax = HighPrecMoney (nonDiscAppTax.getHighPrecMoney * nonDiscVatScale)
-      newParkingTax = HighPrecMoney (parkingTax.getHighPrecMoney * parkingVatScale)
-      newGovtCharges =
-        gstPortion.getHighPrecMoney * gstScale
-          + discAppTax.getHighPrecMoney * rideVatScale
-          + newNonDiscAppTax.getHighPrecMoney
-          + newParkingTax.getHighPrecMoney
-   in (rebuildWithComponents finalValue recomputedParams)
-        { govtCharges = HighPrecMoney newGovtCharges <$ recomputedParams.govtCharges,
-          -- 'rebuildWithComponents' only ever writes 'tollFareTax'/'discountApplicableRideFareTax'
-          -- back (the two components it has a direct 'FareChargeComponent' mapping for) --
-          -- these remaining slots of 'applyConfiguredCharges's ten-slot tax partition need
-          -- their own capped-scale writeback here too, or they'd keep describing the
-          -- pre-cap recompute forever, no longer reconciling with the capped totals around
-          -- them (parkingChargeTax matters most: 'fareSum' adds it on directly, uncapped,
-          -- alongside the now-capped 'parkingCharge').
-          nonDiscountApplicableRideFareTax = newNonDiscAppTax <$ recomputedParams.nonDiscountApplicableRideFareTax,
-          parkingChargeTax = newParkingTax <$ recomputedParams.parkingChargeTax,
-          discountApplicableRideFareTaxExclusive = sum (map finalValue discAppBaseComponents) <$ recomputedParams.discountApplicableRideFareTaxExclusive,
-          nonDiscountApplicableRideFareTaxExclusive = sum (map finalValue nonDiscAppBaseComponents) <$ recomputedParams.nonDiscountApplicableRideFareTaxExclusive,
-          tollFareTaxExclusive = finalValue TollChargesComponent <$ recomputedParams.tollFareTaxExclusive,
-          cancellationFeeTaxExclusive = finalValue CustomerCancellationChargeComponent <$ recomputedParams.cancellationFeeTaxExclusive,
-          parkingChargeTaxExclusive = finalValue ParkingChargeComponent <$ recomputedParams.parkingChargeTaxExclusive
-        }
-
--- | Calculate commission separately (not part of fare)
---
--- This function calculates commission based on fare_policy.commission_charge_config
--- and FareParameters. Commission is NOT included in the fare sum - it's stored
--- separately in booking and ride tables for transparency.
---
--- Example: If fare_policy has commission_charge_config = {"value":"8%","appliesOn":["RideFare"]},
--- then commission will be calculated as 8% of RideFare.
---
--- Returns Nothing if commission is not configured or if amount is 0.
 calculateCommission ::
   MonadFlow m =>
   FareParameters ->
@@ -1665,12 +1449,6 @@ calculateCommission fareParams mbFarePolicy = do
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
 
--- | Commission on the CustomerCancellationChargeComponent alone — a past cancellation due folded
---   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
---   Config invariant: the component must appear in exactly one of the two commission configs —
---   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
---   Controlled entirely by the (Maybe) cancellationCommissionChargeConfig on the fare policy:
---   absent config => Nothing, so estimate, payout, stored values and the ledger booking stay consistent.
 calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
 calculateCancellationCommission fareParams mbFarePolicy = do
   case mbFarePolicy of

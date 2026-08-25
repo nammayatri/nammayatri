@@ -161,7 +161,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           createPrepaidHold
             counterpartyType
             ownerId
-            rideFare
+            bufferedRideFare
             booking.currency
             booking.providerId.getId
             booking.merchantOperatingCityId.getId

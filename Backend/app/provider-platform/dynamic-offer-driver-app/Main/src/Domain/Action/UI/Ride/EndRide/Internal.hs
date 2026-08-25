@@ -186,11 +186,8 @@ endRideTransaction ::
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
-  Maybe DFP.FareRecomputeCapConfig ->
-  Maybe DFP.FareChargeConfig ->
-  Maybe DFP.FareChargeConfig ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig = do
+endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
@@ -210,16 +207,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
-  -- mbCapConfig/mbVatChargeConfig/mbTollTaxChargeConfig come in as arguments,
-  -- sourced from the same 'recalculateFareForDistance' call (further up this same
-  -- synchronous end-ride flow, before this transaction was forked) that locked in
-  -- this ride's fare policy in the first place -- the exact fare policy 'ride'
-  -- itself now points to via 'finalFarePolicyId'. Passing them through directly
-  -- avoids round-tripping through a cache (by-quote-id, TTL'd, no DB fallback of
-  -- its own) or re-reading the ride row: both were unreliable — the cache is a
-  -- best-effort entry that can miss non-deterministically, and the ride row was
-  -- read (via 'findRideById'/'rideOld') before 'recalculateFareForDistance' ever
-  -- wrote 'finalFarePolicyId' to it, so it never carried a useful value here.
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId.getId
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
@@ -258,7 +245,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
-  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig
+  fork "processEndRideFinance" $ processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig
 
   -- Driver operating-city migration on relocation is handled by kafka-consumers'
   -- RIDE_EVENTS_CONSUMER (Processor.RideEvents.Handlers.handleDriverCityMigration), off the
@@ -305,12 +292,10 @@ processEndRideFinance ::
   Id DP.Driver ->
   DI.DriverInformation ->
   TransporterConfig ->
-  Maybe DFP.FareRecomputeCapConfig ->
-  Maybe DFP.FareChargeConfig ->
-  Maybe DFP.FareChargeConfig ->
   m ()
-processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig = do
-  let (walletFinanceEnabled, totalFare, mbFareCap) = settlementTotalFareWithCap merchant thresholdConfig booking mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig newFareParams ride.fare
+processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
+  let walletFinanceEnabled = settlementWalletFinanceEnabled merchant thresholdConfig
+      totalFare = fromMaybe 0 ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),
@@ -344,7 +329,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 
   -- 2. Wallet Flow
   when walletFinanceEnabled $ do
-    createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson mbFareCap
+    createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
   AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
@@ -489,9 +474,8 @@ createDriverWalletTransaction ::
   DI.DriverInformation ->
   TransporterConfig ->
   Maybe DP.Person ->
-  Maybe HighPrecMoney -> -- Fare-recompute cap (estimate + buffer), when enabled and exceeded
   m ()
-createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver mbFareCap = do
+createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver = do
   let isVat = fromMaybe False fareParams.isVatTaxType
       totalFare = fromMaybe 0 ride.fare
       rawTaxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2), pre-discount
@@ -564,11 +548,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
       pure resolvedIsOnline
 
-    let deductionScale = case mbFareCap of
-          Just cap | not isOnline && totalFare > 0 && cap < totalFare -> cap.getHighPrecMoney / totalFare.getHighPrecMoney
-          _ -> 1
-        capDeduction amt = HighPrecMoney (amt.getHighPrecMoney * deductionScale)
-
     let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
         configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
     (mbFleetInfo, mbTdsRate) <- case ride.fleetOwnerId of
@@ -600,7 +579,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
         pure $ (.totalEarnings) <$> mbStats
     let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
-        baseFareForTds = capDeduction (max 0 baseFare)
+        baseFareForTds = max 0 baseFare
         mbTdsAmount = do
           rate <- effectiveTdsRate
           let rawAmount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
@@ -802,7 +781,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             then do
               transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
-            else void $ transfer OwnerLiability GovtIndirect (capDeduction taxAmount) taxRefCash Nothing
+            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef Nothing
