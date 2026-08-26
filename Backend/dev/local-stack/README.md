@@ -2304,15 +2304,75 @@ entire dangerous half today. Swapping in the real key is one line and a
 public history has to be revoked, and revoking this one stops every driver's
 payment page until a new key is deployed.
 
-### The one piece that is still a rebuild
+### Dispatch — `maps-shim/restricted.js` and two lines of Haskell
 
-The client's answer for a lapsed driver: *"we leave it on. However no request
-appear unless he is the only one in the area."* That is a dispatch-pool change
-in Haskell — see the patch pipeline section — and it is the only part of this
-that cannot be done from the shim.
+The client's rule, approved 2026-08-26: a driver who has not paid **stays
+online**, but a request only reaches him when no paying driver is in the pool.
+Plus a cap of 300 rides per paid period, which lands in the same place.
 
-It must also be **visible in the app**. A driver whose rides quietly stop
-concludes the app is broken and rings the office, not that he owes 3 000 DA.
+This is the one part of the subscription that is genuinely a Haskell change, and
+it is deliberately the smallest one available.
+
+**The binary is never told what a subscription is.** It reads one Redis key
+holding a JSON array of driver ids and prefers everybody else. That is the whole
+of its knowledge — not 3 000 DA, not 300 rides. Who is on the list is computed
+in `restricted.js` and can change in the time it takes to restart a container.
+A number compiled into the binary would mean a 45-minute build every time the
+client revised it.
+
+    movin.subscription + ride counts          <- policy, in the shim
+      -> dynamic-offer-driver-app:movin:restricted   (JSON array of ids)
+        -> calculateDriverPool prefers everyone else <- one filter, in Haskell
+
+**The key name is the whole integration, and it was measured.** Hedis prefixes
+keys with the app name: plain calls land under `dynamic-offer-driver-app:`,
+`withCrossAppRedis` under `driver-offer:` — read off the live Redis, not
+guessed. Get it wrong and *nothing fails*: the binary reads a missing key,
+restricts nobody, and the feature is silently off for ever.
+
+**The patch needs no signature changes.** `Redis` is already imported in
+`SharedLogic/DriverPool.hs`, and `CacheFlow m r` already implies `HedisFlow m r`
+— so `calculateDriverPool` can read Redis without touching its constraints.
+Both sites were checked against the **real 2023 baseline fetched from GitHub**,
+not against this branch, which has diverged in exactly that file.
+`try-dispatch-patch.py` in the scratch dir applies them and prints the result.
+
+**Applied at `DriverSelection`, deliberately not at `Estimate`.** Estimate is
+what a passenger is quoted before booking. Filtering there would delete a
+vehicle tier from her price list whenever the only driver of that variant owed
+us money — so she would never see it, never book it, and he would never receive
+the request he was still entitled to as the only one in the area. A passenger
+should not be shown fewer options because a driver has not paid us.
+
+**"The only one in the area" means the current radius**, which widens step by
+step. A lapsed driver can therefore be offered a job at the first narrow step
+while a paying driver sits just outside it. That is the honest reading; holding
+the request back to see whether a wider ring finds somebody paid would delay a
+real passenger to enforce a billing rule.
+
+**Every failure means nobody is restricted.** Missing key, unparseable value,
+query that throws, shim that has never run — all leave dispatch behaving exactly
+as it does today. A stale list is preferred to no list: wrong for minutes rather
+than wrong until somebody notices. The failure worth designing against is the
+other direction, and no path produces it.
+
+**Paying restores him at once**, not on the next five-minute tick — the webhook
+republishes the list the moment it applies a payment. A driver who has just paid
+3 000 DA and then watches five more minutes of requests go past him has, from
+where he is sitting, paid for nothing.
+
+`probe-restricted-drivers.py` proves the shim half on the live stack — 7 of 7:
+the published list matches the policy, lapsing a driver puts him on it,
+restoring takes him off, and the cap arm catches at 1 and ignores at 0 and 300.
+
+Its first run failed the cap test and **the probe was wrong**: rides are counted
+from the start of the period a driver is currently inside, and for the free
+month that is the day the row was created. No existing ride falls inside any
+current period, so a cap of 1 correctly caught nobody.
+
+It must also be **visible in the app**, and that half already ships: D24's
+lapsed state and D9's banner. A driver whose rides quietly stop concludes the
+app is broken and rings the office, not that he owes 3 000 DA.
 
 ### Live mode
 
@@ -2465,6 +2525,9 @@ osrm-config.sql        points the backend's routing at our OSRM
 dedupe-seed.sql        removes the duplicated upstream seed rows
 driver-subscription.sql  the movin schema: who has paid, and every payment.
                        Idempotent — safe to re-run
+driver-subscription-free-month.sql  one free month for the fleet already on
+                       the road.  Cannot double-give, and writes no payment —
+                       so `active` with no receipt means exactly "offered"
 
   prepare steps, each run once and slow
 osrm-prepare.sh        builds the routing graph from algeria-latest.osm.pbf
@@ -2493,6 +2556,10 @@ probe-subscription.sql    can we switch off a driver who hasn't paid?
 probe-subscription-flow.py  the whole payment path, signed for real.  The
                           check it exists for: the same webhook delivered
                           twice must buy ONE month.  Run it ON the VPS
+probe-subscription-live.py  the other half: a real driver token buying a real
+                          Chargily checkout.  Needs the secret key
+probe-restricted-drivers.py  who dispatch should skip, and whether the list
+                          reaches the exact Redis key the binary reads
 probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
 probe-search-window.py    how long a driver really gets, read off a real request.
                           Signs in as a RIDER only -- never as a fleet driver
@@ -2522,6 +2589,8 @@ maps-shim/             Google Places/geocoding, answered from Postgres —
   subscription.js      /subscription/* — the driver’s 3 000 DA a month
                        through Chargily Pay.  The webhook is the only thing
                        that ever extends a subscription
+  restricted.js        publishes who dispatch should skip.  The binary reads
+                       one Redis key and never learns what a subscription is
 geocoder/              place-index build;  places.csv gitignored
 demo-map/              the map on :8025 (nginx conf + page)
   site/areas.geojson   exported from the DB by setup.sh (gitignored)
