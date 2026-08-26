@@ -39,6 +39,11 @@ deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.Person.Person])
 findAllByDeviceId deviceId = do findAllWithKV [Se.Is Beam.deviceId $ Se.Eq deviceId]
 
+findAllByDeviceIdAndMerchantId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.Person.Person])
+findAllByDeviceIdAndMerchantId deviceId merchantId = do findAllWithKV [Se.And [Se.Is Beam.deviceId $ Se.Eq deviceId, Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
