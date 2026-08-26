@@ -84,9 +84,9 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 --   the canonical eight-tag summary. Callers who want finer control can
 --   use 'mkFareParamsDisplayBreakups' and 'mkProjectFareParamsTagBreakupItems'
 --   separately.
-mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkFareParamsBreakups mkPrice mkBreakupItem fareParams =
-  mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams
+mkFareParamsBreakups :: Bool -> (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkFareParamsBreakups isValueAddNP mkPrice mkBreakupItem fareParams =
+  mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams
     <> mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams
 
 -- | Canonical ten-tag summary only. Exposed so callers (e.g. rate-card
@@ -133,8 +133,14 @@ mkProjectFareParamsTagBreakupItemsForCancellation mkPrice mkBreakupItem cancella
 -- | Display-tag portion of the quotation.breakup (BASE_FARE,
 --   DISTANCE_FARE, PARKING_CHARGE, TOLL_CHARGES, …). Does NOT include
 --   the canonical eight-tag summary — 'mkFareParamsBreakups' concats both.
-mkFareParamsDisplayBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
-mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
+--
+--   Three components carry an extra copy under their ONDC v2.1.0 spec title
+--   (@PARKING_CHARGES@, @NIGHT_CHARGES@, @WAITING_CHARGES@). Those exist purely
+--   for external NPs that validate against the spec vocabulary, so they are
+--   emitted only when the BAP is not a value-add NP — our own apps read the
+--   legacy titles, and sending both would show the component twice.
+mkFareParamsDisplayBreakups :: Bool -> (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
   -- let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
   let baseFareFinal = HighPrecMoney $ fareParams.baseFare.getHighPrecMoney -- Temp fix :: have to fix properly
       baseFareCaption = show Enums.BASE_FARE
@@ -165,23 +171,23 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
       nightShiftCaption = show Enums.NIGHT_SHIFT_CHARGE
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
       nightChargesCaption = show Enums.NIGHT_CHARGES
-      mbNightChargesItem = fmap (mkBreakupItem nightChargesCaption) (mkPrice <$> fareParams.nightShiftCharge)
+      mbNightChargesItem = mkV2SpecAliasItem nightChargesCaption fareParams.nightShiftCharge
 
       parkingChargeCaption = show Enums.PARKING_CHARGE
       mbParkingChargeItem = mkBreakupItem parkingChargeCaption . mkPrice <$> fareParams.parkingCharge
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
       parkingChargesCaption = show Enums.PARKING_CHARGES
-      mbParkingChargesItem = mkBreakupItem parkingChargesCaption . mkPrice <$> fareParams.parkingCharge
+      mbParkingChargesItem = mkV2SpecAliasItem parkingChargesCaption fareParams.parkingCharge
 
       waitingChargesCaption = show Enums.WAITING_OR_PICKUP_CHARGES
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
-      -- ONDC v2.1.0: duplicate with new title for spec compliance
+      -- ONDC v2.1.0: duplicate with new title for spec compliance, external NPs only
       waitingChargesCaption2 = show Enums.WAITING_CHARGES
-      mbWaitingChargesItem2 = mkBreakupItem waitingChargesCaption2 . mkPrice <$> fareParams.waitingCharge
+      mbWaitingChargesItem2 = mkV2SpecAliasItem waitingChargesCaption2 fareParams.waitingCharge
 
       mbFixedGovtRateCaption = show Enums.FIXED_GOVERNMENT_RATE
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
@@ -285,6 +291,13 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
     <> detailsBreakups
     <> additionalChargesBreakup
   where
+    -- The ONDC v2.1.0 spec title for a component we already emit under its legacy
+    -- title. Only external NPs need it; for our own apps it would be a duplicate.
+    mkV2SpecAliasItem caption mbAmount =
+      if isValueAddNP
+        then Nothing
+        else mkBreakupItem caption . mkPrice <$> mbAmount
+
     castAdditionalChargeCategoriesToEnum = \case
       DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Enums.NYREGULAR_SUBSCRIPTION_CHARGE

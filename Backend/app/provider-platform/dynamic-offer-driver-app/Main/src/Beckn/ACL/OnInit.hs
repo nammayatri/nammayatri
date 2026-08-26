@@ -30,14 +30,14 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common
 
-mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
-mkOnInitMessageV2 res becknConfig mbFarePolicy =
+mkOnInitMessageV2 :: Utils.IsValueAddNP -> DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
+mkOnInitMessageV2 isValueAddNP res becknConfig mbFarePolicy =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res becknConfig mbFarePolicy
+    { confirmReqMessageOrder = tfOrder isValueAddNP res becknConfig mbFarePolicy
     }
 
-tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
-tfOrder res becknConfig mbFarePolicy = do
+tfOrder :: Utils.IsValueAddNP -> DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder isValueAddNP res becknConfig mbFarePolicy = do
   let farePolicy = case mbFarePolicy of
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
@@ -50,7 +50,7 @@ tfOrder res becknConfig mbFarePolicy = do
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
       orderPayments = tfPayments res becknConfig,
       orderProvider = Utils.tfProvider becknConfig,
-      orderQuote = Utils.tfQuotation res.booking,
+      orderQuote = Utils.tfQuotation isValueAddNP res.booking,
       orderTags = Nothing,
       orderStatus = Nothing,
       orderCreatedAt = Just res.booking.createdAt,

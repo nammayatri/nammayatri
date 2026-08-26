@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.FareParameters as QFP
 
 buildOnUpdateReqV2 ::
@@ -240,12 +241,12 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
         let (items, quote, payment) = case updateType of
               OU.SOFT_UPDATE -> do
                 let items' = Utils.tfItemsSoftUpdate booking merchant.shortId.getShortId bookingUpdateReqDetails.estimatedDistance farePolicy Nothing bookingUpdateReqDetails ride.id.getId
-                    quote' = Utils.tfQuotationSU fareParameters bookingUpdateReqDetails.estimatedFare
+                    quote' = Utils.tfQuotationSU isValueAddNP fareParameters bookingUpdateReqDetails.estimatedFare
                     payment' = UtilsOU.mkPaymentParamsSoftUpdate paymentMethodInfo paymentUrl merchant bppConfig bookingUpdateReqDetails.estimatedFare fareParameters.currency
                 (items', quote', payment')
               OU.CONFIRM_UPDATE -> do
                 let items' = Utils.tfItems booking merchant.shortId.getShortId booking.estimatedDistance farePolicy Nothing
-                    quote' = Utils.tfQuotation booking
+                    quote' = Utils.tfQuotation isValueAddNP booking
                     payment' = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
                 (items', quote', payment')
         fulfillment <- case updateType of
@@ -272,10 +273,11 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
               orderUpdatedAt = Just booking.updatedAt
             }
       Nothing -> do
+        isValueAddNP <- CQVAN.isValueAddNP booking.bapId
         let distanceTagGroups = case updateType of
               OU.SOFT_UPDATE -> UtilsOU.mkUpdatedDistanceTags bookingUpdateReqDetails.estimatedDistance
               OU.CONFIRM_UPDATE -> Nothing
-            quote = Utils.tfQuotationSU fareParameters bookingUpdateReqDetails.estimatedFare
+            quote = Utils.tfQuotationSU isValueAddNP fareParameters bookingUpdateReqDetails.estimatedFare
             fulfillment =
               Spec.Fulfillment
                 { fulfillmentId = Nothing,
@@ -482,6 +484,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderUpdatedAt = Nothing
         }
   OU.AddBaggageBuildReq OU.DAddBaggageReq {..} -> do
+    isValueAddNP <- CQVAN.isValueAddNP outerBooking.bapId
     let addBaggageTags =
           [ Tag.getFullTagGroup
               Tag.SEARCH_REQUEST_INFO
@@ -524,7 +527,7 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderQuote =
             Just $
               Spec.Quotation
-                { quotationBreakup = Utils.mkQuotationBreakup fareParams,
+                { quotationBreakup = Utils.mkQuotationBreakup isValueAddNP fareParams,
                   quotationPrice =
                     Just $
                       Spec.Price

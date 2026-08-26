@@ -49,8 +49,8 @@ mkRideCompletedPaymentType = show . maybe OnUpdate.ON_FULFILLMENT (Common.castDP
 showPaymentCollectedBy :: Maybe DMPM.PaymentMethodInfo -> Text
 showPaymentCollectedBy = show . maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy))
 
-mkRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Spec.Quotation
-mkRideCompletedQuote ride fareParams = do
+mkRideCompletedQuote :: MonadFlow m => Utils.IsValueAddNP -> DRide.Ride -> DFParams.FareParameters -> m Spec.Quotation
+mkRideCompletedQuote isValueAddNP ride fareParams = do
   fare' <- ride.fare & fromMaybeM (InternalError "Ride fare is not present in RideCompletedReq ride.")
   let fare = highPrecMoneyToText fare'
   let currency = show ride.currency
@@ -64,7 +64,7 @@ mkRideCompletedQuote ride fareParams = do
             priceOfferedValue = Nothing
           }
       fareBreakup =
-        Fare.mkFareParamsBreakups (mkPrice' currency) mkBreakupItem fareParams
+        Fare.mkFareParamsBreakups isValueAddNP (mkPrice' currency) mkBreakupItem fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
       tipBreakup = mkTipBreakup currency ride.tipAmount
       breakup = fareBreakup <> tipBreakup

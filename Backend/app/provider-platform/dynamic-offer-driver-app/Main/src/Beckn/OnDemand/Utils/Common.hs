@@ -793,19 +793,19 @@ tfCancellationFee (Just price) = do
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
 tfFulfillmentState = Just . mkFulfillmentState
 
-tfQuotation :: DBooking.Booking -> Maybe Spec.Quotation
-tfQuotation booking =
+tfQuotation :: IsValueAddNP -> DBooking.Booking -> Maybe Spec.Quotation
+tfQuotation isValueAddNP booking =
   Just
     emptyQuotation
-      { Spec.quotationBreakup = mkQuotationBreakup booking.fareParams,
+      { Spec.quotationBreakup = mkQuotationBreakup isValueAddNP booking.fareParams,
         Spec.quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency
       }
 
-tfQuotationSU :: DFParams.FareParameters -> HighPrecMoney -> Maybe Spec.Quotation
-tfQuotationSU fareParams estimatedFare =
+tfQuotationSU :: IsValueAddNP -> DFParams.FareParameters -> HighPrecMoney -> Maybe Spec.Quotation
+tfQuotationSU isValueAddNP fareParams estimatedFare =
   Just
     emptyQuotation
-      { Spec.quotationBreakup = mkQuotationBreakup fareParams,
+      { Spec.quotationBreakup = mkQuotationBreakup isValueAddNP fareParams,
         Spec.quotationPrice = tfQuotationPrice estimatedFare fareParams.currency
       }
 
@@ -818,9 +818,9 @@ tfQuotationPrice estimatedFare currency =
         Spec.priceValue = Just $ encodeToText estimatedFare
       }
 
-mkQuotationBreakup :: DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
-mkQuotationBreakup fareParams =
-  let fareParameters = mkFareParamsBreakups mkPrice mkQuotationBreakupInner fareParams
+mkQuotationBreakup :: IsValueAddNP -> DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
+mkQuotationBreakup isValueAddNP fareParams =
+  let fareParameters = mkFareParamsBreakups isValueAddNP mkPrice mkQuotationBreakupInner fareParams
    in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams) fareParameters -- TODO: Remove after roll out
   where
     mkPrice :: HighPrecMoney -> Maybe Spec.Price
@@ -1115,15 +1115,15 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
             estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
         Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe Double -> Bool -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams mbGovtChargesRate hasStops = do
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe (IsValueAddNP, Params.FareParameters) -> Maybe Double -> Bool -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard mbFareParams mbGovtChargesRate hasStops = do
   let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp mbGovtChargesRate hasStops) farePolicy
       displayFareParamsBreakups =
-        case fareParametersInRateCard of
-          Just True -> maybe [] (mkFareParamsDisplayBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
+        case (fareParametersInRateCard, mbFareParams) of
+          (Just True, Just (isValueAddNP, fareParams)) -> mkFareParamsDisplayBreakups isValueAddNP (\price -> show price) mkRateCardFareParamsBreakupItem fareParams
           _ -> []
       filteredDisplayBreakups = filter (not . findDup farePolicyBreakups) displayFareParamsBreakups
-      summaryBreakups = maybe [] (mkProjectFareParamsTagBreakupItems (\price -> show price) mkRateCardBreakupItem) fareParams
+      summaryBreakups = maybe [] (mkProjectFareParamsTagBreakupItems (\price -> show price) mkRateCardBreakupItem . snd) mbFareParams
       combainedParams = farePolicyBreakups <> filteredDisplayBreakups <> summaryBreakups
       farePolicyBreakupsTags = buildRateCardTags <$> combainedParams
   Just [Tags.getFullTagGroup Tags.FARE_POLICY farePolicyBreakupsTags]

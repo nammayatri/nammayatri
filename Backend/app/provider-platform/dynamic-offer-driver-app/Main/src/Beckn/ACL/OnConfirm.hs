@@ -118,14 +118,14 @@ bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
 bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- ONDC v2.1.0: phased confirmation, driver details sent via on_update RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
-buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> BPPInvoiceInfo -> Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy bppInvoiceInfo =
+buildOnConfirmMessageV2 :: Utils.IsValueAddNP -> DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> BPPInvoiceInfo -> Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 isValueAddNP res pricing becknConfig mbFarePolicy bppInvoiceInfo =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res pricing becknConfig mbFarePolicy bppInvoiceInfo
+    { confirmReqMessageOrder = tfOrder isValueAddNP res pricing becknConfig mbFarePolicy bppInvoiceInfo
     }
 
-tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> BPPInvoiceInfo -> Spec.Order
-tfOrder res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
+tfOrder :: Utils.IsValueAddNP -> DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> BPPInvoiceInfo -> Spec.Order
+tfOrder isValueAddNP res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
   let farePolicy = case mbFarePolicy of
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
@@ -138,7 +138,7 @@ tfOrder res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
       orderPayments = tfPayments res bppConfig,
       orderProvider = Utils.tfProvider bppConfig,
-      orderQuote = Utils.tfQuotation res.booking,
+      orderQuote = Utils.tfQuotation isValueAddNP res.booking,
       orderTags = mkBPPInvoiceInfoTagGroup bppInvoiceInfo,
       orderStatus = Just "ACTIVE",
       orderCreatedAt = Just res.booking.createdAt,
