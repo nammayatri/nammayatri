@@ -37,6 +37,11 @@ import urllib.request
 import uuid
 
 BASE = "https://api.169-58-139-65.sslip.io"
+# The shim's own health, which the public URL cannot answer: the edge has
+# `location = /healthz { return 200 '{"ok":true}'; }` and never proxies it, so
+# asking the public host tells you nginx is alive and nothing about the shim.
+# The first run of this probe failed here and the deployment was fine.
+SHIM = "http://127.0.0.1:8030"
 PRICE = 3000
 DAYS = 30
 
@@ -71,8 +76,8 @@ def shim_env(name):
     return r.stdout.strip()
 
 
-def request(path, method="GET", body=None, headers=None):
-    q = urllib.request.Request(BASE + path, method=method, data=body)
+def request(path, method="GET", body=None, headers=None, base=BASE):
+    q = urllib.request.Request(base + path, method=method, data=body)
     for k, v in (headers or {}).items():
         q.add_header(k, v)
     try:
@@ -164,12 +169,12 @@ print()
 try:
     # ── 1-2. the routes are there and they are shut ─────────────────────────
     print("== the door")
-    code, body = request("/healthz")
+    code, body = request("/healthz", base=SHIM)
     try:
         health = json.loads(body)
     except ValueError:
         health = {}
-    check("/healthz reports payments configured", health.get("payments") is True, body[:120])
+    check("the shim reports payments configured", health.get("payments") is True, body[:120])
 
     code, body = request("/subscription/status")
     check("status without a token is refused", code == 401, f"got {code} {body[:80]}")
@@ -295,16 +300,22 @@ try:
 
     # ── 12. the one thing only Chargily can answer ──────────────────────────
     print("\n== is that key one Chargily knows?")
-    q = urllib.request.Request(base.rstrip("/") + "/balance",
-                               headers={"Authorization": "Bearer " + secret})
-    try:
-        with urllib.request.urlopen(q, timeout=25) as r:
-            live = (r.status, r.read().decode()[:120])
-    except urllib.error.HTTPError as e:
-        live = (e.code, e.read().decode()[:120])
-    except Exception as e:                                  # noqa: BLE001
-        live = (0, str(e))
-    if live[0] == 200:
+    # curl, not urllib, and that is not a style choice. Chargily sits behind
+    # Cloudflare, which refuses `Python-urllib/3.x` with **HTTP 403, error code
+    # 1010** -- "banned based on your browser's signature". That is Cloudflare
+    # declining to ask, not Chargily declining the key, and reading it as a
+    # verdict on the key is how this check lies. curl gets through.
+    r = subprocess.run(
+        ["curl", "-s", "-o", "/dev/stdout", "-w", "\n%{http_code}",
+         "-H", "Authorization: Bearer " + secret,
+         "--max-time", "25", base.rstrip("/") + "/balance"],
+        capture_output=True, text=True, timeout=40)
+    out = r.stdout.rsplit("\n", 1)
+    live = (int(out[-1]) if out[-1].strip().isdigit() else 0, out[0][:160])
+    if live[0] == 403 and "1010" in live[1]:
+        print("  ----  Cloudflare refused the probe itself (1010), so this says")
+        print("        nothing about the key. Retry with curl by hand.")
+    elif live[0] == 200:
         check("the gateway accepts our key", True)
         print(f"        balance: {live[1]}")
     else:

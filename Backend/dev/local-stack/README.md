@@ -2273,6 +2273,19 @@ removed afterwards, including the subject's subscription row.
 The one thing it cannot fake is Chargily accepting our key, so it asks them
 directly instead of guessing.
 
+**Two traps in the probe itself**, both of which reported a failure that was not
+there on the first run:
+
+- **`/healthz` on the public host is nginx's, not the shim's.** The edge has
+  `location = /healthz { return 200 '{"ok":true}'; }` and never proxies it, so
+  asking the public URL proves nginx is alive and says nothing about payments.
+  The shim's own is on `127.0.0.1:8030`, which is why the probe runs on the VPS.
+- **Chargily is behind Cloudflare, which bans `Python-urllib`** — HTTP 403,
+  error code **1010**, *"banned based on your browser's signature"*. That is
+  Cloudflare declining to ask, not Chargily declining the key, and it looks
+  exactly like a rejected key. The probe uses `curl` for that one call and says
+  so explicitly if it ever sees 1010 again.
+
 ### What is deployed and what is waiting
 
 Waiting on **the real test secret key**. The key received on 2026-08-26 was
