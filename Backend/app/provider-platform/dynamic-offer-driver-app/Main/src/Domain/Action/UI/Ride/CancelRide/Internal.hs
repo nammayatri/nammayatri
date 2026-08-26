@@ -75,8 +75,8 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.GstBreakdown
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -309,11 +309,12 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       -- Read the materialized tds_rate for the tax subject (fleet owner if it's
       -- a fleet ride, else the driver). Set by the PAN / linkage webhooks when
       -- PAN-Aadhaar-link TDS is enabled (see PanVerification.materializeTdsRateFor).
-      mbStoredTdsRate <- case ride.fleetOwnerId of
+      (mbFleetInfo, mbStoredTdsRate) <- case ride.fleetOwnerId of
         Just fleetOwnerId -> do
-          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-          pure (mbFleetInfo >>= (.tdsRate))
-        Nothing -> pure (mbDriverInfo >>= (.tdsRate))
+          mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure (mbFleetInfo', mbFleetInfo' >>= (.tdsRate))
+        Nothing -> pure (Nothing, mbDriverInfo >>= (.tdsRate))
+
       mbCumulativeEarnings <- case ride.fleetOwnerId of
         Just _ -> pure Nothing
         Nothing -> do
@@ -356,8 +357,8 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
         computeGstBreakdownForRideOwner
           rideGst
           booking.fromLocation
-          ride.fleetOwnerId
-          ride.driverId
+          ride
+          mbFleetInfo
           gstOnCancellation
       result <- runFinance ctx $ do
         mapM_

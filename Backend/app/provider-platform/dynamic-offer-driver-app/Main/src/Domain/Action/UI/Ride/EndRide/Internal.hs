@@ -14,8 +14,6 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
-    createDriverWalletTransaction,
-    processEndRideFinance,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -114,8 +112,8 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
-import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.GstBreakdown
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
@@ -554,22 +552,22 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
     let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
         configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
-    mbTdsRate <- case ride.fleetOwnerId of
+    (mbFleetInfo, mbTdsRate) <- case ride.fleetOwnerId of
       Just fleetOwnerId -> do
-        mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-        let currentRate = mbFleetInfo >>= (.tdsRate)
+        mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+        let currentRate = mbFleetInfo' >>= (.tdsRate)
         unless panLinkTdsEnabled $
-          whenJust mbFleetInfo $ \_ ->
+          whenJust mbFleetInfo' $ \_ ->
             when (isNothing currentRate) $
               whenJust configTdsRate $ \rate ->
                 QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
-        pure $ if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        pure $ (mbFleetInfo',) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
       Nothing -> do
         let currentRate = driverInfo.tdsRate
         when (not panLinkTdsEnabled && isNothing currentRate) $
           whenJust configTdsRate $ \rate ->
             QDI.updateTdsRate (Just rate) ride.driverId
-        pure $ if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        pure $ (Nothing,) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
     -- For threshold-benefit gating (section 194O), look up the counterparty's
@@ -607,8 +605,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       computeGstBreakdownForRideOwner
         transporterConfig.taxConfig.rideGst
         booking.fromLocation
-        ride.fleetOwnerId
-        ride.driverId
+        ride
+        mbFleetInfo
         (taxAmount + absorbedVat)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount

@@ -105,8 +105,8 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
-import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.GstBreakdown
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
@@ -738,6 +738,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 merchantOperatingCity
                 person.id
                 isFleetOwner
+                mbFleetInfo
                 (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
@@ -813,6 +814,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
       merchantOperatingCity
       person.id
       isFleetOwner
+      Nothing
       totalGst
   let vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just driverFee.vehicleCategory else Nothing

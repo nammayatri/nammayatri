@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module SharedLogic.Finance.GstBreakdown
   ( computeGstBreakdownForRideOwner,
     computeGstBreakdownForPerson,
@@ -8,9 +6,11 @@ module SharedLogic.Finance.GstBreakdown
 where
 
 import Control.Applicative ((<|>))
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -24,18 +24,19 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 
 -- | Ride-earning GST: compare driver/fleet residence proof vs booking pickup location.
---   If 'mbFleetOwnerId' is set, use the fleet owner's addressState; otherwise the driver's.
+--   If 'ride.fleetOwnerId' is set, use the fleet owner's addressState; otherwise the driver's.
 computeGstBreakdownForRideOwner ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   DTC.GstBreakup ->
   DLocation.Location -> -- booking.fromLocation (pickup)
-  Maybe (Id DP.Person) -> -- ride.fleetOwnerId
-  Id DP.Person -> -- ride.driverId
+  DRide.Ride ->
+  Maybe DFOI.FleetOwnerInformation -> -- fleet info from above caller (avoid double queries)
   HighPrecMoney ->
   m (Maybe Finance.GstAmountBreakdown)
-computeGstBreakdownForRideOwner gstBreakup fromLocation mbFleetOwnerId driverId totalGst = do
+computeGstBreakdownForRideOwner gstBreakup fromLocation ride mbFleetInfoCached totalGst = do
+  let (mbFleetOwnerId, driverId) = (ride.fleetOwnerId, ride.driverId)
   mbResidenceState <- case mbFleetOwnerId of
-    Just fleetOwnerId -> resolveFleetOwnerAddressState fleetOwnerId
+    Just fleetOwnerId -> resolveFleetOwnerAddressState fleetOwnerId mbFleetInfoCached
     Nothing -> resolveDriverAddressState driverId
   when (isNothing mbResidenceState) $
     logWarning $
@@ -60,12 +61,13 @@ computeGstBreakdownForPerson ::
   DMOC.MerchantOperatingCity ->
   Id DP.Person -> -- paying person
   Bool -> -- isFleetOwner
+  Maybe DFOI.FleetOwnerInformation -> -- fleet info from above caller (avoid double queries)
   HighPrecMoney ->
   m (Maybe Finance.GstAmountBreakdown)
-computeGstBreakdownForPerson gstBreakup merchantOperatingCity personId isFleetOwner totalGst = do
+computeGstBreakdownForPerson gstBreakup merchantOperatingCity personId isFleetOwner mbFleetInfoCached totalGst = do
   mbReceiverState <-
     if isFleetOwner
-      then resolveFleetOwnerAddressState personId
+      then resolveFleetOwnerAddressState personId mbFleetInfoCached
       else resolveDriverAddressState personId
   when (isNothing mbReceiverState) $
     logWarning $
@@ -120,9 +122,10 @@ computeGstBreakdownGSTIN gstBreakup sellerGstin buyerGstin =
 resolveFleetOwnerAddressState ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DP.Person ->
+  Maybe DFOI.FleetOwnerInformation -> -- fleet info from above caller (avoid double queries)
   m (Maybe Text)
-resolveFleetOwnerAddressState fleetOwnerId = do
-  mbFleetInfo <- QFOI.findByPrimaryKey fleetOwnerId
+resolveFleetOwnerAddressState fleetOwnerId mbFleetInfoCached = do
+  mbFleetInfo <- maybe (QFOI.findByPrimaryKey fleetOwnerId) (pure . Just) mbFleetInfoCached
   case mbFleetInfo of
     Nothing -> do
       logError $
