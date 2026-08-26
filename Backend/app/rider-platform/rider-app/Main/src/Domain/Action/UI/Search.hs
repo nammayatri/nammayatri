@@ -901,7 +901,7 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
 
   mbCacheEntry <-
     case (cacheReadEnabled, mbCacheKey) of
-      (True, Just (pickupGeohash, dropGeohash)) -> QCachedRouteResponse.findByRiderIdAndGeohashAndHourAndToll person.id pickupGeohash dropGeohash hourOfDay finalEffectiveToll
+      (True, Just (pickupGeohash, dropGeohash)) -> QCachedRouteResponse.findByRiderIdAndGeohashAndHourRangeAndToll person.id pickupGeohash dropGeohash hourOfDay finalEffectiveToll
       _ -> pure Nothing
   let mbCachedRawRoutes = mbCacheEntry >>= \entry -> if Time.diffUTCTime now entry.createdAt <= routeCacheMaxAge then Just entry.routes else Nothing
       staleEntryExists = isJust mbCacheEntry && isNothing mbCachedRawRoutes
