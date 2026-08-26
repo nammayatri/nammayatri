@@ -142,11 +142,26 @@ async function status(pool, token, res) {
         ORDER BY paid_at DESC LIMIT 1`,
       [driver.id],
     );
+    /* His rides inside the month he is paying for. A driver over the cap is
+       restricted exactly like a lapsed one and is the opposite of him: he has
+       paid, he is up to date, and paying again would buy the *next* month
+       without lifting anything. The screen cannot tell those two apart without
+       this, and would offer him a button that takes 3 000 DA and changes
+       nothing. Failure here is silent by design -- the rest of the screen is
+       worth drawing without it. */
+    let rides = null;
+    try {
+      rides = await restricted.ridesInPeriod(pool, driver.id);
+    } catch (e) {
+      console.error('[subscription] ride count', e.message);
+    }
+
     return send(res, 200, {
       ...stateOf(q.rows[0] ? q.rows[0].paid_until : null),
       price: PRICE,
       currency: CURRENCY,
       days: DAYS,
+      rides,
       lastPayment: last.rows[0]
         ? {
             checkoutId: last.rows[0].checkout_id,

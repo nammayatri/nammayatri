@@ -162,4 +162,59 @@ function start(pool) {
   if (typeof timer.unref === 'function') timer.unref();
 }
 
-module.exports = { start, refresh, RIDE_CAP, KEY };
+/**
+ * One driver's rides inside the month he is currently paying for.
+ *
+ * ── Why the app needs this and not just the restriction ────────────────────
+ * A driver over his cap is restricted exactly like a lapsed one, and to
+ * dispatch they are the same driver. **To him they are opposites.** The lapsed
+ * driver owes money and paying fixes it; the capped driver has paid, is fully
+ * up to date, and paying again fixes nothing -- his next payment buys the
+ * *next* month, and the cap counts against the one he is in.
+ *
+ * Without this, his rides thin out while the screen says "actif, 12 jours
+ * restants" and offers him a Payer button that would take 3 000 DA and change
+ * nothing. That is the exact failure the whole subscription was designed
+ * around: rides that quietly stop, and a driver who rings the office.
+ *
+ * The same period definition as the restriction list, deliberately in one
+ * place: if the number he reads and the number that restricts him were
+ * computed differently, the screen would eventually contradict the dispatch.
+ */
+async function ridesInPeriod(pool, driverId) {
+  const q = await pool.query(
+    `WITH p AS (
+       SELECT coalesce(
+                (SELECT max(sp.covers_from)
+                   FROM movin.subscription_payment sp
+                  WHERE sp.driver_id = s.driver_id
+                    AND sp.applied_at IS NOT NULL
+                    AND sp.covers_until > now()),
+                s.created_at) AS started,
+              s.paid_until
+         FROM movin.subscription s
+        WHERE s.driver_id = $1)
+     SELECT p.started,
+            p.paid_until,
+            (SELECT count(*) FROM atlas_driver_offer_bpp.ride r
+              WHERE r.driver_id = $1 AND r.status = 'COMPLETED'
+                AND r.created_at >= p.started) AS used
+       FROM p`,
+    [String(driverId)],
+  );
+  const row = q.rows[0];
+  if (!row) return { used: 0, cap: RIDE_CAP, since: null, resetsAt: null, capped: false };
+  const used = Number(row.used || 0);
+  return {
+    used,
+    cap: RIDE_CAP,
+    since: row.started,
+    /* When the count goes back to zero: the end of the month he is inside.
+       Named rather than derived in the app, because "when does this lift" is
+       the only question a capped driver has. */
+    resetsAt: row.paid_until,
+    capped: RIDE_CAP > 0 && used >= RIDE_CAP,
+  };
+}
+
+module.exports = { start, refresh, ridesInPeriod, RIDE_CAP, KEY };
