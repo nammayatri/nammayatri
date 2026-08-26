@@ -607,6 +607,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         booking.fromLocation
         ride
         mbFleetInfo
+        (Just driverInfo)
         (taxAmount + absorbedVat)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount

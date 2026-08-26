@@ -6,6 +6,7 @@ module SharedLogic.Finance.GstBreakdown
 where
 
 import Control.Applicative ((<|>))
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -31,13 +32,14 @@ computeGstBreakdownForRideOwner ::
   DLocation.Location -> -- booking.fromLocation (pickup)
   DRide.Ride ->
   Maybe DFOI.FleetOwnerInformation -> -- fleet info from above caller (avoid double queries)
+  Maybe DI.DriverInformation -> -- driver info from above caller (avoid double queries)
   HighPrecMoney ->
   m (Maybe Finance.GstAmountBreakdown)
-computeGstBreakdownForRideOwner gstBreakup fromLocation ride mbFleetInfoCached totalGst = do
+computeGstBreakdownForRideOwner gstBreakup fromLocation ride mbFleetInfoCached mbDriverInfoCached totalGst = do
   let (mbFleetOwnerId, driverId) = (ride.fleetOwnerId, ride.driverId)
   mbResidenceState <- case mbFleetOwnerId of
     Just fleetOwnerId -> resolveFleetOwnerAddressState fleetOwnerId mbFleetInfoCached
-    Nothing -> resolveDriverAddressState driverId
+    Nothing -> resolveDriverAddressState driverId mbDriverInfoCached
   when (isNothing mbResidenceState) $
     logWarning $
       "GST breakdown: missing counterparty addressState for pickupLocationId="
@@ -62,13 +64,14 @@ computeGstBreakdownForPerson ::
   Id DP.Person -> -- paying person
   Bool -> -- isFleetOwner
   Maybe DFOI.FleetOwnerInformation -> -- fleet info from above caller (avoid double queries)
+  Maybe DI.DriverInformation -> -- driver info from above caller (avoid double queries)
   HighPrecMoney ->
   m (Maybe Finance.GstAmountBreakdown)
-computeGstBreakdownForPerson gstBreakup merchantOperatingCity personId isFleetOwner mbFleetInfoCached totalGst = do
+computeGstBreakdownForPerson gstBreakup merchantOperatingCity personId isFleetOwner mbFleetInfoCached mbDriverInfoCached totalGst = do
   mbReceiverState <-
     if isFleetOwner
       then resolveFleetOwnerAddressState personId mbFleetInfoCached
-      else resolveDriverAddressState personId
+      else resolveDriverAddressState personId mbDriverInfoCached
   when (isNothing mbReceiverState) $
     logWarning $
       "GST breakdown: missing counterparty addressState for merchantOpCityId="
@@ -138,9 +141,10 @@ resolveFleetOwnerAddressState fleetOwnerId mbFleetInfoCached = do
 resolveDriverAddressState ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DP.Person ->
+  Maybe DI.DriverInformation -> -- driver info from above caller (avoid double queries)
   m (Maybe Text)
-resolveDriverAddressState driverId = do
-  mbDriverInfo <- QDI.findById driverId
+resolveDriverAddressState driverId mbDriverInfoCached = do
+  mbDriverInfo <- maybe (QDI.findById driverId) (pure . Just) mbDriverInfoCached
   case mbDriverInfo of
     Nothing -> do
       logError $

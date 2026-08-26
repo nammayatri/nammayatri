@@ -359,6 +359,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           booking.fromLocation
           ride
           mbFleetInfo
+          mbDriverInfo
           gstOnCancellation
       result <- runFinance ctx $ do
         mapM_

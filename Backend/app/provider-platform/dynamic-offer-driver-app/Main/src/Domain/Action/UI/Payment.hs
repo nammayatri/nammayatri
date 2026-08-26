@@ -739,6 +739,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 person.id
                 isFleetOwner
                 mbFleetInfo
+                Nothing
                 (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
@@ -814,6 +815,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
       merchantOperatingCity
       person.id
       isFleetOwner
+      Nothing
       Nothing
       totalGst
   let vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
