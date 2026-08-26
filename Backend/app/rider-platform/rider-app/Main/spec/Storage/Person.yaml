@@ -372,6 +372,11 @@ Person:
       kvFunction: findAllWithKV
       where: deviceId
 
+    findAllByDeviceIdAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [deviceId, merchantId]
+
     updateCustomerTags:
       kvFunction: updateWithKV
       params: [customerNammaTags]
