@@ -496,6 +496,91 @@ async function receipt(pool, token, checkoutId, res) {
   }
 }
 
+/**
+ * GET /subscription/checkout/{id}  (driver token)
+ *
+ * The authoritative state of one payment.
+ *
+ * ── Why our own tables cannot answer this ──────────────────────────────────
+ * A checkout the driver opened and closed, and one whose webhook is merely
+ * late, are the *same row* here: `pending`, both of them. The app has to tell
+ * them apart because the two messages are opposites, and both wrong ones cost
+ * real money:
+ *
+ *   "Paiement enregistré, la confirmation suit"  to a man who abandoned the
+ *   page is a lie about his money, and he waits for a subscription that is
+ *   never coming.
+ *
+ *   "Paiement échoué"  to a man whose webhook is in flight makes him pay a
+ *   second time.
+ *
+ * Only the gateway knows which it is, so this asks it.
+ *
+ * ── Four answers, not five ─────────────────────────────────────────────────
+ *   paid        the webhook has landed and the month is his
+ *   confirming  Chargily took the money; our webhook has not arrived yet
+ *   pending     he has not paid. Past the app's wait, that means he left
+ *   failed      refused, cancelled, or the checkout expired
+ *
+ * `confirming` is the whole reason this route exists. It is the only state in
+ * which "wait a moment" is true rather than a guess.
+ */
+async function checkoutState(pool, token, checkoutId, res) {
+  const driver = await driverFromToken(token);
+  if (!driver) return send(res, 401, { error: 'sign in first' });
+  if (!pool) return send(res, 503, { error: 'no database' });
+
+  let row;
+  try {
+    const q = await pool.query(
+      `SELECT driver_id, status, applied_at
+         FROM movin.subscription_payment WHERE checkout_id = $1`,
+      [String(checkoutId)],
+    );
+    row = q.rows[0];
+  } catch (e) {
+    console.error('[subscription] checkout lookup', e.message);
+    return send(res, 500, { error: 'query failed' });
+  }
+
+  // Scoped to his own payments. The id is Chargily's and long, but one driver
+  // has no business reading the state of another's payment.
+  if (!row || row.driver_id !== driver.id) return send(res, 404, { error: 'no such checkout' });
+
+  // Ours is final once the webhook has applied it; there is nothing the
+  // gateway could add, and a network call would only add a way to fail.
+  if (row.applied_at) return send(res, 200, { status: 'paid', source: 'webhook' });
+  if (row.status === 'failed' || row.status === 'canceled') {
+    return send(res, 200, { status: 'failed', source: 'webhook' });
+  }
+
+  if (!SECRET) return send(res, 200, { status: 'pending', source: 'local' });
+
+  try {
+    const r = await fetch(`${CHARGILY}/checkouts/${encodeURIComponent(checkoutId)}`, {
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    const body = await r.json().catch(() => null);
+    if (!r.ok || !body) {
+      // Not knowing is not the same as failing. `pending` keeps the app
+      // waiting, which is the only harmless answer when we cannot tell.
+      console.error('[subscription] chargily retrieve', r.status);
+      return send(res, 200, { status: 'pending', source: 'unknown' });
+    }
+    const theirs = String(body.status || 'pending');
+    const status =
+      theirs === 'paid'
+        ? 'confirming' // they have the money; our webhook has not landed yet
+        : theirs === 'failed' || theirs === 'canceled' || theirs === 'expired'
+          ? 'failed'
+          : 'pending';
+    return send(res, 200, { status, source: 'gateway', gateway: theirs });
+  } catch (e) {
+    console.error('[subscription] chargily unreachable:', e.message);
+    return send(res, 200, { status: 'pending', source: 'unknown' });
+  }
+}
+
 /** GET /subscription/history  (driver token) -- what the app lists under the state. */
 async function history(pool, token, res) {
   const driver = await driverFromToken(token);
@@ -581,4 +666,4 @@ function done(query, res) {
  */
 const configured = () => Boolean(SECRET && PUBLIC_URL);
 
-module.exports = { status, checkout, webhook, receipt, history, done, configured, PRICE, CURRENCY, DAYS };
+module.exports = { status, checkout, checkoutState, webhook, receipt, history, done, configured, PRICE, CURRENCY, DAYS };

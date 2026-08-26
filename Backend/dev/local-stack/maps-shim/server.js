@@ -455,6 +455,11 @@ http.createServer((req, res) => {
     if (what === 'checkout' && req.method === 'POST') {
       return subscription.checkout(pool, token, url.searchParams.get('method'), res);
     }
+    // ...and the state of one, which our own tables cannot answer: an
+    // abandoned checkout and a late webhook are the same `pending` row here.
+    if (what === 'checkout' && req.method === 'GET') {
+      return subscription.checkoutState(pool, token, decodeURIComponent(rest.join('/')), res);
+    }
     return send(res, 404, { error: 'no such subscription route' });
   }
 
