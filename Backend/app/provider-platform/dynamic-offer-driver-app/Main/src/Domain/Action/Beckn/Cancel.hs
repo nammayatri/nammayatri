@@ -195,7 +195,7 @@ cancel req merchant booking mbActiveSearchTry = do
       Just consequenceCtx ->
         Orchestrator.applyTerminalConsequences
           consequenceCtx
-          (\base gst -> createCancellationLedgerEntries booking consequenceCtx.ride base gst transporterConfig)
+          (\base gst mbCreditDebit -> createCancellationLedgerEntries booking consequenceCtx.ride base gst transporterConfig mbCreditDebit)
       Nothing -> pure Nothing
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
