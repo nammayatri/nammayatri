@@ -173,16 +173,45 @@ computeCustomerCharge row estimatedFare =
   case row.customerDeduction of
     Just (DExtra.MoneyDeduction money) ->
       let (base, overdueFee) = moneyDeductionAmount money estimatedFare
-          tax = ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100
-          commission =
-            ((.commission) =<< row.customerCommissionAndTax) <&> \case
-              DExtra.FixedRate {amount} -> amount
-              DExtra.PercentageRate {percentage} -> base * percentage / 100
+          (tax, commission) = customerTaxAndCommission row base
        in CustomerChargeBreakup {fee = Just base, tax, commission, overdueFee}
     Just (DExtra.MoneyAddition money) ->
       let (base, _overdue) = moneyDeductionAmount money estimatedFare
        in CustomerChargeBreakup {fee = Just (negate (abs base)), tax = Nothing, commission = Nothing, overdueFee = Nothing}
     _ -> CustomerChargeBreakup Nothing Nothing Nothing Nothing
+
+shouldCarryForwardDues :: Maybe DCCM.CancellationConsequenceMatrix -> Bool
+shouldCarryForwardDues mbRow = (mbRow >>= (.collectionMode)) /= Just DCCM.ImmediateCapture
+
+customerIsCharged :: DCCM.CancellationConsequenceMatrix -> Bool
+customerIsCharged row = case row.customerDeduction of
+  Just (DExtra.MoneyDeduction _) -> True
+  _ -> False
+
+-- | Split a TAX-INCLUSIVE total back into (base, tax) using the row's tax percentage.
+-- ride.cancellationFeeIfCancelled stores the total quoted to the rider at soft-cancel
+-- (base + tax, see API.Beckn.Cancel), so the confirm path must divide it out rather
+-- than apply tax to it a second time.
+splitTaxInclusiveTotal :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
+splitTaxInclusiveTotal row total
+  | not (customerIsCharged row) = (total, Nothing)
+  | otherwise =
+    case (.taxPercentage) =<< row.customerCommissionAndTax of
+      Just p | 100 + p /= 0 -> let base = total * 100 / (100 + p) in (base, Just (total - base))
+      _ -> (total, Nothing)
+
+-- | Tax and commission for a base charge. Split out of 'computeCustomerCharge' because
+-- the confirm-cancel path has to rebuild them against the fee quoted at soft-cancel
+-- rather than the fee the row would compute now.
+customerTaxAndCommission :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> (Maybe HighPrecMoney, Maybe HighPrecMoney)
+customerTaxAndCommission row base
+  | not (customerIsCharged row) = (Nothing, Nothing)
+  | otherwise =
+    ( ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100,
+      ((.commission) =<< row.customerCommissionAndTax) <&> \case
+        DExtra.FixedRate {amount} -> amount
+        DExtra.PercentageRate {percentage} -> base * percentage / 100
+    )
 
 moneyDeductionAmount :: DExtra.MoneyDeduction -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
 moneyDeductionAmount money estimatedFare = case money of
@@ -223,6 +252,12 @@ driverMoneyDeduction row estimatedFare =
   row.driverDeduction >>= \case
     DExtra.MoneyDeduction money -> Just (abs (fst (moneyDeductionAmount money estimatedFare)))
     DExtra.MoneyAddition money -> Just (negate (abs (fst (moneyDeductionAmount money estimatedFare))))
+    _ -> Nothing
+
+driverRideCreditDeduction :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
+driverRideCreditDeduction row estimatedFare =
+  row.driverDeduction >>= \case
+    DExtra.RideCreditDeduction money -> Just (abs (fst (moneyDeductionAmount money estimatedFare)))
     _ -> Nothing
 
 --------------------------------------------------------------------------------------

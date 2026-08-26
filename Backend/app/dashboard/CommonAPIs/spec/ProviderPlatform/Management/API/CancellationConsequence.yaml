@@ -59,7 +59,7 @@ types:
   # direction is explicit in the constructor (Deduction takes, Addition gives);
   # all amounts/counts are POSITIVE — the BPP handler rejects signed values
   DeductionAPIEntity:
-    - enum: CoinDeductionAPIEntity CoinDeductionAPI, MoneyDeductionAPIEntity MoneyDeductionAPI, CoinAdditionAPIEntity CoinDeductionAPI, MoneyAdditionAPIEntity MoneyDeductionAPI
+    - enum: CoinDeductionAPIEntity CoinDeductionAPI, MoneyDeductionAPIEntity MoneyDeductionAPI, CoinAdditionAPIEntity CoinDeductionAPI, MoneyAdditionAPIEntity MoneyDeductionAPI, RideCreditDeductionAPIEntity MoneyDeductionAPI
   CoinDeductionAPI:
     - coins: Int
     - expirySeconds: Maybe Int

@@ -72,6 +72,7 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -193,7 +194,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             -- blacklist, driver overlay, coin event, driver money, rate counting — then
             -- the customer-side charge (dues + counters + ledger entries).
             applyImmediateConsequences consequenceCtx doCancellationRateBasedBlocking
-            chargesOutcome <- applyTerminalConsequences consequenceCtx (\base gst -> createCancellationLedgerEntries booking ride base gst transporterConfig)
+            chargesOutcome <- applyTerminalConsequences consequenceCtx (\base gst mbCreditDebit -> createCancellationLedgerEntries booking ride base gst transporterConfig mbCreditDebit)
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
             -- Release pickup-zone counters (idempotent). ByDriver triggers reallocation,
             -- so demand stays live for the next match; every other source terminates the booking.
@@ -288,8 +289,9 @@ createCancellationLedgerEntries ::
   HighPrecMoney ->
   HighPrecMoney ->
   DTC.TransporterConfig ->
+  Maybe HighPrecMoney ->
   m ()
-createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation transporterConfig = do
+createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation transporterConfig mbRideCreditDebit = do
   let riderId = booking.riderId
   case riderId of
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
@@ -347,11 +349,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
       result <- runFinance ctx $ do
         mapM_
-          ( \(amt, ref, dest) -> do
-              -- Two legs through BuyerExternal (nets to 0), mirroring the online ride-payment ledger.
-              void $ transferPending BuyerAsset BuyerExternal amt ref
-              void $ transferPending BuyerExternal dest amt ref
-          )
+          (\(amt, ref, dest) -> void $ transferPending BuyerAsset dest amt ref)
           cancellationComponents
         whenJust mbTdsAmount $ \tdsAmount ->
           void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
@@ -412,6 +410,8 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
         Right _ -> pure ()
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+      whenJust mbRideCreditDebit $ \creditDebit ->
+        SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig
 
 buildCancellationFinanceCtx ::
   ( EsqDBFlow m r,
@@ -490,11 +490,9 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
             ctx <- buildCancellationFinanceCtx booking ride transporterConfig
             result <- runFinance ctx $ do
               when (baseCancellation > 0) $ do
-                transfer_ BuyerAsset BuyerExternal baseCancellation walletReferenceCustomerCancellationCharges
-                transfer_ BuyerExternal OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
+                transfer_ BuyerAsset OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
               when (gstCancellation > 0) $ do
-                transfer_ BuyerAsset BuyerExternal gstCancellation walletReferenceCustomerCancellationGST
-                transfer_ BuyerExternal cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
+                transfer_ BuyerAsset cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
             case result of
               Left err -> logError $ "Failed to book settled cancellation charge after overdue for bookingId: " <> refId <> " - " <> show err
               Right _ -> logInfo $ "Reversed overdue and booked settled cancellation charge for bookingId: " <> refId <> " base=" <> show baseCancellation <> " tax=" <> show gstCancellation
@@ -577,18 +575,14 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
           ctx <- buildCancellationFinanceCtx booking ride transporterConfig
           result <- runFinance ctx $ do
             when (overdueCharge > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueCharge walletReferenceOverdueCancellationCharge
-              transfer_ BuyerExternal OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
+              transfer_ BuyerAsset OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
             when (overdueTax > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueTax walletReferenceOverdueCancellationTax
-              transfer_ BuyerExternal cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
-            -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer (BuyerExternal nets to 0).
+              transfer_ BuyerAsset cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
+            -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer.
             when (overdueBenefit > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueBenefit walletReferenceCancellationOverdueBenefit
-              transfer_ BuyerExternal SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
+              transfer_ BuyerAsset SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
             when (overdueBenefitTax > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
-              transfer_ BuyerExternal overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
+              transfer_ BuyerAsset overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
           case result of
             Left err -> logError $ "Failed to create overdue cancellation ledger entries: " <> show err
             Right _ -> logInfo $ "Created overdue cancellation ledger entries for bookingId: " <> refId <> " charge=" <> show overdueCharge <> " tax=" <> show overdueTax <> " benefit=" <> show overdueBenefit <> " benefitTax=" <> show overdueBenefitTax

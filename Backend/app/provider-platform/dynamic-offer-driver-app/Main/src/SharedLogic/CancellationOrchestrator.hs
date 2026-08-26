@@ -309,8 +309,8 @@ applyTerminalConsequences ::
     ClickhouseFlow m r
   ) =>
   ConsequenceCtx ->
-  -- | create finance ledger entries: base -> gst -> m ()
-  (HighPrecMoney -> HighPrecMoney -> m ()) ->
+  -- | create finance ledger entries: base -> gst -> prepaid-balance debit -> m ()
+  (HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> m ()) ->
   m (Maybe CancellationChargesOutcome)
 applyTerminalConsequences ctx createLedgerEntries = do
   let booking = ctx.booking
@@ -331,21 +331,25 @@ applyTerminalConsequences ctx createLedgerEntries = do
         -- columns: customerDeduction + customerCommissionAndTax + collectionMode
         mbExistingCdd <- QCDD.findByRideId ride.id
         mbOutcome <- case (ctx.source == SBCR.ByUser, ride.cancellationFeeIfCancelled) of
-          (True, Just softCancelFee) ->
-            -- customer cancel after a soft-cancel preview: reuse the fee shown to the
-            -- rider then, with the breakdown from the dues row the preview persisted
-            pure $
-              Just
-                CancellationChargesOutcome
-                  { fee = Just softCancelFee,
-                    tax = mbExistingCdd >>= (.cancellationFeeTax),
-                    overdueFee = mbExistingCdd >>= (.overdueCancellationCharge),
-                    overdueTax = mbExistingCdd >>= (.overdueCancellationTax),
-                    commission = mbExistingCdd >>= (.cancellationCommission),
-                    overdueCommission = mbExistingCdd >>= (.overdueCancellationCommission),
-                    consequenceRowId = mbExistingCdd >>= (.cancellationConsequenceRowId),
-                    collectionMode = mbExistingCdd >>= (.cancellationCollectionMode)
-                  }
+          (True, Just softCancelTotal) -> do
+            mbFresh <- chargesOutcomeFromRow booking decision.consequenceRow
+            pure $ case (mbFresh, decision.consequenceRow) of
+              (Just fresh, Just row) ->
+                let (base, tax) = CancellationConsequence.splitTaxInclusiveTotal row softCancelTotal
+                    (_, commission) = CancellationConsequence.customerTaxAndCommission row base
+                 in Just fresh {fee = Just base, tax = tax, commission = commission}
+              _ ->
+                Just
+                  CancellationChargesOutcome
+                    { fee = Just softCancelTotal,
+                      tax = mbExistingCdd >>= (.cancellationFeeTax),
+                      overdueFee = mbExistingCdd >>= (.overdueCancellationCharge),
+                      overdueTax = mbExistingCdd >>= (.overdueCancellationTax),
+                      commission = mbExistingCdd >>= (.cancellationCommission),
+                      overdueCommission = mbExistingCdd >>= (.overdueCancellationCommission),
+                      consequenceRowId = mbExistingCdd >>= (.cancellationConsequenceRowId),
+                      collectionMode = mbExistingCdd >>= (.cancellationCollectionMode)
+                    }
           _ ->
             if transporterConfig.canAddCancellationFee
               then do
@@ -377,13 +381,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
                   collectionMode = outcome.collectionMode,
-                  carryForwardEnabled = transporterConfig.canAddCancellationFee
+                  carryForwardEnabled = CancellationConsequence.shouldCarryForwardDues decision.consequenceRow
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
             when (isWalletEnabled && totalCharges > 0) $
-              createLedgerEntries baseFee gst
+              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r booking.estimatedFare) =<< decision.consequenceRow)
         pure mbOutcome
       case chargesE of
         Left err -> do
@@ -447,6 +451,7 @@ buildRideCancellationSignals booking ride transporterConfig cancellationDisToPic
       { ride = ride,
         quoteId = booking.quoteId,
         bookingCreatedAt = Just booking.createdAt,
+        scheduledPickupTime = Just booking.startTime,
         fallbackDurationToPickup = booking.dqDurationToPickup,
         initialDisToPickup = booking.distanceToPickup,
         cancellationDisToPickup = cancellationDisToPickup,

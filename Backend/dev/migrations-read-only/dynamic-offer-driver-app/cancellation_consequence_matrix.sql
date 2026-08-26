@@ -27,3 +27,7 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN wa
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
