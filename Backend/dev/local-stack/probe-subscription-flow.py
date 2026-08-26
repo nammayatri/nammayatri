@@ -164,6 +164,24 @@ def cleanup():
 
 
 cleanup()          # in case a previous run died halfway
+
+# ── Start from a known state, not from whatever the fleet happens to be in ──
+# The first version of this probe asserted "one payment buys 30 days" against a
+# subject who happened to have none. The free month then landed on all 33
+# drivers and the same two checks read 60 and 90 -- which was the *stacking*
+# working exactly as designed, reported as a failure.
+#
+# Adapting the arithmetic to the starting point would have made the probe pass
+# and made it weaker: the numbers it checks would no longer be the numbers in
+# the specification. So it clears the subject instead. Every run now begins at
+# `never`, which is also the state a real first payment arrives in, and the
+# snapshot above puts him back exactly as he was.
+psql(f"DELETE FROM movin.subscription WHERE driver_id = '{driver}'")
+
+# What "unchanged" means for the rest of this run. NOT `before`, which is what
+# he had before the reset -- comparing against that would report the reset
+# itself as a write, which it did on the first run of this fix.
+baseline = paid_until(driver)
 print()
 
 try:
@@ -196,7 +214,7 @@ try:
     check("webhook signed with another key is refused", code == 403, f"got {code} {body[:80]}")
 
     check("none of that wrote anything",
-          paid_until(driver) == before,
+          paid_until(driver) == baseline,
           f"paid_until moved to {paid_until(driver)}")
 
     # ── 5. a payment ────────────────────────────────────────────────────────
