@@ -2383,6 +2383,50 @@ account verification, whose document list Chargily does not publish, and
 realistically a domain we own: the current hostname contains the VPS's own IP
 address, so it dies the day the box moves.
 
+## The domain — `./switch-domain.sh`
+
+The API answers on `api.169-58-139-65.sslip.io`, a hostname containing the
+VPS's own IP address, which therefore dies the day the box moves. The client
+bought **movinapp.net** on 2026-08-26.
+
+    ./switch-domain.sh --check api.movinapp.net    # will it work?
+    ./switch-domain.sh api.movinapp.net            # do it
+
+**The old hostname keeps answering afterwards, and that is not politeness.**
+Chargily writes the callback address into each checkout *at the moment it is
+created*, so a payment started before the switch still calls back to the sslip.io
+name. If that stops answering, the driver pays and the webhook lands nowhere —
+money in, no month out, and nothing on any screen to say so. The certificate is
+therefore *expanded* to cover both names rather than replaced. Retire the old one
+only after a fortnight with no checkouts referencing it;
+`movin.subscription_payment.event` records the URL each was created with.
+
+**The script refuses to run against Cloudflare's proxy**, and the reason is
+specific rather than tidy-mindedness. Measured 2026-08-26: `api.movinapp.net`
+resolved to 104.21.75.212 / 172.67.182.57 with `server: cloudflare` and
+answered 404 — the record was created with the orange cloud on, so the name
+reaches Cloudflare, which has no origin for it. Two reasons not to work around
+that:
+
+- **Chargily's webhook would arrive through Cloudflare's bot filtering.** That
+  filtering has already blocked a legitimate automated client of ours — HTTP
+  403, error 1010, hitting Chargily's own Cloudflare-fronted API from the VPS. A
+  webhook silently dropped is a payment taken and never applied.
+- The apps would gain a component between them and us that nobody here can
+  debug.
+
+DNS only — the grey cloud — and the certificate stays ours.
+
+**Two things the script deliberately leaves alone**, because both are the point
+of no return: `PUBLIC_URL` in `.env` (what Chargily writes into *new*
+checkouts) and `API_BASE_URL` in the app, which is compiled in and needs every
+phone updated. Do the second while the only phones are ours.
+
+**Certificate renewal was checked while doing this** and it works, despite
+looking as though it should not: the certificate was issued `standalone` and
+the renewal container runs `--webroot`. The command-line flag overrides the
+stored authenticator — `certbot renew --dry-run` succeeds. Expiry 9 Nov 2026.
+
 ## Backups — `./backup.sh`
 
 ```bash
@@ -2539,6 +2583,9 @@ drivers-keepalive.sh   driver positions go stale silently — this is the fix
 simulate-driver.py     plays a fleet of six, so the app can be finished on one phone
 fleet-service.sh       keeps that fleet running;  without it: cars but no offers
 backup.sh              nightly encrypted backup, offsite;  also restore / list
+switch-domain.sh       move the API onto a real domain.  Keeps the old hostname
+                       answering, because Chargily bakes the callback URL into
+                       every checkout at creation
 ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
 apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
 enrol-driver.sh        who may sign in on /ui/, and with which code;  the code is
