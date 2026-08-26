@@ -312,6 +312,7 @@ PurchasedPassPayment:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
 PassVerifyTransaction:
   tableName: pass_verify_transaction

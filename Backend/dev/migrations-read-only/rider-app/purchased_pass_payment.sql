@@ -69,3 +69,9 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_photo_change_count 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN activated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY purchased_pass_payment_idx_order_id ON atlas_app.purchased_pass_payment USING btree (order_id);
+CREATE INDEX CONCURRENTLY purchased_pass_payment_idx_purchased_pass_id ON atlas_app.purchased_pass_payment USING btree (purchased_pass_id);
