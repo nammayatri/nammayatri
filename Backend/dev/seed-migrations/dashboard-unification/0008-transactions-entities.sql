@@ -52,7 +52,7 @@ WHERE NOT EXISTS (SELECT 1 FROM atlas_dashboard.entity d WHERE d.id = e.id);
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables
-             WHERE table_schema = 'atlas_bpp_dashboard' AND table_name = 'entity') THEN
+             WHERE table_schema = 'atlas_dashboard' AND table_name = 'entity') THEN
     INSERT INTO atlas_dashboard.entity
     SELECT e.* FROM atlas_dashboard.bpp_entity e
     WHERE NOT EXISTS (SELECT 1 FROM atlas_dashboard.entity d WHERE d.id = e.id);

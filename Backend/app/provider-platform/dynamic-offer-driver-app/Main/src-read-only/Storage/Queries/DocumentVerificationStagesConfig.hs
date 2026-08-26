@@ -27,16 +27,17 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentApplicableType -> Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig))
-findByPrimaryKey applicableTo documentOnboardingStage merchantOperatingCityId vehicleCategory = do
+  (Domain.Types.DocumentVerificationConfig.DocumentApplicableType -> Domain.Types.DocumentVerificationConfig.DocumentCategory -> Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig))
+findByPrimaryKey applicableTo documentCategory documentOnboardingStage merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.applicableTo $ Se.Eq applicableTo,
+          Se.Is Beam.documentCategory $ Se.Eq documentCategory,
           Se.Is Beam.documentOnboardingStage $ Se.Eq documentOnboardingStage,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
@@ -59,6 +60,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationStagesConfig.DocumentVerifi
     ]
     [ Se.And
         [ Se.Is Beam.applicableTo $ Se.Eq applicableTo,
+          Se.Is Beam.documentCategory $ Se.Eq documentCategory,
           Se.Is Beam.documentOnboardingStage $ Se.Eq documentOnboardingStage,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
@@ -73,6 +75,7 @@ instance FromTType' Beam.DocumentVerificationStagesConfig Domain.Types.DocumentV
         Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig
           { applicableTo = applicableTo,
             description = description,
+            documentCategory = documentCategory,
             documentOnboardingStage = documentOnboardingStage,
             hint = hint,
             isHidden = isHidden,
@@ -92,6 +95,7 @@ instance ToTType' Beam.DocumentVerificationStagesConfig Domain.Types.DocumentVer
     Beam.DocumentVerificationStagesConfigT
       { Beam.applicableTo = applicableTo,
         Beam.description = description,
+        Beam.documentCategory = documentCategory,
         Beam.documentOnboardingStage = documentOnboardingStage,
         Beam.hint = hint,
         Beam.isHidden = isHidden,

@@ -77,7 +77,6 @@ import Lib.Finance
     findByAccountWithFilters,
     getEntriesByReference,
     invoice,
-    runFinance,
     transfer,
   )
 import qualified Lib.Finance.Core.Types as Finance
@@ -88,6 +87,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
@@ -790,8 +790,9 @@ mkDriverWalletFinanceCtx ::
   Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   Currency ->
   Text -> -- referenceId (order id or booth receipt id)
+  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
   m FinanceCtx
-mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
+mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGateEnabled = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
   let mName = Just merchant.name
@@ -833,7 +834,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        enableWalletGatedTierCheck = walletGateEnabled
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
@@ -866,7 +868,8 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
   when (null existing) $ do
     merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     let currency = merchantOpCity.currency
-    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
     let cashRechargeInvoiceConfig =
           InvoiceConfig
             { invoiceType = SubscriptionPurchase,

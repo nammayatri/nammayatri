@@ -18,6 +18,7 @@ module Beckn.ACL.OnCancel
 where
 
 import qualified Beckn.ACL.Common as ACLCommon
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -75,6 +76,9 @@ bookingCancelledEvent order = do
       effectiveFee = mbCancellationBase <&> \amount -> PriceAPIEntity amount currency
       effectiveTax = mbCancellationTax <&> \taxAmount -> PriceAPIEntity taxAmount currency
       fareBreakups = maybe [] (mapMaybe ACLCommon.mkDFareBreakup) (order.orderQuote >>= (.quotationBreakup))
+      -- Cancellation-consequence handoff from the BPP consequence matrix (absent on old BPPs)
+      mbCollectionMode = ACLCommon.getTagV2' Tag.CANCELLATION_CONSEQUENCE Tag.CANCELLATION_COLLECTION_MODE order.orderTags
+      mbCustomerNotificationKey = ACLCommon.getTagV2' Tag.CANCELLATION_CONSEQUENCE Tag.CUSTOMER_CANCELLATION_NOTIFICATION_KEY order.orderTags
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
@@ -82,5 +86,7 @@ bookingCancelledEvent order = do
         cancellationFee = effectiveFee,
         cancellationFeeTax = effectiveTax,
         cancellationReasonCode = cancellationReasonCode,
-        fareBreakups = fareBreakups
+        fareBreakups = fareBreakups,
+        collectionMode = mbCollectionMode,
+        customerCancellationNotificationKey = mbCustomerNotificationKey
       }

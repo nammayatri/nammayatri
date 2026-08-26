@@ -22,6 +22,8 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerVerifyHandle (..),
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
+    otpAttemptsKey,
+    constantTimeEqText,
     FleetOwnerUpdateLanguageReq (..),
     fleetOwnerUpdateLanguage,
   )
@@ -29,6 +31,7 @@ where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Internal.DriverMode as DriverMode
@@ -203,6 +206,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
+            isNew = Nothing,
             merchantId = merchantId,
             fleetType = fleetType,
             fleetName = mbFleetName,
@@ -305,6 +309,8 @@ fleetOwnerLogin req = do
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Redis.setExp key otp expTime
+  -- A freshly issued OTP gets a fresh attempt budget.
+  Redis.del $ otpAttemptsKey key
   pure Success
 
 buildFleetOwnerAuthReq ::
@@ -343,15 +349,47 @@ fleetOwnerVerifyHandler ::
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerVerifyHandler h req = do
-  case req.otp of
-    Just otp -> do
-      mobileNumberOtpKey <- Redis.safeGet $ h.mkMobileNumberOtpKey req.mobileNumber
-      case mobileNumberOtpKey of
-        Just otpHash -> do
-          unless (otpHash == otp) $ throwError InvalidAuthData
-          pure Success
-        Nothing -> throwError InvalidAuthData
-    _ -> throwError InvalidAuthData
+  otp <- req.otp & fromMaybeM InvalidAuthData
+  let otpKey = h.mkMobileNumberOtpKey req.mobileNumber
+      attemptsKey = otpAttemptsKey otpKey
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
+  -- Count the attempt with INCR rather than read-modify-write. INCR is atomic and returns the
+  -- post-increment value, so a parallel burst of guesses observes distinct counts; a get-then-set
+  -- counter loses updates under exactly the concurrency a brute-force attempt produces, which is
+  -- what the budget exists to stop. Every attempt is counted, including a correct one, so no
+  -- branch below can return without having paid for itself.
+  attempts <- Redis.incr attemptsKey
+  -- INCR creates a key with no TTL. Refreshing on every attempt keeps the counter from outliving
+  -- its OTP and means a crash between the two commands cannot strand the key permanently.
+  Redis.expire attemptsKey expTime
+  when (attempts > maxOtpVerifyAttempts) $ do
+    -- Budget exhausted: burn the OTP so it cannot be guessed by requesting a fresh window.
+    Redis.del otpKey
+    Redis.del attemptsKey
+    throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
+  unless (constantTimeEqText storedOtp otp) $ throwError InvalidAuthData
+  -- OTP is single use: drop it so the same verified request cannot be replayed.
+  Redis.del otpKey
+  Redis.del attemptsKey
+  pure Success
+
+-- | Incorrect OTP submissions allowed per issued OTP before it is invalidated.
+maxOtpVerifyAttempts :: Integer
+maxOtpVerifyAttempts = 5
+
+-- | The attempt counter is derived from the OTP key itself rather than rebuilt from the mobile
+-- number, so it always lands in the same namespace as the OTP it guards. The V1 and V2 fleet
+-- flows use different OTP namespaces; deriving keeps their budgets independent.
+otpAttemptsKey :: Text -> Text
+otpAttemptsKey otpKey = otpKey <> ":verifyAttempts"
+
+-- | Compare in time independent of how many leading characters match. Length is not secret for a
+-- fixed-width OTP, so an early length check is fine.
+constantTimeEqText :: Text -> Text -> Bool
+constantTimeEqText a b =
+  T.length a == T.length b
+    && foldl' (\acc (x, y) -> acc + fromEnum (x /= y)) (0 :: Int) (T.zip a b) == 0
 
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber

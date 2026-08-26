@@ -15,6 +15,7 @@
 module SharedLogic.DriverOnboarding
   ( module SharedLogic.DriverOnboarding,
     module Reexport,
+    module SharedLogic.DriverOnboarding.DocumentIdentifier,
   )
 where
 
@@ -76,6 +77,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
+import SharedLogic.DriverOnboarding.DocumentIdentifier
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
@@ -437,6 +439,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       vehicleRatingRemark = rc.vehicleRatingRemark,
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
+      selectedAutoAcceptTiers = Nothing,
       downgradeReason = Nothing,
       createdAt = now,
       updatedAt = now,
@@ -533,6 +536,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
   pure
     VehicleRegistrationCertificate
       { id,
+        isNew = Nothing,
         documentImageId = input.documentImageId,
         documentImageId2 = input.documentImageId2,
         certificateNumber,
@@ -689,9 +693,6 @@ compareVehicles a b =
 -- Function to sort list of Maybe values
 sortMaybe :: [DVC.VehicleClassVariantMap] -> [DVC.VehicleClassVariantMap]
 sortMaybe = DL.sortBy compareVehicles
-
-removeSpaceAndDash :: Text -> Text
-removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do
@@ -1006,17 +1007,20 @@ matchesRegexSafely documentType input regexPattern = do
       logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
       pure Nothing
 
-validateByRegex :: OnboardingFlow m r => Text -> ODC.DocumentVerificationConfig -> Text -> m Bool -> m Bool
-validateByRegex documentType config input fallback = do
+validateByRegex :: OnboardingFlow m r => Text -> DTC.TransporterConfig -> ODC.DocumentVerificationConfig -> Text -> m Bool -> m Bool
+validateByRegex documentType transporterConfig config input fallback = do
   let regexRules = getRegexRulesFromDocumentConfig config
-  if null regexRules
-    then fallback
-    else do
-      regexResults <- mapM (matchesRegexSafely documentType input) regexRules
-      let validRegexResults = mapMaybe (\x -> x) regexResults
-      if null validRegexResults
+  if not transporterConfig.preProcessDocumentIdentifiers
+    then pure True
+    else
+      if null regexRules
         then fallback
-        else pure (or validRegexResults)
+        else do
+          regexResults <- mapM (matchesRegexSafely documentType input) regexRules
+          let validRegexResults = mapMaybe (\x -> x) regexResults
+          if null validRegexResults
+            then fallback
+            else pure (or validRegexResults)
 
 imageS3Lock :: Text -> Text
 imageS3Lock path = "image-s3-lock-" <> path
@@ -1427,7 +1431,7 @@ isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
 validateIndividualPANCheck :: OnboardingFlow m r => DTC.TransporterConfig -> Person.Person -> Text -> m ()
 validateIndividualPANCheck transporterConfig person panNumber =
   when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
-    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
+    when (inferPanTypeFromNumber (preProcessDocumentIdentifier transporterConfig panNumber) /= Just DPan.INDIVIDUAL) $
       throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
   where
     isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER

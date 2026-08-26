@@ -1786,6 +1786,37 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
     mkRefundNotificationKey =
       T.pack (show paymentServiceType) <> "_" <> T.pack (show notifCategory)
 
+-- | Rider push for a cancellation consequence, keyed by the BPP consequence-matrix
+-- row's customerNotificationKey (carried on the on_cancel order tags). No matching
+-- merchant_push_notification row for the key => silently no push (config-driven).
+notifyCancellationConsequence :: ServiceFlow m r => Id Person -> Text -> Text -> m ()
+notifyCancellationConsequence personId bookingId pnKey = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT person.merchantOperatingCityId
+  mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId pnKey Nothing Nothing person.language Nothing
+  whenJust mbMerchantPN \merchantPN -> do
+    when (merchantPN.shouldTrigger) $ do
+      let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+          templateParams = [] :: [(Text, Text)]
+          title = buildTemplate templateParams merchantPN.title
+          body = buildTemplate templateParams merchantPN.body
+          notificationData =
+            Notification.NotificationReq
+              { category = Notification.CANCELLED_PRODUCT,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.Product bookingId (),
+                body,
+                title,
+                dynamicParams = EmptyDynamicParam,
+                auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+                ttl = Nothing,
+                sound = notificationSound,
+                overlayNotificationData = Nothing
+              }
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
   case booking.tripCategory of
@@ -2035,6 +2066,7 @@ data BusNotificationType
   | AT_STOP
   | TRACKING_AVAILABLE_ON_START
   | DETAILS_UPDATED
+  | PREV_STOP_CROSSED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data BusNotificationEntityData = BusNotificationEntityData
@@ -2084,6 +2116,111 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
   -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort).
   -- The `trip_tracking_enabled` template carries a static deep link, so no variables are passed.
   sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_BUS_TRIP_STARTED []
+
+data BusApproachingParam = BusApproachingParam
+  { vehicleNumber :: Text,
+    routeName :: Text,
+    routeNumber :: Text,
+    vehicleTagNumber :: Maybe Text,
+    stopName :: Text,
+    distanceDisplay :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Push body shows `routeNumber` + `vehicleTagNumber` (if available); `vehicleNumber`/`routeName` are kept only for entity deep-linking.
+notifyBusApproachingStop ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
+  Maybe Text ->
+  m ()
+notifyBusApproachingStop person vehicleNumber routeName routeNumber vehicleTagNumber tripId stopCode stopName notificationKey distanceDisplay mbJourneyId mbBookingId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Just stopCode,
+            stopName = Just stopName,
+            notificationType = APPROACHING,
+            journeyId = mbJourneyId <&> (.getId),
+            bookingId = mbBookingId
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusApproachingParam vehicleNumber routeName routeNumber vehicleTagNumber stopName distanceDisplay
+      routeDisplay = case vehicleTagNumber of
+        Just tag | not (T.null tag) -> routeNumber <> " (" <> tag <> ")"
+        _ -> routeNumber
+  dynamicNotifyPerson
+    person
+    (createNotificationReq notificationKey (\r -> r {notificationTypeForSound = Just Notification.BUS_APPROACHING}))
+    dynamicParams
+    entity
+    Nothing
+    [("routeDisplay", routeDisplay), ("routeName", routeName), ("stopName", stopName), ("distanceDisplay", distanceDisplay)]
+    Nothing
+    Nothing
+
+data BusPrevStopCrossedParam = BusPrevStopCrossedParam
+  { vehicleNumber :: Text,
+    routeName :: Text,
+    routeNumber :: Text,
+    vehicleTagNumber :: Maybe Text,
+    prevStopName :: Text,
+    stopName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Notify a rider that the bus just left the stop right before their source.
+notifyBusPrevStopCrossed ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
+  Maybe Text ->
+  m ()
+notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNumber tripId stopCode prevStopName stopName mbJourneyId mbBookingId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Just stopCode,
+            stopName = Just stopName,
+            notificationType = PREV_STOP_CROSSED,
+            journeyId = mbJourneyId <&> (.getId),
+            bookingId = mbBookingId
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusPrevStopCrossedParam vehicleNumber routeName routeNumber vehicleTagNumber prevStopName stopName
+      routeDisplay = case vehicleTagNumber of
+        Just tag | not (T.null tag) -> routeNumber <> " (" <> tag <> ")"
+        _ -> routeNumber
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "BUS_PREV_STOP_CROSSED" (\r -> r {notificationTypeForSound = Just Notification.BUS_PREV_STOP_CROSSED}))
+    dynamicParams
+    entity
+    Nothing
+    [("routeDisplay", routeDisplay), ("routeName", routeName), ("prevStopName", prevStopName), ("stopName", stopName)]
+    Nothing
+    Nothing
 
 -- | Notify a passenger that the operator changed the driver and/or the assigned bus for their upcoming
 -- FRFS bus trip (waybill-details update). Push-only. A single notification covers both fields; the

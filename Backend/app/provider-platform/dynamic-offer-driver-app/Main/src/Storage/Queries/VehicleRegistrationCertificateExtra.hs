@@ -109,7 +109,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
 
 findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
-  findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
+  findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) (Just 1) (Just 0) <&> listToMaybe
 
 findLastVehicleRCWithApproved :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Maybe Bool -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWithApproved certNumberHash mbApproved = do
@@ -196,13 +196,6 @@ partialFindLastVehicleRCFleet certNumber fleetOwnerId limit offset = do
     Right res' -> do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
-
-findByCertificateNumberHash ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (DbHash -> m (Maybe VehicleRegistrationCertificate))
-findByCertificateNumberHash certificateHash = do
-  findOneWithKV
-    [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
 updateDocsVerificationStatusByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -1,0 +1,124 @@
+imports:
+  CancellationConsequenceMatrix: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
+
+module: CancellationConsequence
+
+# CRUD for the CancellationConsequenceMatrix (dev/docs/cancellation-consequence-matrix-plan.md)
+# and the GLOBAL fault-rule name registry. Dimension values travel as Text (constructor
+# names, e.g. "CustomerAtFault", "CancellationByDriver"); the BPP handler parses and
+# validates them, checks fault-rule names against the registry, and rejects duplicate
+# active rows with an identical dimension tuple.
+apis:
+  - GET: # list matrix rows for the city
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: CancellationConsequenceListRes
+      migrate:
+        capability: city-config.cancel.read
+  - POST: # create a matrix row
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateCancellationConsequenceReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.cancel.write
+  - POST: # update a matrix row in place (full replacement of outputs + active flag)
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateCancellationConsequenceReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.cancel.write
+  - GET: # list the global fault-rule registry
+      endpoint: /registry/list
+      auth: ApiAuthV2
+      response:
+        type: FaultRuleRegistryListRes
+      migrate:
+        capability: city-config.cancel.read
+  - POST: # insert or update a registry entry by name (global, not per city)
+      endpoint: /registry/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertFaultRuleRegistryReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.cancel.write
+
+types:
+  # direction is explicit in the constructor (Deduction takes, Addition gives);
+  # all amounts/counts are POSITIVE — the BPP handler rejects signed values
+  DeductionAPIEntity:
+    - enum: CoinDeductionAPIEntity CoinDeductionAPI, MoneyDeductionAPIEntity MoneyDeductionAPI, CoinAdditionAPIEntity CoinDeductionAPI, MoneyAdditionAPIEntity MoneyDeductionAPI
+  CoinDeductionAPI:
+    - coins: Int
+    - expirySeconds: Maybe Int
+  MoneyDeductionAPI:
+    - enum: FixedMoneyAPIEntity FixedMoneyAPI, PercentageMoneyAPIEntity PercentageMoneyAPI
+  FixedMoneyAPI:
+    - amount: HighPrecMoney
+    - overdueAmount: Maybe HighPrecMoney
+  PercentageMoneyAPI:
+    - percentage: HighPrecMoney
+    - minAmount: Maybe HighPrecMoney
+    - maxAmount: Maybe HighPrecMoney
+  ChargeRateAPI:
+    - enum: FixedRateAPIEntity HighPrecMoney, PercentageRateAPIEntity HighPrecMoney
+  CommissionAndTaxAPI:
+    - taxPercentage: Maybe HighPrecMoney
+    - commission: Maybe ChargeRateAPI
+  CancellationConsequenceRowAPI:
+    - faultVerdict: Maybe Text
+    - faultRule: Maybe Text
+    - cancelledBy: Maybe Text
+    - tripCategory: Maybe Text
+    - vehicleServiceTier: Maybe Text
+    - area: Maybe Text
+    - paymentInstrument: Maybe Text
+    - customerDeduction: Maybe DeductionAPIEntity
+    - customerCommissionAndTax: Maybe CommissionAndTaxAPI
+    - driverDeduction: Maybe DeductionAPIEntity
+    - collectionMode: Maybe Text
+    - waiveOffAllowed: Bool
+    - maxWaiveOffsPerPeriod: Maybe Int
+    - waiveOffPeriodDays: Maybe Int
+    - blacklistDriverForRiderSeconds: Maybe Int
+    - countsTowardDriverCancellationRate: Bool
+    - countsTowardCustomerCancellationStats: Bool
+    - exemptDashboardBookings: Bool
+    - driverNotificationKey: Maybe Text
+    - customerNotificationKey: Maybe Text
+    - active: Bool
+  CreateCancellationConsequenceReq:
+    - row: CancellationConsequenceRowAPI
+    - derive: "'HideSecrets"
+  UpdateCancellationConsequenceReq:
+    - rowId: Id CancellationConsequenceMatrix
+    - row: CancellationConsequenceRowAPI
+    - derive: "'HideSecrets"
+  CancellationConsequenceListRes:
+    - rows: [CancellationConsequenceListItem]
+  CancellationConsequenceListItem:
+    - rowId: Id CancellationConsequenceMatrix
+    - row: CancellationConsequenceRowAPI
+  UpsertFaultRuleRegistryReq:
+    - name: Text
+    - description: Text
+    - active: Bool
+    - derive: "'HideSecrets"
+  FaultRuleRegistryListRes:
+    - entries: [FaultRuleRegistryEntryAPI]
+  FaultRuleRegistryEntryAPI:
+    - name: Text
+    - description: Text
+    - active: Bool

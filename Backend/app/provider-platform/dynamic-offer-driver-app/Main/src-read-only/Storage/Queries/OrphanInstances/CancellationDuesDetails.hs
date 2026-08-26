@@ -20,7 +20,9 @@ instance FromTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDe
       Just
         Domain.Types.CancellationDuesDetails.CancellationDuesDetails
           { cancellationAmount = cancellationAmount,
+            cancellationCollectionMode = cancellationCollectionMode,
             cancellationCommission = cancellationCommission,
+            cancellationConsequenceRowId = cancellationConsequenceRowId,
             cancellationFee = cancellationFee,
             cancellationFeeTax = cancellationFeeTax,
             createdAt = createdAt,
@@ -41,7 +43,9 @@ instance ToTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDeta
   toTType' (Domain.Types.CancellationDuesDetails.CancellationDuesDetails {..}) = do
     Beam.CancellationDuesDetailsT
       { Beam.cancellationAmount = cancellationAmount,
+        Beam.cancellationCollectionMode = cancellationCollectionMode,
         Beam.cancellationCommission = cancellationCommission,
+        Beam.cancellationConsequenceRowId = cancellationConsequenceRowId,
         Beam.cancellationFee = cancellationFee,
         Beam.cancellationFeeTax = cancellationFeeTax,
         Beam.createdAt = createdAt,

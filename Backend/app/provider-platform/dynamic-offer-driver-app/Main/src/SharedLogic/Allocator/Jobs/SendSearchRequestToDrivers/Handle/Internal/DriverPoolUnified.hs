@@ -223,6 +223,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
               routeDistance = searchReq.estimatedDistance
+              pickupLocation = pickupLatLong
+              estimatedDuration = searchReq.estimatedDuration
               currentSearchInfo = DTS.CurrentSearchInfo {..}
               govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
               tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
@@ -235,6 +237,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     merchantOperatingCityId = merchantOpCityId,
                     isRental = isRentalTrip searchTry.tripCategory,
                     isInterCity = isInterCityTrip searchTry.tripCategory,
+                    isScheduled = searchTry.isScheduled,
+                    scheduledPickupTime = Just searchTry.startTime,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
                     tollCharges = tollCharges_,
@@ -374,6 +378,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
                   routeDistance = searchReq.estimatedDistance
+                  pickupLocation = pickupLatLong
+                  estimatedDuration = searchReq.estimatedDuration
               let currentSearchInfo = DTS.CurrentSearchInfo {..}
               let govtCharges = listToMaybe tripQuoteDetails >>= (.govtCharges)
                   tollCharges_ = listToMaybe tripQuoteDetails >>= (.tollCharges)
@@ -386,6 +392,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         merchantOperatingCityId = merchantOpCityId,
                         isRental = isRentalTrip searchTry.tripCategory,
                         isInterCity = isInterCityTrip searchTry.tripCategory,
+                        isScheduled = searchTry.isScheduled,
+                        scheduledPickupTime = Just searchTry.startTime,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
                         tollCharges = tollCharges_,
@@ -473,6 +481,8 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
       Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
         let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
             routeDistance = searchReq.estimatedDistance
+            pickupLocation = LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon
+            estimatedDuration = searchReq.estimatedDuration
         let currentSearchInfo = DTS.CurrentSearchInfo {..}
         let goHomeReq =
               CalculateGoHomeDriverPoolReq
@@ -527,6 +537,15 @@ insertInObject obj tags =
 hasAnyPriorityTag :: [Text] -> DriverPoolWithActualDistResult -> Bool
 hasAnyPriorityTag tagNames dp = case dp.driverPoolResult.driverTags of
   Object keymap -> any (\name -> AKM.member (AK.fromText name) keymap) tagNames
+  _ -> False
+
+-- | driverTags is keyed by bare category (e.g. {"AutoAssign": "COMFY"}), so this checks
+-- the value equals the tier name, unlike hasAnyPriorityTag's key-membership check above.
+hasPriorityTag :: Text -> DriverPoolWithActualDistResult -> Bool
+hasPriorityTag tierName dp = case dp.driverPoolResult.driverTags of
+  Object keymap -> case AKM.lookup (AK.fromString "AutoAssign") keymap of
+    Just (String v) -> v == tierName
+    _ -> False
   _ -> False
 
 priorityDriverTagPrefix :: Text

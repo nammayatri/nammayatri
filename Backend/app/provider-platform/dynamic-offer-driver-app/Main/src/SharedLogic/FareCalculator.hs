@@ -602,7 +602,6 @@ calculateFareParametersHandler params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
-            driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
@@ -1414,7 +1413,6 @@ calculateCancellationCommission fareParams mbFarePolicy = do
 isCustomerPaymentBearer :: DTC.PaymentChargeBearer -> Bool
 isCustomerPaymentBearer = \case
   DTC.PAYMENT_CUSTOMER -> True
-  DTC.PAYMENT_CUSTOMER_AND_DRIVER -> True
   _ -> False
 
 -- | Stripe payment charge P = paymentChargeRate% × base fare, from the per-operating-city

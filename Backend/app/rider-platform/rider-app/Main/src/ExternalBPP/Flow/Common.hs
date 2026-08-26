@@ -359,6 +359,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 changedBusesInSequence = Nothing,
                 finalBoardedBusNumber = Nothing,
                 finalBoardedBusNumberSource = Nothing,
+                boardingConfirmedDespiteDistance = Nothing,
                 finalBoardedDepotNo = Nothing,
                 finalBoardedScheduleNo = Nothing,
                 finalBoardedWaybillId = Nothing,
@@ -570,7 +571,9 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
         orderStatus = orderStatus,
         refundAmount = Just refund,
         baseFare = baseFare,
-        cancellationCharges = Just charges
+        cancellationCharges = Just charges,
+        cancelledBy = Nothing,
+        cancellationTime = Nothing
       }
 
 calculateCancellationCharges ::

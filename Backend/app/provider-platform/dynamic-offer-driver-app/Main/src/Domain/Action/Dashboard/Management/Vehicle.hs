@@ -1,4 +1,4 @@
-module Domain.Action.Dashboard.Management.Vehicle (getVehicleList) where
+module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, mkAssociationInfo) where
 
 import qualified API.Types.ProviderPlatform.Management.Vehicle as VehicleAPI
 import qualified Dashboard.Common as Common

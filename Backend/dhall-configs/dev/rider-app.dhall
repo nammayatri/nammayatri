@@ -457,6 +457,7 @@ in  { esqDBCfg
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey
     , internalClickhouseAPIKey = sec.internalClickhouseAPIKey
+    , assetPublisherApiKey = sec.assetPublisherApiKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
@@ -473,6 +474,7 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
     , dashboardToken = sec.dashboardToken
+    , driverDashboardToken = Some sec.driverDashboardToken
     , cacheConfig
     , cacheTranslationConfig
     , cacheFeedbackFormConfig
@@ -481,6 +483,8 @@ in  { esqDBCfg
     , minTripDistanceForReferralCfg = Some +1000
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
+    , enableAPILatencyLogging = True
+    , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
     , incomingAPIResponseTimeout = +15
@@ -509,6 +513,7 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , fabricGatewayBaseUrl = common.fabricGatewayBaseUrl
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey

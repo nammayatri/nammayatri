@@ -344,11 +344,12 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Maybe (Id DP.Person) -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled mbDashboardPersonId = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Maybe (Id DP.Person) -> Maybe FOI.FleetType -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled mbDashboardPersonId mbFleetType = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
-  person' <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
+  let fleetRole = castFleetTypeToRole $ fromMaybe FOI.NORMAL_FLEET mbFleetType
+  person' <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just fleetRole)
   isDashboardPersonIdTaken <- maybe (pure False) (fmap isJust . QP.findById) mbDashboardPersonId
   let person = case mbDashboardPersonId of
         Just dashboardPersonId | not isDashboardPersonIdTaken -> person' {DP.id = dashboardPersonId}
@@ -365,19 +366,20 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
           if transporterConfig.enableManualDocumentStatusCheck == Just True
             then Just DDVS.ADMIN_PENDING
             else Nothing
-    createFleetOwnerInfo person.id merchantId enabled merchantOpCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+    createFleetOwnerInfo person.id merchantId enabled merchantOpCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus mbFleetType
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
-createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Maybe FOI.FleetType -> Flow ()
+createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbDocsVerificationStatus mbFleetType = do
   now <- getCurrentTime
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
+            isNew = Nothing,
             merchantId = merchantId,
-            fleetType = NORMAL_FLEET, -- overwrite in register
+            fleetType = fromMaybe NORMAL_FLEET mbFleetType, -- overwrite in register
             fleetName = Nothing,
             enabled = not useUnifiedOnboardingFlagsRecompute && fromMaybe True enabled,
             blocked = False,
@@ -462,7 +464,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
       -- Operator won't reach here as it has separate sign up flow --
       let personAuth = buildFleetOwnerAuthReq merchant.id opCity req
       deploymentVersion <- asks (.version)
-      createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
+      createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId (castFleetType <$> req.fleetType)
   let personId = fleetOwnerPerson.id
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> fleetOwnerPerson.useFakeOtp
   otp <- maybe generateOTPCode return useFakeOtpM
@@ -484,6 +486,8 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   void $ Redis.setExp key otp expTime
+  -- A freshly issued OTP gets a fresh attempt budget.
+  Redis.del $ DRegistration.otpAttemptsKey key
   pure $ Common.FleetOwnerLoginResV2 {personId = cast @DP.Person @Common.Person personId}
 
 buildFleetOwnerAuthReq ::

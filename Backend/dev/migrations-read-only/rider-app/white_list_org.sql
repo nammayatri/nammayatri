@@ -17,3 +17,9 @@ ALTER TABLE atlas_app.white_list_org ADD COLUMN merchant_operating_city_id chara
 
 ALTER TABLE atlas_app.white_list_org ALTER COLUMN merchant_operating_city_id SET DEFAULT '';
 ALTER TABLE atlas_app.white_list_org ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.white_list_org ADD COLUMN supported_beckn_protocols text[];

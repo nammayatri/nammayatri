@@ -23,7 +23,6 @@ module SharedLogic.DriverOnboarding.Status
     findFleetDocVerificationConfig,
     hasActiveFleetAssociation,
     botApproveAndReconcile,
-    recomputeOnboardingFlags,
     activateRCAutomatically,
     mkCommonDocumentItem,
     mkDLMetadata,
@@ -35,7 +34,10 @@ module SharedLogic.DriverOnboarding.Status
     getInspectionHubStatusAndReason,
     checkLMSTrainingStatus,
     runRefreshOnboardingFlagsDriver,
+    runRefreshOnboardingFlagsDriverWithBotApproval,
     runRefreshOnboardingFlagsFleet,
+    runRefreshOnboardingFlagsDriverVehicle,
+    runRefreshOnboardingFlagsFleetAndVehicle,
     runRefreshOnboardingFlagsVehicle,
     runRefreshOnboardingFlagsVehicleWithBotApproval,
     ensureNoActiveRidesUnderFleet,
@@ -373,6 +375,9 @@ fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig l
 onboardingLockTTLSeconds :: Int
 onboardingLockTTLSeconds = 15
 
+onboardingLockRetryMicros :: Int
+onboardingLockRetryMicros = 50000
+
 mkPersonDocsStatusKey :: Id DP.Person -> Text
 mkPersonDocsStatusKey personId = "DocsStatus:Person:" <> personId.getId
 
@@ -387,52 +392,69 @@ mkRCDocsStatusKey rcId = "DocsStatus:RC:" <> rcId.getId
 --   Note the two paths differ in what they return: the legacy path reports the flag as persisted
 --   (read back after the writes), the unified path reports the value it just computed.
 runRefreshOnboardingFlagsDriver :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
-runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
-  Hedis.withLockRedisAndReturnValue (mkPersonDocsStatusKey personId) onboardingLockTTLSeconds $ do
+runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig = runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig False
+
+runRefreshOnboardingFlagsDriverWithBotApproval :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Bool -> Id DP.Person -> m (Maybe Bool)
+runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig forceBotApproval personId =
+  Hedis.withWaitAndLockRedis (mkPersonDocsStatusKey personId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
     PersonStatusContext {statusPerson, statusEntityImagesInfo} <- loadPersonStatusContext mbPerson mbTransporterConfig personId
     let transporterConfig = statusEntityImagesInfo.transporterConfig
         merchantOperatingCity = statusEntityImagesInfo.merchantOperatingCity
-    if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then do
-        let language = fromMaybe merchantOperatingCity.language statusPerson.language
-        (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <-
-          fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language Nothing
-        res <-
-          recomputeOnboardingFlags
-            OnboardingFlagsInput
-              { ofiPerson =
-                  Just
-                    PersonFlagsCtx
-                      { pfcPerson = statusPerson,
-                        pfcMerchantOpCityId = merchantOperatingCity.id,
-                        pfcMerchantId = merchantOperatingCity.merchantId,
-                        pfcTransporterConfig = transporterConfig,
-                        pfcConfigs = allDocVerificationConfigs,
-                        pfcDocs = driverDocuments,
-                        pfcVehicleCategory = vehicleCategory,
-                        pfcMakeSelfieAadhaarPanMandatory = Nothing,
-                        pfcDriverName = Nothing,
-                        pfcOnboardingVehicleCategory = Nothing,
-                        pfcIsFleetDriver = Nothing,
-                        pfcVehicleDocs = vehicleDocuments
-                      },
-                ofiVehicles = []
-              }
-            True
-        pure res.ofrPersonEnabled
-      else do
-        statusRes <- statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True Nothing
-        pure $ Just statusRes.enabled
+        language = fromMaybe merchantOperatingCity.language statusPerson.language
+    (allDocVerificationConfigs, driverDocuments', vehicleCategory, vehicleDocuments) <-
+      fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language Nothing
+    let driverDocuments = if forceBotApproval then map forceBotApprovalDocValid driverDocuments' else driverDocuments'
+    res <-
+      recomputeOnboardingFlags
+        OnboardingFlagsInput
+          { ofiPerson =
+              Just
+                PersonFlagsCtx
+                  { pfcPerson = statusPerson,
+                    pfcMerchantOpCityId = merchantOperatingCity.id,
+                    pfcMerchantId = merchantOperatingCity.merchantId,
+                    pfcTransporterConfig = transporterConfig,
+                    pfcConfigs = allDocVerificationConfigs,
+                    pfcDocs = driverDocuments,
+                    pfcVehicleCategory = vehicleCategory,
+                    pfcMakeSelfieAadhaarPanMandatory = Nothing,
+                    pfcDriverName = Nothing,
+                    pfcOnboardingVehicleCategory = Nothing,
+                    pfcIsFleetDriver = Nothing,
+                    pfcVehicleDocs = vehicleDocuments
+                  },
+            ofiVehicles = []
+          }
+        (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+    pure res.ofrPersonEnabled
 
 runRefreshOnboardingFlagsFleet :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
 runRefreshOnboardingFlagsFleet = runRefreshOnboardingFlagsDriver
 
-runRefreshOnboardingFlagsVehicle :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
-runRefreshOnboardingFlagsVehicle mbTransporterConfig = runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig False
+runRefreshOnboardingFlagsDriverVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
+runRefreshOnboardingFlagsDriverVehicle mbPerson mbTransporterConfig personId mbRcNo = do
+  res <- runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId
+  refreshVehicleByRcNo mbTransporterConfig mbRcNo
+  pure res
 
-runRefreshOnboardingFlagsVehicleWithBotApproval :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Bool -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
-runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig forceBotApproval rcId = do
-  Hedis.withLockRedisAndReturnValue (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds $ do
+runRefreshOnboardingFlagsFleetAndVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
+runRefreshOnboardingFlagsFleetAndVehicle mbPerson mbTransporterConfig personId mbRcNo = do
+  res <- runRefreshOnboardingFlagsFleet mbPerson mbTransporterConfig personId
+  refreshVehicleByRcNo mbTransporterConfig mbRcNo
+  pure res
+
+refreshVehicleByRcNo :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Maybe Text -> m ()
+refreshVehicleByRcNo mbTransporterConfig mbRcNo =
+  whenJust mbRcNo $ \rcNo -> do
+    mbRc <- RCQuery.findLastVehicleRCWrapper rcNo
+    whenJust mbRc $ \rc -> void $ runRefreshOnboardingFlagsVehicle mbTransporterConfig rc.id
+
+runRefreshOnboardingFlagsVehicle :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
+runRefreshOnboardingFlagsVehicle mbTransporterConfig = runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig False True
+
+runRefreshOnboardingFlagsVehicleWithBotApproval :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Bool -> Bool -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
+runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig forceBotApproval shouldOverrideInspectionHub rcId = do
+  Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
     rc <- RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id: " <> rcId.getId)
     merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
     merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -444,10 +466,7 @@ runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig forceBotAppr
     let useUnifiedOnboardingFlagsRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
     registrationNo <- decrypt rc.certificateNumber
     (vehicleDocItem, allDocumentVerificationConfigs) <- fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig merchantOperatingCity.language registrationNo (Just True) False True
-    -- Waive the InspectionHub gate here (this is the full vehicle recompute), and force
-    -- BotApproval VALID when the caller asked for it. Both are document-array transforms so the
-    -- recompute itself stays policy-free.
-    let withInspectionWaived = vehicleDocItem {documents = map overrideInspectionHubAsValid vehicleDocItem.documents}
+    let withInspectionWaived = if shouldOverrideInspectionHub then vehicleDocItem {documents = map overrideInspectionHubAsValid vehicleDocItem.documents} else vehicleDocItem
         vehicleDocItem' = if forceBotApproval then withInspectionWaived {documents = map forceBotApprovalDocValid withInspectionWaived.documents} else withInspectionWaived
     void $
       recomputeOnboardingFlags
@@ -518,15 +537,11 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
     fetchFleetOwnerVehicleDocs reqRegistrationNo = do
       let merchantOperatingCity = entityImagesInfo.merchantOperatingCity
           transporterConfig = entityImagesInfo.transporterConfig
-          registrationNo = normalizeRegistrationNo reqRegistrationNo
-      rcNoEnc <- encrypt registrationNo
+          registrationNo = SDO.normalizeDocumentIdentifier transporterConfig reqRegistrationNo
       rc <-
-        RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+        RCQuery.findLastVehicleRCWrapper registrationNo
           >>= fromMaybeM (InvalidRequest $ "Vehicle not found with registrationNo " <> registrationNo)
       fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language registrationNo onlyMandatoryDocs entityImagesInfo.enableDocumentMetadata skipMessages
-
-normalizeRegistrationNo :: Text -> Text
-normalizeRegistrationNo = T.toUpper . SDO.removeSpaceAndDash
 
 -- | The onboarding status engine. Builds the per-document status list returned to the app, and as a
 --   side-effect mutates onboarding state:
@@ -583,32 +598,13 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       then do
         -- BOT flow: verified/enabled are purely doc-driven (see recomputeDriverVerifiedAndEnabled / recomputeFleetVerifiedAndEnabled),
         -- independent of separateDriverVehicleEnablement. The BOT sets `approved`; statusHandler derives the rest.
-        let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
         -- Person flags go through the one common entry point; it picks fleet-owner vs driver from the
         -- config source. Roles that are neither get no write, as before.
         when (SDO.isFleetRole person.role || person.role == DP.DRIVER) $
           void $
-            recomputeOnboardingFlags
-              OnboardingFlagsInput
-                { ofiPerson =
-                    Just
-                      PersonFlagsCtx
-                        { pfcPerson = person,
-                          pfcMerchantOpCityId = merchantOpCityId,
-                          pfcMerchantId = merchantId,
-                          pfcTransporterConfig = transporterConfig,
-                          pfcConfigs = allDocVerificationConfigs,
-                          pfcDocs = driverDocuments,
-                          pfcVehicleCategory = vehicleCategory,
-                          pfcMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory,
-                          pfcDriverName = mDL >>= (.driverName),
-                          pfcOnboardingVehicleCategory = onboardingVehicleCategory,
-                          pfcIsFleetDriver = Nothing,
-                          pfcVehicleDocs = vehicleDocumentsUnverified
-                        },
-                  ofiVehicles = []
-                }
-              (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+            if SDO.isFleetRole person.role
+              then runRefreshOnboardingFlagsFleetAndVehicle (Just person) (Just transporterConfig) person.id mbReqRegistrationNo
+              else runRefreshOnboardingFlagsDriverVehicle (Just person) (Just transporterConfig) person.id mbReqRegistrationNo
         -- Vehicle status list (+ vehicle `verified` write, handled inside getVehicleDocuments under enableBotFlow)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else -- Legacy enablement (unchanged): conditional on separateDriverVehicleEnablement.
@@ -668,7 +664,13 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM convertDLToDLDetails dl
         allRCDetails <- mapM convertRCToRCDetails allRCImgs
-        return (Just allDLDetails, Just allRCDetails)
+        let requestedRCDetails = case mbReqRegistrationNo of
+              Nothing -> allRCDetails
+              Just reqRegistrationNo ->
+                filter
+                  (\rcDetail -> SDO.normalizeDocumentIdentifier transporterConfig rcDetail.vehicleRegistrationCertNumber == SDO.normalizeDocumentIdentifier transporterConfig reqRegistrationNo)
+                  allRCDetails
+        return (Just allDLDetails, Just requestedRCDetails)
       _ -> return (Nothing, Nothing)
 
   (enabled, verified, approved, blocked, blockedReason, onboardingAs, disabledReasonFlag) <-
@@ -694,7 +696,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
 
   let requestedVehicleDocuments = case mbReqRegistrationNo of
         Nothing -> vehicleDocuments
-        Just reqRegistrationNo -> filter (\vehicleDoc -> vehicleDoc.registrationNo == normalizeRegistrationNo reqRegistrationNo) vehicleDocuments
+        Just reqRegistrationNo -> filter (\vehicleDoc -> vehicleDoc.registrationNo == SDO.normalizeDocumentIdentifier transporterConfig reqRegistrationNo) vehicleDocuments
 
   return $
     StatusRes'
@@ -723,7 +725,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           else pure Nothing
       let dontAutoEnable = fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-        let allVehicleDocsVerified = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
+        let allVehicleDocsEnabled = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
             isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
             -- When separated: only check vehicle docs. When combined: check both driver and vehicle docs
@@ -731,8 +733,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             -- Vehicle activation logic depends on enablement mode
             checkToActivateRC =
               if separateEnablement
-                then (allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
-                else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
+                then (allVehicleDocsEnabled && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification
+                else ((allVehicleDocsEnabled && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
         -- isActive=False means RC was explicitly deactivated — skip auto-reactivation for already-enabled drivers.
@@ -742,21 +744,10 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         let enableBotFlow = entityImagesInfo.transporterConfig.enableBotFlow == Just True || entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
         -- Routed through the common entry point. Documents are passed through as-is: this site
         -- does NOT waive the InspectionHub gate (the full vehicle recompute does).
-        when enableBotFlow $
-          void $
-            recomputeOnboardingFlags
-              OnboardingFlagsInput
-                { ofiPerson = Nothing,
-                  ofiVehicles =
-                    [ VehicleDocsEntry
-                        { vdeRegistrationNo = vehicleDoc.registrationNo,
-                          vdeItem = vehicleDoc,
-                          vdeConfigs = driverDocConfs,
-                          vdeMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory
-                        }
-                    ]
-                }
-              (entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+        when enableBotFlow $ do
+          mbRcForRefresh <- RCQuery.findLastVehicleRCWrapper vehicleDoc.registrationNo
+          whenJust mbRcForRefresh $ \rcForRefresh ->
+            void $ runRefreshOnboardingFlagsVehicle (Just entityImagesInfo.transporterConfig) rcForRefresh.id
         mbVehicle <- QVehicle.findById personId
         let firstTimeOnboarding = maybe False (isNothing . (.enabledAt)) mbDriverInfo
             allowAutoActivate =
@@ -775,7 +766,12 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
                 (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
                 (_, _) -> return ()
-        if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+        if unifiedRecompute
+          then do
+            let allVehicleDocsValidForVerified = checkAllVehicleDocsValidForVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
+                derivedApproved = computeApprovedFromDocs Nothing (Right driverDocConfs) DP.DRIVER vehicleDoc.documents
+            return VehicleDocumentItem {isVerified = allVehicleDocsValidForVerified, isApproved = allVehicleDocsEnabled && derivedApproved == Just True, ..}
+          else if allVehicleDocsEnabled then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
     convertDLToDLDetails dl = do
       driverLicenseNumberDec <- decrypt dl.licenseNumber
@@ -967,7 +963,7 @@ botApproveAndReconcile ::
   m ()
 botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   let language = fromMaybe merchantOperatingCity.language person.language
-  (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
+  (allDocVerificationConfigs, driverDocuments, _vehicleCategory, _vehicleDocuments) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
   -- BotApproval's dependency docs must be VALID. On the DVC (driver) side a dep counts only if it applies per
   -- `applicableTo` (a fleet driver skips INDIVIDUAL-only deps like OperatorPartnerCode); FleetOwnerDVC has no split.
   isFleetDriver <- case allDocVerificationConfigs of
@@ -983,33 +979,7 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   unless (null invalidDeps) $
     throwError (InvalidRequest $ "Cannot approve: BotApproval dependency documents not valid: " <> T.intercalate ", " (map show invalidDeps))
   fork "botApproveAndReconcile: recompute verified/enabled" $
-    void $
-      Hedis.withLockRedisAndReturnValue (mkPersonDocsStatusKey person.id) onboardingLockTTLSeconds $ do
-        let docs' = map forceBotApprovalDocValid driverDocuments
-            useUnifiedOnboardingFlagsRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-        -- Fleet-owner vs driver is picked inside recomputeOnboardingFlags from the config source.
-        void $
-          recomputeOnboardingFlags
-            OnboardingFlagsInput
-              { ofiPerson =
-                  Just
-                    PersonFlagsCtx
-                      { pfcPerson = person,
-                        pfcMerchantOpCityId = merchantOperatingCity.id,
-                        pfcMerchantId = merchantOperatingCity.merchantId,
-                        pfcTransporterConfig = transporterConfig,
-                        pfcConfigs = allDocVerificationConfigs,
-                        pfcDocs = docs',
-                        pfcVehicleCategory = vehicleCategory,
-                        pfcMakeSelfieAadhaarPanMandatory = Nothing,
-                        pfcDriverName = Nothing,
-                        pfcOnboardingVehicleCategory = Nothing,
-                        pfcIsFleetDriver = Just isFleetDriver,
-                        pfcVehicleDocs = vehicleDocuments
-                      },
-                ofiVehicles = []
-              }
-            useUnifiedOnboardingFlagsRecompute
+    void $ runRefreshOnboardingFlagsDriverWithBotApproval (Just person) (Just transporterConfig) True person.id
 
 -- | Throw InvalidRequest if any driver under the fleet has a NEW or
 --   INPROGRESS ride. Used as a guard before flipping fleet enabled to false.
@@ -1551,8 +1521,7 @@ verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqReco
               logError $ "Error while decrypting document number: " <> (req.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
               pure Nothing
             Right registrationNo -> do
-              rcNoEnc <- encrypt registrationNo
-              RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+              RCQuery.findLastVehicleRCWrapper registrationNo
         _ -> pure Nothing
 
       if req.status == "pending" || req.status == "source_down_retrying"

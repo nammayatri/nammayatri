@@ -45,7 +45,9 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -185,7 +187,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier)
+  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
   QRideD.create rideDetails
   fork "updateRiderDetails" $ do
     whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
@@ -204,7 +206,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     fork "schedule pickup progress monitor" $ do
       mbMonitoringTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       whenJust (mbMonitoringTransporterConfig >>= (.pickupStallMonitoringConfig)) $ \monitoringConfig ->
-        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.gracePeriodSec) $
+        -- no separate grace period: the first tick is a baseline (sets bestDistance, no
+        -- fault accrual), so monitoring effectively starts one tick after assignment
+        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.tickIntervalSec) $
           CheckDriverPickupProgressJobData
             { driverId = ride.driverId,
               bookingId = booking.id,
@@ -580,7 +584,6 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         onlinePayment = onlinePayment,
         enableOtpLessRide = enableOtpLessRide,
         cancellationFeeIfCancelled = Nothing,
-        cancellationChargesLogicVersion = Nothing,
         tipAmount = Nothing,
         passedThroughDestination = Nothing,
         deliveryFileIds = Nothing,
@@ -608,7 +611,10 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         sosId = Nothing,
         referralFlagReason = Nothing,
         cancellationFaultRule = Nothing,
-        cancellationFaultVerdict = Nothing
+        cancellationFaultVerdict = Nothing,
+        pickupBehaviour = Nothing,
+        pickupDarkSeconds = Nothing,
+        pickupFaultSeconds = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -632,12 +638,28 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> DTC.TransporterConfig -> Flow ()
+pullExistingRideRequests ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Id DTMM.MerchantOperatingCity ->
+  [SearchRequestForDriver] ->
+  Id Merchant ->
+  Id Person ->
+  Price ->
+  DTC.TransporterConfig ->
+  m ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == quoteDriverId) $ do
-      DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.requestId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
       DP.decrementSrdSentCount driverReq.createdAt driverId
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
@@ -749,3 +771,4 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.AUTO_LITE -> buffer.autorickshaw
     DST.PINK_AUTO -> buffer.autorickshaw
     DST.MAHILA_SHAKTI -> buffer.autorickshaw
+    DST.INSTANT_AUTO -> buffer.autorickshaw

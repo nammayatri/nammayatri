@@ -337,7 +337,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just searchRequest.merchantId) (show Domain.MOBILITY) (Just searchRequest.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just searchRequest.merchantId) (show Domain.MOBILITY) (Just searchRequest.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
   blackListedVehicles <- Utils.getBlackListedVehicles searchRequest.merchantOperatingCityId becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
@@ -414,7 +414,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 billingCategory = Nothing,
                 preferSafetyPlus = Nothing,
                 driverPreference = Nothing,
-                selectedOfferId = Nothing
+                selectedOfferId = Nothing,
+                -- A reserved ride is never a walk-and-save shadow: its standing pickup is
+                -- one the customer already committed to, so no endpoint has moved to name.
+                suggestedPickupAddress = Nothing,
+                suggestedDropAddress = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq Nothing
     {- Author: Hemant Mangla

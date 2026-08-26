@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Export the BPP dashboard tables to CSV.
--- RUN AGAINST THE **atlas_bpp_dashboard** DATABASE, from the directory the files go in:
---     cd /tmp/unify && psql atlas_bpp_dashboard -f <this file>
+-- RUN AGAINST THE **atlas_dashboard** DATABASE, from the directory the files go in:
+--     cd /tmp/unify && psql atlas_dashboard -f <this file>
 -- psql does not interpolate variables inside \copy, so paths are literal.
 -- ============================================================================
 \set ON_ERROR_STOP on

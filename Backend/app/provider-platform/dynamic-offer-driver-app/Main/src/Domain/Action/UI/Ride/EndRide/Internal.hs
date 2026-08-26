@@ -92,7 +92,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferWithoutAttribution, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -114,6 +114,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
@@ -190,7 +191,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
-  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier)
+  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
@@ -282,6 +283,7 @@ processEndRideFinance ::
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
@@ -465,7 +467,9 @@ createDriverWalletTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Ride.Ride ->
   SRB.Booking ->

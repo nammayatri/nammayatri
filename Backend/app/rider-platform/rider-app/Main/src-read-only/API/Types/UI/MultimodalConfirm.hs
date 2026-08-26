@@ -157,7 +157,10 @@ data JourneyFeedBackForm = JourneyFeedBackForm {additionalFeedBack :: Kernel.Pre
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoResp = JourneyInfoResp
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { boardingConfirmationReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    boardingConfirmationRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    boardingDistanceFromBusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    createdAt :: Kernel.Prelude.UTCTime,
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -288,7 +291,11 @@ data MultimodalUserPreferences = MultimodalUserPreferences
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: Kernel.Prelude.Text}
+data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq
+  { forceCheckIn :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    supportsBoardingConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -361,8 +368,11 @@ data RouteServiceabilityReq = RouteServiceabilityReq
   { allowClusteredStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    journeyId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    latLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic, Show)

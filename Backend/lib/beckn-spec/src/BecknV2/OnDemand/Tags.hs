@@ -51,6 +51,9 @@ data Taggings = Taggings
     orderTags :: TagList,
     paymentTags :: TagList
   }
+  -- JSON so the BAP can park a search's taggings in Redis and rebuild the same
+  -- Beckn request later (see SharedLogic.BetterRoutePointCache).
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance Default Taggings where
   def = Taggings [] [] [] [] [] [] [] [] []
@@ -88,6 +91,7 @@ data BecknTagGroup
   | VEHICLE_AGE_INFO
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
+  | CANCELLATION_CONSEQUENCE
   | UPDATE_DETAILS
   | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
@@ -364,6 +368,8 @@ data BecknTag
   | PLATFORM_FEE_SGST
   | TOLL_CHARGES
   | CANCELLATION_CHARGES
+  | CANCELLATION_COLLECTION_MODE -- CANCELLATION_CONSEQUENCE: NextRideDues | ImmediateCapture (BPP consequence matrix)
+  | CUSTOMER_CANCELLATION_NOTIFICATION_KEY -- CANCELLATION_CONSEQUENCE: BAP push-notification key from the matrix row
   | TIP_OPTIONS
   | CONGESTION_CHARGE_PERCENTAGE
   | UPDATED_ESTIMATED_DISTANCE
@@ -434,7 +440,7 @@ data BecknTag
   | FIXED_CARD_CHARGE
   | COMMISSION
   | PAYMENT_CHARGE -- Stripe payment-gateway charge amount (settlement detail, like COMMISSION)
-  | PAYMENT_CHARGE_BEARER -- who bears the payment charge: PAYMENT_CUSTOMER / PAYMENT_DRIVER / PAYMENT_PLATFORM / PAYMENT_CUSTOMER_AND_DRIVER
+  | PAYMENT_CHARGE_BEARER
   | -- Info tags
     SPECIAL_LOCATION_TAG
   | SPECIAL_LOCATION_NAME
@@ -789,6 +795,9 @@ instance CompleteTag BecknTag where
     SAFETY_REASON_CODE -> SAFETY_ALERT
     MESSAGE -> DRIVER_NEW_MESSAGE
     CANCELLATION_REASON -> PREVIOUS_CANCELLATION_REASONS
+    -- Cancellation consequence tags (on_cancel, from the BPP consequence matrix)
+    CANCELLATION_COLLECTION_MODE -> CANCELLATION_CONSEQUENCE
+    CUSTOMER_CANCELLATION_NOTIFICATION_KEY -> CANCELLATION_CONSEQUENCE
     OTHER_SELECT_ESTIMATES -> ESTIMATIONS
     MAX_ESTIMATED_DISTANCE -> ESTIMATIONS
     -- Forward batching tags

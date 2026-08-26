@@ -54,6 +54,7 @@ data SearchRequest = SearchRequest
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Bool,
     isReallocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReserveRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,

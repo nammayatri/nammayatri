@@ -130,6 +130,7 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
     internalClickhouseAPIKey :: Text,
+    assetPublisherApiKey :: Text,
     frfsMetricsRateLimitHits :: Int,
     frfsMetricsRateLimitWindowSec :: Int,
     googleTranslateUrl :: BaseUrl,
@@ -157,6 +158,7 @@ data AppCfg = AppCfg
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     dashboardToken :: Text,
+    driverDashboardToken :: Maybe Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
@@ -164,6 +166,8 @@ data AppCfg = AppCfg
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     kvConfigUpdateFrequency :: Int,
     incomingAPIResponseTimeout :: Int,
@@ -189,6 +193,7 @@ data AppCfg = AppCfg
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
@@ -243,6 +248,7 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
     internalClickhouseAPIKey :: Text,
+    assetPublisherApiKey :: Text,
     frfsMetricsRateLimitHits :: Int,
     frfsMetricsRateLimitWindowSec :: Int,
     googleTranslateUrl :: BaseUrl,
@@ -288,6 +294,7 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
     dashboardToken :: Text,
+    driverDashboardToken :: Maybe Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
@@ -296,6 +303,8 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
     incomingAPIResponseTimeout :: Int,
@@ -323,6 +332,7 @@ data AppEnv = AppEnv
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     googleSAPrivateKey :: String,
     ltsCfg :: LocationTrackingeServiceConfig,
     locationTrackingServiceKey :: Text,
@@ -470,6 +480,7 @@ instance Registry Flow where
       fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
       fetchUrlFromList priorityList = do
         case priorityList of
+          (Fabric : rest) -> fetchUrlFromList rest
           (NY : _) -> asks (.nyRegistryUrl)
           _ -> asks (.ondcRegistryUrl)
       retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)

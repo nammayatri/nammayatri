@@ -917,7 +917,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) (Just (SQMSC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
-      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQBC.findByMerchantId (Just merchantOperatingCity.merchantId)))
+      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims, becknProtocol = Nothing}) (Just (SQBC.findByMerchantId (Just merchantOperatingCity.merchantId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPushNotificationRider -> do
       cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId, key = dimLookup "key" dims, tripCategory = dimLookup "tripCategory" dims}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))

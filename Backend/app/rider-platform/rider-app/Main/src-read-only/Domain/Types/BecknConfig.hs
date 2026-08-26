@@ -6,6 +6,7 @@ module Domain.Types.BecknConfig where
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -15,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
   { bapIFSC :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    becknProtocol :: Kernel.Prelude.Maybe Domain.Types.BecknProtocol,
     buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancelTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     collectedBy :: BecknV2.FRFS.Enums.Network,
@@ -24,6 +26,7 @@ data BecknConfig = BecknConfig
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    networkId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ratingTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registryUrl :: Servant.Client.Core.BaseUrl,

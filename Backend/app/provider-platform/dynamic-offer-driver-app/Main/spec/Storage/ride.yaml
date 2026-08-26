@@ -46,6 +46,8 @@ Ride:
     EstimatedEndTimeRange:
       start: UTCTime
       end: UTCTime
+    PickupBehaviour:
+      enum: "REACHED_PICKUP,PROGRESSING,DETOURING,STALLED,MOVING_AWAY,GPS_DARK"
   fields:
     id: Id Ride
     bookingId: Id Booking
@@ -125,7 +127,6 @@ Ride:
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
-    cancellationChargesLogicVersion: Maybe Int
     cancellationFaultVerdict: Maybe Text
     cancellationFaultRule: Maybe Text
     tipAmount: Maybe HighPrecMoney
@@ -149,6 +150,9 @@ Ride:
     subscriptionPurchaseIds: Maybe [Id SubscriptionPurchase]
     sosId: Maybe (Id Sos)
     referralFlagReason: Maybe PayoutFlagReason
+    pickupBehaviour: Maybe PickupBehaviour
+    pickupFaultSeconds: Maybe Int
+    pickupDarkSeconds: Maybe Int
 
   sqlType:
     id: character(36)
@@ -311,7 +315,7 @@ Ride:
   queries:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
-      params: [cancellationFeeIfCancelled, cancellationChargesLogicVersion]
+      params: [cancellationFeeIfCancelled]
       where: id
     updateCancellationFaultVerdict:
       kvFunction: updateOneWithKV
@@ -363,7 +367,7 @@ Ride:
       where: id
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
-      params: [cancellationChargesOnCancel, cancellationChargesLogicVersion]
+      params: [cancellationChargesOnCancel]
       where: id
     updateDriverGpsTurnedOff:
       kvFunction: updateOneWithKV
@@ -387,6 +391,10 @@ Ride:
     updateReferralFlagReason:
       kvFunction: updateOneWithKV
       params: [referralFlagReason]
+      where: id
+    updatePickupJourney:
+      kvFunction: updateOneWithKV
+      params: [pickupBehaviour, pickupFaultSeconds, pickupDarkSeconds]
       where: id
 
   excludedDefaultQueries:

@@ -1,0 +1,27 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+
+# Display-only lookup: maps a geohash cell to the human-readable area name shown
+# to the driver when picking preferred areas on the map. Never consulted by
+# dispatch -- driver-pool matching works purely off the geohash strings stored on
+# driver_information, so a missing or stale row here can never affect allocation.
+GeohashArea:
+  tableName: geohash_area
+  derives: "Generic,Show,Read,FromJSON,ToJSON"
+  fields:
+    id: Id GeohashArea
+    geohash: Text
+    areaName: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCity:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]

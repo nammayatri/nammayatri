@@ -103,8 +103,10 @@ Booking:
     isReferredRide: Maybe Bool
     isSafetyPlus : Bool
     isPetRide: Bool
+    preferenceMatchScore: Maybe Double
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
+    isAutoAccepted: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime

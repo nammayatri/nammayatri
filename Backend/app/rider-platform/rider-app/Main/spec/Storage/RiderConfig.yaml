@@ -123,6 +123,7 @@ RiderConfig:
     seatBookingCleanupTtl: Maybe Int
     distanceWeightage: Int
     isAvoidToll: Bool
+    enableRouteCacheRead: Maybe Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     passExpiryReminderDays: Maybe Int
@@ -163,6 +164,7 @@ RiderConfig:
     busTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    busApproachingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -221,6 +223,10 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
+    enableBoardingProximityCheck: Maybe Bool
+    boardingMatchRadiusInMeters: Maybe Double
+    boardingBusPingMaxAgeSeconds: Maybe Double
+    boardingMaxBookingStartDriftSeconds: Maybe Double
     busTierSortingConfig: "Maybe [BusTierSortingConfig]"
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
@@ -292,6 +298,22 @@ RiderConfig:
     # the absolute floor and ceiling around these.
     betterPointMaxWalkPctOfRide: Maybe Double
     betterPointMinSavingPctOfRide: Maybe Double
+    # How far off the parent's route a customer-chosen point may sit and still be priced by
+    # trimming that route. Beyond this the trim would describe a ride that does not pass
+    # through the point at all, so a fresh route is resolved instead -- one map call, on a
+    # path the customer is explicitly waiting on.
+    betterPointMaxOffRouteDistance: Maybe Meters
+    # Off/unset: the shape we would pick is priced before /rideSearch answers, so it arrives
+    # with the estimates. On: it is dispatched with the others and collected from
+    # /alternateSuggestion/{searchId}/result instead, which keeps the provider round trip off
+    # the search's critical path at the cost of the suggestion appearing a beat later.
+    betterPointLoadSuggestionsAsync: Maybe Bool
+    # Whether select may reverse-geocode a moved walk-and-save pickup/drop that the app did
+    # not name. Off by default: it is a paid map call on the booking path, and the app
+    # geocodes its own markers, so the fallback should be opted into rather than assumed.
+    # With it off an unnamed point keeps the customer's own address, which is a short walk
+    # away -- a worse name, not a wrong place.
+    betterPointResolvePlaceNameOnSelect: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -572,6 +594,7 @@ RiderConfig:
     busTransitTypes: text []
     subwayTransitTypes: text []
     busTrackingNotificationTiers: text []
+    busApproachingNotificationTiers: text []
     domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []

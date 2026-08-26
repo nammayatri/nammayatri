@@ -21,6 +21,7 @@ import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (DbHash, unDbHash)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -29,7 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+import qualified SharedLogic.CancellationDues as SCD
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -70,7 +71,7 @@ data CancellationDueBreakup = CancellationDueBreakup
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
-    cancellationLedgerAction :: UserCancellationDues.CancellationLedgerAction,
+    cancellationLedgerAction :: SCD.CancellationLedgerAction,
     bppRideId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -119,7 +120,9 @@ customerCancellationDuesSync ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Merchant ->
   Context.City ->

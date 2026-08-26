@@ -89,9 +89,11 @@ library
       API.Internal.SyncSearch
       API.Internal.TollList
       API.Internal.TollUpsert
+      API.Internal.VehicleServiceTierList
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.OnixBppWebhook
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -174,6 +176,7 @@ library
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
+      Domain.Action.Dashboard.AppManagement.FrfsFleetOperator
       Domain.Action.Dashboard.AppManagement.Overlay
       Domain.Action.Dashboard.AppManagement.Penalty
       Domain.Action.Dashboard.AppManagement.Subscription
@@ -193,6 +196,7 @@ library
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
+      Domain.Action.Dashboard.Management.CancellationConsequence
       Domain.Action.Dashboard.Management.CoinsConfig
       Domain.Action.Dashboard.Management.Communication
       Domain.Action.Dashboard.Management.DomainDiscountConfig
@@ -216,6 +220,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
@@ -272,6 +277,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
+      Domain.Action.Internal.VehicleServiceTierList
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
@@ -286,6 +292,7 @@ library
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverGoHomeRequest
@@ -413,6 +420,7 @@ library
       Domain.Types.DriverWallet
       Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
+      Domain.Types.Extra.CancellationConsequenceMatrix
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
@@ -531,9 +539,10 @@ library
       SharedLogic.CallIGMBAP
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
-      SharedLogic.CancellationCoins
+      SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
       SharedLogic.CancellationFault
+      SharedLogic.CancellationOrchestrator
       SharedLogic.CancellationSignals
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
@@ -545,6 +554,7 @@ library
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
+      SharedLogic.DriverOnboarding.DocumentIdentifier
       SharedLogic.DriverOnboarding.OnboardingFlags.Checks
       SharedLogic.DriverOnboarding.OnboardingFlags.Flow
       SharedLogic.DriverOnboarding.OnboardingFlags.Guard
@@ -552,12 +562,14 @@ library
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool
+      SharedLogic.DriverPool.AreaPreference
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
@@ -578,6 +590,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.InvoiceRegeneration
+      SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
@@ -590,10 +603,12 @@ library
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
+      SharedLogic.Finance.WalletAccount
       SharedLogic.Fleet
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
+      SharedLogic.GatewayDispatch
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
@@ -623,6 +638,8 @@ library
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
+      SharedLogic.ScheduledBooking.OverlapCheck
+      SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
@@ -633,7 +650,6 @@ library
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type
-      SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
       SharedLogic.VehicleServiceTierAreaRestriction
       SharedLogic.WMB
@@ -698,6 +714,7 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BlockedRoute
+      Storage.CachedQueries.CancellationConsequenceMatrix
       Storage.CachedQueries.CoinsConfig
       Storage.CachedQueries.DocumentVerificationConfig
       Storage.CachedQueries.DocumentVerificationStagesConfig
@@ -711,6 +728,7 @@ library
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+      Storage.CachedQueries.GeohashArea
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.IncentiveJourney
       Storage.CachedQueries.IncentiveJourneyMilestone
@@ -802,6 +820,7 @@ library
       Storage.ConfigPilot.Config.UiDriverConfig
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
+      Storage.Queries.BecknConfigExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
@@ -1029,6 +1048,7 @@ library
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.DriverWallet
+      API.Action.Dashboard.AppManagement.FrfsFleetOperator
       API.Action.Dashboard.AppManagement.Overlay
       API.Action.Dashboard.AppManagement.Penalty
       API.Action.Dashboard.AppManagement.Subscription
@@ -1044,6 +1064,7 @@ library
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Account
       API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.CancellationConsequence
       API.Action.Dashboard.Management.CoinsConfig
       API.Action.Dashboard.Management.Communication
       API.Action.Dashboard.Management.DomainDiscountConfig
@@ -1067,6 +1088,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.ScheduledBooking
       API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
@@ -1091,6 +1113,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
+      API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverDocument
       API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
@@ -1148,10 +1171,12 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.DriverWallet
+      API.Types.Dashboard.AppManagement.Endpoints.FrfsFleetOperator
       API.Types.Dashboard.AppManagement.Endpoints.Overlay
       API.Types.Dashboard.AppManagement.Endpoints.Penalty
       API.Types.Dashboard.AppManagement.Endpoints.Subscription
       API.Types.Dashboard.AppManagement.Endpoints.SubscriptionTransaction
+      API.Types.Dashboard.AppManagement.FrfsFleetOperator
       API.Types.Dashboard.AppManagement.Overlay
       API.Types.Dashboard.AppManagement.Penalty
       API.Types.Dashboard.AppManagement.Subscription
@@ -1174,6 +1199,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
+      API.Types.UI.DriverAreaPreference
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
@@ -1243,6 +1269,7 @@ library
       Domain.Types.CallFeedbackOptions
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
+      Domain.Types.CancellationConsequenceMatrix
       Domain.Types.CancellationDuesDetails
       Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
@@ -1306,6 +1333,7 @@ library
       Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Domain.Types.GeohashArea
       Domain.Types.GoHomeConfig
       Domain.Types.HyperVergeSdkLogs
       Domain.Types.HyperVergeVerification
@@ -1433,6 +1461,7 @@ library
       Storage.Beam.CallFeedbackOptions
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
+      Storage.Beam.CancellationConsequenceMatrix
       Storage.Beam.CancellationDuesDetails
       Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
@@ -1496,6 +1525,7 @@ library
       Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Storage.Beam.GeohashArea
       Storage.Beam.GoHomeConfig
       Storage.Beam.HyperVergeSdkLogs
       Storage.Beam.HyperVergeVerification
@@ -1628,6 +1658,7 @@ library
       Storage.Queries.CallFeedbackOptions
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
+      Storage.Queries.CancellationConsequenceMatrix
       Storage.Queries.CancellationDuesDetails
       Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
@@ -1691,6 +1722,7 @@ library
       Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Storage.Queries.GeohashArea
       Storage.Queries.GoHomeConfig
       Storage.Queries.HyperVergeSdkLogs
       Storage.Queries.HyperVergeVerification
@@ -1739,6 +1771,7 @@ library
       Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.AlertRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
+      Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent

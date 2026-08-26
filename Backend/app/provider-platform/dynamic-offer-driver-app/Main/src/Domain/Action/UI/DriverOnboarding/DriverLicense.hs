@@ -44,6 +44,7 @@ import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -122,9 +123,9 @@ validateDriverDLReqRegexFlow now DriverDLReq {..} =
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
-isDLNumberFormatValid :: OnboardingFlow m r => DTO.DocumentVerificationConfig -> Text -> m Bool
-isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
-  validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
+isDLNumberFormatValid :: OnboardingFlow m r => DTC.TransporterConfig -> DTO.DocumentVerificationConfig -> Text -> m Bool
+isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLNumber =
+  validateByRegex "DL" transporterConfig documentVerificationConfig normalizedDLNumber (pure True)
 
 verifyDL ::
   OnboardingFlow m r =>
@@ -139,6 +140,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
   now <- getCurrentTime
   documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR req.vehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
       hasRegexRules = not (null regexRules)
   if hasRegexRules
@@ -149,9 +151,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let normalizedDLNumber = VC.normalizeDocumentNumber driverLicenseNumber
-  checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
+  let normalizedDLNumber = normalizeDocumentIdentifier transporterConfig driverLicenseNumber
+  checkDLFormat <- isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLNumber
   unless checkDLFormat $
     throwError (InvalidRequest "DL number format is not valid")
   (extractedNameOnCard, dateOfBirth) <-
@@ -175,8 +176,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                   then return (Nothing, Nothing)
                   else case resp.extractedDL of
                     Just extractedDL -> do
-                      let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-                      let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+                      let extractDLNumber = preProcessDocumentIdentifier transporterConfig <$> extractedDL.dlNumber
+                      let dlNumber = preProcessDocumentIdentifier transporterConfig <$> Just driverLicenseNumber
                       let _nameOnCard = extractedDL.nameOnCard
                       -- disable this check for debugging with mock-idfy
                       cacheExtractedDl person.id extractDLNumber operatingCity

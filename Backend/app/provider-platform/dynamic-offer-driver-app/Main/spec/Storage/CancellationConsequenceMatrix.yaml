@@ -1,0 +1,80 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TripCategory: Domain.Types.Common
+  ServiceTierType: Domain.Types.Common
+  Area: Lib.Types.SpecialLocation
+  ConsequenceDeduction: Domain.Types.Extra.CancellationConsequenceMatrix
+  CommissionAndTax: Domain.Types.Extra.CancellationConsequenceMatrix
+  CancellationType: Lib.DriverCoins.Types
+  PaymentInstrument: Domain.Types.MerchantPaymentMethod
+
+# One row = "given who was at fault and why, in this city, for this kind of trip — what
+# exactly happens to whom and how it is collected". Replaces the USER_CANCELLATION_DUES
+# and CANCELLATION_COIN_POLICY amount rules; JsonLogic remains only for fault attribution
+# (CANCELLATION_FAULT_VERDICT). The matrix is AUTHORITATIVE: no matching row means no
+# consequences (logged), there is no fallback.
+#
+# Dimensions (null = wildcard), resolved most-specific-wins with fixed weights:
+#   faultRule (32) > faultVerdict (16) > cancelledBy (8) > tripCategory (4)
+#     > vehicleServiceTier (2) > area (1) + paymentInstrument (1)
+# faultVerdict values: show FaultParty (DriverAtFault/CustomerAtFault/SharedFault/NoFault).
+# cancelledBy values: show CancellationType (CancellationByDriver/CancellationByCustomer).
+# faultRule values: names from cancellation_fault_rule_registry (global).
+# paymentInstrument values: show PaymentInstrument (e.g. Cash, UPI).
+# See dev/docs/cancellation-consequence-matrix-plan.md.
+CancellationConsequenceMatrix:
+  tableName: cancellation_consequence_matrix
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+
+  types:
+    ConsequenceCollectionMode:
+      enum: "NextRideDues,ImmediateCapture"
+
+  fields:
+    id: Id CancellationConsequenceMatrix
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    faultVerdict: Maybe Text
+    faultRule: Maybe Text
+    cancelledBy: Maybe CancellationType
+    tripCategory: Maybe TripCategory
+    vehicleServiceTier: Maybe ServiceTierType
+    area: Maybe Area
+    paymentInstrument: Maybe PaymentInstrument
+    customerDeduction: Maybe ConsequenceDeduction
+    customerCommissionAndTax: Maybe CommissionAndTax
+    driverDeduction: Maybe ConsequenceDeduction
+    collectionMode: Maybe ConsequenceCollectionMode
+    waiveOffAllowed: Bool
+    maxWaiveOffsPerPeriod: Maybe Int
+    waiveOffPeriodDays: Maybe Int
+    blacklistDriverForRiderSeconds: Maybe Seconds
+    countsTowardDriverCancellationRate: Bool
+    countsTowardCustomerCancellationStats: Bool
+    exemptDashboardBookings: Bool
+    driverNotificationKey: Maybe Text
+    customerNotificationKey: Maybe Text
+    active: Bool
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    customerDeduction: text
+    customerCommissionAndTax: text
+    driverDeduction: text
+    cancelledBy: text
+    paymentInstrument: text
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
+
+    updateActiveById:
+      kvFunction: updateOneWithKV
+      params: [active]
+      where:
+        id

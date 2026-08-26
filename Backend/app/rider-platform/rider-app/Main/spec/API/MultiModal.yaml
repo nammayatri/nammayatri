@@ -47,6 +47,7 @@ imports:
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
+  FRFSRescheduleReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
   PaymentStatusResp: Lib.Payment.Domain.Action
   CumulativeOfferResp: SharedLogic.Offer
@@ -96,6 +97,9 @@ types:
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     isSingleMode: Maybe Bool
     offer: Maybe CumulativeOfferResp
+    boardingConfirmationRequired: Maybe Bool
+    boardingDistanceFromBusMeters: Maybe Double
+    boardingConfirmationReason: Maybe Text
     derive: "Show"
 
   LegStatus:
@@ -403,6 +407,9 @@ types:
     vehicleNumber: Maybe Text
     allowUpcomingTrips: Maybe Bool
     allowClusteredStops: Maybe Bool
+    journeyId: Maybe Text
+    latLong: Maybe LatLong
+    timestamp: Maybe UTCTime
     derive: "Show"
 
   AvailableRoute:
@@ -429,7 +436,9 @@ types:
     shortName: Text
 
   OnboardedVehicleDetailsReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+    forceCheckIn: Maybe Bool
+    supportsBoardingConfirmation: Maybe Bool
 
   TowerInfo:
     networkType: Text
@@ -779,6 +788,17 @@ apis:
         type: ChangeStopsReq
       response:
         type: ChangeStopsResp
+
+  # Reschedule a confirmed reserved-seat FRFS leg to another trip on the same route/stops, same fare
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/reschedule
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: FRFSRescheduleReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
       endpoint: /multimodal/routeAvailability

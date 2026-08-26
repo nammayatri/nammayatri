@@ -44,7 +44,6 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
@@ -129,12 +128,12 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer (DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) Nothing True) mbRide
+              mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason)) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of
                 (Just priceEntity, Just ride) ->
-                  QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) mbLogicVersion ride.id
+                  QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
                 _ -> return ()
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2

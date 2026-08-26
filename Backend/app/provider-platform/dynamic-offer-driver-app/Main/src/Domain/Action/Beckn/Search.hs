@@ -22,6 +22,7 @@ module Domain.Action.Beckn.Search
     getNearestOperatingAndSourceCity,
     handler,
     validateRequest,
+    validateScheduledBookingWindowForSearch,
     buildEstimate,
     getIsInterCity,
     searchTxnDedupKey,
@@ -30,6 +31,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
+import Data.Char (isDigit)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import Data.List (sortBy)
@@ -99,8 +101,10 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.ScheduledBooking.WindowValidation as SWV
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.SpecialZone ()
@@ -183,7 +187,11 @@ data DSearchReq = DSearchReq
     -- select/init resolve through estimate.requestId -- but it is a second search for one
     -- customer intent, so it must not fire search/estimate events, add namma tags, or feed
     -- demand hotspots. Always False on the Beckn path.
-    isShadowSearch :: Bool
+    isShadowSearch :: Bool,
+    -- | The search this one shadows, when it is a walk-and-save suggestion. Its dynamic
+    -- pricing inputs are shared with that search so both are priced against the same
+    -- congestion -- see 'dynamicPricingInputsKey'.
+    parentTransactionId :: Maybe Text
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -272,35 +280,42 @@ getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation to
       checkRouteServiceability merchantOpCityId (index, routePoints, routeDistance, routeDuration) responses
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
-handler ValidatedDSearchReq {..} sReq = do
+handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   L.setOptionLocal TxnIdKey sReq.transactionId
   bapMetadata <- mkBapMetaData
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
-  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity)
+  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) sReq.routeDistance)
   sessiontoken <- generateGUIDText
+  -- A shadow reuses what the customer's own search published, so the suggestion is not
+  -- charged congestion that search escaped. The customer's search only publishes -- it
+  -- never consumes -- so a shadow can never decide the price of the real ride.
+  let dpInputsSharing = case sReq.parentTransactionId of
+        Just parentTxnId | sReq.isShadowSearch -> Just (ConsumeDpInputs parentTxnId)
+        Just ownTxnId -> Just (PublishDpInputs ownTxnId)
+        Nothing -> Nothing
   let fromLocGeohashh = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (sReq.pickupLocation.lat, sReq.pickupLocation.lon)
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation
-  fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
+  fromLocation <- withTimeAPI "search" "buildFromLocation" $ buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
+  stops <- withTimeAPI "search" "buildStopLocations" $ mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbStaticDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbTollIds, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed, mbTollInfo) <-
     case (sReq.dropLocation, sReq.fromSpecialLocationId, sReq.toSpecialLocationId) of
       (Just dropLoc, Nothing, Nothing) -> do
-        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes sReq.transactionId
+        serviceableRoute <- withTimeAPI "search" "getRouteServiceability" $ getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes sReq.transactionId
         let estimatedDistance = serviceableRoute.routeDistance
             estimatedDuration = serviceableRoute.routeDuration
         logDebug $ "distance: " <> show estimatedDistance
         let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance cityDistanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints, routeToken = serviceableRoute.routeToken, trafficSegments = serviceableRoute.routeTrafficSegments}
         --------------build stops locations ---------------
-        toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
+        toLocation <- withTimeAPI "search" "buildToLocation" $ buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
         let setRouteInfo transactionId =
               ( do
                   Redis.setExp (searchRequestKey transactionId) routeInfo 3600
                   Redis.setExp (multipleRouteKey transactionId) (createMultipleRouteInfo <$> serviceableRoute.multipleRoutes) 3600
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
-        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId.getId Nothing Nothing serviceableRoute.routePoints
+        mbTollChargesAndNames <- withTimeAPI "search" "getTollInfoOnRoute" $ getTollInfoOnRoute merchantOpCityId.getId Nothing Nothing serviceableRoute.routePoints
         return
           ( Just setRouteInfo,
             Just toLocation,
@@ -317,23 +332,23 @@ handler ValidatedDSearchReq {..} sReq = do
             mbTollChargesAndNames
           )
       (Just dropLoc, Just _, Just _) -> do
-        toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
+        toLocation <- withTimeAPI "search" "buildToLocation" $ buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
         return (Nothing, Just toLocation, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOpCityId) -- TODO: isn't used much, so fo
-  (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "endRide" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  (_, mbVersion) <- withTimeAPI "search" "getAppDynamicLogic" $ getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
+  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
           <|> Just allFarePoliciesProduct.area
-  mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
+  mbVehicleServiceTier <- withTimeAPI "search" "getVehicleServiceTierForMeterRideSearch" $ getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
-  (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- getSpecialZoneQueueInfo resolvedArea fromLocation
+  (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- withTimeAPI "search" "getSpecialZoneQueueInfo" $ getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
@@ -346,7 +361,7 @@ handler ValidatedDSearchReq {..} sReq = do
         case sReq.customerPhoneNum of
           Just number -> do
             -- consent tag is only emitted at confirm, not search, so no consent to record yet here
-            (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False Nothing
+            (riderDetails, isNewRider) <- withTimeAPI "search" "getRiderDetails" $ SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False Nothing
             -- A shadow search runs concurrently with the real one for the same rider, so
             -- both would try to insert the same new rider. Leave the insert to the real
             -- search; the dues on the freshly built record are what a new rider owes anyway.
@@ -357,11 +372,11 @@ handler ValidatedDSearchReq {..} sReq = do
             return 0
       else return 0
   let mbDriverInfo = driverIdForSearch
-  searchReq <- buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
+  searchReq <- withTimeAPI "search" "buildSearchRequest" $ buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
-  void $ QSR.createDSReq searchReq
+  void $ withTimeAPI "search" "createSearchRequest" $ QSR.createDSReq searchReq
 
   unless sReq.isShadowSearch $ do
     fork "Add Namma Tags" $ do
@@ -379,14 +394,14 @@ handler ValidatedDSearchReq {..} sReq = do
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
   -- computation at this stage.
-  (pool, selectedFarePolicies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
+  (pool, selectedFarePolicies) <- withTimeAPI "search" "selectDriversAndMatchFarePolicies" $ selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
   let driverPool = nonEmpty pool
-  navGateMap <- buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
+  navGateMap <- withTimeAPI "search" "buildNavGateMap" $ buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig navGateMap
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig navGateMap
   logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePolicies) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
   logInfo $ "DEBUG: selectedFarePolicies tripCategories=" <> show (map (\fp -> (fp.tripCategory, fp.vehicleServiceTier)) selectedFarePolicies)
-  (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
+  (estimates', quotes) <- withTimeAPI "search" "buildEstimatesAndQuotes" $ foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
   logInfo $ "DEBUG: estimates count=" <> show (length estimates') <> " quotes count=" <> show (length quotes)
   when (null estimates' && null quotes) $ logError $ "No estimates or quotes generated for searchRequestId: " <> searchReq.id.getId <> ", transactionId: " <> sReq.transactionId <> ", selectedFarePoliciesCount: " <> show (length selectedFarePolicies) <> ", riderPreferredOption: " <> show searchReq.riderPreferredOption <> ", tripCategory: " <> show searchReq.tripCategory <> ", hasToLocation: " <> show (isJust searchReq.toLocation)
 
@@ -399,13 +414,13 @@ handler ValidatedDSearchReq {..} sReq = do
         est <- transformReserveRideEsttoEst (fromJust reserveRideEstimate)
         return [est]
 
-  QEst.createMany estimates
-  for_ quotes QQuote.create
+  withTimeAPI "search" "createEstimates" $ QEst.createMany estimates
+  withTimeAPI "search" "createQuotes" $ for_ quotes QQuote.create
 
   unless sReq.isShadowSearch $
     forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
-  driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
-  driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
+  driverInfoQuotes <- withTimeAPI "search" "addNearestDriverInfoQuotes" $ addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
+  driverInfoEstimates <- withTimeAPI "search" "addNearestDriverInfoEstimates" $ addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
@@ -697,6 +712,7 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         parcelType = Nothing,
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
+        isPetRide = False,
         numberOfLuggages = numberOfLuggages,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,
@@ -982,6 +998,10 @@ validateRequest merchant sReq = do
       isReserveRide = sReq.isReserveRide
       reserveRideEstimate = sReq.reserveRideEstimate
       numberOfLuggages = sReq.numberOfLuggages
+  when possibleTripOption.isScheduled $
+    case SWV.validateScheduledBookingWindow transporterConfig.scheduledRideConfig.minLeadTime transporterConfig.scheduledRideConfig.maxLeadTime now sReq.pickupTime of
+      Left err -> throwError err
+      Right () -> pure ()
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->
@@ -1033,10 +1053,23 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
     _ -> pure (False, False, Nothing)
 
+isScheduledForSearch :: DTMT.TransporterConfig -> UTCTime -> DSearchReq -> Bool
+isScheduledForSearch tConf now dsReq =
+  maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+
+validateScheduledBookingWindowForSearch :: Id DMOC.MerchantOperatingCity -> DSearchReq -> Flow ()
+validateScheduledBookingWindowForSearch merchantOpCityId sReq = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  now <- getCurrentTime
+  when (isScheduledForSearch transporterConfig now sReq) $
+    case SWV.validateScheduledBookingWindow transporterConfig.scheduledRideConfig.minLeadTime transporterConfig.scheduledRideConfig.maxLeadTime now sReq.pickupTime of
+      Left err -> throwError err
+      Right () -> pure ()
+
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+        if isScheduledForSearch tConf now dsReq
           then (dsReq.pickupTime, True)
           else (now, False)
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
@@ -1223,13 +1256,27 @@ getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do
 
 decodeAddress :: BA.Address -> Maybe Text
 decodeAddress BA.Address {..} = do
-  let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
-  if null strictFields
+  let raw = catMaybes [door, building, street, locality, city, state, country]
+      tokens = filter (not . T.null) $ map (T.strip . stripPincode) $ concatMap (T.splitOn ",") raw
+      deduped = dedupCI tokens
+  if null deduped
     then Nothing
-    else Just $ T.intercalate ", " strictFields
+    else Just $ T.intercalate ", " deduped
 
-isEmpty :: Maybe Text -> Bool
-isEmpty = maybe True (T.null . T.replace " " "")
+stripPincode :: Text -> Text
+stripPincode = T.strip . T.unwords . filter (not . isPincode) . T.words
+  where
+    isPincode t = T.length t == 6 && T.all isDigit t
+
+dedupCI :: [Text] -> [Text]
+dedupCI = go []
+  where
+    go _ [] = []
+    go seen (x : xs)
+      | key `elem` seen = go seen xs
+      | otherwise = x : go (key : seen) xs
+      where
+        key = T.toLower x
 
 transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
 transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do

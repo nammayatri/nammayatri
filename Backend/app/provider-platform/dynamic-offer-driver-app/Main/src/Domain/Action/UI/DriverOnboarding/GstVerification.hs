@@ -56,6 +56,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Common as SCommonOnb
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -143,7 +144,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         -- Inside the lock so the read of the existing PAN and the create of this GST
         -- are atomic w.r.t. a concurrent PAN upload for the same person (TOCTOU).
         when gstPanLinkCheckRequired $
-          assertUploadedGstLinkedToExistingPan person req.gstin (Id req.imageId)
+          assertUploadedGstLinkedToExistingPan transporterConfig person req.gstin (Id req.imageId)
         case mbGstVerificationService of
           Just VI.Idfy -> do
             mdriverGstInformation <- DGQuery.findByDriverId person.id
@@ -218,8 +219,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         if DCommon.checkFleetOwnerRole person.role
           then do
             fodvc <-
-              getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, role = Just [person.role]}) Nothing
-                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+              getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, role = Nothing}) Nothing
+                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate)) . SCommonOnb.findFleetConfigForRole ODC.GSTCertificate person.role
             pure fodvc.checkExtraction
           else do
             dvc <-
@@ -236,7 +237,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
       let validateExtractedGst resp = case resp.extractedGST of
             Just extractedGST -> do
-              let extractedGstNo = removeSpaceAndDash <$> extractedGST.gstin
+              let extractedGstNo = preProcessDocumentIdentifier transporterConfig <$> extractedGST.gstin
               unless (extractedGstNo == Just req.gstin) $
                 throwImageError (Id req.imageId) $
                   ImageDocumentNumberMismatch
@@ -343,24 +344,24 @@ onVerifyGstHandler person imageId1 imageId2 output = do
     then rejectForMissingLegalName
     else if verificationStatus == Documents.VALID then promoteImagesToValid else invalidateImages
 
-assertUploadedGstLinkedToExistingPan :: Person.Person -> Text -> Id Image.Image -> Flow ()
-assertUploadedGstLinkedToExistingPan person gstin imageId = do
+assertUploadedGstLinkedToExistingPan :: DTC.TransporterConfig -> Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedGstLinkedToExistingPan transporterConfig person gstin imageId = do
   mPanCard <- DPQuery.findValidByDriverId person.id
   whenJust mPanCard $ \panCard -> do
     panNumber <- decrypt panCard.panCardNumber
-    rejectIfPanGstUnlinked person panNumber gstin imageId
+    rejectIfPanGstUnlinked transporterConfig person panNumber gstin imageId
 
-assertUploadedPanLinkedToExistingGst :: Person.Person -> Text -> Id Image.Image -> Flow ()
-assertUploadedPanLinkedToExistingGst person panNumber imageId = do
+assertUploadedPanLinkedToExistingGst :: DTC.TransporterConfig -> Person.Person -> Text -> Id Image.Image -> Flow ()
+assertUploadedPanLinkedToExistingGst transporterConfig person panNumber imageId = do
   mDriverGstin <- DGQuery.findValidByDriverId person.id
   whenJust mDriverGstin $ \driverGstin -> do
     gstin <- decrypt driverGstin.gstin
-    rejectIfPanGstUnlinked person panNumber gstin imageId
+    rejectIfPanGstUnlinked transporterConfig person panNumber gstin imageId
 
-rejectIfPanGstUnlinked :: Person.Person -> Text -> Text -> Id Image.Image -> Flow ()
-rejectIfPanGstUnlinked person panNumber gstin imageId = do
-  let normalizedPan = T.toUpper (removeSpaceAndDash panNumber)
-      normalizedGstin = T.toUpper (removeSpaceAndDash gstin)
+rejectIfPanGstUnlinked :: DTC.TransporterConfig -> Person.Person -> Text -> Text -> Id Image.Image -> Flow ()
+rejectIfPanGstUnlinked transporterConfig person panNumber gstin imageId = do
+  let normalizedPan = normalizeDocumentIdentifier transporterConfig panNumber
+      normalizedGstin = normalizeDocumentIdentifier transporterConfig gstin
       -- A GSTIN embeds the holder's PAN at characters 3-12, so the PAN must sit at that exact slice
       panInGstin = T.take 10 (T.drop 2 normalizedGstin)
   unless (panInGstin == normalizedPan) $ do

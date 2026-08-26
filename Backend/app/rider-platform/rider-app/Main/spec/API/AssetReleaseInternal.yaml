@@ -1,0 +1,74 @@
+imports:
+  AssetType: Domain.Types.AssetRelease
+  City: Kernel.Types.Beckn.Context
+
+module: AssetReleaseInternal
+
+types:
+  AssetPublishReq:
+    assetType: AssetType
+    merchantShortId: Text
+    city: City
+    version: Text
+    url: Text
+    sha256: Text
+    sizeBytes: Int
+    sourceRef: Maybe Text
+
+  AssetPublishResp:
+    releaseId: Text
+    changed: Bool
+    version: Text
+    sha256: Text
+
+  AssetRollbackReq:
+    targetReleaseId: Text
+
+  AssetRollbackResp:
+    releaseId: Text
+    version: Text
+    sha256: Text
+    rolledBackReleaseId: Text
+
+  AssetReleaseResp:
+    releaseId: Text
+    assetType: AssetType
+    version: Text
+    url: Text
+    sha256: Text
+    sizeBytes: Int
+    sourceRef: Maybe Text
+    publishedAt: UTCTime
+
+apis:
+  - POST:
+      endpoint: /assetRelease/publish
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: AssetPublishReq
+      response:
+        type: AssetPublishResp
+
+  - POST:
+      endpoint: /assetRelease/rollback
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: AssetRollbackReq
+      response:
+        type: AssetRollbackResp
+
+  - GET:
+      endpoint: /assetRelease
+      auth: NoAuth
+      headers:
+        token: Text
+      query:
+        assetType: AssetType
+        merchantShortId: Text
+        city: City
+      response:
+        type: (Maybe AssetReleaseResp)

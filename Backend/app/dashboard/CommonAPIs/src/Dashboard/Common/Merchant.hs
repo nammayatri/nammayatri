@@ -611,6 +611,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     primaryLanguage :: Maybe Language,
     supportNumber :: Maybe Text,
     cityStdCode :: Maybe Text,
+    countryDialCode :: Maybe Text,
+    supportEmails :: Maybe [Text],
     enableForMerchant :: Bool,
     exophone :: Text,
     callService :: CallService,
@@ -643,6 +645,8 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "primaryLanguage" form
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "cityStdCode" form
+      <*> parseMaybeInput "countryDialCode" form
+      <*> parseMaybeInput "supportEmails" form
       <*> parseInput "enableForMerchant" form
       <*> parseInput "exophone" form
       <*> parseInput "callService" form
@@ -694,6 +698,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     primaryLanguage :: Maybe Language,
     supportNumber :: Maybe Text,
     cityStdCode :: Maybe Text,
+    countryDialCode :: Maybe Text,
+    supportEmails :: Maybe [Text],
     enableForMerchant :: Bool,
     exophone :: Text,
     callService :: CallService,
@@ -904,6 +910,7 @@ instance ToHttpApiData ConfigNames where
 data NetworkEnums
   = ONDC
   | NY
+  | Fabric
   deriving stock (Show, Eq, Ord, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -1013,7 +1020,8 @@ data UpsertTollReq = UpsertTollReq
     isAutoRickshawAllowed :: Bool,
     isTwoWheelerAllowed :: Maybe Bool,
     isAutoRickshawTollChargeApplicable :: Maybe Bool,
-    isTwoWheelerTollChargeApplicable :: Maybe Bool
+    isTwoWheelerTollChargeApplicable :: Maybe Bool,
+    maxTollCountInRide :: Maybe Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1032,6 +1040,7 @@ data TollAPIEntity = TollAPIEntity
     isTwoWheelerAllowed :: Maybe Bool,
     isAutoRickshawTollChargeApplicable :: Maybe Bool,
     isTwoWheelerTollChargeApplicable :: Maybe Bool,
+    maxTollCountInRide :: Maybe Int,
     merchantId :: Maybe Text,
     merchantOperatingCityId :: Maybe Text
   }

@@ -137,7 +137,7 @@ validateRequest DOrder {..} = do
       -- Booking is expired
       logInfo $ "booking is expired: " <> show booking
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-      bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
+      bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       -- Kept, and it is not dead: validateRequest has no status guard at all, so a replayed
       -- on_confirm for a booking that already reached CONFIRMED -- and therefore already debited --
       -- lands here once validTill has passed and gets marked FAILED. The release is guarded on
@@ -257,13 +257,16 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- Guarded on the PRE-update status: validateRequest does not reject an already-CONFIRMED
   -- booking, so a replayed on_confirm re-runs this handler, and the TripConsumed marker only
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
-  unless (booking.status == Booking.CONFIRMED) $
+  -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
+  -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
     void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
+  unless (isJust booking.parentBookingId) $
+    void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
   void $ CQP.clearPSCache booking.riderId
   whenJust booking.partnerOrgId $ \pOrgId -> do
     walletPOCfg <- do
@@ -328,7 +331,7 @@ buildReconTable ::
   DIBC.IntegratedBPPConfig ->
   m ()
 buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber integratedBPPConfig = do
-  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let isPassCovered = FRFSPassOverride.isFullyPassCovered booking.overriddenAmount

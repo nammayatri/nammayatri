@@ -41,6 +41,7 @@ module SharedLogic.CallBAP
     sendChangeServiceTierUpdateToBAP,
     sendAddBaggageUpdateToBAP,
     buildVehicleFromRideDetailsSnapshot,
+    callBecknAPIUnsigned,
   )
 where
 
@@ -113,7 +114,9 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Types.Beckn.Ack as Ack
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as BecknDomain
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -125,9 +128,11 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
+import Servant (JSON, Post, ReqBody, (:>))
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
+import qualified SharedLogic.GatewayDispatch as GatewayDispatch
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IssueManagement ()
@@ -158,7 +163,9 @@ import TransactionLogs.Types
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CoreMetrics m,
+    MonadCatch m,
     CacheFlow m r,
     EsqDBFlow m r,
     HasHttpClientOptions r c,
@@ -186,7 +193,15 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
   let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
+  res <-
+    GatewayDispatch.dispatchAction
+      transporter.id
+      BecknDomain.MOBILITY
+      "on_select"
+      (onSelectReq.onSelectReqContext.contextBapId)
+      onSelectReq
+      (withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq)
+      (\url mappedAction jsonBody -> withShortRetry $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
   where
@@ -201,7 +216,9 @@ mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
 
 callOnUpdateV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasHttpClientOptions r c,
     CacheFlow m r,
@@ -218,13 +235,23 @@ callOnUpdateV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  res <-
+    GatewayDispatch.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "on_update"
+      (req.onUpdateReqContext.contextBapId)
+      req
+      (withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> withRetryConfig retryConfig $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnUpdateV2" "BPP" (req.onUpdateReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasHttpClientOptions r c,
     CacheFlow m r,
@@ -241,13 +268,23 @@ callOnStatusV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  res <-
+    GatewayDispatch.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "on_status"
+      (req.onStatusReqContext.contextBapId)
+      req
+      (withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> withRetryConfig retryConfig $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnStatusV2" "BPP" (req.onStatusReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasHttpClientOptions r c,
     CacheFlow m r,
@@ -264,7 +301,15 @@ callOnCancelV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  res <-
+    GatewayDispatch.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "on_cancel"
+      (req.onCancelReqContext.contextBapId)
+      req
+      (withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> withRetryConfig retryConfig $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnCancelV2" "BPP" (req.onCancelReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
@@ -272,9 +317,11 @@ callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
+    MonadCatch m,
     EsqDBFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
@@ -297,7 +344,15 @@ callOnConfirmV2 transporter context content bppConfig = do
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   let onConfirmReq = Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content}
-  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap onConfirmReq
+  res <-
+    GatewayDispatch.dispatchAction
+      transporter.id
+      BecknDomain.MOBILITY
+      "on_confirm"
+      (onConfirmReq.onConfirmReqContext.contextBapId)
+      onConfirmReq
+      (withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap onConfirmReq)
+      (\url mappedAction jsonBody -> withShortRetry $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnConfirmV2" "BPP" (Just txnId) (Just onConfirmReq) res
 
@@ -342,6 +397,7 @@ rideAssignedCommon ::
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -507,6 +563,7 @@ buildOnConfirmMessage ::
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
@@ -537,6 +594,7 @@ sendOnConfirmToBAP ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -577,6 +635,7 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
@@ -618,6 +677,7 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
@@ -658,6 +718,7 @@ sendRideEstimatedEndTimeRangeUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
@@ -698,6 +759,7 @@ buildVehicleFromRideDetailsSnapshot booking ride rideDetails =
       variant = fromMaybe (Variant.castServiceTierToVariant booking.vehicleServiceTier) rideDetails.vehicleVariant,
       capacity = ride.vehicleServiceTierSeatingCapacity,
       selectedServiceTiers = [booking.vehicleServiceTier],
+      selectedAutoAcceptTiers = Nothing,
       airConditioned = Nothing,
       category = Nothing,
       downgradeReason = Nothing,
@@ -728,6 +790,7 @@ sendRideCompletedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -776,6 +839,7 @@ sendBookingCancelledUpdateToBAP ::
     HasLongDurationRetryCfg r c,
     CoreMetrics m,
     CacheFlow m r,
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -807,6 +871,7 @@ sendDriverOffer ::
     CoreMetrics m,
     HasPrettyLogger m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DM.Merchant ->
@@ -878,6 +943,7 @@ sendDriverArrivalUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -917,6 +983,7 @@ sendPhoneCallRequestUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -939,6 +1006,7 @@ sendPhoneCallCompletedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -996,6 +1064,7 @@ sendStopArrivalUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1031,6 +1100,7 @@ sendNewMessageToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1069,6 +1139,7 @@ sendUpdateEditDestToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1112,6 +1183,7 @@ sendUpdateEditDestErrToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1139,6 +1211,7 @@ sendSafetyAlertToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DRB.Booking ->
@@ -1179,6 +1252,7 @@ sendEstimateRepetitionUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DRB.Booking ->
@@ -1218,6 +1292,7 @@ sendQuoteRepetitionUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
   ) =>
   DRB.Booking ->
@@ -1257,6 +1332,7 @@ sendTollCrossedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   Maybe DRB.Booking ->
@@ -1296,6 +1372,7 @@ sendDestinationArrivalUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1329,6 +1406,7 @@ notfyDeliveryImageUploadedToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1385,6 +1463,7 @@ sendChangeServiceTierUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1419,6 +1498,7 @@ sendAddBaggageUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
@@ -1443,3 +1523,23 @@ sendAddBaggageUpdateToBAP booking numberOfLuggages newEstimatedFare fareParams =
     retryConfig <- asks (.shortDurationRetryCfg)
     onUpdateMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing addBaggageReq
     void $ callOnUpdateV2 onUpdateMsg retryConfig merchant.id
+
+type FabricUnsignedAPI = ReqBody '[JSON] A.Value :> Post '[JSON] Ack.AckResponse
+
+fabricUnsignedAPI :: Proxy FabricUnsignedAPI
+fabricUnsignedAPI = Proxy
+
+callBecknAPIUnsigned ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  A.Value ->
+  m Ack.AckResponse
+callBecknAPIUnsigned action baseUrl body = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let urlWithAction = baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/" <> T.unpack action}
+  Beckn.callBecknAPI Nothing Nothing action fabricUnsignedAPI urlWithAction internalEndPointHashMap body

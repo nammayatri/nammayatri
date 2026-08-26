@@ -1067,6 +1067,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payo
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_avg_speed_kmph double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_scheduled_holds_per_driver integer  default 1;
+
 
 ------- SQL updates -------
 
@@ -1082,3 +1087,51 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN force_enabled_b
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_drop_loc_qar_cal_enabled boolean ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN drop_qar_cal_radius_in_km double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enforce_upload_file_type_check boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN area_preference_min_cells integer  default 4;
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
+
+------- MSIL scheduled rides (SWS-1 / SWS-2) -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_booking_window integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_booking_window integer;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pre_process_document_identifiers boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_check_required boolean  default true;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_open_to_all_threshold_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_config json  default '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1}' :: json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN min_booking_window;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_booking_window;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN scheduled_ride_avg_speed_kmph;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_scheduled_holds_per_driver;

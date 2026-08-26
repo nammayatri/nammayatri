@@ -1,5 +1,12 @@
 imports:
   IssueCategory: IssueManagement.Domain.Types.Issue.IssueCategory
+  IssueApiIntegration: IssueManagement.Domain.Types.Issue.IssueApiIntegration
+  ApiIntegrationListRes: IssueManagement.Common.Dashboard.Issue
+  UpsertApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
+  UpsertApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
+  TestApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
+  TestApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionListRes: IssueManagement.Common.UI.Issue
   CategoryType: IssueManagement.Domain.Types.Issue.IssueCategory
   IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
   IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
@@ -85,8 +92,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: IssueCategoryListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_CATEGORY_LIST
   - GET: # IssueListAPI
       endpoint: /list
       auth: ApiAuthV2
@@ -105,8 +110,6 @@ apis:
         - toDate: UTCTime
       response:
         type: IssueReportListResponse
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_LIST
   - GET: # IssueInfoAPI
       endpoint: /{issueId}/info
       auth: ApiAuthV2
@@ -114,8 +117,6 @@ apis:
         issueId: Id IssueReport
       response:
         type: IssueInfoDRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_INFO
   - GET: # IssueInfoAPIV2
       endpoint: /info
       name: GetIssueInfoV2
@@ -125,8 +126,6 @@ apis:
         - issueShortId: (ShortId IssueReport)
       response:
         type: IssueInfoDRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_INFO
   - PUT:  # IssueUpdateAPI
       endpoint: /{issueId}/update
       auth: ApiAuthV2
@@ -146,9 +145,6 @@ apis:
               type: IssueUpdateByUserReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: IssueAPI IssueUpdateEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_UPDATE
   # Operator-side media upload for live chat. POST a multipart file, get back a
   # MediaFile id, then send that id in the next /chat/message body. Mirrors the
   # rider-side /v2/issue/upload but goes through dashboard auth.
@@ -179,9 +175,6 @@ apis:
               type: IssueAddCommentByUserReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: IssueAPI IssueAddCommentEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_ADD_COMMENT
   - GET: # IssueFetchMediaAPI
       endpoint: /media
       auth: ApiAuthV2
@@ -189,8 +182,6 @@ apis:
         - filePath: Text
       response:
         type: Text
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_FETCH_MEDIA
   - POST:  # TicketStatusCallBackAPI
       endpoint: /kapture/ticketStatus
       name: PostIssueTicketStatusCallBack
@@ -199,8 +190,6 @@ apis:
         type: Value
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
   - POST:  # CreateIssueCategoryAPI
       endpoint: /category/create
       auth: ApiAuthV2
@@ -208,9 +197,6 @@ apis:
         type: CreateIssueCategoryReq
       response:
         type: CreateIssueCategoryRes
-      migrate:
-        endpoint: IssueAPI CreateIssueCategoryEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_CATEGORY
   - POST:  # UpdateIssueCategoryAPI
       endpoint: /category/update
       auth: ApiAuthV2
@@ -220,9 +206,6 @@ apis:
         type: UpdateIssueCategoryReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: IssueAPI UpdateIssueCategoryEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPDATE_ISSUE_CATEGORY
   - POST:  # CreateIssueOptionAPI
       endpoint: /option/create
       auth: ApiAuthV2
@@ -233,9 +216,6 @@ apis:
         type: CreateIssueOptionReq
       response:
         type: CreateIssueOptionRes
-      migrate:
-        endpoint: IssueAPI CreateIssueOptionEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_OPTION
   - POST:  # UpdateIssueOptionAPI
       endpoint: /option/update
       auth: ApiAuthV2
@@ -245,9 +225,6 @@ apis:
         type: UpdateIssueOptionReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: IssueAPI UpdateIssueOptionEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPDATE_ISSUE_OPTION
   - POST:  # UpsertIssueMessageAPI
       endpoint: /message/upsert
       auth: ApiAuthV2
@@ -255,9 +232,6 @@ apis:
         type: UpsertIssueMessageReq
       response:
         type: UpsertIssueMessageRes
-      migrate:
-        endpoint: IssueAPI UpsertIssueMessageEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
   - POST: # CreateIssueReportV2API
       endpoint: /kapture/create
       name: PostIssueKaptureCreate
@@ -266,9 +240,6 @@ apis:
         type: IssueReportReqV2
       response:
         type: APISuccess
-      migrate:
-        endpoint: IssueAPI CreateIssueReportV2Endpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_REPORT_V2
 
   - GET: # GetCategoryDetailAPI
       endpoint: /category/{categoryId}/detail
@@ -493,6 +464,58 @@ apis:
         type: MarkChatReadByUserReq
       response:
         type: APISuccess
+  - GET: # ApiIntegrationListAPI
+      endpoint: /apiIntegration/list
+      name: GetIssueApiIntegrationList
+      auth: ApiAuthV2
+      response:
+        type: ApiIntegrationListRes
+      migrate:
+        capability: system-config.customer_issue_config.read
+  - POST: # ApiIntegrationUpsertAPI
+      endpoint: /apiIntegration/upsert
+      name: PostIssueApiIntegrationUpsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertApiIntegrationReq
+      response:
+        type: UpsertApiIntegrationRes
+      migrate:
+        capability: system-config.customer_issue_config.write
+  - POST: # ApiIntegrationDeleteAPI
+      endpoint: /apiIntegration/{apiIntegrationId}/delete
+      name: PostIssueApiIntegrationDelete
+      auth: ApiAuthV2
+      params:
+        apiIntegrationId: Id IssueApiIntegration
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.customer_issue_config.write
+  - POST: # ApiIntegrationTestAPI
+      endpoint: /apiIntegration/test
+      name: PostIssueApiIntegrationTest
+      auth: ApiAuthV2
+      request:
+        type: TestApiIntegrationReq
+      response:
+        type: TestApiIntegrationRes
+      migrate:
+        capability: system-config.customer_issue_config.write
+  - GET: # FlowSimulateAPI - walk the chat flow (engine included) from the dashboard
+      endpoint: /flow/simulate
+      name: GetIssueFlowSimulate
+      auth: ApiAuthV2
+      mandatoryQuery:
+        categoryId: (Id IssueCategory)
+      query:
+        - optionId: (Id IssueOption)
+        - rideId: (Id Ride)
+        - sessionId: Text
+      response:
+        type: IssueOptionListRes
+      migrate:
+        capability: system-config.customer_issue_config.read
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}
 

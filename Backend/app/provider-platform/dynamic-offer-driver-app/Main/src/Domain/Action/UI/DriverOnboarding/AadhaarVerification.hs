@@ -443,7 +443,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
         mbAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do
             let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
-            let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+            let extractedAadhaarNumber = preProcessDocumentIdentifier transporterConfig <$> extractedAadhaarOutputData.id_number
             let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
             logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
             logInfo ("req.aadhaarName: " <> show req.aadhaarName)

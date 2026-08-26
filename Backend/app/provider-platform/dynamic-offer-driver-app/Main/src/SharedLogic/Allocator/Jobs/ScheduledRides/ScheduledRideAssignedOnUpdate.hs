@@ -15,6 +15,7 @@
 module SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate where
 
 import qualified AWS.S3 as S3
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -31,10 +32,12 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -45,6 +48,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.SearchTryLocker as CS
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
@@ -67,6 +72,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
@@ -76,6 +82,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     Metrics.HasBPPMetrics m r,
     HasLongDurationRetryCfg r c,
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
@@ -93,7 +100,16 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -164,7 +180,11 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           cancelOrReallocate ride cReason True (RideCancel.MerchantRequestorId (merchantId, merchantOperatingCityId))
                           return $ Terminate "Job is Terminated and Ride is Reallocated because driver can't reach pickup of its scheduled booking on time."
                         else do
-                          void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
+                          -- activation releases this hold: re-point the gate at the earliest remaining one (single-slot -> clear)
+                          -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
+                          CS.withDriverScheduledHoldLock driverId $ do
+                            mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig driverId bookingId
+                            void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True (fst <$> mbNextHold) (snd <$> mbNextHold) driverId
                           whenJust (booking.toLocation) $ \toLoc -> do
                             QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW
@@ -279,6 +299,7 @@ cancelOrReallocate ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
@@ -288,6 +309,7 @@ cancelOrReallocate ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     Metrics.HasBPPMetrics m r,
     HasLongDurationRetryCfg r c,
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
@@ -305,7 +327,16 @@ cancelOrReallocate ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     CH.ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   DRide.Ride ->
   Text ->

@@ -59,6 +59,7 @@ data TransporterConfig = TransporterConfig
     allowedReferralEntities :: [Domain.Types.Person.Role],
     analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
+    areaPreferenceMinCells :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
@@ -92,7 +93,6 @@ data TransporterConfig = TransporterConfig
     cancellationFeeCycle :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     cancellationFeeDisputeLimit :: Kernel.Prelude.Int,
     cancellationFeeDisputeWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    cancellationFeePaymentMethodExceptions :: Kernel.Prelude.Maybe [Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument],
     cancellationFeeVendor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
@@ -153,7 +153,6 @@ data TransporterConfig = TransporterConfig
     driverPaymentCycleDuration :: Kernel.Prelude.NominalDiffTime,
     driverPaymentCycleStartTime :: Kernel.Prelude.NominalDiffTime,
     driverPaymentReminderInterval :: Kernel.Prelude.NominalDiffTime,
-    driverRiderBlacklistDurationSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverSearchBlacklistDurationSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverSmsReceivingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     driverTimeSpentOnPickupThresholdOnCancel :: Kernel.Types.Common.Seconds,
@@ -189,6 +188,7 @@ data TransporterConfig = TransporterConfig
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     enableVendorCheckForCollectingDues :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enforceUploadFileTypeCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     fakeOtpEmails :: [Kernel.Prelude.Text],
@@ -222,6 +222,7 @@ data TransporterConfig = TransporterConfig
     isGstPanLinkCheckRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMLBasedDynamicPricingEnabled :: Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,
+    isStrongNameCheckRequired :: Kernel.Prelude.Bool,
     issueBreachConfig :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachConfig],
     kaptureDisposition :: Kernel.Prelude.Text,
     kaptureQueue :: Kernel.Prelude.Text,
@@ -245,6 +246,7 @@ data TransporterConfig = TransporterConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     meterRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
+    metricsDistanceBucketsKm :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     minBaseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minDistanceForStopFcm :: Kernel.Types.Common.HighPrecMeters,
     minLocationAccuracy :: Kernel.Prelude.Double,
@@ -279,6 +281,7 @@ data TransporterConfig = TransporterConfig
     pickupStallMonitoringConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallMonitoringConfig,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    preProcessDocumentIdentifiers :: Kernel.Prelude.Bool,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcChangeThresholdDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -304,8 +307,10 @@ data TransporterConfig = TransporterConfig
     sameRiderDriverRideCountThreshold :: Kernel.Prelude.Int,
     schedulePayoutForDay :: Kernel.Prelude.Maybe Kernel.Prelude.Integer,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideConfig :: Domain.Types.TransporterConfig.ScheduledRideConfig,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideOpenToAllThresholdMinutes :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
     searchRepeatLimit :: Kernel.Prelude.Int,
     sendMembershipIdInProfile :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -343,7 +348,6 @@ data TransporterConfig = TransporterConfig
     useOfferListCache :: Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
-    validCancellationPenaltyReasons :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     validNameComparePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
@@ -459,6 +463,7 @@ data DriverWalletConfig = DriverWalletConfig
     connectAccountChargeTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
     enableDriverWallet :: Kernel.Prelude.Bool,
+    enableWalletGatedTierCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -466,6 +471,7 @@ data DriverWalletConfig = DriverWalletConfig
     gstPercentage :: Kernel.Prelude.Double,
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    minWalletAmountForScheduledRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
@@ -500,7 +506,7 @@ data InvoiceConfig = InvoiceConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM | PAYMENT_CUSTOMER_AND_DRIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutChargeBearer = DRIVER_BEARER | PLATFORM_BEARER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -515,23 +521,46 @@ data PayoutFeeConfig = PayoutFeeConfig
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PickupStallCaseConfig = PickupStallCaseConfig {stages :: [Domain.Types.TransporterConfig.PickupStallStage]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupDarkStage = PickupDarkStage
+  { afterDarkSec :: Kernel.Prelude.Int,
+    channel :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupNudgeChannel,
+    chatSuggestions :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    overlayKey :: Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data PickupNudgeChannel = OVERLAY | CHAT_MESSAGE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
-  { badTickDebounce :: Kernel.Prelude.Int,
-    gracePeriodSec :: Kernel.Prelude.Int,
-    locationDarkConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
-    progressThresholdMeters :: Kernel.Prelude.Int,
-    retreatingConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
-    stalledConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
+  { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
+    detourCreditSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    detourDisplacementMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    deviationAllowanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    progressThresholdMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stages :: [Domain.Types.TransporterConfig.PickupStallStage],
+    staleFixAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickIntervalSec :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallStage = PickupStallStage {afterStallSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text, terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction}
+data PickupStallStage = PickupStallStage
+  { afterFaultSec :: Kernel.Prelude.Int,
+    channel :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupNudgeChannel,
+    chatSuggestions :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    overlayKey :: Kernel.Prelude.Text,
+    terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ScheduledRideConfig = ScheduledRideConfig
+  { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    maxHoldsPerDriver :: Kernel.Prelude.Int,
+    maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

@@ -55,7 +55,6 @@ import Environment (Flow)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
-import Kernel.Types.Common (Meters (..), Seconds (..))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, throwError, withShortRetry)
 import qualified Safety.Domain.Types.Sos as SafetySos
@@ -72,8 +71,12 @@ import WhatsappBot.Handles (BackendHandle (..))
 import WhatsappBot.Types
 
 -- | Build the prod backend handle for one resolved merchant-city.
+-- | ctx is currently unused: the EasyBooking swap (see searchFlexi) dropped
+-- the last read of it (ctx.flexiRentalDistanceM/flexiRentalDurationS, when
+-- this built a RentalSearchReq). Kept in the signature since MerchantCtx is
+-- the natural place for future flexi-specific config this handle might need.
 mkBackendHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> MerchantCtx -> BackendHandle Flow
-mkBackendHandle merchantId mocId ctx =
+mkBackendHandle merchantId mocId _ctx =
   BackendHandle
     { authenticate = \phone ->
         runBot "authenticate" $ do
@@ -148,7 +151,14 @@ mkBackendHandle merchantId mocId ctx =
       searchFlexi = \auth origin ->
         runBot "searchFlexi" $ do
           now <- getCurrentTime
-          let req = SLS.RentalSearch (rentalSearchReq origin now)
+          -- EasyBooking, not Rental: same destination-less UX (share pickup, no
+          -- drop needed) but priced per-km via the regular Progressive fare
+          -- policy at end-ride, instead of Rental's fixed package pricing.
+          -- Quote-reading needs no change: Domain.Action.UI.Quote.getOffers
+          -- classifies any destination-less, non-meter search as OnRentalCab
+          -- regardless of trip category, and Backend.hs's rentalOrDemandQuote
+          -- already matches that constructor.
+          let req = SLS.EasyBookingSearch (easyBookingSearchReq origin now)
           resp <- runSearch auth req
           pure resp.searchId.getId,
       getFlexiQuotes = \_auth searchId ->
@@ -281,25 +291,26 @@ mkBackendHandle merchantId mocId ctx =
           subscriptionId = Nothing,
           verifyBeforeCancellingOldBooking = Nothing,
           numberOfLuggages = Nothing,
-          doMultimodalSearch = Nothing
+          doMultimodalSearch = Nothing,
+          shouldCacheRoute = Nothing
         }
 
-    rentalSearchReq origin now =
-      SLS.RentalSearchReq
+    -- Flexi's search request since the EasyBooking swap (see searchFlexi
+    -- above). ctx.flexiRentalDistanceM/flexiRentalDurationS -- previously read
+    -- here when this built a RentalSearchReq -- are staying in MetaBotCfg for
+    -- now (per product decision) even though nothing reads them anymore;
+    -- EasyBookingSearchReq has no distance/duration fields at all, since the
+    -- real fare comes from actual GPS distance at end-ride, not an upfront
+    -- estimate.
+    easyBookingSearchReq origin now =
+      SLS.EasyBookingSearchReq
         { origin = mkSearchLoc origin,
-          stops = Nothing,
+          startTime = now,
           isSourceManuallyMoved = Just False,
           isSpecialLocation = Nothing,
-          startTime = now,
-          estimatedRentalDistance = Meters ctx.flexiRentalDistanceM,
-          estimatedRentalDuration = Seconds ctx.flexiRentalDurationS,
           quotesUnifiedFlow = Nothing,
           isReallocationEnabled = Nothing,
-          fareParametersInRateCard = Nothing,
-          placeNameSource = Nothing,
-          recentLocationId = Nothing,
-          numberOfLuggages = Nothing,
-          doMultimodalSearch = Nothing
+          numberOfLuggages = Nothing
         }
 
     selectReq =
@@ -318,7 +329,11 @@ mkBackendHandle merchantId mocId ctx =
           billingCategory = Nothing,
           preferSafetyPlus = Nothing,
           driverPreference = Nothing,
-          selectedOfferId = Nothing
+          selectedOfferId = Nothing,
+          -- The bot books what the customer asked for over chat; there is no map to move a
+          -- marker on, so no walk-and-save endpoint to name.
+          suggestedPickupAddress = Nothing,
+          suggestedDropAddress = Nothing
         }
 
     updateProfileReq upd =

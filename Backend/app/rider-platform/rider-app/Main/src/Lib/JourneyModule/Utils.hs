@@ -2051,23 +2051,31 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
       newDriverName
       newDriverMobileNumber
       booking.id
-  -- Assigned bus number + its tag -> journey leg (customer reads fleetNo/busTagNumber here), guarded to
-  -- not-yet-boarded legs. The tag tracks the vehicle, so it is refreshed together with the bus number.
+  -- Applied regardless of boarding status: the waybill is the operational source of truth for which
+  -- physical vehicle is running this service (e.g. a genuine mid-route bus swap), so a rider's earlier
+  -- boarded-on record shouldn't pin it to a bus that's no longer actually there.
   (newBusNumber, newBusTagNumber, busChanged) <- case mbJourneyLeg of
     -- No journey leg for this booking: keep the booking's existing vehicle number so a driver-only change
     -- notification still shows a bus number. No leg means no tag and no detectable bus change.
     Nothing -> pure (booking.finalBoardedVehicleNumber, Nothing, False)
     Just journeyLeg -> do
-      let canRefreshBus =
-            not (T.null meta.vehicle_no)
-              && journeyLeg.finalBoardedBusNumberSource /= Just DJourneyLeg.UserActivated
+      let canRefreshBus = not (T.null meta.vehicle_no)
           effectiveBus = if canRefreshBus then Just meta.vehicle_no else journeyLeg.finalBoardedBusNumber
           -- Never erase a stored tag with a null fetched one (new vehicle may be absent from the fleet-tag
           -- list): prefer the fetched tag, else keep the current one -- same fallback as the driver fields.
           effectiveBusTag = if canRefreshBus then (meta.busTagNumber <|> journeyLeg.busTagNumber) else journeyLeg.busTagNumber
           busChanged = canRefreshBus && (effectiveBus /= journeyLeg.finalBoardedBusNumber || effectiveBusTag /= journeyLeg.busTagNumber)
-      when busChanged $
+          alreadyBoarded = journeyLeg.finalBoardedBusNumberSource == Just DJourneyLeg.UserActivated
+      when (busChanged && alreadyBoarded) $
+        logError $
+          "Waybill reassignment applied after boarding: journeyLeg=" <> journeyLeg.id.getId
+            <> " previouslyBoardedOn="
+            <> show journeyLeg.finalBoardedBusNumber
+            <> " waybillNowReports="
+            <> meta.vehicle_no
+      when busChanged $ do
         QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag journeyLeg.id
+        QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure
     RefreshedTicketVehicleInfo

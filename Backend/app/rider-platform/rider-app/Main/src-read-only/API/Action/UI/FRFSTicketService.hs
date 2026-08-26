@@ -267,6 +267,9 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> QueryParam
+           "overrideEntityId"
+           Data.Text.Text
+      :> QueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
@@ -303,6 +306,19 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "frfs"
+      :> "booking"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "reschedule"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
       :<|> TokenAuth
       :> "frfs"
       :> "booking"
@@ -441,7 +457,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -601,10 +617,11 @@ getFrfsBookingList ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
   )
-getFrfsBookingList a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getFrfsBookingList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postFrfsBookingCanCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -632,6 +649,16 @@ postFrfsBookingCancel ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postFrfsBookingCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsBookingCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsBookingReschedule ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+  )
+postFrfsBookingReschedule a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsBookingReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getFrfsBookingCancelStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

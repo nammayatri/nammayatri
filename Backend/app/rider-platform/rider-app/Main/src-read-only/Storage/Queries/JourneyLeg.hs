@@ -79,6 +79,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   updateWithKV
     [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
       Se.Set Beam.agencyName (agency <&> (.name)),
+      Se.Set Beam.boardingConfirmedDespiteDistance boardingConfirmedDespiteDistance,
       Se.Set Beam.busConductorId busConductorId,
       Se.Set Beam.busDriverId busDriverId,
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),

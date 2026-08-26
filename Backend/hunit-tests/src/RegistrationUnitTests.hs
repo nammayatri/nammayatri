@@ -62,7 +62,8 @@ testPostRegistrationV2LoginOtpWithRealExecution =
         let req =
               Common.FleetOwnerLoginReqV2
                 { Common.mobileNumber = "6123456789",
-                  Common.mobileCountryCode = "+91"
+                  Common.mobileCountryCode = "+91",
+                  Common.fleetType = Nothing
                 }
             merchantShortId = ShortId "test-merchant"
             opCity = Context.City "Bangalore"
@@ -85,8 +86,8 @@ testPostRegistrationV2LoginOtpWithRealExecution =
         let expectedResponseType = DRegistrationV2.postRegistrationV2LoginOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerLoginReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different mobile numbers and validates request handling" $ do
-        let req1 = Common.FleetOwnerLoginReqV2 "9876543210" "+91"
-            req2 = Common.FleetOwnerLoginReqV2 "8765432109" "+91"
+        let req1 = Common.FleetOwnerLoginReqV2 "9876543210" "+91" Nothing
+            req2 = Common.FleetOwnerLoginReqV2 "8765432109" "+91" Nothing
             merchantShortId = ShortId "test-merchant"
             opCity = Context.City "Bangalore"
 
@@ -361,11 +362,11 @@ testErrorHandlingWithRealFunctions =
   testGroup
     "Error Handling with Real Functions"
     [ testCase "Invalid mobile number format" $ do
-        let invalidReq = Common.FleetOwnerLoginReqV2 "123" "+91"
+        let invalidReq = Common.FleetOwnerLoginReqV2 "123" "+91" Nothing
         let Common.FleetOwnerLoginReqV2 {Common.mobileNumber = mn} = invalidReq
         mn @?= "123",
       testCase "Invalid country code format" $ do
-        let invalidReq = Common.FleetOwnerLoginReqV2 "6123456789" "91"
+        let invalidReq = Common.FleetOwnerLoginReqV2 "6123456789" "91" Nothing
         let Common.FleetOwnerLoginReqV2 {Common.mobileCountryCode = mcc} = invalidReq
         mcc @?= "91",
       testCase "Empty name validation" $ do

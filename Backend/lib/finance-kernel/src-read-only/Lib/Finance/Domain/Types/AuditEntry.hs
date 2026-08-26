@@ -40,10 +40,10 @@ data AuditEntityType
   | SubscriptionPurchase
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AuditAction))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AuditAction)
 
-$(mkHttpInstancesForEnum (''AuditAction))
+$(mkHttpInstancesForEnum ''AuditAction)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AuditEntityType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AuditEntityType)
 
-$(mkHttpInstancesForEnum (''AuditEntityType))
+$(mkHttpInstancesForEnum ''AuditEntityType)

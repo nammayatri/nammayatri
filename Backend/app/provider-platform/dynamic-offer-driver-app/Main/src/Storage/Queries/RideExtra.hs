@@ -260,6 +260,10 @@ getUpcomingOrActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => 
 getUpcomingOrActiveByDriverId (Id personId) =
   findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.UPCOMING, Ride.INPROGRESS, Ride.NEW]]]
 
+findAllByDriverIdAndStatuses :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Ride.RideStatus] -> m [Ride]
+findAllByDriverIdAndStatuses (Id personId) statuses =
+  findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In statuses]]
+
 getActiveBookingAndRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Ride, Booking)]
 getActiveBookingAndRideByDriverId (Id personId) = do
   now <- getCurrentTime

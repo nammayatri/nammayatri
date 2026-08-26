@@ -157,6 +157,13 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "fleet"
+      :> "consent"
+      :> "decline"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "fleet"
       :> "config"
       :> Get
            '[JSON]
@@ -164,7 +171,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> getFleetConfig
+handler = getWmbFleetBadges :<|> postWmbAvailableRoutes :<|> postWmbQrStart :<|> getWmbTripActive :<|> getWmbRouteDetails :<|> getWmbTripList :<|> postWmbTripStart :<|> postWmbTripEnd :<|> postWmbTripRequest :<|> getWmbRequestsStatus :<|> postWmbRequestsCancel :<|> postFleetConsent :<|> postFleetConsentDecline :<|> getFleetConfig
 
 getWmbFleetBadges ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -291,6 +298,15 @@ postFleetConsent ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postFleetConsent a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postFleetConsent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postFleetConsentDecline ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postFleetConsentDecline a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postFleetConsentDecline (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getFleetConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

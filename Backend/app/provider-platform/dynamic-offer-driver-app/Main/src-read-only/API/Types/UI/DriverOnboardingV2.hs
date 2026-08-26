@@ -2,6 +2,7 @@
 
 module API.Types.UI.DriverOnboardingV2 where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
@@ -47,6 +48,14 @@ data AirConditionedTier = AirConditionedTier
   { isWorking :: Kernel.Prelude.Bool,
     restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AutoAcceptanceInfo = AutoAcceptanceInfo
+  { isSelected :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    minWalletBalanceRequired :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    mode :: Kernel.Prelude.Maybe Dashboard.Common.AutoAcceptanceMode
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -175,6 +184,7 @@ data DriverPanReq = DriverPanReq
 
 data DriverVehicleServiceTier = DriverVehicleServiceTier
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoAcceptance :: Kernel.Prelude.Maybe AutoAcceptanceInfo,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,

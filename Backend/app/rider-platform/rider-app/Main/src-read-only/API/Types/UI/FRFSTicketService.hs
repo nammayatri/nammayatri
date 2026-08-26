@@ -295,6 +295,20 @@ data FRFSRefundAttemptAPI = FRFSRefundAttemptAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSRescheduleReq = FRFSRescheduleReq
+  { fromStationCode :: Data.Maybe.Maybe Data.Text.Text,
+    offered :: Data.Maybe.Maybe [FRFSRescheduleSeatReq],
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    toStationCode :: Data.Maybe.Maybe Data.Text.Text,
+    tripId :: Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRescheduleSeatReq = FRFSRescheduleSeatReq {category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType, seatIds :: [Kernel.Types.Id.Id Domain.Types.Seat.Seat]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRouteAPI = FRFSRouteAPI
   { code :: Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
@@ -386,6 +400,8 @@ data FRFSTicketAPI = FRFSTicketAPI
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    appliedPassId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
+    appliedPassName :: Data.Maybe.Maybe Data.Text.Text,
     appliedPurchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     bppOrderId :: Data.Maybe.Maybe Data.Text.Text,
@@ -405,6 +421,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     quantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     quoteCategories :: [FRFSQuoteCategoryAPIEntity],
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    startTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     tickets :: [FRFSTicketAPI],

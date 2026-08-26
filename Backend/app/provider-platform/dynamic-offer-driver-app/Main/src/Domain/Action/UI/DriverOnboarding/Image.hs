@@ -25,11 +25,23 @@ module Domain.Action.UI.DriverOnboarding.Image
     throwValidationError,
     convertHVStatusToValidationStatus,
     convertValidationStatusToVerificationStatus,
+    -- Exported for unit tests: pure classification helpers with no Flow dependency.
+    UploadedFileType (..),
+    detectUploadedFileType,
+    canonicalExtension,
+    allowedExtensionsFor,
+    normalizeExtension,
+    resolveStoredExtension,
+    isImageOnlyDocument,
+    pdfActiveContentFinding,
+    containsPdfName,
   )
 where
 
 import qualified API.Types.UI.DriverOnboardingV2 as Domain
-import AWS.S3 as S3
+-- 'PDF' is hidden because AWS.S3's FileType has a constructor of the same name that would clash
+-- with the local 'UploadedFileType' constructor below; the S3 one is not used in this module.
+import AWS.S3 as S3 hiding (PDF)
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
@@ -115,25 +127,226 @@ data GetDocsResponse = GetDocsResponse
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
+-- | Formats the onboarding document pipeline is permitted to store.
+--
+-- Scope note: matching magic bytes is an integrity check on the declared type, not by itself a
+-- defence against active content — a polyglot can be a valid JPEG and valid HTML simultaneously.
+-- PDF is on this list because GST certificates need it, and PDF supports embedded JavaScript, so
+-- PDFs additionally go through 'pdfActiveContentFinding' below. These documents are served back
+-- to the dashboard as base64 in the response body rather than as a URL, so there is no S3
+-- Content-Disposition or CDN header in the path to fall back on: what is stored is what the
+-- viewer renders. Rejecting at upload is therefore the only server-side control available.
+data UploadedFileType
+  = JPEG
+  | PNG
+  | WEBP
+  | HEIC
+  | AVIF
+  | PDF
+  deriving (Show, Eq)
+
+-- | Identify the payload from its magic bytes. The declared extension is not trusted as an
+-- assertion about the content; it is consulted only to disambiguate ISO-BMFF generic brands,
+-- which genuinely carry no format information.
+detectUploadedFileType :: Maybe Text -> BS.ByteString -> Maybe UploadedFileType
+detectUploadedFileType mbDeclaredExtension bs
+  | "\xFF\xD8\xFF" `BS.isPrefixOf` bs = Just JPEG
+  | "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A" `BS.isPrefixOf` bs = Just PNG
+  | "%PDF-" `BS.isPrefixOf` bs = Just PDF
+  | "RIFF" `BS.isPrefixOf` bs && "WEBP" `BS.isPrefixOf` BS.drop 8 bs = Just WEBP
+  -- ISO-BMFF branded container: bytes 4..7 are "ftyp", the brand follows at 8..11. AVIF and HEIC
+  -- share this container, so the brand decides which.
+  | "ftyp" `BS.isPrefixOf` BS.drop 4 bs =
+    let brand = BS.take 4 (BS.drop 8 bs)
+     in if
+            | brand `elem` ["avif", "avis"] -> Just AVIF
+            | brand `elem` ["heic", "heix", "hevc", "hevx", "heim", "heis"] -> Just HEIC
+            -- mif1/msf1 are the generic ISO brands, emitted by both AVIF and HEIC encoders. The
+            -- bytes cannot distinguish them, so fall back to what the caller declared rather
+            -- than picking one and producing a spurious extension mismatch.
+            | brand `elem` ["mif1", "msf1"] ->
+              Just $ if mbDeclaredExtension == Just "avif" then AVIF else HEIC
+            | otherwise -> Nothing
+  | otherwise = Nothing
+
+canonicalExtension :: UploadedFileType -> Text
+canonicalExtension = \case
+  JPEG -> "jpg"
+  PNG -> "png"
+  WEBP -> "webp"
+  HEIC -> "heic"
+  AVIF -> "avif"
+  PDF -> "pdf"
+
+-- | Extensions a caller may legitimately declare for a given detected format. A declared
+-- extension that disagrees with the content is treated as an attempt to smuggle a payload past
+-- extension-based checks further down the chain.
+allowedExtensionsFor :: UploadedFileType -> [Text]
+allowedExtensionsFor = \case
+  JPEG -> ["jpg", "jpeg"]
+  PNG -> ["png"]
+  WEBP -> ["webp"]
+  HEIC -> ["heic", "heif"]
+  AVIF -> ["avif"]
+  PDF -> ["pdf"]
+
+isImageFileType :: UploadedFileType -> Bool
+isImageFileType = \case
+  PDF -> False
+  _ -> True
+
+-- | Document types that are captured as photographs and rendered directly in an <img>. A PDF
+-- stored under one of these would be stored as .pdf and break every consumer rendering it, so
+-- these accept image formats only. Everything else (certificates, licences, forms) may be either.
+isImageOnlyDocument :: DVC.DocumentType -> Bool
+isImageOnlyDocument docType =
+  docType
+    `elem` [ DVC.ProfilePhoto,
+             DVC.UploadProfile,
+             DVC.VehicleFront,
+             DVC.VehicleBack,
+             DVC.VehicleRight,
+             DVC.VehicleLeft,
+             DVC.VehicleFrontInterior,
+             DVC.VehicleBackInterior,
+             DVC.Odometer,
+             DVC.InspectionHub
+           ]
+
+-- | PDF names that make a viewer do something other than display a page. A scanned certificate
+-- has no reason to carry any of these, and each is a documented execution or exfiltration vector.
+--
+-- Deliberately excludes @/OpenAction@ and @/AA@: both are routinely present in benign documents
+-- to set an initial zoom or page, and are only dangerous when they reference a @/JavaScript@
+-- action, which is itself on this list. Also excludes @/URI@, which is an ordinary hyperlink.
+pdfActiveContentNames :: [BS.ByteString]
+pdfActiveContentNames =
+  [ "/JavaScript",
+    "/JS",
+    "/Launch",
+    "/EmbeddedFile",
+    "/EmbeddedFiles",
+    "/XFA",
+    "/RichMedia",
+    "/SubmitForm",
+    "/ImportData"
+  ]
+
+-- | The first active-content name present in a PDF, if any.
+--
+-- Best effort by construction, and worth being explicit about the limits. PDF allows these names
+-- to live inside a compressed object stream (@/ObjStm@ with a @/FlateDecode@ filter), where a raw
+-- byte scan cannot see them, and allows them to be written with hex escapes such as
+-- @/J#61vaScript@. This catches the direct encodings, which is what commodity PDF-payload
+-- generators emit. It raises the cost of the attack; it does not make a stored PDF trustworthy,
+-- so the viewer rendering these must still treat them as untrusted.
+pdfActiveContentFinding :: BS.ByteString -> Maybe BS.ByteString
+pdfActiveContentFinding bs = find (`containsPdfName` bs) pdfActiveContentNames
+
+-- | Whether a PDF name token occurs, respecting token boundaries. The boundary check is what
+-- keeps @/JS@ from also matching the @/JSName@ of some unrelated dictionary key.
+containsPdfName :: BS.ByteString -> BS.ByteString -> Bool
+containsPdfName name = go
+  where
+    go haystack =
+      let (_, rest) = BS.breakSubstring name haystack
+       in not (BS.null rest)
+            && case BS.uncons (BS.drop (BS.length name) rest) of
+              -- Name runs to end of file: nothing can follow, so the token is complete.
+              Nothing -> True
+              Just (c, _) -> isPdfDelimiter c || go (BS.drop 1 rest)
+    -- PDF whitespace and delimiter characters (ISO 32000-1 tables 1 and 2).
+    isPdfDelimiter c = c `BS.elem` "\0\t\n\f\r ()<>[]{}/%"
+
+-- | Reject anything whose bytes are not a permitted document format, whose declared extension
+-- contradicts those bytes, which is a PDF under a photo-only document type, or which is a PDF
+-- carrying active content.
+--
+-- When @enforce@ is False this runs in shadow mode: every rejection is logged and allowed
+-- through, so the rejection rate can be measured against real onboarding traffic before the
+-- check starts failing requests. Returns Nothing when the content could not be identified,
+-- in which case the caller falls back to the legacy declared-extension behaviour.
+validateUploadedFileType ::
+  MonadFlow m =>
+  Bool ->
+  DVC.DocumentType ->
+  BS.ByteString ->
+  Maybe Text ->
+  m (Maybe UploadedFileType)
+validateUploadedFileType enforce docType content mbDeclaredExtension = do
+  let mbDeclared = normalizeExtension =<< mbDeclaredExtension
+  case detectUploadedFileType mbDeclared content of
+    Nothing ->
+      reject ("Unrecognized file content, declared extension: " <> show mbDeclared) Nothing $
+        "Unsupported file type. Only JPEG, PNG, WEBP, HEIC, AVIF and PDF documents are accepted."
+    Just fileType -> do
+      let extensionMismatch = case mbDeclared of
+            Just declared -> declared `notElem` allowedExtensionsFor fileType
+            Nothing -> False
+      if extensionMismatch
+        then
+          reject ("Declared extension " <> show mbDeclared <> " contradicts detected " <> show fileType) (Just fileType) $
+            "File extension does not match the uploaded file content."
+        else
+          if isImageOnlyDocument docType && not (isImageFileType fileType)
+            then
+              reject (show fileType <> " uploaded for image-only document " <> show docType) (Just fileType) $
+                show docType <> " must be an image, not a " <> T.toLower (show fileType) <> "."
+            else case (fileType, pdfActiveContentFinding content) of
+              -- Matched left-to-right, so the scan is only forced for a PDF.
+              (PDF, Just marker) ->
+                reject ("PDF carries active content name " <> show marker) (Just fileType) $
+                  "This PDF contains scripts, embedded files or interactive forms and cannot be accepted. Please upload a plain scanned document."
+              _ -> pure (Just fileType)
+  where
+    reject logDetail mbFileType userMessage
+      | enforce = throwError $ InvalidRequest userMessage
+      | otherwise = do
+        logWarning $ "UploadFileTypeCheck:shadow: would have rejected upload. " <> logDetail
+        pure mbFileType
+
+-- | The declared extension is caller-supplied and reaches 'createPath', where it is concatenated
+-- into the S3 object key. Anything outside a bare alphanumeric run is rejected rather than
+-- cleaned, so a value carrying separators or traversal segments (@png/../../other-driver/x@)
+-- cannot steer the key out of the driver's own prefix; it falls through to the @png@ default
+-- instead. Length is bounded for the same reason — an extension is a handful of characters, and
+-- an unbounded one is only ever an attempt to shape the key.
+normalizeExtension :: Text -> Maybe Text
+normalizeExtension ext = do
+  let normalized = ext & T.strip & T.dropWhile (== '.') & T.toLower
+  if T.null normalized || T.length normalized > 8 || not (T.all (`elem` allowedExtensionChars) normalized)
+    then Nothing
+    else Just normalized
+  where
+    -- Already lower-cased above, so the lower-case run is the whole alphanumeric set.
+    allowedExtensionChars :: [Char]
+    allowedExtensionChars = ['a' .. 'z'] <> ['0' .. '9']
+
+-- | Extension the object is stored under.
+--
+-- Shadow mode must be observably inert: with @enforce@ False the object keeps the extension the
+-- caller declared, byte-for-byte the behaviour that predates this check, and the only effect of
+-- the check is a log line. Letting detected content win while the flag is off would silently
+-- change stored S3 paths (a JPEG declared .png would land as .jpg) on every merchant at deploy
+-- time, before anyone opted in.
+--
+-- Only when enforcing does detected content decide the extension.
+resolveStoredExtension :: Bool -> Maybe UploadedFileType -> Maybe Text -> Text
+resolveStoredExtension enforce mbFileType mbDeclaredExtension
+  | enforce, Just fileType <- mbFileType = canonicalExtension fileType
+  | otherwise = fromMaybe "png" (normalizeExtension =<< mbDeclaredExtension)
+
 createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
   Text ->
   Text ->
   DVC.DocumentType ->
-  Maybe Text ->
+  Text ->
   m Text
-createPath driverId merchantId documentType mbExtension = do
+createPath driverId merchantId documentType sanitizedExt = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-      sanitizedExt =
-        case mbExtension of
-          Nothing -> "png"
-          Just ext ->
-            ext
-              & T.strip
-              & T.dropWhile (== '.')
-              & (\t -> if T.null t then "png" else T.toLower t)
   return
     ( pathPrefix <> "/driver-onboarding/" <> "org-" <> merchantId <> "/"
         <> driverId
@@ -170,6 +383,10 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $
     throwError $ InvalidRequest $ "Image size " <> show (BS.length imageSizeInBytes) <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show (fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB) <> "MB)"
+  -- Defaults to shadow mode: log what would be rejected without failing onboarding, until the
+  -- rejection rate has been measured per merchant. Flip enforceUploadFileTypeCheck to enforce.
+  let enforceFileTypeCheck = fromMaybe False transporterConfig.enforceUploadFileTypeCheck
+  mbUploadedFileType <- validateUploadedFileType enforceFileTypeCheck imageType imageSizeInBytes fileExtension
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC, DVC.VehicleBack, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleFrontInterior, DVC.VehicleRight, DVC.VehicleLeft, DVC.Odometer, DVC.InspectionHub]
   mbRcId <-
     if imageType `elem` rcDependentDocuments
@@ -222,7 +439,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       when (imageType == DVC.ProfilePhoto && not isDashboard) $
         enforceSelfieReuploadPolicy person allImages
 
-      imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
+      imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension enforceFileTypeCheck mbUploadedFileType fileExtension)
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
           Redis.withLockRedis (imageS3Lock imagePath) 5 $

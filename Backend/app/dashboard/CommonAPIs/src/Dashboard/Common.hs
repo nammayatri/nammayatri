@@ -43,7 +43,7 @@ import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Types.Common (Centesimal, Meters)
+import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters)
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import qualified Kernel.Types.Id as Id
@@ -91,6 +91,8 @@ data DriverUdyam
 data TripTransaction
 
 data CoinsConfig
+
+data CancellationConsequenceMatrix
 
 data IncentiveJourney
 
@@ -417,5 +419,16 @@ data CancellationRateConfig = CancellationRateConfig
 data AvailabilityCheckConfig = AvailabilityCheckConfig
   { radiusMeters :: Meters,
     minDriverCount :: Int
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Enables silent (no accept-tap) assignment for a tier; AutoAcceptOnly ties tier eligibility itself to it, AutoAcceptOptional only ties priority.
+data AutoAcceptanceMode = AutoAcceptOnly | AutoAcceptOptional
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+data AutoAcceptanceConfig = AutoAcceptanceConfig
+  { minWalletBalance :: Maybe HighPrecMoney,
+    mode :: AutoAcceptanceMode,
+    enabled :: Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

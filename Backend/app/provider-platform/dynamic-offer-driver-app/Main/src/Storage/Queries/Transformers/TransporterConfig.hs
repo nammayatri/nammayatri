@@ -3,6 +3,7 @@ module Storage.Queries.Transformers.TransporterConfig
     parseFieldM,
     parseFieldWithDefaultM,
     parseAnalyticsConfig,
+    parseScheduledRideConfig,
     parseDriverWalletConfig,
     parseSubscriptionConfig,
     parseTaxConfig,
@@ -48,6 +49,19 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
           }
   parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def parseAnalyticsConfigWithDefault mbVal
 
+$(mkFieldParserWithDefault ''ScheduledRideConfig)
+
+parseScheduledRideConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m ScheduledRideConfig
+parseScheduledRideConfig merchantOperatingCityId mbVal = do
+  let def =
+        ScheduledRideConfig
+          { minLeadTime = Nothing,
+            maxLeadTime = Nothing,
+            avgSpeedKmph = Nothing,
+            maxHoldsPerDriver = 1
+          }
+  parseFieldWithDefaultM "transporterConfig" "scheduledRideConfig" merchantOperatingCityId def parseScheduledRideConfigWithDefault mbVal
+
 $(mkFieldParserWithDefault ''DriverWalletConfig)
 
 parseDriverWalletConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DriverWalletConfig
@@ -62,11 +76,13 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             forceOnlineLedger = Nothing,
             maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
+            minWalletAmountForScheduledRides = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,
             onlineCommissionPaidOutDirectly = Nothing,
             fetchWalletTransactionsFromClickhouse = Nothing,
+            enableWalletGatedTierCheck = Nothing,
             paymentChargeBearer = Nothing,
             paymentChargeRate = Nothing,
             connectAccountCharge = Nothing,

@@ -106,6 +106,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 verifyBeforeCancellingOldBooking = Just True,
                 numberOfLuggages = Nothing,
                 doMultimodalSearch = Just True,
+                shouldCacheRoute = Nothing,
                 city = Nothing,
                 ..
               }
@@ -141,7 +142,11 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     billingCategory = Nothing,
                     preferSafetyPlus = Nothing,
                     driverPreference = Nothing,
-                    selectedOfferId = Nothing
+                    selectedOfferId = Nothing,
+                    -- A multimodal taxi leg is never a walk-and-save shadow, so there is
+                    -- no moved endpoint here to name.
+                    suggestedPickupAddress = Nothing,
+                    suggestedDropAddress = Nothing
                   }
           mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just req.searchId)
           mbJourneyLegData <- case mbJourneyLeg of
@@ -269,7 +274,8 @@ cancelSearch' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   (Id DPerson.Person, Id Merchant.Merchant) ->
   Id DEstimate.Estimate ->

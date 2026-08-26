@@ -38,7 +38,9 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortOn)
 import qualified Data.Map.Strict as Map
+import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -171,7 +173,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
     passAPIEntities <- flip mapMaybeM flatPasses $ \pass ->
       withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
-        >>= either (const (pure Nothing)) (pure . Just)
+        >>= either (const (pure Nothing)) (pure . mfilter (.eligibility) . Just)
 
     return $
       PassAPI.PassInfoAPIEntity
@@ -297,13 +299,15 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
-        let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
-        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
-          throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
-        let futureRenewalsOverlap = any (\futurePass -> hasDateOverlap (futurePass.startDate, futurePass.endDate) (startDate, endDate)) futureRenewals
-        when futureRenewalsOverlap $
-          throwError (InvalidRequest "You already have a future renewal of this pass in the selected dates")
+        livePayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
+        let overlappingPayments = filter (\livePayment -> hasDateOverlap (livePayment.startDate, livePayment.endDate) (startDate, endDate)) livePayments
+        exhaustedFlags <- mapM isExhaustedPayment overlappingPayments
+        let blockingPayments = [livePayment | (livePayment, exhausted) <- zip overlappingPayments exhaustedFlags, not exhausted]
+        whenJust (listToMaybe blockingPayments) $ \blockingPayment ->
+          throwError . InvalidRequest $
+            if blockingPayment.startDate > DT.utctDay istTime
+              then "You already have a future renewal of this pass in the selected dates"
+              else "You already have an active pass of this type in the selected dates"
         return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
@@ -504,6 +508,17 @@ validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person requiredDoc
   unless (null missingDocs) $ do
     let missingDocNames = show missingDocs
     throwError $ InvalidRequest $ "Missing required documents: " <> missingDocNames
+
+passRequiresDocument ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPass.PassDocumentType ->
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m Bool
+passRequiresDocument docType purchasedPassPayment =
+  maybe
+    (pure True)
+    (fmap (maybe True (elem docType . (.documentsRequired))) . CQPass.findById)
+    purchasedPassPayment.passId
 
 -- Check if person has a specific document
 hasDocument :: Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> DPass.PassDocumentType -> Bool
@@ -725,6 +740,16 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
 
+mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
+mkFrfsOverrideConfig benefit =
+  PassAPI.FrfsOverrideConfigAPIEntity
+    { percentageApplicable = benefit.percentageSaving >>= \p -> if p.enabled == Just True then Just p.applicableValue else Nothing,
+      fixedApplicable = benefit.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
+      maximumTripCount = benefit.maximumTripCount,
+      unlimitedTripCount = benefit.unlimitedTripCount == Just True,
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+    }
+
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
 findMerchantOperatingCity merchantShortId opCity =
   CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
@@ -818,6 +843,11 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         Just (DPass.PercentageSaving percentage) -> passAmount / (1 - (percentage / 100))
         Nothing -> passAmount
 
+  mbFrfsOverrideConfig <-
+    if pass.frfsPriceOverrideApplicable == Just True
+      then fmap mkFrfsOverrideConfig <$> FRFSPassOverride.benefitFromPass pass
+      else pure Nothing
+
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
@@ -830,6 +860,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         vehicleType = pass.vehicleType,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
+        frfsOverrideConfig = mbFrfsOverrideConfig,
+        frfsCancelLimit = pass.frfsCancelLimit,
         documentsRequired = pass.documentsRequired,
         eligibility = eligibility,
         name = name,
@@ -887,6 +919,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         vehicleType = purchasedPass.vehicleType,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
+        frfsOverrideConfig = Nothing,
+        frfsCancelLimit = Nothing,
         description = description,
         documentsRequired = [],
         eligibility = True,
@@ -932,10 +966,16 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
-  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbLivePayment >>= (.passId))
+  mbPayment <-
+    case mbLivePayment of
+      Just live -> pure (Just live)
+      Nothing ->
+        listToMaybe . sortOn (Down . (.endDate)) . filter ((== DPurchasedPass.Expired) . (.status))
+          <$> QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
+  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbPayment >>= (.passId))
   mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
-  availableTripCount <- case (mbLivePayment, mbBenefit) of
-    (Just livePayment, Just benefit) -> FRFSPassOverride.remainingTrips livePayment benefit
+  availableTripCount <- case (mbPayment, mbBenefit) of
+    (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
   let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
 
@@ -970,6 +1010,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         tripsLeft = tripsLeft,
         availableTripCount = availableTripCount,
         unlimitedTripCount = unlimitedTripCount,
+        purchasedPassPaymentId = (.id) <$> mbPayment,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
@@ -1007,7 +1048,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
       let hasProfilePicture = isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      photoRequired <- passRequiresDocument DPass.ProfilePicture purchasedPassPayment
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (hasProfilePicture || not photoRequired) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -1109,8 +1151,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
       return (DPayment.FulfillmentPending, Nothing, Nothing)
   where
-    convertPaymentStatusToPurchasedPassStatus hasProfilePicture futureDatePass = \case
-      Payment.CHARGED -> if hasProfilePicture then if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active else Just DPurchasedPass.PhotoPending
+    convertPaymentStatusToPurchasedPassStatus photoSatisfied futureDatePass = \case
+      Payment.CHARGED -> if photoSatisfied then if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active else Just DPurchasedPass.PhotoPending
       -- There can be a CHARGED transaction for Same Order even on Failure, so we should not mark the Pass as FAILED.
       -- Payment.AUTHENTICATION_FAILED -> Just DPurchasedPass.Failed
       -- Payment.AUTHORIZATION_FAILED -> Just DPurchasedPass.Failed
@@ -1160,6 +1202,8 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
       [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
       today
 
+  photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
+
   case listToMaybe latestPayments of
     Just firstPayment ->
       let newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
@@ -1173,7 +1217,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
 
           newStatus
             | firstPayment.endDate < today = DPurchasedPass.Expired
-            | not hasPhoto = DPurchasedPass.PhotoPending
+            | not hasPhoto && photoRequired = DPurchasedPass.PhotoPending
             | firstPayment.startDate <= today = DPurchasedPass.Active
             | otherwise = DPurchasedPass.PreBooked
 
@@ -1697,17 +1741,39 @@ buildPurchasedPassPaymentAPIEntities ::
   m [PassAPI.PurchasedPassTransactionAPIEntity]
 buildPurchasedPassPaymentAPIEntities payments = do
   refundMap <- fetchRefundsForPayments payments
-  return $ map (mkPurchasedPassPaymentAPIEntity refundMap) payments
+  forM payments $ \payment -> do
+    availableTripCount <- availableTripCountForPayment payment
+    return $ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount payment
+
+-- Trips left on this payment's own override benefit. Nothing when the pass carries
+-- no override config or grants unlimited trips -- same rule as the parent pass entity.
+availableTripCountForPayment ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m (Maybe Int)
+availableTripCountForPayment payment = do
+  mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
+  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
+  maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
+
+isExhaustedPayment ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m Bool
+isExhaustedPayment payment = maybe False (<= 0) <$> availableTripCountForPayment payment
 
 mkPurchasedPassPaymentAPIEntity ::
   Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
+  Maybe Int ->
   DPurchasedPassPayment.PurchasedPassPayment ->
   PassAPI.PurchasedPassTransactionAPIEntity
-mkPurchasedPassPaymentAPIEntity refundMap purchasedPassPayment =
+mkPurchasedPassPaymentAPIEntity refundMap availableTripCount purchasedPassPayment =
   let refunds = Map.findWithDefault [] purchasedPassPayment.orderId refundMap
       computedStatus = computePassStatusFromRefunds purchasedPassPayment.status refunds
    in PassAPI.PurchasedPassTransactionAPIEntity
         { id = purchasedPassPayment.id,
+          purchasedPassPaymentId = purchasedPassPayment.id,
+          availableTripCount = availableTripCount,
           startDate = purchasedPassPayment.startDate,
           endDate = purchasedPassPayment.endDate,
           status = computedStatus,

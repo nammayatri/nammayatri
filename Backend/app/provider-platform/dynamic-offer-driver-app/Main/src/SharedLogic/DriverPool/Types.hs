@@ -16,6 +16,7 @@
 module SharedLogic.DriverPool.Types where
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as A
 import Data.Default.Class
 import qualified Domain.Types as DTC
@@ -144,10 +145,12 @@ data DriverPoolResult = DriverPoolResult
     latestScheduledPickup :: Maybe Maps.LatLong,
     customerTags :: Maybe A.Value,
     driverTags :: A.Value,
+    selectedAutoAcceptTiers :: [DVST.ServiceTierType],
     score :: Maybe A.Value,
     minRideDistance :: Maybe Meters,
     maxRideDistance :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
+    isPetModeEnabled :: Bool,
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
     driverGender :: Maybe Person.Gender,
     vehicleNumber :: Maybe Text,
@@ -158,7 +161,7 @@ data DriverPoolResult = DriverPoolResult
     previousRideDropLon :: Maybe Double,
     distanceFromDriverToDestination :: Maybe Meters
   }
-  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+  deriving (Generic, Show, HasCoordinates, ToJSON)
 
 -- Used for Tagging logic testing
 instance Default DriverPoolResult where
@@ -187,10 +190,12 @@ instance Default DriverPoolResult where
         latestScheduledPickup = Nothing,
         customerTags = Nothing,
         driverTags = A.emptyObject,
+        selectedAutoAcceptTiers = [],
         score = Nothing,
         minRideDistance = Nothing,
         maxRideDistance = Nothing,
         maxPickupDistance = Nothing,
+        isPetModeEnabled = False,
         isTollRouteEligible = True,
         driverGender = Nothing,
         vehicleNumber = Nothing,
@@ -232,6 +237,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     minRideDistance :: Maybe Meters,
     maxRideDistance :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
+    isPetModeEnabled :: Bool,
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
     vehicleNumber :: Maybe Text,
     fleetOwnerId :: Maybe Text
@@ -289,9 +295,14 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     -- sourced independently and could disagree, which silently mislabelled experiment arms.
     poolingLogicVersion :: Maybe Int,
     searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters,
-    idleTimeSeconds :: Maybe Double
+    idleTimeSeconds :: Maybe Double,
+    -- Fraction (0 to 1) of the driver's self-selected preferences (ride-distance range,
+    -- pickup radius, pet mode, ...) that this specific search satisfies. See
+    -- `preferenceMatchScore` below -- adding a new preference dimension never requires
+    -- touching this field or its callers, only appending one more PreferenceCheck.
+    preferenceMatchScore :: Double
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, ToJSON)
 
 -- Used for Tagging logic testing
 instance Default DriverPoolWithActualDistResult where
@@ -314,8 +325,60 @@ instance Default DriverPoolWithActualDistResult where
         score = Nothing,
         poolingLogicVersion = Nothing,
         searchReqDriverStatsCounters = Nothing,
-        idleTimeSeconds = Nothing
+        idleTimeSeconds = Nothing,
+        preferenceMatchScore = 1.0
       }
+
+-- | One preference dimension's outcome for a single driver/ride pairing.
+-- `isApplicable = False` means this dimension has nothing to say about this ride
+-- (driver didn't set the preference, or the preference doesn't pertain to this ride)
+-- and is excluded from the score rather than counted against the driver.
+--
+-- `satisfaction` is a fraction in [0, 1] rather than a Bool so a dimension can
+-- express a partial match (e.g. the area preference scores a pickup-only match
+-- lower than a pickup-and-drop match). Binary dimensions use 'binaryCheck'.
+data PreferenceCheck = PreferenceCheck
+  { isApplicable :: Bool,
+    satisfaction :: Double
+  }
+
+-- | A dimension that has nothing to say about this ride, and so is excluded from
+-- the aggregate rather than counted as a miss.
+notApplicable :: PreferenceCheck
+notApplicable = PreferenceCheck {isApplicable = False, satisfaction = 0.0}
+
+-- | Build a PreferenceCheck for a dimension that is either fully met or not met
+-- at all. Keeps binary call sites readable and clamps them to the same [0, 1]
+-- scale the graded dimensions use.
+binaryCheck :: Bool -> Bool -> PreferenceCheck
+binaryCheck applicable satisfied =
+  PreferenceCheck
+    { isApplicable = applicable,
+      satisfaction = if satisfied then 1.0 else 0.0
+    }
+
+-- | Mean satisfaction across the applicable preferences, in [0, 1].
+-- No applicable preferences => 1.0 (nothing to violate => neutral/full match).
+-- Each dimension's satisfaction is clamped so a malformed contributor cannot
+-- drag the aggregate outside [0, 1].
+computePreferenceMatchScore :: [PreferenceCheck] -> Double
+computePreferenceMatchScore checks =
+  case filter isApplicable checks of
+    [] -> 1.0
+    applicable -> sum (map (clamp01 . satisfaction) applicable) / fromIntegral (length applicable)
+  where
+    clamp01 = max 0.0 . min 1.0
+
+withJsonDefault :: A.Key -> A.Value -> A.Value -> A.Value
+withJsonDefault k fallback (A.Object o) | not (AKM.member k o) = A.Object (AKM.insert k fallback o)
+withJsonDefault _ _ v = v
+
+instance FromJSON DriverPoolResult where
+  -- absent isPetModeEnabled => driver had not opted into pet rides
+  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "isPetModeEnabled" (A.Bool False)
+
+instance FromJSON DriverPoolWithActualDistResult where
+  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "preferenceMatchScore" (A.Number 1.0)
 
 instance HasCoordinates DriverPoolWithActualDistResult where
   getCoordinates r = getCoordinates r.driverPoolResult

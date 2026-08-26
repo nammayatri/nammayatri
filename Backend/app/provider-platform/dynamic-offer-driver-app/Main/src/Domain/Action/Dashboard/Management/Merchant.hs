@@ -95,11 +95,16 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import Data.Default.Class (def)
+-- Aliased HMS, not HM: this module already binds HM to Data.Aeson.KeyMap (line above the
+-- ByteString imports), and cassava's NamedRecord is a Data.HashMap.Strict map.
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8With)
 import qualified Data.Text.Encoding as TEnc
+import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
@@ -261,6 +266,7 @@ import qualified Toll.Domain.Types.Toll as Toll
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
 import qualified Toll.Storage.Queries.Toll as QToll
 import qualified Toll.Storage.Queries.TollExtra as QTollExtra
+import Tools.Csv (desanitizeCsvField, sanitizeCsvField)
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -1692,7 +1698,6 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text,
-    driverCancellationPenaltyAmount :: Text,
     driverCancellationNotAllowed :: Text,
     perLuggageCharge :: Text,
     returnFee :: Text,
@@ -1705,109 +1710,117 @@ data FarePolicyCSVRow = FarePolicyCSVRow
 
 instance ToNamedRecord FarePolicyCSVRow where
   toNamedRecord FarePolicyCSVRow {..} =
-    namedRecord
-      [ "city" .= city,
-        "vehicle_service_tier" .= vehicleServiceTier,
-        "area" .= area,
-        "tripCategory" .= tripCategory,
-        "fare_policy_key" .= farePolicyKey,
-        "night_shift_start" .= nightShiftStart,
-        "night_shift_end" .= nightShiftEnd,
-        "min_allowed_trip_distance" .= minAllowedTripDistance,
-        "max_allowed_trip_distance" .= maxAllowedTripDistance,
-        "service_charge" .= serviceCharge,
-        "toll_charges" .= tollCharges,
-        "pet_charges" .= petCharges,
-        "driver_allowance" .= driverAllowance,
-        "airport_convenience_fee" .= airportConvenienceFee,
-        "business_discount_percentage" .= businessDiscountPercentage,
-        "personal_discount_percentage" .= personalDiscountPercentage,
-        "priority_charges" .= priorityCharges,
-        "tip_options" .= tipOptions,
-        "govt_charges" .= govtCharges,
-        "fare_policy_type" .= farePolicyType,
-        "description" .= description,
-        "congestion_charge_multiplier" .= congestionChargeMultiplier,
-        "congestion_charge_multiplier_include_base_fare" .= congestionChargeMultiplierIncludeBaseFare,
-        "parking_charge" .= parkingCharge,
-        "per_stop_charge" .= perStopCharge,
-        "currency" .= currency,
-        "base_distance" .= baseDistance,
-        "base_fare" .= baseFare,
-        "dead_km_fare" .= deadKmFare,
-        "pickup_charges_min" .= pickupChargesMin,
-        "pickup_charges_max" .= pickupChargesMax,
-        "waiting_charge" .= waitingCharge,
-        "waiting_charge_type" .= waitingChargeType,
-        "night_shift_charge" .= nightShiftCharge,
-        "night_shift_charge_type" .= nightShiftChargeType,
-        "free_wating_time" .= freeWatingTime,
-        "start_distance_driver_addition" .= startDistanceDriverAddition,
-        "min_fee" .= minFee,
-        "max_fee" .= maxFee,
-        "step_fee" .= stepFee,
-        "default_step_fee" .= defaultStepFee,
-        "extra_km_rate_start_distance" .= extraKmRateStartDistance,
-        "per_extra_km_rate" .= perExtraKmRate,
-        "base_fare_depreciation" .= baseFareDepreciation,
-        "per_min_rate_start_duration" .= perMinRateStartDuration,
-        "per_min_rate" .= perMinRate,
-        "per_min_rate_duration_basis" .= perMinRateDurationBasis,
-        "peak_timings" .= peakTimings,
-        "peak_days" .= peakDays,
-        "cancellation_fare_policy_description" .= cancellationFarePolicyDescription,
-        "free_cancellation_time_seconds" .= freeCancellationTimeSeconds,
-        "max_cancellation_charge" .= maxCancellationCharge,
-        "max_waiting_time_at_pickup_seconds" .= maxWaitingTimeAtPickupSeconds,
-        "min_cancellation_charge" .= minCancellationCharge,
-        "per_metre_cancellation_charge" .= perMetreCancellationCharge,
-        "per_minute_cancellation_charge" .= perMinuteCancellationCharge,
-        "percentage_of_ride_fare_to_be_charged" .= percentageOfRideFareToBeCharged,
-        "platform_fee_charge_type" .= platformFeeChargeType,
-        "platform_fee_charge" .= platformFeeCharge,
-        "platform_fee_cgst" .= platformFeeCgst,
-        "platform_fee_sgst" .= platformFeeSgst,
-        "platform_fee_charge_fare_policy_level" .= platformFeeChargeFarePolicyLevel,
-        "platform_fee_cgst_fare_policy_level" .= platformFeeCgstFarePolicyLevel,
-        "platform_fee_sgst_pare_policy_level" .= platformFeeSgstFarePolicyLevel,
-        "platform_fee_charges_by" .= platformFeeChargesBy,
-        "per_minute_ride_extra_time_charge" .= perMinuteRideExtraTimeCharge,
-        "ride_extra_time_charge_grace_period" .= rideExtraTimeChargeGracePeriod,
-        "search_source" .= searchSource,
-        "per_extra_min_rate" .= perExtraMinRate,
-        "included_km_per_hr" .= includedKmPerHr,
-        "planned_per_km_rate" .= plannedPerKmRate,
-        "max_additional_kms_limit" .= maxAdditionalKmsLimit,
-        "total_additional_kms_limit" .= totalAdditionalKmsLimit,
-        "time_percentage" .= timePercentage,
-        "distance_percentage" .= distancePercentage,
-        "fare_percentage" .= farePercentage,
-        "include_actual_time_percentage" .= includeActualTimePercentage,
-        "include_actual_dist_percentage" .= includeActualDistPercentage,
-        "ride_duration" .= rideDuration,
-        "buffer_kms" .= bufferKms,
-        "buffer_meters" .= bufferMeters,
-        "per_hour_charge" .= perHourCharge,
-        "per_km_rate_one_way" .= perKmRateOneWay,
-        "per_km_rate_round_trip" .= perKmRateRoundTrip,
-        "km_per_planned_extra_hour" .= kmPerPlannedExtraHour,
-        "per_day_max_hour_allowance" .= perDayMaxHourAllowance,
-        "per_day_max_allowance_in_mins" .= perDayMaxAllowanceInMins,
-        "default_wait_time_at_destination" .= defaultWaitTimeAtDestination,
-        "enabled" .= enabled,
-        "pickup_buffer_in_secs_for_night_shift_cal" .= pickupBufferInSecsForNightShiftCal,
-        "disable_recompute" .= disableRecompute,
-        "state_entry_permit_charges" .= stateEntryPermitCharges,
-        "additional_charges" .= conditionalCharges,
-        "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
-        "driver_cancellation_not_allowed" .= driverCancellationNotAllowed,
-        "per_luggage_charge" .= perLuggageCharge,
-        "return_fee" .= returnFee,
-        "booth_charges" .= boothCharges,
-        "vat_charge_config" .= vatChargeConfig,
-        "commission_charge_config" .= commissionChargeConfig,
-        "toll_tax_charge_config" .= tollTaxCharge
-      ]
+    -- Neutralized on the way out at the single choke point, covering every column rather than
+    -- only the obviously free-text ones (description, area, fare_policy_key): columns that are
+    -- enum- or number-derived today can become user-controlled later. A value that does not look
+    -- like a formula is returned unchanged, so this costs nothing for the numeric columns.
+    namedRecord $
+      map
+        sanitizeNamedField
+        [ "city" .= city,
+          "vehicle_service_tier" .= vehicleServiceTier,
+          "area" .= area,
+          "tripCategory" .= tripCategory,
+          "fare_policy_key" .= farePolicyKey,
+          "night_shift_start" .= nightShiftStart,
+          "night_shift_end" .= nightShiftEnd,
+          "min_allowed_trip_distance" .= minAllowedTripDistance,
+          "max_allowed_trip_distance" .= maxAllowedTripDistance,
+          "service_charge" .= serviceCharge,
+          "toll_charges" .= tollCharges,
+          "pet_charges" .= petCharges,
+          "driver_allowance" .= driverAllowance,
+          "airport_convenience_fee" .= airportConvenienceFee,
+          "business_discount_percentage" .= businessDiscountPercentage,
+          "personal_discount_percentage" .= personalDiscountPercentage,
+          "priority_charges" .= priorityCharges,
+          "tip_options" .= tipOptions,
+          "govt_charges" .= govtCharges,
+          "fare_policy_type" .= farePolicyType,
+          "description" .= description,
+          "congestion_charge_multiplier" .= congestionChargeMultiplier,
+          "congestion_charge_multiplier_include_base_fare" .= congestionChargeMultiplierIncludeBaseFare,
+          "parking_charge" .= parkingCharge,
+          "per_stop_charge" .= perStopCharge,
+          "currency" .= currency,
+          "base_distance" .= baseDistance,
+          "base_fare" .= baseFare,
+          "dead_km_fare" .= deadKmFare,
+          "pickup_charges_min" .= pickupChargesMin,
+          "pickup_charges_max" .= pickupChargesMax,
+          "waiting_charge" .= waitingCharge,
+          "waiting_charge_type" .= waitingChargeType,
+          "night_shift_charge" .= nightShiftCharge,
+          "night_shift_charge_type" .= nightShiftChargeType,
+          "free_wating_time" .= freeWatingTime,
+          "start_distance_driver_addition" .= startDistanceDriverAddition,
+          "min_fee" .= minFee,
+          "max_fee" .= maxFee,
+          "step_fee" .= stepFee,
+          "default_step_fee" .= defaultStepFee,
+          "extra_km_rate_start_distance" .= extraKmRateStartDistance,
+          "per_extra_km_rate" .= perExtraKmRate,
+          "base_fare_depreciation" .= baseFareDepreciation,
+          "per_min_rate_start_duration" .= perMinRateStartDuration,
+          "per_min_rate" .= perMinRate,
+          "per_min_rate_duration_basis" .= perMinRateDurationBasis,
+          "peak_timings" .= peakTimings,
+          "peak_days" .= peakDays,
+          "cancellation_fare_policy_description" .= cancellationFarePolicyDescription,
+          "free_cancellation_time_seconds" .= freeCancellationTimeSeconds,
+          "max_cancellation_charge" .= maxCancellationCharge,
+          "max_waiting_time_at_pickup_seconds" .= maxWaitingTimeAtPickupSeconds,
+          "min_cancellation_charge" .= minCancellationCharge,
+          "per_metre_cancellation_charge" .= perMetreCancellationCharge,
+          "per_minute_cancellation_charge" .= perMinuteCancellationCharge,
+          "percentage_of_ride_fare_to_be_charged" .= percentageOfRideFareToBeCharged,
+          "platform_fee_charge_type" .= platformFeeChargeType,
+          "platform_fee_charge" .= platformFeeCharge,
+          "platform_fee_cgst" .= platformFeeCgst,
+          "platform_fee_sgst" .= platformFeeSgst,
+          "platform_fee_charge_fare_policy_level" .= platformFeeChargeFarePolicyLevel,
+          "platform_fee_cgst_fare_policy_level" .= platformFeeCgstFarePolicyLevel,
+          "platform_fee_sgst_pare_policy_level" .= platformFeeSgstFarePolicyLevel,
+          "platform_fee_charges_by" .= platformFeeChargesBy,
+          "per_minute_ride_extra_time_charge" .= perMinuteRideExtraTimeCharge,
+          "ride_extra_time_charge_grace_period" .= rideExtraTimeChargeGracePeriod,
+          "search_source" .= searchSource,
+          "per_extra_min_rate" .= perExtraMinRate,
+          "included_km_per_hr" .= includedKmPerHr,
+          "planned_per_km_rate" .= plannedPerKmRate,
+          "max_additional_kms_limit" .= maxAdditionalKmsLimit,
+          "total_additional_kms_limit" .= totalAdditionalKmsLimit,
+          "time_percentage" .= timePercentage,
+          "distance_percentage" .= distancePercentage,
+          "fare_percentage" .= farePercentage,
+          "include_actual_time_percentage" .= includeActualTimePercentage,
+          "include_actual_dist_percentage" .= includeActualDistPercentage,
+          "ride_duration" .= rideDuration,
+          "buffer_kms" .= bufferKms,
+          "buffer_meters" .= bufferMeters,
+          "per_hour_charge" .= perHourCharge,
+          "per_km_rate_one_way" .= perKmRateOneWay,
+          "per_km_rate_round_trip" .= perKmRateRoundTrip,
+          "km_per_planned_extra_hour" .= kmPerPlannedExtraHour,
+          "per_day_max_hour_allowance" .= perDayMaxHourAllowance,
+          "per_day_max_allowance_in_mins" .= perDayMaxAllowanceInMins,
+          "default_wait_time_at_destination" .= defaultWaitTimeAtDestination,
+          "enabled" .= enabled,
+          "pickup_buffer_in_secs_for_night_shift_cal" .= pickupBufferInSecsForNightShiftCal,
+          "disable_recompute" .= disableRecompute,
+          "state_entry_permit_charges" .= stateEntryPermitCharges,
+          "additional_charges" .= conditionalCharges,
+          "driver_cancellation_not_allowed" .= driverCancellationNotAllowed,
+          "per_luggage_charge" .= perLuggageCharge,
+          "return_fee" .= returnFee,
+          "booth_charges" .= boothCharges,
+          "vat_charge_config" .= vatChargeConfig,
+          "commission_charge_config" .= commissionChargeConfig,
+          "toll_tax_charge_config" .= tollTaxCharge
+        ]
+    where
+      sanitizeNamedField (columnName, value) =
+        (columnName, TEnc.encodeUtf8 (sanitizeCsvField (decodeUtf8Lenient value)))
 
 farePolicyCSVHeader :: Header
 farePolicyCSVHeader =
@@ -1905,7 +1918,6 @@ farePolicyCSVHeader =
       "disable_recompute",
       "state_entry_permit_charges",
       "additional_charges",
-      "driver_cancellation_penalty_amount",
       "driver_cancellation_not_allowed",
       "per_luggage_charge",
       "return_fee",
@@ -1916,110 +1928,119 @@ farePolicyCSVHeader =
     ]
 
 instance FromNamedRecord FarePolicyCSVRow where
-  parseNamedRecord r =
-    FarePolicyCSVRow
-      <$> r .: "city"
-      <*> r .: "vehicle_service_tier"
-      <*> r .: "area"
-      <*> r .: "tripCategory"
-      <*> r .: "fare_policy_key"
-      <*> r .: "night_shift_start"
-      <*> r .: "night_shift_end"
-      <*> r .: "min_allowed_trip_distance"
-      <*> r .: "max_allowed_trip_distance"
-      <*> r .: "service_charge"
-      <*> r .: "toll_charges"
-      <*> r .: "pet_charges"
-      <*> r .: "driver_allowance"
-      <*> r .: "airport_convenience_fee"
-      <*> r .: "business_discount_percentage"
-      <*> r .: "personal_discount_percentage"
-      <*> r .: "priority_charges"
-      <*> r .: "tip_options"
-      <*> r .: "govt_charges"
-      <*> r .: "fare_policy_type"
-      <*> r .: "description"
-      <*> r .: "congestion_charge_multiplier"
-      <*> r .: "congestion_charge_multiplier_include_base_fare"
-      <*> r .: "parking_charge"
-      <*> r .: "per_stop_charge"
-      <*> r .: "currency"
-      <*> r .: "base_distance"
-      <*> r .: "base_fare"
-      <*> r .: "dead_km_fare"
-      <*> r .: "pickup_charges_min"
-      <*> r .: "pickup_charges_max"
-      <*> r .: "waiting_charge"
-      <*> r .: "waiting_charge_type"
-      <*> r .: "night_shift_charge"
-      <*> r .: "night_shift_charge_type"
-      <*> r .: "free_wating_time"
-      <*> r .: "start_distance_driver_addition"
-      <*> r .: "min_fee"
-      <*> r .: "max_fee"
-      <*> r .: "step_fee"
-      <*> r .: "default_step_fee"
-      <*> r .: "extra_km_rate_start_distance"
-      <*> r .: "per_extra_km_rate"
-      <*> r .: "base_fare_depreciation"
-      <*> r .: "per_min_rate_start_duration"
-      <*> r .: "per_min_rate"
-      <*> (r .: "per_min_rate_duration_basis" <|> pure "") -- optional so older CSV templates keep working
-      <*> r .: "peak_timings"
-      <*> r .: "peak_days"
-      <*> r .: "cancellation_fare_policy_description"
-      <*> r .: "free_cancellation_time_seconds"
-      <*> r .: "max_cancellation_charge"
-      <*> r .: "max_waiting_time_at_pickup_seconds"
-      <*> r .: "min_cancellation_charge"
-      <*> r .: "per_metre_cancellation_charge"
-      <*> r .: "per_minute_cancellation_charge"
-      <*> r .: "percentage_of_ride_fare_to_be_charged"
-      <*> r .: "platform_fee_charge_type"
-      <*> r .: "platform_fee_charge"
-      <*> r .: "platform_fee_cgst"
-      <*> r .: "platform_fee_sgst"
-      <*> r .: "platform_fee_charge_fare_policy_level"
-      <*> r .: "platform_fee_cgst_fare_policy_level"
-      <*> r .: "platform_fee_sgst_pare_policy_level"
-      <*> r .: "platform_fee_charges_by"
-      <*> r .: "per_minute_ride_extra_time_charge"
-      <*> r .: "ride_extra_time_charge_grace_period"
-      <*> r .: "search_source"
-      <*> r .: "per_extra_min_rate"
-      <*> r .: "included_km_per_hr"
-      <*> r .: "planned_per_km_rate"
-      <*> r .: "max_additional_kms_limit"
-      <*> r .: "total_additional_kms_limit"
-      <*> r .: "time_percentage"
-      <*> r .: "distance_percentage"
-      <*> r .: "fare_percentage"
-      <*> r .: "include_actual_time_percentage"
-      <*> r .: "include_actual_dist_percentage"
-      <*> r .: "ride_duration"
-      <*> r .: "buffer_kms"
-      <*> r .: "buffer_meters"
-      <*> r .: "per_hour_charge"
-      <*> r .: "per_km_rate_one_way"
-      <*> r .: "per_km_rate_round_trip"
-      <*> r .: "km_per_planned_extra_hour"
-      <*> r .: "per_day_max_hour_allowance"
-      <*> r .: "per_day_max_allowance_in_mins"
-      <*> r .: "default_wait_time_at_destination"
-      <*> r .: "enabled"
-      <*> r .: "pickup_buffer_in_secs_for_night_shift_cal"
-      <*> r .: "disable_recompute"
-      <*> r .: "state_entry_permit_charges"
-      <*> r .: "additional_charges"
-      <*> r .: "driver_cancellation_penalty_amount"
-      -- optional column: old fare-policy CSV templates don't have it
-      <*> (r .: "driver_cancellation_not_allowed" <|> pure "")
-      <*> r .: "per_luggage_charge"
-      <*> r .: "return_fee"
-      <*> r .: "booth_charges"
-      <*> r .: "vat_charge_config"
-      <*> r .: "commission_charge_config"
-      <*> r .: "toll_tax_charge_config"
+  parseNamedRecord rawRecord =
+    -- Mirror of the sanitization applied in ToNamedRecord. This CSV is a round-trip format
+    -- (export -> edit -> re-upload), so a value quoted on the way out must be unquoted on the
+    -- way back in. Without this every negative number returns as "'-5", fails readMaybe, and is
+    -- silently dropped on the endpoint that sets pricing.
+    let r = HMS.map (TEnc.encodeUtf8 . desanitizeCsvField . decodeUtf8Lenient) rawRecord
+     in FarePolicyCSVRow
+          <$> r .: "city"
+          <*> r .: "vehicle_service_tier"
+          <*> r .: "area"
+          <*> r .: "tripCategory"
+          <*> r .: "fare_policy_key"
+          <*> r .: "night_shift_start"
+          <*> r .: "night_shift_end"
+          <*> r .: "min_allowed_trip_distance"
+          <*> r .: "max_allowed_trip_distance"
+          <*> r .: "service_charge"
+          <*> r .: "toll_charges"
+          <*> r .: "pet_charges"
+          <*> r .: "driver_allowance"
+          <*> r .: "airport_convenience_fee"
+          <*> r .: "business_discount_percentage"
+          <*> r .: "personal_discount_percentage"
+          <*> r .: "priority_charges"
+          <*> r .: "tip_options"
+          <*> r .: "govt_charges"
+          <*> r .: "fare_policy_type"
+          <*> r .: "description"
+          <*> r .: "congestion_charge_multiplier"
+          <*> r .: "congestion_charge_multiplier_include_base_fare"
+          <*> r .: "parking_charge"
+          <*> r .: "per_stop_charge"
+          <*> r .: "currency"
+          <*> r .: "base_distance"
+          <*> r .: "base_fare"
+          <*> r .: "dead_km_fare"
+          <*> r .: "pickup_charges_min"
+          <*> r .: "pickup_charges_max"
+          <*> r .: "waiting_charge"
+          <*> r .: "waiting_charge_type"
+          <*> r .: "night_shift_charge"
+          <*> r .: "night_shift_charge_type"
+          <*> r .: "free_wating_time"
+          <*> r .: "start_distance_driver_addition"
+          <*> r .: "min_fee"
+          <*> r .: "max_fee"
+          <*> r .: "step_fee"
+          <*> r .: "default_step_fee"
+          <*> r .: "extra_km_rate_start_distance"
+          <*> r .: "per_extra_km_rate"
+          <*> r .: "base_fare_depreciation"
+          <*> r .: "per_min_rate_start_duration"
+          <*> r .: "per_min_rate"
+          <*> (r .: "per_min_rate_duration_basis" <|> pure "") -- optional so older CSV templates keep working
+          <*> r .: "peak_timings"
+          <*> r .: "peak_days"
+          <*> r .: "cancellation_fare_policy_description"
+          <*> r .: "free_cancellation_time_seconds"
+          <*> r .: "max_cancellation_charge"
+          <*> r .: "max_waiting_time_at_pickup_seconds"
+          <*> r .: "min_cancellation_charge"
+          <*> r .: "per_metre_cancellation_charge"
+          <*> r .: "per_minute_cancellation_charge"
+          <*> r .: "percentage_of_ride_fare_to_be_charged"
+          <*> r .: "platform_fee_charge_type"
+          <*> r .: "platform_fee_charge"
+          <*> r .: "platform_fee_cgst"
+          <*> r .: "platform_fee_sgst"
+          <*> r .: "platform_fee_charge_fare_policy_level"
+          <*> r .: "platform_fee_cgst_fare_policy_level"
+          <*> r .: "platform_fee_sgst_pare_policy_level"
+          <*> r .: "platform_fee_charges_by"
+          <*> r .: "per_minute_ride_extra_time_charge"
+          <*> r .: "ride_extra_time_charge_grace_period"
+          <*> r .: "search_source"
+          <*> r .: "per_extra_min_rate"
+          <*> r .: "included_km_per_hr"
+          <*> r .: "planned_per_km_rate"
+          <*> r .: "max_additional_kms_limit"
+          <*> r .: "total_additional_kms_limit"
+          <*> r .: "time_percentage"
+          <*> r .: "distance_percentage"
+          <*> r .: "fare_percentage"
+          <*> r .: "include_actual_time_percentage"
+          <*> r .: "include_actual_dist_percentage"
+          <*> r .: "ride_duration"
+          <*> r .: "buffer_kms"
+          <*> r .: "buffer_meters"
+          <*> r .: "per_hour_charge"
+          <*> r .: "per_km_rate_one_way"
+          <*> r .: "per_km_rate_round_trip"
+          <*> r .: "km_per_planned_extra_hour"
+          <*> r .: "per_day_max_hour_allowance"
+          <*> r .: "per_day_max_allowance_in_mins"
+          <*> r .: "default_wait_time_at_destination"
+          <*> r .: "enabled"
+          <*> r .: "pickup_buffer_in_secs_for_night_shift_cal"
+          <*> r .: "disable_recompute"
+          <*> r .: "state_entry_permit_charges"
+          <*> r .: "additional_charges"
+          -- optional column: old fare-policy CSV templates don't have it
+          <*> (r .: "driver_cancellation_not_allowed" <|> pure "")
+          <*> r .: "per_luggage_charge"
+          <*> r .: "return_fee"
+          <*> r .: "booth_charges"
+          <*> r .: "vat_charge_config"
+          <*> r .: "commission_charge_config"
+          <*> r .: "toll_tax_charge_config"
+
+-- | Total UTF-8 decode. TEnc.decodeUtf8 is partial and throws UnicodeException; the CSV paths
+-- must not fail on a byte sequence Postgres happened to accept.
+decodeUtf8Lenient :: BS.ByteString -> Text
+decodeUtf8Lenient = decodeUtf8With lenientDecode
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -2677,7 +2698,6 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     disableRecompute = maybe "" showT fp.disableRecompute,
                     stateEntryPermitCharges = stateEntryPermit,
                     conditionalCharges = conditionalChargesJson,
-                    driverCancellationPenaltyAmount = maybe "" showT farePolicy.driverCancellationPenaltyAmount,
                     driverCancellationNotAllowed = maybe "" showT farePolicy.driverCancellationNotAllowed,
                     perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
                     returnFee = returnFeeVal,
@@ -3044,7 +3064,6 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
-      let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let driverCancellationNotAllowed :: (Maybe Bool) = readMaybeCSVField idx row.driverCancellationNotAllowed "Driver Cancellation Not Allowed"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
@@ -3811,12 +3830,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
             return Nothing
           Just sub | req.city `elem` sub.city -> return Nothing
-          Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) newUniqueId newSubscriberId subType domain
+          Just _ -> do
+            cityStdCode <- getCityStdCode req.city req.cityStdCode >>= fromMaybeM (InvalidRequest "City std code not found")
+            Just <$> RegistryT.buildAddCityNyReq (Context.City cityStdCode :| []) newUniqueId newSubscriberId subType domain
 
   whenJust mbNewOperatingCity $ \newOperatingCity ->
     whenJust newOperatingCity.stdCode $ \stdCode -> do
       let (Context.City cityText) = newOperatingCity.city
-      void $ City.validateAndAppendCityStdCodeMapping cityText stdCode
+      mbMappingError <- City.validateAndAppendCityStdCodeMapping cityText stdCode
+      whenJust mbMappingError $ \mappingError -> throwError $ InvalidRequest mappingError
 
   -- Reject before any DB write if the requested exophone number is already in use by another operating city
   existingExophones <- CQExophone.findAllByPhone req.exophone
@@ -3955,7 +3977,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           city = req.city,
           state = req.state,
           country = req.country,
+          countryDialCode = req.countryDialCode <|> baseCity.countryDialCode,
           supportNumber = req.supportNumber <|> baseCity.supportNumber,
+          supportEmails = req.supportEmails <|> baseCity.supportEmails,
           stdCode = Just cityStdCode,
           language = fromMaybe baseCity.language req.primaryLanguage,
           currency = fromMaybe baseCity.currency req.currency,
@@ -4616,6 +4640,7 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+castNetworkEnums Common.Fabric = Domain.Types.Fabric
 
 postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.PayoutConfigReq -> Flow APISuccess
 postMerchantPayoutConfigUpdate merchantShortId city req = do
@@ -4637,7 +4662,7 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
   now <- getCurrentTime
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   whiteListOrgId <- generateGUID
-  let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, createdAt = now, updatedAt = now}
+  let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, supportedBecknProtocols = Nothing, createdAt = now, updatedAt = now}
       valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
       registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
   existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
@@ -4821,6 +4846,7 @@ applyVehicleServiceTierUpdate existing req =
       DVST.specialZone = req.specialZone <|> existing.specialZone,
       DVST.cancellationRateConfig = req.cancellationRateConfig <|> existing.cancellationRateConfig,
       DVST.availabilityCheckConfig = req.availabilityCheckConfig <|> existing.availabilityCheckConfig,
+      DVST.autoAcceptanceConfig = req.autoAcceptanceConfig <|> existing.autoAcceptanceConfig,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
       DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
@@ -4927,6 +4953,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         cancellationRateConfig = req.cancellationRateConfig,
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         availabilityCheckConfig = req.availabilityCheckConfig,
+        autoAcceptanceConfig = req.autoAcceptanceConfig,
         createdAt = now,
         updatedAt = now
       }

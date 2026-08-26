@@ -323,7 +323,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,
-      issuedToName = Nothing
+      issuedToName = Nothing,
+      enableWalletGatedTierCheck = False -- driver-app-only concept; rider-app never reads this field
     }
 
 applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx

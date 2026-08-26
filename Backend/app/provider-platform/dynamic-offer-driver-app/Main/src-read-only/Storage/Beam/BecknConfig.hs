@@ -5,6 +5,7 @@ module Storage.Beam.BecknConfig where
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
+import qualified Domain.Types
 import qualified Domain.Types.BecknConfig
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -13,12 +14,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { becknProtocol :: B.C f (Kernel.Prelude.Maybe Domain.Types.BecknProtocol),
+    buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     multimodalOnSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    networkId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onCancelTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onConfirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onInitTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

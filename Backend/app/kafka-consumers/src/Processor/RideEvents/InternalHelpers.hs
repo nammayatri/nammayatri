@@ -124,7 +124,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
                 referralTitle = "Your referred customer has completed their first ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             fork "DriverToCustomerReferralCoin Event : " $ do
-              DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+              DC.driverCoinsEvent driver.id Nothing driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) Nothing
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) driver.merchantOperatingCityId.getId)
@@ -369,6 +369,7 @@ data EarningsKey = D2CReferralEarnings | D2DReferralEarnings
 creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
+    Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r
   ) =>
   HighPrecMoney ->

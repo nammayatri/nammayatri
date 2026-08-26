@@ -41,7 +41,9 @@ updateByPrimaryKey (Domain.Types.CancellationDuesDetails.CancellationDuesDetails
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cancellationAmount cancellationAmount,
+      Se.Set Beam.cancellationCollectionMode cancellationCollectionMode,
       Se.Set Beam.cancellationCommission cancellationCommission,
+      Se.Set Beam.cancellationConsequenceRowId cancellationConsequenceRowId,
       Se.Set Beam.cancellationFee cancellationFee,
       Se.Set Beam.cancellationFeeTax cancellationFeeTax,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),

@@ -37,7 +37,9 @@ postOperatorRegister merchantShortId opCity req = do
       >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
 
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  runRequestValidation (DashboardCommon.validateOperatorRegisterReq merchantOpCity.country) req
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  let validateFn = if transporterConfig.isStrongNameCheckRequired then DashboardCommon.validateOperatorRegisterReq else DashboardCommon.validateOperatorRegisterReqWithLooseCheck
+  runRequestValidation (validateFn merchantOpCity.country) req
   let personAuth = buildOperatorAuthReq merchant.id opCity req
   personOpt <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.OPERATOR, DP.FLEET_OWNER]
   case personOpt of

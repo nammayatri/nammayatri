@@ -15,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
+import Control.Applicative ((<|>))
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.Text as Text
@@ -36,7 +37,7 @@ import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt, encrypt, hash)
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -79,7 +80,9 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
 
   fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
 
-  Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle
+  let requestorRole = (castFleetRoleToPersonRole <$> role) <|> ((.role) <$> mbPerson)
+
+  Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle requestorRole
   let castConfigs = fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
@@ -94,6 +97,11 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
         toto = fmap castConfigs toto,
         onboardingStages = fmap (map castOnboardingStageAPIEntity) onboardingStages
       }
+
+castFleetRoleToPersonRole :: CommonOnboarding.Role -> Role
+castFleetRoleToPersonRole = \case
+  CommonOnboarding.NORMAL_FLEET -> FLEET_OWNER
+  CommonOnboarding.BUSINESS_FLEET -> FLEET_BUSINESS
 
 filterByStage ::
   Maybe OnboardingExtra.DocumentOnboardingStage ->
@@ -455,8 +463,7 @@ getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId enableDocumen
     Just rcId -> RCQuery.findById (Id rcId) >>= fromMaybeM (InvalidRequest $ "RC not found by id: " <> rcId)
     Nothing -> case mbRcNo of
       Just rcNo -> do
-        rcNoEnc <- encrypt rcNo
-        RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
+        RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
       Nothing -> throwError (InvalidRequest "Either rcNo or rcId must be provided")
   -- Dashboard callers are merchant/city-scoped by ApiAuthV2; the resolved RC must belong to the same operating city.
   whenJust rc.merchantOperatingCityId $ \rcOpCityId ->

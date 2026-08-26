@@ -223,11 +223,12 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         let createReq =
               Common.FleetOwnerLoginReqV2
                 { mobileNumber = req.mobileNumber,
-                  mobileCountryCode = req.mobileCountryCode
+                  mobileCountryCode = req.mobileCountryCode,
+                  fleetType = Nothing
                 }
         let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
         deploymentVersion <- asks (.version)
-        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
+        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId Nothing
         -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
         void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
         pure personData

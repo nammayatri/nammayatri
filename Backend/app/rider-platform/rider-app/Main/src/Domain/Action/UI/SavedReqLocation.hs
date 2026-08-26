@@ -25,6 +25,7 @@ import Data.Text (pack)
 import qualified Domain.Types.Person as Person
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
+import qualified Domain.Types.ServiceTierType as ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -55,7 +56,8 @@ data CreateSavedReqLocationReq = CreateSavedReqLocationReq
     placeId :: Maybe Text,
     ward :: Maybe Text,
     isMoved :: Maybe Bool,
-    locationName :: Maybe Text
+    locationName :: Maybe Text,
+    preferredServiceTierType :: Maybe ServiceTierType.ServiceTierType
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

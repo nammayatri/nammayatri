@@ -77,6 +77,7 @@ executeConsequence entityId action = do
       PermanentBlock params -> handlePermanentBlock entityId params
       ChargeFee params -> handleChargeFee entityId params
       IncrementCounter _ -> logDebug $ "INCREMENT_COUNTER skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
+      AssignTag params -> handleAssignTag entityId params
   case result of
     Right () -> do
       logDebug $ "Successfully executed consequence " <> show action <> " for entity " <> entityId

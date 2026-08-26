@@ -19,6 +19,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
+    countryDialCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     id :: B.C f Kernel.Prelude.Text,
@@ -29,6 +30,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     merchantShortId :: B.C f Kernel.Prelude.Text,
     state :: B.C f Kernel.Types.Beckn.Context.IndianState,
     stdCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    supportEmails :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     supportNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

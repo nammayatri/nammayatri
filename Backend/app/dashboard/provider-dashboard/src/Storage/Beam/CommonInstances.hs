@@ -25,6 +25,7 @@ import qualified "lib-dashboard" Storage.Beam.AccessAudit as BeamAA
 import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
 import qualified "lib-dashboard" Storage.Beam.Capability as BeamC
 import qualified "lib-dashboard" Storage.Beam.CapabilityEndpoint as BeamCE
+import qualified "lib-dashboard" Storage.Beam.DeletedUser as BeamDU
 import qualified "lib-dashboard" Storage.Beam.Entity as BeamE
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
@@ -39,6 +40,9 @@ import "lib-dashboard" Storage.Beam.SchemaName (resolveSchema)
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
 
 instance HasSchemaName BeamAA.AccessAuditT where
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
+
+instance HasSchemaName BeamDU.DeletedUserT where
   schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamAM.AccessMatrixT where

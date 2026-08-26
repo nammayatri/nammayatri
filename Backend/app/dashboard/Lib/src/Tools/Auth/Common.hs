@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -271,4 +271,19 @@ checkPasswordExpiry person = do
           secondsSinceUpdate = diffUTCTime now passwordUpdatedAt
           expiryLimit = fromIntegral days * 86400
       when (secondsSinceUpdate > expiryLimit) $
-        throwError $ InvalidRequest "Your password has expired. Please reset or contact admin."
+        throwError PasswordExpired
+
+-- | An admin-assigned password is a one-shot credential: it may be exchanged for a new password
+-- via changePasswordAfterExpiry, but never for a session. Enforced independently of
+-- passwordExpiryDays so it holds even when password expiry is switched off.
+--
+-- Called both at login and at every token verification. The login check alone would be adequate
+-- only because changePasswordByAdmin also destroys existing sessions; enforcing it here too means
+-- the gate does not silently depend on that cleanup being remembered by future reset paths.
+checkForcedPasswordChange ::
+  (BeamFlow m r) =>
+  DP.Person ->
+  m ()
+checkForcedPasswordChange person =
+  when (person.forcePasswordChange == Just True) $
+    throwError PasswordChangeRequired

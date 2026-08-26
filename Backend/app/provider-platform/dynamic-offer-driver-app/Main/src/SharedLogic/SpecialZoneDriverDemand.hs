@@ -1127,6 +1127,12 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
             | info <- driverInfos,
               info.onRide || info.mode == Just DTC.OFFLINE
           ]
+      blockedDrivers =
+        Set.fromList
+          [ info.driverId
+            | info <- driverInfos,
+              info.blocked
+          ]
       airportIneligibleDrivers =
         Set.fromList
           [ did
@@ -1156,17 +1162,19 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
               not (Set.member (cooldownKeyFor d) inCooldownKeys)
                 && not (Set.member d busyDrivers)
                 && not (Set.member d onRideDriversOrOfflineDrivers)
+                && not (Set.member d blockedDrivers)
                 && not (Set.member d airportIneligibleDrivers)
           )
           vehicleEligibleDriverIds
       -- Drivers with no business sitting in the special-zone queue — on a ride,
-      -- offline, or not airport-eligible — are evicted in the background. Cooldown /
-      -- pending-Active drivers are only *temporarily* ineligible and stay in place.
-      -- Scoped to this batch's input set so we never touch drivers we didn't fetch
-      -- info for; dedup by driverId (on-ride/offline reason wins) so each driver is
-      -- removed at most once even when it matches both conditions.
+      -- offline, blocked, or not airport-eligible — are evicted in the background.
+      -- Cooldown / pending-Active drivers are only *temporarily* ineligible and stay
+      -- in place. Scoped to this batch's input set so we never touch drivers we didn't
+      -- fetch info for; dedup by driverId (first matching reason wins) so each driver
+      -- is removed at most once even when it matches several conditions.
       reasonForQueueRemoval d
         | Set.member d onRideDriversOrOfflineDrivers = Just ("on_ride_or_offline" :: Text)
+        | Set.member d blockedDrivers = Just "driver_blocked"
         | Set.member d airportIneligibleDrivers = Just "cannot_switch_to_airport"
         | otherwise = Nothing
       toRemoveWithReason = mapMaybe (\d -> (,) d <$> reasonForQueueRemoval d) driverIds

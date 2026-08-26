@@ -393,7 +393,8 @@ buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
 
 data BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
   { fleetOwnerName :: Text,
-    fleetOwnerId :: Text
+    fleetOwnerId :: Text,
+    fleetName :: Text
   }
 
 buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text, Text, Maybe Text)
@@ -405,6 +406,7 @@ buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
         staticMsg
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
           & T.replace (templateText "fleetOwnerId") req.fleetOwnerId
+          & T.replace (templateText "fleetName") req.fleetName
           & T.replace (templateText "expiryDate") expiryDate
   pure (senderHeader, dynamicMsg, templateId, messageType)
 

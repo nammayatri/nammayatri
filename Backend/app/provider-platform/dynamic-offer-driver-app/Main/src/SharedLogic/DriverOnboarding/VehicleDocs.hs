@@ -519,8 +519,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
           if wrongRcNo
             then return []
             else do
-              rcNoEnc <- encrypt registrationNo
-              rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+              rc <- RCQuery.findLastVehicleRCWrapper registrationNo
               -- VRC-derived "RC link already created (done)" check, replacing the
               -- driver_rc_association history read (findUnlinkedRC). Reuses the RC row
               -- fetched just above + transporterConfig from entityImagesInfo, so it adds

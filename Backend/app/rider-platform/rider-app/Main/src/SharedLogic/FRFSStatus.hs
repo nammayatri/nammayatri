@@ -49,6 +49,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -90,13 +91,13 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
   -- No trip release here: the trip is debited in OnConfirm once the booking is CONFIRMED, and
   -- this guard excludes CONFIRMED, so nothing has been spent for anything reaching this line.
-  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.status /= DFRFSTicketBooking.RESCHEDULED && validTillWithBuffer < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
@@ -271,7 +272,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
+          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
                 [] -> 0 -- 30 minutes in seconds if all are Nothing
@@ -284,13 +285,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
         return bookingApiResp
     DFRFSTicketBooking.CANCELLED -> do
-      FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+    -- No netting here: the refund is already booked as negative recon rows at on_cancel, and this branch runs on every status poll.
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
-      FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
@@ -305,6 +305,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+    DFRFSTicketBooking.RESCHEDULED -> do
+      withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
+        let paymentBookingStatus = maybe FRFSTicketService.NEW (makeTicketBookingPaymentAPIStatus . (.status)) paymentStatusResp
+        buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
   where
     orElseM action fallback = action >>= maybe fallback pure
 
@@ -459,6 +463,7 @@ buildFRFSTicketBookingStatusAPIRes ::
   Maybe FRFSTicketService.FRFSBookingPaymentAPI ->
   m FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
+  mbAppliedPassPayment <- FRFSPassOverride.paymentForOverrideAppliedEntity booking.overrideAppliedEntityId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
@@ -489,6 +494,9 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         overrideType = booking.overrideType,
         overriddenTotalPrice = mkPriceAPIEntity . Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
         appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+        appliedPassId = mbAppliedPassPayment >>= (.passId),
+        appliedPassName = mbAppliedPassPayment >>= (.passName),
+        startTime = booking.startTime,
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,

@@ -97,7 +97,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  let createReq = API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 req.mobileNumber req.mobileCountryCode
+  let createReq = API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 req.mobileNumber req.mobileCountryCode Nothing
   let req' = DRegistrationV2.buildFleetOwnerRegisterReqV2 merchantShortId opCity createReq
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $

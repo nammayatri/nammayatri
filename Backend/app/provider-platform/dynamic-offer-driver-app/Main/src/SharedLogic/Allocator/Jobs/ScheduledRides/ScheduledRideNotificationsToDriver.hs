@@ -27,7 +27,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Overlay as DOverlay
 import Domain.Types.Person
 import Domain.Types.RideRelatedNotificationConfig
-import Domain.Types.TransporterConfig
+import Domain.Types.TransporterConfig hiding (PickupNudgeChannel (..))
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..), SchedulerFlow)

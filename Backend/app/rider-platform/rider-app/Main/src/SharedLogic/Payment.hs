@@ -16,6 +16,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -71,6 +72,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -353,7 +355,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       case paymentStatusResponse.status of
         Payment.CHARGED -> do
           purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
-          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, merchantId = purchasedPassPayment.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS))) >>= fromMaybeM (InternalError "Beckn Config not found")
+          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, merchantId = purchasedPassPayment.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS))) >>= fromMaybeM (InternalError "Beckn Config not found")
           mkPassReconEntry bapConfig purchasedPassPayment
         _ -> return ()
       where
@@ -456,7 +458,24 @@ refundStatusHandler paymentOrder paymentServiceType = do
                 when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
                   QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             case refund.status of
-              Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
+              Payment.REFUND_SUCCESS -> do
+                let alreadyRefunded = bookingPayment.status == DFRFSTicketBookingPayment.REFUNDED
+                unless alreadyRefunded $
+                  whenJust mbBooking $ \booking ->
+                    when (booking.status `elem` [DFRFSTicketBooking.COUNTER_CANCELLED, DFRFSTicketBooking.CANCELLED]) $
+                      do
+                        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+                        bapConfig <-
+                          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
+                            >>= fromMaybeM (InternalError "Beckn Config not found")
+                        let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+                        person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+                        mRiderNumber <- mapM decrypt person.mobileNumber
+                        if booking.status == DFRFSTicketBooking.COUNTER_CANCELLED
+                          then FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.COUNTER_CANCELLED FRFSUtils.counterCancellationRefundTag booking bapConfig refund.refundAmount mRiderNumber fareParameters
+                          else whenJust booking.refundAmount $ \bookingRefundAmount ->
+                            FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.CANCELLED FRFSUtils.cancellationRefundTag booking bapConfig bookingRefundAmount mRiderNumber fareParameters
+                QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
               Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
               _ -> do
                 case isRefundApiCallSuccess of
@@ -590,6 +609,49 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
                   }
           createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
+
+markRefundPendingWithAmount ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
+  ) =>
+  Id Person.Person ->
+  Id DOrder.PaymentOrder ->
+  HighPrecMoney ->
+  m ()
+markRefundPendingWithAmount personId orderId amount = do
+  paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  mbExistingRefund <- HQRefunds.findLatestByOrderId paymentOrder.shortId
+  case mbExistingRefund of
+    -- createRefundService refuses a second refund per order, so a repeat dispute would silently no-op -- log it rather than blocking the callback.
+    Just existingRefund ->
+      logError $
+        "Refund already exists for orderId: " <> orderId.getId
+          <> ", existingRefundId: "
+          <> existingRefund.id.getId
+          <> ", existingRefundAmount: "
+          <> show existingRefund.refundAmount
+          <> ", requestedAmount: "
+          <> show amount
+          <> " - no further refund will be issued for this order"
+    Nothing -> do
+      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId orderId
+      mapM_ (\bookingPayment -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id) bookingPayments
+      void $ initiateRefundWithPaymentStatusRespSync personId orderId
 
 markRefundPendingAndSyncOrderStatus ::
   ( CacheFlow m r,
@@ -861,7 +923,7 @@ paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 paymentChargeForAppFee mbCharge mbBearer =
   case mbBearer of
     Just bearer
-      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER", "PAYMENT_CUSTOMER_AND_DRIVER"] -> fromMaybe 0 mbCharge
+      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER"] -> fromMaybe 0 mbCharge
     _ -> 0
 
 makePaymentIntent ::
@@ -1109,6 +1171,7 @@ paymentErrorHandler ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r

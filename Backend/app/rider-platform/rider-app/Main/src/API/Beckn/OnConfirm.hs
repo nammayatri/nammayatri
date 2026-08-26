@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnConfirm (API, handler) where
+module API.Beckn.OnConfirm (API, handler, onConfirmWebhook) where
 
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -30,6 +30,7 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
@@ -41,6 +42,9 @@ type API = OnConfirm.OnConfirmAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onConfirm
+
+onConfirmWebhook :: OnConfirm.OnConfirmReqV2 -> FlowHandler AckResponse
+onConfirmWebhook = onConfirm DummySig.dummySignatureAuthResult
 
 onConfirm ::
   SignatureAuthResult ->

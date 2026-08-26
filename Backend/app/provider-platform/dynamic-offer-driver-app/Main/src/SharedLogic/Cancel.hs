@@ -14,6 +14,7 @@
 
 module SharedLogic.Cancel where
 
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -31,17 +32,20 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
-import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
@@ -86,6 +90,7 @@ reAllocateBookingIfPossible ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -93,6 +98,7 @@ reAllocateBookingIfPossible ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -106,7 +112,18 @@ reAllocateBookingIfPossible ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EventStreamFlow m r,
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   Bool ->
   Bool ->
@@ -119,6 +136,7 @@ reAllocateBookingIfPossible ::
   Bool ->
   m Bool
 reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant booking ride driver vehicle bookingCReason isForceReallocation = do
+  -- INSTANT_AUTO reallocates through this same shared path as every other OneWayOnDemandDynamicOffer tier, no carve-out.
   case booking.tripCategory of
     DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer

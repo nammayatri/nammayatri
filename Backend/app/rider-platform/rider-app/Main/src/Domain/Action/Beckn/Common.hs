@@ -471,6 +471,7 @@ rideAssignedReqHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
     FinanceBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r
@@ -532,6 +533,7 @@ rideAssignedReqHandler req = do
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasKafkaProducer r,
         HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+        HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
         HasField "blackListedJobs" r [Text],
         FinanceBeamFlow.BeamFlow m r
       ) =>
@@ -868,6 +870,7 @@ rideCompletedReqHandler ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
@@ -1561,6 +1564,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
           && case booking.tripCategory of
             Just (Trip.OneWay Trip.OneWayRideOtp) -> True
             Just (Trip.InterCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.Rental Trip.RideOtp) -> True
             Just (Trip.CrossCity Trip.OneWayRideOtp _) -> True
             Just (Trip.Ambulance Trip.OneWayRideOtp) -> True
             Just (Trip.Delivery Trip.OneWayRideOtp) -> True

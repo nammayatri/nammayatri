@@ -625,6 +625,7 @@ apis:
         - fleetOwnerId: Text
         - search: Text
         - driverNumber: Text
+        - driverPhoneCountryCode: Text
         - limit: Int
         - offset: Int
         - sortDesc: Bool
@@ -644,6 +645,7 @@ apis:
               - fleetOwnerId: Text
               - search: Text
               - driverNumber: Text
+              - driverPhoneCountryCode: Text
               - limit: Int
               - offset: Int
               - sortDesc: Bool
@@ -2111,6 +2113,7 @@ types:
     - middleName: Maybe Text
     - lastName: Maybe Text
     - mobileNo: Maybe Text
+    - mobileCountryCode: Maybe Text
     - email: Maybe Text
     - blocked: Bool
     - enabled: Bool
@@ -2488,7 +2491,17 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - rejectReason: Maybe Text
     - approved: Maybe Bool
+    - verified: Maybe Bool
+    - reviewRequired: Maybe Bool
+    - reviewedAt: Maybe UTCTime
+    - failedRules: "[Text]"
+    - permitExpiry: Maybe UTCTime
+    - vehicleCategory: Maybe VehicleCategory
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
     - association: Maybe AssociationDetail
+    - recentFleetInfo: Maybe DriverAssociationInfo
+    - linkedDriverInfo: Maybe DriverAssociationInfo
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

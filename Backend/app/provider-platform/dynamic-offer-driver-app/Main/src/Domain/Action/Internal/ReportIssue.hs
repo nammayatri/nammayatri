@@ -299,5 +299,5 @@ runBehaviorPipeline transporterConfig driverId merchantOpCityId counterConfig ac
               actionEvent = Just actionEvent
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications driverId output.communications
+    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
   return (hasConsequences || hasCommunications)

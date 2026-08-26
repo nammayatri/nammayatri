@@ -25,6 +25,8 @@ CancellationDuesDetails:
     overdueCancellationCommission : Maybe HighPrecMoney
     currency : Currency
     paymentStatus : CancellationDuesPaymentStatus
+    cancellationConsequenceRowId : Maybe Text
+    cancellationCollectionMode : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
 

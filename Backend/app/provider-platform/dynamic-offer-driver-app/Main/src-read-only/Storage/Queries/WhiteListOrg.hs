@@ -4,6 +4,7 @@
 
 module Storage.Queries.WhiteListOrg (module Storage.Queries.WhiteListOrg, module ReExport) where
 
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.WhiteListOrg
@@ -49,6 +50,7 @@ updateByPrimaryKey (Domain.Types.WhiteListOrg.WhiteListOrg {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
+      Se.Set Beam.supportedBecknProtocols supportedBecknProtocols,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

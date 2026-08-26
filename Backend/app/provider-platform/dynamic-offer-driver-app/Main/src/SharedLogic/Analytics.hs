@@ -56,11 +56,11 @@ updateCancellationAnalyticsAndDriverStats ::
   ) =>
   TC.TransporterConfig ->
   DRide.Ride ->
-  SBCR.BookingCancellationReason ->
+  SBCR.CancellationSource ->
   m ()
-updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason = do
+updateCancellationAnalyticsAndDriverStats transporterConfig ride source = do
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  case bookingCReason.source of
+  case source of
     SBCR.ByDriver -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         updateOperatorAnalyticsCancelCount transporterConfig ride.driverId

@@ -64,6 +64,7 @@ import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.ARDUBPPMetrics.Types
+import Tools.Metrics.DriverSearchRequestResponseMetrics.Types
 import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
@@ -117,6 +118,7 @@ data HandlerEnv = HandlerEnv
     kvConfigUpdateFrequency :: Int,
     nwAddress :: BaseUrl,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
@@ -140,6 +142,7 @@ data HandlerEnv = HandlerEnv
     mlPricingInternal :: MLPricingInternal,
     inMemEnv :: CF.InMemEnv,
     bppMetrics :: BPPMetricsContainer,
+    driverSearchRequestResponseMetrics :: DriverSearchRequestResponseMetricsContainer,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     droppedPointsThreshold :: HighPrecMeters,
     osrmMatchThreshold :: HighPrecMeters,
@@ -158,7 +161,10 @@ data HandlerEnv = HandlerEnv
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
-    actorInfo :: Finance.ActorInfo
+    actorInfo :: Finance.ActorInfo,
+    driverQuoteExpirationSeconds :: NominalDiffTime,
+    quoteRespondCoolDown :: Int,
+    driverUnlockDelay :: Seconds
   }
   deriving (Generic)
 
@@ -210,6 +216,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobRetryOnExceptionMap :: (M.Map Text Bool) = M.mapKeys show jobRetryOnExceptionMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
+  driverSearchRequestResponseMetrics <- registerDriverSearchRequestResponseMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
@@ -221,7 +228,8 @@ buildHandlerEnv HandlerCfg {..} = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, ..}
+  let driverQuoteExpirationSeconds' = fromIntegral appCfg.driverQuoteExpirationSeconds
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, driverQuoteExpirationSeconds = driverQuoteExpirationSeconds', quoteRespondCoolDown = appCfg.quoteRespondCoolDown, driverUnlockDelay = appCfg.driverUnlockDelay, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

@@ -354,8 +354,10 @@ MerchantOperatingCity:
     city: City
     state: IndianState
     country: Country
+    countryDialCode: Maybe Text
     location: LatLong
     supportNumber: Maybe Text
+    supportEmails: Maybe [Text]
     language: Language
     currency: Currency
     distanceUnit: DistanceUnit
@@ -367,6 +369,7 @@ MerchantOperatingCity:
     currency: character varying(255)
     lat: double precision
     lon: double precision
+    supportEmails: "text[]"
   default:
     country: "'India'"
     language: "'ENGLISH'"
@@ -705,7 +708,6 @@ MerchantServiceUsageConfig:
 
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   sqlType:
     getDistances: character varying(30)
     getRoutes: character varying(30)
@@ -919,22 +921,31 @@ TransporterConfig:
     PickupStallTerminalAction:
       enum: "REALLOCATE_RIDE,RECORD_ONLY"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
+    PickupNudgeChannel:
+      enum: "OVERLAY,CHAT_MESSAGE"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupStallStage:
-      afterStallSec: Int
+      afterFaultSec: Int
       overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       terminalAction: Maybe PickupStallTerminalAction
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
-    PickupStallCaseConfig:
-      stages: "[PickupStallStage]"
+    PickupDarkStage:
+      afterDarkSec: Int
+      overlayKey: Text
+      channel: Maybe PickupNudgeChannel
+      chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
-      gracePeriodSec: Int
-      progressThresholdMeters: Int
-      badTickDebounce: Int
-      stalledConfig: Maybe PickupStallCaseConfig
-      retreatingConfig: Maybe PickupStallCaseConfig
-      locationDarkConfig: Maybe PickupStallCaseConfig
+      stages: "[PickupStallStage]"
+      darkStages: "[PickupDarkStage]"
+      progressThresholdMeters: Maybe Int
+      deviationAllowanceMeters: Maybe Int
+      detourDisplacementMeters: Maybe Int
+      detourCreditSec: Maybe Int
+      staleFixAfterSec: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
@@ -1009,10 +1020,16 @@ TransporterConfig:
       useDbForEarningAndMetrics: Bool
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    ScheduledRideConfig:
+      minLeadTime: Maybe Seconds
+      maxLeadTime: Maybe Seconds
+      avgSpeedKmph: Maybe Double
+      maxHoldsPerDriver: Int
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
-      enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM, PAYMENT_CUSTOMER_AND_DRIVER"
+      enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
     PayoutChargeBearer:
       enum: "DRIVER_BEARER, PLATFORM_BEARER"
     ConnectChargeBearer:
@@ -1038,11 +1055,13 @@ TransporterConfig:
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
+      minWalletAmountForScheduledRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      enableWalletGatedTierCheck: Maybe Bool
       # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
@@ -1156,6 +1175,9 @@ TransporterConfig:
     dpWhiteListedGeohash: Maybe [Text]
     dpBlackListedGeohash: Maybe [Text]
     dpGeoHashPercision: Maybe Int
+    # Fewest cells a driver must select for a preferred-area (cells method) selection
+    # to be accepted.
+    areaPreferenceMinCells: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
@@ -1254,8 +1276,6 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
-    cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
-    validCancellationPenaltyReasons: "Maybe [Text]"
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1281,6 +1301,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: NominalDiffTime
     minmRentalAndScheduledBookingLeadTimeHours: Hours
     scheduledRideFilterExclusionThresholdHours: Hours
+    scheduledRideOpenToAllThresholdMinutes: Maybe Minutes
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
     variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
@@ -1337,6 +1358,7 @@ TransporterConfig:
     unifiedOnboardingFlagsRecompute: Maybe Bool
     forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
+    preProcessDocumentIdentifiers: Bool
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool
@@ -1350,12 +1372,14 @@ TransporterConfig:
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
     maxAllowedVideoDocSizeInMB: Maybe Int
+    enforceUploadFileTypeCheck: Maybe Bool
     maxNumberOfLuggages: Maybe Int
     bulkWaiveOffLimit: Int
     rcExpiryChecks: Maybe Bool
     requireRouteMappingInVehicle: Bool
     enableExistingVehicleInBulkUpload: Bool
     isDriverNameMandatoryInBulkUpload: Bool
+    isStrongNameCheckRequired: Bool
     onboardingDocsCountLimit: Maybe Int
     defaultOnboardingAs: Maybe OnboardingAs
     localPoliceNumbers: Maybe [Text]
@@ -1381,6 +1405,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    scheduledRideConfig: ScheduledRideConfig
     taxConfig: TaxConfig
     knowledgeCenterSopTypes: KnowledgeCenterSopTypesConfig
     cancellationFeeCycle: Maybe Seconds
@@ -1418,7 +1443,6 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: Maybe Bool
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
-    driverRiderBlacklistDurationSeconds: Maybe Seconds
     driverLocationStalenessThresholdSeconds: Maybe Seconds
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
@@ -1443,6 +1467,7 @@ TransporterConfig:
     forceDirectCalling: Maybe Bool
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
+    metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
 
   beamType:
     currency: Maybe Currency
@@ -1502,9 +1527,11 @@ TransporterConfig:
     fleetUpiPayoutEnabled: Maybe Bool
     fleetBankPayoutEnabled: Maybe Bool
     bulkWaiveOffLimit: Maybe Int
+    preProcessDocumentIdentifiers: Maybe Bool
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
     isDriverNameMandatoryInBulkUpload: Maybe Bool
+    isStrongNameCheckRequired: Maybe Bool
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
@@ -1526,6 +1553,8 @@ TransporterConfig:
       driverWalletConfig: Maybe Value
     analyticsConfig:
       analyticsConfig: Maybe Value
+    scheduledRideConfig:
+      scheduledRideConfig: Maybe Value
     subscriptionConfig:
       subscriptionConfig: Maybe Value
     taxConfig:
@@ -1582,6 +1611,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
+    scheduledRideConfig: Just . Data.Aeson.toJSON|I
     driverDrivenSearchReqExpiry:
       Kernel.Utils.Common.nominalDiffTimeToSeconds <$>
       driverDrivenSearchReqExpiry|E
@@ -1602,9 +1632,11 @@ TransporterConfig:
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
+    preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: Just isStrongNameCheckRequired|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     pickupStallMonitoringConfig: Data.Aeson.toJSON <$> pickupStallMonitoringConfig|E
@@ -1693,6 +1725,9 @@ TransporterConfig:
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
+    scheduledRideConfig:
+      Storage.Queries.Transformers.TransporterConfig.parseScheduledRideConfig
+      merchantOperatingCityId|IM
     driverDrivenSearchReqExpiry:
       Kernel.Utils.Common.secondsToNominalDiffTime <$>
       driverDrivenSearchReqExpiry|E
@@ -1719,9 +1754,11 @@ TransporterConfig:
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
+    preProcessDocumentIdentifiers: fromMaybe True preProcessDocumentIdentifiers|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
+    isStrongNameCheckRequired: fromMaybe True isStrongNameCheckRequired|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       cancellationRateSlabConfig|E
@@ -1767,6 +1804,7 @@ TransporterConfig:
     fraudAuthCountWindow: json
     stripeStatusRefreshCountWindow: json
     authIpBlockedUntilInMins: integer
+    scheduledRideOpenToAllThresholdMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
@@ -1827,6 +1865,7 @@ TransporterConfig:
     analyticsConfig: json
     driverWalletConfig: json
     subscriptionConfig: json
+    scheduledRideConfig: json
     feedbackNotificationConfig: json
     taxConfig: json
     invoiceConfig: json
@@ -1836,10 +1875,9 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
-    cancellationFeePaymentMethodExceptions: "text[]"
-    validCancellationPenaltyReasons: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
+    metricsDistanceBucketsKm: "integer[]"
 
   default:
     mediaFileUrlPattern: |-
@@ -1850,6 +1888,7 @@ TransporterConfig:
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
+    areaPreferenceMinCells: "4"
     dpWhiteListedGeohash: "ARRAY[]::TEXT[]"
     dpBlackListedGeohash: "ARRAY[]::TEXT[]"
     minLocationAccuracy: "50"
@@ -1860,6 +1899,7 @@ TransporterConfig:
     timeDiffFromUtc: "19800"
     subscription: "false"
     aadhaarVerificationRequired: "false"
+    preProcessDocumentIdentifiers: "true"
     rcLimit: "3"
     driverAutoPayNotificationTime: "32400"
     driverAutoPayExecutionTime: "104400"
@@ -1965,6 +2005,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
     scheduledRideSearchRepeatLimit: "10"
+    scheduledRideConfig: '''{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1}'' :: json'
     enableScheduleReallocation: "true"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
@@ -1988,6 +2029,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     isDriverNameMandatoryInBulkUpload: "true"
+    isStrongNameCheckRequired: "true"
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
     deactivateRCOnUnlink: "true"
@@ -2018,7 +2060,6 @@ TransporterConfig:
     knowledgeCenterSopTypes: "'[]' :: json"
     allowFarePolicyUpdateBelowMinBaseFare: "true"
     driverSearchBlacklistDurationSeconds: "3600"
-    driverRiderBlacklistDurationSeconds: "3600"
     allowPanReupload: "false"
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
@@ -2028,7 +2069,6 @@ TransporterConfig:
     forceDirectCalling: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   queries:
     findByMerchantOpCityId:
       kvFunction: findOneWithKV
@@ -2082,9 +2122,10 @@ TransporterConfig:
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
+        - areaPreferenceMinCells
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
-        - driverRiderBlacklistDurationSeconds
+        - metricsDistanceBucketsKm
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
@@ -2181,6 +2222,7 @@ MerchantPushNotification:
     title: Text
     body: Text
     language: Language
+    audioUrl: Maybe Text
     fcmNotificationType: FCMNotificationType
     fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant

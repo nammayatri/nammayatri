@@ -32,7 +32,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMC
 import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
-import Domain.Types.TransporterConfig
+import Domain.Types.TransporterConfig hiding (PickupNudgeChannel (..))
 import qualified Domain.Types.VendorFee as DVF
 import Environment
 import Kernel.Beam.Functions as B

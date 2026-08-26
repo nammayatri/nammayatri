@@ -385,10 +385,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN initiated_by te
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enabled_reason_flag text ;
 
 
-------- SQL updates -------
 
 
 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_new boolean;

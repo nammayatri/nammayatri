@@ -27,7 +27,11 @@ import Tools.Auth
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
 listCities mId = do
-  merchantOperatingCities <- CQMOC.findAllByMerchantId (merchantIdFallback mId)
+  let merchantId = merchantIdFallback mId
+  merchantOperatingCities <-
+    CQMOC.findAllByMerchantId merchantId >>= \case
+      [] -> CQMOC.findAllByMerchantShortId (ShortId merchantId.getId)
+      cities -> pure cities
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
@@ -36,6 +40,7 @@ listCities mId = do
         DTC.CityRes
           { code = city,
             name = show city,
+            countryDialCode = fromMaybe "+91" countryDialCode,
             subscription = maybe False (.subscription) mbTransporterConfig,
             ..
           }

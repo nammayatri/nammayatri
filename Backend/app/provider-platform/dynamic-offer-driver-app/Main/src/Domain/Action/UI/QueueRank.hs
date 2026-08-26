@@ -28,7 +28,7 @@ getQueuePosition (driverId, _merchantId, _merchantOpCityId) specialLocationId ve
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   now <- getCurrentTime
   enableForAirport <- QDI.resolveAirportRestriction now driverInfo
-  if enableForAirport == DI.BLOCKED
+  if enableForAirport == DI.BLOCKED || driverInfo.blocked
     then
       pure $
         QueueRankResponse

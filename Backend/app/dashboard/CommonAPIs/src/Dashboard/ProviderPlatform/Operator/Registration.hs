@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.ProviderPlatform.Operator.Registration (module ReExport, validateOperatorRegisterReq) where
+module Dashboard.ProviderPlatform.Operator.Registration (module ReExport, validateOperatorRegisterReq, validateOperatorRegisterReqWithLooseCheck) where
 
 import API.Types.ProviderPlatform.Operator.Endpoints.Registration
 import Dashboard.Common as ReExport
@@ -19,6 +19,16 @@ validateOperatorRegisterReq country OperatorRegisterReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ P.MinLength 1 `P.And` P.MaxLength 50 `P.And` P.name,
       validateField "lastName" lastName $ P.MaxLength 50 `P.And` P.name,
+      validateField "mobileNumber" mobileNumber $ P.getMobileNumberPredicate country,
+      validateField "mobileCountryCode" mobileCountryCode $ P.getMobileCountryCodePredicate country,
+      validateField "email" email $ P.InMaybe P.email
+    ]
+
+validateOperatorRegisterReqWithLooseCheck :: Context.Country -> Validate OperatorRegisterReq
+validateOperatorRegisterReqWithLooseCheck country OperatorRegisterReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ P.MinLength 1 `P.And` P.MaxLength 50 `P.And` P.nameWithNumber,
+      validateField "lastName" lastName $ P.MaxLength 50 `P.And` P.nameWithNumber,
       validateField "mobileNumber" mobileNumber $ P.getMobileNumberPredicate country,
       validateField "mobileCountryCode" mobileCountryCode $ P.getMobileCountryCodePredicate country,
       validateField "email" email $ P.InMaybe P.email

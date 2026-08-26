@@ -26,13 +26,13 @@ createMany = traverse_ create
 
 findByDomainSourceTarget ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByDomainSourceTarget domain source target = do findAllWithKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.source $ Se.Eq source, Se.Is Beam.target $ Se.Eq target]]
 
-findByEntityId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+findByEntityId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByEntityId entityId = do findAllWithKV [Se.Is Beam.entityId $ Se.Eq entityId]
 
-findByGroupTargetKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+findByGroupTargetKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByGroupTargetKey groupTargetKey = do findAllWithKV [Se.Is Beam.groupTargetKey $ Se.Eq groupTargetKey]
 
 findById ::
@@ -42,12 +42,12 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByReconciliationStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Reconciliation.Types.ReconciliationStatus -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Lib.Finance.Reconciliation.Types.ReconciliationStatus -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByReconciliationStatus reconStatus = do findAllWithKV [Se.Is Beam.reconStatus $ Se.Eq reconStatus]
 
 findBySummaryId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findBySummaryId summaryId = do findAllWithKV [Se.Is Beam.summaryId $ Se.Eq (Kernel.Types.Id.getId summaryId)]
 
 findByPrimaryKey ::

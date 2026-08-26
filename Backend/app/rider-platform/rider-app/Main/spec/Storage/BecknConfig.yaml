@@ -7,6 +7,7 @@ imports:
   parseBaseUrl: Kernel.Prelude
   VehicleCategory: BecknV2.OnDemand.Enums
   Network: BecknV2.FRFS.Enums
+  BecknProtocol: Domain.Types
   EBIXConfig: Domain.Types.Extra.IntegratedBPPConfig
   DIRECTConfig: Domain.Types.Extra.IntegratedBPPConfig
   CMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
@@ -42,18 +43,25 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
+    networkId: Maybe Text
+    becknProtocol: Maybe BecknProtocol
 
   derives: "Generic,Show,FromJSON,ToJSON"
 
   default:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
+    becknProtocol: "'Beckn_V2'"
 
   queries:
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, domain]
+    findByMerchantIdDomainAndBecknProtocol:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain, becknProtocol]
     findByMerchantId:
       kvFunction: findAllWithKV
       where:

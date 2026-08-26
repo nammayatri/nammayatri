@@ -30,6 +30,12 @@ import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
 
+-- | Ledger-side action requested through the internal dues-sync API: settle the
+-- customer-cancellation ledger entries, or mark them overdue. (Moved here from the
+-- deleted SharedLogic.UserCancellationDues; JSON encoding unchanged.)
+data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 data ApplyCancellationChargeReq = ApplyCancellationChargeReq
   { ride :: DRide.Ride,
     riderId :: Id DRD.RiderDetails,
@@ -44,7 +50,11 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
     overdueCancellationCharge :: Maybe HighPrecMoney,
     overdueCancellationTax :: Maybe HighPrecMoney,
     cancellationCommission :: Maybe HighPrecMoney,
-    overdueCancellationCommission :: Maybe HighPrecMoney
+    overdueCancellationCommission :: Maybe HighPrecMoney,
+    -- id of the CancellationConsequenceMatrix row that produced this charge (audit trail)
+    consequenceRowId :: Maybe Text,
+    -- show ConsequenceCollectionMode from the row (NextRideDues / ImmediateCapture)
+    collectionMode :: Maybe Text
   }
 
 -- | Add a cancellation charge to the rider's running balance and record the per-ride
@@ -52,7 +62,9 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
 -- (valid-cancellation counts, due-ride counts) stay with the callers.
 applyCancellationCharge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ApplyCancellationChargeReq -> m ()
 applyCancellationCharge req = do
-  void $ QRD.updateCancellationDues (req.totalCharges + req.currentDues) req.riderId
+  -- totalCharges is SIGNED: a negative value is a credit to the customer, reducing their
+  -- outstanding dues; the balance never goes below zero and credits create no dues row.
+  void $ QRD.updateCancellationDues (max 0 (req.totalCharges + req.currentDues)) req.riderId
   when (req.totalCharges > 0) $ do
     duesDetailsId <- generateGUID
     now <- getCurrentTime
@@ -68,6 +80,8 @@ applyCancellationCharge req = do
           overdueCancellationTax = req.overdueCancellationTax,
           cancellationCommission = req.cancellationCommission,
           overdueCancellationCommission = req.overdueCancellationCommission,
+          cancellationConsequenceRowId = req.consequenceRowId,
+          cancellationCollectionMode = req.collectionMode,
           currency = req.currency,
           paymentStatus = DCDD.PENDING,
           createdAt = now,

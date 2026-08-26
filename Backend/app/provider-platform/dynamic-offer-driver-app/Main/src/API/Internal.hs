@@ -44,6 +44,7 @@ import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
 import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
+import qualified API.Internal.VehicleServiceTierList as VehicleServiceTierList
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import qualified API.Internal.XyneWebhook as XyneWebhook
@@ -98,6 +99,7 @@ type API =
            :<|> XyneWebhook.IssuesAPI
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
+           :<|> VehicleServiceTierList.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -147,3 +149,4 @@ handler env =
     :<|> XyneWebhook.issuesHandler
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler
+    :<|> VehicleServiceTierList.handler

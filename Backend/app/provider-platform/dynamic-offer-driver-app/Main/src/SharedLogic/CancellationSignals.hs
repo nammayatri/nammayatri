@@ -19,13 +19,10 @@
 -- the inputs of all of them at once.
 module SharedLogic.CancellationSignals where
 
-import qualified Data.Text as Text
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -40,7 +37,19 @@ data CancellationSignals = CancellationSignals
     callAttemptCount :: Int,
     actualCoveredDistance :: Maybe Meters,
     expectedCoveredDistance :: Maybe Meters,
-    pickupStallCase :: Maybe Text
+    -- raw distances (also exposed to the fault rules: e.g. "driver within
+    -- max(10% of initial, 100m) of pickup" style conditions)
+    initialDistanceToPickup :: Maybe Meters,
+    currentDistanceToPickup :: Maybe Meters,
+    isAdvanceBooking :: Bool,
+    isPickupOrDestinationEdited :: Bool,
+    -- pickup journey (see SharedLogic.BehaviourManagement.PickupStallState): what the
+    -- driver was doing when the cancel landed, how much of the pickup phase he provably
+    -- wasted, and how long he was unresolved-GPS-dark. Counts default to 0 (not null)
+    -- so JsonLogic math on them is total.
+    pickupBehaviour :: Maybe Text,
+    pickupFaultSeconds :: Int,
+    pickupDarkSeconds :: Int
   }
   deriving (Generic, Show)
 
@@ -59,7 +68,7 @@ buildCancellationSignals req = do
   now <- getCurrentTime
   callAttemptCount <- getCallAttemptCount req.ride.id
   durationToPickup <- maybe (fromMaybe 0 req.fallbackDurationToPickup) (.durationToPickup) <$> QDQ.findById (Id req.quoteId)
-  pickupStallCase <- getPickupStallCase req.ride
+  mbPickupJourney <- PickupStallState.getPickupJourney req.ride
   let computedAt = now
       estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
       timeOfCancellation = round $ diffUTCTime now req.ride.createdAt
@@ -75,6 +84,13 @@ buildCancellationSignals req = do
       isDistanceArrived = maybe False (< highPrecMetersToMeters req.arrivedPickupThreshold) req.cancellationDisToPickup
       isArrivedAtPickup = isJust req.ride.driverArrivalTime || isDistanceArrived
       timeSinceBooking = req.bookingCreatedAt <&> \createdAt -> round $ diffUTCTime now createdAt
+      initialDistanceToPickup = req.initialDisToPickup
+      currentDistanceToPickup = req.cancellationDisToPickup
+      isAdvanceBooking = req.ride.isAdvanceBooking
+      isPickupOrDestinationEdited = fromMaybe False req.ride.isPickupOrDestinationEdited
+      pickupBehaviour = mbPickupJourney <&> \journey -> PickupStallState.behaviourLabel journey.behaviour
+      pickupFaultSeconds = maybe 0 (.faultSeconds) mbPickupJourney
+      pickupDarkSeconds = maybe 0 (.darkSeconds) mbPickupJourney
   pure CancellationSignals {..}
 
 -- | The one definition of "the driver attempted to call the rider" — every cancellation
@@ -84,16 +100,3 @@ getCallAttemptCount rideId = QCallStatus.countCallsByEntityId rideId
 
 getCallAttemptByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m Bool
 getCallAttemptByDriver rideId = (> 0) <$> getCallAttemptCount rideId
-
--- | The stall verdict for this ride, if any: the case name (STALLED / RETREATING /
--- LOCATION_DARK) from the PickupStallDetected ride tag, falling back to the pickup
--- progress monitor's live Redis state for stalls detected but not yet fired as a tag.
-getPickupStallCase :: (MonadFlow m, CacheFlow m r) => DRide.Ride -> m (Maybe Text)
-getPickupStallCase ride = do
-  let tagPrefix = PickupStallState.pickupStallRideTagPrefix <> "#"
-      tagCase = listToMaybe $ mapMaybe (\(LYT.TagNameValue t) -> Text.stripPrefix tagPrefix t) (fromMaybe [] ride.rideTags)
-  case tagCase of
-    Just stallCase -> pure (Just stallCase)
-    Nothing -> do
-      mbState :: Maybe PickupStallState.PickupProgressState <- Redis.safeGet (PickupStallState.pickupProgressStateKey ride.id)
-      pure $ (.activeCase) =<< mbState

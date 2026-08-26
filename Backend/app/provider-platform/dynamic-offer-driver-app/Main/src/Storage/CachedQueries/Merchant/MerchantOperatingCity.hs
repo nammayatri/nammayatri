@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
+import qualified Storage.Queries.MerchantOperatingCityExtra as QueriesExtra
 import Tools.Error
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
@@ -64,6 +65,13 @@ findAllByMerchantId merchantId =
       Just a -> return a
       Nothing -> cacheMerchantId merchantId /=<< Queries.findAllByMerchantId merchantId
 
+findAllByMerchantShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m [MerchantOperatingCity]
+findAllByMerchantShortId merchantShortId =
+  IM.withInMemCache [makeMerchantShortIdKey merchantShortId] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantShortIdKey merchantShortId) >>= \case
+      Just a -> return a
+      Nothing -> cacheMerchantShortId merchantShortId /=<< QueriesExtra.findAllByMerchantShortId merchantShortId
+
 findAllByMerchantIdAndState :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.IndianState -> m [MerchantOperatingCity]
 findAllByMerchantIdAndState merchantId state =
   IM.withInMemCache [makeMerchantIdAndStateKey merchantId state] inMemCacheTtl $
@@ -96,6 +104,11 @@ cacheMerchantId merchantId merchantOperatingCities = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey merchantId
   Hedis.setExp merchantIdKey merchantOperatingCities expTime
+
+cacheMerchantShortId :: CacheFlow m r => ShortId Merchant -> [MerchantOperatingCity] -> m ()
+cacheMerchantShortId merchantShortId merchantOperatingCities = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantShortIdKey merchantShortId) merchantOperatingCities expTime
 
 cacheMerchantIdAndState :: CacheFlow m r => Id Merchant -> Context.IndianState -> [MerchantOperatingCity] -> m ()
 cacheMerchantIdAndState merchantId state merchantOperatingCities = do
@@ -135,6 +148,9 @@ makeMerchantShortIdAndCityKey merchantShortId city = "CachedQueries:MerchantOper
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey merchantId = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId
+
+makeMerchantShortIdKey :: ShortId Merchant -> Text
+makeMerchantShortIdKey merchantShortId = "CachedQueries:MerchantOperatingCity:MerchantShortId-" <> merchantShortId.getShortId
 
 makeMerchantIdAndStateKey :: Id Merchant -> Context.IndianState -> Text
 makeMerchantIdAndStateKey merchantId state = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId <> ":State-" <> show state

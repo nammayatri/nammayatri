@@ -27,6 +27,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 import TransactionLogs.PushLogs
@@ -47,15 +48,15 @@ processSearchRequest ::
   Text ->
   Value ->
   Flow (DSearch.DSearchRes, Spec.OnSearchReq)
-processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country logTag reqJson = do
-  validatedSReq <- DSearch.validateRequest merchant dSearchReq
+processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country logTag reqJson = withTimeAPI "search" (logTag <> ":total") $ do
+  validatedSReq <- withTimeAPI "search" "validateRequest" $ DSearch.validateRequest merchant dSearchReq
   fork (logTag <> " received pushing ondc logs") $
     void $ pushLogs logTag reqJson validatedSReq.merchant.id.getId "MOBILITY"
   let bppId = validatedSReq.merchant.subscriberId.getShortId
   bppUri <- Utils.mkBppUri transporterId.getId
   dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
-  isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
+  isValueAddNP <- withTimeAPI "search" "isValueAddNP" $ VNP.isValueAddNP dSearchReq.bapId
   let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
       dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
-  onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
+  onSearchReq <- withTimeAPI "search" "mkOnSearchRequest" $ ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
   pure (dSearchRes, onSearchReq)

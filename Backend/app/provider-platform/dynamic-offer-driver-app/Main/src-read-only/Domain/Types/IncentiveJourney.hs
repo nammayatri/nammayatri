@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -28,12 +29,13 @@ data IncentiveJourney = IncentiveJourney
     startDate :: Kernel.Prelude.UTCTime,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data IncentiveJourneyType = Daily | Weekly deriving (Generic, (Show), (Read), (Eq), (Ord), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data IncentiveJourneyType = Daily | Weekly deriving (Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IncentiveJourneyType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IncentiveJourneyType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''IncentiveJourneyType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''IncentiveJourneyType)

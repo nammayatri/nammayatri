@@ -17,6 +17,7 @@ module Domain.Types.Person.Type where
 
 import Data.Aeson
 import qualified Domain.Types.Entity as Entity
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -43,6 +44,14 @@ data PersonE e = Person
     rejectionReason :: Maybe Text,
     rejectedAt :: Maybe UTCTime,
     passwordUpdatedAt :: Maybe UTCTime,
+    -- | Set when an admin assigns a password. While True the credential may only be
+    -- used to set a new password, never to obtain a session.
+    forcePasswordChange :: Maybe Bool,
+    -- | Durable record of the merchant this person was provisioned under. Written once at
+    -- creation and never updated, so it survives access-row changes. Cross-merchant admin
+    -- guards read this rather than counting merchant_access rows, which any admin can delete.
+    -- Nothing on rows that predate the column.
+    merchantId :: Maybe (Id DMerchant.Merchant),
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
     language :: Maybe KET.Language,

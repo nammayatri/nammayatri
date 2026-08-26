@@ -78,6 +78,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     overriddenAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     overrideAppliedEntityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     overrideType :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType),
+    parentBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -88,6 +89,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     quoteId :: B.C f Kernel.Prelude.Text,
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    rescheduleCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     riderId :: B.C f Kernel.Prelude.Text,
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -122,6 +124,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['overrideAppliedEntityId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

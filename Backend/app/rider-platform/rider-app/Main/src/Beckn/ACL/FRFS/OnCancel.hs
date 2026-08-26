@@ -31,7 +31,7 @@ buildOnCancelReq onCancelReq = do
   Utils.validateContext Spec.ON_CANCEL onCancelReq.onCancelReqContext
   handleError onCancelReq $ \message -> do
     case parseData message of
-      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus) -> do
+      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus, cancelledBy, cancellationTime) -> do
         let dOnCancel =
               DOnCancel.DOnCancel
                 { providerId,
@@ -43,12 +43,14 @@ buildOnCancelReq onCancelReq = do
                   refundAmount,
                   cancellationCharges,
                   baseFare,
-                  orderStatus
+                  orderStatus,
+                  cancelledBy,
+                  cancellationTime
                 }
         return $ Just dOnCancel
       Left err -> throwError $ InvalidBecknSchema $ "on_cancel error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, Maybe HighPrecMoney, Maybe HighPrecMoney, HighPrecMoney, Spec.OrderStatus)
+    parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, Maybe HighPrecMoney, Maybe HighPrecMoney, HighPrecMoney, Spec.OrderStatus, Maybe Text, Maybe UTCTime)
     parseData message = do
       transactionId <- onCancelReq.onCancelReqContext.contextTransactionId & maybe (Left "TransactionId not found") Right
       messageId <- onCancelReq.onCancelReqContext.contextMessageId & maybe (Left "MessageId not found") Right
@@ -69,7 +71,11 @@ buildOnCancelReq onCancelReq = do
 
       (baseFare, refundAmount, cancellationCharges) <- Utils.getAndValidateCancellationParams quoteBreakup orderStatus
 
-      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus)
+      let mbCancellation = order.orderCancellation
+          cancelledBy = mbCancellation >>= (.cancellationCancelledBy)
+          cancellationTime = mbCancellation >>= (.cancellationTime)
+
+      Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus, cancelledBy, cancellationTime)
 
 handleError ::
   (MonadFlow m) =>

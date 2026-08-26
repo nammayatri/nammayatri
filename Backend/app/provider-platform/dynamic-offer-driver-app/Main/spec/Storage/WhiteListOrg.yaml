@@ -4,6 +4,7 @@ imports:
   ShortId: Kernel.Types.Id
   Subscriber: Kernel.Types.Registry
   Domain: Kernel.Types.Beckn.Domain
+  BecknProtocol: Domain.Types
 
 WhiteListOrg:
   tableName: white_list_org
@@ -15,6 +16,7 @@ WhiteListOrg:
     domain : Domain
     merchantId : Id Merchant
     merchantOperatingCityId : Id MerchantOperatingCity
+    supportedBecknProtocols : Maybe [BecknProtocol]
   derives: "Generic,'UsageSafety"
 
   constraints:
@@ -29,6 +31,7 @@ WhiteListOrg:
   sqlType:
     subscriberId: character varying(255)
     domain: character varying(255)
+    supportedBecknProtocols: "text[]"
 
   default:
     merchantId: "''"

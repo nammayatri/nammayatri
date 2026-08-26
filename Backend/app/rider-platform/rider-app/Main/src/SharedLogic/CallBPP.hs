@@ -27,6 +27,7 @@ import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as Merchant
@@ -36,6 +37,7 @@ import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Types.Beckn.Domain as BecknDomain
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -46,6 +48,7 @@ import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Servant.Client (ClientError (DecodeFailure), ResponseF (responseBody))
+import qualified SharedLogic.GatewayLookup as GatewayLookup
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -69,6 +72,7 @@ searchV2 ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     EsqDBFlow m r
   ) =>
   BaseUrl ->
@@ -114,10 +118,13 @@ searchV2Sync ::
   Text ->
   -- | isShadowSearch: pricing a better-route-point suggestion rather than the real search
   Bool ->
+  -- | The parent search, when this is a shadow: both are then priced against one set of
+  -- dynamic-pricing inputs.
+  Maybe Text ->
   API.SearchReqV2 ->
   m API.SyncSearchRes
-searchV2Sync bppUrl bppMerchantId token isShadowSearch req = do
-  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) (Just isShadowSearch) req
+searchV2Sync bppUrl bppMerchantId token isShadowSearch mbParentTransactionId req = do
+  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) (Just isShadowSearch) mbParentTransactionId req
   callAPI bppUrl cl "internalSyncSearch" internalSyncSearchAPI
     >>= fromEitherM (ExternalAPICallError (Just "INTERNAL_SYNC_SEARCH_FAILED") bppUrl)
 
@@ -136,12 +143,15 @@ searchMetro gatewayUrl req = do
 
 selectV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   API.SelectReqV2 ->
@@ -150,7 +160,15 @@ selectV2 ::
 selectV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  res <- callBecknAPIWithSignature' merchantId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "select"
+      (req.selectReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.selectReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "selectV2" "BAP" transactionId (Just req) res
@@ -158,12 +176,15 @@ selectV2 providerUrl req merchantId = do
 
 initV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   API.InitReqV2 ->
@@ -172,7 +193,15 @@ initV2 ::
 initV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.initReqContext.contextBapId
-  res <- callBecknAPIWithSignature' merchantId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "init"
+      (req.initReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.initReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "initV2" "BAP" transactionId (Just req) res
@@ -180,12 +209,15 @@ initV2 providerUrl req merchantId = do
 
 confirmV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   ConfirmReqV2 ->
@@ -194,7 +226,15 @@ confirmV2 ::
 confirmV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
-  res <- callBecknAPIWithSignature' merchantId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "confirm"
+      (req.confirmReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.confirmReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "confirmV2" "BAP" transactionId (Just req) res
@@ -202,12 +242,15 @@ confirmV2 providerUrl req merchantId = do
 
 cancelV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   Id Merchant.Merchant ->
   BaseUrl ->
@@ -216,7 +259,15 @@ cancelV2 ::
 cancelV2 merchantId providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
-  res <- callBecknAPIWithSignature' merchantId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "cancel"
+      (req.cancelReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.cancelReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "cancelV2" "BAP" transactionId (Just req) res
@@ -237,18 +288,31 @@ update providerUrl req = do
 
 updateV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    CacheFlow m r,
+    EsqDBFlow m r,
     HasRequestId r
   ) =>
+  Id Merchant.Merchant ->
   BaseUrl ->
   UpdateReqV2 ->
   m UpdateRes
-updateV2 providerUrl req = do
+updateV2 merchantId providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.updateReqContext.contextBapId
-  res <- callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "update"
+      (req.updateReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.updateReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "updateV2" "BAP" transactionId (Just req) res
@@ -257,12 +321,15 @@ updateV2 providerUrl req = do
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasRequestId r
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -282,7 +349,15 @@ callTrack booking ride = do
             ..
           }
   trackBecknReq <- TrackACL.buildTrackReqV2 trackBuildReq
-  res <- callBecknAPIWithSignature' booking.merchantId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq
+  res <-
+    GatewayLookup.dispatchAction
+      booking.merchantId
+      BecknDomain.MOBILITY
+      "track"
+      (trackBecknReq.trackReqContext.contextBppId)
+      trackBecknReq
+      (callBecknAPIWithSignature' booking.merchantId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callTrack" "BAP" (Just booking.transactionId) (Just trackBecknReq) res
   pure ()
@@ -309,8 +384,10 @@ callGetDriverLocation mTrackingUrl = do
 
 feedbackV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
@@ -324,7 +401,15 @@ feedbackV2 ::
 feedbackV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.ratingReqContext.contextBapId
-  res <- callBecknAPIWithSignature' merchantId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "feedback"
+      (req.ratingReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.ratingReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "feedbackV2" "BAP" transactionId (Just req) res
@@ -332,8 +417,10 @@ feedbackV2 providerUrl req merchantId = do
 
 callStatusV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
@@ -347,7 +434,15 @@ callStatusV2 ::
 callStatusV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
-  res <- callBecknAPIWithSignature' merchantId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
+  res <-
+    GatewayLookup.dispatchAction
+      merchantId
+      BecknDomain.MOBILITY
+      "status"
+      (req.statusReqContext.contextBppId)
+      req
+      (callBecknAPIWithSignature' merchantId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req)
+      (\url mappedAction jsonBody -> callBecknAPIUnsigned mappedAction url jsonBody)
   fork "Logging Internal API Call" $ do
     let transactionId = req.statusReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "statusV2" "BAP" transactionId (Just req) res
@@ -419,3 +514,23 @@ callBecknAPIWithSignatureMetro a b c d e = do
     c
     d
     e
+
+type FabricUnsignedAPI = ReqBody '[JSON] Aeson.Value :> Post '[JSON] AckResponse
+
+fabricUnsignedAPI :: Proxy FabricUnsignedAPI
+fabricUnsignedAPI = Proxy
+
+callBecknAPIUnsigned ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Aeson.Value ->
+  m AckResponse
+callBecknAPIUnsigned action baseUrl body = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let urlWithAction = baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/" <> T.unpack action}
+  callBecknAPI Nothing Nothing action fabricUnsignedAPI urlWithAction internalEndPointHashMap body

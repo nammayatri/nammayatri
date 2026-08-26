@@ -38,7 +38,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
-    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
+    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
     userBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)
     userSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)
     pure $
@@ -74,6 +74,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             isBlockedRoute = isBlockedRoute,
             isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
             isDashboardRequest = fromMaybe False isDashboardRequest,
+            isPetRide = fromMaybe False isPetRide,
             isReallocationEnabled = isReallocationEnabled,
             isReserveRide = isReserveRide,
             isScheduled = fromMaybe False isScheduled,
@@ -146,6 +147,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.isBlockedRoute = isBlockedRoute,
         Beam.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
         Beam.isDashboardRequest = Just isDashboardRequest,
+        Beam.isPetRide = Kernel.Prelude.Just isPetRide,
         Beam.isReallocationEnabled = isReallocationEnabled,
         Beam.isReserveRide = isReserveRide,
         Beam.isScheduled = Just isScheduled,
@@ -170,7 +172,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
+        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,

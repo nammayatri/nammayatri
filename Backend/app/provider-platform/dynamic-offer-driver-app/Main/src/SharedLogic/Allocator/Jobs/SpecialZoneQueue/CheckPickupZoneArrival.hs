@@ -95,7 +95,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
               logWarning $ "Gate " <> gateId <> " not found for arrival check, expiring request"
               QSZQR.updateResponse (Just DSZQR.Ignored) DSZQR.Expired requestId
             Just gate -> do
-              driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
+              driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing Nothing
               isInPickupZone <- case find (\d -> d.driverId == driverId) driversNearGate of
                 Just dl -> do
                   mbGateCheck <- QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong dl.lat dl.lon)

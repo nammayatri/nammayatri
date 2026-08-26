@@ -76,6 +76,7 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.MetaWhatsappWebhook
+      API.OnixBapWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -266,6 +267,8 @@ library
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
+      Domain.Action.UI.AssetManifest
+      Domain.Action.UI.AssetReleaseInternal
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
@@ -364,6 +367,7 @@ library
       Domain.Action.UI.TransitOperator
       Domain.Action.UI.TransitOperator.Validation
       Domain.Action.UI.TriggerFCM
+      Domain.Action.UI.VehicleServiceTier
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.XyneWebhook
       Domain.Action.UI.ZendeskSdkToken
@@ -378,6 +382,7 @@ library
       Domain.Types.DeliveryDetails
       Domain.Types.EventManagement
       Domain.Types.EventManagement.Permissions
+      Domain.Types.Extra.AssetRelease
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
@@ -497,6 +502,7 @@ library
       Lib.JourneyModule.Utils
       SharedLogic.BehaviourManagement.CustomerCancellationRate
       SharedLogic.BetterRoutePoint
+      SharedLogic.BetterRoutePointCache
       SharedLogic.BetterRoutePointSearch
       SharedLogic.Booking
       SharedLogic.Cac
@@ -509,6 +515,7 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
+      SharedLogic.DummySignatureAuth
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
@@ -527,10 +534,12 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSPassConfirm
       SharedLogic.FRFSPassOverride
+      SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
+      SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
@@ -618,6 +627,7 @@ library
       Storage.Beam.SystemConfigs
       Storage.Beam.Toll
       Storage.Beam.Yudhishthira
+      Storage.CachedQueries.AssetReleaseExtra
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
@@ -717,6 +727,7 @@ library
       Storage.Queries.BookingExtra
       Storage.Queries.BookingPartiesLinkExtra
       Storage.Queries.BusinessHourExtra
+      Storage.Queries.CachedRouteResponseExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
@@ -756,6 +767,7 @@ library
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonExtra
+      Storage.Queries.PersonPTStatsExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
@@ -916,6 +928,8 @@ library
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
       API.Action.UI.AlertWebhook
+      API.Action.UI.AssetManifest
+      API.Action.UI.AssetReleaseInternal
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
@@ -964,6 +978,7 @@ library
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
+      API.Action.UI.VehicleServiceTier
       API.Action.UI.ZendeskSdkToken
       API.Action.UI.ZendeskWebhook
       API.Action.UnifiedDashboard.Management
@@ -1031,6 +1046,8 @@ library
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
       API.Types.UI.AlertWebhook
+      API.Types.UI.AssetManifest
+      API.Types.UI.AssetReleaseInternal
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
       API.Types.UI.CancellationChargesWaiveOff
@@ -1045,6 +1062,7 @@ library
       API.Types.UI.FavouriteDriver
       API.Types.UI.FinanceInvoice
       API.Types.UI.FollowRide
+      API.Types.UI.FRFSInternal
       API.Types.UI.FRFSTicketService
       API.Types.UI.Insurance
       API.Types.UI.Invoice
@@ -1074,6 +1092,7 @@ library
       API.Types.UI.TicketService
       API.Types.UI.TrackRoute
       API.Types.UI.TriggerFCM
+      API.Types.UI.VehicleServiceTier
       API.Types.UI.ZendeskSdkToken
       API.Types.UI.ZendeskWebhook
       API.Types.UnifiedDashboard.Management
@@ -1087,6 +1106,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.AlertIncident
       Domain.Types.AppInstalls
+      Domain.Types.AssetRelease
       Domain.Types.BBPS
       Domain.Types.BBPSConfig
       Domain.Types.BecknConfig
@@ -1098,6 +1118,7 @@ library
       Domain.Types.BookingUpdateRequest
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
+      Domain.Types.CachedRouteResponse
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
@@ -1258,6 +1279,7 @@ library
       Storage.Beam.AlertIncident
       Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
+      Storage.Beam.AssetRelease
       Storage.Beam.BBPS
       Storage.Beam.BBPSConfig
       Storage.Beam.BecknConfig
@@ -1269,6 +1291,7 @@ library
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
+      Storage.Beam.CachedRouteResponse
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
@@ -1422,6 +1445,7 @@ library
       Storage.Beam.VehicleSeatLayoutMapping
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.AssetRelease
       Storage.CachedQueries.DeviceVehicleMapping
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FRFSVehicleServiceTier
@@ -1433,6 +1457,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.AlertIncident
       Storage.Queries.AppInstalls
+      Storage.Queries.AssetRelease
       Storage.Queries.BBPS
       Storage.Queries.BBPSConfig
       Storage.Queries.BecknConfig
@@ -1444,6 +1469,7 @@ library
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
+      Storage.Queries.CachedRouteResponse
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
@@ -1527,6 +1553,7 @@ library
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BookingPartiesLink
       Storage.Queries.OrphanInstances.BusinessHour
+      Storage.Queries.OrphanInstances.CachedRouteResponse
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability

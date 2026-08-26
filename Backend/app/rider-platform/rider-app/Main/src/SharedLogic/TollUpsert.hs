@@ -49,6 +49,7 @@ data TollCSVRow = TollCSVRow
     isTwoWheelerAllowed :: Text,
     isAutoRickshawTollChargeApplicable :: Maybe Text,
     isTwoWheelerTollChargeApplicable :: Maybe Text,
+    maxTollCountInRide :: Maybe Text,
     tollStartGates :: Text,
     tollEndGates :: Text
   }
@@ -66,6 +67,7 @@ instance FromNamedRecord TollCSVRow where
       <*> r .: "is_two_wheeler_allowed"
       <*> optionalNamedField r "is_auto_rickshaw_toll_charge_applicable"
       <*> optionalNamedField r "is_two_wheeler_toll_charge_applicable"
+      <*> optionalNamedField r "max_toll_count_in_ride"
       <*> r .: "toll_start_gates"
       <*> r .: "toll_end_gates"
 
@@ -121,6 +123,7 @@ processRow opCity merchantOpCity row = do
   isTwoWheelerAllowed <- readMaybeCSVField row.isTwoWheelerAllowed "is_two_wheeler_allowed"
   isAutoRickshawTollChargeApplicable <- readMaybeCSVFieldFromOptional row.isAutoRickshawTollChargeApplicable "is_auto_rickshaw_toll_charge_applicable"
   isTwoWheelerTollChargeApplicable <- readMaybeCSVFieldFromOptional row.isTwoWheelerTollChargeApplicable "is_two_wheeler_toll_charge_applicable"
+  maxTollCountInRide <- readMaybeCSVFieldFromOptional row.maxTollCountInRide "max_toll_count_in_ride"
   tollStartGates <- parseGates row.tollStartGates "toll_start_gates"
   tollEndGates <- parseGates row.tollEndGates "toll_end_gates"
   let upsertReq =
@@ -133,7 +136,8 @@ processRow opCity merchantOpCity row = do
             isAutoRickshawAllowed = isAutoRickshawAllowed,
             isTwoWheelerAllowed = isTwoWheelerAllowed,
             isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
-            isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable
+            isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
+            maxTollCountInRide = maxTollCountInRide
           }
   mbTollIdText <- pure $ cleanField row.tollId
   mbExisting <- case mbTollIdText of

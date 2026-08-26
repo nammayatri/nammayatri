@@ -26,6 +26,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
             cloudBaseUrl = cloudBaseUrl',
             cloudType = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) cloudType,
             country = country,
+            countryDialCode = countryDialCode,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             id = Kernel.Types.Id.Id id,
@@ -35,6 +36,7 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
             merchantShortId = Kernel.Types.Id.ShortId merchantShortId,
             state = state,
             stdCode = stdCode,
+            supportEmails = supportEmails,
             supportNumber = supportNumber
           }
 
@@ -45,6 +47,7 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
         Beam.cloudBaseUrl = Kernel.Prelude.fmap showBaseUrl cloudBaseUrl,
         Beam.cloudType = Kernel.Prelude.fmap Kernel.Prelude.show cloudType,
         Beam.country = country,
+        Beam.countryDialCode = countryDialCode,
         Beam.currency = Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.id = Kernel.Types.Id.getId id,
@@ -55,5 +58,6 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
         Beam.merchantShortId = Kernel.Types.Id.getShortId merchantShortId,
         Beam.state = state,
         Beam.stdCode = stdCode,
+        Beam.supportEmails = supportEmails,
         Beam.supportNumber = supportNumber
       }

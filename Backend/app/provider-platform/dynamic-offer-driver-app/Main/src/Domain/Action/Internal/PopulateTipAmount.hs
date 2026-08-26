@@ -28,12 +28,13 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (AccountRole (..), FinanceCtx, runFinance, transfer)
+import Lib.Finance (AccountRole (..), FinanceCtx, transfer)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified SharedLogic.Finance.InvoiceRegeneration as InvoiceRegen
+import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM

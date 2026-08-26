@@ -80,6 +80,7 @@ SearchRequestForDriver:
     mode: Maybe DriverMode
     goHomeRequestId: Maybe (Id DriverGoHomeRequest)
     rideFrequencyScore: Maybe Double
+    preferenceMatchScore: Maybe Double
     customerCancellationDues: HighPrecMoney
     clientSdkVersion: Maybe Version
     reactBundleVersion: Maybe Text
@@ -112,6 +113,7 @@ SearchRequestForDriver:
     coinsRewardedOnGoldTierRide: Maybe Int
     commissionCharges: Maybe HighPrecMoney
     driverCancellationNotAllowed: Maybe Bool
+    isAutoAccepted: Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text

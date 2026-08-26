@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -33,21 +34,25 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.Beam.Types (TxnIdKey (..))
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
-import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJobData)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
@@ -74,16 +79,11 @@ import Tools.Utils
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
--- | Sentinel driverId used for the "drivers exhausted" marker row inserted into
--- search_request_for_driver when a search runs out of drivers mid-search. This is a
--- fake driver that never exists in the person table; analytics filter on it.
+-- | Dummy driverId for the "drivers exhausted" marker row; analytics filter on it.
 driversNotFoundDriverId :: Id DPerson.Person
 driversNotFoundDriverId = Id "drivers-not-found"
 
--- | Build the single dummy SearchRequestForDriver row that marks a mid-search driver
--- pool exhaustion. Every real driver-specific column is a zero/empty default; only the
--- fields needed for analytics correlation carry real values (searchTryId, requestId,
--- merchantOperatingCityId) alongside the sentinel driverId.
+-- | Single dummy SRFD marking mid-search pool exhaustion; only analytics-correlation fields carry real values.
 buildDriversExhaustedMarker :: MonadFlow m => DSR.SearchRequest -> SearchTry -> Int -> m DSRD.SearchRequestForDriver
 buildDriversExhaustedMarker searchReq searchTry batchNumber = do
   now <- getCurrentTime
@@ -131,6 +131,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         driverAvailableTime = Nothing,
         driverSpeed = Nothing,
         rideFrequencyScore = Nothing,
+        preferenceMatchScore = Nothing,
         coinsRewardedOnGoldTierRide = Nothing,
         conditionalCharges = [],
         isPartOfIntelligentPool = False,
@@ -167,10 +168,11 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         clientConfigVersion = Nothing,
         clientDevice = Nothing,
         reactBundleVersion = Nothing,
-        driverCancellationNotAllowed = Nothing
+        driverCancellationNotAllowed = Nothing,
+        isAutoAccepted = Nothing
       }
 
-sendSearchRequestToDrivers ::
+type SendSearchRequestJobFlow m r c =
   ( EncFlow m r,
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
@@ -194,6 +196,7 @@ sendSearchRequestToDrivers ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
@@ -205,12 +208,40 @@ sendSearchRequestToDrivers ::
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "enableLtsPoolDataForPooling" r Bool,
     HasField "cloudType" r (Maybe CloudType),
-    Finance.HasActorInfo m r
-  ) =>
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
+    EventStreamFlow m r,
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
+  )
+
+-- Immediate dispatch (Redis-backed). Scheduled dispatch uses the sibling handler below.
+sendSearchRequestToDrivers ::
+  SendSearchRequestJobFlow m r c =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
-sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
-  let jobData = jobInfo.jobData
+sendSearchRequestToDrivers Job {id, jobInfo} = processSendSearchRequestJob id.getId jobInfo.jobData
+
+sendScheduledSearchRequestToDrivers ::
+  SendSearchRequestJobFlow m r c =>
+  Job 'SendScheduledSearchRequestToDriver ->
+  m ExecutionResult
+sendScheduledSearchRequestToDrivers Job {id, jobInfo} = processSendSearchRequestJob id.getId jobInfo.jobData
+
+processSendSearchRequestJob ::
+  SendSearchRequestJobFlow m r c =>
+  Text ->
+  SendSearchRequestToDriverJobData ->
+  m ExecutionResult
+processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
   let searchTryId = jobData.searchTryId
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
@@ -304,6 +335,7 @@ sendSearchRequestToDrivers' ::
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     Metrics.HasBPPMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -324,6 +356,7 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
@@ -332,7 +365,18 @@ sendSearchRequestToDrivers' ::
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    HasField "enableLtsPoolDataForPooling" r Bool
+    HasField "enableLtsPoolDataForPooling" r Bool,
+    Redis.HedisFlow m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EventStreamFlow m r,
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   DriverPoolConfig ->
   SearchTry ->

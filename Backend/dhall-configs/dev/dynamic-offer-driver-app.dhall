@@ -280,6 +280,7 @@ let registryMap =
 
 let AllocatorJobType =
       < SendSearchRequestToDriver
+      | SendScheduledSearchRequestToDriver
       | UnblockDriver
       | UnblockAirportDriver
       | UnblockSoftBlockedDriver
@@ -337,6 +338,9 @@ let jobRetryOnExceptionMapx =
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
+      , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
+        , mapValue = True
+        }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.UnblockAirportDriver, mapValue = False }
       , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
@@ -600,6 +604,7 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , fabricGatewayBaseUrl = common.fabricGatewayBaseUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , urlShortnerConfig = common.urlShortnerConfig
     , vocalyticsCnfg = VocaliticsConfig

@@ -159,6 +159,17 @@ types:
     isSpotBooking: Maybe Bool
     purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
 
+  FRFSRescheduleSeatReq:
+    category: FRFSQuoteCategoryType
+    seatIds: [(Id Seat)]
+
+  FRFSRescheduleReq:
+    tripId: Text
+    offered: Maybe [FRFSRescheduleSeatReq]
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
+
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
     description: Text
@@ -205,6 +216,9 @@ types:
     # Whole booking: this is what the payment order was created for.
     overriddenTotalPrice: Maybe PriceAPIEntity
     appliedPurchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    appliedPassId: Maybe (Id Pass)
+    appliedPassName: Maybe Text
+    startTime: Maybe UTCTime
     derive: "Show"
 
   FRFSRefundAttemptAPI:
@@ -674,6 +688,7 @@ apis:
         vehicleType: VehicleCategory
         limit: Int
         offset: Int
+        overrideEntityId: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
 
@@ -703,6 +718,17 @@ apis:
       auth: TokenAuth
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # Reschedule a confirmed reserved-seat booking to another trip on the same route/stops, same fare
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/reschedule
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # Booking Cancel Status
   - GET:

@@ -48,7 +48,7 @@ findVehicles merchantId merchantOpCityId limitVal offsetVal mbFleetOwnerId mbCer
                         B.&&. maybe (B.val_ True) (\verified -> rc.verified B.==. B.val_ (Just verified)) mbVerified
                         B.&&. ( case mbApprovalFilter of
                                   Nothing -> B.val_ True
-                                  Just Nothing -> B.isNothing_ rc.approved
+                                  Just Nothing -> B.isNothing_ rc.approved B.&&. rc.verified B.==. B.val_ (Just True)
                                   Just (Just approved) -> rc.approved B.==. B.val_ (Just approved)
                               )
                         B.&&. maybe (B.val_ True) (\fromTime -> rc.createdAt B.>=. B.val_ fromTime) mbFrom

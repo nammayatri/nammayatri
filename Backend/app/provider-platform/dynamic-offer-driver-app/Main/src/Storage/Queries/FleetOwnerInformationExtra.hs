@@ -362,9 +362,9 @@ updateFleetOwnerVerifiedAndApprovedStatus verified approved fleetOwnerPersonId =
   _now <- getCurrentTime
   updateOneWithKV
     ( [ Se.Set Beam.verified verified,
-        Se.Set Beam.updatedAt _now
+        Se.Set Beam.updatedAt _now,
+        Se.Set Beam.approved approved
       ]
-        <> [Se.Set Beam.approved approved | isJust approved]
     )
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 

@@ -28,17 +28,10 @@ import Storage.Queries.Transformers.Ride
 findByShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Ride.Ride))
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
-updateCancellationChargesOnCancel ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationChargesOnCancel cancellationChargesOnCancel cancellationChargesLogicVersion id = do
+updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel,
-      Se.Set Beam.cancellationChargesLogicVersion cancellationChargesLogicVersion,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCancellationFaultVerdict ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -52,17 +45,10 @@ updateCancellationFaultVerdict cancellationFaultVerdict cancellationFaultRule id
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationFeeIfCancelledField ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFeeIfCancelledField cancellationFeeIfCancelled cancellationChargesLogicVersion id = do
+updateCancellationFeeIfCancelledField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled,
-      Se.Set Beam.cancellationChargesLogicVersion cancellationChargesLogicVersion,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCommission :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -142,6 +128,19 @@ updatePaymentCharge ::
 updatePaymentCharge paymentCharge paymentChargeBearer id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentCharge paymentCharge, Se.Set Beam.paymentChargeBearer paymentChargeBearer, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePickupJourney ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.Ride.PickupBehaviour -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updatePickupJourney pickupBehaviour pickupFaultSeconds pickupDarkSeconds id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.pickupBehaviour pickupBehaviour,
+      Se.Set Beam.pickupFaultSeconds pickupFaultSeconds,
+      Se.Set Beam.pickupDarkSeconds pickupDarkSeconds,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePreviousRideTripEndPosAndTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -2,6 +2,7 @@ module SharedLogic.Booking where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
+import Data.List (nub)
 import Data.Text hiding (map)
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
 import Data.Time.Calendar (addDays, toGregorian)
@@ -9,6 +10,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
@@ -58,6 +60,7 @@ cancelBooking ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r
@@ -86,7 +89,8 @@ cancelBooking booking mbDriver transporter = do
     when booking.isScheduled $ removeBookingFromRedis booking
     QBCR.upsert bookingCancellationReason
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source)
+    metricsDistanceBucketEdges <- SML.getDistanceBucketEdges booking.merchantOperatingCityId
+    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED
@@ -136,11 +140,15 @@ removeBookingFromRedis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Boo
 removeBookingFromRedis booking = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
-      vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
-      redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
+      redisKey = createRedisKeyForServiceTier localStartTime booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier
+      -- Backward-compat: also clear the pre-migration variant key so a cancelled/assigned booking
+      -- written under the old scheme doesn't linger and resurface in reads. Drop once all such
+      -- bookings have expired.
+      legacyRedisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory (castServiceTierToVariant booking.vehicleServiceTier)
       redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
       member = createMember booking
   void $ Redis.zRem redisKey [member]
+  when (legacyRedisKey /= redisKey) $ void $ Redis.zRem legacyRedisKey [member]
   void $ Redis.hDel redisKeyForHset [booking.id.getId]
 
 -- Creates a Redis sorted set member string containing booking metadata.
@@ -150,15 +158,23 @@ createMember :: DRB.Booking -> Text
 createMember booking = booking.id.getId <> "|" <> (pack . show $ booking.fromLocation.lat) <> "|" <> (pack . show $ booking.fromLocation.lon) <> "|" <> pack (formatTime defaultTimeLocale "%FT%T%z" booking.startTime) <> "|" <> (pack . show $ booking.vehicleServiceTier)
 
 -- Generates Redis key for sorted set storage of scheduled bookings.
--- Format: "ScheduledBookings:cityId:YYYY-MM-DD:vehicleVariant:tripType"
--- Time parameter should be in local timezone to group bookings by local date.
+-- Format: "ScheduledBookings:cityId:YYYY-MM-DD:<serviceTier>:tripType"
+-- The key part is the booking's service tier (current scheme). Time parameter should be in local
+-- timezone to group bookings by local date.
+createRedisKeyForServiceTier :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> ServiceTierType -> Text
+createRedisKeyForServiceTier time mocId tripCategory serviceTier = createRedisKeyWith time mocId tripCategory (show serviceTier)
+
+-- Backward-compat key keyed on vehicle variant (the pre-migration scheme).
 createRedisKey :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> VehicleVariant -> Text
-createRedisKey time mocId tripCategory vehicleVariant =
+createRedisKey time mocId tripCategory vehicleVariant = createRedisKeyWith time mocId tripCategory (show vehicleVariant)
+
+createRedisKeyWith :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> String -> Text
+createRedisKeyWith time mocId tripCategory keyPart =
   let (year, month, day) = toGregorian $ utctDay time
       date = printf "%04d-%02d-%02d" year month day
       cityId = unpack mocId.getId
       tripType = createTripType tripCategory
-   in (pack $ "ScheduledBookings:" <> cityId <> ":" <> date <> ":" <> show vehicleVariant <> ":" <> tripType)
+   in (pack $ "ScheduledBookings:" <> cityId <> ":" <> date <> ":" <> keyPart <> ":" <> tripType)
 
 createTripType :: TripCategory -> [Char]
 createTripType (OneWay _) = "OneWay"
@@ -185,14 +201,17 @@ createRedisKeyForHset time mocId =
 calculateSortedSetScore :: UTCTime -> Double
 calculateSortedSetScore time = realToFrac (utcTimeToPOSIXSeconds time)
 
--- Generates all Redis key combinations for given trip categories and vehicle variants.
--- Used to query multiple sorted sets in parallel for different booking types.
-createRedisKeysForCombinations :: UTCTime -> Id MerchantOperatingCity -> [TripCategory] -> [VehicleVariant] -> [Text]
-createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
-  [ createRedisKey time mocId tripCategory vehicleVariant
-    | tripCategory <- tripCategories,
-      vehicleVariant <- vehicleVariants
-  ]
+createRedisKeysForCombinations :: UTCTime -> Id MerchantOperatingCity -> [TripCategory] -> [ServiceTierType] -> [Text]
+createRedisKeysForCombinations time mocId tripCategories serviceTiers =
+  nub
+    [ key
+      | tripCategory <- tripCategories,
+        serviceTier <- serviceTiers,
+        key <-
+          [ createRedisKeyForServiceTier time mocId tripCategory serviceTier,
+            createRedisKey time mocId tripCategory (castServiceTierToVariant serviceTier)
+          ]
+    ]
 
 -- Stores a scheduled booking in Redis for efficient querying by drivers.
 -- Uses local timezone for keys and scores to ensure bookings are grouped by local date.
@@ -201,15 +220,20 @@ createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
 addScheduledBookingInRedis :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DRB.Booking -> m ()
 addScheduledBookingInRedis booking = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
-      bookingLocalDay = utctDay localStartTime
-      endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
-      expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
-      vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
-      redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
-      redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
-      member = createMember booking
-      score = ceiling $ calculateSortedSetScore localStartTime
-  void $ Redis.zAddExp redisKey member score expirationSeconds
-  void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
+  -- this redis is read only by the driver board, so skip maintaining it when the board is disabled
+  unless transporterConfig.disableListScheduledBookingAPI $ do
+    localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
+        bookingLocalDay = utctDay localStartTime
+        endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
+        expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
+        redisKey = createRedisKeyForServiceTier localStartTime booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier
+        -- Backward-compat: dual-write the pre-migration variant key so instances still reading the old
+        -- scheme (during a rolling deploy) continue to see this booking. Drop once fully rolled out.
+        legacyRedisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory (castServiceTierToVariant booking.vehicleServiceTier)
+        redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
+        member = createMember booking
+        score = ceiling $ calculateSortedSetScore localStartTime
+    void $ Redis.zAddExp redisKey member score expirationSeconds
+    when (legacyRedisKey /= redisKey) $ void $ Redis.zAddExp legacyRedisKey member score expirationSeconds
+    void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds

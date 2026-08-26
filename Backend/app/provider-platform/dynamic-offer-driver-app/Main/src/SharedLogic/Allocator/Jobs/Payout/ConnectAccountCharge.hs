@@ -54,6 +54,7 @@ sendConnectAccountCharge ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
   Job 'ConnectAccountChargeDeduction ->
@@ -70,15 +71,24 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
       let dwc = tConfig.driverWalletConfig
       case (dwc.connectAccountCharge, dwc.connectAccountChargeBearer, dwc.connectAccountChargeFrequency) of
         (Just charge, Just bearer, Just freq) | charge > 0 -> do
-          accounts <- QDBA.findActiveConnectAccountsByCity merchantOpCityId
-          logInfo $ "Posting connect-account charge for " <> show (length accounts) <> " active accounts in city " <> merchantOpCityId.getId
-          forM_ accounts $ \acc -> do
-            mbPerson <- QPerson.findById acc.driverId
-            whenJust mbPerson $ \person -> do
-              let counterparty = counterpartyFromRole person.role
-                  chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId)
-              recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
-                >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
+          let batchSize = 100
+              chargeAccount acc = do
+                mbPerson <- QPerson.findById acc.driverId
+                whenJust mbPerson $ \person -> do
+                  let counterparty = counterpartyFromRole person.role
+                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) (fromMaybe False dwc.enableWalletGatedTierCheck)
+                  recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
+                    >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
+              -- Page through active accounts in bounded batches so a large fleet is not loaded at once.
+              processBatches offset processed = do
+                accounts <- QDBA.findActiveConnectAccountsByCity merchantOpCityId batchSize offset
+                forM_ accounts chargeAccount
+                let processed' = processed + length accounts
+                if length accounts == batchSize
+                  then processBatches (offset + batchSize) processed'
+                  else pure processed'
+          total <- processBatches 0 (0 :: Int)
+          logInfo $ "Posted connect-account charge for " <> show total <> " active accounts in city " <> merchantOpCityId.getId
           nextTime <- nextConnectChargeRun freq
           pure $ ReSchedule nextTime
         _ -> do

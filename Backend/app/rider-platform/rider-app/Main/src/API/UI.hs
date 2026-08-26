@@ -5,6 +5,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AssetManifest as AssetManifest
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.CRIS as CRIS
@@ -48,6 +49,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.VehicleServiceTier as VehicleServiceTier
 import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
@@ -162,6 +164,7 @@ type API =
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
+           :<|> AssetManifest.API
            :<|> TrackRoute.API
            :<|> BBPS.API
            :<|> RentalsIntercityCache.API
@@ -191,6 +194,7 @@ type API =
            :<|> AddBaggage.API
            :<|> ZendeskSdkToken.API
            :<|> FleetEngineToken.API
+           :<|> VehicleServiceTier.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -296,6 +300,7 @@ handler =
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
+    :<|> AssetManifest.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
     :<|> RentalsIntercityCache.handler
@@ -325,3 +330,4 @@ handler =
     :<|> AddBaggage.handler
     :<|> ZendeskSdkToken.handler
     :<|> FleetEngineToken.handler
+    :<|> VehicleServiceTier.handler

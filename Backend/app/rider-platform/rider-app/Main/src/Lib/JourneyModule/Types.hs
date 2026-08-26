@@ -19,6 +19,7 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBookingStatus
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.IntegratedBPPConfig as DTBC
@@ -118,9 +119,12 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
@@ -138,6 +142,7 @@ type ConfirmFlow m r c =
     HasBAPMetrics m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     Redis.HedisFlow m r,
@@ -161,6 +166,7 @@ type CancelFlow m r c =
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
@@ -187,6 +193,7 @@ type GetStateFlow m r c =
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
@@ -318,7 +325,9 @@ data LegInfo = LegInfo
     validTill :: Maybe UTCTime,
     hasApplicablePasses :: Maybe Bool,
     observingFailures :: Maybe Bool,
-    isCancellable :: Maybe Bool
+    isCancellable :: Maybe Bool,
+    isReschedulable :: Maybe Bool,
+    remainingRescheduleCount :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -708,7 +717,9 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         validTill = Nothing,
         hasApplicablePasses = Just False,
         observingFailures = Nothing,
-        isCancellable = Nothing
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -793,7 +804,9 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         validTill = Nothing,
         hasApplicablePasses = Just False,
         observingFailures = Nothing,
-        isCancellable = Nothing
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
       }
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DP.Person -> DJL.JourneyLeg -> m LegInfo
@@ -841,7 +854,9 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         validTill = Nothing,
         hasApplicablePasses = Just False,
         observingFailures = Nothing,
-        isCancellable = Nothing
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
       }
   where
     mkLocation now location name =
@@ -917,7 +932,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsBooking booking) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
-  isCancellable <- computeIsCancellable booking integratedBPPConfig
+  (isCancellable, isReschedulable, remainingRescheduleCount) <- computeIsCancellableAndReschedulable booking integratedBPPConfig
   mbAppliedPass <-
     if booking.overrideType == Just DFRFSBooking.PassOverride
       then do
@@ -962,7 +977,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
         hasApplicablePasses = Nothing,
         observingFailures = Nothing,
-        isCancellable = isCancellable
+        isCancellable = isCancellable,
+        isReschedulable = isReschedulable,
+        remainingRescheduleCount = remainingRescheduleCount
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount integratedBPPConfig = do
@@ -1220,22 +1237,44 @@ getLegRouteInfo mbFallback journeyRouteDetailsWithTrackingStatuses integratedBPP
           integratedBppConfigId = maybe (cast integratedBPPConfig.id) (cast . (.integratedBppConfigId)) mbStation
         }
 
-computeIsCancellable ::
+computeIsCancellableAndReschedulable ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   DFRFSBooking.FRFSTicketBooking ->
   DIBC.IntegratedBPPConfig ->
-  m (Maybe Bool)
-computeIsCancellable booking integratedBPPConfig = do
+  m (Maybe Bool, Maybe Bool, Maybe Int)
+computeIsCancellableAndReschedulable booking integratedBPPConfig = do
   mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   let configCancellable = maybe True (.isCancellationAllowed) mbFrfsConfig
+      configReschedulable = maybe False (fromMaybe False . (.isRescheduleAllowed)) mbFrfsConfig
       (userCancellationAllowed, _) = SIBC.frfsCancellationFlags integratedBPPConfig
   let mbServiceTierType = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
-  case mbServiceTierType of
-    Just serviceTierType -> do
-      mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
-      let vstCancellable = fromMaybe True (mbVst >>= (.isCancellable))
-      return $ Just (configCancellable && vstCancellable && userCancellationAllowed)
-    Nothing -> return $ Just (configCancellable && userCancellationAllowed)
+  mbVst <- case mbServiceTierType of
+    Just serviceTierType -> QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
+    Nothing -> return Nothing
+  let isCancellable = case mbServiceTierType of
+        Just _ -> configCancellable && fromMaybe True (mbVst >>= (.isCancellable)) && userCancellationAllowed
+        Nothing -> configCancellable && userCancellationAllowed
+  isReschedulable <- computeIsReschedulable mbVst configReschedulable
+  let remainingRescheduleCount =
+        if isReschedulable
+          then max 0 (fromMaybe 1 (mbVst >>= (.maxRescheduleCount)) - fromMaybe 0 booking.rescheduleCount)
+          else 0
+  return (Just isCancellable, Just isReschedulable, Just remainingRescheduleCount)
+  where
+    computeIsReschedulable mbVst configReschedulable = do
+      let vstReschedulable = fromMaybe False (mbVst >>= (.isRescheduleAllowed))
+          withinRescheduleCount = fromMaybe 0 booking.rescheduleCount < fromMaybe 1 (mbVst >>= (.maxRescheduleCount))
+          maxRescheduleTimeAfterStart = fromMaybe (Seconds 1800) (mbVst >>= (.maxRescheduleTimeAfterStart))
+      now <- getCurrentTime
+      let pastWindow = case booking.startTime of
+            Just startTime -> now > addUTCTime (fromIntegral (getSeconds maxRescheduleTimeAfterStart)) startTime
+            Nothing -> False
+      return $
+        booking.status == DFRFSBookingStatus.CONFIRMED
+          && configReschedulable
+          && vstReschedulable
+          && withinRescheduleCount
+          && not pastWindow
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro
@@ -1371,7 +1410,9 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
         validTill = frfsSearch.validTill,
         hasApplicablePasses = Nothing,
         observingFailures = Nothing,
-        isCancellable = Nothing
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
       }
 
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> Maybe [FRFSPassOverride.PassCandidate] -> m LegInfo
@@ -1512,7 +1553,9 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
         hasApplicablePasses = Just hasTicketFreePass,
         observingFailures = Just observingFailures,
-        isCancellable = Nothing
+        isCancellable = Nothing,
+        isReschedulable = Nothing,
+        remainingRescheduleCount = Nothing
       }
   where
     shouldMatchDeviceId :: DPurchasedPass.PurchasedPass -> Maybe Text -> Bool
@@ -1781,6 +1824,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
         finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),
         finalBoardedBusNumberSource = mbFinalBoardedBusData >>= (.updateSource),
+        boardingConfirmedDespiteDistance = Nothing,
         osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
         osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),
         straightLineEntrance = chooseGate (gates >>= (.straightLineEntrance)) (leg.entrance),

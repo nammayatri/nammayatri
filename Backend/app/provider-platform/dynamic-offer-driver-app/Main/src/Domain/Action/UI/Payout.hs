@@ -474,7 +474,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
           whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
             whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
               let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
-                  chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId
+                  chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
               recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
                 >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
 

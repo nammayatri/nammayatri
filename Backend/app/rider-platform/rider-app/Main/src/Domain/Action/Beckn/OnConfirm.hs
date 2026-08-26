@@ -154,6 +154,7 @@ onConfirm ::
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text]
   ) =>
   ValidatedOnConfirmReq ->

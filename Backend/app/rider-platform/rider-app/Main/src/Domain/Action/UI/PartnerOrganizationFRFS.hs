@@ -85,6 +85,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.FRFSConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -488,7 +489,7 @@ shareTicketInfo ticketBookingId = do
 
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
-          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)))
+          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)))
             >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
         void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
 
@@ -499,7 +500,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
   frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
-    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
+    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
   route <-
     maybe
@@ -737,12 +738,16 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   let routeStations = decodeFromText =<< booking.routeStationsJson
+  mbAppliedPassPayment <- FRFSPassOverride.paymentForOverrideAppliedEntity booking.overrideAppliedEntityId
   let bookingRes =
         FRFSTypes.FRFSTicketBookingStatusAPIRes
           { FRFSTypes._type = booking._type,
             overrideType = booking.overrideType,
             overriddenTotalPrice = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
             appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+            appliedPassId = mbAppliedPassPayment >>= (.passId),
+            appliedPassName = mbAppliedPassPayment >>= (.passName),
+            startTime = booking.startTime,
             bookingId = booking.id,
             city = merchantOperatingCity.city,
             createdAt = booking.createdAt,
@@ -841,7 +846,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing Nothing
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing Nothing Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

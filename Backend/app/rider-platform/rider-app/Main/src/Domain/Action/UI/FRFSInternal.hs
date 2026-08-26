@@ -1,5 +1,6 @@
-module Domain.Action.UI.FRFSInternal (getFrfsTripRouteManifest, postFrfsTripNotifyTripStarted) where
+module Domain.Action.UI.FRFSInternal (getFrfsTripRouteManifest, postFrfsTripNotifyTripStarted, postFrfsTripStopNotifyApproaching) where
 
+import qualified API.Types.UI.FRFSInternal
 import qualified API.Types.UI.FRFSTicketService
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Environment
@@ -28,4 +29,21 @@ postFrfsTripNotifyTripStarted tripId mbToken = do
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   fork ("notifyBusTripStartedForTrip" <> tripId) (FRFSTicketService.notifyBusTripStartedForTrip tripId)
+  pure APISuccess.Success
+
+postFrfsTripStopNotifyApproaching ::
+  Text ->
+  Text ->
+  Maybe Text ->
+  API.Types.UI.FRFSInternal.NotifyBusApproachingReq ->
+  Environment.Flow APISuccess.APISuccess
+postFrfsTripStopNotifyApproaching tripId stopCode mbToken req = do
+  internalAPIKey <- asks (.internalAPIKey)
+  unless (Just internalAPIKey == mbToken) $
+    throwError $ AuthBlocked "Invalid BPP internal api key"
+  -- One endpoint, two event kinds distinguished by thresholdType — dispatched to separate flows.
+  case (req.thresholdType, req.crossedStopId) of
+    ("crossed", Just _) -> fork ("notifyBusPrevStopCrossedForTrip" <> tripId <> stopCode) (FRFSTicketService.notifyBusPrevStopCrossedForTrip tripId stopCode req)
+    ("crossed", Nothing) -> logWarning $ "Dropping crossed stop-notification for trip " <> tripId <> " stop " <> stopCode <> ": missing crossedStopId"
+    _ -> fork ("notifyBusApproachingStopForTrip" <> tripId <> stopCode) (FRFSTicketService.notifyBusApproachingStopForTrip tripId stopCode req)
   pure APISuccess.Success

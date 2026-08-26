@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Common.FRFSJourneyUtils where
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Data.HashMap.Strict as HM
 import Data.List (partition)
+import Data.Ord (comparing)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -25,10 +26,12 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
@@ -61,6 +64,92 @@ topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> 
 
 resultKeyFRFS :: Text -> Text
 resultKeyFRFS journeyLegId = "journeyLegResult:" <> journeyLegId
+
+-- For a pre-assigned/entered vehicle: checks the booking's own scheduled window, the rider's recent
+-- location history (not a single ping) against that vehicle's live position, and that the vehicle is
+-- currently running the trip this booking was made for (not a same-vehicle different trip later the
+-- same day). The bus's live position is one snapshot in time, so it's compared against whichever rider
+-- point is closest in time to that snapshot -- not the freshest rider point, which may have been
+-- recorded well after the bus moved on.
+checkRiderNearBusFRFS ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  [APITypes.RiderLocationReq] ->
+  DomainRiderConfig.RiderConfig ->
+  DIBC.IntegratedBPPConfig ->
+  m (Bool, Maybe Double, Maybe Text)
+checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTime riderLocationHistory riderConfig integratedBppConfig = do
+  now <- getCurrentTime
+  -- A booking's own scheduled start (the GTFS-scheduled departure resolved for this specific booking's
+  -- trip/route/station at confirm time) must be near "now" -- otherwise the rider's other booking on
+  -- the same route/vehicle, days away, could wrongly ride along on this proximity check. Deliberately a
+  -- generous window (12h default): a live-tracked shuttle can legitimately run hours late, this only
+  -- needs to catch "wrong day", not "running behind schedule". Checked first, before any live lookup,
+  -- since an obviously-wrong-day booking never needs one.
+  let isWithinBookingWindow = case mbBookingStartTime of
+        Nothing -> True
+        Just startTime -> abs (Time.diffUTCTime now startTime) < intToNominalDiffTime (round (fromMaybe (12 * 3600) riderConfig.boardingMaxBookingStartDriftSeconds))
+  if not isWithinBookingWindow
+    then pure (False, Nothing, Just "OUTSIDE_BOOKING_WINDOW")
+    else do
+      mbBusData <- getBusLiveInfo vehicleNumber integratedBppConfig
+      case mbBusData of
+        Nothing -> pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
+        Just busData -> do
+          let busPingTime = posixSecondsToUTCTime (fromIntegral busData.timestamp)
+          let pingAgeSeconds = abs (Time.diffUTCTime now busPingTime)
+          -- A binary trust gate for one specific vehicle, feeding an action that marks a ticket used --
+          -- deliberately tighter than busTrackingConfig.thresholdSeconds (30s), which exists for the voting
+          -- system's relative ranking across many candidate buses and tolerates more slop than a moving
+          -- bus's position staying meaningfully close to boardingMatchRadiusInMeters.
+          let maxPingAgeSeconds = fromMaybe 10.0 riderConfig.boardingBusPingMaxAgeSeconds
+          let isStale = pingAgeSeconds >= realToFrac maxPingAgeSeconds
+          -- Same freshness bar applied to the rider side: picking "whichever point is closest in time
+          -- to the bus ping" from the whole history can otherwise let an old-but-coincidentally-aligned
+          -- rider point win over a genuinely current one that better reflects where the rider actually
+          -- is right now. Filtered against server time, not the client-supplied currTime, since a
+          -- client clock can be skewed.
+          let recentRiderPoints = filter (\p -> abs (Time.diffUTCTime now p.currTime) < realToFrac maxPingAgeSeconds) riderLocationHistory
+          if isStale
+            then pure (False, Nothing, Just "NO_LIVE_BUS_DATA")
+            else
+              if null recentRiderPoints
+                then pure (False, Nothing, Just "NO_RECENT_RIDER_LOCATION")
+                else do
+                  let closestPoint = minimumBy (comparing (\p -> abs (Time.diffUTCTime p.currTime busPingTime))) recentRiderPoints
+                  let busLoc = LatLong busData.latitude busData.longitude
+                  let distanceMeters :: Double = realToFrac (highPrecMetersToMeters (distanceBetweenInMeters closestPoint.latLong busLoc))
+                  let matchRadius = fromMaybe 30.0 riderConfig.boardingMatchRadiusInMeters
+                  -- Same vehicle, different trip: a shuttle can run multiple trips a day, so a rider with two
+                  -- same-day bookings on the same physical bus could otherwise match the wrong one. Verify the
+                  -- vehicle's *currently active* trip is the one this booking was actually made for. Fails open
+                  -- (doesn't block) when either side lacks the data to compare, same as the no-data case above.
+                  isSameActiveTrip <- case (mbRouteCode, mbBookingTripId) of
+                    (Just routeCode, Just bookingTripId) -> do
+                      let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId bookingTripId
+                      scheduleDetails <- OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBppConfig
+                      -- getBusTripSchedule is already scoped to this exact waybill+trip, but don't rely on that
+                      -- implicitly -- confirm the returned detail really is the requested trip before trusting
+                      -- its is_active_trip flag.
+                      pure $
+                        any
+                          ( \detail ->
+                              detail.is_active_trip == Just True
+                                && detail.vehicle_no == vehicleNumber
+                                && detail.waybill_no == Just waybillNo
+                                && detail.trip_number == Just tripNo
+                          )
+                          scheduleDetails
+                    _ -> pure True
+                  let isMatch = distanceMeters <= matchRadius && isSameActiveTrip
+                  let reason
+                        | isMatch = Nothing
+                        | distanceMeters > matchRadius = Just "TOO_FAR"
+                        | otherwise = Just "TRIP_MISMATCH"
+                  pure (isMatch, Just distanceMeters, reason)
 
 isYetToReachStop :: Text -> UTCTime -> FullBusData -> Bool
 isYetToReachStop stopCode now bus =

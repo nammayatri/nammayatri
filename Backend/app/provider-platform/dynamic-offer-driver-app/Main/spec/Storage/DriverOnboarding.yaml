@@ -335,6 +335,7 @@ VehicleRegistrationCertificate:
     rejectReason: Maybe Text
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
+    isNew: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
@@ -357,6 +358,10 @@ VehicleRegistrationCertificate:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateIsNew:
+      kvFunction: updateOneWithKV
+      params: [isNew]
       where: id
     updateFleetOwnerId:
       kvFunction: updateWithKV
@@ -1443,6 +1448,7 @@ DocumentVerificationStagesConfig:
     documentOnboardingStage: DocumentOnboardingStage|NoRelation
     vehicleCategory: VehicleCategory|NoRelation
     applicableTo: Domain.Types.DocumentVerificationConfig.DocumentApplicableType
+    documentCategory: Domain.Types.DocumentVerificationConfig.DocumentCategory
     title: Text
     description: Maybe Text
     hint: Maybe Text
@@ -1454,11 +1460,13 @@ DocumentVerificationStagesConfig:
     order: "0"
     isHidden: "false"
     applicableTo: "'FLEET_AND_INDIVIDUAL'"
+    documentCategory: "'Driver'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentOnboardingStage: PrimaryKey
     vehicleCategory: PrimaryKey
     applicableTo: PrimaryKey
+    documentCategory: PrimaryKey
   sqlType:
     stageDependency: text[]
     mediaJSON: json

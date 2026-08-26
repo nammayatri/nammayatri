@@ -213,6 +213,12 @@ apis:
       response:
         type: APISuccess
 
+  - POST: # Decline a pending fleet invitation, ending the driver-fleet association.
+      endpoint: /fleet/consent/decline
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
+
   - GET: # Retrieve the fleet config information
       endpoint: /fleet/config
       auth: TokenAuth PROVIDER_TYPE

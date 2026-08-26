@@ -38,6 +38,24 @@ instance IsAPIError RatingError
 
 instanceExceptionWithParent 'HTTPException ''RatingError
 
+data ScheduledBookingError
+  = ScheduledBookingWindowInvalid Text
+  deriving (Eq, Show)
+
+instance IsBaseError ScheduledBookingError where
+  toMessage (ScheduledBookingWindowInvalid reason) = Just reason
+
+instance IsHTTPError ScheduledBookingError where
+  toErrorCode (ScheduledBookingWindowInvalid _) = "SCHEDULED_BOOKING_WINDOW_INVALID"
+  toHttpCode (ScheduledBookingWindowInvalid _) = E400
+
+instance IsAPIError ScheduledBookingError
+
+instance IsBecknAPIError ScheduledBookingError where
+  toType _ = DOMAIN_ERROR
+
+instanceExceptionWithParent 'HTTPException ''ScheduledBookingError
+
 data LocationServiceabilityError
   = LocationUnserviceable
   deriving (Eq, Show, IsBecknAPIError)
@@ -398,6 +416,7 @@ data DriverQuoteError
   | DriverTransactionTryAgain (Maybe Text)
   | CustomerDestinationUpdated
   | CustomerCancelled
+  | ScheduledRideOverlapConflict
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -419,6 +438,7 @@ instance IsBaseError DriverQuoteError where
   toMessage (DriverTransactionTryAgain driverId) = Just $ "Ongoing Transaction" <> maybe "" (<> "For DriverId") driverId <> ". Please try again later."
   toMessage CustomerDestinationUpdated = Just "Customer destination updated"
   toMessage CustomerCancelled = Just "Customer cancelled the ride request"
+  toMessage ScheduledRideOverlapConflict = Just "Cannot accept this scheduled ride: it conflicts with an existing ride commitment"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -438,6 +458,7 @@ instance IsHTTPError DriverQuoteError where
     DriverTransactionTryAgain _ -> "DRIVER_TRANSACTION_TRY_AGAIN"
     CustomerDestinationUpdated -> "CUSTOMER_DESTINATION_UPDATED"
     CustomerCancelled -> "CUSTOMER_CANCELLED"
+    ScheduledRideOverlapConflict -> "SCHEDULED_RIDE_OVERLAP_CONFLICT"
 
   toHttpCode = \case
     FoundActiveQuotes -> E400
@@ -456,6 +477,7 @@ instance IsHTTPError DriverQuoteError where
     DriverTransactionTryAgain _ -> E409
     CustomerDestinationUpdated -> E400
     CustomerCancelled -> E400
+    ScheduledRideOverlapConflict -> E409
 
 instance IsAPIError DriverQuoteError
 

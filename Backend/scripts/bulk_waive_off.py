@@ -38,7 +38,7 @@ import time
 import urllib.error
 import urllib.request
 
-DEFAULT_CSV = "/Users/hemantmangla/Downloads/state-machine_driver_Low-Value-to-Inactive_2026-08-31.csv"
+DEFAULT_CSV = "/Users/hemantmangla/Downloads/new_activation - final_list.c"
 FAILED_CSV = "failed_driver_ids.csv"
 
 

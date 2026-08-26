@@ -22,6 +22,7 @@ import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.AccessMatrix as DMatrix
+import qualified Domain.Types.DeletedUser as DDU
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
@@ -32,7 +33,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DTransaction
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash, unEncrypted)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -43,20 +44,27 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.DeletedUser as QDeletedUser
 import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonCapability as QPC
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
+-- isSuperAdmin lives here rather than in Domain.Action.Dashboard.Capability: that module has no
+-- export list, so it re-exports only what it defines, not what it imports.
+import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import Tools.Error
@@ -190,9 +198,168 @@ validateCreatePerson CreatePersonReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "email" email P.email,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+-- | Access tiers that carry administrative privilege and therefore must live on a
+-- managed organizational email domain. Written as an exhaustive case rather than a
+-- membership list so that adding a constructor to DashboardAccessType is a compile error
+-- here instead of a silently uncovered tier.
+isAdminTier :: DRole.DashboardAccessType -> Bool
+isAdminTier = \case
+  DRole.DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_RELEASE_ADMIN -> True
+  DRole.MERCHANT_ADMIN -> True
+  DRole.TICKET_DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_USER -> False
+  DRole.DASHBOARD_OPERATOR -> False
+  DRole.FLEET_OWNER -> False
+  DRole.RENTAL_FLEET_OWNER -> False
+  DRole.MERCHANT_MAKER -> False
+  DRole.MERCHANT_SERVER -> False
+  DRole.TICKET_DASHBOARD_USER -> False
+  DRole.TICKET_DASHBOARD_MERCHANT -> False
+  DRole.TICKET_DASHBOARD_APPROVER -> False
+
+-- | Invariant: an account holding an admin-tier role must sit on one of its merchant's approved
+-- email domains. Enforced at every path that can produce that pairing — person creation, role
+-- assignment, and email change — not just at creation.
+--
+-- The allow-list is per-merchant (merchant.adminEmailDomains); an empty list leaves the
+-- restriction switched off. Matching is exact: an allow-list entry of "maruti.co.in" admits
+-- "user@maruti.co.in" but not "user@mail.maruti.co.in". Subdomains must be listed explicitly.
+assertAdminEmailDomain ::
+  BeamFlow m r =>
+  Id DMerchant.Merchant ->
+  DRole.Role ->
+  Maybe Text ->
+  m ()
+assertAdminEmailDomain merchantId role mbEmail =
+  when (isAdminTier role.dashboardAccessType) $ do
+    merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+    let allowedDomains = merchant.adminEmailDomains
+    unless (null allowedDomains) $ do
+      -- An admin-tier account with no email at all cannot satisfy the restriction.
+      email <- mbEmail & fromMaybeM (InvalidRequest adminEmailDomainError)
+      let domain = T.toLower . T.drop 1 . T.dropWhile (/= '@') $ email
+      unless (any (\allowed -> domain == T.toLower allowed) allowedDomains) $
+        throwError $ InvalidRequest adminEmailDomainError
+
+-- Deliberately does not echo the allow-list back to the caller.
+adminEmailDomainError :: Text
+adminEmailDomainError = "Administrator accounts must use an approved organizational email domain."
+
+-- | Merchants whose admin-email policy a given person is subject to.
+--
+-- One person row carries one email across every merchant that person can reach, so checking only
+-- the caller's merchant is too weak: an admin of a permissive merchant could set an address that
+-- violates a stricter merchant the same person administers. Reachability is defined exactly as in
+-- 'assertPersonInCallerMerchant' — access rows when there are any, the provisioning merchant
+-- otherwise — so the two guards cannot drift apart. The caller's own merchant is always included,
+-- which is what preserves today's behaviour for a person with neither access rows nor a
+-- provisioning merchant.
+--
+-- Merchants with an empty allow-list impose nothing, so this only tightens where a policy is
+-- actually configured. Two merchants with disjoint non-empty lists will reject every address for
+-- a person they share, which is the correct outcome: such an account cannot satisfy both.
+policyMerchantsForPerson ::
+  BeamFlow m r =>
+  TokenInfo ->
+  SP.Person ->
+  m [Id DMerchant.Merchant]
+policyMerchantsForPerson tokenInfo person = do
+  allAccess <- QAccess.findAllMerchantAccessByPersonId person.id
+  let reachable =
+        if null allAccess
+          then maybe [] (: []) person.merchantId
+          else map (.merchantId) allAccess
+  pure . nub $ tokenInfo.merchantId : reachable
+
+-- | 'assertAdminEmailDomain' against every merchant the person is subject to, not just the
+-- caller's. Use this for mutations on an existing person; 'assertAdminEmailDomain' alone is right
+-- only at creation, where there is no person row and so nothing else to be subject to.
+assertAdminEmailDomainForPerson ::
+  BeamFlow m r =>
+  TokenInfo ->
+  SP.Person ->
+  DRole.Role ->
+  Maybe Text ->
+  m ()
+assertAdminEmailDomainForPerson tokenInfo person role mbEmail =
+  when (isAdminTier role.dashboardAccessType) $ do
+    merchants <- policyMerchantsForPerson tokenInfo person
+    forM_ merchants $ \merchantId -> assertAdminEmailDomain merchantId role mbEmail
+
+-- | Admin mutations that address a person directly by id must not reach across merchants.
+-- Without this an admin of any merchant could act on an arbitrary person id.
+--
+-- merchant_access rows are authoritative whenever the person has any: those merchants, and only
+-- those, may act on them. A person shared across merchants therefore stays manageable by each.
+--
+-- The access rows cannot be the whole story though, because they are deletable. An earlier
+-- version of this function used them alone and was bypassable: resetMerchantAccess and
+-- resetMerchantCityAccess delete access rows and leave the person row alive, so an attacker could
+-- empty a victim's rows and then claim them as "unowned". That state is also reachable with no
+-- attack at all — a merchant revoking its own user's last access produces it.
+--
+-- person.merchantId, the merchant the person was provisioned under, closes that. It is written
+-- once at creation, never updated, and not settable from any admin endpoint, so it holds the
+-- claim when the rows are gone. It is deliberately consulted ONLY as a fallback rather than
+-- unioned in: unioning would leave the provisioning merchant with authority forever, including
+-- over a person whose access has since moved entirely to somebody else. Access, once granted,
+-- decides; provisioning only decides when there is no access to speak of.
+--
+-- No claimant at all is still permitted, and now means one of two things: the person was created
+-- moments ago and has not been granted access yet (createPerson writes no access row;
+-- createUserForMerchant grants it on the next line), so rejecting would strand an admin who
+-- typo'd an email at creation; or the row predates this column and the backfill found no access
+-- row to derive one from. Neither is forgeable by a caller.
+assertPersonInCallerMerchant ::
+  BeamFlow m r =>
+  TokenInfo ->
+  Id DP.Person ->
+  m ()
+assertPersonInCallerMerchant tokenInfo personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  allAccess <- QAccess.findAllMerchantAccessByPersonId personId
+  let claimants =
+        if null allAccess
+          then maybe [] (: []) person.merchantId
+          else map (.merchantId) allAccess
+  unless (null claimants) $
+    unless (tokenInfo.merchantId `elem` claimants) $
+      throwError (PersonDoesNotExist personId.getId)
+
+-- | Granting a person access to a merchant is how somebody becomes a user of that merchant, so
+-- leaving this open undoes every other cross-merchant guard: an admin of B could grant their own
+-- user access to merchant A. Callers are held to their own merchant, with an escape hatch for a
+-- SUPER_ADMIN, who legitimately provisions across merchants.
+--
+-- Unconditional, matching DCap.guardAdminMutation: the SUPER_ADMIN tier is seeded (seed-migration
+-- 0018), so the existence guard that once kept these rules dormant no longer has anything to wait
+-- for. Returns True when this is a cross-merchant grant that was permitted.
+assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m Bool
+assertMayGrantAccessToMerchant tokenInfo targetMerchantId
+  | targetMerchantId == tokenInfo.merchantId = pure False
+  | otherwise = do
+    unlessM (isSuperAdmin tokenInfo.personId) $
+      throwError AccessDenied
+    pure True
+
+-- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
+-- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
+-- only payload — request bodies here carry credentials and must never reach the audit log.
+recordAdminActionOnPerson ::
+  BeamFlow m r =>
+  DTransaction.Endpoint ->
+  TokenInfo ->
+  Id DP.Person ->
+  m ()
+recordAdminActionOnPerson endpoint tokenInfo personId = do
+  transaction <- STransaction.buildDashboardAuthTransaction endpoint tokenInfo.personId tokenInfo.merchantId
+  QT.create transaction {DTransaction.request = Just personId.getId}
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -234,6 +401,7 @@ createPerson tokenInfo personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  assertAdminEmailDomain tokenInfo.merchantId role (Just personEntity.email)
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
@@ -255,7 +423,7 @@ createPerson tokenInfo personEntity = do
         res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) tokenInfo.city createReq
         pure $ cast res.personId
       else generateGUID
-  person <- buildPerson personId personEntity (role.dashboardAccessType)
+  person <- buildPerson personId personEntity (role.dashboardAccessType) tokenInfo.merchantId
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing Nothing
   QP.create person
@@ -300,15 +468,22 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
       merchantAccesslistWithCity
 
 assignRole ::
-  BeamFlow m r =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
   m APISuccess
 assignRole tokenInfo personId roleId = do
+  assertPersonInCallerMerchant tokenInfo personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  -- Promotion into an admin tier must satisfy the same domain restriction as creating one.
+  -- Guarded on the tier so that ordinary role changes don't pay a passetto round trip to decrypt
+  -- an email whose value would then be discarded.
+  when (isAdminTier newRole.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomainForPerson tokenInfo person newRole decPerson.email
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   -- Admin tiering (existence-guarded): promoting into (or demoting out of) an
@@ -319,25 +494,41 @@ assignRole tokenInfo personId roleId = do
   DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
   DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
   QP.updatePersonRole personId newRole
+  recordAdminActionOnPerson DTransaction.DashboardUserRoleAssign tokenInfo personId
   pure Success
 
 assignMerchantCityAccess ::
   ( BeamFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
   Id DP.Person ->
   MerchantCityAccessReq ->
   m APISuccess
-assignMerchantCityAccess _ personId req = do
+assignMerchantCityAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  isCrossMerchantGrant <- assertMayGrantAccessToMerchant tokenInfo merchant.id
+  -- A same-merchant grant must not adopt another merchant's user. One person row means one
+  -- password across every merchant they can reach, so adopting merchant A's user and then
+  -- resetting their password would hand the caller a working session on A. Cross-merchant grants
+  -- skip this because they are already SUPER_ADMIN-gated above.
+  unless isCrossMerchantGrant $ assertPersonInCallerMerchant tokenInfo personId
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Granting admin-tier access into a merchant must satisfy that merchant's domain policy.
+  -- Without this the control is bypassable in one hop: provision the admin under a merchant with
+  -- no allow-list, then grant them access to the merchant that has one. Checked against
+  -- merchant.id, the merchant being joined, rather than the caller's.
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  when (isAdminTier role.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomain merchant.id role decPerson.email
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
@@ -355,11 +546,14 @@ resetMerchantAccess ::
   Id DP.Person ->
   MerchantAccessReq ->
   m APISuccess
-resetMerchantAccess _ personId req = do
+resetMerchantAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  -- Revoking access is a mutation on somebody else's user like any other, and it used to be the
+  -- one that let a caller manufacture an "unowned" person for assertPersonInCallerMerchant.
+  assertPersonInCallerMerchant tokenInfo personId
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
@@ -381,11 +575,12 @@ resetMerchantCityAccess ::
   Id DP.Person ->
   MerchantCityAccessReq ->
   m APISuccess
-resetMerchantCityAccess _ personId req = do
+resetMerchantCityAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  assertPersonInCallerMerchant tokenInfo personId
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
@@ -423,11 +618,33 @@ changePassword tokenInfo req = do
   QReg.deleteAllByPersonIdAndMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
   pure Success
 
+-- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
+-- attacker cannot get a fresh budget by switching between the two endpoints that both resolve
+-- credentials via findByEmailAndPassword.
+--
+-- Normalized the same way the lookup is: findByEmailAndPasswordWithType hashes the lower-cased
+-- email, so a mixed-case and a lower-case spelling resolve to one account. Keying on the raw string
+-- gave each casing its own budget, which is a fresh set of guesses per variant against one account.
+-- Stripping surrounding whitespace only ever merges buckets further, so it cannot widen the budget.
+makeEmailHitsCountKey :: Maybe Text -> Text
+makeEmailHitsCountKey email = "Email:" <> maybe "" normalizeEmailForKey email <> ":hitsCount"
+  where
+    normalizeEmailForKey = T.toLower . T.strip
+
 changePasswordAfterExpiry ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   ChangePasswordAfterExpiryReq ->
   m APISuccess
 changePasswordAfterExpiry req = do
+  -- Unauthenticated and resolves credentials, so it is a password oracle unless limited exactly
+  -- as login is. This is also the sole recovery path for an admin-reset account.
+  loginRateLimitOptions <- asks (.loginRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just req.email)) loginRateLimitOptions
   encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -525,18 +742,29 @@ getAccessMatrix tokenInfo = do
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   TokenInfo ->
   Id DP.Person ->
   ChangePasswordByAdminReq ->
   m APISuccess
-changePasswordByAdmin _ personId req = do
+changePasswordByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
-  QP.updatePersonPassword personId newHash
+  QP.updatePersonPasswordByAdmin personId newHash
+  recordAdminActionOnPerson DTransaction.DashboardUserPasswordResetByAdmin tokenInfo personId
+  -- An admin reset is also the remedy for a compromised account, so any session established
+  -- with the old credential must die with it.
+  Auth.cleanCachedTokens personId
+  QReg.deleteAllByPersonId personId
   pure Success
 
 changeMobileNumberByAdmin ::
@@ -545,7 +773,8 @@ changeMobileNumberByAdmin ::
   Id DP.Person ->
   ChangeMobileNumberByAdminReq ->
   m APISuccess
-changeMobileNumberByAdmin _ personId req = do
+changeMobileNumberByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   runRequestValidation validateChangeMobileNumberReq req
   mobileDbHash <- getDbHash req.newMobileNumber
   result <- QP.findByIdWithRoleAndCheckMobileHash personId (Just mobileDbHash)
@@ -557,6 +786,7 @@ changeMobileNumberByAdmin _ personId req = do
     throwError $ InvalidRequest $ "Cannot update phone number for role: " <> role.name
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
+  recordAdminActionOnPerson DTransaction.DashboardUserMobileChangeByAdmin tokenInfo personId
   pure Success
 
 changeEnabledStatus ::
@@ -566,6 +796,10 @@ changeEnabledStatus ::
   ChangeEnabledStatusReq ->
   m APISuccess
 changeEnabledStatus tokenInfo personId req = do
+  -- Writes here are already merchant+city scoped, so a cross-merchant call is inert rather than
+  -- harmful. Guarding anyway turns a silent no-op into an explicit error and keeps every
+  -- person-id-addressed admin endpoint consistent.
+  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
@@ -577,15 +811,30 @@ changeEmailByAdmin ::
   Id DP.Person ->
   ChangeEmailByAdminReq ->
   m APISuccess
-changeEmailByAdmin _ personId req = do
-  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbExistingPerson <- QP.findByEmail (T.toLower req.newEmail)
+changeEmailByAdmin tokenInfo personId req = do
+  -- Authorization first, and specifically before the uniqueness probe below: that probe reports
+  -- whether an address is already registered, so running it for an unauthorized caller would turn
+  -- this endpoint into an account-enumeration oracle over the whole person table.
+  assertPersonInCallerMerchant tokenInfo personId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  runRequestValidation validateChangeEmailReq req
+  let newEmail = T.toLower req.newEmail
+  mbExistingPerson <- QP.findByEmail newEmail
   whenJust mbExistingPerson $ \existingPerson ->
     when (existingPerson.id /= personId) $
       throwError (InvalidRequest $ "Email already registered with another user: " <> req.newEmail)
-  encEmail <- encrypt $ T.toLower req.newEmail
+  -- Changing an existing admin's email must not move them off an approved domain.
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  assertAdminEmailDomainForPerson tokenInfo person role (Just newEmail)
+  encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
+  recordAdminActionOnPerson DTransaction.DashboardUserEmailChangeByAdmin tokenInfo personId
   pure Success
+
+validateChangeEmailReq :: Validate ChangeEmailByAdminReq
+validateChangeEmailReq ChangeEmailByAdminReq {..} =
+  sequenceA_
+    [validateField "newEmail" newEmail P.email]
 
 deletePerson ::
   ( BeamFlow m r,
@@ -594,20 +843,46 @@ deletePerson ::
   ) =>
   TokenInfo ->
   Id DP.Person ->
+  Maybe Text ->
   m APISuccess
-deletePerson tokenInfo personId = do
-  void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+deletePerson tokenInfo personId mbDeleteReason = do
+  -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
+  -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
+  assertPersonInCallerMerchant tokenInfo personId
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
   QT.create transaction{DTransaction.request = Just personId.getId}
+  -- Snapshot the user into deleted_user (tombstone) before removing them, so the
+  -- deletion leaves a resolvable record (also lets orphaned granted_by ids be
+  -- traced back to who was deleted).
+  now <- getCurrentTime
+  deletedUserId <- generateGUID
+  QDeletedUser.create
+    DDU.DeletedUser
+      { id = Id deletedUserId,
+        personId = person.id,
+        firstName = person.firstName,
+        lastName = person.lastName,
+        roleId = person.roleId,
+        emailEncrypted = person.email <&> (unEncrypted . (.encrypted)),
+        deleteReason = mbDeleteReason,
+        deletedBy = tokenInfo.personId,
+        deletedAt = now
+      }
   QAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
   QReg.deleteAllByPersonId personId
+  -- person_capability.person_id (subject) is a NOT NULL FK to person, so delete the
+  -- user's own overrides before the person delete. granted_by rows (capabilities this
+  -- user granted to others) are kept as history — that FK was dropped in migration
+  -- 0097, so the id survives and stays resolvable via deleted_user.
+  QPC.deleteAllByPersonId personId
   QP.deletePerson personId
   pure Success
 
-buildPerson :: (EncFlow m r) => Id SP.Person -> CreatePersonReq -> DRole.DashboardAccessType -> m SP.Person
-buildPerson pid req dashboardAccessType = do
+buildPerson :: (EncFlow m r) => Id SP.Person -> CreatePersonReq -> DRole.DashboardAccessType -> Id DMerchant.Merchant -> m SP.Person
+buildPerson pid req dashboardAccessType merchantId = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   --TODO write query to make existing email in person table to lower case
@@ -632,6 +907,8 @@ buildPerson pid req dashboardAccessType = do
         rejectionReason = Nothing,
         rejectedAt = Nothing,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

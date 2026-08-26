@@ -120,14 +120,12 @@ import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
-import SharedLogic.CancellationCoins
 import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
 import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
-import SharedLogic.UserCancellationDues
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
@@ -246,11 +244,8 @@ $(genToSchema ''DIJ.IncentiveJourney)
 $(genToSchema ''DIJM.IncentiveJourneyMilestone)
 $(genToSchema ''MerchantServiceConfigDimensions)
 $(genToSchema ''TaggedDriverPoolInput)
-$(genToSchema ''CancellationCoinData)
 $(genToSchema ''FaultVerdictData)
 $(genToSchema ''DynamicPricingData)
-$(genToSchema ''UserCancellationDuesData)
-$(genToSchema ''UserCancellationDuesWaiveOffData)
 $(genToSchema ''FRT.InvoiceContext)
 
 instance Default FRT.InvoiceContext where
@@ -363,10 +358,7 @@ postNammaTagTagVerify merchantShortId opCity LYT.VerifyNammaTagRequest {..} = do
         LYT.RideEnd -> do
           _ :: Domain.Types.Yudhishthira.EndRideTagData <- parseOrThrowError value
           pure ()
-        LYT.RideCancel -> do
-          _ :: Domain.Types.Yudhishthira.CancelRideTagData <- parseOrThrowError value
-          pure ()
-        _ -> throwError $ InvalidRequest $ "Only supported for Search, Cancel and EndRide event for now"
+        _ -> throwError $ InvalidRequest $ "Only supported for Search and RideEnd events for now"
 
     parseOrThrowError value =
       case A.fromJSON value of
@@ -420,15 +412,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0 (Just 0))
-    LYT.CANCELLATION_COIN_POLICY -> do
-      logicData :: CancellationCoinData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy CancellationCoinResult) transporterConfig.referralLinkPassword req logicData
     LYT.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
-    LYT.USER_CANCELLATION_DUES -> do
-      logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy UserCancellationDuesResult) transporterConfig.referralLinkPassword req logicData
     LYT.GPS_TOLL_BEHAVIOR -> do
       logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
@@ -450,9 +436,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.PICKUP_STALL_BEHAVIOR -> do
       logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
-    LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
-      logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
+    LYT.QUOTE_RESPONSE_BEHAVIOR -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) transporterConfig.referralLinkPassword req logicData
     LYT.CANCELLATION_FAULT_VERDICT -> do
       logicData :: FaultVerdictData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy FaultVerdict) transporterConfig.referralLinkPassword req logicData
@@ -693,23 +679,11 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYT.defaultValue = A.toJSON (def :: TaggedDriverPoolInput),
             LYT.schema = toInlinedSchemaValue (Proxy @TaggedDriverPoolInput)
           }
-    LYT.CANCELLATION_COIN_POLICY ->
-      return $
-        LYT.DomainSchemaResp
-          { LYT.defaultValue = A.toJSON (def :: CancellationCoinData),
-            LYT.schema = toInlinedSchemaValue (Proxy @CancellationCoinData)
-          }
     LYT.DYNAMIC_PRICING_UNIFIED ->
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (def :: DynamicPricingData),
             LYT.schema = toInlinedSchemaValue (Proxy @DynamicPricingData)
-          }
-    LYT.USER_CANCELLATION_DUES ->
-      return $
-        LYT.DomainSchemaResp
-          { LYT.defaultValue = A.toJSON (def :: UserCancellationDuesData),
-            LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesData)
           }
     LYT.GPS_TOLL_BEHAVIOR ->
       return $
@@ -753,11 +727,11 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
             LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
-    LYT.USER_CANCELLATION_DUES_WAIVE_OFF ->
+    LYT.QUOTE_RESPONSE_BEHAVIOR ->
       return $
         LYT.DomainSchemaResp
-          { LYT.defaultValue = A.toJSON (def :: UserCancellationDuesWaiveOffData),
-            LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesWaiveOffData)
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
     LYT.CANCELLATION_FAULT_VERDICT ->
       return $
@@ -1064,7 +1038,7 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyConfig -> do
-      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
+      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims, vehicleVariant = dimLookup "vehicleVariant" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyMilestoneConfig -> do
       cfgs <- getConfig (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, milestoneId = dimLookup "milestoneId" dims}) Nothing

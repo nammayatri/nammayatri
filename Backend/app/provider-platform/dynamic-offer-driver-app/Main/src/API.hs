@@ -19,6 +19,7 @@ import qualified API.Dashboard as Dashboard
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
+import qualified API.OnixBppWebhook as OnixBppWebhook
 import qualified API.UI as UI
 import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.Aeson as Aeson
@@ -58,6 +59,7 @@ type DriverOfferAPI =
     -- Mounted at the DriverOfferAPI level (not in MainAPI) to skip OpenAPI
     -- schema derivation: the BECKN-shaped SearchReqV2 has no ToSchema instance.
     :<|> ("internal" :> InternalSyncSearch.API)
+    :<|> OnixBppWebhook.API
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
@@ -156,6 +158,7 @@ driverOfferServer env =
     :<|> IGM.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> InternalSyncSearch.handler
+    :<|> OnixBppWebhook.handler
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"

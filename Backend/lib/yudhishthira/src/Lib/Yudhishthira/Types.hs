@@ -327,6 +327,7 @@ data LogicDomain
   | UNHYGIENIC_VEHICLE_BEHAVIOR
   | VEHICLE_UNSAFE_BEHAVIOR
   | PICKUP_STALL_BEHAVIOR
+  | QUOTE_RESPONSE_BEHAVIOR
   | BEHAVIOR_THRESHOLD_CHECK
   | BEHAVIOR_CONSEQUENCE_CALC
   | BEHAVIOR_COMMUNICATION
@@ -343,17 +344,18 @@ data LogicDomain
   | INVOICE_TEMPLATE InvoiceTemplateScope
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Dashboard-listable domains: the retired cancellation domains
+-- (USER_CANCELLATION_DUES, USER_CANCELLATION_DUES_WAIVE_OFF, CANCELLATION_COIN_POLICY —
+-- absorbed by the CancellationConsequenceMatrix) are excluded so no NEW configs can be
+-- created for them; constructors and Show/Read stay for persisted rows.
 instance Enumerable LogicDomain where
   allValues =
     [ POOLING,
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
       PICKUP_ETA_CALCULATION,
-      USER_CANCELLATION_DUES,
-      USER_CANCELLATION_DUES_WAIVE_OFF,
       CANCELLATION_FAULT_VERDICT,
       FRFS_TICKET_CATEGORIES,
-      CANCELLATION_COIN_POLICY,
       CUMULATIVE_OFFER_POLICY,
       FRFS_OFFER_SEGMENT_POLICY,
       OFFERS_FRAUD_CHECKS,
@@ -366,6 +368,7 @@ instance Enumerable LogicDomain where
       UNHYGIENIC_VEHICLE_BEHAVIOR,
       VEHICLE_UNSAFE_BEHAVIOR,
       PICKUP_STALL_BEHAVIOR,
+      QUOTE_RESPONSE_BEHAVIOR,
       BEHAVIOR_THRESHOLD_CHECK,
       BEHAVIOR_CONSEQUENCE_CALC,
       BEHAVIOR_COMMUNICATION,
@@ -375,8 +378,8 @@ instance Enumerable LogicDomain where
       PASS_PURCHASE_ELIGIBILITY
     ]
       ++ map CONFIG [minBound .. maxBound]
-      ++ map RIDER_CONFIG [minBound .. maxBound]
-      ++ map DRIVER_CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG (filter (not . isDriverOnlyConfigType) [minBound .. maxBound])
+      ++ map DRIVER_CONFIG (filter (not . isRiderOnlyConfigType) [minBound .. maxBound])
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
       ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
       ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
@@ -385,6 +388,52 @@ instance Enumerable LogicDomain where
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
+
+isRiderOnlyConfigType :: ConfigType -> Bool
+isRiderOnlyConfigType = \case
+  RiderConfig -> True
+  PayoutConfigRider -> True
+  RideRelatedNotificationConfigRider -> True
+  MerchantConfig -> True
+  MerchantServiceUsageConfigRider -> True
+  BecknConfig -> True
+  MerchantPushNotificationRider -> True
+  ExophoneRider -> True
+  FRFSConfig -> True
+  HotSpotConfig -> True
+  MerchantPaymentMethod -> True
+  CancellationReason -> True
+  IntegratedBPPConfig -> True
+  PassCategory -> True
+  TranslationRider -> True
+  IssueConfigRider -> True
+  _ -> False
+
+isDriverOnlyConfigType :: ConfigType -> Bool
+isDriverOnlyConfigType = \case
+  DriverPoolConfig -> True
+  TransporterConfig -> True
+  PayoutConfig -> True
+  RideRelatedNotificationConfig -> True
+  MerchantMessage -> True
+  MerchantPushNotification -> True
+  MerchantServiceUsageConfigDriver -> True
+  DocumentVerificationConfig -> True
+  DocumentVerificationStagesConfig -> True
+  GoHomeConfig -> True
+  LeaderBoardConfig -> True
+  ReminderConfig -> True
+  ScheduledPayoutConfig -> True
+  TagActionNotificationConfig -> True
+  FleetOwnerDocumentVerificationConfig -> True
+  CoinsConfig -> True
+  IncentiveJourneyConfig -> True
+  IncentiveJourneyMilestoneConfig -> True
+  Exophone -> True
+  Overlay -> True
+  TranslationDriver -> True
+  IssueConfigDriver -> True
+  _ -> False
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -397,8 +446,8 @@ generateLogicDomainShowInstances =
     ++ [show CANCELLATION_FAULT_VERDICT]
     ++ [show FRFS_TICKET_CATEGORIES]
     ++ [show (CONFIG configType) | configType <- configTypes]
-    ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
-    ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
+    ++ [show (RIDER_CONFIG configType) | configType <- configTypes, not (isDriverOnlyConfigType configType)]
+    ++ [show (DRIVER_CONFIG configType) | configType <- configTypes, not (isRiderOnlyConfigType configType)]
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
     ++ [show (UI_DRIVER a b) | a <- a', b <- b']
     ++ [show (UI_RIDER a b) | a <- a', b <- b']
@@ -415,6 +464,7 @@ generateLogicDomainShowInstances =
     ++ [show UNHYGIENIC_VEHICLE_BEHAVIOR]
     ++ [show VEHICLE_UNSAFE_BEHAVIOR]
     ++ [show PICKUP_STALL_BEHAVIOR]
+    ++ [show QUOTE_RESPONSE_BEHAVIOR]
     ++ [show BEHAVIOR_THRESHOLD_CHECK]
     ++ [show BEHAVIOR_CONSEQUENCE_CALC]
     ++ [show BEHAVIOR_COMMUNICATION]
@@ -466,6 +516,7 @@ instance Show LogicDomain where
   show UNHYGIENIC_VEHICLE_BEHAVIOR = "UNHYGIENIC-VEHICLE-BEHAVIOR"
   show VEHICLE_UNSAFE_BEHAVIOR = "VEHICLE-UNSAFE-BEHAVIOR"
   show PICKUP_STALL_BEHAVIOR = "PICKUP-STALL-BEHAVIOR"
+  show QUOTE_RESPONSE_BEHAVIOR = "QUOTE-RESPONSE-BEHAVIOR"
   show BEHAVIOR_THRESHOLD_CHECK = "BEHAVIOR-THRESHOLD-CHECK"
   show BEHAVIOR_CONSEQUENCE_CALC = "BEHAVIOR-CONSEQUENCE-CALC"
   show BEHAVIOR_COMMUNICATION = "BEHAVIOR-COMMUNICATION"
@@ -522,6 +573,8 @@ instance Read LogicDomain where
             [(VEHICLE_UNSAFE_BEHAVIOR, drop 1 rest)]
           "PICKUP-STALL-BEHAVIOR" ->
             [(PICKUP_STALL_BEHAVIOR, drop 1 rest)]
+          "QUOTE-RESPONSE-BEHAVIOR" ->
+            [(QUOTE_RESPONSE_BEHAVIOR, drop 1 rest)]
           "BEHAVIOR-THRESHOLD-CHECK" ->
             [(BEHAVIOR_THRESHOLD_CHECK, drop 1 rest)]
           "BEHAVIOR-CONSEQUENCE-CALC" ->

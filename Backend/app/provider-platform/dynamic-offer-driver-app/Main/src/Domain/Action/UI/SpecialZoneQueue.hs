@@ -143,21 +143,25 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
     --   metrics surfaced over the trigger-notify FCM (perKmFare, isDemandHigh,
     --   demandCount). Recompute on each poll; 'getAirportPerKmFare' is cached
     --   for one day per (specialLocation, variant) and 'demandCount' is one
-    --   Redis read. 'isDemandHigh' has no caller-supplied value at poll time
-    --   — defaulting to True mirrors 'fromMaybe True mbIsDemandHigh' in
-    --   'notifyDrivers'.
+    --   Redis read. perKmFare and isDemandHigh are gated by the gate's
+    --   'GateConfig', same as 'notifyDrivers', so a driver who polls instead of
+    --   reading the FCM sees the same fields. There is no caller-supplied
+    --   isDemandHigh at poll time, so an enabled gate reports True — matching
+    --   'fromMaybe True mbIsDemandHigh' on the notify path.
     enrichRes req = do
       mbGate <- QGI.findById (Kernel.Types.Id.Id req.gateId)
       let mbServiceTier = Kernel.Prelude.readMaybe (T.unpack req.vehicleType) :: Maybe DVST.ServiceTierType
+      let gateFlag f = fromMaybe False (mbGate >>= (.gateConfig) >>= f)
       mbPerKmFare <- case (mbGate, mbServiceTier) of
-        (Just gate, Just serviceTier) ->
-          SpecialZoneDriverDemand.getAirportPerKmFare
-            merchantId
-            merchantOpCityId
-            (Kernel.Types.Id.Id req.specialLocationId)
-            gate.point
-            req.gateId
-            serviceTier
+        (Just gate, Just serviceTier)
+          | gateFlag (.enablePerKmFare) ->
+            SpecialZoneDriverDemand.getAirportPerKmFare
+              merchantId
+              merchantOpCityId
+              (Kernel.Types.Id.Id req.specialLocationId)
+              gate.point
+              req.gateId
+              serviceTier
         _ -> pure Nothing
       mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey req.gateId req.vehicleType)
       pure $
@@ -171,7 +175,7 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
             validTill = req.validTill,
             status = req.status,
             perKmFare = mbPerKmFare,
-            isDemandHigh = True,
+            isDemandHigh = gateFlag (.enableIsDemandHigh),
             demandCount = fromMaybe 0 mbDemandCount
           }
 

@@ -43,6 +43,8 @@ data PersonT f = PersonT
     rejectionReason :: B.C f (Maybe Text),
     rejectedAt :: B.C f (Maybe Time.UTCTime),
     passwordUpdatedAt :: B.C f (Maybe Time.UTCTime),
+    forcePasswordChange :: B.C f (Maybe Bool),
+    merchantId :: B.C f (Maybe Text),
     approvedBy :: B.C f (Maybe Text),
     rejectedBy :: B.C f (Maybe Text),
     language :: B.C f (Maybe KET.Language),

@@ -39,7 +39,8 @@ data MerchantT f = MerchantT
     hasFleetMemberHierarchy :: B.C f (Maybe Bool),
     isStrongNameCheckRequired :: B.C f (Maybe Bool),
     singleActiveSessionOnly :: B.C f (Maybe Bool),
-    trackLoginLogoutForRoles :: B.C f [Text]
+    trackLoginLogoutForRoles :: B.C f [Text],
+    adminEmailDomains :: B.C f [Text]
   }
   deriving (Generic, B.Beamable)
 

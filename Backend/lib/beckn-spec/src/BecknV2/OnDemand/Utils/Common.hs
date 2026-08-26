@@ -21,6 +21,16 @@ import Data.Generics.Aliases (ext1Q)
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import Domain.Types
+  ( OneWayMode
+      ( MeterRide,
+        OneWayOnDemandDynamicOffer,
+        OneWayOnDemandStaticOffer,
+        OneWayRideOtp
+      ),
+    ServiceTierType (..),
+    TripCategory (..),
+    TripMode (OnDemandStaticOffer, RideOtp),
+  )
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
@@ -163,10 +173,11 @@ mapServiceTierToCategory = \case
   EV_HATCHBACK -> Enums.CAB
   EV_SEDAN -> Enums.CAB
   EV_SUV -> Enums.CAB
+  INSTANT_AUTO -> Enums.AUTO_RICKSHAW
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS, DVST.HERITAGE_CAB, DVST.VIP_ESCORT, DVST.VIP_OFFICER, DVST.AC_PRIORITY, DVST.EV_HATCHBACK, DVST.EV_SEDAN, DVST.EV_SUV]
-getListOfServiceTireTypes Enums.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW, DVST.EV_AUTO_RICKSHAW, DVST.AUTO_PLUS, DVST.E_RICKSHAW, DVST.AUTO_LITE, DVST.PINK_AUTO, DVST.MAHILA_SHAKTI]
+getListOfServiceTireTypes Enums.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW, DVST.EV_AUTO_RICKSHAW, DVST.AUTO_PLUS, DVST.E_RICKSHAW, DVST.AUTO_LITE, DVST.PINK_AUTO, DVST.MAHILA_SHAKTI, DVST.INSTANT_AUTO]
 getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE, DVST.DELIVERY_BIKE, DVST.BIKE_PLUS]
 getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE, DVST.BIKE_PLUS]
 getListOfServiceTireTypes Enums.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]

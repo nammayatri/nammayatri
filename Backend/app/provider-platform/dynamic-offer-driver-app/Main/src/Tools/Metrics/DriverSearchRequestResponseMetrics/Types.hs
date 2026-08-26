@@ -28,9 +28,11 @@ import Prometheus as P
 type HasDriverSearchRequestResponseMetrics m r =
   HasFlowEnv m r ["driverSearchRequestResponseMetrics" ::: DriverSearchRequestResponseMetricsContainer, "version" ::: DeploymentVersion]
 
--- Labels: (merchant, city, vehicle_service_tier, version, batch_number, response)
--- merchant = merchant shortId, city = operating city name
-type DriverResponseCounterMetric = P.Vector P.Label6 P.Counter
+-- Labels: (merchant, city, vehicle_service_tier, batch_number, response, distance_bucket, pooling_logic_version, pooling_config_version, backend_version)
+-- merchant = merchant shortId, city = operating city name.
+-- NOTE: Label9 is the prometheus-client maximum — adding any further label to this
+-- counter requires restructuring (e.g. splitting the metric).
+type DriverResponseCounterMetric = P.Vector P.Label9 P.Counter
 
 newtype DriverSearchRequestResponseMetricsContainer = DriverSearchRequestResponseMetricsContainer
   { driverResponseCounter :: DriverResponseCounterMetric
@@ -43,5 +45,5 @@ registerDriverSearchRequestResponseMetricsContainer = do
 
 registerDriverResponseCounter :: IO DriverResponseCounterMetric
 registerDriverResponseCounter =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "version", "batch_number", "response") . P.counter $
-    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant shortId, city name, vehicle service tier, deployment version, batch number and response type"
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "batch_number", "response", "distance_bucket", "pooling_logic_version", "pooling_config_version", "backend_version") . P.counter $
+    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant shortId, city name, vehicle service tier, batch number, response type, distance bucket, pooling logic/config versions and deployment version"

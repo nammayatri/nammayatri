@@ -585,9 +585,11 @@ types:
     - customerCancellationDues: Maybe HighPrecMoney
     - tollCharges: Maybe HighPrecMoney
     - congestionCharge: Maybe Money
+    - parkingCharge: Maybe HighPrecMoney
     - customerCancellationDuesWithCurrency: Maybe PriceAPIEntity
     - tollChargesWithCurrency: Maybe PriceAPIEntity
     - congestionChargeWithCurrency: Maybe PriceAPIEntity
+    - parkingChargeWithCurrency: Maybe PriceAPIEntity
     - tollFareTaxWithCurrency: Maybe PriceAPIEntity
     - discountWithCurrency: Maybe PriceAPIEntity
     - discountTaxWithCurrency: Maybe PriceAPIEntity

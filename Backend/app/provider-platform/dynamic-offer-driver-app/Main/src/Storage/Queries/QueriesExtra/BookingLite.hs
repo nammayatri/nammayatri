@@ -18,6 +18,7 @@ module Storage.Queries.QueriesExtra.BookingLite where
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -40,6 +41,35 @@ findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 findBookingsFromDBLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id BookingLite] -> m [BookingLite]
 findBookingsFromDBLite bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> bookingIds)]
 
+-- Lite list read for the ops "scheduled bookings" dashboard: scalar columns only, NO
+-- LocationMapping/Location joins (pickup is resolved per-page in the handler).
+findScheduledUpcomingBookingsLite ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  [Domain.Types.Booking.BookingStatus] ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [BookingLite]
+findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just (Kernel.Types.Id.getId merchantOpCityId)),
+          Se.Is Beam.isScheduled $ Se.Eq (Just True),
+          Se.Is Beam.status $ Se.In statuses,
+          Se.Is Beam.startTime $ Se.GreaterThanOrEq fromTime,
+          Se.Is Beam.startTime $ Se.LessThanOrEq toTime
+        ]
+    ]
+    (Se.Asc Beam.startTime)
+    (Just limit)
+    (Just offset)
+
+-- All bookings sharing a transactionId, lite (for reallocation-count without location joins).
+findAllByTransactionIdLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [BookingLite]
+findAllByTransactionIdLite txnId = findAllWithKV [Se.Is Beam.transactionId $ Se.Eq txnId]
+
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -52,6 +82,7 @@ data BookingLite = BookingLite
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     tripCategory :: Domain.Types.Common.TripCategory,
+    startTime :: Kernel.Prelude.UTCTime,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -74,5 +105,6 @@ instance FromTType' BookingLiteTable BookingLite where
             riderId = Kernel.Types.Id.Id <$> riderId,
             vehicleServiceTier = vehicleVariant,
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
+            startTime = startTime,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }

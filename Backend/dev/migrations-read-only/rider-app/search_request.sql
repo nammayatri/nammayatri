@@ -511,3 +511,19 @@ ALTER TABLE atlas_app.search_request ADD COLUMN is_whatsapp_request boolean ;
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY search_request_idx_parent_search_request_id ON atlas_app.search_request USING btree (parent_search_request_id);
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN route_cache_used boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN has_better_point_suggestion boolean ;

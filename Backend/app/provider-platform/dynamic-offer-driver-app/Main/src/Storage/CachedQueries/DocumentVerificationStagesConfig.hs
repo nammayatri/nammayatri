@@ -15,16 +15,16 @@
 
 module Storage.CachedQueries.DocumentVerificationStagesConfig
   ( findAllByMerchantOpCityId,
-    findByMerchantOpCityIdAndCategory,
+    findByMerchantOpCityIdAndDocumentCategory,
     clearCache,
     create,
     updateByPrimaryKey,
   )
 where
 
+import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.DocumentVerificationStagesConfig as DTO (DocumentVerificationStagesConfig)
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.VehicleCategory
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -45,9 +45,9 @@ findAllByMerchantOpCityId id mbConfigVersionMap =
     Nothing
     (Queries.findAllByMerchantOpCityId Nothing Nothing id)
 
-findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationStagesConfig]
-findByMerchantOpCityIdAndCategory merchantOpCityId category mbConfigVersionMap =
-  filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
+findByMerchantOpCityIdAndDocumentCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DVC.DocumentCategory -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationStagesConfig]
+findByMerchantOpCityIdAndDocumentCategory merchantOpCityId documentCategory mbConfigVersionMap =
+  filter (\config -> config.documentCategory == documentCategory) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()

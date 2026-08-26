@@ -42,11 +42,16 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
       endStation = last routeStation.stations
-  fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode startStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode endStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  route <- OTPRest.getRouteByRouteId integratedBPPConfig routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig <&> listToMaybe
-  toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfig <&> listToMaybe
+  mbFromStation <- withGtfsFallback booking.id.getId ("station:" <> startStation.code) Nothing $ B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode startStation.code integratedBPPConfig
+  mbToStation <- withGtfsFallback booking.id.getId ("station:" <> endStation.code) Nothing $ B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode endStation.code integratedBPPConfig
+  mbRoute <- withGtfsFallback booking.id.getId ("route:" <> routeStation.code) Nothing $ OTPRest.getRouteByRouteId integratedBPPConfig routeStation.code
+  let fromStationCode = maybe startStation.code (.code) mbFromStation
+      toStationCode = maybe endStation.code (.code) mbToStation
+      routeCode = maybe routeStation.code (.code) mbRoute
+  fromRoute <- withGtfsFallback booking.id.getId ("routeStopMapping:" <> fromStationCode) [] (OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStationCode routeCode integratedBPPConfig) <&> listToMaybe
+  toRoute <- withGtfsFallback booking.id.getId ("routeStopMapping:" <> toStationCode) [] (OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStationCode routeCode integratedBPPConfig) <&> listToMaybe
+  when (isNothing fromRoute || isNothing toRoute) $
+    logError $ "DirectOrder:getTicketDetail stop provider code unavailable, QR will carry the NANDI placeholder. bookingId=" <> booking.id.getId <> " routeCode=" <> routeCode <> " fromStopCode=" <> fromStationCode <> " toStopCode=" <> toStationCode
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID
@@ -62,7 +67,10 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
           let endOfDayDiffInSeconds = nominalDiffTimeToSeconds $ diffUTCTime (UTCTime (utctDay now) (timeOfDayToTime $ Time.TimeOfDay 23 59 59)) now
           Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
           return otpCode
-  let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
+  let ticketDescription = "ROUTE: " <> routeShortName <> " | FROM: " <> fromStationName <> " | TO: " <> toStationName
+      routeShortName = maybe routeStation.shortName (.shortName) mbRoute
+      fromStationName = maybe (fromMaybe startStation.code startStation.name) (.name) mbFromStation
+      toStationName = maybe (fromMaybe endStation.code endStation.name) (.name) mbToStation
       fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       singleAdultTicketPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amountInt)
       adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
@@ -107,3 +115,11 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
 
     otpKey :: Text
     otpKey = "otpKey"
+
+withGtfsFallback :: (MonadFlow m) => Text -> Text -> a -> m a -> m a
+withGtfsFallback bookingId label fallback action =
+  withTryCatch ("DirectOrder:" <> label) action >>= \case
+    Right res -> pure res
+    Left err -> do
+      logError $ "DirectOrder:getTicketDetail GTFS lookup failed [" <> label <> "], falling back to booking data. bookingId=" <> bookingId <> " err=" <> show err
+      pure fallback

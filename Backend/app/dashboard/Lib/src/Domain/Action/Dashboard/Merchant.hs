@@ -97,11 +97,16 @@ createMerchantWithAdmin tokenInfo req = do
   when enforceStrongPasswordPolicy $
     DPerson.validateStrongPassword req.adminPassword
   role <- QRole.findByName "MERCHANT_ADMIN" >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
-  person <- buildPersonCreateReq req role
-  decPerson <- decrypt person
-  QP.create person
+  -- Merchant first: the admin being created belongs to the merchant being created, not to the
+  -- caller's merchant, so person.merchantId needs the new merchant's id.
   merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
+  person <- buildPersonCreateReq req role merchant.id
+  decPerson <- decrypt person
+  -- Insert order follows the reference: person.merchantId carries a foreign key onto merchant.id
+  -- (ddl-migrations/*/[0097|0074|0012]-add-merchant-id-to-person.sql), so creating the person first
+  -- fails the constraint.
   QMerchant.create merchant
+  QP.create person
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
   pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) Nothing Nothing
@@ -146,7 +151,8 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
-        trackLoginLogoutForRoles = []
+        trackLoginLogoutForRoles = [],
+        adminEmailDomains = []
       }
 
 changeMerchantEnableState ::
@@ -207,8 +213,8 @@ createUserForMerchant tokenInfo req = do
   _ <- DPerson.assignMerchantCityAccess tokenInfo personEntity.person.id DPerson.MerchantCityAccessReq {operatingCity = tokenInfo.city, merchantId = merchant.shortId}
   pure personEntity
 
-buildPersonCreateReq :: (BeamFlow m r, EncFlow m r) => CreateMerchantWithAdminReq -> DRole.Role -> m SP.Person
-buildPersonCreateReq req role = do
+buildPersonCreateReq :: (BeamFlow m r, EncFlow m r) => CreateMerchantWithAdminReq -> DRole.Role -> Id DMerchant.Merchant -> m SP.Person
+buildPersonCreateReq req role merchantId = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.adminMobileNumber
@@ -233,6 +239,8 @@ buildPersonCreateReq req role = do
         rejectedAt = Nothing,
         dashboardType = fromMaybe SP.DEFAULT_DASHBOARD req.dashboardType,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

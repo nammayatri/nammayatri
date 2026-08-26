@@ -14,6 +14,7 @@
 
 module Main where
 
+import qualified CsvSanitizationTests
 import qualified Dashboard (dashboardUnitTests)
 import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
@@ -36,6 +37,10 @@ main = do
         testGroup
           "FileManagement Unit Tests"
           [ FileManagementUnitTests.fileManagementUnitTests
+          ],
+        testGroup
+          "Security Unit Tests"
+          [ CsvSanitizationTests.csvSanitizationTests
           ],
         testGroup
           "Rewards Unit Tests"

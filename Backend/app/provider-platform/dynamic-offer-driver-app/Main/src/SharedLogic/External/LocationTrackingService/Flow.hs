@@ -82,8 +82,8 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo mbTs = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
-nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, Forkable m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> m [DriverLocation]
+nearBy lat lon onRide vt radius merchantId groupId groupId2 searchTryId = do
   ltsCfg <- asks (.ltsCfg)
   let req =
         NearByReq
@@ -94,7 +94,8 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
             vehicleType = vt,
             merchantId = merchantId,
             groupId,
-            groupId2
+            groupId2,
+            searchTryId
           }
   -- Call both APIs (primary and secondary cloud) concurrently and combine results
   let callNearByAPI url = do

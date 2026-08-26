@@ -13,6 +13,7 @@ module SharedLogic.IncentiveJourney
     mkWeeklyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
+    matchesJourneyVehicle,
     evaluateDriverJourney,
     loadJourneyMilestones,
   )
@@ -30,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DTV
+import qualified Domain.Types.VehicleVariant as DTVV
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
@@ -83,6 +85,11 @@ isJourneyWindowActive localTime journey =
               IncentiveMetrics.DayWindow -> False
         _ -> True
    in inDateRange && inTimeBound
+
+matchesJourneyVehicle :: DIJ.IncentiveJourney -> DTV.VehicleCategory -> Maybe DTVV.VehicleVariant -> Bool
+matchesJourneyVehicle journey vehCategory mbVehicleVariant =
+  (isNothing journey.vehicleCategory || journey.vehicleCategory == Just vehCategory)
+    && (isNothing journey.vehicleVariant || journey.vehicleVariant == mbVehicleVariant)
 
 -- | Stats uniqueness bucket for one evaluation window.
 -- Daily (default): Day:YYYY-MM-DD or TimeBound:YYYY-MM-DD:<peak>
@@ -194,6 +201,7 @@ evaluateDriverJourney ::
   DTC.TransporterConfig ->
   Maybe [LYT.TagNameValueExpiry] ->
   DTV.VehicleCategory ->
+  Maybe DTVV.VehicleVariant ->
   Maybe DCommon.ServiceTierType ->
   Maybe Text ->
   Maybe Text ->
@@ -201,7 +209,7 @@ evaluateDriverJourney ::
   UTCTime ->
   IncentiveMetrics.RideIncentiveDeltas ->
   m ()
-evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig driverTag vehCategory mbServiceTier mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
+evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig driverTag vehCategory mbVehicleVariant mbServiceTier mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
   let journeyTags = parseJourneyTags driverTag
   when (null journeyTags) $
     logInfo $ "evaluateDriverJourney called with no Journey tags for driver " <> driverId.getId
@@ -213,7 +221,8 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig dri
             { merchantOperatingCityId = merchantOpCityId.getId,
               journeyId = Nothing,
               enabled = Just True,
-              vehicleCategory = Nothing
+              vehicleCategory = Nothing,
+              vehicleVariant = Nothing
             }
         )
         (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -222,7 +231,7 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig dri
             ( \j ->
                 j.merchantId == merchantId
                   && j.driverTag `elem` journeyTags
-                  && (isNothing j.vehicleCategory || j.vehicleCategory == Just vehCategory)
+                  && matchesJourneyVehicle j vehCategory mbVehicleVariant
             )
             enabledJourneys
     case selectPreferredJourney localTime matching of

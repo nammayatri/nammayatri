@@ -6,6 +6,7 @@ module Storage.ConfigPilot.Config.BecknConfig
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Domain.Types as Domain
 import qualified Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -20,7 +21,8 @@ data BecknConfigDimensions = BecknConfigDimensions
   { merchantOperatingCityId :: Text,
     merchantId :: Text,
     domain :: Maybe Text,
-    vehicleCategory :: Maybe Enums.VehicleCategory
+    vehicleCategory :: Maybe Enums.VehicleCategory,
+    becknProtocol :: Maybe Domain.BecknProtocol
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -41,10 +43,18 @@ instance ConfigDimensions BecknConfigDimensions where
       (SQBC.findByMerchantId (Just (Id a.merchantId)))
       [ CR.DimMatcher (\dims -> Just dims.merchantOperatingCityId) (fmap (.getId) . (.merchantOperatingCityId)) (==),
         CR.DimMatcher (.domain) (Just . (.domain)) (==),
-        CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
+        CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==),
+        CR.DimMatcher
+          (\dims -> Just (fromMaybe Domain.Beckn_V2 dims.becknProtocol))
+          (\cfg -> Just (fromMaybe Domain.Beckn_V2 cfg.becknProtocol))
+          (==)
       ]
       ( Just
           [ CR.DimMatcher (.domain) (Just . (.domain)) (==),
-            CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
+            CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==),
+            CR.DimMatcher
+              (\dims -> Just (fromMaybe Domain.Beckn_V2 dims.becknProtocol))
+              (\cfg -> Just (fromMaybe Domain.Beckn_V2 cfg.becknProtocol))
+              (==)
           ]
       )

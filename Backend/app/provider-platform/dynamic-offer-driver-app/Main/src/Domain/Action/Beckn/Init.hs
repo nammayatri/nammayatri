@@ -153,13 +153,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain
+        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing
+        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
@@ -229,12 +229,14 @@ handler merchantId req validatedReq = do
       Maybe InitReqDetails ->
       [LYT.ConfigVersionMap] ->
       Maybe Int ->
+      Maybe Double ->
       Maybe (Id DST.SearchTry) ->
       Maybe Seconds ->
       Maybe Text ->
       Maybe Text ->
+      Maybe Bool ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide searchTryId dqDurationToPickup emailDomain businessEmailDomain = do
+    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide mbPreferenceMatchScore searchTryId dqDurationToPickup emailDomain businessEmailDomain isAutoAccepted = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -280,6 +282,7 @@ handler merchantId req validatedReq = do
             createdAt = now,
             updatedAt = now,
             isPetRide = isJust driverQuote.fareParams.petCharges,
+            preferenceMatchScore = mbPreferenceMatchScore,
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,

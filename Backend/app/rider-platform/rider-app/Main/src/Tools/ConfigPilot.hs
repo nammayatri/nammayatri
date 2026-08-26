@@ -55,6 +55,7 @@ import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.PassCategory as SQPC
 import qualified Storage.Queries.Translations as SQTL
 import qualified Storage.Queries.UiRiderConfig as SQU
@@ -83,7 +84,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       mscCfgs <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
-      bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing})
+      bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing, becknProtocol = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing}) (Just (CQMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])))
@@ -137,7 +138,7 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       handleConfigUpdate (\mocId' -> normalizeMaybeFetch (\m -> CQFRFS.findByMerchantOperatingCityId m (Just [])) mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.FRFSConfig) >> invalidateConfigInMem LYTU.FRFSConfig) CQFRFS.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider -> do
-      handleConfigUpdateViaJson (normalizeMaybeFetchJson CQMSUC.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider) >> invalidateConfigInMem LYTU.MerchantServiceUsageConfigRider) CQMSUC.updateMerchantServiceUsageConfig (cast merchantOpCityId)
+      handleConfigUpdateViaJson (normalizeMaybeFetchJson CQMSUC.findByMerchantOperatingCityId) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider) >> invalidateConfigInMem LYTU.MerchantServiceUsageConfigRider) SQMSUC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
       handleConfigUpdateViaJson SQMSC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig) >> invalidateConfigInMem LYTU.MerchantServiceConfig) CQMSC.upsertMerchantServiceConfig (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do

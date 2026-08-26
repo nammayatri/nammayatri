@@ -19,6 +19,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     cloudBaseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     country :: Kernel.Types.Beckn.Context.Country,
+    countryDialCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -28,6 +29,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
     stdCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supportEmails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

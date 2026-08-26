@@ -193,7 +193,7 @@ data ServiceHandle m = ServiceHandle
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
-    getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe FarePolicy.DropQARConfig -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
+    getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe FarePolicy.DropQARConfig -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> Maybe DTC.TripCategory -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
   }
 
 buildEndRideHandle ::
@@ -226,8 +226,8 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation,
-        getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbDropQARConfig mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
-          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing mbDropQARConfig timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
+        getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbDropQARConfig mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur mbTripCategory ->
+          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing mbDropQARConfig timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur mbTripCategory
       }
 
 -- Helper function to get driver number from Person record
@@ -696,6 +696,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               expirationPeriod
               thresholdConfig.timeDiffFromUtc
               timeBoundReferenceUtc
+            DC.incrementScopedValidRideCounts DCT.DynamicOfferTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
             -- Journey# tag takes precedence: skip Incentive# / legacy coin flow.
             if SLJourney.hasJourneyTag driverTag
               then
@@ -706,18 +707,23 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   thresholdConfig
                   driverTag
                   vehCategory
+                  ride.vehicleVariant
                   (Just booking.vehicleServiceTier)
                   (Just ride.id.getId)
                   mbPickupSpecialLocationId
                   mbDropSpecialLocationId
                   timeBoundReferenceUtc
                   rideDeltas
-              else DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+              else DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
           when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
             let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
                 timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
                 driverTag = mbDriver >>= (.driverTag)
+                mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
+                mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
+            -- Scoped valid-ride counters for OTP rides (variant / pickup SL / drop SL).
+            DC.incrementScopedValidRideCounts DCT.OTPRideTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
             DC.incrementValidRideCountForTimeBoundCohort
               driverId
               booking.providerId
@@ -729,7 +735,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               timeBoundReferenceUtc
             -- Journey# drivers skip legacy/incentive coin awards on OTP rides too.
             unless (SLJourney.hasJourneyTag driverTag) $
-              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
 
     -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
@@ -891,6 +897,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
                 booking.merchantOperatingCityId
                 booking.estimatedDuration
                 actualDuration
+                (Just booking.tripCategory)
             case mbCongestionDetails of
               Just details -> do
                 logInfo $ "End ride congestion recompute result: " <> show details
