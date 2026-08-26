@@ -1014,6 +1014,100 @@ rateCustomer driverId rideId ratingValue = do
   pure Success""",
         "driver: the rating action itself",
     ),
+    # ── Movin DZ: the subscription, as dispatch sees it ─────────────────────
+    #
+    # The client's rule, 2026-08-26: a driver who has not paid **stays online**,
+    # but a request only reaches him when no paying driver is in the pool. Plus
+    # a cap on rides per paid period, which lands in exactly the same place.
+    #
+    # ── Why the binary is never told what a subscription is ─────────────────
+    # It reads one Redis key holding a JSON array of driver ids and prefers
+    # everybody else. That is the whole of its knowledge. Who is on that list --
+    # lapsed, over his ride cap, in a dispute, whatever the client decides next
+    # -- is computed by maps-shim, which can change any of it without a rebuild.
+    # Putting "3000 DA" or "300 rides" in here would mean a 45-minute build and
+    # new binaries every time the client changed his mind about a number.
+    #
+    # ── Why a Redis key and not a query ─────────────────────────────────────
+    # The table lives in our own `movin` schema, which the binary has no Beam
+    # types for; teaching it would mean a schema, a migration and a generated
+    # query module. `Redis` is already imported in this very file, `CacheFlow`
+    # already implies `HedisFlow` (shared-kernel: `type CacheFlow m r =
+    # (HasCacheConfig r, HedisFlow m r, ...)`) -- so **no signature changes at
+    # all**, which is what keeps this patch to one function body.
+    #
+    # The key is written unprefixed, so Hedis stores it as
+    # `dynamic-offer-driver-app:movin:restricted`. Measured, not assumed: the
+    # live Redis carries `dynamic-offer-driver-app:DriverLocation:...` for
+    # plain calls and `driver-offer:DriverPool:...` for `withCrossAppRedis`.
+    # Values are plain JSON, so a JSON array of id strings decodes as [Text].
+    #
+    # ── Every failure means "no restriction" ────────────────────────────────
+    # A missing key, an unparseable value, a shim that has never run: all of
+    # them give [], and dispatch behaves exactly as it does today. The failure
+    # that matters is the other direction -- restricting a driver who has paid
+    # -- and no path here can produce it.
+    (
+        f"{DRIVER_SRC}/SharedLogic/DriverPool.hs",
+        343,
+        """calculateDriverPool ::
+  ( EncFlow m r,""",
+        """-- | Movin DZ: the ids of drivers who owe us money, or who have used up the
+-- rides their month bought. Written by maps-shim; absent until it has run.
+movinRestrictedKey :: Text
+movinRestrictedKey = "movin:restricted"
+
+movinRestrictedDrivers :: (Redis.HedisFlow m r) => m [Text]
+movinRestrictedDrivers = fromMaybe [] <$> Redis.get movinRestrictedKey
+
+-- | Prefer drivers who have paid -- but never at the cost of a ride.
+--
+-- If anybody in the pool is paid up, only those are offered the job. If nobody
+-- is, everybody is offered it, which is the client's rule stated exactly: a
+-- driver who has not paid still gets a request **when he is the only one in
+-- the area**. The passenger is never the one who pays for this policy: a pool
+-- that had drivers in it still has drivers in it.
+--
+-- "The area" means the current search radius, which widens step by step. So a
+-- lapsed driver can be offered a job at the first, narrow step while a paying
+-- driver sits just outside it. That is the honest reading of "the only one in
+-- the area", and the alternative -- holding the request back to see whether a
+-- wider ring finds somebody paid -- would delay a real passenger to enforce a
+-- billing rule.
+movinPreferPaying ::
+  (Redis.HedisFlow m r) =>
+  [QP.NearestDriversResult] ->
+  m [QP.NearestDriversResult]
+movinPreferPaying pool = do
+  restricted <- movinRestrictedDrivers
+  let paysUp :: QP.NearestDriversResult -> Bool
+      paysUp d = let dId = d.driverId in dId.getId `notElem` restricted
+      (paying, owing) = partition paysUp pool
+  pure $ if notNull paying then paying else owing
+
+calculateDriverPool ::
+  ( EncFlow m r,""",
+        "driver: prefer paid-up drivers, unless there are none",
+    ),
+    # Applied at DriverSelection only, deliberately NOT at Estimate.
+    #
+    # Estimate is what a passenger is quoted before he books. Filtering there
+    # would remove a vehicle variant from the price list whenever the only
+    # driver of that variant happened to owe us money -- so the passenger would
+    # never see the tier, never book it, and the driver would never get the
+    # request he was still entitled to as the only one in the area. The
+    # restriction belongs where the job is handed out, not where the price is
+    # quoted; a passenger should not be shown fewer options because a driver
+    # has not paid us.
+    (
+        f"{DRIVER_SRC}/SharedLogic/DriverPool.hs",
+        409,
+        """    DriverSelection -> filterM (fmap (< maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool""",
+        """    DriverSelection -> do
+      movinPool <- movinPreferPaying approxDriverPool
+      filterM (fmap (< maxParallelSearchRequests) . getParallelSearchRequestCount now) movinPool""",
+        "driver: apply the subscription preference when handing out a job",
+    ),
 ]
 
 

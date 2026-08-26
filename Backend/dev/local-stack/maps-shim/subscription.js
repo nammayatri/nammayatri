@@ -35,6 +35,7 @@
  */
 
 const crypto = require('crypto');
+const restricted = require('./restricted');
 
 /** Dinars, not centimes. Their own example is `"amount": 2000` = 2 000 DZD. */
 const PRICE     = Number(process.env.SUBSCRIPTION_PRICE || 3000);
@@ -444,6 +445,15 @@ async function webhook(pool, req, res) {
 
     await client.query('COMMIT');
     console.log(`[subscription] ${driverId} paid ${data.amount} ${data.currency}, until ${paidUntil}`);
+
+    /* Republish the dispatch restriction list at once rather than waiting for
+       its timer. A driver who has just paid 3 000 DA and then watches five
+       more minutes of requests go past him has, from where he is sitting,
+       paid for nothing. Deliberately not awaited: Chargily is owed a 200 for a
+       payment that is already committed, and a slow Redis must not turn a
+       successful webhook into a retry. */
+    void restricted.refresh(pool, 'payment applied');
+
     return send(res, 200, { ok: true, driverId, paidUntil });
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});

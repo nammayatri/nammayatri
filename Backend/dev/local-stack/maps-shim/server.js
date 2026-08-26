@@ -24,6 +24,7 @@ const fleet = require('./fleet');
 const avatars = require('./avatars');
 const rating = require('./rating');
 const subscription = require('./subscription');
+const restricted = require('./restricted');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -513,6 +514,9 @@ http.createServer((req, res) => {
 
   return proxyToMockGoogle(req, res);
 }).listen(PORT, () => {
+  // Who dispatch should skip. Published to Redis, where the driver binary
+  // reads it -- see restricted.js for why the policy lives here and not there.
+  restricted.start(pool);
   console.log(
     `maps-shim on :${PORT}  ->  OSRM ${OSRM_URL}, mock-google ${MOCK_GOOGLE_URL}, ` +
     `search ${pool ? 'from geo.place' : 'OFF (no PG_URL)'}`,
