@@ -405,6 +405,8 @@ data DriverInformationRes = DriverInformationRes
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
     forwardBatchingEnabled :: Bool,
+    isForwardAutoAcceptEnabled :: Bool,
+    forwardAutoAcceptMode :: Maybe DriverInfo.ForwardAutoAcceptMode,
     isPetModeEnabled :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
@@ -694,6 +696,8 @@ data BookingAPIEntity = BookingAPIEntity
 
 data UpdateProfileInfoPoints = UpdateProfileInfoPoints
   { isAdvancedBookingEnabled :: Maybe Bool,
+    isForwardAutoAcceptEnabled :: Maybe Bool,
+    forwardAutoAcceptMode :: Maybe DriverInfo.ForwardAutoAcceptMode,
     isInteroperable :: Maybe Bool,
     isCategoryLevelSubscriptionEnabled :: Maybe Bool
   }
@@ -911,12 +915,26 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
     unless (driverInfo.forwardBatchingEnabled == isAdvancedBookingEnabled) $
       QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
+  let rawForwardAutoAcceptEnabled = fromMaybe driverInfo.forwardAutoAcceptEnabled req.isForwardAutoAcceptEnabled
+      newForwardAutoAcceptMode = req.forwardAutoAcceptMode <|> driverInfo.forwardAutoAcceptMode
+      newForwardAutoAcceptEnabled = rawForwardAutoAcceptEnabled && isJust newForwardAutoAcceptMode
+  when (isJust req.isForwardAutoAcceptEnabled || isJust req.forwardAutoAcceptMode) $
+    unless (driverInfo.forwardAutoAcceptEnabled == newForwardAutoAcceptEnabled && driverInfo.forwardAutoAcceptMode == newForwardAutoAcceptMode) $
+      QDriverInformation.updateForwardAutoAcceptEnabled newForwardAutoAcceptEnabled newForwardAutoAcceptMode personId
   whenJust req.isInteroperable $ \isInteroperable ->
     unless (driverInfo.isInteroperable == isInteroperable) $
       QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
+
+  let updatedDriverInfo =
+        driverInfo
+          { DriverInfo.forwardBatchingEnabled = fromMaybe driverInfo.forwardBatchingEnabled req.isAdvancedBookingEnabled,
+            DriverInfo.forwardAutoAcceptEnabled = newForwardAutoAcceptEnabled,
+            DriverInfo.forwardAutoAcceptMode = newForwardAutoAcceptMode,
+            DriverInfo.isInteroperable = fromMaybe driverInfo.isInteroperable req.isInteroperable
+          }
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just updatedDriverInfo) mbFleetInfo
 
 getInformation ::
   ( OnboardingFlow m r,
@@ -1877,6 +1895,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           upiId = payoutVpa,
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
+          isForwardAutoAcceptEnabled = driverInfo.forwardAutoAcceptEnabled,
+          forwardAutoAcceptMode = driverInfo.forwardAutoAcceptMode,
           approved = driverInfo.approved,
           blockedReason = driverInfo.blockedReason,
           disabledReasonFlag = driverInfo.disabledReasonFlag,

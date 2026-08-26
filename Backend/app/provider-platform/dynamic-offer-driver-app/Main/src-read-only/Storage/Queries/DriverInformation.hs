@@ -292,6 +292,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.enabledReasonFlag enabledReasonFlag,
       Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
       Se.Set Beam.firstVerifiedAt firstVerifiedAt,
+      Se.Set Beam.forwardAutoAcceptEnabled (Kernel.Prelude.Just forwardAutoAcceptEnabled),
+      Se.Set Beam.forwardAutoAcceptMode forwardAutoAcceptMode,
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.hasRideStarted hasRideStarted,

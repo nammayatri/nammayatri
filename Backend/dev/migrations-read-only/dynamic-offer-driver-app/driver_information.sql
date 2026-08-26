@@ -392,3 +392,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enabled_reason_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_new boolean;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_auto_accept_enabled boolean default false;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_auto_accept_mode text ;

@@ -34,6 +34,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverToDestinationDuration :: (B.C f Kernel.Types.Common.Seconds),
     dynamicBatchSize :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int])),
     enableEarlyBatchAdvanceOnFullReject :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    enableForwardAutoAssign :: (B.C f Kernel.Prelude.Bool),
     enableForwardBatching :: (B.C f Kernel.Prelude.Bool),
     enablePriorityTagSplit :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     id :: (B.C f Kernel.Prelude.Text),

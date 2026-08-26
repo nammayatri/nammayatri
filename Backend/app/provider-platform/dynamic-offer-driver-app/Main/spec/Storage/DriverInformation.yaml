@@ -71,6 +71,8 @@ DriverInformation:
     MapProvider:
       enum: "GOOGLE_MAPS, WAZE, APPLE_MAPS"
       derive: "HttpInstance"
+    ForwardAutoAcceptMode:
+      enum: "Distance, AreaPreference"
   fields:
     driverId: Id Person
     adminId: Maybe (Id Person)
@@ -126,6 +128,8 @@ DriverInformation:
     vehicleUnsafeViolationCount: Maybe Int
     extraFareMitigationFlag: Maybe Bool
     forwardBatchingEnabled: Bool
+    forwardAutoAcceptEnabled: Bool
+    forwardAutoAcceptMode: Maybe ForwardAutoAcceptMode
     payoutVpa: Maybe Text
     isInteroperable: Bool
     payoutRegistrationOrderId: Maybe Text
@@ -199,6 +203,7 @@ DriverInformation:
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
+    forwardAutoAcceptEnabled: "false"
     isInteroperable: "false"
     onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
@@ -232,6 +237,7 @@ DriverInformation:
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
+    forwardAutoAcceptEnabled: Maybe Bool
     isInteroperable: Maybe Bool
     isSpecialLocWarrior: Maybe Bool
     preferredSecondarySpecialLocIds: "Maybe [Text]"
@@ -259,6 +265,7 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    forwardAutoAcceptEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
     driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
@@ -284,6 +291,7 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
     forwardBatchingEnabled: Kernel.Prelude.Just|I
+    forwardAutoAcceptEnabled: Kernel.Prelude.Just|I
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I

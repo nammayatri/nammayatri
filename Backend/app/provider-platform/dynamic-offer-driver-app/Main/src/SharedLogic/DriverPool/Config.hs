@@ -130,6 +130,7 @@ instance Default DriverPoolConfig where
         driverToDestinationDuration = Common.Seconds 900,
         enableEarlyBatchAdvanceOnFullReject = Nothing,
         enableForwardBatching = True,
+        enableForwardAutoAssign = False,
         id = Id "default-driver-pool-config-id",
         maxDriverQuotesRequired = 5,
         maxNumberOfBatches = 4,

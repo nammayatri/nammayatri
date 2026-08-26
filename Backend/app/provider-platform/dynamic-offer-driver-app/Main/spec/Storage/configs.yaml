@@ -49,6 +49,7 @@ DriverPoolConfig:
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     enableForwardBatching: Bool
+    enableForwardAutoAssign: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
     vehicleVariant: Maybe ServiceTierType|NoRelation
@@ -105,6 +106,7 @@ DriverPoolConfig:
     currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"
     onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }']"
     enableForwardBatching: "false"
+    enableForwardAutoAssign: "false"
     maxParallelSearchRequestsOnRide: "1"
     selfRequestIfRiderIsDriver: "false"
     radiusStepSize: "500"

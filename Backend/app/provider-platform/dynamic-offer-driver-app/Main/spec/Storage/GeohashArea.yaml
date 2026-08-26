@@ -25,3 +25,14 @@ GeohashArea:
       kvFunction: findAllWithKV
       where:
         eq: [merchantOperatingCityId]
+    findByMerchantOperatingCityAndGeohash:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, geohash]
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, geohash]
+      unique: true
+
+  extraOperations:
+    - GENERATE_INDEXES

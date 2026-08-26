@@ -832,6 +832,8 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             actualDistanceThreshold,
             actualDistanceThresholdOnRide,
             enableForwardBatching,
+            -- Not part of the bulk-CSV upload yet (settable via the JSON create/update dashboard API).
+            enableForwardAutoAssign = False,
             batchSizeOnRide,
             distanceUnit,
             distanceBasedBatchSplit,

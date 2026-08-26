@@ -34,6 +34,7 @@ data DriverPoolConfig = DriverPoolConfig
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
     dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int,
     enableEarlyBatchAdvanceOnFullReject :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForwardAutoAssign :: Kernel.Prelude.Bool,
     enableForwardBatching :: Kernel.Prelude.Bool,
     enablePriorityTagSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig,
