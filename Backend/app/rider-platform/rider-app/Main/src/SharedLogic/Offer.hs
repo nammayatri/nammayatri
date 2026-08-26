@@ -669,7 +669,7 @@ mkIsMultipleOrNoDeviceIdExist person =
   case person.deviceId of
     Nothing -> pure Nothing
     Just deviceId -> do
-      personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
+      personsWithSameDeviceId <- QPerson.findAllByDeviceIdAndMerchantId (Just deviceId) person.merchantId
       pure $ Just (length personsWithSameDeviceId > 1)
 
 mkIsDriverNumberSameAsCustomer :: Person.Person -> Maybe DRide.Ride -> Bool
