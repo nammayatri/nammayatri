@@ -82,6 +82,7 @@ data DeductionAPIEntity
   | MoneyDeductionAPIEntity MoneyDeductionAPI
   | CoinAdditionAPIEntity CoinDeductionAPI
   | MoneyAdditionAPIEntity MoneyDeductionAPI
+  | RideCreditDeductionAPIEntity MoneyDeductionAPI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

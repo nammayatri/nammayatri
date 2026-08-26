@@ -308,8 +308,8 @@ applyTerminalConsequences ::
     ClickhouseFlow m r
   ) =>
   ConsequenceCtx ->
-  -- | create finance ledger entries: base -> gst -> m ()
-  (HighPrecMoney -> HighPrecMoney -> m ()) ->
+  -- | create finance ledger entries: base -> gst -> prepaid-balance debit -> m ()
+  (HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> m ()) ->
   m (Maybe CancellationChargesOutcome)
 applyTerminalConsequences ctx createLedgerEntries = do
   let booking = ctx.booking
@@ -361,13 +361,13 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
                   collectionMode = outcome.collectionMode,
-                  carryForwardEnabled = transporterConfig.canAddCancellationFee
+                  carryForwardEnabled = CancellationConsequence.shouldCarryForwardDues decision.consequenceRow
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
             when (isWalletEnabled && totalCharges > 0) $
-              createLedgerEntries baseFee gst
+              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r booking.estimatedFare) =<< decision.consequenceRow)
         pure mbOutcome
       case chargesE of
         Left err -> do
@@ -449,6 +449,7 @@ buildRideCancellationSignals booking ride transporterConfig cancellationDisToPic
       { ride = ride,
         quoteId = booking.quoteId,
         bookingCreatedAt = Just booking.createdAt,
+        scheduledPickupTime = Just booking.startTime,
         fallbackDurationToPickup = booking.dqDurationToPickup,
         initialDisToPickup = booking.distanceToPickup,
         cancellationDisToPickup = cancellationDisToPickup,
