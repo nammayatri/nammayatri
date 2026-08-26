@@ -70,6 +70,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -368,7 +369,14 @@ validateImageHandler ::
 validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-  docConfigs <- maybe (getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Nothing}) Nothing) pure mbDocConfigs
+  docConfigs <- case mbDocConfigs of
+    Just cfgs -> pure cfgs
+    Nothing -> do
+      let fetchDocConfigs docType = getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) Nothing
+      direct <- fetchDocConfigs imageType
+      if null direct && imageType `elem` VDocs.vehicleDocsByRcIdList
+        then fetchDocConfigs DVC.VehicleInspectionForm
+        else pure direct
   -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
   -- When mbUploaderRole is Nothing (e.g. admin not at BPP), allow; only check when uploader role is known
   whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->
