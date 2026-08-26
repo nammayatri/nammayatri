@@ -140,10 +140,20 @@ ok "reloaded"
 
 # ── 5. prove it ────────────────────────────────────────────────────────────
 say "does it work"
+# `--resolve` pins the name to loopback rather than going out to the public IP
+# and back. This box cannot reach its own public address -- the first version
+# of this check went out to the internet and got 000 for *both* names,
+# including the one that had been serving perfectly for weeks, which reads as
+# "the switch just took the API down". It had not: verified from a laptop, both
+# answered 200 throughout. A verification step that cries wolf on a live
+# migration is worse than none, because the instinct it triggers is to roll back
+# something that is working.
 for host in "$NEW" "$OLD"; do
-  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://$host/healthz")"
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+          --resolve "$host:443:127.0.0.1" "https://$host/healthz")"
   if [ "$code" = "200" ]; then ok "https://$host/healthz -> 200"; else bad "https://$host/healthz -> $code"; fi
 done
+echo "   (checked against 127.0.0.1 with the right SNI; confirm from outside too)"
 
 cat <<NEXT
 
