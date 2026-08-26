@@ -1051,7 +1051,7 @@ getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId = do
     withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes action = do
       mbPaymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
       case mbPaymentBooking of
-        Nothing | FRFSPassOverride.isFullyPassCovered booking.overriddenAmount -> noPaymentRes
+        Nothing | FRFSUtils.noPaymentRequired integratedBppConfig booking -> noPaymentRes
         Nothing -> throwError $ InvalidRequest "Payment booking not found for approved TicketBookingId"
         Just paymentBooking -> withPaymentOrder paymentBooking
       where

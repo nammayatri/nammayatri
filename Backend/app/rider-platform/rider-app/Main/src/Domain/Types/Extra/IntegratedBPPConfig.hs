@@ -86,7 +86,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     redisPrefix :: Maybe Text,
     busBlockExpiryTime :: Maybe Seconds,
     busBlockMaxLimit :: Maybe Int,
-    qrEncoding :: Maybe QREncoding
+    qrEncoding :: Maybe QREncoding,
+    zeroAmountConfirmAllowed :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
