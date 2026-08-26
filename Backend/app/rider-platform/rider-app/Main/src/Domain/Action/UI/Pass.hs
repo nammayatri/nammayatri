@@ -509,6 +509,17 @@ validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person requiredDoc
     let missingDocNames = show missingDocs
     throwError $ InvalidRequest $ "Missing required documents: " <> missingDocNames
 
+passRequiresDocument ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPass.PassDocumentType ->
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m Bool
+passRequiresDocument docType purchasedPassPayment =
+  maybe
+    (pure True)
+    (fmap (maybe True (elem docType . (.documentsRequired))) . CQPass.findById)
+    purchasedPassPayment.passId
+
 -- Check if person has a specific document
 hasDocument :: Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> DPass.PassDocumentType -> Bool
 hasDocument mbProfilePicture mbPassPhotoMediaId person docType = case docType of
@@ -1037,7 +1048,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
       let hasProfilePicture = isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      photoRequired <- passRequiresDocument DPass.ProfilePicture purchasedPassPayment
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (hasProfilePicture || not photoRequired) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -1139,8 +1151,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
       return (DPayment.FulfillmentPending, Nothing, Nothing)
   where
-    convertPaymentStatusToPurchasedPassStatus hasProfilePicture futureDatePass = \case
-      Payment.CHARGED -> if hasProfilePicture then if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active else Just DPurchasedPass.PhotoPending
+    convertPaymentStatusToPurchasedPassStatus photoSatisfied futureDatePass = \case
+      Payment.CHARGED -> if photoSatisfied then if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active else Just DPurchasedPass.PhotoPending
       -- There can be a CHARGED transaction for Same Order even on Failure, so we should not mark the Pass as FAILED.
       -- Payment.AUTHENTICATION_FAILED -> Just DPurchasedPass.Failed
       -- Payment.AUTHORIZATION_FAILED -> Just DPurchasedPass.Failed
@@ -1190,6 +1202,8 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
       [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
       today
 
+  photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
+
   case listToMaybe latestPayments of
     Just firstPayment ->
       let newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
@@ -1203,7 +1217,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
 
           newStatus
             | firstPayment.endDate < today = DPurchasedPass.Expired
-            | not hasPhoto = DPurchasedPass.PhotoPending
+            | not hasPhoto && photoRequired = DPurchasedPass.PhotoPending
             | firstPayment.startDate <= today = DPurchasedPass.Active
             | otherwise = DPurchasedPass.PreBooked
 

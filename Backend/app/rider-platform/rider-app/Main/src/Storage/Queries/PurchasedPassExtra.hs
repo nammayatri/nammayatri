@@ -154,15 +154,18 @@ updateStatusByIds status purchasedPassIds = do
 updateStatusToPhotoPendingByIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Id DPurchasedPass.PurchasedPass] ->
+  [Text] ->
   Day ->
   m ()
-updateStatusToPhotoPendingByIds [] _ = pure ()
-updateStatusToPhotoPendingByIds purchasedPassIds today = do
+updateStatusToPhotoPendingByIds [] _ _ = pure ()
+updateStatusToPhotoPendingByIds _ [] _ = pure ()
+updateStatusToPhotoPendingByIds purchasedPassIds photoPassCodes today = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set Beam.status DPurchasedPass.PhotoPending, Se.Set Beam.updatedAt now]
     [ Se.And
         [ Se.Is Beam.id $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.passCode $ Se.In photoPassCodes,
           Se.Is Beam.startDate $ Se.LessThanOrEq today,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq today,
           Se.Is Beam.passPhotoMediaId $ Se.Eq Nothing,
