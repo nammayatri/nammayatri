@@ -152,8 +152,8 @@ resolveDriverAddressState driverId = do
 
 toGstRateBreakup :: Finance.GstJurisdiction -> DTC.GstBreakup -> Finance.GstRateBreakup
 toGstRateBreakup Finance.IntraState gstBreakup =
-  Finance.InfraStateBreakup $
-    Finance.GstRateInfraStateBreakup
+  Finance.IntraStateBreakup $
+    Finance.GstRateIntraStateBreakup
       { cgstRate = gstBreakup.cgstPercentage,
         sgstRate = gstBreakup.sgstPercentage
       }

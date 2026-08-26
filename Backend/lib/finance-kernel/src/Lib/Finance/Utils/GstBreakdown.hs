@@ -3,7 +3,7 @@
 module Lib.Finance.Utils.GstBreakdown
   ( GstJurisdiction (..),
     GstRateBreakup (..),
-    GstRateInfraStateBreakup (..),
+    GstRateIntraStateBreakup (..),
     GstRateInterStateBreakup (..),
     compareIndianPlace,
     compareIndianGstinStateCode,
@@ -23,10 +23,10 @@ data GstJurisdiction = IntraState | InterState
   deriving (Eq, Show)
 
 -- The sum of types was made to avoid mutually exclusive tax rates
-data GstRateBreakup = InfraStateBreakup GstRateInfraStateBreakup | InterStateBreakup GstRateInterStateBreakup
+data GstRateBreakup = IntraStateBreakup GstRateIntraStateBreakup | InterStateBreakup GstRateInterStateBreakup
   deriving (Eq, Show)
 
-data GstRateInfraStateBreakup = GstRateInfraStateBreakup
+data GstRateIntraStateBreakup = GstRateIntraStateBreakup
   { cgstRate :: Maybe HighPrecMoney,
     sgstRate :: Maybe HighPrecMoney
   }
@@ -97,7 +97,7 @@ computeGstBreakdownFromRates :: GstRateBreakup -> HighPrecMoney -> Maybe GstAmou
 computeGstBreakdownFromRates rateBreakup totalGst
   | totalGst <= 0 = Nothing
   | otherwise = case rateBreakup of
-    InfraStateBreakup GstRateInfraStateBreakup {cgstRate, sgstRate} ->
+    IntraStateBreakup GstRateIntraStateBreakup {cgstRate, sgstRate} ->
       let cgstPct = positiveRate cgstRate
           sgstPct = positiveRate sgstRate
           totalPct = cgstPct + sgstPct
