@@ -16,6 +16,7 @@ module Tools.PartnerSdk
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,7 +36,7 @@ generateContributorToken ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   PartnerSdk.GenerateContributorTokenReq ->
-  m PartnerSdk.GenerateContributorTokenResp
+  m A.Value
 generateContributorToken merchantId merchantOpCityId req = do
   let serviceName = DMSC.PartnerSdkService ExtraMSC.Aarokya
   msc <-
