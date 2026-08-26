@@ -877,6 +877,16 @@ getOfferSegmentUdf2 True (Just quoteId) = do
   pure $ mbQuote >>= (.offerSegment)
 getOfferSegmentUdf2 _ _ = pure Nothing
 
+zeroAmountOfferEnabled :: DIBC.IntegratedBPPConfig -> Bool
+zeroAmountOfferEnabled integratedBPPConfig = case integratedBPPConfig.providerConfig of
+  DIBC.ONDC DIBC.ONDCBecknConfig {zeroAmountConfirmAllowed} -> zeroAmountConfirmAllowed == Just True
+  _ -> False
+
+noPaymentRequired :: DIBC.IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> Bool
+noPaymentRequired integratedBPPConfig booking =
+  FRFSPassOverride.isFullyPassCovered booking.overriddenAmount
+    || (zeroAmountOfferEnabled integratedBPPConfig && booking.totalPrice.amount <= 0)
+
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -1201,7 +1211,8 @@ totalOrderValue paymentBookingStatus booking =
 updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
 updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
   mbPaymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
-  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  unless (isJust mbPaymentBooking || noPaymentRequired integratedBPPConfig booking) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   -- Divide by the number of recon rows, which is one per ticket the BPP issued -- NOT by the
   -- ticket quantity. buildReconTable splits the fare across `length tickets`, and an operator
