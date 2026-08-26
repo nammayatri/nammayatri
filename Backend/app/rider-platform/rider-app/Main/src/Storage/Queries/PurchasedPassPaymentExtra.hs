@@ -53,15 +53,18 @@ expireOlderPaymentsByPurchasedPassIds purchasedPassIds endDate = do
 updateStatusToPhotoPendingByPurchasedPassIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Id DPurchasedPass.PurchasedPass] ->
+  [Text] ->
   Day ->
   m ()
-updateStatusToPhotoPendingByPurchasedPassIds [] _ = pure ()
-updateStatusToPhotoPendingByPurchasedPassIds purchasedPassIds today = do
+updateStatusToPhotoPendingByPurchasedPassIds [] _ _ = pure ()
+updateStatusToPhotoPendingByPurchasedPassIds _ [] _ = pure ()
+updateStatusToPhotoPendingByPurchasedPassIds purchasedPassIds photoPassCodes today = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set Beam.status DPurchasedPass.PhotoPending, Se.Set Beam.updatedAt now]
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.passCode $ Se.In photoPassCodes,
           Se.Is Beam.status $ Se.In [DPurchasedPass.PreBooked, DPurchasedPass.Active],
           Se.Is Beam.startDate $ Se.LessThanOrEq today,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq today,

@@ -1,8 +1,10 @@
 module SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate where
 
+import Data.List (nub)
 import qualified Data.Time as Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -14,6 +16,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
@@ -104,9 +107,29 @@ activateBatch merchantOpCityId today budget = do
   let passIds = map (.id) passes
   QPurchasedPass.updateStatusByIds DPurchasedPass.Active passIds
   QPurchasedPassPayment.activatePreBookedPaymentsByPurchasedPassIds passIds today
-  QPurchasedPass.updateStatusToPhotoPendingByIds passIds today
-  QPurchasedPassPayment.updateStatusToPhotoPendingByPurchasedPassIds passIds today
+  photoPassCodes <- passCodesRequiringPhoto passes
+  QPurchasedPass.updateStatusToPhotoPendingByIds passIds photoPassCodes today
+  QPurchasedPassPayment.updateStatusToPhotoPendingByPurchasedPassIds passIds photoPassCodes today
   pure (length passes)
+
+-- Codes of the passes in this batch that actually ask for a photo. Enabled and disabled
+-- passes both count: retiring a product must not stop collecting photos from the riders
+-- still holding it.
+passCodesRequiringPhoto ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  [DPurchasedPass.PurchasedPass] ->
+  m [Text]
+passCodesRequiringPhoto purchasedPasses = do
+  let passTypeIds = nub $ map (.passTypeId) purchasedPasses
+  passes <-
+    concat
+      <$> mapM
+        (\passTypeId -> (<>) <$> CQPass.findAllByPassTypeIdAndEnabled passTypeId True <*> CQPass.findAllByPassTypeIdAndEnabled passTypeId False)
+        passTypeIds
+  pure [pass.code | pass <- passes, DPass.ProfilePicture `elem` pass.documentsRequired]
 
 scheduleTomorrow ::
   ( EsqDBFlow m r,
