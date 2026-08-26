@@ -57,6 +57,10 @@ data ConsequenceDeduction
     -- required; the legacy DriverFee rail cannot pay out), customer → reduces
     -- outstanding cancellation dues (clamped at zero; no payout rail exists)
     MoneyAddition MoneyDeduction
+  | -- | debit the party's PREPAID SUBSCRIPTION balance (positive amounts). The holder is
+    -- resolved per ride — fleet owner when the ride has one, else the driver — the same
+    -- way the money and coin consequences resolve theirs.
+    RideCreditDeduction MoneyDeduction
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
