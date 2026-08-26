@@ -1120,4 +1120,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_config text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prefer_ondc_cancellation_reason_id boolean ;

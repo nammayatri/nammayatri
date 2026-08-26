@@ -27,7 +27,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude
 import Kernel.Utils.Common
-import qualified SharedLogic.CancellationConfig as SCC
 
 parseOndcCancellationReasonId :: Text -> Maybe Enums.CancellationReasonId
 parseOndcCancellationReasonId raw =
@@ -71,7 +70,7 @@ resolveCancellationReasonCode mbTransporterConfig mbOndcReasonId mbShortDesc
         logError "Buyer cancellation carried neither cancellation_reason_id nor short_desc"
         pure $ Just ondcUnspecifiedCode
   where
-    preferOndcReasonId = SCC.preferOndcCancellationReasonId mbTransporterConfig
+    preferOndcReasonId = fromMaybe False (mbTransporterConfig >>= (.preferOndcCancellationReasonId))
 
 sanitiseUnknownCode :: Text -> Text
 sanitiseUnknownCode raw =
