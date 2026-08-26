@@ -644,7 +644,7 @@ applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBook
   if null logics
     then pure offerListResp
     else do
-      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount)
+      result <- LYTUtils.runLogicsWithDebugLog logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount)
       case A.fromJSON result.result :: A.Result OffersFraudChecksResp of
         A.Success logicResult -> do
           let mbFailureReason = (T.strip <$> logicResult.failureReason) >>= (\reason -> if T.null reason then Nothing else Just reason)
@@ -669,7 +669,7 @@ mkIsMultipleOrNoDeviceIdExist person =
   case person.deviceId of
     Nothing -> pure Nothing
     Just deviceId -> do
-      personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
+      personsWithSameDeviceId <- QPerson.findAllByDeviceIdAndMerchantId (Just deviceId) person.merchantId
       pure $ Just (length personsWithSameDeviceId > 1)
 
 mkIsDriverNumberSameAsCustomer :: Person.Person -> Maybe DRide.Ride -> Bool
