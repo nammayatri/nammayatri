@@ -66,7 +66,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Init APIV2 Flow" "Reached"
-    (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do
+    (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri, isValueAddNP) <- do
       let context = reqV2.initReqContext
       callbackUrl <- Utils.getContextBapUri context
       bppUri <- Utils.getContextBppUri context
@@ -76,7 +76,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       country <- Utils.getContextCountry context
       isValueAddNP <- CQVAN.isValueAddNP bapId
       dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
-      pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
+      pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri, isValueAddNP)
 
     let txnId = Just transactionId
         initFulfillmentId =
@@ -103,7 +103,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
-                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                let onInitMessage = ACL.mkOnInitMessageV2 isValueAddNP dInitRes bppConfig mbFarePolicy
                 pure $
                   Spec.OnInitReq
                     { onInitReqContext = context,

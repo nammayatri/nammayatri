@@ -74,7 +74,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
       emptyOrder
         { Spec.orderFulfillments = Just fulfillments,
           Spec.orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings (not $ null searchRequest.stops)) fulfillments,
-          Spec.orderQuote = Just $ mkQuoteV2 driverQuote req.now,
+          Spec.orderQuote = Just $ mkQuoteV2 isValueAddNP driverQuote req.now,
           Spec.orderPayments = Just [paymentV2],
           Spec.orderProvider = mkProvider bppConfig
         }
@@ -160,18 +160,18 @@ mkItemTagsV2 estimatedFare mbCancellationCharge congestionChargeViaDp mbFarePoli
   let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
   Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
-mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation
-mkQuoteV2 quote now = do
+mkQuoteV2 :: Bool -> DQuote.DriverQuote -> UTCTime -> Spec.Quotation
+mkQuoteV2 isValueAddNP quote now = do
   let nominalDifferenceTime = diffUTCTime quote.validTill now
   Spec.Quotation
-    { quotationBreakup = Just $ mkQuoteBreakupInner quote,
+    { quotationBreakup = Just $ mkQuoteBreakupInner isValueAddNP quote,
       quotationPrice = mkQuotationPrice quote,
       quotationTtl = Just $ formatTimeDifference nominalDifferenceTime
     }
 
-mkQuoteBreakupInner :: DQuote.DriverQuote -> [Spec.QuotationBreakupInner]
-mkQuoteBreakupInner quote = do
-  let fareParams = mkFareParamsBreakups mkBreakupPrice mkQuotationBreakupInner quote.fareParams
+mkQuoteBreakupInner :: Bool -> DQuote.DriverQuote -> [Spec.QuotationBreakupInner]
+mkQuoteBreakupInner isValueAddNP quote = do
+  let fareParams = mkFareParamsBreakups isValueAddNP mkBreakupPrice mkQuotationBreakupInner quote.fareParams
    in filter filterRequiredBreakups fareParams
   where
     mkBreakupPrice money =

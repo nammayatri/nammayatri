@@ -102,7 +102,7 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0 booking.isSafetyPlus
-  quote <- Common.buildRideCompletedQuote ride fareParams
+  quote <- Common.buildRideCompletedQuote isValueAddNP ride fareParams
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -199,7 +199,7 @@ buildOnStatusReqV2' action domain messageId bppSubscriberId bppUri city country 
       }
 
 mkOnStatusMessageV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   DStatus.OnStatusBuildReq ->
   Maybe FarePolicyD.FullFarePolicy ->
   DBC.BecknConfig ->
@@ -211,7 +211,7 @@ mkOnStatusMessageV2 res mbFarePolicy bppConfig = do
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => DStatus.OnStatusBuildReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order

@@ -20,17 +20,25 @@ where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Utils.Common
 import qualified Storage.Queries.ValueAddNP as Queries
 
+inMemCacheTtl :: Seconds
+inMemCacheTtl = 3600
+
 isValueAddNP :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Bool
-isValueAddNP subscriberId =
-  Hedis.safeGet lookupKey >>= \case
-    Just subscriberIds -> return $ checkIfValueAddNP subscriberId subscriberIds
-    Nothing -> do
-      subscriberIds <- Queries.findAll True <&> map (.subscriberId)
-      cacheValueAddNPList subscriberIds
-      return $ checkIfValueAddNP subscriberId subscriberIds
+isValueAddNP subscriberId = checkIfValueAddNP subscriberId <$> getValueAddNPList
+
+getValueAddNPList :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => m [Text]
+getValueAddNPList =
+  IM.withInMemCache [lookupKey] inMemCacheTtl $
+    Hedis.safeGet lookupKey >>= \case
+      Just subscriberIds -> return subscriberIds
+      Nothing -> do
+        subscriberIds <- Queries.findAll True <&> map (.subscriberId)
+        cacheValueAddNPList subscriberIds
+        return subscriberIds
 
 checkIfValueAddNP :: Text -> [Text] -> Bool
 checkIfValueAddNP subscriberId subscriberIds = subscriberId `elem` subscriberIds
