@@ -23,6 +23,7 @@ const http = require('http');
 const fleet = require('./fleet');
 const avatars = require('./avatars');
 const rating = require('./rating');
+const subscription = require('./subscription');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -372,7 +373,12 @@ function send(res, code, obj) {
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/healthz') {
-    return send(res, 200, { ok: true, osrm: OSRM_URL, mockGoogle: MOCK_GOOGLE_URL, search: Boolean(pool) });
+    return send(res, 200, {
+      ok: true, osrm: OSRM_URL, mockGoogle: MOCK_GOOGLE_URL, search: Boolean(pool),
+      // False means a driver pressing "payer" gets "payments not configured".
+      // Cheaper to notice here than in his hands. Never the key itself.
+      payments: subscription.configured(),
+    });
   }
   if (url.pathname === '/directions/json') return directions(url.searchParams, res);
 
@@ -408,6 +414,48 @@ http.createServer((req, res) => {
     if (kind === 'phone') return rating.serveForPhone(pool, who, res);
     if (kind === 'driver') return rating.serveForDriver(pool, who, res);
     return send(res, 404, { error: 'no such rating' });
+  }
+
+  // The driver's 3 000 DA a month, through Chargily Pay. Here rather than on
+  // the driver backend because the backend has nowhere to put it: no plan, fee,
+  // subscription, invoice or order table in either schema, and none of those
+  // words in the binary -- upstream's driver-subscription subsystem is not in
+  // this build. See subscription.js, and probe-subscription.sql for the
+  // measurement.
+  //
+  //   GET  /subscription/status              his screen, from his token
+  //   POST /subscription/checkout?method=    opens a payment page
+  //   GET  /subscription/history             what he has paid
+  //   GET  /subscription/receipt/{checkout}  one of them, in full
+  //   POST /subscription/webhook             Chargily. The only thing that
+  //                                          ever extends a subscription.
+  //   GET  /subscription/done?state=         where his browser lands after
+  //
+  // No route here takes a driver id: `status`, `checkout`, `history` and
+  // `receipt` all derive it from the token by asking the driver backend who it
+  // belongs to, so one driver cannot read or buy against another's account.
+  if (url.pathname.startsWith('/subscription/')) {
+    const [, , what, ...rest] = url.pathname.split('/');
+    const token = req.headers.token || '';
+
+    // Chargily first: it is the only caller here that is not the app, the only
+    // one that POSTs a body, and the only one whose body must reach the handler
+    // unparsed -- the signature is an HMAC over the exact bytes.
+    if (what === 'webhook') {
+      if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
+      return subscription.webhook(pool, req, res);
+    }
+    if (what === 'done') return subscription.done(url.searchParams, res);
+
+    if (what === 'status' && req.method === 'GET') return subscription.status(pool, token, res);
+    if (what === 'history' && req.method === 'GET') return subscription.history(pool, token, res);
+    if (what === 'receipt' && req.method === 'GET') {
+      return subscription.receipt(pool, token, decodeURIComponent(rest.join('/')), res);
+    }
+    if (what === 'checkout' && req.method === 'POST') {
+      return subscription.checkout(pool, token, url.searchParams.get('method'), res);
+    }
+    return send(res, 404, { error: 'no such subscription route' });
   }
 
   // Profile photographs. Nothing to do with Google either -- see avatars.js for

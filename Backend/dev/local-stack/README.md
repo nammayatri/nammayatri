@@ -2143,61 +2143,172 @@ python3 probe-shortlist.py   # two searches, one shortlisted; reads who was
 Measured 2026-08-23 against the live stack: control asked 4 drivers, a
 shortlist of one asked exactly that one.
 
-## Driver subscriptions — decided 2026-08-25, not yet built
+## Driver subscriptions — `driver-subscription.sql`, `maps-shim/subscription.js`
 
-The revenue model, settled with the client, and the research behind the gateway
-choice. Nothing here is implemented; it is recorded so the next person does not
-re-derive it.
+Passengers pay drivers in **cash** and the app never touches that money. Drivers
+pay **us** 3 000 DA a month, by CIB or Edahabia, through **Chargily Pay v2**. No
+CCP (*"cannot be automated, no API"*), no cash.
 
-**The model.** Passengers keep paying drivers in **cash** — the app never
-touches that money. Drivers pay **us** 3 000 DA a month. No CCP (*"cannot be
-automated, no API"*), no cash. Receipts are not required but must be
-*generatable*.
+Three defaults the client approved on 2026-08-26, each of them a line of config
+rather than a decision buried in the code:
 
-**The gateway: Chargily Pay v2** (`dev.chargily.com/pay-v2/introduction`, full
-page index at `/llms.txt`, Node SDK, OpenAPI spec). Base URLs
-`https://pay.chargily.net/test/api/v2` and `https://pay.chargily.net/api/v2`.
+| | | where |
+|---|---|---|
+| **We** pay Chargily's fee, not the driver | 0 % under 100 drivers anyway, and a driver asked for 3 037,50 DA instead of 3 000 reads as a bug | `chargily_pay_fees_allocation: 'merchant'` |
+| **No grace period** | he is warned three days out and that is all | `SUBSCRIPTION_WARN_DAYS`, and `warn` on the status route |
+| **One month at a time** | one price, one button | `MONTHS = 1`; the column exists so changing our mind is config, not a migration |
 
-Their free *Startup* plan is **0% commission** up to 300 000 DZD and 300
+Their free *Startup* plan is **0 % commission** up to 300 000 DZD and 300
 transactions a month. At 3 000 DA that is **exactly 100 drivers with no fees at
-all**; *Comfort* is 1.25% (min 12,5, max 1 250 DZD) unlimited, *Supreme* 2.5%.
-Extra payouts beyond the free ones cost 1.5%, minimum 150 DZD. No plan has a
-monthly cost.
+all**; *Comfort* is 1.25 % unlimited, *Supreme* 2.5 %. No plan has a monthly
+cost.
 
-**The constraint that decides the design: there is no recurring billing.** The
-API has customers, products, prices, checkouts, payment links, webhooks and
-balance — and no subscriptions. Nor could it have: CIB and Edahabia have no
+### There is no recurring billing, and there never will be
+
+Their API has customers, products, prices, checkouts, payment links, webhooks
+and balance — and no subscriptions. Nor could it: CIB and Edahabia have no
 card-on-file debit, so **no** Algerian gateway can charge a driver
-automatically. A "monthly subscription" is therefore **pay-then-extend**: he
-presses pay, a webhook writes `paid_until = +30d`, and a notification goes out
-three days before it lapses. Nobody is ever charged without acting.
+automatically.
 
-**Where it goes: maps-shim.** The backend still has nowhere to record a payment
-— no plan, fee, subscription, invoice, mandate or order table in either schema,
-and none of those words in the binary. The shim is already Node with a Postgres
-pool and already publishes two routes of its own, so the gateway, the
-subscription table and the webhook all land there. **No rebuild.**
+"Monthly subscription" therefore means **pay-then-extend**: he presses pay, the
+webhook writes `paid_until = +30 days`, and nobody is ever charged without
+acting. Anyone reading this expecting to find the renewal job should stop
+looking — there is nothing to find.
 
-The one piece that *is* a rebuild is the client's answer to a lapsed driver:
-*"we leave it on. However no request appear unless he is the only one in the
-area."* That is a dispatch-pool change. It must also be **visible in the app** —
-a driver whose rides quietly stop concludes the app is broken and rings the
-office, not that he owes 3 000 DA.
+### Where it lives, and why it is not in the backend
 
-**Two traps to design against**, from their reference:
+`probe-subscription.sql` measured it on 2026-08-16: there is nowhere in either
+upstream schema to record a payment — no plan, fee, subscription, invoice,
+mandate or order table, and none of those words in the binary. Upstream's
+driver-subscription subsystem is simply not in this build. So the choice was a
+rebuild or our own tables, and the shim was already Node with a Postgres pool.
+**No rebuild.**
 
-- The webhook signature is an **HMAC-SHA256 of the raw body**, in a header
-  called `signature`. Computed over a re-serialised parse it never matches, and
-  the failure looks like a Chargily bug.
-- Webhooks are retried. Without storing the applied `checkout_id` and ignoring
-  a repeat, one retry is a free month.
+Our tables live in schema `movin`, for the same reason the place index lives in
+`geo`: the upstream binary owns its own schemas and runs migrations over them.
 
-**What blocks what.** Test Mode needs no domain, no documents and no
-verification, so the whole flow can be built and proven on the current host —
-`api.169-58-139-65.sslip.io` is public HTTPS with a real certificate, which is
-all a webhook needs. **Live Mode** needs account verification, whose document
-list Chargily does not publish, and realistically a domain we own: the current
-hostname contains the VPS's own IP address, so it dies the day the box moves.
+    movin.subscription          one row per driver: driver_id, paid_until
+    movin.subscription_payment  every checkout ever created; PK is Chargily's id
+    movin.invoice_seq           receipt numbers, drawn only when a payment applies
+    movin.driver_subscription_state   the view the office reads
+
+No foreign key to `person(id)`, deliberately: an FK from our schema into theirs
+takes a lock on their table and can block one of their migrations, and that
+failure would land on a backend deploy with nothing to say it came from here.
+
+### The routes
+
+All on the public edge, all in `maps-shim/subscription.js`.
+
+| | |
+|---|---|
+| `GET /subscription/status` | what *Mon abonnement* draws, including the price |
+| `POST /subscription/checkout?method=cib\|edahabia` | opens a payment page, returns its URL |
+| `GET /subscription/history` | his last 24 payments |
+| `GET /subscription/receipt/{checkoutId}` | one of them in full, with its invoice number |
+| `POST /subscription/webhook` | **Chargily.** The only thing that ever extends a subscription |
+| `GET /subscription/done?state=` | where his browser lands afterwards |
+
+**No route here takes a driver id.** `status`, `checkout`, `history` and
+`receipt` all derive it from the token by asking the driver backend who it
+belongs to — the same trick `fleet.js` uses for passengers, with the one
+difference that matters: the id comes out of *that* response rather than being
+checked against one the caller supplied. So a driver cannot open a checkout
+against somebody else's account, read whether a rival has paid, or enumerate the
+fleet by trying ids. The id is not an input.
+
+`/subscription/` is not behind the auth-guard, and that is deliberate on both
+counts: the app routes prove themselves against the driver backend, so the guard
+would add nothing, and Chargily has no token and no business being asked for
+one.
+
+### Three things that would each quietly cost money
+
+**A retry is a free month.** Chargily retries webhooks. The guard is
+`applied_at IS NULL` in an `UPDATE … RETURNING`: the first delivery claims the
+row and gets a driver back, every later delivery matches nothing and the
+extension never runs. One statement, so two simultaneous deliveries cannot both
+win — the second blocks on the row lock and then matches nothing.
+
+**A re-serialised body never verifies.** The signature is an HMAC-SHA256 of the
+**raw bytes**, in a header called `signature`, keyed with the API secret. Hash a
+`JSON.parse` round-trip instead and it never matches, because key order and
+whitespace are not preserved — and the failure looks like a Chargily bug rather
+than ours. Hence `rawBody()`, and hence the nginx block being forbidden from
+buffering or rewriting.
+
+**Half of an extension is worse than none.** Marking the payment applied and
+extending the subscription are the same fact, so they are one transaction. A
+crash between them either takes his money without giving him the month, or
+leaves a payment a retry would apply twice.
+
+One more, less obvious: `greatest(paid_until, now())` is the whole of
+pay-then-extend. Paying early stacks onto what is left; paying late starts from
+today. Without the `greatest`, a driver who lapses for three months and then
+pays buys a month that ended two months ago.
+
+### `never` is not `lapsed`, and on day one everybody is `never`
+
+`paid_until` NULL means he has never paid. **Every driver in the pilot is in that
+state right now**, and treating it as "unpaid, restrict him" would restrict the
+whole fleet the moment the dispatch rule exists. What happens to the 33 drivers
+already on the road — a free month, a start date, or a bill — is the office's
+decision and has not been made. Until it is, nothing restricts anybody.
+
+### Proving it — `probe-subscription-flow.py`
+
+Run it **on the VPS**. Everything goes through the public edge, so the nginx
+block is under test too; a location that buffered the body would make every
+webhook look forged, and that failure is invisible from inside the container.
+
+It signs real events with the secret the container is actually running, so every
+path from the signature check to the row lock is exercised for real. The check
+it exists for is test 6: **the same signed bytes delivered twice must extend the
+subscription once.** It also proves stacking, restarting after a lapse, that a
+`checkout.failed` buys nothing, that an unrecorded checkout is rebuilt from
+Chargily's metadata rather than lost, and that an unattributable one is accepted
+rather than retried for days. Everything it writes is namespaced `probe_` and
+removed afterwards, including the subject's subscription row.
+
+The one thing it cannot fake is Chargily accepting our key, so it asks them
+directly instead of guessing.
+
+### What is deployed and what is waiting
+
+Waiting on **the real test secret key**. The key received on 2026-08-26 was
+`test_pk_…`, a **public** key, and it cannot create a checkout: measured against
+their API the same day, it returns `401 Unauthenticated`, while a nonsense path
+on the same host returns a 404 page — so the route exists and the key is what
+was refused. Their own reference authenticates with `Bearer test_sk_…`.
+
+Until it arrives, `CHARGILY_SECRET_KEY` in `.env` holds a clearly-labelled
+placeholder. That is not idleness: the webhook is the only thing that extends a
+subscription, and a webhook is just signed bytes, so the placeholder proves the
+entire dangerous half today. Swapping in the real key is one line and a
+`docker compose up -d maps-shim`.
+
+**`.env` was not gitignored until 2026-08-26.** It is now. A secret key in a
+public history has to be revoked, and revoking this one stops every driver's
+payment page until a new key is deployed.
+
+### The one piece that is still a rebuild
+
+The client's answer for a lapsed driver: *"we leave it on. However no request
+appear unless he is the only one in the area."* That is a dispatch-pool change
+in Haskell — see the patch pipeline section — and it is the only part of this
+that cannot be done from the shim.
+
+It must also be **visible in the app**. A driver whose rides quietly stop
+concludes the app is broken and rings the office, not that he owes 3 000 DA.
+
+### Live mode
+
+Test Mode needs no domain, no documents and no verification, so all of the above
+is provable on the current host — `api.169-58-139-65.sslip.io` is public HTTPS
+with a real certificate, which is all a webhook needs. **Live Mode** needs
+account verification, whose document list Chargily does not publish, and
+realistically a domain we own: the current hostname contains the VPS's own IP
+address, so it dies the day the box moves.
 
 ## Backups — `./backup.sh`
 
@@ -2339,6 +2450,8 @@ algeria-geofences.sql  service area — the national border
 algeria-tariff.sql     the Algerian fares;  apply-tariff.sh applies them
 osrm-config.sql        points the backend's routing at our OSRM
 dedupe-seed.sql        removes the duplicated upstream seed rows
+driver-subscription.sql  the movin schema: who has paid, and every payment.
+                       Idempotent — safe to re-run
 
   prepare steps, each run once and slow
 osrm-prepare.sh        builds the routing graph from algeria-latest.osm.pbf
@@ -2364,6 +2477,9 @@ probe-unused-routes.py    what the rider API can serve that we don't use
 probe-rider-extras.py     do the useful unused routes actually work?
 probe-trip-history.py     what a past-trips list can show — and one wrong finding
 probe-subscription.sql    can we switch off a driver who hasn't paid?
+probe-subscription-flow.py  the whole payment path, signed for real.  The
+                          check it exists for: the same webhook delivered
+                          twice must buy ONE month.  Run it ON the VPS
 probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
 probe-search-window.py    how long a driver really gets, read off a real request.
                           Signs in as a RIDER only -- never as a fleet driver
@@ -2390,6 +2506,9 @@ maps-shim/             Google Places/geocoding, answered from Postgres —
   avatars.js           /avatar/{driver,phone,ride,plate}
   rating.js            /rating/{phone,driver} — see "Showing somebody their
                        own rating"
+  subscription.js      /subscription/* — the driver’s 3 000 DA a month
+                       through Chargily Pay.  The webhook is the only thing
+                       that ever extends a subscription
 geocoder/              place-index build;  places.csv gitignored
 demo-map/              the map on :8025 (nginx conf + page)
   site/areas.geojson   exported from the DB by setup.sh (gitignored)

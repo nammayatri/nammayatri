@@ -27,3 +27,15 @@ edge-webroot/
 # decides who may sign in at all. Written by ./enrol-driver.sh, lives only on
 # the VPS, and belongs in the backup set.
 auth-guard/driver-codes.json
+
+# Per-machine settings, and from 2026-08-26 the Chargily Pay secret key -- a
+# credential that can move money. The repo-root .gitignore does not cover this
+# path, and nothing here was tracked, so the key was one `git add -A` away from
+# being in history for ever. A secret in a public history is a secret that has
+# to be revoked, and revoking this one means every driver's payment page stops
+# working until a new key is deployed.
+#
+# What belongs in it: BIND_ADDR, CHARGILY_SECRET_KEY, CHARGILY_BASE,
+# PUBLIC_URL, SUBSCRIPTION_PRICE. See docker-compose.yml (maps-shim) for what
+# each one does.
+.env

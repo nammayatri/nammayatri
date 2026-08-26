@@ -334,6 +334,28 @@ services:
       # these are the only user-created files this stack keeps outside Postgres,
       # and a bind mount under the repo would put faces in git.
       AVATAR_DIR: "/data/avatars"
+      # Where to prove a caller is a signed-in driver, for /subscription/*.
+      # Host networking again, so this is the published driver-app port.
+      DRIVER_URL: "http://localhost:8016"
+      # ── Chargily Pay ────────────────────────────────────────────────────
+      # The secret key is NOT in git and must never be: it can move money.
+      # It comes from `.env` beside this file on the server, which is
+      # gitignored, and it reaches nobody by chat or WhatsApp either.
+      #
+      # Empty is a supported state, not a broken one: /healthz then reports
+      # `payments: false` and the checkout route answers "payments not
+      # configured" instead of forwarding a 401 from Chargily that would look
+      # like the driver's problem.
+      #
+      # CHARGILY_BASE decides test or live, and nothing else does. Live is
+      # https://pay.chargily.net/api/v2 -- note the missing /test.
+      CHARGILY_SECRET_KEY: "${CHARGILY_SECRET_KEY:-}"
+      CHARGILY_BASE: "${CHARGILY_BASE:-https://pay.chargily.net/test/api/v2}"
+      # Our own public origin. Chargily redirects the driver here when he is
+      # done and posts the webhook here; a private address would mean the
+      # payment happens and we never hear about it.
+      PUBLIC_URL: "${PUBLIC_URL:-}"
+      SUBSCRIPTION_PRICE: "${SUBSCRIPTION_PRICE:-3000}"
     volumes:
       - ./maps-shim:/app:ro
       - avatars:/data/avatars
