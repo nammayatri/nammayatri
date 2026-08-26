@@ -46,6 +46,8 @@ CancellationConsequenceMatrix:
     customerCommissionAndTax: Maybe CommissionAndTax
     driverDeduction: Maybe ConsequenceDeduction
     collectionMode: Maybe ConsequenceCollectionMode
+    carryForwardDues: Maybe Bool
+    consumeRideCreditOnCancellation: Maybe Bool
     waiveOffAllowed: Bool
     maxWaiveOffsPerPeriod: Maybe Int
     waiveOffPeriodDays: Maybe Int

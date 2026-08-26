@@ -89,6 +89,8 @@ types:
     - customerCommissionAndTax: Maybe CommissionAndTaxAPI
     - driverDeduction: Maybe DeductionAPIEntity
     - collectionMode: Maybe Text
+    - carryForwardDues: Maybe Bool
+    - consumeRideCreditOnCancellation: Maybe Bool
     - waiveOffAllowed: Bool
     - maxWaiveOffsPerPeriod: Maybe Int
     - waiveOffPeriodDays: Maybe Int

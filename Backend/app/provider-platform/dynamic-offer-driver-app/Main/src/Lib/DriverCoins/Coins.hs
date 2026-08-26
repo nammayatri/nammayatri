@@ -573,6 +573,7 @@ validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToP
         { ride = ride,
           quoteId = booking.quoteId,
           bookingCreatedAt = Nothing,
+          scheduledPickupTime = Nothing,
           fallbackDurationToPickup = Nothing,
           initialDisToPickup = initialDisToPickup,
           cancellationDisToPickup = cancellationDisToPickup,

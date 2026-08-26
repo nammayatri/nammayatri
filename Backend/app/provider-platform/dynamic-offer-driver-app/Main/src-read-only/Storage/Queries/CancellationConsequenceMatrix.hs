@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateActiveById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix -> m ())
@@ -43,7 +43,9 @@ updateByPrimaryKey (Domain.Types.CancellationConsequenceMatrix.CancellationConse
       Se.Set Beam.area area,
       Se.Set Beam.blacklistDriverForRiderSeconds blacklistDriverForRiderSeconds,
       Se.Set Beam.cancelledBy cancelledBy,
+      Se.Set Beam.carryForwardDues carryForwardDues,
       Se.Set Beam.collectionMode collectionMode,
+      Se.Set Beam.consumeRideCreditOnCancellation consumeRideCreditOnCancellation,
       Se.Set Beam.countsTowardCustomerCancellationStats countsTowardCustomerCancellationStats,
       Se.Set Beam.countsTowardDriverCancellationRate countsTowardDriverCancellationRate,
       Se.Set Beam.customerCommissionAndTax customerCommissionAndTax,
@@ -75,7 +77,9 @@ instance FromTType' Beam.CancellationConsequenceMatrix Domain.Types.Cancellation
             area = area,
             blacklistDriverForRiderSeconds = blacklistDriverForRiderSeconds,
             cancelledBy = cancelledBy,
+            carryForwardDues = carryForwardDues,
             collectionMode = collectionMode,
+            consumeRideCreditOnCancellation = consumeRideCreditOnCancellation,
             countsTowardCustomerCancellationStats = countsTowardCustomerCancellationStats,
             countsTowardDriverCancellationRate = countsTowardDriverCancellationRate,
             customerCommissionAndTax = customerCommissionAndTax,
@@ -106,7 +110,9 @@ instance ToTType' Beam.CancellationConsequenceMatrix Domain.Types.CancellationCo
         Beam.area = area,
         Beam.blacklistDriverForRiderSeconds = blacklistDriverForRiderSeconds,
         Beam.cancelledBy = cancelledBy,
+        Beam.carryForwardDues = carryForwardDues,
         Beam.collectionMode = collectionMode,
+        Beam.consumeRideCreditOnCancellation = consumeRideCreditOnCancellation,
         Beam.countsTowardCustomerCancellationStats = countsTowardCustomerCancellationStats,
         Beam.countsTowardDriverCancellationRate = countsTowardDriverCancellationRate,
         Beam.customerCommissionAndTax = customerCommissionAndTax,

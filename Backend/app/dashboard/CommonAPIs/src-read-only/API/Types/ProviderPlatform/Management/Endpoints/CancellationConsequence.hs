@@ -37,6 +37,8 @@ data CancellationConsequenceRowAPI = CancellationConsequenceRowAPI
     customerCommissionAndTax :: Kernel.Prelude.Maybe CommissionAndTaxAPI,
     driverDeduction :: Kernel.Prelude.Maybe DeductionAPIEntity,
     collectionMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    carryForwardDues :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    consumeRideCreditOnCancellation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     waiveOffAllowed :: Kernel.Prelude.Bool,
     maxWaiveOffsPerPeriod :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     waiveOffPeriodDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

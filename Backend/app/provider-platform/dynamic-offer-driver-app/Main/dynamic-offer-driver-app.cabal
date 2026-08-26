@@ -539,7 +539,6 @@ library
       SharedLogic.CallIGMBAP
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
-      SharedLogic.CancellationConfig
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
       SharedLogic.CancellationFault

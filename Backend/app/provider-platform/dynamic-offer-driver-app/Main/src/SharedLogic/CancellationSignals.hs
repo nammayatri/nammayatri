@@ -31,6 +31,7 @@ data CancellationSignals = CancellationSignals
   { computedAt :: UTCTime,
     timeOfCancellation :: Int,
     timeSinceBooking :: Maybe Int,
+    timeSinceScheduledPickup :: Maybe Int,
     isArrivedAtPickup :: Bool,
     driverWaitingTime :: Maybe Int,
     callAttemptByDriver :: Bool,
@@ -57,6 +58,7 @@ data CancellationSignalsReq = CancellationSignalsReq
   { ride :: DRide.Ride,
     quoteId :: Text,
     bookingCreatedAt :: Maybe UTCTime,
+    scheduledPickupTime :: Maybe UTCTime,
     fallbackDurationToPickup :: Maybe Seconds,
     initialDisToPickup :: Maybe Meters,
     cancellationDisToPickup :: Maybe Meters,
@@ -84,6 +86,7 @@ buildCancellationSignals req = do
       isDistanceArrived = maybe False (< highPrecMetersToMeters req.arrivedPickupThreshold) req.cancellationDisToPickup
       isArrivedAtPickup = isJust req.ride.driverArrivalTime || isDistanceArrived
       timeSinceBooking = req.bookingCreatedAt <&> \createdAt -> round $ diffUTCTime now createdAt
+      timeSinceScheduledPickup = req.scheduledPickupTime <&> \pickupAt -> round $ diffUTCTime now pickupAt
       initialDistanceToPickup = req.initialDisToPickup
       currentDistanceToPickup = req.cancellationDisToPickup
       isAdvanceBooking = req.ride.isAdvanceBooking
