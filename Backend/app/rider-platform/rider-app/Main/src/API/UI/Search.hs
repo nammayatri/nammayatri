@@ -154,7 +154,7 @@ data SearchResp = SearchResp
     --
     -- Counts every shape that endpoint serves: when the city prices one inline this is the
     -- shapes beside it, and when it loads them asynchronously it includes the default too.
-    hasAlternates :: Bool
+    hasAlternates :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -325,7 +325,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           searchExpiry = dSearchRes.searchRequestExpiry,
           routeInfo = dSearchRes.shortestRouteInfo,
           results = dispatchRes.inlineResults,
-          hasAlternates = dispatchRes.hasAlternates
+          hasAlternates = Just dispatchRes.hasAlternates
         }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -1314,7 +1314,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
         results = Nothing,
         -- A reserved ride never gets a walk-and-save shape: its pickup is one the customer
         -- already committed to, and this path does not dispatch suggestions at all.
-        hasAlternates = False
+        hasAlternates = Just False
       }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
