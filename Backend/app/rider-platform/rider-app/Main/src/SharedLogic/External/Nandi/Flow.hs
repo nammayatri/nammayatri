@@ -268,9 +268,9 @@ operatorTripDetails :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDur
 operatorTripDetails baseUrl gtfsId scheduleNumber =
   withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorTripDetails gtfsId (Just scheduleNumber)) "operatorTripDetails" NandiAPI.operatorTripDetailsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_TRIP_DETAILS_API") baseUrl)
 
-operatorFleets :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [Fleet]
-operatorFleets baseUrl gtfsId =
-  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorFleets gtfsId) "operatorFleets" NandiAPI.operatorFleetsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_FLEETS_API") baseUrl)
+operatorFleets :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Int -> Maybe Int -> m [Fleet]
+operatorFleets baseUrl gtfsId limit offset =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorFleets gtfsId limit offset) "operatorFleets" NandiAPI.operatorFleetsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_FLEETS_API") baseUrl)
 
 operatorConductors :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m Employee
 operatorConductors baseUrl gtfsId token =
@@ -373,3 +373,18 @@ gimsVerifyConductor baseUrl gtfsId req =
 getWaybillMetadata :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m WaybillMetadataResponse
 getWaybillMetadata baseUrl gtfsId waybillNo =
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiWaybillMetadata gtfsId waybillNo) "getWaybillMetadata" NandiAPI.nandiWaybillMetadataAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_WAYBILL_METADATA_API") baseUrl)
+
+-- ===== Vehicle management =====
+
+operatorUpsertVehicles :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> [VehicleUpsertRequest] -> m [Fleet]
+operatorUpsertVehicles baseUrl gtfsId items =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertVehicles gtfsId items) "operatorUpsertVehicles" NandiAPI.operatorUpsertVehiclesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_VEHICLES_API") baseUrl)
+
+-- No withShortRetry: soft-delete on GIMS returns rows_affected, and a retry after a successful call would report 0 as if the delete had failed.
+operatorDeleteVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> Text -> m RowsAffectedResp
+operatorDeleteVehicle baseUrl gtfsId vehicleId =
+  callAPI baseUrl (NandiAPI.deleteOperatorVehicle gtfsId vehicleId) "operatorDeleteVehicle" NandiAPI.operatorDeleteVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DELETE_VEHICLE_API") baseUrl)
+
+operatorQueryVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> m [Fleet]
+operatorQueryVehicle baseUrl gtfsId vehicleNo tagNumber fleetNo =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorQueryVehicle gtfsId vehicleNo tagNumber fleetNo) "operatorQueryVehicle" NandiAPI.operatorQueryVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_VEHICLE_API") baseUrl)

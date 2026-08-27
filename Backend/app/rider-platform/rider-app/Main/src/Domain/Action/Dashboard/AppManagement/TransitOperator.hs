@@ -37,6 +37,9 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorInsertRouteStop,
     transitOperatorReprocessRoutes,
     transitOperatorExportRouteStopMapping,
+    transitOperatorUpsertVehicles,
+    transitOperatorDeleteVehicle,
+    transitOperatorQueryVehicle,
   )
 where
 
@@ -126,9 +129,9 @@ transitOperatorGetTripDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 transitOperatorGetTripDetails merchantShortId opCity scheduleNumber vehicleCategory =
   DTOp.transitOperatorGetTripDetailsUtil merchantShortId opCity vehicleCategory scheduleNumber
 
-transitOperatorGetFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
-transitOperatorGetFleets merchantShortId opCity vehicleCategory =
-  DTOp.transitOperatorGetFleetsUtil merchantShortId opCity vehicleCategory
+transitOperatorGetFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorGetFleets merchantShortId opCity limit offset vehicleCategory =
+  DTOp.transitOperatorGetFleetsUtil merchantShortId opCity vehicleCategory limit offset
 
 transitOperatorGetConductor :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.Employee)
 transitOperatorGetConductor merchantShortId opCity token vehicleCategory =
@@ -299,3 +302,15 @@ transitOperatorReprocessRoutes merchantShortId opCity vehicleCategory req =
 transitOperatorExportRouteStopMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.RouteStopMappingExport])
 transitOperatorExportRouteStopMapping merchantShortId opCity vehicleCategory =
   DTOp.transitOperatorExportRouteStopMappingUtil merchantShortId opCity vehicleCategory
+
+transitOperatorUpsertVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> [SharedLogic.External.Nandi.Types.VehicleUpsertRequest] -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorUpsertVehicles merchantShortId opCity vehicleCategory items =
+  DTOp.transitOperatorUpsertVehiclesUtil merchantShortId opCity vehicleCategory items
+
+transitOperatorDeleteVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorDeleteVehicle merchantShortId opCity vehicleCategory vehicleId =
+  DTOp.transitOperatorDeleteVehicleUtil merchantShortId opCity vehicleCategory vehicleId
+
+transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorQueryVehicle merchantShortId opCity fleetNo tagNumber vehicleNo vehicleCategory =
+  DTOp.transitOperatorQueryVehicleUtil merchantShortId opCity vehicleCategory vehicleNo tagNumber fleetNo

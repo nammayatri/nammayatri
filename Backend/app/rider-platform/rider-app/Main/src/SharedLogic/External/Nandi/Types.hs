@@ -1182,12 +1182,31 @@ data ScheduleNumber = ScheduleNumber
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+-- Extra fields (tag_number..updated_at) populated only by /vehicles/upsert, /vehicles/query and the
+-- extended /fleets response; historical /fleets consumers just see them as Nothing (server omits them via skip_serializing_if).
 data Fleet = Fleet
   { vehicle_id :: Value,
     vehicle_no :: Maybe Text,
-    fleet_no :: Maybe Text
+    fleet_no :: Maybe Text,
+    tag_number :: Maybe Text,
+    created_at :: Maybe UTCTime,
+    status :: Maybe Text,
+    updated_at :: Maybe UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+-- vehicle_no is the natural identity (conflict key) and is required. fleet_no required on create, optional
+-- on update. Absent/null fields COALESCE to the existing DB value on UPDATE. vehicle_id is server-minted.
+data VehicleUpsertRequest = VehicleUpsertRequest
+  { vehicle_no :: Text,
+    fleet_no :: Maybe Text,
+    tag_number :: Maybe Text,
+    status :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets [VehicleUpsertRequest] where
+  hideSecrets = identity
 
 data Employee = Employee
   { emp_id :: Value,
