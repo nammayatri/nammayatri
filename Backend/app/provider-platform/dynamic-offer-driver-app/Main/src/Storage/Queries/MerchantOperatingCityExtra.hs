@@ -21,3 +21,6 @@ findByCity city = do findAllWithOptionsKV [Se.And [Se.Is Beam.city $ Se.Eq city]
 
 findAllByMerchantShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ShortId Merchant -> m [MerchantOperatingCity]
 findAllByMerchantShortId merchantShortId = do findAllWithKV [Se.Is Beam.merchantShortId $ Se.Eq (getShortId merchantShortId)]
+
+findAllByCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => City -> m [MerchantOperatingCity]
+findAllByCity city = do findAllWithKV [Se.Is Beam.city $ Se.Eq city]
