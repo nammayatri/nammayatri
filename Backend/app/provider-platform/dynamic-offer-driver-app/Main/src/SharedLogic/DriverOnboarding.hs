@@ -1440,7 +1440,7 @@ validateIndividualPANCheck transporterConfig person panNumber =
 getDriverDocumentInfo :: OnboardingFlow m r => Person.Person -> m (Bool, DriverDocument)
 getDriverDocumentInfo person = do
   case person.role of
-    role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
+    role | isFleetRole role -> do
       res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
       decryptedPanNumber <- mapM decrypt res.panNumber
       decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
@@ -1537,6 +1537,20 @@ applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerifi
     (True, False) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False Nothing
     (False, True) -> DIQuery.updateVerifiedAndApprovedState (cast personId) False (Just False)
     (False, False) -> pure ()
+
+-- | Point an RC at a fleet and give it that fleet's association, if it does not have one already.
+linkRCToFleet ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  Id Person ->
+  VehicleRegistrationCertificate ->
+  m ()
+linkRCToFleet transporterConfig fleetOwnerId rc = do
+  now <- getCurrentTime
+  QRC.updateFleetOwnerId (Just fleetOwnerId.getId) rc.id
+  mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rc.id now
+  when (isNothing mbFleetAssoc) $
+    createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc
 
 endFleetRCAssociationIfPossible ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

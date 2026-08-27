@@ -200,7 +200,7 @@ instance YTH.GenericDefaults DDVSC.MediaInfo where
     [ DDVSC.MediaInfo
         { DDVSC.title = "defaultText",
           DDVSC.description = Just "defaultText",
-          DDVSC.url = "defaultUrl",
+          DDVSC.url = Just "defaultUrl",
           DDVSC.thumbnailUrl = Just "defaultUrl"
         }
     ]

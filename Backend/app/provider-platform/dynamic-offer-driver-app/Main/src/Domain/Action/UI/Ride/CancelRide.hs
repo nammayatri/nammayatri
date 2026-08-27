@@ -65,6 +65,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
+import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -239,7 +240,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
-        DP.FLEET_OWNER -> do
+        role | isFleetRole role -> do
           when (ride.fleetOwnerId /= Just authPerson.id) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "fleetOwner -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByFleetOwner ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.FleetOwner)

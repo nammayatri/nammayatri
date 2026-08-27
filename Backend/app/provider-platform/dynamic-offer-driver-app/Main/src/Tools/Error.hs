@@ -1023,6 +1023,21 @@ instance IsHTTPError FleetErrors where
 
 instance IsAPIError FleetErrors
 
+-- | verb, detail, invariant code -- a guard refused the action on the target.
+newtype OnboardingGuardError = OnboardingActionNotAllowed (Text, Text, Text)
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OnboardingGuardError
+
+instance IsBaseError OnboardingGuardError where
+  toMessage (OnboardingActionNotAllowed (verb, detail, invariant)) = Just $ verb <> " not allowed: " <> detail <> " [" <> invariant <> "]"
+
+instance IsHTTPError OnboardingGuardError where
+  toErrorCode (OnboardingActionNotAllowed _) = "ONBOARDING_ACTION_NOT_ALLOWED"
+  toHttpCode _ = E400
+
+instance IsAPIError OnboardingGuardError
+
 data OverlayError
   = OverlayKeyAndUdfNotFound Text
   | OverlayKeyNotFound Text

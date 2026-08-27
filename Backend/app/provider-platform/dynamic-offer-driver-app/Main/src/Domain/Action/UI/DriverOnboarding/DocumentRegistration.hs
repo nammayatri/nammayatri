@@ -35,7 +35,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SharedLogic.DriverOnboarding (convertUTCTimetoDate, parseDateTime, preProcessDocumentIdentifier)
+import SharedLogic.DriverOnboarding (convertUTCTimetoDate, isFleetRole, parseDateTime, preProcessDocumentIdentifier)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -86,7 +86,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   isImageValidationRequired <-
-    if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+    if isFleetRole person.role
       then do
         -- Role-aware fleet config (in-mem cached); default to requiring validation when none exists.
         mbDocConfig <- SStatus.findFleetDocVerificationConfig merchantOpCityId imageType person.role

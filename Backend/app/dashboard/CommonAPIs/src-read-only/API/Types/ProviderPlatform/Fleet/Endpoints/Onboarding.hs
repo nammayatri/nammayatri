@@ -212,7 +212,12 @@ data LocalAddressProofDocumentMetadata = LocalAddressProofDocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MediaInfo = MediaInfo {description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text, url :: Kernel.Prelude.Text}
+data MediaInfo = MediaInfo
+  { description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    url :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
