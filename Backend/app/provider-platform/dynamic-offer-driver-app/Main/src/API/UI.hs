@@ -29,6 +29,7 @@ import qualified API.Action.UI.DriverIncentiveCoins as DriverIncentiveCoins
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
+import qualified API.Action.UI.DriverRideRequestStats as DriverRideRequestStats
 import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
@@ -193,6 +194,7 @@ type API =
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
+           :<|> DriverRideRequestStats.API
        )
 
 handler :: FlowServer API
@@ -276,3 +278,4 @@ handler =
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler
+    :<|> DriverRideRequestStats.handler

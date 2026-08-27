@@ -320,6 +320,7 @@ library
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.DriverRideRequestStats
       Domain.Action.UI.DriverSafetySettings
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
@@ -1119,6 +1120,7 @@ library
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
+      API.Action.UI.DriverRideRequestStats
       API.Action.UI.DriverSafetySettings
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
@@ -1204,6 +1206,7 @@ library
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
+      API.Types.UI.DriverRideRequestStats
       API.Types.UI.DriverSafetySettings
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking

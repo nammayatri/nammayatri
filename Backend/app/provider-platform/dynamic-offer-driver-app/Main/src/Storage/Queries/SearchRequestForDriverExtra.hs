@@ -26,6 +26,24 @@ import qualified Storage.Queries.Person as QP
 
 -- Extra code goes here --
 
+getRideRequestStatsSince :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> m (Int, Int, Int, Int, Maybe UTCTime, Maybe UTCTime)
+getRideRequestStatsSince driverId since = do
+  reqs <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamSRFD.driverId $ Se.Eq (getId driverId),
+            Se.Is BeamSRFD.createdAt $ Se.GreaterThanOrEq (T.utcToLocalTime T.utc since)
+          ]
+      ]
+  let totalRequests = length reqs
+      acceptedReqs = filter (\req -> req.response == Just Domain.Accept) reqs
+      acceptedRequests = length acceptedReqs
+      rejectedRequests = length (filter (\req -> req.response == Just Domain.Reject) reqs)
+      pulledRequests = length (filter (\req -> req.response == Just Domain.Pulled) reqs)
+      lastRequestAt = if null reqs then Nothing else Just (maximum (map (.createdAt) reqs))
+      lastAcceptedRequestAt = if null acceptedReqs then Nothing else Just (maximum (map (.createdAt) acceptedReqs))
+  pure (totalRequests, acceptedRequests, rejectedRequests, pulledRequests, lastRequestAt, lastAcceptedRequestAt)
+
 searchReqestForDriverkey :: Text -> Text
 searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
 
