@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Finance.Storage.Queries.DirectTaxTransaction where
+module Lib.Finance.Storage.Queries.DirectTaxTransaction (module Lib.Finance.Storage.Queries.DirectTaxTransaction, module ReExport) where
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -14,6 +14,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as Beam
+import Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as ReExport
 import qualified Sequelize as Se
 
 create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction -> m ())
@@ -35,6 +36,22 @@ findByInvoiceNumber invoiceNumber = do findAllWithKV [Se.Is Beam.invoiceNumber $
 
 findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction])
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
+
+findByTdsTreatmentAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m [Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction])
+findByTdsTreatmentAndDateRange limit offset merchantOperatingCityId tdsTreatment startTime endTime = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.tdsTreatment $ Se.Eq tdsTreatment,
+          Se.Is Beam.transactionDate $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.transactionDate $ Se.LessThanOrEq endTime
+        ]
+    ]
+    (Se.Desc Beam.transactionDate)
+    limit
+    offset
 
 findByTransactionDate :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.UTCTime -> m [Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction])
 findByTransactionDate transactionDate = do findAllWithKV [Se.Is Beam.transactionDate $ Se.Eq transactionDate]
@@ -73,65 +90,3 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTrans
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction where
-  fromTType' (Beam.DirectTaxTransactionT {..}) = do
-    pure $
-      Just
-        Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction
-          { counterpartyId = counterpartyId,
-            createdAt = createdAt,
-            createdBy = createdBy,
-            createdById = createdById,
-            grossAmount = grossAmount,
-            id = Kernel.Types.Id.Id id,
-            invoiceNumber = invoiceNumber,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId,
-            netAmountPaid = netAmountPaid,
-            panOfParty = panOfParty,
-            panType = panType,
-            paymentDate = paymentDate,
-            referenceId = referenceId,
-            tanOfDeductee = tanOfDeductee,
-            tdsAmount = tdsAmount,
-            tdsRate = tdsRate,
-            tdsRateReason = tdsRateReason,
-            tdsSection = tdsSection,
-            tdsTreatment = tdsTreatment,
-            transactionDate = transactionDate,
-            transactionType = transactionType,
-            updatedBy = updatedBy,
-            updatedById = updatedById,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction where
-  toTType' (Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction {..}) = do
-    Beam.DirectTaxTransactionT
-      { Beam.counterpartyId = counterpartyId,
-        Beam.createdAt = createdAt,
-        Beam.createdBy = createdBy,
-        Beam.createdById = createdById,
-        Beam.grossAmount = grossAmount,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.invoiceNumber = invoiceNumber,
-        Beam.merchantId = merchantId,
-        Beam.merchantOperatingCityId = merchantOperatingCityId,
-        Beam.netAmountPaid = netAmountPaid,
-        Beam.panOfParty = panOfParty,
-        Beam.panType = panType,
-        Beam.paymentDate = paymentDate,
-        Beam.referenceId = referenceId,
-        Beam.tanOfDeductee = tanOfDeductee,
-        Beam.tdsAmount = tdsAmount,
-        Beam.tdsRate = tdsRate,
-        Beam.tdsRateReason = tdsRateReason,
-        Beam.tdsSection = tdsSection,
-        Beam.tdsTreatment = tdsTreatment,
-        Beam.transactionDate = transactionDate,
-        Beam.transactionType = transactionType,
-        Beam.updatedBy = updatedBy,
-        Beam.updatedById = updatedById,
-        Beam.updatedAt = updatedAt
-      }
