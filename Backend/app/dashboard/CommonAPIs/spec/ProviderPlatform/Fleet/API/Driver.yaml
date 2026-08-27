@@ -1600,6 +1600,7 @@ types:
   ChangeDriverFleetOwnerReq:
     - newFleetOwnerId: Text
     - reason: Maybe Text
+    - rcNo: Maybe Text
     - derive: "'HideSecrets"
 
   UpdateDriverReq:

@@ -696,11 +696,7 @@ limitOffset mbLimit mbOffset =
 
 ---------------------------------------------------------------------
 deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-deleteDriverPermanentlyDelete merchantShortId opCity reqDriverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetDriver (cast reqDriverId))
+deleteDriverPermanentlyDelete merchantShortId _opCity reqDriverId =
   DeleteDriver.deleteDriver merchantShortId (cast reqDriverId)
 
 ---------------------------------------------------------------------
@@ -716,7 +712,7 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   let driverId_ = cast @Common.Driver @DP.Driver driverId
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument (SGuard.TargetDriver personId) $ do
     QDriverLicense.deleteByDriverId personId
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
@@ -734,7 +730,7 @@ postDriverUnlinkAadhaar merchantShortId opCity driverId = do
 
   _ <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument (SGuard.TargetDriver personId) $ do
     QAadhaarCard.deleteByPersonId personId
     QDriverInfo.updateAadhaarVerifiedState False driverId_
     unless (transporterConfig.aadhaarVerificationRequired) $
@@ -893,7 +889,7 @@ postDriverDeleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = 
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkVehicle (SGuard.TargetDriver personId) $
     DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
 
 ---------------------------------------------------------------------

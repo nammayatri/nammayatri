@@ -11,7 +11,6 @@ import Data.List (nub)
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified SharedLogic.Association.Change as AC
 import SharedLogic.DriverOnboarding.OnboardingFlags.Checks
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -20,6 +19,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 defaultRecomputeSpec :: GuardTarget -> RecomputeSpec
 defaultRecomputeSpec = \case
   TargetDriver personId -> recomputeDrivers [personId]
+  TargetDriverVehicle personId registrationNo -> recomputeDrivers [personId] <> recomputeVehicles [registrationNo]
   TargetFleetOwner personId -> recomputeFleetOwners [personId]
   TargetVehicle registrationNo -> recomputeVehicles [registrationNo]
   TargetVehicleById rcId -> mempty {rsVehicleIds = [rcId]}
@@ -42,12 +42,12 @@ withOnboardingAction transporterConfig actor verb target body =
 
 withOnboardingActionFanout :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m (a, RecomputeSpec) -> m a
 withOnboardingActionFanout transporterConfig actor verb target body =
-  withOnboardingActionLock target $
-    AC.withAssociation (guardOnboardingAction transporterConfig actor verb target) $ do
-      (result, extraSpec) <- body
-      when (isUnified transporterConfig) $
-        runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
-      pure result
+  withOnboardingActionLock target $ do
+    guardOnboardingAction transporterConfig actor verb target
+    (result, extraSpec) <- body
+    when (isUnified transporterConfig) $
+      runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
+    pure result
 
 onboardingActionLockTTLSeconds :: Int
 onboardingActionLockTTLSeconds = 30
@@ -61,6 +61,7 @@ onboardingActionLockRetryMs = 100
 withOnboardingActionLock :: OnboardingFlow m r => GuardTarget -> m a -> m a
 withOnboardingActionLock target body = case target of
   TargetDriver personId -> locked personId.getId
+  TargetDriverVehicle personId _ -> locked personId.getId
   TargetFleetOwner personId -> locked personId.getId
   TargetVehicleById rcId -> locked rcId.getId
   TargetVehicle registrationNo -> locked registrationNo

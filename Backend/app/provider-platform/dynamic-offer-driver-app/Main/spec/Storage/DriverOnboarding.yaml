@@ -1439,7 +1439,7 @@ DocumentVerificationStagesConfig:
     MediaInfo:
       title: Text
       description: Maybe Text
-      url: Text
+      url: Maybe Text
       thumbnailUrl: Maybe Text
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:

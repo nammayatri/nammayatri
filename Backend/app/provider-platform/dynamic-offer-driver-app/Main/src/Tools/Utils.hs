@@ -84,7 +84,7 @@ emailBasedonEmailVerificationMandate reqEmail person mandateEmailVerification = 
       pure person.email
     else do
       whenJust reqEmail $ \reqEmail' ->
-        unless (reqEmail == person.email) $
-          unlessM (isNothing <$> QP.findByEmailAndMerchantIdAndRole (Just reqEmail') person.merchantId Person.FLEET_OWNER) $
-            throwError (EmailAlreadyLinked reqEmail')
+        unless (reqEmail == person.email) $ do
+          mbLinked <- foldM (\acc role_ -> maybe (QP.findByEmailAndMerchantIdAndRole (Just reqEmail') person.merchantId role_) (pure . Just) acc) Nothing [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+          whenJust mbLinked $ \_ -> throwError (EmailAlreadyLinked reqEmail')
       pure $ reqEmail <|> person.email

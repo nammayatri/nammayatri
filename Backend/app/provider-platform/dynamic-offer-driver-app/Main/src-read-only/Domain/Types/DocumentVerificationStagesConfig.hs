@@ -32,5 +32,10 @@ data DocumentVerificationStagesConfig = DocumentVerificationStagesConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data MediaInfo = MediaInfo {description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text, url :: Kernel.Prelude.Text}
+data MediaInfo = MediaInfo
+  { description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    url :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

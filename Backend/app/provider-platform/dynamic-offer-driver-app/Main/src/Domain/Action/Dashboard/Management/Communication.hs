@@ -52,6 +52,7 @@ import Kernel.Types.Predicate (MaxLength (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DriverOnboarding (isFleetRole)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
@@ -492,6 +493,7 @@ type RecipientWithRole = (Text, DDelivery.CommunicationRecipientRole)
 personRoleToRecipientRole :: DP.Role -> DDelivery.CommunicationRecipientRole
 personRoleToRecipientRole DP.DRIVER = DDelivery.RR_DRIVER
 personRoleToRecipientRole DP.FLEET_OWNER = DDelivery.RR_FLEET_OWNER
+personRoleToRecipientRole DP.FLEET_BUSINESS = DDelivery.RR_FLEET_OWNER
 personRoleToRecipientRole DP.OPERATOR = DDelivery.RR_OPERATOR
 personRoleToRecipientRole DP.ADMIN = DDelivery.RR_ADMIN
 personRoleToRecipientRole _ = DDelivery.RR_DRIVER
@@ -635,7 +637,7 @@ validateRecipientsInScope recipientIds merchant merchantOpCity mbFleetOwnerId mb
                 unless (any isJust fleetOwnerIds) $
                   throwError (InvalidRequest $ "Driver " <> id_ <> " is not under operator " <> operatorId)
                 pure (id_, DDelivery.RR_DRIVER)
-              DP.FLEET_OWNER -> do
+              role | isFleetRole role -> do
                 assoc <- QFOA.findByFleetOwnerIdAndOperatorId person.id (Kernel.Types.Id.Id operatorId) True
                 unless (isJust assoc) $
                   throwError (InvalidRequest $ "Fleet owner " <> id_ <> " is not under operator " <> operatorId)

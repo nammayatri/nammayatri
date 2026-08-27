@@ -132,7 +132,7 @@ fleetOwnerRegister req mbEnabled = do
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
   let personAuth = buildFleetOwnerAuthReq merchant.id req
-  personOpt <- QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+  personOpt <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
   case personOpt of
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do

@@ -250,8 +250,11 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure driverInfo.enabledReasonFlag
   let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else driverInfo.approved == Just True
       bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
-      derivedShouldEnable = bypassDocGates || (consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk)
+      docsDerivedEnable = consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk
+      derivedShouldEnable = bypassDocGates || docsDerivedEnable
       shouldEnable = derivedShouldEnable || (driverInfo.enabled && not mutationAllowed)
+  when (useUnifiedOnboardingFlagsRecompute && bypassDocGates && docsDerivedEnable) $
+    DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.

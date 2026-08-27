@@ -476,11 +476,13 @@ postFleetConsentDecline ::
     ) ->
     Flow APISuccess
   )
-postFleetConsentDecline (mbDriverId, _merchantId, _merchantOperatingCityId) = do
+postFleetConsentDecline (mbDriverId, _merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
   when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot decline a driver-initiated request"
-  FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetDriverAssociation.fleetOwnerId) (cast driverId)) SGuard.DeactivateFromFleet (SGuard.TargetDriver (cast driverId)) $
+    FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
   pure Success
 
 postFleetConsent ::
@@ -500,7 +502,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id (cast driverId)) SGuard.LinkToFleet (SGuard.TargetDriver (cast driverId)) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id (cast driverId)) SGuard.ActivateToFleet (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
