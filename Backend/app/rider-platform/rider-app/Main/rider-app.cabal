@@ -575,7 +575,7 @@ library
       SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSSeller.CallBAP
       SharedLogic.FRFSSeller.Common
-      SharedLogic.FRFSSeller.QuoteCache
+      SharedLogic.FRFSSeller.QuoteStore
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GatewayLookup

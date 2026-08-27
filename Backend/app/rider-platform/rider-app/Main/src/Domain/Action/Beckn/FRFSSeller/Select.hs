@@ -15,7 +15,7 @@ import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common
-import qualified SharedLogic.FRFSSeller.QuoteCache as QuoteCache
+import qualified SharedLogic.FRFSSeller.QuoteStore as QuoteStore
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
@@ -83,7 +83,7 @@ priceSelection operator transactionId becknConfig mbOperatorConfig operatingHour
             >>= (.itemQuantitySelected)
             >>= (.itemQuantitySelectedCount)
   quote <-
-    lift (QuoteCache.findQuote operator transactionId itemId)
+    lift (QuoteStore.findQuote operator transactionId itemId)
       >>= maybe (throwE QuoteUnavailable) pure
   when (quantity < 1 || quantity > quote.maxTicketsPerOrder) $
     throwE (Unprocessable $ "Quantity " <> show quantity <> " outside 1.." <> show quote.maxTicketsPerOrder)

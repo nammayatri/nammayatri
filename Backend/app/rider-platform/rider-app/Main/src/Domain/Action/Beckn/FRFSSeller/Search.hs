@@ -22,7 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common
-import qualified SharedLogic.FRFSSeller.QuoteCache as QuoteCache
+import qualified SharedLogic.FRFSSeller.QuoteStore as QuoteStore
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -62,24 +62,21 @@ handleSearch operator req = do
       logWarning $ "FRFS seller search refused: " <> reason
       CallBAP.sendOnSearch merchantId self.subscriberId bapUri $
         ACL.buildOnSearchErrorReq self now' ctx (Common.becknError Common.LocationUnserviceable reason)
-    Common.Serviceable -> serve ctx self bapUri merchantId transactionId mbOperatorConfig
+    Common.Serviceable -> serve ctx self bapUri merchantId transactionId
   where
-    serve ctx self bapUri merchantId transactionId mbOperatorConfig = do
-      catalogResult <- withTryCatch "frfsSeller:buildCatalog" (buildCatalog operator merchantId req)
+    serve ctx self bapUri merchantId transactionId = do
+      catalogResult <- withTryCatch "frfsSeller:buildCatalog" (buildCatalog operator merchantId transactionId self req)
       now <- getCurrentTime
       onSearchReq <- case catalogResult of
-        Right catalog -> do
-          cfg <- either (throwError . InternalError) pure (Common.operatorConfig mbOperatorConfig)
-          QuoteCache.cacheQuotes cfg.quoteCache.ttlSeconds operator transactionId (mkQuotes catalog)
-          pure $ ACL.buildOnSearchReq self now ctx catalog
+        Right catalog -> pure $ ACL.buildOnSearchReq self now ctx catalog
         Left err -> do
           logError $ "frfsSeller:buildCatalog failed for operator " <> operator <> ": " <> show err
           pure $ ACL.buildOnSearchErrorReq self now ctx (Common.becknError Common.InternalError "Unable to build catalog for this search")
       CallBAP.sendOnSearch merchantId self.subscriberId bapUri onSearchReq
 
-mkQuotes :: ACL.SellerCatalog -> [QuoteCache.SellerQuote]
+mkQuotes :: ACL.SellerCatalog -> [QuoteStore.SellerQuote]
 mkQuotes catalog =
-  [ QuoteCache.SellerQuote
+  [ QuoteStore.SellerQuote
       { itemId = item.itemId,
         journeyId = fromMaybe "" catalog.journeyId,
         providerId = catalog.providerId,
@@ -98,8 +95,8 @@ mkQuotes catalog =
   where
     stopOf wanted = find (\stop -> stop.stopType == wanted) (concatMap (.stops) catalog.fulfillments)
 
-buildCatalog :: Text -> Id DM.Merchant -> Spec.SearchReq -> Flow ACL.SellerCatalog
-buildCatalog operator merchantId req = do
+buildCatalog :: Text -> Id DM.Merchant -> Text -> ACL.SellerIdentity -> Spec.SearchReq -> Flow ACL.SellerCatalog
+buildCatalog operator merchantId transactionId self req = do
   cityCode <-
     (req.searchReqContext.contextLocation >>= (.locationCity) >>= (.cityCode))
       & fromMaybeM (InvalidRequest "City missing on search context")
@@ -117,8 +114,26 @@ buildCatalog operator merchantId req = do
   operatingHours <- ExternalCallAPI.getOperatingHoursTags integratedBPPConfig
   operatingWindow <- ExternalCallAPI.getOperatingWindow integratedBPPConfig
   case mbJourney of
+    -- A stopless discovery search publishes the station roster and prices nothing, so
+    -- there is no quote to persist and no origin/destination for an FRFSSearch row.
     Nothing -> pure (discoveryCatalog operator integratedBPPConfig stations operatingHours operatingWindow cfg)
-    Just (fromStop, toStop) -> journeyCatalog operator merchantId merchantOperatingCity integratedBPPConfig stations operatingHours operatingWindow cfg fromStop toStop
+    Just (fromStop, toStop) -> do
+      catalog <- journeyCatalog operator merchantId merchantOperatingCity integratedBPPConfig stations operatingHours operatingWindow cfg fromStop toStop
+      now <- getCurrentTime
+      QuoteStore.persistQuotes
+        QuoteStore.SellerQuoteContext
+          { operator,
+            transactionId,
+            merchantId,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            integratedBPPConfig,
+            selfSubscriberId = self.subscriberId,
+            selfSubscriberUrl = self.subscriberUrl,
+            quantity = cfg.oneWayTicketLimit,
+            validTill = addUTCTime (fromIntegral cfg.quoteCache.ttlSeconds) now
+          }
+        (mkQuotes catalog)
+      pure catalog
 
 coordOf :: Double -> Maybe Double
 coordOf value = if value == 0.0 then Nothing else Just value
@@ -236,7 +251,7 @@ journeyCatalog operator merchantId merchantOperatingCity integratedBPPConfig sta
 
 -- | One item per journey type, which is what Go emits: @metro_transformer.go:138-145@ builds
 -- the id as @<journeyType>-<stations>@ while iterating FareDetails, a list with no category
--- dimension. Fanning out over categories would hand every item that same id, and QuoteCache
+-- dimension. Fanning out over categories would hand every item that same id, and QuoteStore
 -- keys on the id alone, so the last one written would win.
 mkItems :: Common.OperatorConfig -> Text -> Common.SellerJourneyType -> FRFSUtils.FRFSFare -> [ACL.SellerItem]
 mkItems cfg journeyId journeyType fare =

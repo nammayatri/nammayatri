@@ -25,7 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.CallBAP as CallBAP
 import qualified SharedLogic.FRFSSeller.Common as Common
-import qualified SharedLogic.FRFSSeller.QuoteCache as QuoteCache
+import qualified SharedLogic.FRFSSeller.QuoteStore as QuoteStore
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -116,7 +116,7 @@ initialiseOrder operator transactionId becknConfig mbOperatorConfig paymentId op
   whenJust (Common.nonZeroBuyerFinderFee order) $ \fee ->
     throwE (FinderFeeNotAcceptable $ "Buyer finder fee must be zero, got " <> fee)
   quote <-
-    lift (QuoteCache.findQuote operator transactionId itemId)
+    lift (QuoteStore.findQuote operator transactionId itemId)
       >>= maybe (throwE QuoteUnavailable) pure
   when (quantity < 1 || quantity > quote.maxTicketsPerOrder) $
     throwE (QuantityExceeded $ "Quantity " <> show quantity <> " outside 1.." <> show quote.maxTicketsPerOrder)
@@ -129,7 +129,7 @@ initialiseOrder operator transactionId becknConfig mbOperatorConfig paymentId op
   let totalPrice = Common.formatPrice (unitPrice * fromIntegral quantity)
   account <- either (throwE . Unprocessable) pure (Common.settlementAccount becknConfig totalPrice)
   cfg <- either (throwE . Unprocessable) pure (Common.operatorConfig mbOperatorConfig)
-  lift (QuoteCache.holdQuote cfg.quoteCache.heldTtlSeconds operator transactionId quote)
+  lift (QuoteStore.holdQuote cfg.quoteCache.heldTtlSeconds operator transactionId quote)
   let validity = Common.ticketValidity cfg
   pure
     ACL.InitialisedOrder
