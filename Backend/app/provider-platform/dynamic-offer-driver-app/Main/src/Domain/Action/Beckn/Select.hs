@@ -42,6 +42,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool
+import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
@@ -51,6 +52,7 @@ import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -80,6 +82,18 @@ data DSelectReq = DSelectReq
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
   logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
+  -- Rider-acceptance funnel counter (BPP_rider_acceptance_count). Fires once per select
+  -- to keep RA = rider_acceptance / search_request bounded; OTP/special-zone rides skip
+  -- Select entirely, so this captures the "normal" acceptances only. Tier is taken from
+  -- the primary selected estimate (validateRequest guarantees the list is non-empty).
+  whenJust (listToMaybe estimates) $ \primaryEstimate -> do
+    cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
+    distanceEdges <- SML.getDistanceBucketEdges searchReq.merchantOperatingCityId
+    BPPMetrics.incrementRiderAcceptanceCount
+      merchant.shortId.getShortId
+      cityLabel
+      (show primaryEstimate.vehicleServiceTier)
+      (SML.distanceBucketLabel distanceEdges primaryEstimate.estimatedDistance)
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
