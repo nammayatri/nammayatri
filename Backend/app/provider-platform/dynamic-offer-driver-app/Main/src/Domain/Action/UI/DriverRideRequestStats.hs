@@ -11,7 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.SearchRequestForDriverExtra as QSRFD
 
-getDriverRideRequestStats ::
+getRideRequestStats ::
   ( ( Maybe (Id SP.Person),
       Id DM.Merchant,
       Id DMOC.MerchantOperatingCity
@@ -19,7 +19,7 @@ getDriverRideRequestStats ::
     Maybe Int ->
     Flow API.Types.UI.DriverRideRequestStats.DriverRideRequestStatsRes
   )
-getDriverRideRequestStats (mbPersonId, _merchantId, _merchantOpCityId) mbDurationInMinutes = do
+getRideRequestStats (mbPersonId, _merchantId, _merchantOpCityId) mbDurationInMinutes = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   let durationInMinutes = fromMaybe (24 * 60) mbDurationInMinutes
   now <- getCurrentTime
