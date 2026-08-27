@@ -22,6 +22,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     dependencyDocumentType :: B.C f [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    doNotValidateDuringOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
     documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
     documentFieldsJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

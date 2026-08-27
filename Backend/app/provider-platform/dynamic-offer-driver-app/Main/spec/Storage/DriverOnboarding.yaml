@@ -730,6 +730,7 @@ DocumentVerificationConfig:
     isDefaultVerifiedOnManualVerification: Maybe Bool
     isImageValidationRequired: Bool
     markImageValidOnValidationSkip: Maybe Bool
+    doNotValidateDuringOnboarding: Maybe Bool
     doStrictVerifcation: Bool
     order: Int
     filterForOldApks: Maybe Bool
