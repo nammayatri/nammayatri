@@ -210,6 +210,7 @@ data RiderConfig = RiderConfig
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackVehicleKeyExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
+    unifiedQREnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     upcomingBusThresholdSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     updateTicketValidityInSecondsPostSetOnboarding :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,

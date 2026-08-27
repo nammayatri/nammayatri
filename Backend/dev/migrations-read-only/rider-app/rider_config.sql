@@ -845,3 +845,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_boarding_proximity_check bo
 ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_max_booking_start_drift_seconds double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_match_radius_in_meters double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;

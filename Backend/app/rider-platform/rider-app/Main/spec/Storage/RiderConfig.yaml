@@ -231,6 +231,7 @@ RiderConfig:
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
     enableMultiModalForAllUsers: Maybe Bool
+    unifiedQREnabled: Maybe Bool
     passStatusUpdateBatchSize: Maybe Int
     nyRegularSubscriptionBatchSize: Maybe Int
     nyRegularExecutionTimeOffsetMinutes: Maybe Int
@@ -552,6 +553,7 @@ RiderConfig:
     blockedUntilInMins: "1440"
     busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
     enableMultiModalForAllUsers: "false"
+    unifiedQREnabled: "false"
     initiateFirstMultimodalJourney: "false"
     enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
