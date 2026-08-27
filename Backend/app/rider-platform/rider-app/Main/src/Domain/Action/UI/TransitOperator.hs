@@ -128,10 +128,10 @@ transitOperatorGetTripDetailsUtil merchantShortId city vehicleCategory scheduleN
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorTripDetails baseUrl gtfsId scheduleNumber
 
-transitOperatorGetFleetsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Fleet]
-transitOperatorGetFleetsUtil merchantShortId city vehicleCategory = do
+transitOperatorGetFleetsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Int -> Maybe Int -> Flow [Fleet]
+transitOperatorGetFleetsUtil merchantShortId city vehicleCategory limit offset = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorFleets baseUrl gtfsId
+  NandiFlow.operatorFleets baseUrl gtfsId limit offset
 
 transitOperatorGetConductorUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow Employee
 transitOperatorGetConductorUtil merchantShortId city vehicleCategory token = do
@@ -309,3 +309,50 @@ transitOperatorExportRouteStopMappingUtil :: ShortId Merchant -> Context.City ->
 transitOperatorExportRouteStopMappingUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorExportRouteStopMapping baseUrl gtfsId
+
+-- ===== Vehicle management (GIMS) =====
+
+-- Strip surrounding whitespace and treat blank/whitespace-only as absent — mirrors GIMS server-side normalization.
+nonBlankText :: Maybe Text -> Maybe Text
+nonBlankText = (>>= \t -> let t' = T.strip t in if T.null t' then Nothing else Just t')
+
+transitOperatorUpsertVehiclesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> [VehicleUpsertRequest] -> Flow [Fleet]
+transitOperatorUpsertVehiclesUtil merchantShortId city vehicleCategory items = do
+  when (null items) $ throwError $ InvalidRequest "upsertVehicles: body must contain at least one vehicle"
+  normalized <- traverse normalizeItem items
+  -- Reject intra-batch duplicates on the natural conflict key: GIMS behavior on same-vehicle_no twice in one POST is implementation-defined (last-wins vs first-wins vs whole-batch-fail).
+  let counts = Map.fromListWith (+) $ zip (map (.vehicle_no) normalized) (repeat (1 :: Int))
+      dupes = Map.keys $ Map.filter (> 1) counts
+  unless (null dupes) $
+    throwError $ InvalidRequest $ "upsertVehicles: duplicate vehicle_no in batch: " <> T.intercalate ", " dupes
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorUpsertVehicles baseUrl gtfsId normalized
+  where
+    -- Strip once at the boundary so a padded write and a clean-string query land on the same natural key.
+    normalizeItem req = do
+      let vNo = T.strip req.vehicle_no
+      when (T.null vNo) $ throwError $ InvalidRequest "upsertVehicles: vehicle_no must not be blank"
+      pure
+        req{vehicle_no = vNo,
+            fleet_no = nonBlankText req.fleet_no,
+            tag_number = nonBlankText req.tag_number,
+            status = nonBlankText req.status
+           }
+
+transitOperatorDeleteVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp
+transitOperatorDeleteVehicleUtil merchantShortId city vehicleCategory vehicleId = do
+  -- guard blank/whitespace: an empty Capture segment would silently target the wrong URL (or 404) instead of failing loud
+  let vehicleId' = T.strip vehicleId
+  when (T.null vehicleId') $ throwError $ InvalidRequest "deleteVehicle: vehicleId must not be blank"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorDeleteVehicle baseUrl gtfsId vehicleId'
+
+transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
+transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo = do
+  let vehicleNo' = nonBlankText vehicleNo
+      tagNumber' = nonBlankText tagNumber
+      fleetNo' = nonBlankText fleetNo
+  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo') $
+    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'

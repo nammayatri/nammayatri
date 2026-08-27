@@ -280,7 +280,7 @@ type OperatorBreakTypesAPI = "internal" :> "operator" :> Capture "gtfs_id" Text 
 
 type OperatorTripDetailsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-details" :> QueryParam "scheduleNumber" Text :> Get '[JSON] [NandiTripDetail]
 
-type OperatorFleetsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "fleets" :> Get '[JSON] [Fleet]
+type OperatorFleetsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "fleets" :> QueryParam "limit" Int :> QueryParam "offset" Int :> Get '[JSON] [Fleet]
 
 type OperatorConductorsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "conductors" :> QueryParam "token" Text :> Get '[JSON] Employee
 
@@ -422,7 +422,7 @@ getOperatorBreakTypes = ET.client operatorBreakTypesAPI
 getOperatorTripDetails :: Text -> Maybe Text -> ET.EulerClient [NandiTripDetail]
 getOperatorTripDetails = ET.client operatorTripDetailsAPI
 
-getOperatorFleets :: Text -> ET.EulerClient [Fleet]
+getOperatorFleets :: Text -> Maybe Int -> Maybe Int -> ET.EulerClient [Fleet]
 getOperatorFleets = ET.client operatorFleetsAPI
 
 getOperatorConductors :: Text -> Maybe Text -> ET.EulerClient Employee
@@ -584,3 +584,39 @@ operatorVerifyAPI = Proxy
 
 postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
 postOperatorVerify = ET.client operatorVerifyAPI
+
+-- ===== Vehicle management =====
+
+type OperatorUpsertVehiclesAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "vehicles" :> "upsert"
+    :> ReqBody '[JSON] [VehicleUpsertRequest]
+    :> Post '[JSON] [Fleet]
+
+type OperatorQueryVehicleAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "vehicles" :> "query"
+    :> QueryParam "vehicle_no" Text
+    :> QueryParam "tag_number" Text
+    :> QueryParam "fleet_no" Text
+    :> Get '[JSON] [Fleet]
+
+type OperatorDeleteVehicleAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "vehicles" :> Capture "vehicle_id" Text
+    :> Delete '[JSON] RowsAffectedResp
+
+operatorUpsertVehiclesAPI :: Proxy OperatorUpsertVehiclesAPI
+operatorUpsertVehiclesAPI = Proxy
+
+operatorQueryVehicleAPI :: Proxy OperatorQueryVehicleAPI
+operatorQueryVehicleAPI = Proxy
+
+operatorDeleteVehicleAPI :: Proxy OperatorDeleteVehicleAPI
+operatorDeleteVehicleAPI = Proxy
+
+postOperatorUpsertVehicles :: Text -> [VehicleUpsertRequest] -> ET.EulerClient [Fleet]
+postOperatorUpsertVehicles = ET.client operatorUpsertVehiclesAPI
+
+getOperatorQueryVehicle :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> ET.EulerClient [Fleet]
+getOperatorQueryVehicle = ET.client operatorQueryVehicleAPI
+
+deleteOperatorVehicle :: Text -> Text -> ET.EulerClient RowsAffectedResp
+deleteOperatorVehicle = ET.client operatorDeleteVehicleAPI
