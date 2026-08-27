@@ -417,12 +417,20 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       -- Publishes this search's dynamic-pricing inputs when a suggestion exists, so the
       -- shadow prices on the same congestion instead of its own drop's.
       let mbDpPublishKey = mbSuggestedBuild $> dSearchRes.searchRequest.id.getId
+      syncStartedAt <- getCurrentTime
       mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey
       -- Both searches were dispatched together; only now do we join on the suggestion, so
-      -- its latency overlaps the real search's instead of adding to it.
+      -- its latency overlaps the real search's instead of adding to it. The estimates the
+      -- customer asked for are always waited on first, and the suggestion is only ever
+      -- attached to them -- there is no reply carrying a suggestion and no estimates.
       inlineResults <- case (mbQuotesRes, suggestedAwaitable) of
         (Just quotesRes, Just awaitable) -> do
-          mbSuggested <- withTimeAPI "rideSearch" "awaitBetterRoutePointSearch" $ awaitSuggestedSearch dSearchRes awaitable
+          -- What is left of the one budget, not a fresh one. The shadow went out before the
+          -- real search, so by now it has usually answered and this returns at once; when it
+          -- has not, the customer's estimates are already in hand and waiting longer for an
+          -- extra would be paying twice for it.
+          remaining <- remainingSyncBudget syncStartedAt
+          mbSuggested <- withTimeAPI "rideSearch" "awaitBetterRoutePointSearch" $ awaitSuggestedSearch dSearchRes remaining awaitable
           pure . Just $ quotesRes {DQuote.suggestedEstimates = mbSuggested}
         _ -> pure mbQuotesRes
       pure DispatchRes {inlineResults, hasAlternates}
@@ -512,19 +520,35 @@ suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
     priceSuggestedSearch parentRes shadowRes (DQuote.mkSuggestedOption <$> ctx.alternates)
       >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
 
--- | Joins on the shadow search. It shares the real search's timeout budget, so a slow
--- suggestion degrades to no suggestion rather than delaying the estimates the customer
+-- | Joins on the shadow search within what the real search left of the sync budget, so a
+-- slow suggestion degrades to no suggestion rather than delaying the estimates the customer
 -- is waiting for.
-awaitSuggestedSearch :: DSearch.SearchRes -> ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)) -> Flow (Maybe DQuote.SuggestedEstimates)
-awaitSuggestedSearch dSearchRes awaitable =
-  L.await (Just syncSearchTimeoutMicros) awaitable >>= \case
-    Right r -> pure r
-    Left AwaitingTimeout -> do
-      logWarning $ "better_route_point: shadow search exceeded timeout for txn " <> dSearchRes.searchRequest.id.getId
-      pure Nothing
-    Left (ForkedFlowError e) -> do
-      logError $ "better_route_point: shadow search fork failed for txn " <> dSearchRes.searchRequest.id.getId <> ": " <> e
-      pure Nothing
+awaitSuggestedSearch :: DSearch.SearchRes -> ET.Microseconds -> ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)) -> Flow (Maybe DQuote.SuggestedEstimates)
+awaitSuggestedSearch dSearchRes budget@(ET.Microseconds remaining) awaitable
+  | remaining == 0 = do
+    -- Spent by the real search alone. Waiting on zero would mean waiting on nothing, so the
+    -- suggestion is dropped here and collected from /alternateSuggestion/{id}/result later.
+    logWarning $ "better_route_point: no sync budget left for the shadow of txn " <> dSearchRes.searchRequest.id.getId
+    pure Nothing
+  | otherwise =
+    L.await (Just budget) awaitable >>= \case
+      Right r -> pure r
+      Left AwaitingTimeout -> do
+        logWarning $ "better_route_point: shadow search exceeded timeout for txn " <> dSearchRes.searchRequest.id.getId
+        pure Nothing
+      Left (ForkedFlowError e) -> do
+        logError $ "better_route_point: shadow search fork failed for txn " <> dSearchRes.searchRequest.id.getId <> ": " <> e
+        pure Nothing
+
+-- | What the real search left of 'syncSearchTimeoutMicros'. Clamped at zero in 'Int':
+-- 'ET.Microseconds' wraps a 'Word32', so subtracting past zero would wrap round to a
+-- timeout of roughly seventy minutes.
+remainingSyncBudget :: UTCTime -> Flow ET.Microseconds
+remainingSyncBudget startedAt = do
+  now <- getCurrentTime
+  let ET.Microseconds budget = syncSearchTimeoutMicros
+      elapsed = round (realToFrac (diffUTCTime now startedAt) * 1000000 :: Double) :: Int
+  pure . ET.Microseconds . fromIntegral $ max 0 (fromIntegral budget - elapsed)
 
 awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Maybe Text -> Flow (Maybe DQuote.GetQuotesRes)
 awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey = do
