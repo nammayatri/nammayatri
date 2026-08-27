@@ -8,7 +8,7 @@ import Kernel.Prelude
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as Domain
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as Beam
-import Lib.Finance.Storage.Queries.DirectTaxTransaction ()
+import Lib.Finance.Storage.Queries.OrphanInstances.DirectTaxTransaction ()
 import qualified Sequelize as Se
 
 -- | Bulk shape used by the reconciliation framework: fetch every direct

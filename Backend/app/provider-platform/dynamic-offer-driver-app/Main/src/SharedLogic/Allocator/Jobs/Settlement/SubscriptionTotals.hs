@@ -57,7 +57,7 @@ fetchSubscriptionTotals merchantOpCityId fromTime toTime = do
             netAmount = acc.netAmount + taxableVal,
             txnCount = acc.txnCount + 1
            },
-        SubscriptionTransactionRow spId planFee (cgstAmt + sgstAmt + igstAmt + taxableVal) (show st) : rs
+        SubscriptionTransactionRow {subscriptionId = spId, debitAmount = planFee, creditAmount = cgstAmt + sgstAmt + igstAmt + taxableVal, status = show st} : rs
       )
 
 -- ---------------------------------------------------------------------------
@@ -108,4 +108,4 @@ fetchPGSettlementTotals merchantId merchantOperatingCityId fromTime toTime = do
             PgDom.ORDER -> r.txnAmount
             PgDom.REFUND -> fromMaybe 0 r.refundAmount
             PgDom.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
-       in PGSettlementTransactionRow amt r.txnType (show r.txnStatus) r.subscriptionPurchaseId
+       in PGSettlementTransactionRow {amount = amt, txnType = r.txnType, txnStatus = show r.txnStatus, subscriptionPurchaseId = r.subscriptionPurchaseId}

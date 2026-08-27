@@ -9,28 +9,30 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Core.Types
+import qualified Lib.Finance.Domain.Types.JournalEntryTransaction
 import qualified Lib.Finance.Domain.Types.SapJournalEntry
 import Tools.Beam.UtilsTH
 
 data JournalEntryTransactionT f = JournalEntryTransactionT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdBy :: (B.C f Lib.Finance.Core.Types.ActorType),
-    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    creditAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    debitAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    description :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    sapBatchId :: (B.C f Kernel.Prelude.Text),
-    sapJournalEntryId :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Kernel.Prelude.Text),
-    subscriptionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    transactionType :: (B.C f Lib.Finance.Domain.Types.SapJournalEntry.TransactionType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedBy :: (B.C f Lib.Finance.Core.Types.ActorType),
-    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    createdBy :: B.C f Lib.Finance.Core.Types.ActorType,
+    createdById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    creditAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    debitAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    description :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    referenceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    referenceType :: B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.JournalEntryTransaction.ReferenceType),
+    sapBatchId :: B.C f Kernel.Prelude.Text,
+    sapJournalEntryId :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Kernel.Prelude.Text,
+    transactionType :: B.C f Lib.Finance.Domain.Types.SapJournalEntry.TransactionType,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedBy :: B.C f Lib.Finance.Core.Types.ActorType,
+    updatedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +42,6 @@ instance B.Table JournalEntryTransactionT where
 
 type JournalEntryTransaction = JournalEntryTransactionT Identity
 
-$(enableKVPG (''JournalEntryTransactionT) [('id)] [])
+$(enableKVPG ''JournalEntryTransactionT ['id] [])
 
-$(mkTableInstancesGenericSchema (''JournalEntryTransactionT) "journal_entry_transaction")
+$(mkTableInstancesGenericSchema ''JournalEntryTransactionT "journal_entry_transaction")
