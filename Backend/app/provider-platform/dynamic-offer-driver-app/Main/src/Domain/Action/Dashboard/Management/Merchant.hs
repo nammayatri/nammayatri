@@ -1303,6 +1303,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
+        doNotValidateDuringOnboarding = Nothing,
         documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
         isDefaultVerifiedOnManualVerification = Nothing,
         ..

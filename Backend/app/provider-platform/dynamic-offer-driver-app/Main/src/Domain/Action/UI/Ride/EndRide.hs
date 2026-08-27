@@ -41,12 +41,14 @@ import qualified Data.Text as Text
 import Data.Time (utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
@@ -57,6 +59,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
@@ -78,6 +81,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common hiding (Days)
 import Kernel.Types.Confidence
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -113,11 +117,14 @@ import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPanCard as DPQuery
+import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -755,6 +762,36 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
+
+    fork "deferred PAN verification at ride-end" $
+      whenJust mbDriver $ \driverPerson -> do
+        mbDriverPanCard <- DPQuery.findByDriverId driverId
+        whenJust mbDriverPanCard $ \driverPanCard ->
+          when (driverPanCard.verificationStatus == Documents.PENDING) $ do
+            panDocCfg <-
+              getOneConfig
+                ( DocumentVerificationConfigDimensions
+                    { merchantOperatingCityId = booking.merchantOperatingCityId.getId,
+                      documentType = Just DTO.PanCard,
+                      vehicleCategory = Just DVC.CAR
+                    }
+                )
+                Nothing
+                >>= fromMaybeM (DocumentVerificationConfigNotFound booking.merchantOperatingCityId.getId (show DTO.PanCard))
+            when (fromMaybe False panDocCfg.doNotValidateDuringOnboarding) $ do
+              mbInFlight <- IVQueryExtra.findLatestPendingByDriverIdAndDocType driverId DTO.PanCard
+              when (isNothing mbInFlight) $ do
+                panNumber <- decrypt driverPanCard.panCardNumber
+                nowForDob <- getCurrentTime
+                let dob = fromMaybe nowForDob driverPanCard.driverDob
+                PanVerification.verifyPanFlow
+                  driverPerson
+                  driverPerson.merchantOperatingCityId
+                  panDocCfg
+                  panNumber
+                  dob
+                  driverPanCard.documentImageId1
+                  driverPanCard.driverNameOnGovtDB
 
     return updRide
   driverRideRes <- do

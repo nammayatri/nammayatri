@@ -39,6 +39,7 @@ module Tools.Verification
     fetchAndExtractVerifiedPan,
     fetchAndExtractVerifiedAadhaar,
     getVerifiedAadhaarXML,
+    getOCRResultPAN,
   )
 where
 

@@ -111,6 +111,10 @@ type API =
                       :> TokenAuth
                       :> QueryParam "imageId" Text
                       :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
+                    :<|> "pan"
+                      :> TokenAuth
+                      :> QueryParam "imageId" Text
+                      :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
                 )
        )
     :<|> "driver" :> "referral"
@@ -154,7 +158,7 @@ handler =
       :<|> generateAadhaarOtp
       :<|> verifyAadhaarOtp
       :<|> unVerifiedAadhaarData
-      :<|> (getOCRResultRC :<|> getOCRResultDL)
+      :<|> (getOCRResultRC :<|> getOCRResultDL :<|> getOCRResultPAN)
   )
     :<|> addReferral
     :<|> getReferredDrivers
@@ -233,3 +237,6 @@ getOCRResultRC (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ 
 
 getOCRResultDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 getOCRResultDL (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultDL personId merchantOpCityId mbImageId
+
+getOCRResultPAN :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
+getOCRResultPAN (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultPAN personId mbImageId
