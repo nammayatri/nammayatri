@@ -27,6 +27,8 @@ DELETE FROM atlas_dashboard.person_capability WHERE capability_id IN
     OR capability_id IN ('analytics.incentive.read');
 DELETE FROM atlas_dashboard.capability WHERE domain IN ('ops', 'agent', 'transit', 'config', 'city', 'tickets', 'system', 'utility', 'access') OR id IN ('analytics.incentive.read');
 INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALUES
+    ('city-operations.scheduled-bookings.read', 'city-operations', '', false),
+    ('city-operations.scheduled-bookings.write', 'city-operations', '', false),
     ('city-operations.customer.read', 'city-operations', '', false),
     ('city-operations.customer.write', 'city-operations', '', false),
     ('city-operations.driver.read', 'city-operations', '', false),
@@ -124,6 +126,8 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('system-config.release.write', 'system-config', '', false),
     ('system-config.scheduler.execute', 'system-config', '', false),
     ('system-config.failover.execute', 'system-config', '', false),
+    ('city-config.cancel.read', 'city-config', '', false),
+    ('city-config.cancel.write', 'city-config', '', false),
     ('city-config.geo.read', 'city-config', '', false),
     ('city-config.geo.write', 'city-config', '', false),
     ('city-config.offer.read', 'city-config', '', false),
@@ -151,6 +155,7 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('fleet.profile.write', 'fleet', '', false),
     ('fleet.operator.read', 'fleet', '', false),
     ('fleet.operator.write', 'fleet', '', false),
+    ('finance.tds_reimbursement.submit', 'finance', '', false),
     ('finance.report.read', 'finance', '', false),
     ('finance.settlement.read', 'finance', '', false),
     ('finance.settlement.export', 'finance', '', false),
