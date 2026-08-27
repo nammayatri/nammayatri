@@ -135,7 +135,7 @@ SELECT
   now(), now()
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
 JOIN atlas_driver_offer_bpp.transporter_config tc ON tc.merchant_operating_city_id = moc.id
-WHERE tc.cancellation_fee_payment_method_exceptions LIKE '%Cash%';
+WHERE array_to_string(tc.cancellation_fee_payment_method_exceptions, ',') LIKE '%Cash%';
 
 -- 2e. DriverAtFault: coin penalty backfilled from coin_config's (vestigial) value, plus
 --     driver money penalty backfilled from fare_policy.driver_cancellation_penalty_amount.
