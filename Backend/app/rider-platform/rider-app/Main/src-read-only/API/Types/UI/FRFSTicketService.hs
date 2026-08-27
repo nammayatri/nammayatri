@@ -124,7 +124,11 @@ data FRFSCategorySelectionReq = FRFSCategorySelectionReq
     quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
     seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat]
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSConcession = FRFSConcession {categoryLookupId :: Data.Maybe.Maybe Data.Text.Text, concessionDesc :: Data.Text.Text, concessionId :: Data.Text.Text}
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSConfigAPIRes = FRFSConfigAPIRes
@@ -357,6 +361,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    isSingleLady :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     journeyDate :: Data.Maybe.Maybe Data.Time.Calendar.Day,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
@@ -542,7 +547,7 @@ data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.S
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SeatLayoutResp = SeatLayoutResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
+data SeatLayoutResp = SeatLayoutResp {concessions :: Data.Maybe.Maybe [FRFSConcession], seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
