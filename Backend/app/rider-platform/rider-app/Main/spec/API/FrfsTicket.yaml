@@ -57,6 +57,7 @@ types:
     fromStationCode: Text
     toStationCode: Text
     journeyDate: Maybe Day
+    isSingleLady: Maybe Bool
     tripCategory: Maybe FRFSTripCategory
     routeCode: Maybe Text
     serviceTier: Maybe ServiceTierType
@@ -154,6 +155,7 @@ types:
     quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
     seatIds: Maybe [(Id Seat)]
+    derive: "Show"
 
   CrisSdkResponse:
     osType: Text
@@ -447,9 +449,20 @@ types:
     seat: Seat
     status: SeatStatus
 
+
+
+
+
+  FRFSConcession:
+    concessionId: Text
+    concessionDesc: Text
+    categoryLookupId: Maybe Text
+    derive: "Show"
+
   SeatLayoutResp:
     seatLayout: SeatLayout
     seats: [SeatWithStatus]
+    concessions: Maybe [FRFSConcession]
 
   SeatLayoutDetailsResp:
     seatLayout: SeatLayout
@@ -787,6 +800,15 @@ apis:
         vehicleNumber: Text
         fromStopCode: Text
         toStopCode: Text
+      response:
+        type: SeatLayoutResp
+
+
+  - GET:
+      endpoint: /frfs/quote/{quoteId}/seats
+      auth: TokenAuth
+      params:
+        quoteId: Id FRFSQuote
       response:
         type: SeatLayoutResp
 
