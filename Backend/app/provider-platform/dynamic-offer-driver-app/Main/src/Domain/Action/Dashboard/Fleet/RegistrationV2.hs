@@ -130,7 +130,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   fleetOwnerId <- (mbPersonId <|> (Id <$> mbRequestorId)) & fromMaybeM (InvalidRequest "personId required")
 
   person <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-  unless (person.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+  unless (DomainRC.isFleetRole person.role) $
     throwError (InvalidRequest "personId should be fleet owner")
   -- Validate fleet owner also belongs to the same merchant and city
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
@@ -162,7 +162,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   mbRequestedOperatorId <- case mbRequestorId of
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      when (requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+      when (DomainRC.isFleetRole requestor.role) $
         unless (requestor.id == fleetOwnerId) $ throwError AccessDenied
       if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
     Nothing -> pure Nothing
@@ -633,7 +633,7 @@ checkRequestorAccessToFleet mbFleetOwnerId requestorId = do
     DP.ADMIN -> do
       fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "Fleet owner required")
       runInReplica $ QP.findById (Id @DP.Person fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
-    role | role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
+    role | DomainRC.isFleetRole role -> do
       whenJust mbFleetOwnerId $ \fleetOwnerId -> do
         unless (fleetOwnerId == requestorId) $ throwError AccessDenied
       pure requestor

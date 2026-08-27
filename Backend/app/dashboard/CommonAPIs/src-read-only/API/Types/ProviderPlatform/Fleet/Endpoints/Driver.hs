@@ -168,7 +168,7 @@ data CarRideInfo = CarRideInfo
 instance Kernel.Types.HideSecrets.HideSecrets CarRideInfo where
   hideSecrets = Kernel.Prelude.identity
 
-data ChangeDriverFleetOwnerReq = ChangeDriverFleetOwnerReq {newFleetOwnerId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data ChangeDriverFleetOwnerReq = ChangeDriverFleetOwnerReq {newFleetOwnerId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

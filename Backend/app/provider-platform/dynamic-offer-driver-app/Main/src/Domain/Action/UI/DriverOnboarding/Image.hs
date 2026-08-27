@@ -394,7 +394,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         Just rcNo -> do
           rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
           case person.role of
-            role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
+            role | isFleetRole role -> do
               fleetAssoc <- FRCA.findLatestByRCIdAndFleetOwnerId rc.id personId
               when (isNothing fleetAssoc) $ throwError RCNotLinkedWithFleet
               return $ Just rc.id
@@ -462,7 +462,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         -- A fleet upload carrying an rcNumber is a VEHICLE document; those are governed by
         -- docConfigs like driver uploads. The fleet-owner table only describes the fleet
         -- owner's own identity documents.
-        if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] && isNothing rcNumber
+        if isFleetRole person.role && isNothing rcNumber
           then do
             --------------- Image validation for fleet (different config table than docConfigs)
             fleetDocConfigs <- listToMaybe <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, role = Nothing}) Nothing
@@ -474,7 +474,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       let guardTarget = case mbRcId of
             Just rcId -> SGuard.TargetVehicleById rcId
             Nothing
-              | person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> SGuard.TargetFleetOwner personId
+              | isFleetRole person.role -> SGuard.TargetFleetOwner personId
               | otherwise -> SGuard.TargetDriver personId
           -- Status writes go through the onboarding-action wrapper: entity lock + flag recompute.
           setVerificationStatus status =

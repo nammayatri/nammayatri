@@ -1416,7 +1416,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
       case fdaForFleetOwner of
         Just fda
           | not fda.isActive ->
-            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.Unlink (SGuard.TargetDriver driverId) $
+            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
               FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
         Just _ -> throwError $ InvalidRequest "Direct revoke is not allowed for active fleet associations"
         Nothing -> throwError $ InvalidRequest "No fleet association found to revoke"

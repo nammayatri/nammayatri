@@ -71,6 +71,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.DriverOnboarding (isFleetRole)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -366,7 +367,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
   payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
   when (isPayoutOrderSuccess payoutStatus) do
     person' <- QP.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
-    let isFleetOwnerRole = person'.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+    let isFleetOwnerRole = isFleetRole person'.role
     unless isFleetOwnerRole do
       driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
       QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)

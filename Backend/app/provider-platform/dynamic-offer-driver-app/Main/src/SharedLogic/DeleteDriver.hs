@@ -23,6 +23,8 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DriverOnboarding (isFleetRole)
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -59,21 +61,10 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QVehicleRC
 import qualified Tools.Auth as Auth
 import Tools.Error
 
-checkFleetActiveAssociations :: Id DP.Person -> Flow ()
-checkFleetActiveAssociations personId = do
-  QFleetRCAssociation.findActiveAssociationByFleetOwnerId personId >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete fleet owner with active RC associations")
-  QFleetDriverAssociation.findActiveDriverByFleetOwnerId personId.getId >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete fleet owner with active driver associations")
-  QFleetOperatorAssociation.findActiveByFleetOwnerId personId >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete fleet owner with active operator associations")
-
 checkOperatorActiveAssociations :: Id DP.Person -> Flow ()
 checkOperatorActiveAssociations personId = do
   QDriverOperatorAssociation.findActiveAssociationByOperatorId personId >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete operator with active driver associations")
   QFleetOperatorAssociation.findActiveAssociationByOperatorId personId >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete operator with active fleet associations")
-
-checkDriverActiveAssociations :: Id DP.Person -> Flow ()
-checkDriverActiveAssociations personId = do
-  QFleetDriverAssociation.findByDriverId personId True >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete driver with active fleet associations")
-  QDriverOperatorAssociation.findByDriverId personId True >>= flip whenJust (\_ -> throwError $ InvalidRequest "Cannot delete driver with active operator associations")
 
 deleteDriver :: ShortId DM.Merchant -> Id DP.Person -> Flow APISuccess
 deleteDriver merchantShortId reqDriverId = do
@@ -87,8 +78,9 @@ deleteDriver merchantShortId reqDriverId = do
       when (person.merchantId /= merchant.id) $
         throwError $ InvalidRequest "Person does not belong to this merchant"
       case person.role of
-        role | role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
-          checkFleetActiveAssociations person.id
+        role | isFleetRole role -> do
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+          SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetFleetOwner person.id)
           QFleetOperatorAssociation.deleteByFleetOwnerId person.id.getId
           QFleetRCAssociation.deleteByFleetOwnerId person.id
           QFleetDriverAssociation.deleteByFleetOwnerId person.id.getId
@@ -108,7 +100,7 @@ deleteDriver merchantShortId reqDriverId = do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
           driverDeleteCheck <- validateDriver merchant person (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
           when driverDeleteCheck $ throwError $ InvalidRequest "Driver can't be deleted"
-          checkDriverActiveAssociations person.id
+          SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetDriver person.id)
           -- this function uses tokens from db, so should be called before transaction
           Auth.clearDriverSession person.id
           -- Esq.runTransaction $ do

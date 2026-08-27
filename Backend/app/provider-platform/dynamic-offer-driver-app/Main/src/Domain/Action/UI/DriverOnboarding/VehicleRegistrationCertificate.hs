@@ -324,13 +324,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     updateExistingRCFleetOwnerIfEnabled transporterConfig regNumber fleetOwnerId = do
       when (fromMaybe False transporterConfig.linkFleetToUnVerifiedExistingRC) $ do
         mbExistingRC <- VRCExtra.findLastVehicleRCWrapper regNumber
-        whenJust mbExistingRC $ \existingRC -> do
-          now <- getCurrentTime
-          let updatedRC = existingRC {DVRC.fleetOwnerId = Just fleetOwnerId.getId}
-          void $ RCQuery.upsert updatedRC
-          mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId updatedRC.id now
-          when (isNothing mbFleetAssoc) $
-            createFleetRCAssociationIfPossible transporterConfig fleetOwnerId updatedRC
+        whenJust mbExistingRC $ \existingRC -> linkRCToFleet transporterConfig fleetOwnerId existingRC
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel mbVehicleCategory mbVehicleClass =
       Verification.RCVerificationResponse
@@ -674,7 +668,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                 Nothing
           -- Create associations always
           case person.role of
-            Person.FLEET_OWNER -> do
+            role | isFleetRole role -> do
               mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
               when (isNothing mbFleetAssoc) $ do
                 createFleetRCAssociationIfPossible transporterConfig person.id rc

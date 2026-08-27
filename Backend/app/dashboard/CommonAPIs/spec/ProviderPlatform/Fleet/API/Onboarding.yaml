@@ -183,7 +183,7 @@ types:
   MediaInfo:
     title: Text
     description: Maybe Text
-    url: Text
+    url: Maybe Text
     thumbnailUrl: Maybe Text
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
