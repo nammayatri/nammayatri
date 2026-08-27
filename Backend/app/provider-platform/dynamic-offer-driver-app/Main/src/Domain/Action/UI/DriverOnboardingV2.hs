@@ -851,78 +851,99 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       throwError $ DocumentAlreadyValidated "PAN"
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SDO.validateIndividualPANCheck transporterConfig person req.panNumber
-  (verificationStatus, mbNameFromGovtDB) <-
-    if isDigiLockerFlow
-      then pure (Documents.VALID, Nothing)
-      else case mbPanVerificationService of
-        Just VI.HyperVerge -> callHyperVerge
-        Just VI.Idfy -> callIdfy transporterConfig person.id.getId
-        _ -> pure (Documents.VALID, Nothing)
+  panDocConfig <-
+    getOneConfig
+      ( DocumentVerificationConfigDimensions
+          { merchantOperatingCityId = merchantOpCityId.getId,
+            documentType = Just DTO.PanCard,
+            vehicleCategory = Just DVC.CAR
+          }
+      )
+      Nothing
+      >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
+  let isHyperVergeFlow = mbPanVerificationService == Just VI.HyperVerge
+      skipProviderValidation =
+        not isDigiLockerFlow
+          && not isHyperVergeFlow
+          && fromMaybe False panDocConfig.doNotValidateDuringOnboarding
+  if skipProviderValidation
+    then do
+      mbDriverPanCard <- QDPC.findByDriverId personId
+      panCardDetails <- buildPanCard merchantId person req Documents.PENDING (Just merchantOpCityId)
+      QDPC.upsertPanRecord panCardDetails mbDriverPanCard
+    else do
+      (verificationStatus, mbNameFromGovtDB) <-
+        if isDigiLockerFlow
+          then pure (Documents.VALID, Nothing)
+          else case mbPanVerificationService of
+            Just VI.HyperVerge -> callHyperVerge
+            Just VI.Idfy -> callIdfy transporterConfig person.id.getId
+            _ -> pure (Documents.VALID, Nothing)
 
-  let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
-  mbDriverPanCard <- QDPC.findByDriverId personId
-  panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
-  QDPC.upsertPanRecord panCardDetails mbDriverPanCard
-  let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
-  unless allowPanAadhaarLink $
-    logInfo $
-      "PanAadhaarLink postDriverRegisterPancard: skipped (allowPanAadhaarLinkage=false) driverId="
-        <> personId.getId
-  when allowPanAadhaarLink $ do
-    mdriverPanCard <- QDPC.findByDriverId personId
-    when (isNothing mdriverPanCard) $
-      logInfo $
-        "PanAadhaarLink postDriverRegisterPancard: skipped (no DriverPanCard row yet after upsert — unexpected) driverId="
-          <> personId.getId
-    whenJust mdriverPanCard $ \driverPanCard -> do
-      panNumber <- decrypt driverPanCard.panCardNumber
-      mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
-      mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
-      when (isNothing mbAadhaarNumber) $
+      let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
+      mbDriverPanCard <- QDPC.findByDriverId personId
+      panCardDetails <- buildPanCard merchantId person updatedReq verificationStatus (Just merchantOpCityId)
+      QDPC.upsertPanRecord panCardDetails mbDriverPanCard
+      let allowPanAadhaarLink = fromMaybe True transporterConfig.allowPanAadhaarLinkage
+      unless allowPanAadhaarLink $
         logInfo $
-          "PanAadhaarLink postDriverRegisterPancard: skipped (no aadhaarNumber; Aadhaar not on file or field empty) driverId="
+          "PanAadhaarLink postDriverRegisterPancard: skipped (allowPanAadhaarLinkage=false) driverId="
             <> personId.getId
-            <> " hasAadhaarRow="
-            <> show (isJust mbAadhaarCard)
-      case req.nameOnCard of
-        Just name_ -> void $ PersonQuery.updateName name_ person.id
-        Nothing -> pure ()
-      whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-        let panAadhaarLinkReq = VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
-        logInfo $
-          "PanAadhaarLink postDriverRegisterPancard: calling verifyPanAadhaarLinkAsync driverId="
-            <> personId.getId
-            <> " req="
-            <> show panAadhaarLinkReq
-        verifyRes <-
-          Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId panAadhaarLinkReq
-        logInfo $
-          "PanAadhaarLink postDriverRegisterPancard: verifyPanAadhaarLinkAsync returned requestor="
-            <> show verifyRes.requestor
-            <> " requestId="
-            <> verifyRes.requestId
-            <> " driverId="
-            <> personId.getId
-        case verifyRes.requestor of
-          VerificationTypes.Idfy -> do
-            encPan <- encrypt panNumber
-            now <- getCurrentTime
-            ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
-            IVQuery.create ivEntity
+      when allowPanAadhaarLink $ do
+        mdriverPanCard <- QDPC.findByDriverId personId
+        when (isNothing mdriverPanCard) $
+          logInfo $
+            "PanAadhaarLink postDriverRegisterPancard: skipped (no DriverPanCard row yet after upsert — unexpected) driverId="
+              <> personId.getId
+        whenJust mdriverPanCard $ \driverPanCard -> do
+          panNumber <- decrypt driverPanCard.panCardNumber
+          mbAadhaarCard <- QAadhaarCard.findByPrimaryKey person.id
+          mbAadhaarNumber <- traverse decrypt (mbAadhaarCard >>= (.aadhaarNumber))
+          when (isNothing mbAadhaarNumber) $
             logInfo $
-              "PanAadhaarLink postDriverRegisterPancard: IdfyVerification row created requestId="
-                <> verifyRes.requestId
-                <> " driverId="
+              "PanAadhaarLink postDriverRegisterPancard: skipped (no aadhaarNumber; Aadhaar not on file or field empty) driverId="
                 <> personId.getId
-          _ -> do
-            logError $
-              "PanAadhaarLink postDriverRegisterPancard: no IdfyVerification row — requestor is not Idfy requestor="
+                <> " hasAadhaarRow="
+                <> show (isJust mbAadhaarCard)
+          case req.nameOnCard of
+            Just name_ -> void $ PersonQuery.updateName name_ person.id
+            Nothing -> pure ()
+          whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+            let panAadhaarLinkReq = VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
+            logInfo $
+              "PanAadhaarLink postDriverRegisterPancard: calling verifyPanAadhaarLinkAsync driverId="
+                <> personId.getId
+                <> " req="
+                <> show panAadhaarLinkReq
+            verifyRes <-
+              Verification.verifyPanAadhaarLinkAsync person.merchantId merchantOpCityId panAadhaarLinkReq
+            logInfo $
+              "PanAadhaarLink postDriverRegisterPancard: verifyPanAadhaarLinkAsync returned requestor="
                 <> show verifyRes.requestor
                 <> " requestId="
                 <> verifyRes.requestId
                 <> " driverId="
                 <> personId.getId
-            throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
+            case verifyRes.requestor of
+              VerificationTypes.Idfy -> do
+                encPan <- encrypt panNumber
+                now <- getCurrentTime
+                ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
+                IVQuery.create ivEntity
+                logInfo $
+                  "PanAadhaarLink postDriverRegisterPancard: IdfyVerification row created requestId="
+                    <> verifyRes.requestId
+                    <> " driverId="
+                    <> personId.getId
+              _ -> do
+                logError $
+                  "PanAadhaarLink postDriverRegisterPancard: no IdfyVerification row — requestor is not Idfy requestor="
+                    <> show verifyRes.requestor
+                    <> " requestId="
+                    <> verifyRes.requestId
+                    <> " driverId="
+                    <> personId.getId
+                throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
   return Success
   where
     getImage :: Id Image.Image -> Flow Text

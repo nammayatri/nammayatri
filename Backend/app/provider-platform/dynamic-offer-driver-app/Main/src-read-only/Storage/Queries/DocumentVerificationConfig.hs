@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.dependencyDocumentType dependencyDocumentType,
       Se.Set Beam.description description,
       Se.Set Beam.disableWarning disableWarning,
+      Se.Set Beam.doNotValidateDuringOnboarding doNotValidateDuringOnboarding,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
       Se.Set Beam.documentCategory documentCategory,
       Se.Set Beam.documentFieldsJSON (mkDocumentFieldsJSON documentFields),
