@@ -760,10 +760,11 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       if isVat
         then do
           let rideEarningComponents =
-                [ (baseFare, walletReferenceBaseRide),
+                [ (baseFare, walletReferenceBaseRide), -- includes payment charge if Payment Customer
                   (taxAmount, if isOnline then taxRefOnline else taxRefCash),
                   (tollWithVat, walletReferenceTollCharges),
                   (parkingWithVat, walletReferenceParkingCharges)
+                  -- if PAYMENT_CUSTOMER then (paymentCharge, paymentChargeRef) else []
                 ]
           forM_ rideEarningComponents postEarning
         else do
@@ -814,8 +815,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
           commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash
-          onlineCommissionPaidOutDirectly = isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
-          shouldReverseCommissionWalletDebit = onlineCommissionPaidOutDirectly || commissionAlreadyCollectedAtBooth
           commissionInvoiceConfig =
             InvoiceConfig
               { invoiceType = BeckInvoice.Commission,
@@ -856,14 +855,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         when (cancellationCommissionVat > 0) $
           void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT Nothing
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
-        when shouldReverseCommissionWalletDebit $ do
-          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (commissionVatAmount > 0) $
-            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform Nothing
+        when commissionAlreadyCollectedAtBooth $ do          
+          void $ transfer SellerRevenue OwnerLiability (commissionBaseAmount + fromMaybe 0 commissionVatAmount) walletReferenceDeductedAtPaymentByPlatform Nothing          
           when (cancellationCommissionBase > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionBase walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (cancellationCommissionVat > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionVat walletReferenceDeductedAtPaymentByPlatform Nothing
+            void $ transfer SellerRevenue OwnerLiability (cancellationCommissionBase + fromMaybe 0 cancellationCommissionVat) walletReferenceDeductedAtPaymentByPlatform Nothing          
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)

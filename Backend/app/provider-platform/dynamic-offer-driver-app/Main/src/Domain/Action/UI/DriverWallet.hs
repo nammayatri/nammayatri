@@ -384,6 +384,7 @@ generateMonthBuckets startDay endDay =
            in (firstDay, lastDay) : step next
    in step (sy, sm)
 
+-- todo add enum here for addition deduction in earning.
 referenceTypeToItemName :: Text -> Text
 referenceTypeToItemName ref
   | ref == walletReferenceBaseRide = "Ride Earnings"
@@ -409,7 +410,6 @@ referenceTypeToItemName ref
   | ref == walletReferenceCommissionVATCash = "Commission VAT (Cash)"
   | ref == walletReferenceCancellationCommission = "Cancellation Commission"
   | ref == walletReferenceCancellationCommissionVAT = "Cancellation Commission VAT"
-  | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
   | otherwise = ref
 
 --------------------------------------------------------------------------------

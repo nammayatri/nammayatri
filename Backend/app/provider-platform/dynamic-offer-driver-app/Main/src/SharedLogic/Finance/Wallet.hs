@@ -745,6 +745,7 @@ recordStripeChargeLedger ctx funder amount refType
     result <- runFinance ctx $ case funder of
       FundByPlatform -> void $ transfer BuyerAsset SellerExpense amount refType Nothing
       FundByCustomer -> do
+        -- owner liablity to seller liablity
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer BuyerAsset SellerRevenue amount refType Nothing
       FundByDriver -> do
