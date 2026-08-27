@@ -31,6 +31,7 @@ imports:
   ReprocessReq: SharedLogic.External.Nandi.Types
   ReprocessResult: SharedLogic.External.Nandi.Types
   RouteStopMappingExport: SharedLogic.External.Nandi.Types
+  VehicleUpsertRequest: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
   APISuccess: Kernel.Types.APISuccess
@@ -209,6 +210,9 @@ apis:
       auth: ApiAuthV2
       mandatoryQuery:
         vehicleCategory: VehicleCategory
+      query:
+        limit: Int
+        offset: Int
       response:
         type: "[Fleet]"
 
@@ -421,6 +425,46 @@ apis:
         vehicleCategory: VehicleCategory
       response:
         type: "[RouteStopMappingExport]"
+
+  - GET:
+      endpoint: /queryVehicle
+      name: TransitOperatorQueryVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        vehicleNo: Text
+        tagNumber: Text
+        fleetNo: Text
+      response:
+        type: "[Fleet]"
+
+  - POST:
+      endpoint: /upsertVehicles
+      name: TransitOperatorUpsertVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: "[VehicleUpsertRequest]"
+      response:
+        type: "[Fleet]"
+
+  - DELETE:
+      endpoint: /deleteVehicle
+      name: TransitOperatorDeleteVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        vehicleId: Text
+      response:
+        type: RowsAffectedResp
 
 types:
   DeviceVehicleMappingListRes:
