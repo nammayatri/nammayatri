@@ -225,7 +225,7 @@ recomputePostOfferAmount mbCtx offer = case mbCtx of
   _ -> pure offer.finalOrderAmount
 
 getSelectedOfferDetailsWithBasket ::
-  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -289,7 +289,8 @@ processRideOffer ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     BeamFlow m r,
-    PaymentBeamFlow.BeamFlow m r
+    PaymentBeamFlow.BeamFlow m r,
+    ClickhouseFlow m r
   ) =>
   Maybe DPayment.OfferStatsInput ->
   DRB.Booking ->
@@ -460,7 +461,7 @@ applyAutoApplyOverride autoApplyOfferCodes offer
           }
 
 listOffersForPerson ::
-  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
   Id Merchant.Merchant ->
   Person.Person ->
   Maybe HighPrecMoney ->
