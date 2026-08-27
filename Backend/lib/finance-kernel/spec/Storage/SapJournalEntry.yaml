@@ -59,7 +59,6 @@ SapJournalEntry:
   constraints:
     id: PrimaryKey
     batchId: "!SecondaryKey"
-    transactionType: "!SecondaryKey"
 
   queries:
     findById:

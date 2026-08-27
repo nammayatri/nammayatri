@@ -24,6 +24,7 @@ imports:
   ActorType: Lib.Finance.Core.Types
   SubscriptionCreditAllocation: Lib.Finance.Domain.Types.LedgerEntry
   TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
+  ReferenceType: Lib.Finance.Domain.Types.JournalEntryTransaction
   JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
   Image: Dashboard.Common
   Person: Dashboard.Common
@@ -323,6 +324,7 @@ apis:
         batchId: Text
         belnr: Text
         glNumber: Text
+        description: Text
       auth: ApiAuthV2
       response:
         type: SapJournalListRes
@@ -336,7 +338,8 @@ apis:
       query:
         limit: Int
         offset: Int
-        subscriptionId: Text
+        referenceId: Text
+        description: Text
       auth: ApiAuthV2
       response:
         type: SapJournalTransactionsRes
@@ -890,10 +893,12 @@ types:
     - creditAmount: HighPrecMoney
     - currency: Text
     - description: Text
-    - subscriptionId: Maybe Text
+    - referenceId: Maybe Text
+    - referenceType: Maybe ReferenceType
     - creationDate: UTCTime
     - createdBy: Text
 
+  # ----- TDS Reimbursement -----
   TdsReimbursementQuarter:
     - enum: "Q1, Q2, Q3, Q4"
     - derive: "HttpInstance"

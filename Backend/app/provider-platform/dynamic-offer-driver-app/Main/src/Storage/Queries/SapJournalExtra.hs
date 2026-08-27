@@ -21,10 +21,11 @@ findByMerchantIdWithFilters ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   m [Domain.SapJournalEntry]
-findByMerchantIdWithFilters merchantId merchantOperatingCityId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber mbLimit mbOffset = do
+findByMerchantIdWithFilters merchantId merchantOperatingCityId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber mbDescription mbLimit mbOffset = do
   let limitVal = fromIntegral $ min 100 $ fromMaybe 20 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
@@ -46,6 +47,7 @@ findByMerchantIdWithFilters merchantId merchantOperatingCityId mbDateFrom mbDate
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bid -> entry.batchId B.==?. B.val_ bid) mbBatchId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\belnr -> entry.belnr B.==?. B.val_ (Just belnr)) mbBelnr
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\gl -> B.sqlBool_ ((B.customExpr_ (\glCol glVal -> glCol <> " @> ARRAY[" <> glVal <> "]::text[]") :: B.QExpr Postgres s (Maybe [Text]) -> B.QExpr Postgres s Text -> B.QExpr Postgres s Bool) entry.glNumber (B.val_ gl))) mbGlNumber
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\description -> entry.description B.==?. B.val_ description) mbDescription
                   )
                   (B.all_ (BeamCommon.sapJournalEntry BeamCommon.atlasDB))
   case res of
