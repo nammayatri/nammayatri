@@ -133,6 +133,7 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 import Utils.Common.Cac.KeyNameConstants
+import Utils.Common.Fallback (withFallback)
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -1125,7 +1126,7 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
         If the pickup location is in the operating city, then return the city.
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
-      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions
+      geoms <- withFallback "getNearestOperatingAndSourceCity:findGeometriesContaining" (B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions) (pure [])
       case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
@@ -1147,7 +1148,7 @@ getDestinationCity merchant dropLatLong = do
   case geoRestriction of
     Unrestricted -> return (CityState {city = merchant.city, state = merchant.state}, Nothing)
     Regions regions -> do
-      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions
+      geoms <- withFallback "getDestinationCity:findGeometriesContaining" (B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions) (pure [])
       case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case

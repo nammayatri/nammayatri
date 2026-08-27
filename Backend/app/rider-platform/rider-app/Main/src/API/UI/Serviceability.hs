@@ -94,8 +94,7 @@ checkForIsInterCity ::
   BPPInternal.IsIntercityReq ->
   FlowHandler BPPInternal.IsIntercityResp
 checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  eitherResp <- try @_ @SomeException (BPPInternal.getIsInterCity merchant req)
+  eitherResp <- try @_ @SomeException (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId) >>= \merchant -> BPPInternal.getIsInterCity merchant req)
   case eitherResp of
     Left err -> do
       -- BPP geo-restriction is expected; a real BPP outage still surfaces via the

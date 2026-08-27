@@ -61,13 +61,18 @@ findpersonENListWithFallBack :: (BeamFlow m r, Metrics.CoreMetrics m) => Id Pers
 findpersonENListWithFallBack personId mbPerson = do
   personENList <- withFallback "findpersonENListWithFallBack" (Lib.findAllByPersonId (cast personId)) (pure [])
   let isUpdated = any (\item -> isJust (SafetyPDEN.shareTripWithEmergencyContactOption item)) personENList
-  if isUpdated
+  if isUpdated || null personENList
     then return personENList
-    else do
-      person <- maybe (runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound (getId personId))) return mbPerson
-      let safetyOpt = toSafetyRideShare <$> person.shareTripWithEmergencyContactOption
-      Lib.updateShareTripWithEmergencyContactOptions (cast personId) safetyOpt
-      return $ map (\p -> p {SafetyPDEN.shareTripWithEmergencyContactOption = safetyOpt}) personENList
+    else
+      withFallback
+        "findpersonENListWithFallBack:updateShareTripWithEmergencyContactOptions"
+        ( do
+            person <- maybe (runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound (getId personId))) return mbPerson
+            let safetyOpt = toSafetyRideShare <$> person.shareTripWithEmergencyContactOption
+            Lib.updateShareTripWithEmergencyContactOptions (cast personId) safetyOpt
+            return $ map (\p -> p {SafetyPDEN.shareTripWithEmergencyContactOption = safetyOpt}) personENList
+        )
+        (return personENList)
 
 makePersonDefaultEmergencyNumberAPIEntity :: Bool -> SafetyPDEN.DecryptedPersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumberAPIEntity
 makePersonDefaultEmergencyNumberAPIEntity onRide SafetyPDEN.PersonDefaultEmergencyNumber {..} =

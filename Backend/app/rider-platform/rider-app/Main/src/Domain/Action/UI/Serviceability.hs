@@ -36,6 +36,7 @@ import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -52,6 +53,7 @@ import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
+import Utils.Common.Fallback (withFallback)
 
 data RestrictedHours = RestrictedHours
   { startTime :: Maybe TimeOfDay,
@@ -208,7 +210,8 @@ getNearestOperatingAndCurrentCity ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     MonadFlow m,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Metrics.CoreMetrics m
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -225,7 +228,8 @@ getNearestOperatingAndCurrentCity' ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     MonadFlow m,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Metrics.CoreMetrics m
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -241,7 +245,7 @@ getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) should
     upsertPersonCityInformation personId merchantId shouldUpdatePerson (Just nearestOperatingCity.city)
   return mbNearestOpAndCurrentCity
 
-getNearestOperatingCityHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant.Merchant -> GeoRestriction -> LatLong -> CityState -> m (Maybe NearestOperatingAndCurrentCity)
+getNearestOperatingCityHelper :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Merchant.Merchant -> GeoRestriction -> LatLong -> CityState -> m (Maybe NearestOperatingAndCurrentCity)
 getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState = do
   case geoRestriction of
     Unrestricted -> do
@@ -252,7 +256,7 @@ getNearestOperatingCityHelper merchant geoRestriction latLong merchantCityState 
         If the pickup location is in the operating city, then return the city.
         If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
       -}
-      geoms <- B.runInReplica $ findGeometriesContaining latLong regions
+      geoms <- withFallback "getNearestOperatingCityHelper:findGeometriesContaining" (B.runInReplica $ findGeometriesContaining latLong regions) (pure [])
       case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
         [] ->
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
