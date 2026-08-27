@@ -31,6 +31,7 @@ import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -53,7 +54,7 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicle = do
   where
     findAndCache = flip whenJust cacheMerchantIdDomainAndVehicle /=<< Queries.findByMerchantIdDomainAndVehicle (Just merchantId) domain vehicle
 
-findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Id Merchant -> Text -> Enums.VehicleCategory -> m (Maybe BecknConfig)
+findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id MerchantOperatingCity -> Id Merchant -> Text -> Enums.VehicleCategory -> m (Maybe BecknConfig)
 findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCityId merchantId domain vehicle = do
   Hedis.safeGet (makeMerchantIdDomainVehicleAndMerchantOperatingCityIdKey merchantOperatingCityId merchantId domain vehicle) >>= \case
     Just a -> return a

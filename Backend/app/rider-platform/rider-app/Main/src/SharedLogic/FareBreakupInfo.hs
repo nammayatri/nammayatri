@@ -19,10 +19,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FareBreakupInfo as QFareBreakupInfo
+import Utils.Common.Fallback (withFallback)
 
 -- | Canonical description for the rider's tip line in a RIDE fare breakup. This is exactly the
 -- title the BPP emits over Beckn for a tip (BUYER_ADDITIONAL_AMOUNT), so the line the driver sends
@@ -54,13 +56,13 @@ findFareBreakupsFromInfo entityId entityType =
   fmap (map (itemToFareBreakup entityId entityType)) <$> findFareBreakupItems entityId entityType
 
 getFareBreakupsWithFallback ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Metrics.CoreMetrics m) =>
   Text ->
   DFareBreakup.FareBreakupEntityType ->
   m [DFareBreakup.FareBreakup] ->
   m [DFareBreakup.FareBreakup]
 getFareBreakupsWithFallback entityId entityType oldQuery = do
-  mbFromInfo <- findFareBreakupsFromInfo entityId entityType
+  mbFromInfo <- withFallback "getFareBreakupsWithFallback" (findFareBreakupsFromInfo entityId entityType) (pure Nothing)
   maybe oldQuery pure mbFromInfo
 
 fareBreakupToItem :: DFareBreakup.FareBreakup -> FareBreakupInfoItem

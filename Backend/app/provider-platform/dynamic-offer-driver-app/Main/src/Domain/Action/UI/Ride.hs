@@ -70,6 +70,7 @@ import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Tools.Metrics.CoreMetrics as CM
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
@@ -111,6 +112,7 @@ import qualified Text.Read as TR (read)
 import Tools.Error
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
+import Utils.Common.Fallback (withFallback)
 
 data DeliveryImageUploadReq = DeliveryImageUploadReq
   { file :: FilePath,
@@ -186,7 +188,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r, CM.CoreMetrics m) =>
   Id DP.Person ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Maybe Integer ->
@@ -210,7 +212,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
     (False, Just True) -> return []
-    _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
+    _ -> withFallback "listDriverRides:findAllByDriverId" (QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays) (pure [])
 
   driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
   filteredRides <- case mbFleetOwnerId of

@@ -90,6 +90,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPassExtra as QPurchasedPass
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
+import Utils.Common.Fallback (withFallback)
 
 data StopReq = StopReq
   { gps :: LatLong,
@@ -215,7 +216,7 @@ getBookingListImpl _ (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mb
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
-  (rbList, allbookings) <- QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
+  (rbList, allbookings) <- withFallback "getBookingListImpl:findAllByRiderIdAndRide" (QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId) (pure ([], []))
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do

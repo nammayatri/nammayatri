@@ -54,6 +54,7 @@ import Kernel.External.Notification.Types (NotificationService (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
 import Kernel.Prelude hiding (unwords)
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics as CM
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
@@ -71,6 +72,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
+import Utils.Common.Fallback (withFallback)
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
@@ -150,13 +152,19 @@ instance Default FCMReq where
 createFCMReq :: Text -> Text -> FCM.FCMEntityType -> (FCMReq -> FCMReq) -> FCMReq
 createFCMReq notificationKey entityId entityType modifier = modifier $ def {entityId = entityId, notificationKey = notificationKey, entityType = entityType}
 
-findFCMConfigWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id Person -> m FCMConfig
+findFCMConfigWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CM.CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Id Person -> m FCMConfig
 findFCMConfigWithFallback merchantOpCityId personId = do
-  driver <- QPerson.findById personId
-  mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
-  case mbClientConfig of
-    Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
-    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+  let transporterFcmConfig = getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) <&> (.fcmConfig)
+  withFallback
+    "findFCMConfigWithFallback"
+    ( do
+        driver <- QPerson.findById personId
+        mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (driver >>= (.clientDevice) <&> (.deviceType)) (fromMaybe "" (driver >>= (.clientId)))
+        case mbClientConfig of
+          Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure fcmCfg
+          Nothing -> transporterFcmConfig
+    )
+    transporterFcmConfig
 
 -- dynamicFCMNotifyPerson
 --     merchantOpCityId

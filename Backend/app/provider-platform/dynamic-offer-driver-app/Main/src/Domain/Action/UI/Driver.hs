@@ -1026,7 +1026,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
-          mbFleetAssociation <- QFDA.findByDriverId driverId True
+          mbFleetAssociation <- withFallback "setActivity:findByDriverId" (QFDA.findByDriverId driverId True) (pure Nothing)
           let (ownerType, ownerId) = case mbFleetAssociation of
                 Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
                 Nothing -> (DSP.DRIVER, personId.getId)
@@ -1964,7 +1964,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             searchReq <- QSR.findByIdOutageTolerant searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
-              mbActiveBooking <- runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
+              mbActiveBooking <- withFallback "respondQuote:findByTransactionIdAndStatuses" (runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]) (pure Nothing)
               whenJust mbActiveBooking $ \_ ->
                 throwError RideRequestAlreadyAccepted
             merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
