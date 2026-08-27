@@ -16,6 +16,7 @@ module Domain.Action.UI.DriverOnboarding.PanVerification
   ( DriverPanReq (..),
     DriverPanRes,
     verifyPan,
+    verifyPanFlow,
     onVerifyPan,
     onVerifyPanAadhaarLink,
     verifyPanAadhaarLinkageIfAadhaarExists,
@@ -41,6 +42,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as ODC
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as Domain
@@ -71,6 +73,7 @@ import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificati
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
+import Storage.Queries.DriverInformationExtra (updateDynamicBlockedStateWithActivity)
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -276,7 +279,7 @@ castTextToDomainType panType = case panType of
   Just _ -> Just DPan.BUSINESS
   Nothing -> Nothing
 
-verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
+verifyPanFlow :: (ServiceFlow m r, MonadFlow m) => Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> m ()
 verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
   logDebug $ "verifyPanFlow: " <> show panNumber
   now <- getCurrentTime
@@ -326,7 +329,32 @@ onVerifyPanHandler person imageId1 imageId2 output = do
         -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
         finalStatus <- resolveFaceMatchVerificationStatus person panConfig imageId1 Nothing (Just details.inputPanNumber)
         DPQuery.updateVerificationStatus finalStatus person.id
-      when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
+      when (isvalid == Just False) $ do
+        DPQuery.updateVerificationStatus Documents.INVALID person.id
+        panDocCfg <-
+          getOneConfig
+            ( DocumentVerificationConfigDimensions
+                { merchantOperatingCityId = person.merchantOperatingCityId.getId,
+                  documentType = Just DTO.PanCard,
+                  vehicleCategory = Just CAR
+                }
+            )
+            Nothing
+            >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.PanCard))
+        when (fromMaybe False panDocCfg.doNotValidateDuringOnboarding) $
+          updateDynamicBlockedStateWithActivity
+            (cast person.id)
+            (Just "PAN verification failed")
+            Nothing
+            "PanWebhook:Idfy"
+            person.merchantId
+            "PanWebhook:Idfy"
+            person.merchantOperatingCityId
+            DTDBT.Application
+            True
+            Nothing
+            Nothing
+            DocumentInvalid
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
           QFOI.updatePanImage mEncryptedPanNumber (Just imageId1.getId) person.id
@@ -366,7 +394,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber verificatio
         panAadhaarLinkage = Nothing
       }
 
-mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
+mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m Domain.IdfyVerification
 mkIdfyVerificationEntity person imageId1 imageId2 driverDateOfBirth dateOfIssue nameOnCard requestId now imageExtractionValidation encryptedPan = do
   entityId <- generateGUID
   return $

@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.DocumentRegistration
     ValidateDocumentImageResponse (..),
     getOCRResultRC,
     getOCRResultDL,
+    getOCRResultPAN,
   )
 where
 
@@ -32,10 +33,11 @@ import Domain.Types.VehicleCategory
 import Environment
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SharedLogic.DriverOnboarding (convertUTCTimetoDate, isFleetRole, parseDateTime, preProcessDocumentIdentifier)
+import SharedLogic.DriverOnboarding (convertUTCTimetoDate, isFleetRole, parseDateTime, preProcessDocumentIdentifier, removeSpaceAndDash)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -101,6 +103,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
     else do
       case imageType of
         DVC.DriverLicense -> do
+          Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:DriverLicense:" <> personId.getId)
           resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
           if resp.provider == Just VT.InternalOCR
@@ -117,6 +120,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
               Nothing ->
                 return $ emptyValidateDocumentImageResponse imageId
         DVC.VehicleRegistrationCertificate -> do
+          Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:RegistrationCertificate:" <> personId.getId)
           resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           if resp.provider == Just VT.InternalOCR
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
@@ -137,6 +141,19 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
                       registrationDate = extractedRC.registrationDate,
                       ownerName = extractedRC.ownerName
                     }
+              Nothing ->
+                return $ emptyValidateDocumentImageResponse imageId
+        DVC.PanCard -> do
+          Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:PanCard:" <> personId.getId)
+          resp <- Verification.extractPanImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          if resp.provider == Just VT.InternalOCR
+            then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
+            else case resp.extractedPan of
+              Just extractedPan -> do
+                let documentNumber = removeSpaceAndDash <$> extractedPan.id_number
+                let nameOnCard = extractedPan.name_on_card
+                let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedPan.date_of_birth)
+                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, nameOnCard, dateOfBirth}
               Nothing ->
                 return $ emptyValidateDocumentImageResponse imageId
         _ -> return $ emptyValidateDocumentImageResponse imageId
@@ -211,5 +228,23 @@ getOCRResultDL personId merchantOpCityId mbImageId = do
           { documentNumber,
             nameOnCard,
             dateOfBirth,
+            ocrProvider = Just VT.InternalOCR
+          }
+
+getOCRResultPAN ::
+  Id Person.Person ->
+  Maybe Text ->
+  Flow ValidateDocumentImageResponse
+getOCRResultPAN personId mbImageId = do
+  mbPAN <- Verification.getOCRResultPAN personId.getId
+  let resolvedImageId = maybe (Id "") Id mbImageId
+  case mbPAN of
+    Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
+    Just pan ->
+      pure $
+        (emptyValidateDocumentImageResponse resolvedImageId)
+          { documentNumber = removeSpaceAndDash <$> pan.panNumber,
+            nameOnCard = pan.nameOnCard,
+            dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< pan.dateOfBirth),
             ocrProvider = Just VT.InternalOCR
           }
