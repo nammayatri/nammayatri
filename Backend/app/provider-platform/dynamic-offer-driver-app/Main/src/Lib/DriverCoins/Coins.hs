@@ -75,6 +75,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
@@ -629,7 +630,8 @@ validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToP
           fallbackDurationToPickup = Nothing,
           initialDisToPickup = initialDisToPickup,
           cancellationDisToPickup = cancellationDisToPickup,
-          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
+          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold,
+          includePickupJourney = PickupStallState.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
         }
   mbFaultVerdict <-
     CancellationFault.getOrComputeFaultVerdict ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $

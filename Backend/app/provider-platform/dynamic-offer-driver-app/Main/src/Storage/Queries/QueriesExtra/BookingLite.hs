@@ -83,6 +83,7 @@ data BookingLite = BookingLite
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     tripCategory :: Domain.Types.Common.TripCategory,
     startTime :: Kernel.Prelude.UTCTime,
+    isScheduled :: Kernel.Prelude.Bool,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -106,5 +107,6 @@ instance FromTType' BookingLiteTable BookingLite where
             vehicleServiceTier = vehicleVariant,
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
             startTime = startTime,
+            isScheduled = fromMaybe False isScheduled,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }

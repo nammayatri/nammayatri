@@ -153,7 +153,9 @@ cancel req merchant booking mbActiveSearchTry = do
       fork "record pickup stall on customer cancel" $ do
         mbJourney <- PickupStall.getPickupJourney ride
         PickupStall.flushPickupJourney ride Nothing
-        when (isNothing ride.pickupBehaviour) $
+        -- Behaviour Engine for scheduled rides is per-city opt-in; default = capture-only.
+        let scheduledBehaviourEngineOn = PickupStall.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
+        when (isNothing ride.pickupBehaviour && scheduledBehaviourEngineOn) $
           whenJust mbJourney $ \journey ->
             when (journey.behaviour `elem` [SRide.STALLED, SRide.MOVING_AWAY]) $
               PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault

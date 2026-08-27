@@ -91,6 +91,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
@@ -449,7 +450,8 @@ buildRideCancellationSignals booking ride transporterConfig cancellationDisToPic
         fallbackDurationToPickup = booking.dqDurationToPickup,
         initialDisToPickup = booking.distanceToPickup,
         cancellationDisToPickup = cancellationDisToPickup,
-        arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
+        arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold,
+        includePickupJourney = PickupStallState.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
       }
 
 -- | Dry-run twin of 'decideCancellationConsequences' for previews (driver penalty check,

@@ -531,12 +531,17 @@ data PickupDarkStage = PickupDarkStage
 
 data PickupNudgeChannel = OVERLAY | CHAT_MESSAGE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data PickupStallCaseConfig = PickupStallCaseConfig {stages :: [Domain.Types.TransporterConfig.PickupStallStage]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
     detourCreditSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     detourDisplacementMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     deviationAllowanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    etaFeasibilityConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
     progressThresholdMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    runBehaviourEngineForScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    runDistanceMonitorForScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     stages :: [Domain.Types.TransporterConfig.PickupStallStage],
     staleFixAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickIntervalSec :: Kernel.Prelude.Int
@@ -552,7 +557,7 @@ data PickupStallStage = PickupStallStage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE | REALLOCATE_ALL_RIDES deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
