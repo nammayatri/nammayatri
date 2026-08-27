@@ -50,6 +50,6 @@ instance B.Table SapJournalEntryT where
 
 type SapJournalEntry = SapJournalEntryT Identity
 
-$(enableKVPG ''SapJournalEntryT ['id] [['batchId], ['transactionType]])
+$(enableKVPG ''SapJournalEntryT ['id] [['batchId]])
 
 $(mkTableInstancesGenericSchema ''SapJournalEntryT "sap_journal_entry")
