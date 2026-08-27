@@ -31,8 +31,6 @@ module WhatsappBot.Ride
     bumpStage,
     buildTrackingLink,
     isValidBookingId,
-    cancelTriggers,
-    statusTriggers,
   )
 where
 
@@ -427,9 +425,3 @@ isValidBookingId :: Text -> Bool
 isValidBookingId b = not (T.null b) && T.all ok b
   where
     ok c = isAsciiUpper c || isAsciiLower c || isDigit c || c == '-' || c == '_'
-
-cancelTriggers :: [Text]
-cancelTriggers = ["cancel", "stop", "exit", "quit", "reset"]
-
-statusTriggers :: [Text]
-statusTriggers = ["status", "track", "where is my ride"]

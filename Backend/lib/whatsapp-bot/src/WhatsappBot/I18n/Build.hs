@@ -123,6 +123,8 @@ buildLanguageStringsM resolveField = do
   flexiRideEndedTmpl <- resolveField "wa_bot_flexiRideEnded"
   flexiRideCancelled' <- resolveField "wa_bot_flexiRideCancelled"
   flexiBookAnother' <- resolveField "wa_bot_flexiBookAnother"
+  getAppButton' <- resolveField "wa_bot_getAppButton"
+  getAppMessageTmpl <- resolveField "wa_bot_getAppMessage"
   flexiEndRideButton' <- resolveField "wa_bot_flexiEndRideButton"
   flexiEndOtpShareTmpl <- resolveField "wa_bot_flexiEndOtpShare"
   flexiEndOtpNotReady' <- resolveField "wa_bot_flexiEndOtpNotReady"
@@ -238,6 +240,8 @@ buildLanguageStringsM resolveField = do
         flexiRideEnded = \fareLine -> substitute flexiRideEndedTmpl [fareLine],
         flexiRideCancelled = flexiRideCancelled',
         flexiBookAnother = flexiBookAnother',
+        getAppButton = getAppButton',
+        getAppMessage = \url -> substitute getAppMessageTmpl [url],
         flexiEndRideButton = flexiEndRideButton',
         flexiEndOtpShare = \otp -> substitute flexiEndOtpShareTmpl [otp],
         flexiEndOtpNotReady = flexiEndOtpNotReady',

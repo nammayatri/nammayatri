@@ -48,6 +48,17 @@ data MetaBotCfg = MetaBotCfg
     flexiIntroVideoUrl :: Maybe Text,
     flexiSupportPhone :: Maybe Text,
     nyTrackingUrl :: Text,
+    -- App-download promo link, shown via the "Get the App" button on the
+    -- ride-completion message (WhatsappBot.Messages/Engine.hs) — same
+    -- per-merchant pattern as nyTrackingUrl above.
+    appDownloadUrl :: Text,
+    -- Trigger words checked against every inbound message, before anything
+    -- else (WhatsappBot.Engine's intercept chain) — previously hardcoded in
+    -- WhatsappBot.Ride. Per-merchant only; not per-language (still matched
+    -- against the raw lowercased input regardless of the customer's chosen
+    -- language, same as before).
+    cancelTriggers :: [Text],
+    statusTriggers :: [Text],
     -- Poll-loop tuning, per merchant instead of code-hardcoded (review ask:
     -- Adapter/Env.hs's mkBotConfig used to hardcode these). Required, not
     -- Maybe: meta_config has no production rows yet (table was never
