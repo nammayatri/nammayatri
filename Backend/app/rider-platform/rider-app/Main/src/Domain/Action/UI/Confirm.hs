@@ -30,6 +30,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -65,7 +66,8 @@ confirm ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->

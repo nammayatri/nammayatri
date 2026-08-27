@@ -46,6 +46,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -153,7 +154,8 @@ confirm ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    ClickhouseFlow m r
   ) =>
   DConfirmReq ->
   m DConfirmRes
