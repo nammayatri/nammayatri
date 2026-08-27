@@ -232,7 +232,11 @@ mkTnstcFare svc = do
               },
         categories =
           mkCategory ADULT adult :
-          maybe [] (\c -> [mkCategory CHILD c]) svc.svcChildFare,
+          catMaybes
+            [ mkCategory CHILD <$> nonZeroFare svc.svcChildFare,
+              mkCategory ADULT_SLEEPER <$> nonZeroFare svc.svcAdultSlpFare,
+              mkCategory CHILD_SLEEPER <$> nonZeroFare svc.svcChildSlpFare
+            ],
         fareDetails = Nothing,
         vehicleServiceTier =
           FRFSUtils.FRFSVehicleServiceTier
@@ -245,6 +249,9 @@ mkTnstcFare svc = do
             },
         fareQuoteType = Just DFRFSQuote.SingleJourney
       }
+
+nonZeroFare :: Maybe Double -> Maybe Double
+nonZeroFare = mfilter (> 0)
 
 tnstcClassToTier :: Text -> Text -> Spec.ServiceTierType
 tnstcClassToTier classId classDesc =

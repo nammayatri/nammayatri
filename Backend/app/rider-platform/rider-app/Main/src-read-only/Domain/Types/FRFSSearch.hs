@@ -32,6 +32,7 @@ data FRFSSearch = FRFSSearch
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isSingleLady :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyDate :: Kernel.Prelude.Maybe Data.Time.Day,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

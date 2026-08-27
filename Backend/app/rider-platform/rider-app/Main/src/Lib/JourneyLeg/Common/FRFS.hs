@@ -437,7 +437,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
           busLocationData = Just journeyLeg.busLocationData
-      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, journeyDate = Nothing, tripCategory = Nothing, ..}
+      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, journeyDate = Nothing, tripCategory = Nothing, isSingleLady = Nothing, ..}
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do
