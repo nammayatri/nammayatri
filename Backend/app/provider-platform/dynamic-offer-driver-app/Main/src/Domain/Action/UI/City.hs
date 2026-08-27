@@ -19,8 +19,10 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Auth
@@ -44,3 +46,24 @@ listCities mId = do
             subscription = maybe False (.subscription) mbTransporterConfig,
             ..
           }
+
+listCityMerchants :: Context.City -> Flow [DTC.CityMerchantRes]
+listCityMerchants reqCity = do
+  merchantOperatingCities <- CQMOC.findAllByCity reqCity
+  catMaybes <$> mapM mkCityMerchantRes merchantOperatingCities
+  where
+    mkCityMerchantRes MerchantOperatingCity {..} = do
+      mbMerchant <- CQM.findById merchantId
+      return $
+        mbMerchant >>= \merchant ->
+          if not merchant.enabled
+            then Nothing
+            else
+              Just
+                DTC.CityMerchantRes
+                  { merchantId = merchantId.getId,
+                    merchantShortId = merchantShortId.getShortId,
+                    merchantName = merchant.name,
+                    countryDialCode = fromMaybe "+91" countryDialCode,
+                    ..
+                  }

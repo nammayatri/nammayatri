@@ -19,6 +19,17 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.External.Types (Language)
 import Kernel.Types.Beckn.Context as Context
 
+data CityMerchantRes = CityMerchantRes
+  { merchantId :: Text,
+    merchantShortId :: Text,
+    merchantName :: Text,
+    countryDialCode :: Text,
+    supportNumber :: Maybe Text,
+    supportEmails :: Maybe [Text],
+    language :: Language
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data CityRes = CityRes
   { code :: Context.City,
     name :: Text,

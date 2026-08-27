@@ -65,6 +65,13 @@ findAllByMerchantId merchantId =
       Just a -> return a
       Nothing -> cacheMerchantId merchantId /=<< Queries.findAllByMerchantId merchantId
 
+findAllByCity :: (CacheFlow m r, EsqDBFlow m r) => Context.City -> m [MerchantOperatingCity]
+findAllByCity city =
+  IM.withInMemCache [makeAllByCityKey city] inMemCacheTtl $
+    Hedis.safeGet (makeAllByCityKey city) >>= \case
+      Just a -> return a
+      Nothing -> cacheAllByCity city /=<< QueriesExtra.findAllByCity city
+
 findAllByMerchantShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m [MerchantOperatingCity]
 findAllByMerchantShortId merchantShortId =
   IM.withInMemCache [makeMerchantShortIdKey merchantShortId] inMemCacheTtl $
@@ -105,6 +112,11 @@ cacheMerchantId merchantId merchantOperatingCities = do
   let merchantIdKey = makeMerchantIdKey merchantId
   Hedis.setExp merchantIdKey merchantOperatingCities expTime
 
+cacheAllByCity :: CacheFlow m r => Context.City -> [MerchantOperatingCity] -> m ()
+cacheAllByCity city merchantOperatingCities = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeAllByCityKey city) merchantOperatingCities expTime
+
 cacheMerchantShortId :: CacheFlow m r => ShortId Merchant -> [MerchantOperatingCity] -> m ()
 cacheMerchantShortId merchantShortId merchantOperatingCities = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -133,6 +145,9 @@ cachedMerchantOperatingCityCity merchantOperatingCity = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantOperatingCityCityKey = makeMerchantOperatingCityCityKey merchantOperatingCity.city
   Hedis.setExp merchantOperatingCityCityKey merchantOperatingCity expTime
+
+makeAllByCityKey :: Context.City -> Text
+makeAllByCityKey city = "CachedQueries:MerchantOperatingCity:AllByCity-" <> show city
 
 makeMerchantOperatingCityCityKey :: Context.City -> Text
 makeMerchantOperatingCityCityKey city = "CachedQueries:MerchantOperatingCity:City-" <> show city

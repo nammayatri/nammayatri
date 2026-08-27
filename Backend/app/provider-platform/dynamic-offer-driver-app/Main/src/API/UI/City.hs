@@ -23,6 +23,7 @@ import qualified Domain.Types.City as DTC
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -33,10 +34,16 @@ type API =
     :> ( Capture "merchantId" (Id DM.Merchant)
            :> "list"
            :> Get '[JSON] [DTC.CityRes]
+           :<|> Capture "city" Context.City
+             :> "merchants"
+             :> Get '[JSON] [DTC.CityMerchantRes]
        )
 
 handler :: FlowServer API
-handler = listCities
+handler = listCities :<|> listCityMerchants
 
 listCities :: Id DM.Merchant -> FlowHandler [DTC.CityRes]
 listCities = withFlowHandlerAPI . DCity.listCities
+
+listCityMerchants :: Context.City -> FlowHandler [DTC.CityMerchantRes]
+listCityMerchants = withFlowHandlerAPI . DCity.listCityMerchants
