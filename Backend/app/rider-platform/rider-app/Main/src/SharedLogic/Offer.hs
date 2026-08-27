@@ -564,7 +564,7 @@ mkOfferListReq person price = do
 -------------------------------------------------------------------------------------------------------
 
 offerListWithBasket ::
-  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -637,14 +637,15 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           pure (productId, filteredOffers)
   pure $ map (\(productId, resp) -> (productId, overrideOfferListRespAutoApply autoApplyOfferCodes resp)) productOffers
 
-applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
+applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
 applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
   if null logics
     then pure offerListResp
     else do
-      result <- LYTUtils.runLogicsWithDebugLog logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount)
+      let mbEntityTransactionId = (mbBookingEntity <&> (.transactionId)) <|> (mbSearchReqEntity <&> (.id.getId))
+      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS mbEntityTransactionId logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount)
       case A.fromJSON result.result :: A.Result OffersFraudChecksResp of
         A.Success logicResult -> do
           let mbFailureReason = (T.strip <$> logicResult.failureReason) >>= (\reason -> if T.null reason then Nothing else Just reason)
