@@ -56,7 +56,7 @@ flowchart LR
 - Dedicated table `ledger_adjustment_request` — **not** reusing fleet `AlertRequest` / `approval_request`.
 - Spec + domain live in **dynamic-offer-driver-app** (not `finance-kernel/spec` as the build-plan sketch suggested) — keep that placement.
 - Business logic in [`SharedLogic/Finance/LedgerAdjustment.hs`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/Finance/LedgerAdjustment.hs); post via `Finance.adjustment` (LAW-1 one balanced entry; LAW-2 corrections = reversal, not UPDATE).
-- Status flow today: `PENDING_APPROVAL` → `POSTED` | `POST_FAILED` | `REJECTED`. Spec also has unused `APPROVED` / `approvedAt` — keep for now (see Open questions).
+- Status flow today: `PENDING_APPROVAL` → `POSTED` | `POST_FAILED` | `REJECTED`. `APPROVED` / `approvedAt` — unused, removed from spec.
 - Maker ≠ checker enforced on approve/reject; Redis locks on submit/approve/reject; duplicate guard on `referenceId` for in-flight/posted statuses.
 - RBAC MVP: `ApiEntity.FINANCE_MANAGEMENT` + access-matrix rows for adjustment actions; no new `FINANCE_MAKER` / `FINANCE_CHECKER` roles unless product requires (see Open questions).
 
@@ -96,7 +96,7 @@ LedgerAdjustmentRequest:
     AdjustmentDirection:
       enum: "Credit,Debit"
     AdjustmentRequestStatus:
-      enum: "PENDING_APPROVAL,APPROVED,REJECTED,POSTED,POST_FAILED"  # APPROVED unused in runtime today — see Open questions
+      enum: "PENDING_APPROVAL,REJECTED,POSTED,POST_FAILED"
   fields:
     id: Id LedgerAdjustmentRequest
     personId: Id Person
@@ -233,7 +233,7 @@ Credit posts From→To via `Finance.adjustment`; Debit reverses amount (same acc
     - personId: Id Person
     - category: AdjustmentCategory
     - direction: AdjustmentDirection
-    - amount: Maybe PriceAPIEntity
+    - amount: PriceAPIEntity
     - description: Maybe Text
     - referenceType: Text
     - referenceId: Maybe Text
@@ -324,5 +324,4 @@ No `Lib/Finance/Adjustment/*` module — logic stays in driver-app SharedLogic (
 ## Open questions
 
 1. **FINANCE_MAKER / FINANCE_CHECKER** new roles vs configure existing roles + access matrix only.
-2. **`APPROVED` / `approvedAt`** — present in storage + API specs and YAML TODO suggests removal, but runtime never writes `APPROVED` (approve goes straight `PENDING_APPROVAL` → `POSTED` / `POST_FAILED`; `approvedAt` is set together with `postedAt` on success only). Keep for now in case the flow later splits “checker accepted” from “ledger posted”. Do **not** clean up until product confirms the status machine is final.
-3. **Misc Control account** — keep `SellerExpense` stand-in or introduce a dedicated AccountType when WS7 lands.
+2. **Misc Control account** — keep `SellerExpense` stand-in or introduce a dedicated AccountType when WS7 lands.

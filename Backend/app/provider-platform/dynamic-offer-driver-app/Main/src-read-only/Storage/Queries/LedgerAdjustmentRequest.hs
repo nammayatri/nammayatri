@@ -33,23 +33,22 @@ findByReferenceIdAndStatuses referenceId status = do findOneWithKV [Se.And [Se.I
 
 updateStatusAndChecker ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m ())
-updateStatusAndChecker status adminCheckerId adminCheckerName errorMessage approvedAt id = do
+  (Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m ())
+updateStatusAndChecker status adminCheckerId adminCheckerName errorMessage id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.adminCheckerId (Kernel.Types.Id.getId <$> adminCheckerId),
       Se.Set Beam.adminCheckerName adminCheckerName,
       Se.Set Beam.errorMessage errorMessage,
-      Se.Set Beam.approvedAt approvedAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusCheckerAndPostResult ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m ())
-updateStatusCheckerAndPostResult status adminCheckerId adminCheckerName errorMessage ledgerEntryId approvedAt postedAt id = do
+  (Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m ())
+updateStatusCheckerAndPostResult status adminCheckerId adminCheckerName errorMessage ledgerEntryId postedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
@@ -57,7 +56,6 @@ updateStatusCheckerAndPostResult status adminCheckerId adminCheckerName errorMes
       Se.Set Beam.adminCheckerName adminCheckerName,
       Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.ledgerEntryId (Kernel.Types.Id.getId <$> ledgerEntryId),
-      Se.Set Beam.approvedAt approvedAt,
       Se.Set Beam.postedAt postedAt,
       Se.Set Beam.updatedAt _now
     ]

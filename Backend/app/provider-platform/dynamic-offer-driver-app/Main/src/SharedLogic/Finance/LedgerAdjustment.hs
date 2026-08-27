@@ -92,7 +92,7 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = Ac
       mbExisting <-
         QLedgerAdjustmentRequest.findByReferenceIdAndStatuses
           (Just referenceId)
-          [DLA.PENDING_APPROVAL, DLA.APPROVED, DLA.POSTED, DLA.POST_FAILED] -- except REJECTED
+          [DLA.PENDING_APPROVAL, DLA.POSTED, DLA.POST_FAILED] -- except REJECTED
       whenJust mbExisting $ \_ ->
         throwError (LedgerAdjustmentAlreadyExists referenceId)
 
@@ -592,7 +592,6 @@ buildLedgerAdjustmentRequest adjustmentRequestId merchantOpCity personId categor
         ledgerEntryId = Nothing,
         merchantId = merchantOpCity.merchantId,
         merchantOperatingCityId = merchantOpCity.id,
-        approvedAt = Nothing,
         postedAt = Nothing,
         createdAt = now,
         updatedAt = now
@@ -656,7 +655,6 @@ toApiAdjustmentDirection = \case
 castAdjustmentRequestStatus :: API.AdjustmentRequestStatus -> DLA.AdjustmentRequestStatus
 castAdjustmentRequestStatus = \case
   API.PENDING_APPROVAL -> DLA.PENDING_APPROVAL
-  API.APPROVED -> DLA.APPROVED
   API.REJECTED -> DLA.REJECTED
   API.POSTED -> DLA.POSTED
   API.POST_FAILED -> DLA.POST_FAILED
@@ -664,7 +662,6 @@ castAdjustmentRequestStatus = \case
 toApiAdjustmentRequestStatus :: DLA.AdjustmentRequestStatus -> API.AdjustmentRequestStatus
 toApiAdjustmentRequestStatus = \case
   DLA.PENDING_APPROVAL -> API.PENDING_APPROVAL
-  DLA.APPROVED -> API.APPROVED
   DLA.REJECTED -> API.REJECTED
   DLA.POSTED -> API.POSTED
   DLA.POST_FAILED -> API.POST_FAILED
@@ -745,7 +742,7 @@ mkLedgerAdjustmentItem DLA.LedgerAdjustmentRequest {..} =
       personId = cast @DP.Person @Dashboard.Common.Person personId,
       category = toApiAdjustmentCategory category,
       direction = toApiAdjustmentDirection direction,
-      amount = Just $ PriceAPIEntity amount currency,
+      amount = PriceAPIEntity amount currency,
       description,
       referenceType,
       referenceId,
@@ -759,7 +756,6 @@ mkLedgerAdjustmentItem DLA.LedgerAdjustmentRequest {..} =
       ledgerEntryId = getId <$> ledgerEntryId,
       createdAt,
       updatedAt,
-      approvedAt,
       postedAt
     }
 
@@ -817,7 +813,6 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             Nothing
             mbLedgerEntryId
             (Just now)
-            (Just now)
             adjustmentRequest.id
         Left (err :: SomeException) -> do
           let errMessage = T.pack (displayException err)
@@ -831,7 +826,6 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             (Just checkerId)
             (Just adminCheckerName)
             (Just errMessage)
-            Nothing
             adjustmentRequest.id
           throwM err
     pure Success
@@ -1148,7 +1142,8 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           tdsRateReason = Nothing,
           emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
           fromLocationAddress = Nothing,
-          issuedToName = Nothing
+          issuedToName = Nothing,
+          enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
         }
 
 unsupportedLedgerAdjustmentCategory ::
@@ -1198,7 +1193,6 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
         DLA.REJECTED
         (Just $ Id @DP.Person requestorId)
         (Just adminCheckerName)
-        Nothing
         Nothing
         adjustmentRequest.id
       ledgerAdjustmentRejectSideEffect adjustmentRequest

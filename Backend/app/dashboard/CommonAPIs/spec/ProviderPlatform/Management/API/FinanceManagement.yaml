@@ -27,7 +27,6 @@ imports:
   JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
   Image: Dashboard.Common
   Person: Dashboard.Common
-  Image: Dashboard.Common
   FinanceTdsReimbursementRequest: Dashboard.Common
   Invoice: Lib.Finance.Domain.Types.Invoice
   MediaFile: IssueManagement.Domain.Types.MediaFile
@@ -441,7 +440,7 @@ types:
     - derive: "HttpInstance"
 
   AdjustmentRequestStatus:
-    - enum: "PENDING_APPROVAL,APPROVED,REJECTED,POSTED,POST_FAILED"
+    - enum: "PENDING_APPROVAL,REJECTED,POSTED,POST_FAILED"
     - derive: "HttpInstance"
 
   # ----- Subscription Purchase -----
@@ -696,7 +695,7 @@ types:
     - personId: Id Person
     - category: AdjustmentCategory
     - direction: AdjustmentDirection
-    - amount: Maybe PriceAPIEntity
+    - amount: PriceAPIEntity
     - description: Maybe Text
     - referenceType: Text
     - referenceId: Maybe Text
@@ -710,7 +709,6 @@ types:
     - ledgerEntryId: Maybe Text
     - createdAt: UTCTime
     - updatedAt: UTCTime
-    - approvedAt: Maybe UTCTime
     - postedAt: Maybe UTCTime
 
   # ----- Payout list -----

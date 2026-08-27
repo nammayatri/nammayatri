@@ -52,7 +52,6 @@ data AdjustmentDirection
 
 data AdjustmentRequestStatus
   = PENDING_APPROVAL
-  | APPROVED
   | REJECTED
   | POSTED
   | POST_FAILED
@@ -172,7 +171,7 @@ data LedgerAdjustmentItem = LedgerAdjustmentItem
     personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
     category :: AdjustmentCategory,
     direction :: AdjustmentDirection,
-    amount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    amount :: Kernel.Types.Common.PriceAPIEntity,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -186,7 +185,6 @@ data LedgerAdjustmentItem = LedgerAdjustmentItem
     ledgerEntryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
-    approvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     postedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)

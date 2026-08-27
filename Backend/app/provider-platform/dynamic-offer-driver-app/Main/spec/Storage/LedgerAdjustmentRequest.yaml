@@ -17,7 +17,7 @@ LedgerAdjustmentRequest:
       enum: "Credit,Debit"
       derive: "HttpInstance"
     AdjustmentRequestStatus:
-      enum: "PENDING_APPROVAL,APPROVED,REJECTED,POSTED,POST_FAILED" # TODO remove APPROVED and approvedAt field in starage and api spec
+      enum: "PENDING_APPROVAL,REJECTED,POSTED,POST_FAILED"
       derive: "HttpInstance"
 
   fields:
@@ -44,7 +44,6 @@ LedgerAdjustmentRequest:
     ledgerEntryId: Maybe (Id LedgerEntry)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    approvedAt: Maybe UTCTime
     postedAt: Maybe UTCTime
 
   constraints:
@@ -65,12 +64,12 @@ LedgerAdjustmentRequest:
 
     updateStatusCheckerAndPostResult:
       kvFunction: updateOneWithKV
-      params: [status, adminCheckerId, adminCheckerName, errorMessage, ledgerEntryId, approvedAt, postedAt]
+      params: [status, adminCheckerId, adminCheckerName, errorMessage, ledgerEntryId, postedAt]
       where: id
 
     updateStatusAndChecker:
       kvFunction: updateOneWithKV
-      params: [status, adminCheckerId, adminCheckerName, errorMessage, approvedAt]
+      params: [status, adminCheckerId, adminCheckerName, errorMessage]
       where: id
 
   excludedDefaultQueries:

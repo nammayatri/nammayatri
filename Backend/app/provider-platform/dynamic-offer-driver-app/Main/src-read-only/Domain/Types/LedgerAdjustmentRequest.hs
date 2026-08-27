@@ -21,7 +21,6 @@ data LedgerAdjustmentRequest = LedgerAdjustmentRequest
     adminMakerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     adminMakerName :: Kernel.Prelude.Text,
     amount :: Kernel.Types.Common.HighPrecMoney,
-    approvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     category :: Domain.Types.LedgerAdjustmentRequest.AdjustmentCategory,
     currency :: Kernel.Types.Common.Currency,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -58,7 +57,7 @@ data AdjustmentCategory
 
 data AdjustmentDirection = Credit | Debit deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data AdjustmentRequestStatus = PENDING_APPROVAL | APPROVED | REJECTED | POSTED | POST_FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data AdjustmentRequestStatus = PENDING_APPROVAL | REJECTED | POSTED | POST_FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AdjustmentCategory)
 

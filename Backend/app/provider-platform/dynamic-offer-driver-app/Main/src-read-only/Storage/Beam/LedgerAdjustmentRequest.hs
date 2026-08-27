@@ -18,7 +18,6 @@ data LedgerAdjustmentRequestT f = LedgerAdjustmentRequestT
     adminMakerId :: B.C f Kernel.Prelude.Text,
     adminMakerName :: B.C f Kernel.Prelude.Text,
     amount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    approvedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     category :: B.C f Domain.Types.LedgerAdjustmentRequest.AdjustmentCategory,
     currency :: B.C f Kernel.Types.Common.Currency,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
