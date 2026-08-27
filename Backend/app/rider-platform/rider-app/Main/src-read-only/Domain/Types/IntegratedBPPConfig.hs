@@ -28,6 +28,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sortQuotesByRouteServiceTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
