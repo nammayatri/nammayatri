@@ -202,6 +202,7 @@ data RiderConfigT f = RiderConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackVehicleKeyExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
+    unifiedQREnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     upcomingBusThresholdSec :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     updateTicketValidityInSecondsPostSetOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

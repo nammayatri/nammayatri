@@ -988,11 +988,11 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
 getUnifiedQR journey legs = do
-  let bookings = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` [DTrip.Metro, DTrip.Bus, DTrip.Subway]) legs)
-  let cmrlBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CMRL]
-  let mtcBookings = [b | (provider, b) <- bookings, provider == providerToText JL.MTC]
-  let crisBookings = [b | (provider, b) <- bookings, provider == providerToText JL.CRIS]
-  if null cmrlBookings && null mtcBookings && null crisBookings
+  let bookingsFor mode = mapMaybe getTickets (filter (\leg -> leg.travelMode == mode) legs)
+  let metroBookings = bookingsFor DTrip.Metro
+  let busBookings = bookingsFor DTrip.Bus
+  let subwayBookings = bookingsFor DTrip.Subway
+  if null metroBookings && null busBookings && null subwayBookings
     then Nothing
     else
       Just $
@@ -1001,41 +1001,32 @@ getUnifiedQR journey legs = do
             _type = "INTEGRATED_QR",
             txnId = journey.id.getId,
             createdAt = journey.createdAt,
-            cmrl = cmrlBookings,
-            mtc = mtcBookings,
-            cris = crisBookings
+            cmrl = metroBookings,
+            mtc = busBookings,
+            cris = subwayBookings
           }
 
-providerToText :: JL.Provider -> Text
-providerToText JL.CMRL = "Chennai Metro Rail Limited"
-providerToText JL.MTC = "Buses"
-providerToText JL.DIRECT = "Direct Multimodal Services"
-providerToText JL.CRIS = "CRIS Subway"
-
-getTickets :: JL.LegInfo -> Maybe (Text, JL.BookingData)
+getTickets :: JL.LegInfo -> Maybe JL.BookingData
 getTickets leg =
   leg.pricingId >>= \_ -> do
     case leg.legExtraInfo of
-      JL.Metro info -> processTickets JL.CMRL info.bookingId info.tickets info.providerName
-      JL.Bus info -> processTickets JL.MTC info.bookingId info.tickets info.providerName
-      JL.Subway info -> processTickets JL.CRIS info.bookingId info.tickets info.providerName
+      JL.Metro info -> processTickets info.bookingId info.tickets
+      JL.Bus info -> processTickets info.bookingId info.tickets
+      JL.Subway info -> processTickets info.bookingId info.tickets
       _ -> Nothing
   where
-    processTickets :: JL.Provider -> Maybe (Id DFRFSBooking.FRFSTicketBooking) -> Maybe [Text] -> Maybe Text -> Maybe (Text, JL.BookingData)
-    processTickets expectedProvider mbBookingId mbTickets mbProviderName = do
+    processTickets :: Maybe (Id DFRFSBooking.FRFSTicketBooking) -> Maybe [Text] -> Maybe JL.BookingData
+    processTickets mbBookingId mbTickets = do
       tickets <- mbTickets
-      provider <- mbProviderName
       bookingId <- mbBookingId
-      if (provider == providerToText expectedProvider || provider == providerToText JL.DIRECT) && not (null tickets)
+      if not (null tickets)
         then
           Just
-            ( providerToText expectedProvider,
-              JL.BookingData
-                { bookingId = bookingId.getId,
-                  isRoundTrip = False, -- TODO: add round trip support
-                  ticketData = tickets
-                }
-            )
+            JL.BookingData
+              { bookingId = bookingId.getId,
+                isRoundTrip = False, -- TODO: add round trip support
+                ticketData = tickets
+              }
         else Nothing
 
 deleteLeg ::
@@ -1545,7 +1536,9 @@ generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Servi
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
-  let unifiedQR = getUnifiedQR journey legs
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing
+  let unifiedQrEnabled = fromMaybe False (mbRiderConfig >>= (.unifiedQREnabled))
+  let unifiedQR = if unifiedQrEnabled then getUnifiedQR journey legs else Nothing
   let mbCurrency = KP.listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity

@@ -830,3 +830,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_asyn
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_resolve_place_name_on_select boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
