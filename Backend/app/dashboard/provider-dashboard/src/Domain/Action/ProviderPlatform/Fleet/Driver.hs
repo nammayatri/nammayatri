@@ -746,8 +746,8 @@ postDriverFleetVehicleEdit merchantShortId opCity apiTokenInfo fleetOwnerId driv
 getDriverFleetStatusSummary :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.EntityOperationType -> Maybe (Kernel.Prelude.Text) -> Environment.Flow Common.StatusSummaryResponse)
 getDriverFleetStatusSummary merchantShortId opCity apiTokenInfo entityOperationType mbFleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatusSummary) entityOperationType (Just fleetOwnerId')
+  (mbFleetOwnerId', _) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatusSummary) entityOperationType mbFleetOwnerId'
 
 getDriverVehicleInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
 getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
