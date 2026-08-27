@@ -71,6 +71,7 @@ FRFSSearch:
     quantity: Int
     vehicleType: VehicleCategory
     journeyDate: Maybe Day
+    isSingleLady: Maybe Bool
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -306,6 +307,7 @@ FRFSQuoteCategory:
     merchantOperatingCityId: Id MerchantOperatingCity
     seatIds: Maybe [Id Seat]
     seatLabels: Maybe [Text]
+    concessionTypeId: Maybe Text
     holdId: Maybe Text
   constraints:
     id: PrimaryKey

@@ -43,6 +43,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.Seat
+import qualified Domain.Types.SeatLayout
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
@@ -54,6 +56,9 @@ import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Verify as CallExternalBPP
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Error as TNSTCError
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Layout as TNSTCLayout
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Types as TNSTCTypes
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -128,8 +133,10 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
+import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Seat as QSeat
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -1714,7 +1721,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   let seatListWithStatus = map (applyQuotaLogic fromIdx toIdx) rawSeatListWithStatus
   let availCount = length $ filter (\s -> s.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
-  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus}
+  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus, concessions = Nothing}
   where
     applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
     applyQuotaLogic fromIdx toIdx seatWithStatus =
@@ -2173,3 +2180,105 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
         current = fmap toTripInfo resp.current,
         upcoming = map toTripInfo resp.upcoming
       }
+
+getFrfsQuoteSeats ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
+  Environment.Flow SeatLayoutResp
+getFrfsQuoteSeats _auth quoteId = do
+  quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> quoteId.getId)
+  integratedBPPConfig <-
+    QIBC.findById quote.integratedBppConfigId
+      >>= fromMaybeM (InvalidRequest $ "IntegratedBPPConfig not found: " <> quote.integratedBppConfigId.getId)
+  tnstcConfig <- case integratedBPPConfig.providerConfig of
+    DIBC.TNSTC cfg -> pure cfg
+    _ -> throwError (InvalidRequest "quoteId is only valid for reserved-seat intercity providers")
+  counterCode <- tnstcConfig.counterCode & fromMaybeM (InternalError "TNSTC counterCode not configured")
+  search <- QFRFSSearch.findById quote.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
+  journeyDate <- search.journeyDate & fromMaybeM (InvalidRequest "journeyDate missing on search")
+  layoutId <- quote.providerLayoutId & fromMaybeM (InvalidRequest "providerLayoutId missing on quote")
+  serviceId <- quote.providerServiceId & fromMaybeM (InvalidRequest "providerServiceId missing on quote")
+  classId <- quote.providerClassId & fromMaybeM (InvalidRequest "providerClassId missing on quote")
+
+  let seatLayoutId = tnstcSeatLayoutId integratedBPPConfig.merchantOperatingCityId.getId layoutId
+  seatLayout <-
+    QSeatLayout.findById seatLayoutId
+      >>= fromMaybeM (InvalidRequest $ "Seat layout not provisioned for TNSTC layoutID " <> layoutId <> "; seed it from the dashboard")
+  seats <- QSeat.findAllByLayoutId seatLayoutId
+  when (null seats) $ throwError (InvalidRequest $ "Seat layout " <> seatLayoutId.getId <> " has no seats; re-seed it from the dashboard")
+
+  seatSetsResult <-
+    try @_ @TNSTCError.TNSTCFault $
+      TNSTCLayout.getServiceSeatDetails tnstcConfig $
+        TNSTCLayout.GetServiceSeatDetailsReq
+          { rqssCounterCode = counterCode,
+            rqssEndPlaceId = search.toStationCode,
+            rqssJourneyDate = journeyDate,
+            rqssServiceClass = classId,
+            rqssServiceId = serviceId,
+            rqssStartPlaceId = search.fromStationCode,
+            rqssSingleLady = fromMaybe False search.isSingleLady,
+            rqssUserName = tnstcConfig.username
+          }
+  seatSets <- case seatSetsResult of
+    Right sets -> return sets
+    Left fault -> do
+      logWarning $ "TNSTC seat map unavailable serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " fault=" <> show fault
+      throwError (InvalidRequest "Seat map unavailable for this service")
+  concessions <-
+    TNSTCLayout.getConcessionTypes tnstcConfig $
+      TNSTCLayout.GetConcessionTypesReq
+        { rqctClassId = classId,
+          rqctCounterCode = counterCode,
+          rqctEndPlaceId = search.toStationCode,
+          rqctJourneyDate = journeyDate,
+          rqctSeatNumber = "1",
+          rqctServiceId = serviceId,
+          rqctStartPlaceId = search.fromStationCode,
+          rqctTotalSeats = search.quantity,
+          rqctUserName = tnstcConfig.username
+        }
+  let seatListWithStatus =
+        map
+          ( \st ->
+              SeatWithStatus
+                { seat =
+                    st
+                      { Domain.Types.Seat.isLadiesOnly = Just (fromMaybe False search.isSingleLady && st.seatLabel `elem` seatSets.tssSet2),
+                        Domain.Types.Seat.isDifferentlyAbled = Just (st.seatLabel `elem` seatSets.tssSet5)
+                      },
+                  status = fromMaybe BOOKED (tnstcSeatStatus seatSets st.seatLabel)
+                }
+          )
+          seats
+      availCount = length $ filter (\x -> x.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
+  logInfo $ "FRFSTicketService:tnstcSeatLayout quoteId=" <> quoteId.getId <> " serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " seats=" <> show (length seats) <> " available=" <> show availCount
+  return $
+    SeatLayoutResp
+      { seatLayout = seatLayout,
+        seats = seatListWithStatus,
+        concessions =
+          Just $
+            map
+              ( \c ->
+                  FRFSConcession
+                    { concessionId = c.tctConcessionId,
+                      concessionDesc = c.tctConcessionDesc,
+                      categoryLookupId = c.tctCategoryLookupId
+                    }
+              )
+              concessions
+      }
+
+tnstcSeatLayoutId :: Text -> Text -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout
+tnstcSeatLayoutId mocId layoutId = Kernel.Types.Id.Id ("tnstc-" <> Data.Text.take 8 mocId <> "-" <> layoutId)
+
+tnstcSeatStatus :: TNSTCTypes.TnstcSeatSets -> Text -> Maybe FRFSTicketService.SeatStatus
+tnstcSeatStatus sets seatNo
+  | seatNo `elem` sets.tssSet0 = Just FRFSTicketService.AVAILABLE
+  | seatNo `elem` sets.tssSet1 = Just FRFSTicketService.BOOKED
+  | seatNo `elem` sets.tssSet3 = Just FRFSTicketService.BLOCKED
+  | seatNo `elem` sets.tssSet4 = Just FRFSTicketService.BOOKED
+  | otherwise = Nothing

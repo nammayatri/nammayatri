@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.hasApplicablePass hasApplicablePass,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
+      Se.Set Beam.isSingleLady isSingleLady,
       Se.Set Beam.isSingleMode isSingleMode,
       Se.Set Beam.journeyDate journeyDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

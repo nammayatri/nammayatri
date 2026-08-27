@@ -1353,6 +1353,8 @@ getQuantityTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.STUDENT_QUANTITY
   FEMALE -> FRFSCategorySpec.FEMALE_QUANTITY
   MALE -> FRFSCategorySpec.MALE_QUANTITY
+  ADULT_SLEEPER -> FRFSCategorySpec.ADULT_QUANTITY
+  CHILD_SLEEPER -> FRFSCategorySpec.CHILD_QUANTITY
 
 getPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getPriceTagFromCategory categoryType = case categoryType of
@@ -1362,6 +1364,8 @@ getPriceTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.STUDENT_PRICE
   FEMALE -> FRFSCategorySpec.FEMALE_PRICE
   MALE -> FRFSCategorySpec.MALE_PRICE
+  ADULT_SLEEPER -> FRFSCategorySpec.ADULT_PRICE
+  CHILD_SLEEPER -> FRFSCategorySpec.CHILD_PRICE
 
 getTotalPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getTotalPriceTagFromCategory categoryType = case categoryType of
@@ -1371,6 +1375,8 @@ getTotalPriceTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.TOTAL_STUDENT_PRICE
   FEMALE -> FRFSCategorySpec.TOTAL_FEMALE_PRICE
   MALE -> FRFSCategorySpec.TOTAL_MALE_PRICE
+  ADULT_SLEEPER -> FRFSCategorySpec.TOTAL_ADULT_PRICE
+  CHILD_SLEEPER -> FRFSCategorySpec.TOTAL_CHILD_PRICE
 
 data QuoteCategorySelection = QuoteCategorySelection
   { qcQuoteCategoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,
