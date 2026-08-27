@@ -6,6 +6,7 @@ import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Types (ServiceFlow)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -42,7 +43,8 @@ getOfferDiscount ::
     EncFlow m r,
     ServiceFlow m r,
     EsqDBReplicaFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    ClickhouseFlow m r
   ) =>
   Maybe Text ->
   Text ->
