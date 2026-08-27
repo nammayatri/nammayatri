@@ -25,6 +25,7 @@ data IntegratedBPPConfigT f = IntegratedBPPConfigT
     platformType :: B.C f Domain.Types.IntegratedBPPConfig.PlatformType,
     configJSON :: B.C f Data.Aeson.Value,
     providerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    sortQuotesByRouteServiceTiers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

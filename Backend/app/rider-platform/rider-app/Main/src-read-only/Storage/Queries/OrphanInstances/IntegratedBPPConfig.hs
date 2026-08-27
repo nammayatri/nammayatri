@@ -30,6 +30,7 @@ instance FromTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.In
             platformType = platformType,
             providerConfig = providerConfig',
             providerName = providerName,
+            sortQuotesByRouteServiceTiers = sortQuotesByRouteServiceTiers,
             vehicleCategory = vehicleCategory,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -49,6 +50,7 @@ instance ToTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.Inte
         Beam.platformType = platformType,
         Beam.configJSON = Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig,
         Beam.providerName = providerName,
+        Beam.sortQuotesByRouteServiceTiers = sortQuotesByRouteServiceTiers,
         Beam.vehicleCategory = vehicleCategory,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

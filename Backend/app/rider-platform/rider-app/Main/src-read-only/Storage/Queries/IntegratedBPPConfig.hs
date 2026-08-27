@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
       Se.Set Beam.platformType platformType,
       Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
       Se.Set Beam.providerName providerName,
+      Se.Set Beam.sortQuotesByRouteServiceTiers sortQuotesByRouteServiceTiers,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.updatedAt _now
     ]
