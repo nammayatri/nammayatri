@@ -150,10 +150,11 @@ findSafetySettingsWithFallback ::
   m DSafety.SafetySettings
 findSafetySettingsWithFallback personId getDefaultSettings =
   Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey $ getId personId) 1 $ do
-    res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq $ getId personId]]
-    case res of
-      Just safetySettings -> return safetySettings
-      Nothing -> do
+    eRes <- try @_ @SomeException (findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq $ getId personId]])
+    case eRes of
+      Left _ -> getDefaultSettings
+      Right (Just safetySettings) -> return safetySettings
+      Right Nothing -> do
         safetySettings <- getDefaultSettings
         _ <- createWithKV safetySettings
         return safetySettings
