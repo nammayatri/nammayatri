@@ -24,6 +24,7 @@ const fleet = require('./fleet');
 const avatars = require('./avatars');
 const rating = require('./rating');
 const subscription = require('./subscription');
+const identity = require('./identity');
 const restricted = require('./restricted');
 
 const PORT           = Number(process.env.PORT || 8020);
@@ -31,6 +32,8 @@ const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace
 const MOCK_GOOGLE_URL= (process.env.MOCK_GOOGLE_URL || 'http://localhost:8019').replace(/\/$/, '');
 // Where to check that a caller is a signed-in passenger, for /fleet/nearby.
 const RIDER_URL      = (process.env.RIDER_URL || 'http://localhost:8013').replace(/\/$/, '');
+// Where to prove a caller is a signed-in driver, for avatar writes.
+const DRIVER_URL     = (process.env.DRIVER_URL || 'http://localhost:8016').replace(/\/$/, '');
 
 // Where the place index lives. Unset means "no search": the three geocoding
 // paths fall through to mock-google exactly as before, which is what the stack
@@ -487,21 +490,56 @@ http.createServer((req, res) => {
       return avatars.serveForPlate(value, pool, res);
     }
 
-    // A passenger's key is a database lookup rather than a hash -- see
-    // avatars.js -- so this is async where the driver's is not.
-    const resolve =
-      kind === 'driver'
-        ? Promise.resolve(avatars.driverKey(value))
-        : kind === 'phone'
-          ? avatars.keyForPhone(pool, value)
-          : Promise.resolve(null);
+    // ── Reading stays open ─────────────────────────────────────────────────
+    // An avatar is shown to the person at the other end of a ride either way,
+    // and the keys are opaque UUIDs and one-way hashes. A passenger's key is a
+    // database lookup rather than a hash, so this is async where a driver's
+    // is not.
+    if (req.method === 'GET') {
+      const resolve =
+        kind === 'driver'
+          ? Promise.resolve(avatars.driverKey(value))
+          : kind === 'phone'
+            ? avatars.keyForPhone(pool, value)
+            : Promise.resolve(null);
+      return resolve.then((key) => avatars.serve(key, res));
+    }
 
-    return resolve.then((key) => {
-      if (req.method === 'GET') return avatars.serve(key, res);
-      if (req.method === 'PUT') return avatars.store(key, req, res);
-      if (req.method === 'DELETE') return avatars.remove(key, res);
-      return send(res, 405, { error: 'method not allowed' });
-    });
+    // ── Writing does not, and did not until 2026-08-27 ─────────────────────
+    //
+    // This module's own header has always claimed PUT "takes the caller's
+    // token and asks the backend whose it is". It was written and never
+    // built: PUT and DELETE reached the store with no credential at all.
+    // Measured against the live edge, `DELETE /avatar/driver/{id}` answered
+    // 200 to a stranger, and PUT got as far as the content-type check. Anyone
+    // knowing a driver's id could replace the face a passenger sees when
+    // choosing him. **The comment describing the protection is why nobody
+    // looked for it.**
+    //
+    // The id in the path is now ignored entirely. The key is built from
+    // whoever the backend says the token belongs to, so naming somebody else
+    // correctly achieves nothing — the same rule /subscription/ follows.
+    if (req.method === 'PUT' || req.method === 'DELETE') {
+      const token = req.headers.token || '';
+      const owner =
+        kind === 'driver'
+          ? identity
+              .driverFromToken(DRIVER_URL, token)
+              .then((d) => (d ? avatars.driverKey(d.id) : null))
+          : kind === 'phone'
+            ? identity
+                .riderFromToken(RIDER_URL, token)
+                .then((r) => (r ? avatars.keyForRiderId(pool, r.id) : null))
+            : Promise.resolve(null);
+
+      return owner.then((key) => {
+        if (!key) return send(res, 401, { error: 'sign in first' });
+        if (req.method === 'PUT') return avatars.store(key, req, res);
+        return avatars.remove(key, res);
+      });
+    }
+
+    return send(res, 405, { error: 'method not allowed' });
   }
 
   // Without an index configured these fall through to mock-google, which is

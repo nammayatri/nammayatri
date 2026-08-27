@@ -29,9 +29,26 @@
  * No authentication on GET. An avatar is shown to the person on the other end
  * of a ride either way, and the ids are opaque UUIDs and one-way hashes — there
  * is nothing here to enumerate that is not already on the other party's screen.
- * PUT is a different matter: it takes the caller's token and asks the backend
- * whose it is, exactly as `fleet.js` does, so nobody can write a face onto
- * somebody else's profile.
+ *
+ * ── Writes are authenticated. They were not, and this comment said they were ─
+ * This paragraph used to read: "PUT is a different matter: it takes the
+ * caller's token and asks the backend whose it is, exactly as fleet.js does,
+ * so nobody can write a face onto somebody else's profile."
+ *
+ * **It was never built.** PUT and DELETE reached the store with no credential
+ * at all. Measured against the live edge on 2026-08-27: `DELETE
+ * /avatar/driver/{id}` answered 200 to a stranger, and PUT got as far as the
+ * content-type check — so anyone knowing a driver's id could replace the face
+ * a passenger sees when choosing him, or delete it.
+ *
+ * The comment is kept here rather than quietly corrected, because it is the
+ * reason nobody looked: a file that documents a protection reads, to everyone
+ * afterwards, as a file that has one. Description is not implementation, and
+ * only a request made with no credentials can tell the two apart.
+ *
+ * What is true now: the id in the path is ignored, and the storage key is built
+ * from whoever `identity.js` says the token belongs to. Naming somebody else
+ * correctly achieves nothing.
  */
 const fs = require('fs');
 const path = require('path');
@@ -108,6 +125,37 @@ async function keyForPhone(pool, phone) {
 
 function driverKey(id) {
   return /^[0-9a-fA-F-]{8,64}$/.test(String(id || '')) ? 'd_' + String(id) : null;
+}
+
+/**
+ * A passenger's avatar key, from her person id rather than from a number.
+ *
+ * ── Why not just call keyForPhone with her number ──────────────────────────
+ * Because we are never given it. `GET /v2/profile` masks it (`055...188`), so
+ * the only thing a proven token yields is `person.id`. This reads the same hash
+ * `keyForPhone` ends at, from the row that id names, so both paths produce
+ * byte-identical keys — a photograph uploaded through one is found by the
+ * other.
+ *
+ * This exists so that writing an avatar never has to trust a number supplied by
+ * the caller. Before it, `PUT /avatar/phone/{number}` took whatever number it
+ * was given and wrote to that key, with nothing checking the caller had any
+ * claim to it.
+ */
+async function keyForRiderId(pool, personId) {
+  if (!pool || !/^[0-9a-fA-F-]{8,64}$/.test(String(personId || ''))) return null;
+  try {
+    const q = await pool.query(
+      `SELECT encode(mobile_number_hash, 'hex') AS h
+         FROM atlas_app.person WHERE id = $1`,
+      [String(personId)],
+    );
+    const h = q.rows[0] && q.rows[0].h;
+    return h ? 'h_' + String(h).slice(0, 32) : null;
+  } catch (e) {
+    console.error('[avatars] rider id lookup', e.message);
+    return null;
+  }
 }
 
 function findFile(key) {
@@ -285,6 +333,7 @@ function remove(key, res) {
 module.exports = {
   DIR,
   keyForPhone,
+  keyForRiderId,
   driverKey,
   serve,
   serveForRide,
