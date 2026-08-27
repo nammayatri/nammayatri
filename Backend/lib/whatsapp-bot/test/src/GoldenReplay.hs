@@ -57,6 +57,7 @@ module GoldenReplay
   ( goldenTests,
     copyChecks,
     fixtureGuards,
+    rideTypeButtonLayoutChecks,
   )
 where
 
@@ -82,6 +83,7 @@ import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
+import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
@@ -568,18 +570,16 @@ mkClock clockRef =
 fixtureMerchant :: Text -> MerchantCtx
 fixtureMerchant pn
   | pn == "pn_reg" =
-    base {merchantLabel = "REG", rideMode = RideModeRegular, flexiEnabled = False, regularEnabled = True}
+    base {merchantLabel = "REG", rideTypesOrder = [Regular]}
   | pn == "pn_flexi" =
-    base {merchantLabel = "FLEXI", rideMode = RideModeFlexi, flexiEnabled = True, regularEnabled = False}
+    base {merchantLabel = "FLEXI", rideTypesOrder = [Flexi]}
   | otherwise =
     error ("fixtureMerchant: unknown phone_number_id " <> pn)
   where
     base =
       MerchantCtx
         { merchantLabel = "FLEXI",
-          rideMode = RideModeFlexi,
-          flexiEnabled = True,
-          regularEnabled = False,
+          rideTypesOrder = [Flexi],
           flexiBaseFare = Nothing, -- FLEXI_BASE_FARE unset in test/setup.ts
           flexiPerKm = Nothing, -- FLEXI_PER_KM unset in test/setup.ts
           flexiServiceArea = Just "Tumkur",
@@ -876,3 +876,42 @@ enCopyCases =
     ("regularConfirmButton", "✅ Book auto", en.regularConfirmButton),
     ("pickupConfirmButton", "✅ Confirm pickup", en.pickupConfirmButton)
   ]
+
+-- ===========================================================================
+-- Ride-type chooser button layout — direct unit checks of
+-- WhatsappBot.Flow.Booking.rideTypeButtons / hiddenRideTypeButtons against
+-- the locked design-discussion rule:
+--   total <= 1 -> show it directly, no More
+--   total >= 2 -> show min(total - 1, 2) directly, in priority order; the
+--                 rest goes behind More (capped at 2 direct so direct+More
+--                 never exceeds WhatsApp's real 3-button-per-message limit —
+--                 see developers.facebook.com's interactive-reply-buttons docs)
+--
+-- No golden JSON fixture exercises this: both existing fixture merchants
+-- (pn_flexi/pn_reg) only ever offer ONE ride type each, so this is the only
+-- place the "More" path is actually verified. Sizes 3+ repeat a RideType
+-- value (only 2 real ones exist today) purely to exercise the counting
+-- logic — not a realistic merchant config.
+-- ===========================================================================
+
+rideTypeButtonLayoutChecks :: TestTree
+rideTypeButtonLayoutChecks =
+  testGroup "ride-type chooser button layout" $
+    map
+      (\(lbl, rts, expectedDirect, expectedHidden) -> testCase lbl (checkLayout rts expectedDirect expectedHidden))
+      [ ("size 1 (Flexi only): no More", [Flexi], ["ride_type:flexi"], []),
+        ("size 1 (Regular only): no More", [Regular], ["ride_type:regular"], []),
+        ("size 2: top priority direct, rest in More", [Flexi, Regular], ["ride_type:flexi"], ["ride_type:regular"]),
+        ("size 2 reversed order: priority follows the list", [Regular, Flexi], ["ride_type:regular"], ["ride_type:flexi"]),
+        ("size 3: 2 direct (capped), 1 in More", [Flexi, Regular, Flexi], ["ride_type:flexi", "ride_type:regular"], ["ride_type:flexi"]),
+        ("size 4: still 2 direct (capped), 2 in More", [Flexi, Regular, Flexi, Regular], ["ride_type:flexi", "ride_type:regular"], ["ride_type:flexi", "ride_type:regular"])
+      ]
+  where
+    checkLayout rts expectedDirect expectedHidden = do
+      let allButtons = map (.btnId) (rideTypeButtons en rts)
+          hasMore = "more_ride_types" `elem` allButtons
+          direct = filter (/= "more_ride_types") allButtons
+          hidden = map (.btnId) (hiddenRideTypeButtons en rts)
+      assertEqual "direct buttons" expectedDirect direct
+      assertEqual "More button present iff something is hidden" (not (null expectedHidden)) hasMore
+      assertEqual "hidden (More-revealed) buttons" expectedHidden hidden

@@ -24,7 +24,14 @@ import Kernel.Prelude
 
 data MetaBotCfg = MetaBotCfg
   { merchantLabel :: Text,
-    rideMode :: Text,
+    -- Ordered list of ride-type ids this merchant offers via WhatsApp, e.g.
+    -- ["flexi", "regular"] — order is PRIORITY order, not just membership.
+    -- Replaces the old rideMode :: Text ("flexi"|"regular"|"both"), which
+    -- could only express membership, never priority, and had no room for a
+    -- 3rd ride type. Unrecognized ids are dropped (see
+    -- WhatsappBot.Adapter.Env.mkMerchantCtx) rather than failing the whole
+    -- config, so a not-yet-built future type named here doesn't break the bot.
+    rideTypesOrder :: [Text],
     flexiBaseFare :: Maybe Double,
     flexiPerKm :: Maybe Double,
     flexiServiceArea :: Maybe Text,

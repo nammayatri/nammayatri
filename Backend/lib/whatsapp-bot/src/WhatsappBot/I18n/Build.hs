@@ -138,6 +138,7 @@ buildLanguageStringsM resolveField = do
   rideTypePrompt' <- resolveField "wa_bot_rideTypePrompt"
   rideTypeFlexi' <- resolveField "wa_bot_rideTypeFlexi"
   rideTypeRegular' <- resolveField "wa_bot_rideTypeRegular"
+  moreRideTypes' <- resolveField "wa_bot_moreRideTypes"
   rideStartedSimple' <- resolveField "wa_bot_rideStartedSimple"
   regularDropPrompt' <- resolveField "wa_bot_regularDropPrompt"
   regularSelectDrop' <- resolveField "wa_bot_regularSelectDrop"
@@ -252,6 +253,7 @@ buildLanguageStringsM resolveField = do
         rideTypePrompt = rideTypePrompt',
         rideTypeFlexi = rideTypeFlexi',
         rideTypeRegular = rideTypeRegular',
+        moreRideTypes = moreRideTypes',
         rideStartedSimple = rideStartedSimple',
         regularDropPrompt = regularDropPrompt',
         regularSelectDrop = regularSelectDrop',

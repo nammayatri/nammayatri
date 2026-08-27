@@ -181,6 +181,10 @@ data LanguageStrings = LanguageStrings
     rideTypePrompt :: Text,
     rideTypeFlexi :: Text,
     rideTypeRegular :: Text,
+    -- "More" button revealing ride types beyond the first 2 direct slots
+    -- (WhatsappBot.Flow.Booking.rideTypeButtons) — distinct from moreButton,
+    -- which opens the settings/help drawer, a different menu entirely.
+    moreRideTypes :: Text,
     rideStartedSimple :: Text,
     -- Regular one-way flow (pickup + drop -> auto fare -> book)
     regularDropPrompt :: Text,
