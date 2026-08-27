@@ -134,7 +134,10 @@ buildEnded :: Map.Map SupportedLanguage LanguageStrings -> BotBookingDetails -> 
 buildEnded translations b lang =
   BuiltMessage
     { bmText = s.flexiRideEnded fareLine,
-      bmButtons = [OutButton {btnId = "book", btnTitle = s.flexiBookAnother, btnDesc = Nothing}]
+      bmButtons =
+        [ OutButton {btnId = "book", btnTitle = s.flexiBookAnother, btnDesc = Nothing},
+          OutButton {btnId = "get_app", btnTitle = s.getAppButton, btnDesc = Nothing}
+        ]
     }
   where
     s = t translations lang

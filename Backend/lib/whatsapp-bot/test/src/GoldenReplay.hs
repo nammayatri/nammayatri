@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- | Golden characterization-replay harness — Haskell port of the TypeScript
+-- | Golden characterization-replay harness -- Haskell port of the TypeScript
 -- connector's @test/harness.ts@ + @test/golden-fixtures.test.ts@.
 --
 -- It replays each embedded golden fixture through the WEBHOOK LAYER: every
@@ -18,15 +18,15 @@
 -- Plus a THIRD oracle on the persisted schema: every 'saveContext' round-trips
 -- its 'FlowContext' through JSON and stores the DECODED value, so a session
 -- shape production's @Redis.get@ could not read back (which would DELETE the
--- key — see 'codecRoundTrip') fails the fixture that produced it.
+-- key -- see 'codecRoundTrip') fails the fixture that produced it.
 --
 -- Ports, faithfully:
 --   * @structured()@ (harness.ts:189-197): @{kind,to,merchant,buttons?,link?}@,
 --     button DATA-ids only (copy dropped). A LIST send is recorded exactly like
---     a buttons send (@kind="buttons"@, row data-ids under @buttons@) — the TS
+--     a buttons send (@kind="buttons"@, row data-ids under @buttons@) -- the TS
 --     FakeRecordingConnector overrides @sendWithButtons@ and always tags it
 --     @'buttons'@; there is no separate @list@ kind in any fixture.
---   * @normalizeArgs()@ (harness.ts:231-256): per-method arg normalization —
+--   * @normalizeArgs()@ (harness.ts:231-256): per-method arg normalization --
 --     drop auth/config/Date; @projPlace@ = @{placeId,lat,lon}@; @getActiveBookings@
 --     recorded with @[]@. Baked into each mock method (it records already-normalized
 --     args, exactly like the TS spy wrapper).
@@ -119,7 +119,7 @@ data Step = Step
   { note :: Maybe Text,
     inbound :: Value, -- raw Meta webhook envelope
     concurrent :: Maybe Value, -- a second inbound landing mid-step (gated)
-    -- NOTE: the fixture's @flush@ flag is intentionally NOT modelled — @normal@
+    -- NOTE: the fixture's @flush@ flag is intentionally NOT modelled -- @normal@
     -- and @flush@ steps run identically here (the virtual clock drains poll loops
     -- in-line), so it is an ignored extra key (see module header).
     expectOutbound :: [Value],
@@ -167,7 +167,7 @@ callToValue :: RecordedCall -> Value
 callToValue c = object ["method" .= rcMethod c, "args" .= rcArgs c]
 
 -- | Record a clock-derived @createdAfter@ as whole seconds relative to the
--- fixture's @systemTime@ — @Null@ when the caller passed none.
+-- fixture's @systemTime@ -- @Null@ when the caller passed none.
 --
 -- The TS recorder originally dropped this argument (@case 'getActiveBookings':
 -- return []@), which made @sos-no-select-time@ unable to assert the very thing
@@ -259,7 +259,7 @@ guardL rb m act =
     _ -> Right <$> act
 
 -- ===========================================================================
--- Canned NY mock data — transcribed VERBATIM from
+-- Canned NY mock data -- transcribed VERBATIM from
 -- ny-connectors/connectors/src/ny/mock-client.ts.
 -- ===========================================================================
 
@@ -283,9 +283,9 @@ cannedSavedLocations =
 
 cannedPredictions :: Text -> [BotPrediction]
 cannedPredictions q =
-  [ BotPrediction {description = q <> " — Tumkur Bus Stand", placeId = "mock-place-1", distance = Just 1200},
-    BotPrediction {description = q <> " — Amanikere Lake", placeId = "mock-place-2", distance = Just 1200},
-    BotPrediction {description = q <> " — SIT College Road", placeId = "mock-place-3", distance = Just 1200}
+  [ BotPrediction {description = q <> " -- Tumkur Bus Stand", placeId = "mock-place-1", distance = Just 1200},
+    BotPrediction {description = q <> " -- Amanikere Lake", placeId = "mock-place-2", distance = Just 1200},
+    BotPrediction {description = q <> " -- SIT College Road", placeId = "mock-place-3", distance = Just 1200}
   ]
 
 cannedPlaceDetails :: Text -> BotPlace
@@ -302,7 +302,7 @@ cannedEstimates =
     BotEstimate {estimateId = "mock-est-cab", estimatedFare = 118, serviceTierName = "Cab (Non-AC)", vehicleVariant = "SEDAN", totalFareRange = FareRange {minFare = 118, maxFare = 140}, estimatedPickupDuration = Just 300}
   ]
 
--- | The default flexi quote (mock-client.ts:158) — also the value the gate knob
+-- | The default flexi quote (mock-client.ts:158) -- also the value the gate knob
 -- yields once released, so a gated search proceeds exactly as unstalled.
 cannedFlexiQuotes :: [BotQuote]
 cannedFlexiQuotes =
@@ -399,7 +399,7 @@ mkBackend rb =
         guard1 rb "reverseGeocode" (pure (cannedReverse ll)),
       -- Always serviceable: no golden fixture exercises the real rejection
       -- path (the old out-of-area.json tested the PURE hardcoded-city check,
-      -- which no longer exists — that fixture's own premise, "no backend
+      -- which no longer exists -- that fixture's own premise, "no backend
       -- call", is what this change deliberately breaks, so it was retired
       -- rather than patched).
       checkServiceable = \_a ll -> do
@@ -444,7 +444,7 @@ mkBackend rb =
     }
   where
     -- A phone containing "00000" is the OTP/new-user-auth-failure path
-    -- (mock-client.ts:52-62). "7411122233" is unused by any other fixture —
+    -- (mock-client.ts:52-62). "7411122233" is unused by any other fixture --
     -- dedicated here as the "already-known, named" segment (see
     -- welcome-back.json). Every other test phone is a genuinely first-time user.
     authResult p
@@ -470,8 +470,8 @@ mkSender outRef label =
 -- | Force the value through the exact JSON path production uses.
 --
 -- The harness previously kept 'Session' as a live Haskell value, so a schema
--- change that would make @Redis.get@ fail — and therefore DELETE the key, since
--- @get = safeGet = get' key (del key)@ — was invisible to every fixture. Encode
+-- change that would make @Redis.get@ fail -- and therefore DELETE the key, since
+-- @get = safeGet = get' key (del key)@ -- was invisible to every fixture. Encode
 -- and decode on every write, store the DECODED value so the round-trip is
 -- load-bearing, and record failures for the caller to assert on.
 codecRoundTrip :: (ToJSON a, FromJSON a) => a -> Either String a
@@ -590,8 +590,11 @@ fixtureMerchant pn
           flexiIntroVideoUrl = Just "https://videos.example/intro.mp4",
           flexiSupportPhone = Just "+91 90000 12345",
           nyTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}",
+          appDownloadUrl = "https://play.google.com/store/apps/details?id=in.juspay.nammayatri&hl=en_IN",
+          cancelTriggers = ["cancel", "stop", "exit", "quit", "reset"],
+          statusTriggers = ["status", "track", "where is my ride"],
           -- Unused by fixtureConfig below (it builds BotConfig directly,
-          -- bypassing mkBotConfig) — present only because MerchantCtx now
+          -- bypassing mkBotConfig) -- present only because MerchantCtx now
           -- requires them. Mirrors the same TS-parity values for clarity.
           flexiQuotePollAttempts = 10,
           flexiQuotePollIntervalMs = 2000,
@@ -619,7 +622,7 @@ fixtureConfig m =
 
 -- | The same static compiled tables as production's DB-less default (no DB in
 -- the golden harness), so every fixture keeps asserting against the identical
--- copy it always has — a real proof that threading the translations map
+-- copy it always has -- a real proof that threading the translations map
 -- through the engine didn't change any behaviour.
 staticTranslations :: Map.Map SupportedLanguage LanguageStrings
 staticTranslations = Map.insert En en staticNonEnglish
@@ -668,7 +671,7 @@ makeWorld merchantCtx theKnobs t0 = do
             clock = clockH,
             cfg = fixtureConfig merchantCtx
           }
-      -- ASSUMED TrackerDeps shape (reconcile with Tracker.hs — see module note).
+      -- ASSUMED TrackerDeps shape (reconcile with Tracker.hs -- see module note).
       deps =
         TrackerDeps
           { tdRegistry = registryH,
@@ -821,7 +824,7 @@ goldenTests =
 -- @GOLDEN_DIR@) both hold 6 identically-named files while disagreeing on the
 -- contents of 5 of them. The count reads 6 == 6 and passes.
 --
--- 'embedDir' on a missing directory yields @[]@, and @testGroup "…" []@ exits
+-- 'embedDir' on a missing directory yields @[]@, and @testGroup "..." []@ exits
 -- 0, so a broken embed path silently passes too. Assert a non-empty, exact set.
 fixtureGuards :: TestTree
 fixtureGuards =
@@ -855,7 +858,7 @@ fixtureGuards =
     ]
 
 -- ===========================================================================
--- English copy spot-checks — guard the En table against wording drift
+-- English copy spot-checks -- guard the En table against wording drift
 -- (transcribed from ny-connectors/connectors/src/i18n/en.ts).
 -- ===========================================================================
 
@@ -866,39 +869,39 @@ copyChecks =
 
 enCopyCases :: [(String, Text, Text)]
 enCopyCases =
-  [ ("welcome", "🙏 Namaskara! I'm your Namma Yatri assistant\n\nReady to book an auto?", en.welcome),
-    ("flexiFinding", "🛺 Finding an auto near you…", en.flexiFinding),
-    ("flexiCancelSearch", "❌ Cancel search", en.flexiCancelSearch),
-    ("flexiNoAuto", "😔 No auto available near you right now. Please try again.", en.flexiNoAuto),
-    ("flexiTryAgain", "🔁 Try again", en.flexiTryAgain),
-    ("flexiBookAnother", "🛺 Book another", en.flexiBookAnother),
-    ("rideTypeFlexi", "🛺 Quick Ride", en.rideTypeFlexi),
-    ("rideTypeRegular", "🚗 Ride with destination", en.rideTypeRegular),
-    ("regularConfirmButton", "✅ Book auto", en.regularConfirmButton),
-    ("pickupConfirmButton", "✅ Confirm pickup", en.pickupConfirmButton)
+  [ ("welcome", "Namaskara! I'm your Namma Yatri assistant\n\nReady to book an auto?", en.welcome),
+    ("flexiFinding", "Finding an auto near you...", en.flexiFinding),
+    ("flexiCancelSearch", "Cancel search", en.flexiCancelSearch),
+    ("flexiNoAuto", "No auto available near you right now. Please try again.", en.flexiNoAuto),
+    ("flexiTryAgain", "Try again", en.flexiTryAgain),
+    ("flexiBookAnother", "Book another", en.flexiBookAnother),
+    ("rideTypeFlexi", "Quick Ride", en.rideTypeFlexi),
+    ("rideTypeRegular", "Ride with destination", en.rideTypeRegular),
+    ("regularConfirmButton", "Book auto", en.regularConfirmButton),
+    ("pickupConfirmButton", "Confirm pickup", en.pickupConfirmButton)
   ]
 
 -- ===========================================================================
--- Ride-type chooser button layout — direct unit checks of
+-- Ride-type chooser button layout -- direct unit checks of
 -- WhatsappBot.Flow.Booking.rideTypeButtons / hiddenRideTypeButtons.
 --
 -- maxDirectButtons = Nothing (default, locked design-discussion rule):
 --   total <= 1 -> show it directly, no More
 --   total >= 2 -> show min(total - 1, 2) directly, in priority order; the
 --                 rest goes behind More (capped at 2 direct so direct+More
---                 never exceeds WhatsApp's real 3-button-per-message limit —
+--                 never exceeds WhatsApp's real 3-button-per-message limit --
 --                 see developers.facebook.com's interactive-reply-buttons docs)
 --
 -- maxDirectButtons = Just n (explicit per-merchant override): cap =
 -- clamp(n, 1, 2). If everything fits within cap, show it ALL directly with
--- NO More — no automatic "-1" reservation, unlike the Nothing case.
+-- NO More -- no automatic "-1" reservation, unlike the Nothing case.
 -- Otherwise show `cap` directly, hide the rest.
 --
 -- No golden JSON fixture exercises this: both existing fixture merchants
 -- (pn_flexi/pn_reg) only ever offer ONE ride type each, so this is the only
 -- place the "More" path is actually verified. Sizes 3+ repeat a RideType
 -- value (only 2 real ones exist today) purely to exercise the counting
--- logic — not a realistic merchant config.
+-- logic -- not a realistic merchant config.
 -- ===========================================================================
 
 rideTypeButtonLayoutChecks :: TestTree

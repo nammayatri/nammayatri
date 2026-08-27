@@ -199,6 +199,11 @@ data MerchantCtx = MerchantCtx
     flexiIntroVideoUrl :: Maybe Text,
     flexiSupportPhone :: Maybe Text,
     nyTrackingUrl :: Text, -- ride-share tracking URL template ({rideId} placeholder)
+    appDownloadUrl :: Text, -- shown on the "Get the App" button's follow-up message (Engine.hs)
+    -- Trigger words checked against every inbound message before anything
+    -- else in Engine.hs's intercept chain — previously hardcoded in Ride.hs.
+    cancelTriggers :: [Text],
+    statusTriggers :: [Text],
     -- Poll-loop tuning, per merchant (mirrors MetaBotCfg's fields of the same
     -- name). Consumed by mkBotConfig at the rider-app adapter boundary — see
     -- WhatsappBot.Env.BotConfig for what these actually gate.

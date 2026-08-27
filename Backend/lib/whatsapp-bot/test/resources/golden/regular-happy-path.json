@@ -495,7 +495,8 @@
           "to": "919812345678",
           "merchant": "REG",
           "buttons": [
-            "book"
+            "book",
+            "get_app"
           ]
         }
       ],

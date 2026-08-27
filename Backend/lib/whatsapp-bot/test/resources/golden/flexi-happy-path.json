@@ -291,7 +291,8 @@
           "to": "919361176218",
           "merchant": "FLEXI",
           "buttons": [
-            "book"
+            "book",
+            "get_app"
           ]
         }
       ],
