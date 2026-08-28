@@ -15,6 +15,10 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementTdsReimbursementStatus,
     getFinanceManagementTdsReimbursementList,
     getFinanceManagementTdsReimbursement,
+    postFinanceManagementFinanceAdjustmentSubmit,
+    getFinanceManagementFinanceAdjustmentList,
+    postFinanceManagementFinanceAdjustmentApprove,
+    postFinanceManagementFinanceAdjustmentReject,
   )
 where
 
@@ -35,6 +39,7 @@ import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
 import qualified Domain.Types.Image as DImage
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
+import qualified Domain.Types.LedgerAdjustmentRequest as DLAR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -48,6 +53,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -102,7 +108,9 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
+import qualified SharedLogic.Finance.LedgerAdjustment as LedgerAdjustment
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
+import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
@@ -1996,7 +2004,12 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
         throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not belong to this fleet owner")
       unless (invoice.issuedAt >= periodStart && invoice.issuedAt < periodEnd) $
         throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not fall within " <> show quarter <> " of assessment year " <> req.assessmentYear)
+      pure (line, invoice)
 
+    -- Block invoices already on PENDING/APPROVED mappings or with DirectTax Reimbursed.
+    TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement Nothing (snd <$> invoicesWithLines)
+
+    forM_ invoicesWithLines $ \(line, invoice) -> do
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
       forM_ indirectTaxTxns $ \txn ->
         unless (abs (invoice.subtotal - txn.taxableValue) <= roundingTolerance) $
@@ -2022,7 +2035,6 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
                 <> show expectedTdsAmount
                 <> ")"
           )
-      pure (line, invoice)
 
     let sumTdsAmount = sum $ map ((.tdsAmount) . fst) invoicesWithLines
     when (abs (sumTdsAmount - req.certAmount) > roundingTolerance) $
@@ -2332,3 +2344,68 @@ resolveTdsDocumentUrl :: Id DImage.Image -> Flow Text
 resolveTdsDocumentUrl imageId = do
   image <- QImage.findById imageId >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> imageId.getId)
   S3.generateDownloadUrl (T.unpack image.s3Path) 3600
+
+postFinanceManagementFinanceAdjustmentSubmit ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  API.SubmitLedgerAdjustmentReq ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentSubmit = LedgerAdjustment.ledgerAdjustmentSubmit
+
+getFinanceManagementFinanceAdjustmentList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (Id Dashboard.Common.LedgerAdjustmentRequest) ->
+  Maybe API.AdjustmentRequestStatus ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe Bool ->
+  Maybe API.AdjustmentCategory ->
+  Maybe API.AdjustmentDirection ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Text ->
+  Flow API.LedgerAdjustmentListRes
+getFinanceManagementFinanceAdjustmentList merchantShortId opCity mbLimit mbOffset mbAdjustmentRequestId mbStatus mbPersonId mbExcludeCurrentAdminMaker mbCategory mbDirection mbReferenceType mbReferenceId mbAdminMakerId mbAdminCheckerId =
+  LedgerAdjustment.ledgerAdjustmentList
+    merchantShortId
+    opCity
+    mbLimit
+    mbOffset
+    (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest <$> mbAdjustmentRequestId)
+    mbStatus
+    (cast @Dashboard.Common.Person @DP.Person <$> mbPersonId)
+    mbExcludeCurrentAdminMaker
+    mbCategory
+    mbDirection
+    mbReferenceType
+    mbReferenceId
+    (cast @Dashboard.Common.Person @DP.Person <$> mbAdminMakerId)
+    (cast @Dashboard.Common.Person @DP.Person <$> mbAdminCheckerId)
+
+postFinanceManagementFinanceAdjustmentApprove ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.LedgerAdjustmentRequest ->
+  Text ->
+  Text ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentApprove merchantShortId opCity adjustmentRequestId =
+  LedgerAdjustment.ledgerAdjustmentApproveAndPost merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId)
+
+postFinanceManagementFinanceAdjustmentReject ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.LedgerAdjustmentRequest ->
+  Text ->
+  Text ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentReject merchantShortId opCity adjustmentRequestId =
+  LedgerAdjustment.ledgerAdjustmentReject merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId)

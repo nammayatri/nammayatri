@@ -75,5 +75,10 @@ DirectTaxTransaction:
       kvFunction: findAllWithKV
       where: invoiceNumber
 
+    findAllByInvoiceNumbers:
+      kvFunction: findAllWithKV
+      where:
+        in: [invoiceNumber]
+
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

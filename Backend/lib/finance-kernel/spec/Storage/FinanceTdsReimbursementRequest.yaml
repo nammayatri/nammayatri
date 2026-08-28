@@ -59,6 +59,11 @@ FinanceTdsReimbursementRequest:
       where:
         and: [fleetOwnerId, quarter, assessmentYear, merchantOperatingCityId]
 
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [id]
+
     updateStatusAndRejectionReason:
       kvFunction: updateOneWithKV
       params: [status, rejectionReason]

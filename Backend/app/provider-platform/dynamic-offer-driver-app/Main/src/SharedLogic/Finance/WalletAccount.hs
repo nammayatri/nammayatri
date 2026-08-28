@@ -20,6 +20,7 @@ module SharedLogic.Finance.WalletAccount
     getWalletAndControlAccountsByOwner,
     getWalletBalanceByOwner,
     hasMinWalletBalance,
+    validateWalletDebitAmount,
     getControlBalanceByOwner,
     computeTdsRateReason,
     estimateWalletDeductions,
@@ -30,6 +31,8 @@ import qualified Domain.Types.DriverPanCard as DPanCard
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
+import Kernel.Types.Error
+import Kernel.Utils.Common (throwError)
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 
@@ -85,6 +88,20 @@ hasMinWalletBalance counterpartyType mbMinBalance ownerId =
   case mbMinBalance of
     Nothing -> pure True
     Just minBalance -> maybe False (>= minBalance) <$> getWalletBalanceByOwner counterpartyType ownerId
+
+-- | Ensures a wallet debit amount does not exceed the owner's current liability balance.
+validateWalletDebitAmount ::
+  (BeamFlow m r, MonadFlow m) =>
+  CounterpartyType ->
+  Text ->
+  HighPrecMoney ->
+  m ()
+validateWalletDebitAmount counterpartyType ownerId debitAmount = do
+  walletBalance <-
+    getWalletBalanceByOwner counterpartyType ownerId
+      >>= maybe (throwError (InvalidRequest "Wallet balance not found")) pure
+  when (debitAmount > walletBalance) $
+    throwError (InvalidRequest $ "Could not debit more than wallet balance: " <> show walletBalance)
 
 -- | Balance of the Control (cash-earnings memo) account.
 getControlBalanceByOwner ::

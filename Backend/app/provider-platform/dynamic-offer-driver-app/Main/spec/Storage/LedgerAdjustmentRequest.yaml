@@ -1,0 +1,80 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Image: Domain.Types.Image
+  LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+
+LedgerAdjustmentRequest:
+  tableName: ledger_adjustment_request
+  derives: "Generic"
+
+  types:
+    AdjustmentCategory:
+      enum: "RideRelatedCredit,RideRelatedDebit,PayoutRelatedCredit,PayoutRelatedDebit,TdsReimbursementCredit,TdsReimbursementDebit,IncentiveCredit,IncentiveDebit,MiscellaneousCredit,MiscellaneousDebit,TdsDeductionDebit"
+      derive: "HttpInstance"
+    AdjustmentDirection:
+      enum: "Credit,Debit"
+      derive: "HttpInstance"
+    AdjustmentRequestStatus:
+      enum: "PENDING_APPROVAL,REJECTED,POSTED,POST_FAILED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id LedgerAdjustmentRequest
+    personId: Id Person
+    category: AdjustmentCategory
+    direction: AdjustmentDirection
+    amount: HighPrecMoney
+    currency: Currency
+    description: Maybe Text
+    # Optional business reference (ride id, payout id, etc.) for search / audit
+    referenceType: Text
+    referenceId: Maybe Text
+    # Supporting document image
+    documentId: Maybe (Id Image)
+    # Maker-checker (dashboard person ids + display names)
+    adminMakerId: Id Person
+    adminMakerName: Text
+    adminCheckerId: Maybe (Id Person)
+    adminCheckerName: Maybe Text
+    status: AdjustmentRequestStatus
+    errorMessage: Maybe Text
+    # Populated after successful approve + ledger post
+    ledgerEntryId: Maybe (Id LedgerEntry)
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    postedAt: Maybe UTCTime
+
+  constraints:
+    id: PrimaryKey
+    referenceId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByReferenceIdAndStatuses:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [referenceId]
+          - in: [status]
+
+    updateStatusCheckerAndPostResult:
+      kvFunction: updateOneWithKV
+      params: [status, adminCheckerId, adminCheckerName, errorMessage, ledgerEntryId, postedAt]
+      where: id
+
+    updateStatusAndChecker:
+      kvFunction: updateOneWithKV
+      params: [status, adminCheckerId, adminCheckerName, errorMessage]
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

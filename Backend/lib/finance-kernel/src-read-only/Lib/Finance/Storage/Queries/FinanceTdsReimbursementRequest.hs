@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByFleetOwnerIdQuarterAndAssessmentYear ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.Quarter -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest]))
+  (Kernel.Prelude.Text -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.Quarter -> Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest])
 findAllByFleetOwnerIdQuarterAndAssessmentYear fleetOwnerId quarter assessmentYear merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -35,6 +35,11 @@ findAllByFleetOwnerIdQuarterAndAssessmentYear fleetOwnerId quarter assessmentYea
           Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
         ]
     ]
+
+findAllByIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ([Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest] -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest])
+findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
 updateStatusAndRejectionReason ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

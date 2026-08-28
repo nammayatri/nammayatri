@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction] -> m ())
 createMany = traverse_ create
 
+findAllByInvoiceNumbers :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Kernel.Prelude.Maybe Kernel.Prelude.Text] -> m [Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction])
+findAllByInvoiceNumbers invoiceNumber = do findAllWithKV [Se.Is Beam.invoiceNumber $ Se.In invoiceNumber]
+
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction -> m (Maybe Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction))
