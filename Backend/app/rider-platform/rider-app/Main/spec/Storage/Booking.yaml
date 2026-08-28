@@ -204,6 +204,7 @@ Booking:
     hasStops: Maybe Bool
     riderId: Id Person
     isPetRide: Bool
+    isStucked: Bool  # ops marker for the stuck-booking cron; set in batch by dashboard booking sync / stuck-cancel
     fromLocation: Location
     billingCategory: BillingCategory
     initialPickupLocation: Location|NoRelation
@@ -332,6 +333,7 @@ Booking:
     preferSafetyPlus: Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
+    isStucked: Maybe Bool
     requiresPaymentBeforeConfirm: Maybe Bool
 
 
@@ -430,6 +432,7 @@ Booking:
     preferSafetyPlus : Kernel.Prelude.Just|I
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just|I
+    isStucked: Kernel.Prelude.Just|I
     requiresPaymentBeforeConfirm: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
 
@@ -463,6 +466,7 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
     isPetRide: fromMaybe False isPetRide | E
+    isStucked: fromMaybe False isStucked | E
     requiresPaymentBeforeConfirm: fromMaybe False requiresPaymentBeforeConfirm | E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 

@@ -75,6 +75,7 @@ data Booking = Booking
     isPetRide :: Kernel.Prelude.Bool,
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
+    isStucked :: Kernel.Prelude.Bool,
     isWhatsappRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

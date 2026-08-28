@@ -30,6 +30,7 @@ import qualified API.Action.ProviderPlatform.Operator as OperatorDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DriverInfoByPhoneNumber as DriverInfoByPhoneNumber
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
+import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAdmin as InternalAdmin
 import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAuth as InternalAuth
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
@@ -58,6 +59,7 @@ type InternalAPI =
   "driver-offer"
     :> ( CacAuth.API
            :<|> InternalAuth.API
+           :<|> InternalAdmin.API
        )
 
 type API' =
@@ -100,3 +102,4 @@ handlerV3 :: FlowServer InternalAPI
 handlerV3 =
   CacAuth.handler
     :<|> InternalAuth.handler
+    :<|> InternalAdmin.handler

@@ -299,6 +299,7 @@ handler merchantId req validatedReq = do
             createdAt = now,
             updatedAt = now,
             isPetRide = isJust driverQuote.fareParams.petCharges,
+            isStucked = False,
             preferenceMatchScore = mbPreferenceMatchScore,
             estimatedFare = driverQuote.estimatedFare,
             currency = driverQuote.currency,

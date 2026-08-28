@@ -103,6 +103,7 @@ Booking:
     isReferredRide: Maybe Bool
     isSafetyPlus : Bool
     isPetRide: Bool
+    isStucked: Bool  # ops marker for the stuck-booking cron; set in batch by dashboard booking sync / stuck-cancel
     preferenceMatchScore: Maybe Double
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
@@ -149,6 +150,7 @@ Booking:
     isSafetyPlus : Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
+    isStucked: Maybe Bool
     billingCategory: Maybe BillingCategory
     searchTryId: Maybe Text
 
@@ -199,6 +201,7 @@ Booking:
     isSafetyPlus : Just isSafetyPlus|E
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
+    isStucked: Just isStucked|E
     billingCategory: Just billingCategory|E
     searchTryId: (Kernel.Types.Id.getId <$> searchTryId)|E
     pickupGateId: pickupGateId|E
@@ -230,6 +233,7 @@ Booking:
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
+    isStucked: fromMaybe False isStucked|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
     searchTryId: Kernel.Types.Id.Id <$> searchTryId|E
     pickupGateId: pickupGateId|E
