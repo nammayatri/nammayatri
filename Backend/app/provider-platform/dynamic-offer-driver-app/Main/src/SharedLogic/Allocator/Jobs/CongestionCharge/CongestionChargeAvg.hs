@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
   )
 where
 
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (CONGESTION_CHARGE))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -28,6 +29,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), CongestionChargeCalculationRequestJobData (..))
 import SharedLogic.DynamicPricing
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.Clickhouse.Estimate as Est
 
 calculateCongestionChargeAvgTaxi ::
@@ -42,15 +44,17 @@ calculateCongestionChargeAvgTaxi ::
 calculateCongestionChargeAvgTaxi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   now <- getCurrentTime
   let CongestionChargeCalculationRequestJobData {..} = jobInfo.jobData
-  let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
   let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
-  calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
-  calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
-  result <- Est.calulateCongestionByGeohash from now
-  -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
-  -- let queryResult = SRFD.concatFun query1Result query2Result
-  logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
-  mapM_ (updateGeohashCongestion congestionChargeCalculationTTLInSec congestionAvgDampingFactor) result
+  congestionChargeExcluded <- CQLF.isFeatureExcluded CONGESTION_CHARGE
+  unless congestionChargeExcluded $ do
+    let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
+    calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
+    calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
+    result <- Est.calulateCongestionByGeohash from now
+    -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
+    -- let queryResult = SRFD.concatFun query1Result query2Result
+    logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
+    mapM_ (updateGeohashCongestion congestionChargeCalculationTTLInSec congestionAvgDampingFactor) result
   return (ReSchedule nextScheduleT)
 
 updateGeohashCongestion ::
