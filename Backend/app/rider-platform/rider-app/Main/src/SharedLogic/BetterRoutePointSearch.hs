@@ -42,6 +42,7 @@ import Data.Aeson (encode)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (WALK_AND_SAVE))
 import qualified Domain.Types.Location as DL
 import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.RiderConfig as DRC
@@ -57,6 +58,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.Search as SLS
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -68,10 +70,14 @@ buildSuggestedSearchRes ::
   BRP.BetterRoutePlan ->
   m [SLS.SearchRes]
 buildSuggestedSearchRes riderConfig parentRes detected = do
-  mbPlan <- JMU.measureLatency (measurePlanWalks riderConfig parentRes.searchRequest detected) "betterRoutePoint.measureWalks"
-  case mbPlan of
-    Nothing -> pure []
-    Just plan -> JMU.measureLatency (buildFromPlan plan) "betterRoutePoint.buildShadow"
+  walkAndSaveExcluded <- CQLF.isFeatureExcluded WALK_AND_SAVE
+  if walkAndSaveExcluded
+    then pure []
+    else do
+      mbPlan <- JMU.measureLatency (measurePlanWalks riderConfig parentRes.searchRequest detected) "betterRoutePoint.measureWalks"
+      case mbPlan of
+        Nothing -> pure []
+        Just plan -> JMU.measureLatency (buildFromPlan plan) "betterRoutePoint.buildShadow"
   where
     buildFromPlan plan = do
       let routes = plan.best : plan.alternatives
