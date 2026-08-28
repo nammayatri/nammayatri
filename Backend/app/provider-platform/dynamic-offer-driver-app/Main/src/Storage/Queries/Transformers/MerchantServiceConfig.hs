@@ -41,6 +41,7 @@ getConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig cfg -> toJSON cfg
     Maps.OSRMConfig cfg -> toJSON cfg
+    Maps.DishaConfig cfg -> toJSON cfg
     Maps.MMIConfig cfg -> toJSON cfg
     Maps.NextBillionConfig cfg -> toJSON cfg
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
@@ -152,6 +153,7 @@ getServiceName = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> Domain.MapsService Maps.Google
     Maps.OSRMConfig _ -> Domain.MapsService Maps.OSRM
+    Maps.DishaConfig _ -> Domain.MapsService Maps.Disha
     Maps.MMIConfig _ -> Domain.MapsService Maps.MMI
     Maps.NextBillionConfig _ -> Domain.MapsService Maps.NextBillion
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
@@ -260,6 +262,7 @@ mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceNa
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON for serviceName: " <> show serviceName <> " Error:" <> err)) return $ case serviceName of
   Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> eitherValue configJSON
   Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> eitherValue configJSON
+  Domain.MapsService Maps.Disha -> Domain.MapsServiceConfig . Maps.DishaConfig <$> eitherValue configJSON
   Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> eitherValue configJSON
   Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> eitherValue configJSON
   Domain.MapsService Maps.SelfTuned -> Left "No Config Found For SelfTuned."

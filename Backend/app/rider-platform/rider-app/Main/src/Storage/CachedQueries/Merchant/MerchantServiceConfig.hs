@@ -103,6 +103,7 @@ getServiceName msc = case msc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> MapsService Maps.Google
     Maps.OSRMConfig _ -> MapsService Maps.OSRM
+    Maps.DishaConfig _ -> MapsService Maps.Disha
     Maps.MMIConfig _ -> MapsService Maps.MMI
     Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
   SmsServiceConfig smsCfg -> case smsCfg of

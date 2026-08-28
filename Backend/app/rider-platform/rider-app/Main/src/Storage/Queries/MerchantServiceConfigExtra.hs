@@ -102,6 +102,7 @@ getServiceNameConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
     Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.DishaConfig cfg -> (Domain.MapsService Maps.Disha, toJSON cfg)
     Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
     Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
   Domain.SmsServiceConfig smsCfg -> case smsCfg of

@@ -38,6 +38,7 @@ getServiceConfigFromDomain serviceName configJSON = do
   maybe (throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON - " <> show serviceName)) return $ case serviceName of
     Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.Disha -> Domain.MapsServiceConfig . Maps.DishaConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.SelfTuned -> Nothing
@@ -120,6 +121,7 @@ getServiceNameConfigJson = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
     Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.DishaConfig cfg -> (Domain.MapsService Maps.Disha, toJSON cfg)
     Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
     Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
