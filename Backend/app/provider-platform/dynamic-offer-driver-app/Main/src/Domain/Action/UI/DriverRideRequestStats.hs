@@ -23,7 +23,7 @@ getRideRequestStats (mbPersonId, _merchantId, _merchantOpCityId) mbDurationInMin
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   let durationInMinutes = fromMaybe (24 * 60) mbDurationInMinutes
   now <- getCurrentTime
-  let since = addUTCTime (- fromIntegral (durationInMinutes * 60) :: NominalDiffTime) now
+  let since = addUTCTime (fromIntegral (- (durationInMinutes * 60))) now
   (totalRequests, acceptedRequests, rejectedRequests, pulledRequests, lastRequestAt, lastAcceptedRequestAt) <- QSRFD.getRideRequestStatsSince driverId since
   pure
     API.Types.UI.DriverRideRequestStats.DriverRideRequestStatsRes
