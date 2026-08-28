@@ -11,7 +11,7 @@ types:
 
 apis:
   - GET: # DriverRideRequestStatsAPI
-      endpoint: /rideRequestStats
+      endpoint: /driver/rideRequestStats
       auth: TokenAuth PROVIDER_TYPE
       query:
         - durationInMinutes: Int
