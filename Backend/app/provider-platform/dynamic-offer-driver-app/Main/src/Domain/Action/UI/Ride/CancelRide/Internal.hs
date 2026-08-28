@@ -21,7 +21,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal
     driverDistanceToPickup,
     buildCancellationContext,
     getCancellationCharges,
-    customerCancellationChargesCalculation,
     CancellationChargesOutcome (..),
     getDistanceToPickup,
   )
@@ -184,14 +183,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
             transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             (cancellationDisToPickup, _mbDriverLocation) <- getDistanceToPickup booking (Just ride)
             -- ONE decision (signals → fault verdict → consequence-matrix row) feeds every
             -- consequence below through the orchestrator; nothing re-derives it.
             decision <- decideCancellationConsequences booking ride transporterConfig bookingCReason.source bookingCReason.reasonCode cancellationDisToPickup
-            let consequenceCtx = ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCReason.source, decision = decision}
-            -- the decision above already consumed the live pickup journey; persist it on the ride
-            fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+            let consequenceCtx = ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCReason.source, decision = decision}
             mbVehicle <- QVeh.findById ride.driverId
             vehicle <- case mbVehicle of
               Just v -> pure v
@@ -201,8 +199,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
                   pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
                 | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
-            unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig driver
+            -- the decision above already consumed the live pickup journey; persist it on the ride
+            fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):
             -- blacklist, driver overlay, coin event, driver money, rate counting — then
             -- the customer-side charge (dues + counters + ledger entries).

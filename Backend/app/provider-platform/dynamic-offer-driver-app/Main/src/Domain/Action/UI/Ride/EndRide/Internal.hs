@@ -234,7 +234,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         -- Settle only the dues that actually rode on this fare (oldest rows first) and
         -- decrement the balance by that amount — dues accrued after the fare was quoted
         -- stay PENDING and attach to the next ride instead of being wiped.
-        settledRideIds <- SCD.settleCancellationDuesUpTo riderDetails cancellationDues
+        settledRideIds <- SCD.settleCancellationDuesUpTo riderDetails.id cancellationDues
         let bppRideIds = (.getId) <$> settledRideIds
         unless (null bppRideIds) $ do
           appBackendBapInternal <- asks (.appBackendBapInternal)

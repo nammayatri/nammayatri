@@ -31,12 +31,10 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Extra.CancellationConsequenceMatrix as DExtra
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions (createWithKV, updateOneWithKV)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
 import qualified Kernel.Types.SystemConfigs as KTSC
@@ -60,25 +58,6 @@ data ConsequenceInput = ConsequenceInput
     isDashboardBooking :: Bool
   }
   deriving (Generic, Show)
-
--- | Resolve once per ride and cache, so the charge calculation (main cancel flow) and
--- the coin event (fork) apply the SAME row. The main flow resolves first with the full
--- context (area, payment instrument); the fork then reads the cached decision.
-getOrResolveConsequence :: (CacheFlow m r, EsqDBFlow m r) => Id DRide.Ride -> ConsequenceInput -> m (Maybe DCCM.CancellationConsequenceMatrix)
-getOrResolveConsequence rideId input = do
-  mbCached :: Maybe DCCM.CancellationConsequenceMatrix <- Redis.safeGet (consequenceRowKey rideId)
-  case mbCached of
-    Just row -> pure (Just row)
-    Nothing -> do
-      mbRow <- resolveConsequence input
-      whenJust mbRow $ \row -> Redis.setExp (consequenceRowKey rideId) row consequenceRowTtl
-      pure mbRow
-
-consequenceRowKey :: Id DRide.Ride -> Text
-consequenceRowKey rideId = "CancellationConsequence:rideId-" <> rideId.getId
-
-consequenceRowTtl :: Int
-consequenceRowTtl = 3600
 
 resolveConsequence :: (CacheFlow m r, EsqDBFlow m r) => ConsequenceInput -> m (Maybe DCCM.CancellationConsequenceMatrix)
 resolveConsequence input = do
@@ -113,18 +92,16 @@ dimMatches Nothing _ = True
 dimMatches (Just rowVal) (Just eventVal) = rowVal == eventVal
 dimMatches (Just _) Nothing = False
 
--- fixed weights: faultRule > faultVerdict > cancelledBy > tripCategory > vehicleServiceTier > area/paymentInstrument
-specificity :: DCCM.CancellationConsequenceMatrix -> Int
+-- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > vehicleServiceTier > area/paymentInstrument
+specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Int)
 specificity row =
-  sum
-    [ 32 * fromEnum (isJust row.faultRule),
-      16 * fromEnum (isJust row.faultVerdict),
-      8 * fromEnum (isJust row.cancelledBy),
-      4 * fromEnum (isJust row.tripCategory),
-      2 * fromEnum (isJust row.vehicleServiceTier),
-      1 * fromEnum (isJust row.area),
-      1 * fromEnum (isJust row.paymentInstrument)
-    ]
+  ( isJust row.faultRule,
+    isJust row.faultVerdict,
+    isJust row.cancelledBy,
+    isJust row.tripCategory,
+    isJust row.vehicleServiceTier,
+    fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument)
+  )
 
 -- | Build the resolver input from a full booking — the ONE place the dimension values
 -- come from, so every resolution site (charge calc, side effects, coin fork when it has

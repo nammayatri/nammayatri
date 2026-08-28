@@ -309,3 +309,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fault_rule text 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_fault_seconds integer ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_dark_seconds integer ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_behaviour text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fee_tax_if_cancelled double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_consequence_row_id_if_cancelled text ;
