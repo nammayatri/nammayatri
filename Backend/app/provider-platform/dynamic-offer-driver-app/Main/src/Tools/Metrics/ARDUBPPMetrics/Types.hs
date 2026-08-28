@@ -63,6 +63,7 @@ data BPPMetricsContainer = BPPMetricsContainer
     searchTryCounter :: SearchTryCounterMetric,
     searchRequestSentToDriverCounter :: AllocationFunnelCounterMetric,
     searchRequestExpiredCounter :: AllocationFunnelCounterMetric,
+    riderAcceptanceCounter :: RideFunnelCounterMetric,
     bookingCreatedCounter :: RideFunnelCounterMetric,
     rideCreatedCounter :: RideFunnelCounterMetric,
     rideStartedCounter :: RideFunnelCounterMetric,
@@ -83,6 +84,7 @@ registerBPPMetricsContainer searchDurationTimeout = do
   searchTryCounter <- registerSearchTryCounter
   searchRequestSentToDriverCounter <- registerAllocationFunnelCounter "BPP_search_request_sent_to_driver_count" "Count of search requests fanned out to drivers, batched per driver"
   searchRequestExpiredCounter <- registerAllocationFunnelCounter "BPP_search_request_expired_count" "Count of driver search requests retracted without any driver response"
+  riderAcceptanceCounter <- registerRideFunnelCounter "BPP_rider_acceptance_count" "Count of rider fare acceptances (Beckn select; normal flow only, OTP/special-zone rides skip select)"
   bookingCreatedCounter <- registerRideFunnelCounter "BPP_booking_created_count" "Count of bookings confirmed on the BPP"
   rideCreatedCounter <- registerRideFunnelCounter "BPP_ride_created_count" "Count of rides created (driver assigned to booking)"
   rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
