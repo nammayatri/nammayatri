@@ -654,10 +654,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         else do
           let exceededLookback = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
           pure (exceededLookback, exceededLookback)
-    when shouldFlagRiderForRepeatCustomerFraud $ QRiderDetails.flagRiderForCoinZero booking.riderId
     newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) LYT.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
-    QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     when (thresholdConfig.enableMobilityBilling == Just True) $
       fork "report Google mobility billable event" $
         GoogleMobilityBilling.reportNavBillableEvent booking updRide
@@ -669,6 +667,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId rideFareParams thresholdConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
+    when shouldFlagRiderForRepeatCustomerFraud $ QRiderDetails.flagRiderForCoinZero booking.riderId
+    QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
     fork "DriverRideCompletedCoin Event : " $ do
       expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc

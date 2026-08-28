@@ -39,6 +39,7 @@ import Data.Aeson (encode)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (WALK_AND_SAVE))
 import qualified Domain.Types.Location as DL
 import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.RiderConfig as DRC
@@ -54,6 +55,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.Search as SLS
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -88,13 +90,17 @@ buildSuggestedSearchRes ::
   SLS.SearchRes ->
   m (Maybe SuggestedSearchBuild)
 buildSuggestedSearchRes riderConfig parentRes = do
-  -- `$!` matters here: without it the timing would be meaningless, because a lazy Maybe
-  -- is not evaluated until used. Forcing to WHNF is enough — deciding Just vs Nothing is
-  -- exactly what runs both segment scans.
-  mbPlan <- JMU.measureLatency (pure $! detectBetterRoute riderConfig parentRes) "betterRoutePoint.detect"
-  case mbPlan of
-    Nothing -> pure Nothing
-    Just plan -> JMU.measureLatency (Just <$> buildFromPlan plan) "betterRoutePoint.buildShadow"
+  walkAndSaveExcluded <- CQLF.isFeatureExcluded WALK_AND_SAVE
+  if walkAndSaveExcluded
+    then pure Nothing
+    else do
+      -- `$!` matters here: without it the timing would be meaningless, because a lazy Maybe
+      -- is not evaluated until used. Forcing to WHNF is enough — deciding Just vs Nothing is
+      -- exactly what runs both segment scans.
+      mbPlan <- JMU.measureLatency (pure $! detectBetterRoute riderConfig parentRes) "betterRoutePoint.detect"
+      case mbPlan of
+        Nothing -> pure Nothing
+        Just plan -> JMU.measureLatency (Just <$> buildFromPlan plan) "betterRoutePoint.buildShadow"
   where
     -- Every shape gets its shadow now, not when the customer asks: creating one is two
     -- local writes, and doing it here is what lets a fare be dispatched in the background

@@ -24,6 +24,7 @@ import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types as DTC
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -69,6 +70,7 @@ import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -241,7 +243,8 @@ buildDriverQuote clientId driver driverStats searchReq sd estimateId tripCategor
   now <- getCurrentTime
   deploymentVersion <- asks (.version)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
+  dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True && not dynamicPricingExcluded
     then
       fork "updateDynamicPricingAcceptanceCounters" $
         geoAddDynamicPricingCounter mkAcceptanceVehicleCategoryWithDistanceBin mkAcceptanceVehicleCategory mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon sd.searchTryId.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
