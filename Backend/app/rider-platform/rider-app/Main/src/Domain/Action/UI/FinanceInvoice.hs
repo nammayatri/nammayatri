@@ -58,8 +58,10 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
     Nothing -> case (mbInvoiceType, mbReferenceId) of
       (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Ride)
       (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId (Just RideCancellation)
+      (Just Refund, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Refund)
       (Just Ride, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Ride"
       (Just RideCancellation, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=RideCancellation"
+      (Just Refund, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Refund"
       _ ->
         let hasDateRange = isJust mbFrom || isJust mbTo
             statusFilter = if hasDateRange then [] else [Draft, Issued, Paid]
