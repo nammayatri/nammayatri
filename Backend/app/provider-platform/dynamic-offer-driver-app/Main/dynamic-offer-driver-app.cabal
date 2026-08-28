@@ -431,6 +431,7 @@ library
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
       Domain.Types.Extra.IdfyVerification
+      Domain.Types.Extra.LeanFlow
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
@@ -782,6 +783,7 @@ library
       Storage.CachedQueries.Route
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.SurgeConfig
+      Storage.CachedQueries.SystemConfigs.LeanFlow
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails

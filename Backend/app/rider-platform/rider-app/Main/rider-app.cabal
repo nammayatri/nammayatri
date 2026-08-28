@@ -389,6 +389,7 @@ library
       Domain.Types.Extra.FRFSCachedQuote
       Domain.Types.Extra.IntegratedBPPConfig
       Domain.Types.Extra.InterCityDetails
+      Domain.Types.Extra.LeanFlow
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -675,6 +676,7 @@ library
       Storage.CachedQueries.Seat
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.SystemConfigs.LeanFlow
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP

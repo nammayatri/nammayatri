@@ -15,6 +15,7 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
 import qualified Data.Vector as V
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DEMAND_HOTSPOTS))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -36,6 +37,7 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- What it is:
@@ -78,9 +80,10 @@ getDriverDemandHotspots ::
   )
 getDriverDemandHotspots (_, _, merchantOpCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  demandHotspotsExcluded <- CQLF.isFeatureExcluded DEMAND_HOTSPOTS
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
-      if configs.enableDemandHotspots
+      if configs.enableDemandHotspots && not demandHotspotsExcluded
         then do
           let cachedResultKey = mkDemandHotspotCachedKey merchantOpCityId.getId
           cachedResult :: Maybe GetDemandHotspotsResp <- Redis.safeGet cachedResultKey
@@ -136,9 +139,10 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
 updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Flow ()
 updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong = do
   now <- getCurrentTime
+  demandHotspotsExcluded <- CQLF.isFeatureExcluded DEMAND_HOTSPOTS
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
-      when configs.enableDemandHotspots $ do
+      when (configs.enableDemandHotspots && not demandHotspotsExcluded) $ do
         let mbGeohash = Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)
         whenJust mbGeohash $ \geohash -> do
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
@@ -160,9 +164,10 @@ updateDemandHotspotsOnBooking ::
   Maps.LatLong ->
   m ()
 updateDemandHotspotsOnBooking searchReqId merchantOpCityId transporterConfig latlong = do
+  demandHotspotsExcluded <- CQLF.isFeatureExcluded DEMAND_HOTSPOTS
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
-      when configs.enableDemandHotspots $ do
+      when (configs.enableDemandHotspots && not demandHotspotsExcluded) $ do
         let mbGeohash = Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)
         whenJust mbGeohash $ \geohash -> do
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)

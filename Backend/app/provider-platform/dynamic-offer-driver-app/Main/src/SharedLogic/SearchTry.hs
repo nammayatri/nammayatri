@@ -23,6 +23,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -55,6 +56,7 @@ import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
@@ -276,7 +278,8 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
-  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
+  dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True && not dynamicPricingExcluded
     then
       fork "updateDynamicPricingDemandCounters" $
         geoAddDynamicPricingCounter mkDemandVehicleCategoryWithDistanceBin mkDemandVehicleCategory mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon id_.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
