@@ -2653,13 +2653,13 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
         autoPayInvoices <- mapMaybeM (mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId transporterConfig) invoices
         return ([], autoPayInvoices)
       _ -> do
-        manualPayInvoices_ <- mapMaybeM (\manualInvoice -> mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId transporterConfig) invoices
+        manualPayInvoices_ <- mapMaybeM (mkManualPaymentEntity mapDriverFeeByDriverFeeId) invoices
         return (manualPayInvoices_, [])
 
   return HistoryEntityV2 {autoPayInvoices, manualPayInvoices}
 
-mkManualPaymentEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> m (Maybe ManualInvoiceHistory)
-mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig = do
+mkManualPaymentEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Map (Id DDF.DriverFee) DDF.DriverFee -> INV.Invoice -> m (Maybe ManualInvoiceHistory)
+mkManualPaymentEntity mapDriverFeeByDriverFeeId' manualInvoice = do
   allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
   let amount = sum $ mapToAmount $ filter ((DDF.CLEARED_BY_YATRI_COINS /=) . (.status)) allDriverFeeForInvoice
@@ -2670,7 +2670,7 @@ mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig
           ManualInvoiceHistory
             { invoiceId = manualInvoice.invoiceShortId,
               rideDays = length allDriverFeeForInvoice,
-              rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
+              rideTakenOn = if length allDriverFeeForInvoice == 1 then (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
               amount,
               amountWithCurrency = PriceAPIEntity amount dfee.currency,
               createdAt = manualInvoice.createdAt,
@@ -2701,7 +2701,7 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
                   amountWithCurrency = PriceAPIEntity (sum $ mapToAmount [dfee]) dfee.currency,
                   executionAt = executionTime,
                   autoPayStage = dfee.autopayPaymentStage,
-                  rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
+                  rideTakenOn = dfee.createdAt,
                   isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
                   coinDiscountAmount = dfee.amountPaidByCoin,
                   coinDiscountAmountWithCurrency = flip PriceAPIEntity dfee.currency <$> (dfee.amountPaidByCoin)
@@ -2825,7 +2825,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
+              rideTakenOn = driverFee.createdAt,
               offerAndPlanDetails = driverFee.planOfferTitle,
               isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
