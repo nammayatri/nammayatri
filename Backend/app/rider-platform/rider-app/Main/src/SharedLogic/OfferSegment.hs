@@ -26,6 +26,7 @@ where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
+import qualified Data.Time as Time
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PassType as PassType
 import qualified Domain.Types.Person as Person
@@ -96,6 +97,8 @@ data OfferSegmentInput = OfferSegmentInput
     passPurchaseCount :: Int,
     hasEverPurchased :: Bool,
     daysSinceLastPurchase :: Maybe Int,
+    personCreatedAt :: Text,
+    firstJoinedAt :: Text,
     current :: CurrentPurchase,
     dimensions :: [DimensionSummary]
   }
@@ -120,7 +123,7 @@ getPersonOfferSegment person merchantOperatingCityId ctx = do
       then pure Nothing
       else do
         rows <- fetchUsageRows person
-        let input = mkInput now rows ctx
+        let input = mkInput now person rows ctx
         result <- LYTU.runLogics logics input
         unless (null result.errors) $
           logError $ "OfferSegment: rule errors: " <> show result.errors
@@ -161,8 +164,8 @@ fetchUsageRows person = do
           forM_ needsAdopting $ \row -> QPersonPTStats.updateStaticPersonIdById staticPersonId row.id
           forM_ needsRepointing $ \row -> QPersonPTStats.updatePersonIdById person.id row.id
 
-mkInput :: UTCTime -> [DPUS.PersonPTStats] -> OfferSegmentContext -> OfferSegmentInput
-mkInput now rows ctx =
+mkInput :: UTCTime -> Person.Person -> [DPUS.PersonPTStats] -> OfferSegmentContext -> OfferSegmentInput
+mkInput now person rows ctx =
   OfferSegmentInput
     { ticketCount = sum (map (fromMaybe 0 . (.ticketCount)) rows),
       purchaseCount = totalPurchases,
@@ -170,6 +173,8 @@ mkInput now rows ctx =
       passPurchaseCount = purchasesOf DPUS.PASS,
       hasEverPurchased = totalPurchases > 0,
       daysSinceLastPurchase = daysSince <$> mbLastPurchasedAt,
+      personCreatedAt = show (Time.utctDay person.createdAt),
+      firstJoinedAt = show (Time.utctDay firstJoined),
       current = mkCurrent,
       dimensions = map toDimension rows
     }
@@ -186,6 +191,7 @@ mkInput now rows ctx =
             Just row | row.purchaseCount > 0 -> Just (daysSince row.lastPurchasedAt)
             _ -> Nothing
         }
+    firstJoined = foldr (\row acc -> maybe acc (min acc) row.personCreatedAt) person.createdAt rows
     mbCurrentRow = listToMaybe (filter matchesCurrent rows)
     matchesCurrent row =
       Just row.productType == ctx.productType

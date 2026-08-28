@@ -22,3 +22,8 @@ CREATE INDEX CONCURRENTLY person_pt_stats_idx_static_person_id ON atlas_app.pers
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY person_pt_stats_idx_person_id ON atlas_app.person_pt_stats USING btree (person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_pt_stats ADD COLUMN person_created_at timestamp with time zone ;

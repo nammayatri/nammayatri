@@ -41,8 +41,8 @@ data PurchaseEvent = PurchaseEvent
     vehicleServiceTierType :: Maybe Spec.ServiceTierType,
     productType :: DPUS.FRFSProductType,
     passTypeId :: Maybe (Id PassType.PassType),
-    -- | Tickets bought. Nothing for a pass, where only purchaseCount moves.
     quantity :: Maybe Int,
+    personCreatedAt :: UTCTime,
     merchantId :: Id Merchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
@@ -68,7 +68,7 @@ mkPurchaseEvent person vehicleType vehicleServiceTierType productType passTypeId
       (pure person.id.getId)
       (\encPhone -> SLUtils.getPureStaticCustomerId person <$> decrypt encPhone)
       person.mobileNumber
-  pure PurchaseEvent {personId = person.id, ..}
+  pure PurchaseEvent {personId = person.id, personCreatedAt = person.createdAt, ..}
 
 recordPurchase ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
@@ -79,13 +79,15 @@ recordPurchase ev = do
   Redis.withWaitAndLockRedis (lockKey ev.staticPersonId) 10 100 $ do
     mbRow <- findRow ev
     case mbRow of
-      Just row ->
+      Just row -> do
         QPersonPTStats.updateCounts
           (liftM2 (+) row.ticketCount ev.quantity)
           (row.purchaseCount + 1)
           now
           ev.personId
           row.id
+        when (isNothing row.personCreatedAt) $
+          QPersonPTStats.updatePersonCreatedAtById (Just ev.personCreatedAt) row.id
       Nothing -> do
         newId <- generateGUID
         QPersonPTStats.create
@@ -100,6 +102,7 @@ recordPurchase ev = do
               ticketCount = ev.quantity,
               purchaseCount = 1,
               lastPurchasedAt = now,
+              personCreatedAt = Just ev.personCreatedAt,
               merchantId = ev.merchantId,
               merchantOperatingCityId = ev.merchantOperatingCityId,
               createdAt = now,
