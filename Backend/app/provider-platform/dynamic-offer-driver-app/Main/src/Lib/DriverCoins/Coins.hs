@@ -43,7 +43,6 @@ where
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
-import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Coins.CoinsConfig as DTCoinsConfig
 import qualified Domain.Types.Common as DTC
@@ -75,9 +74,6 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.CancellationConsequence as CancellationConsequence
-import qualified SharedLogic.CancellationFault as CancellationFault
-import qualified SharedLogic.CancellationSignals as CancellationSignals
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
@@ -90,8 +86,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 import Tools.Utils
@@ -319,16 +313,18 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
             updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 -- | Matrix-only cancellation coin path (no coin_config lookup): amount + expiry come
--- from the consequence-matrix row's CoinDeduction/CoinAddition via validateCancellation
--- (which reads the once-per-ride cached row, so charge and coins apply the SAME row).
+-- from the consequence-matrix row's CoinDeduction/CoinAddition.
 -- The event function is derived from the sign of the delta purely for history/notification
 -- labelling. The direct-wallet-incentive mode keeps its own (wallet-config) path.
 handleCancellationCoinsFromMatrix :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m ()
 handleCancellationCoinsFromMatrix driverId merchantId merchantOpCityId eventType transporterConfig combinedBlacklist entityId vehCategory mbServiceTierType =
   case eventType of
-    DCT.Cancellation {..} -> do
-      (coins, mbExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
-      let eventFunction = if coins < 0 then DCT.BookingCancellationPenalisaton else DCT.BookingCancellationCompensation
+    DCT.Cancellation {consequenceCoins, consequenceRowId} -> do
+      let (coins, mbExpiry) = case consequenceCoins of
+            Just (delta, expiryOverride) -> (delta, expiryOverride)
+            Nothing -> (0, Nothing)
+          eventFunction = if coins < 0 then DCT.BookingCancellationPenalisaton else DCT.BookingCancellationCompensation
+      logInfo $ "Cancellation coins from consequence matrix row " <> show consequenceRowId <> ": " <> show coins <> " expiryOverride=" <> show mbExpiry
       if coins == 0 || eventFunction `elem` combinedBlacklist
         then logInfo $ "Cancellation coins skipped for driver " <> driverId.getId <> ": coins=" <> show coins <> " blacklisted=" <> show (eventFunction `elem` combinedBlacklist)
         else do
@@ -615,47 +611,6 @@ hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpira
 
 -- | Returns the coin delta and the matrix row's expiry override (both from the row's
 -- driverDeduction CoinDeduction variant; a MONEY deduction or matrix miss yields 0).
-validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> DTCR.CancellationReasonCode -> m (Int, Maybe Int)
-validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason = do
-  rideIdText <- fromMaybeM (RideNotFound "RideId is not present") rideId
-  ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
-  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  signals <-
-    CancellationSignals.buildCancellationSignals
-      CancellationSignals.CancellationSignalsReq
-        { ride = ride,
-          quoteId = booking.quoteId,
-          bookingCreatedAt = Nothing,
-          fallbackDurationToPickup = Nothing,
-          initialDisToPickup = initialDisToPickup,
-          cancellationDisToPickup = cancellationDisToPickup,
-          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
-        }
-  mbFaultVerdict <-
-    CancellationFault.getOrComputeFaultVerdict ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $
-      CancellationFault.mkFaultVerdictData signals cancelledBy (Just cancellationReason)
-  -- Coin amount comes from the (once-per-ride cached) consequence matrix row, replacing
-  -- the CANCELLATION_COIN_POLICY JsonLogic. The main cancel flow resolves first with the
-  -- full booking context (area, payment instrument); this fork then reads that cached
-  -- decision, so both apply the SAME row. Matrix miss => no coins (logged in resolver).
-  mbRow <-
-    CancellationConsequence.getOrResolveConsequence ride.id $
-      CancellationConsequence.ConsequenceInput
-        { merchantOperatingCityId = ride.merchantOperatingCityId,
-          faultVerdict = mbFaultVerdict,
-          cancelledBy = cancelledBy,
-          tripCategory = booking.tripCategory,
-          vehicleServiceTier = booking.vehicleServiceTier,
-          area = Nothing,
-          paymentInstrument = Nothing,
-          isDashboardBooking = False
-        }
-  let mbCoinDeduction = CancellationConsequence.driverCoinDeduction =<< mbRow
-      coins = maybe 0 fst mbCoinDeduction
-      mbExpiry = snd =<< mbCoinDeduction
-  logInfo $ "Cancellation coins from consequence matrix row " <> show ((.id.getId) <$> mbRow) <> ": " <> show coins <> " expiryOverride=" <> show mbExpiry
-  pure (coins, mbExpiry)
-
 runActionWhenValidConditions :: EventFlow m r => [m Bool] -> m Int -> m Int
 runActionWhenValidConditions conditions action = do
   isValid <- checkAllConditions conditions

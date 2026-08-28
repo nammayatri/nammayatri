@@ -611,6 +611,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         sosId = Nothing,
         referralFlagReason = Nothing,
         cancellationFaultRule = Nothing,
+        cancellationFeeTaxIfCancelled = Nothing,
+        cancellationConsequenceRowIdIfCancelled = Nothing,
         cancellationFaultVerdict = Nothing,
         pickupBehaviour = Nothing,
         pickupDarkSeconds = Nothing,

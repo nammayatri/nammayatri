@@ -49,7 +49,7 @@ data CancellationType
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
   | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType, tripCategoryType :: DCoins.TripCategoryType}
-  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters, cancelledBy :: CancellationType, cancellationReason :: CancellationReasonCode}
+  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters, cancelledBy :: CancellationType, cancellationReason :: CancellationReasonCode, consequenceCoins :: Maybe (Int, Maybe Int), consequenceRowId :: Maybe Text}
   | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard

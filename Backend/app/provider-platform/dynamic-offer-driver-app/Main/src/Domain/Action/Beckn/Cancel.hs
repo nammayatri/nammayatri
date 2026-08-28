@@ -132,10 +132,12 @@ cancel req merchant booking mbActiveSearchTry = do
     -- (blacklist, driver overlay, coin event, driver money, rate counter) BEFORE the
     -- reallocation decision: a customer forced to cancel because of the driver must still
     -- produce the driver-side consequences even when the booking reallocates.
-    mbDecision <- forM mbRide $ \ride -> do
+    mbConsequenceCtx <- forM mbRide $ \ride -> do
+      driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
-      Orchestrator.applyImmediateConsequences (Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCR.source, decision = decision}) Nothing
-      pure decision
+      let consequenceCtx = Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, driver = driver, source = bookingCR.source, decision = decision}
+      Orchestrator.applyImmediateConsequences consequenceCtx Nothing
+      pure consequenceCtx
 
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
@@ -159,9 +161,10 @@ cancel req merchant booking mbActiveSearchTry = do
               PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id (PickupStall.behaviourLabel journey.behaviour) PickupStall.CustomerCancelledDriverAtFault
 
     isReallocated <-
-      case mbRide of
-        Just ride -> do
-          driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      case mbConsequenceCtx of
+        Just consequenceCtx -> do
+          let ride = consequenceCtx.ride
+              driver = consequenceCtx.driver
           fork "cancelRide - Notify driver" $
             Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
           isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -178,12 +181,12 @@ cancel req merchant booking mbActiveSearchTry = do
     -- cancel can no longer dodge its consequences by having reallocation enabled. On a
     -- reallocated booking the charge is recorded as dues and collected on the next ride
     -- (the reallocation on_cancel carries no fee term).
-    chargesOutcome <- case (mbRide, mbDecision) of
-      (Just ride, Just decision) -> do
+    chargesOutcome <- case mbConsequenceCtx of
+      Just consequenceCtx ->
         Orchestrator.applyTerminalConsequences
-          (Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCR.source, decision = decision})
-          (\base gst -> createCancellationLedgerEntries booking ride base gst transporterConfig)
-      _ -> pure Nothing
+          consequenceCtx
+          (\base gst -> createCancellationLedgerEntries booking consequenceCtx.ride base gst transporterConfig)
+      Nothing -> pure Nothing
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     if isReallocated
