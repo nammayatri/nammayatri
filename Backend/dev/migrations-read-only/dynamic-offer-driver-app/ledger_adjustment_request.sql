@@ -1,0 +1,26 @@
+CREATE TABLE atlas_driver_offer_bpp.ledger_adjustment_request ();
+
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN admin_checker_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN admin_checker_name text ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN admin_maker_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN admin_maker_name text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN amount double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN approved_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN category text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN currency character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN description text ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN direction text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN document_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN error_message text ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN ledger_entry_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN posted_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN reference_id text ;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN reference_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD PRIMARY KEY ( id);

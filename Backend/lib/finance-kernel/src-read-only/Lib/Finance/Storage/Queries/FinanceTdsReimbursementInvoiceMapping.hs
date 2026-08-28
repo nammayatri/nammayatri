@@ -26,12 +26,17 @@ createMany = traverse_ create
 
 findAllByInvoiceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ([Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping]))
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping])
 findAllByInvoiceId invoiceId = do findAllWithKV [Se.Is Beam.invoiceId $ Se.Eq (Kernel.Types.Id.getId invoiceId)]
+
+findAllByInvoiceIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ([Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice] -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping])
+findAllByInvoiceIds invoiceId = do findAllWithKV [Se.Is Beam.invoiceId $ Se.In (Kernel.Types.Id.getId <$> invoiceId)]
 
 findAllByRequestId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ([Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping]))
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping.FinanceTdsReimbursementInvoiceMapping])
 findAllByRequestId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
 
 findByRequestIdAndInvoiceId ::

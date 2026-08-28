@@ -26,8 +26,11 @@ imports:
   TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
   JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
   Image: Dashboard.Common
+  Person: Dashboard.Common
   FinanceTdsReimbursementRequest: Dashboard.Common
   Invoice: Lib.Finance.Domain.Types.Invoice
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  LedgerAdjustmentRequest: Dashboard.Common
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -197,6 +200,116 @@ apis:
         type: ReconciliationTriggerRes
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
+  # ----- Ledger adjustment (maker-checker) -----
+  - POST: # LedgerAdjustmentSubmitAPI
+      endpoint: /finance/adjustment/submit
+      auth: ApiAuthV2
+      request:
+        type: SubmitLedgerAdjustmentReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.adjustment.write
+      helperApi:
+        - POST:
+            endpoint: /finance/adjustment/submit
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            request:
+              type: SubmitLedgerAdjustmentReq
+            response:
+              type: APISuccess
+
+  - GET: # LedgerAdjustmentListAPI
+      endpoint: /finance/adjustment/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - adjustmentRequestId: Id LedgerAdjustmentRequest
+        - status: AdjustmentRequestStatus
+        - personId: Id Person
+        - excludeCurrentAdminMaker: Bool
+        - category: AdjustmentCategory
+        - direction: AdjustmentDirection
+        - referenceType: Text
+        - referenceId: Text
+        - adminMakerId: Id Person
+        - adminCheckerId: Id Person
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: LedgerAdjustmentListRes
+      migrate:
+        capability: finance.adjustment.read
+      helperApi:
+        - GET:
+            endpoint: /finance/adjustment/list
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - adjustmentRequestId: Id LedgerAdjustmentRequest
+              - status: AdjustmentRequestStatus
+              - personId: Id Person
+              - excludeCurrentAdminMaker: Bool
+              - category: AdjustmentCategory
+              - direction: AdjustmentDirection
+              - referenceType: Text
+              - referenceId: Text
+              - adminMakerId: Id Person
+              - adminCheckerId: Id Person
+              - from: UTCTime
+              - to: UTCTime
+            response:
+              type: LedgerAdjustmentListRes
+
+  - POST: # LedgerAdjustmentApproveAPI
+      endpoint: /finance/adjustment/{adjustmentRequestId}/approve
+      auth: ApiAuthV2
+      params:
+        adjustmentRequestId: Id LedgerAdjustmentRequest
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.adjustment.approve
+      helperApi:
+        - POST:
+            endpoint: /finance/adjustment/{adjustmentRequestId}/approve
+            auth: ApiAuthV2
+            params:
+              adjustmentRequestId: Id LedgerAdjustmentRequest
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            response:
+              type: APISuccess
+
+  - POST: # LedgerAdjustmentRejectAPI
+      endpoint: /finance/adjustment/{adjustmentRequestId}/reject
+      auth: ApiAuthV2
+      params:
+        adjustmentRequestId: Id LedgerAdjustmentRequest
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.adjustment.write
+      helperApi:
+        - POST:
+            endpoint: /finance/adjustment/{adjustmentRequestId}/reject
+            auth: ApiAuthV2
+            params:
+              adjustmentRequestId: Id LedgerAdjustmentRequest
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            response:
+              type: APISuccess
+
   # ----- SAP Journal Entries -----
   - GET: # SapJournalListAPI
       endpoint: /finance/sapJournals
@@ -316,6 +429,18 @@ types:
 
   TransactionTypeFilter:
     - enum: "Order, Refund, Chargeback"
+    - derive: "HttpInstance"
+
+  AdjustmentCategory:
+    - enum: "RideRelatedCredit,RideRelatedDebit,PayoutRelatedCredit,PayoutRelatedDebit,TdsReimbursementCredit,TdsReimbursementDebit,IncentiveCredit,IncentiveDebit,MiscellaneousCredit,MiscellaneousDebit,TdsDeductionDebit"
+    - derive: "HttpInstance"
+
+  AdjustmentDirection:
+    - enum: "Credit,Debit"
+    - derive: "HttpInstance"
+
+  AdjustmentRequestStatus:
+    - enum: "PENDING_APPROVAL,REJECTED,POSTED,POST_FAILED"
     - derive: "HttpInstance"
 
   # ----- Subscription Purchase -----
@@ -550,6 +675,41 @@ types:
     - groupTargetKey: Maybe Text          # srcMatchKey uniformly; tgtMatchKey on orphans
     - groupSourceTotal: Maybe HighPrecMoney
     - groupTargetAmount: Maybe HighPrecMoney
+
+  # ----- Ledger adjustment (maker-checker) -----
+  SubmitLedgerAdjustmentReq:
+    - personId: Id Person
+    - category: AdjustmentCategory
+    - direction: AdjustmentDirection
+    - amount: PriceAPIEntity
+    - description: Maybe Text
+    - referenceType: Text
+    - referenceId: Maybe Text
+    - documentId: Maybe (Id Image)
+    - derive: "'HideSecrets"
+  LedgerAdjustmentListRes:
+    - summary: Summary
+    - adjustmentRequests: [LedgerAdjustmentItem]
+  LedgerAdjustmentItem:
+    - adjustmentRequestId: Id LedgerAdjustmentRequest
+    - personId: Id Person
+    - category: AdjustmentCategory
+    - direction: AdjustmentDirection
+    - amount: PriceAPIEntity
+    - description: Maybe Text
+    - referenceType: Text
+    - referenceId: Maybe Text
+    - documentId: Maybe (Id Image)
+    - adminMakerId: Id Person
+    - adminCheckerId: Maybe (Id Person)
+    - adminMakerName: Text
+    - adminCheckerName: Maybe Text
+    - status: AdjustmentRequestStatus
+    - errorMessage: Maybe Text
+    - ledgerEntryId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - postedAt: Maybe UTCTime
 
   # ----- Payout list -----
   PayoutListRes:

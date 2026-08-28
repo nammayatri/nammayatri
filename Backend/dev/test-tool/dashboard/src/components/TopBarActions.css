@@ -452,6 +452,18 @@
 .tb-floating-section-row > .tb-btn .tb-status-chip {
   margin-left: auto !important;
 }
+.tb-floating-section-row > .tb-btn.tb-sync-span {
+  grid-column: 1 / -1;
+}
+.tb-floating-hint {
+  color: #8b949e;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.tb-floating-hint code {
+  color: #c9d1d9;
+  font-size: 10px;
+}
 
 /* ── RefPicker (combobox for branch / commit selection) ──────────── */
 /* Mirrors the structure of .tb-modal-form-field (label + control)
