@@ -2,6 +2,7 @@
 
 module Storage.Queries.Entity where
 
+import qualified Data.Map.Strict as M
 import Domain.Types.Entity
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Beam.Functions
@@ -16,6 +17,20 @@ create = createWithKV
 
 findById :: BeamFlow m r => Id Entity -> m (Maybe Entity)
 findById entityId = findOneWithKV [Se.Is BeamE.id $ Se.Eq $ getId entityId]
+
+findAllByIds :: BeamFlow m r => [Id Entity] -> m [Entity]
+findAllByIds [] = pure []
+findAllByIds entityIds = findAllWithKV [Se.Is BeamE.id $ Se.In $ getId <$> entityIds]
+
+-- findAllByIds gives no ordering guarantee, and the deprecated primary-entity scalars on
+-- PersonAPIEntity are defined as the first element, so callers need the requested order back.
+-- Ids that no longer resolve are dropped rather than raised: a dangling reference must not 500
+-- a login or a profile read.
+findAllByIdsOrdered :: BeamFlow m r => [Id Entity] -> m [Entity]
+findAllByIdsOrdered entityIds = do
+  found <- findAllByIds entityIds
+  let byId = M.fromList [(e.id, e) | e <- found]
+  pure $ mapMaybe (`M.lookup` byId) entityIds
 
 findByMerchantAndShortId :: BeamFlow m r => Id DMerchant.Merchant -> ShortId Entity -> m (Maybe Entity)
 findByMerchantAndShortId merchantId shortId =

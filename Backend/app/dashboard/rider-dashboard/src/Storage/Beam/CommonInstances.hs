@@ -27,6 +27,7 @@ import qualified "lib-dashboard" Storage.Beam.Capability as BeamC
 import qualified "lib-dashboard" Storage.Beam.CapabilityEndpoint as BeamCE
 import qualified "lib-dashboard" Storage.Beam.DeletedUser as BeamDU
 import qualified "lib-dashboard" Storage.Beam.Entity as BeamE
+import qualified "lib-dashboard" Storage.Beam.EntityAccess as BeamEA
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
 import qualified "lib-dashboard" Storage.Beam.MerchantPair as BeamMPair
@@ -64,6 +65,9 @@ instance HasSchemaName BeamRC.RoleCapabilityT where
   schemaName _ = resolveSchema (T.pack "atlas_bap_dashboard")
 
 instance HasSchemaName BeamE.EntityT where
+  schemaName _ = resolveSchema (T.pack "atlas_bap_dashboard")
+
+instance HasSchemaName BeamEA.EntityAccessT where
   schemaName _ = resolveSchema (T.pack "atlas_bap_dashboard")
 
 instance HasSchemaName BeamM.MerchantT where

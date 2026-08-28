@@ -19,6 +19,7 @@ import Dashboard.Common
 import Data.Char (isDigit, isLower, isUpper)
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sortOn)
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -54,6 +55,7 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.DeletedUser as QDeletedUser
 import qualified Storage.Queries.Entity as QEntity
+import qualified Storage.Queries.EntityAccess as QEntityAccess
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -425,7 +427,7 @@ createPerson tokenInfo personEntity = do
       else generateGUID
   person <- buildPerson personId personEntity (role.dashboardAccessType) tokenInfo.merchantId
   decPerson <- decrypt person
-  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing Nothing
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing [] AP.HideTokenNo
   QP.create person
   return $ CreatePersonRes personAPIEntity
 
@@ -452,10 +454,50 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
-    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) Nothing Nothing
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) [] DP.HideTokenNo
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
+
+maxPTPageSize :: Integer
+maxPTPageSize = 100
+
+data ListPTEmployeeRes = ListPTEmployeeRes
+  { list :: [DP.PTEmployeeAPIEntity],
+    summary :: Summary
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- Depot-operations view: PT staff of the caller's merchant with the credentials and depot
+-- assignments that screen needs. entityShortId is resolved against the caller's merchant, so an
+-- unknown or foreign depot is rejected rather than silently returning everyone.
+ptList ::
+  (BeamFlow m r, EncFlow m r) =>
+  TokenInfo ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ListPTEmployeeRes
+ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit mbOffset = do
+  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  mbEntityId <- forM mbEntityShortId $ \shortId ->
+    QEntity.findByMerchantAndShortId tokenInfo.merchantId (ShortId shortId)
+      >>= fmap (.id) . fromMaybeM (InvalidRequest $ "Entity " <> shortId <> " does not exist for this merchant")
+  -- Every returned row costs a passetto round-trip to decrypt tokenNo and vpa, so the caller
+  -- cannot widen the page arbitrarily.
+  let cappedLimit = min maxPTPageSize (fromMaybe maxPTPageSize mbLimit)
+  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset tokenInfo.merchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId (Just cappedLimit) mbOffset
+  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) tokenInfo.merchantId
+  entities <- B.runInReplica $ QEntity.findAllByIds (nub $ entityGrants <&> (.entityId))
+  let entityIdsByPerson = M.fromListWith (flip (<>)) [(grant.personId, [grant.entityId]) | grant <- entityGrants]
+      entityById = M.fromList [(entity.id, entity) | entity <- entities]
+  res <- forM personAndRoleList $ \(encPerson, role) -> do
+    decPerson <- decrypt encPerson
+    let personEntities = mapMaybe (`M.lookup` entityById) (M.findWithDefault [] encPerson.id entityIdsByPerson)
+    pure $ DP.makePTEmployeeAPIEntity decPerson role personEntities
+  pure $ ListPTEmployeeRes {list = res, summary = Summary {totalCount = totalCount, count = length res}}
 
 makeAvailableCitiesForMerchant :: [ShortId DMerchant.Merchant] -> [City.City] -> [DP.AvailableCitiesForMerchant]
 makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
@@ -697,18 +739,15 @@ profile tokenInfo = do
   role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
-  mbEntity <- case encPerson.entityId of
-    Just eId -> Just <$> (QEntity.findById eId >>= fromMaybeM (InvalidRequest $ "Entity " <> eId.getId <> " referenced by person " <> tokenInfo.personId.getId <> " does not exist"))
-    Nothing -> pure Nothing
-  let mbEntityId = mbEntity <&> (.id)
-      mbEntityName = mbEntity <&> (.entityName)
+  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonId tokenInfo.personId
+  personEntities <- B.runInReplica $ QEntity.findAllByIdsOrdered (entityGrants <&> (.entityId))
   case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
       let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
       let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
-      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity) mbEntityId mbEntityName
+      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity) personEntities DP.ShowTokenNo
 
 updateProfile ::
   BeamFlow m r =>
@@ -871,6 +910,7 @@ deletePerson tokenInfo personId mbDeleteReason = do
         deletedAt = now
       }
   QAccess.deleteAllByPersonId personId
+  QEntityAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
   QReg.deleteAllByPersonId personId
   -- person_capability.person_id (subject) is a NOT NULL FK to person, so delete the
@@ -914,8 +954,8 @@ buildPerson pid req dashboardAccessType merchantId = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        vpa = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq

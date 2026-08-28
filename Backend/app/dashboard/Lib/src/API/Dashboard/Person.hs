@@ -44,6 +44,14 @@ type API =
            :> QueryParam "offset" Integer
            :> QueryParam "personId" (Id DP.Person)
            :> Get '[JSON] DPerson.ListPersonRes
+           :<|> "ptList"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> QueryParam "searchString" Text
+             :> QueryParam "roleName" Text
+             :> QueryParam "entityShortId" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] DPerson.ListPTEmployeeRes
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "assignRole"
@@ -156,6 +164,7 @@ type API =
 handler :: BeamFlow' => FlowServer API
 handler =
   ( listPerson
+      :<|> ptList
       :<|> assignRole
       :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
       :<|> assignMerchantCityAccess
@@ -184,6 +193,10 @@ handler =
 listPerson :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
   withFlowHandlerAPI' . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
+
+ptList :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPTEmployeeRes
+ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit =
+  withFlowHandlerAPI' . DPerson.ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit
 
 createPerson :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
 createPerson tokenInfo = withFlowHandlerAPI' . DPerson.createPerson tokenInfo

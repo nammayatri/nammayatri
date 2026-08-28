@@ -46,6 +46,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Entity as QEntity
+import qualified Storage.Queries.EntityAccess as QEntityAccess
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -117,8 +118,9 @@ data Pending2FASetupData = Pending2FASetupData
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
--- The four trailing fields are Maybe so the legacy email+password wire shape
--- stays additive; tokenNo login populates them for the PT welcome screen.
+-- The trailing Maybe fields keep the legacy email+password wire shape additive; tokenNo login
+-- populates them for the PT welcome screen. entityName is deprecated in favour of entityShortIds
+-- but stays on the wire so a frontend can be released after the backend.
 data LoginRes = LoginRes
   { authToken :: Text,
     is2faMandatory :: Bool,
@@ -130,7 +132,8 @@ data LoginRes = LoginRes
     role :: Maybe Text,
     firstName :: Maybe Text,
     lastName :: Maybe Text,
-    entityName :: Maybe Text
+    entityName :: Maybe Text,
+    entityShortIds :: [ShortId Entity.Entity]
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -203,9 +206,9 @@ login rawReq = do
         mbPerson <- QP.findByMobileNumber mob cc
         case mbPerson of
           -- Defense in depth: require DASHBOARD_USER tier so a mistakenly-set
-          -- tokenNoHash on any admin never becomes a login credential.
+          -- tokenNo on any admin never becomes a login credential.
           Just p
-            | p.tokenNoHash == Just tokenDbHash,
+            | (p.tokenNo <&> (.hash)) == Just tokenDbHash,
               p.dashboardAccessType == Just DRole.DASHBOARD_USER ->
               pure p
           _ -> throwError (InvalidRequest "Invalid mobile number or token")
@@ -326,7 +329,7 @@ generateLoginRes person merchant otp city = do
     if isToken
       then generateToken person.id merchant city
       else pure ""
-  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  (mbRoleName, personEntities) <- lookupRoleAndEntities person
   pure
     LoginRes
       { authToken = token,
@@ -339,7 +342,8 @@ generateLoginRes person merchant otp city = do
         role = mbRoleName,
         firstName = Just person.firstName,
         lastName = Just person.lastName,
-        entityName = mbEntity <&> (.entityName)
+        entityName = listToMaybe personEntities <&> (.entityName),
+        entityShortIds = personEntities <&> (.entityShortId)
       }
 
 generateLoginResWithoutOtp ::
@@ -360,7 +364,7 @@ generateLoginResWithoutOtp person merchant city = do
   token <- generateToken person.id merchant city
   twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
-  (mbRoleName, mbEntity) <- lookupRoleAndEntity person
+  (mbRoleName, personEntities) <- lookupRoleAndEntities person
   pure
     LoginRes
       { authToken = token,
@@ -373,17 +377,17 @@ generateLoginResWithoutOtp person merchant city = do
         role = mbRoleName,
         firstName = Just person.firstName,
         lastName = Just person.lastName,
-        entityName = mbEntity <&> (.entityName)
+        entityName = listToMaybe personEntities <&> (.entityName),
+        entityShortIds = personEntities <&> (.entityShortId)
       }
 
 -- Best-effort: a missing Role or Entity does not fail the login.
-lookupRoleAndEntity :: BeamFlow m r => DP.Person -> m (Maybe Text, Maybe Entity.Entity)
-lookupRoleAndEntity person = do
+lookupRoleAndEntities :: BeamFlow m r => DP.Person -> m (Maybe Text, [Entity.Entity])
+lookupRoleAndEntities person = do
   mbRole <- QRole.findById person.roleId
-  mbEntity <- case person.entityId of
-    Just eId -> QEntity.findById eId
-    Nothing -> pure Nothing
-  pure (mbRole <&> (.name), mbEntity)
+  entityGrants <- QEntityAccess.findAllByPersonId person.id
+  personEntities <- QEntity.findAllByIdsOrdered (entityGrants <&> (.entityId))
+  pure (mbRole <&> (.name), personEntities)
 
 -- 2FA is required for a person when the deployment enforces it AND the
 -- person's role name isn't in the deployment-configured exempt list
@@ -816,8 +820,8 @@ buildFleetOwner req pid roleId dashboardAccessType merchantId = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        vpa = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
