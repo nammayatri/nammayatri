@@ -85,6 +85,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             enableWalletGatedTierCheck = Nothing,
             paymentChargeBearer = Nothing,
             paymentChargeRate = Nothing,
+            paymentChargeVat = Nothing,
             connectAccountCharge = Nothing,
             connectAccountChargeFrequency = Nothing,
             connectAccountChargeBearer = Nothing,

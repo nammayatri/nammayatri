@@ -89,6 +89,9 @@ module SharedLogic.Finance.Wallet
     walletReferencePGPaymentCharges,
     walletReferencePGPayoutCharges,
     walletReferenceConnectAccountCharges,
+    walletReferencePGPaymentChargesVAT,
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePaymentChargeVatPaidByCustomer,
     StripeChargeFunder (..),
     recordStripeChargeLedger,
     buildDriverChargeCtx,
@@ -236,6 +239,18 @@ walletReferencePGPayoutCharges = "PGPayoutCharges"
 
 walletReferenceConnectAccountCharges :: Text
 walletReferenceConnectAccountCharges = "ConnectAccountCharges"
+
+-- Payment-charge VAT (additive) deduction leg.
+walletReferencePGPaymentChargesVAT :: Text
+walletReferencePGPaymentChargesVAT = "PGPaymentChargesVAT"
+
+-- Customer-borne payment charge / its VAT: the amount the customer paid, credited to the
+-- driver wallet like base fare (addition leg) before being deducted again (nets to zero).
+walletReferencePaymentChargePaidByCustomer :: Text
+walletReferencePaymentChargePaidByCustomer = "PaymentChargePaidByCustomer"
+
+walletReferencePaymentChargeVatPaidByCustomer :: Text
+walletReferencePaymentChargeVatPaidByCustomer = "PaymentChargeVatPaidByCustomer"
 
 walletReferenceDriverCancellationCharges :: Text
 walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
@@ -413,7 +428,13 @@ walletCreditRefs =
     walletReferenceTips,
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
-    walletReferenceDeductedAtPaymentByPlatform
+    walletReferenceDeductedAtPaymentByPlatform,
+    walletReferencePGPaymentCharges,
+    walletReferencePGPaymentChargesVAT,
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePaymentChargeVatPaidByCustomer,
+    walletReferencePGPayoutCharges,
+    walletReferenceConnectAccountCharges
   ]
 
 -- | Reference types for entries that represent merchant-to-driver transfers
@@ -745,6 +766,7 @@ recordStripeChargeLedger ctx funder amount refType
     result <- runFinance ctx $ case funder of
       FundByPlatform -> void $ transfer BuyerAsset SellerExpense amount refType Nothing
       FundByCustomer -> do
+        -- owner liablity to seller liablity
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer BuyerAsset SellerRevenue amount refType Nothing
       FundByDriver -> do

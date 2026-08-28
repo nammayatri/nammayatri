@@ -1062,9 +1062,14 @@ TransporterConfig:
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
-      # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
+      # Stripe payment charge: P = paymentChargeRate% * the POST-DISCOUNT fare the rider pays
+      # (the offer discount is never charged a payment fee); bearer decides the funding leg.
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
+      # Additive VAT on the payment charge. Stored VAT-INCLUSIVE on booking/ride.paymentCharge
+      # (like commission) and split back out at settlement, so one figure grosses up the rider,
+      # funds the Stripe application fee and leaves the driver wallet.
+      paymentChargeVat: Maybe Double
       # Stripe connect-account maintenance charge (scheduled deduction).
       connectAccountCharge: Maybe HighPrecMoney
       connectAccountChargeFrequency: Maybe ChargeFrequency

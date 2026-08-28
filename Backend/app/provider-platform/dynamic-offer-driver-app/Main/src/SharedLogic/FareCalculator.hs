@@ -31,6 +31,10 @@ module SharedLogic.FareCalculator
     calculateCommission,
     calculateCancellationCommission,
     calculatePaymentCharge,
+    applyPaymentChargeOnPayableFare,
+    paymentChargeFareDelta,
+    paymentChargeFromFareTotal,
+    paymentChargeTotalRate,
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
@@ -1428,25 +1432,97 @@ isCustomerPaymentBearer = \case
   DTC.PAYMENT_CUSTOMER -> True
   _ -> False
 
--- | Stripe payment charge P = paymentChargeRate% × base fare, from the per-operating-city
---   DriverWalletConfig. Returns (P, bearer-as-Text) for ride persistence, driver UI and the
---   BAP application fee. 'base fare' subtracts any customer gross-up already folded into
---   paymentProcessingFee, so P is identical across bearers.
-calculatePaymentCharge :: Maybe DTC.DriverWalletConfig -> FareParameters -> (Maybe HighPrecMoney, Maybe Text)
-calculatePaymentCharge mbDwc fareParams =
-  case mbDwc of
-    Just dwc ->
-      case (dwc.paymentChargeRate, dwc.paymentChargeBearer) of
-        (Just rate, Just bearer)
-          | rate > 0 ->
-            let baseFareSum = fareSum fareParams Nothing - fromMaybe 0 fareParams.paymentProcessingFee
-                p = HighPrecMoney (baseFareSum.getHighPrecMoney * (toRational rate / 100))
-             in (if p > 0 then Just p else Nothing, Just (show bearer))
-        _ -> (Nothing, Nothing)
-    Nothing -> (Nothing, Nothing)
+-- | Stripe payment charge P = paymentChargeRate% × the amount the rider actually pays,
+--   from the per-operating-city DriverWalletConfig. Returns (P, bearer-as-Text) for ride
+--   persistence, driver UI and the BAP application fee.
+--
+--   The base is the fare NET of the customer offer discount and EXCLUDING the charge
+--   itself (any customer gross-up already folded into paymentProcessingFee is subtracted
+--   first), so P is identical across bearers and never applies to the discounted portion.
+--   Pass 'Nothing' for the discount only where none is known yet (estimate / quote time).
+--
+--   P is stored VAT-INCLUSIVE (see 'paymentChargeTotalRate'), exactly like commission:
+--   one figure grosses up the rider, funds the Stripe application fee and leaves the
+--   driver's wallet, and settlement splits it back out with 'splitGrossByVatPct'.
+calculatePaymentCharge :: Maybe DTC.DriverWalletConfig -> FareParameters -> Maybe HighPrecMoney -> (Maybe HighPrecMoney, Maybe Text)
+calculatePaymentCharge mbDwc fareParams mbCustomerDiscount =
+  let (_, mbP, mbBearer) = applyPaymentChargeOnPayableFare mbDwc fareParams mbCustomerDiscount
+   in (mbP, mbBearer)
 
--- | Gross up the fare by the payment charge when the RIDER bears it, by populating the
---   (otherwise-dormant) paymentProcessingFee slot which 'fareSum' already sums.
+-- | Effective payment-charge percentage: the configured rate plus its additive VAT.
+--   A 2% rate with a 25% VAT bills the rider 2.5% of the payable fare.
+paymentChargeTotalRate :: DTC.DriverWalletConfig -> Double
+paymentChargeTotalRate dwc =
+  fromMaybe 0 dwc.paymentChargeRate * (1 + fromMaybe 0 dwc.paymentChargeVat / 100)
+
+-- | Post-discount payment charge, together with the 'FareParameters' re-grossed-up to
+--   match when the RIDER bears the charge.
+--
+--   At estimate / quote time no discount exists yet, so 'applyPaymentChargeGrossUp'
+--   grosses the rider up on the full fare. Once the BAP reports an offer discount
+--   (init, and again at end ride on the final fare) both the charge and the gross-up
+--   move to the post-discount base -- otherwise the rider would keep paying a payment
+--   fee on the discounted portion that is never deducted from the driver.
+--
+--   The returned fareParams differ from the input ONLY in 'paymentProcessingFee', so the
+--   caller can adjust a stored fare by the delta of that one field.
+applyPaymentChargeOnPayableFare ::
+  Maybe DTC.DriverWalletConfig ->
+  FareParameters ->
+  Maybe HighPrecMoney ->
+  (FareParameters, Maybe HighPrecMoney, Maybe Text)
+applyPaymentChargeOnPayableFare mbDwc fareParams mbCustomerDiscount =
+  case mbDwc of
+    Just dwc
+      | Just rate <- dwc.paymentChargeRate,
+        Just bearer <- dwc.paymentChargeBearer,
+        rate > 0 ->
+        let totalRate = paymentChargeTotalRate dwc
+            preChargeFare = fareSum fareParams Nothing - fromMaybe 0 fareParams.paymentProcessingFee
+            payableFare = max 0 (preChargeFare - fromMaybe 0 mbCustomerDiscount)
+            p = HighPrecMoney (payableFare.getHighPrecMoney * (toRational totalRate / 100))
+            mbP = if p > 0 then Just p else Nothing
+            adjusted =
+              if isCustomerPaymentBearer bearer
+                then fareParams {paymentProcessingFee = mbP}
+                else fareParams
+         in (adjusted, mbP, Just (show bearer))
+    _ -> (fareParams, Nothing, Nothing)
+
+-- | Delta to apply to an already-stored fare when 'applyPaymentChargeOnPayableFare'
+--   re-grosses-up a customer-borne charge. Zero for every other bearer.
+paymentChargeFareDelta :: FareParameters -> FareParameters -> HighPrecMoney
+paymentChargeFareDelta before after =
+  fromMaybe 0 after.paymentProcessingFee - fromMaybe 0 before.paymentProcessingFee
+
+-- | Payment charge implied by an already-computed fare TOTAL (as produced by 'fareSum'),
+--   for surfaces that carry only the scalar fare and not the 'FareParameters' -- the
+--   driver's nearby-ride-request card. When the RIDER bears the charge the total already
+--   contains the gross-up, so P is backed out of it (total * r / (100 + r)); otherwise the
+--   total is the pre-charge fare and P is total * r / 100.
+--
+--   Returns 0 when the platform bears the charge, matching 'mkDriverRideRes': only a
+--   customer- or driver-borne charge comes out of what the driver is shown.
+paymentChargeFromFareTotal :: Maybe DTC.DriverWalletConfig -> HighPrecMoney -> HighPrecMoney
+paymentChargeFromFareTotal mbDwc total =
+  case mbDwc of
+    Just dwc
+      | Just rate <- dwc.paymentChargeRate,
+        Just bearer <- dwc.paymentChargeBearer,
+        rate > 0,
+        total > 0 ->
+        let totalRate = paymentChargeTotalRate dwc
+         in case bearer of
+              DTC.PAYMENT_CUSTOMER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / toRational (100 + totalRate)))
+              DTC.PAYMENT_DRIVER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / 100))
+              DTC.PAYMENT_PLATFORM -> 0
+    _ -> 0
+
+-- | Gross up the fare by the payment charge (VAT included) when the RIDER bears it, by
+--   populating the (otherwise-dormant) paymentProcessingFee slot which 'fareSum' already
+--   sums. This runs at estimate / quote time, before any offer discount exists;
+--   'applyPaymentChargeOnPayableFare' re-does it on the post-discount base at init and
+--   end ride.
 applyPaymentChargeGrossUp :: Maybe DTC.DriverWalletConfig -> FareParameters -> FareParameters
 applyPaymentChargeGrossUp mbDwc fareParams =
   case mbDwc of
@@ -1455,7 +1531,7 @@ applyPaymentChargeGrossUp mbDwc fareParams =
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0,
         isCustomerPaymentBearer bearer ->
-        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational rate / 100))
+        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational (paymentChargeTotalRate dwc) / 100))
          in fareParams {paymentProcessingFee = Just p}
     _ -> fareParams
 

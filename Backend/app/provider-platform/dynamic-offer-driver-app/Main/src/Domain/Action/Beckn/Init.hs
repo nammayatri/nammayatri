@@ -63,6 +63,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
@@ -248,7 +249,15 @@ handler merchantId req validatedReq = do
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
       cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
       mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
-      let (mbPaymentCharge, mbPaymentChargeBearer) = FC.calculatePaymentCharge ((.driverWalletConfig) <$> mbTransporterConfig) driverQuote.fareParams
+      -- The BAP's offer discount is first known here, so this is where the payment charge
+      -- moves off the quoted fare and onto what the rider actually pays. For a CUSTOMER
+      -- bearer that also re-grosses-up the fare (paymentProcessingFee), so the booking's
+      -- fareParams row and estimatedFare must both be shifted by the same delta.
+      let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount
+          (adjustedFareParams, mbPaymentCharge, mbPaymentChargeBearer) =
+            FC.applyPaymentChargeOnPayableFare ((.driverWalletConfig) <$> mbTransporterConfig) driverQuote.fareParams mbClampedDiscount
+          fareDelta = FC.paymentChargeFareDelta driverQuote.fareParams adjustedFareParams
+      when (fareDelta /= 0) $ QFareParams.updateFareParameters adjustedFareParams adjustedFareParams.id
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
       let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
@@ -283,7 +292,7 @@ handler merchantId req validatedReq = do
             updatedAt = now,
             isPetRide = isJust driverQuote.fareParams.petCharges,
             preferenceMatchScore = mbPreferenceMatchScore,
-            estimatedFare = driverQuote.estimatedFare,
+            estimatedFare = driverQuote.estimatedFare + fareDelta,
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,
             customerLanguage = searchRequest.customerLanguage,
@@ -291,7 +300,7 @@ handler merchantId req validatedReq = do
             billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,
             estimatedStaticDuration = searchRequest.estimatedStaticDuration,
-            fareParams = driverQuote.fareParams,
+            fareParams = adjustedFareParams,
             specialLocationTag = driverQuote.specialLocationTag,
             specialLocationName = searchRequest.specialLocationName,
             specialZoneOtpCode = Nothing,
@@ -335,7 +344,7 @@ handler merchantId req validatedReq = do
             pickupGateId = searchRequest.pickupGateId,
             ledgerWriteMode = Nothing,
             financeInvoiceId = Nothing,
-            discountAmount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount,
+            discountAmount = mbClampedDiscount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

@@ -306,7 +306,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam onl
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
       amountPaidByCustomer = fare - (if customerBearsCharge then onlinePaymentCharge else 0) - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge} = labels
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge, lblPaymentChargePaid} = labels
       cancellationDues =
         fromMaybe 0 $
           case finalFareParam of
@@ -329,11 +329,13 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam onl
           else Nothing
       fareBreakupItems =
         catMaybes
-          [ mkComp FareBreakup "AMOUNT_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
+          [ mkComp FareBreakup "FARE_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge onlinePaymentCharge (driverBearsCharge && onlinePaymentCharge > 0),
+            -- Customer-borne charge: shown as what the customer paid (+P) then deducted (−P), net zero.
+            mkComp FareBreakup "PAYMENT_CHARGE_PAID_BY_CUSTOMER" lblPaymentChargePaid onlinePaymentCharge (customerBearsCharge && onlinePaymentCharge > 0),
+            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge onlinePaymentCharge ((customerBearsCharge || driverBearsCharge) && onlinePaymentCharge > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
             mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0)
@@ -441,7 +443,8 @@ data EarningsLabels = EarningsLabels
     lblFare :: Maybe Text,
     lblAirportConvenienceFee :: Maybe Text,
     lblServiceCharge :: Maybe Text,
-    lblPaymentCharge :: Maybe Text
+    lblPaymentCharge :: Maybe Text,
+    lblPaymentChargePaid :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -450,7 +453,7 @@ fetchEarningsLabels ::
   m EarningsLabels
 fetchEarningsLabels lang =
   EarningsLabels
-    <$> resolveLabel lang "AMOUNT_PAID_BY_CUSTOMER"
+    <$> resolveLabel lang "FARE_PAID_BY_CUSTOMER"
     <*> resolveLabel lang "DISCOUNT"
     <*> resolveLabel lang "TIPS"
     <*> resolveLabel lang "COMMISSION"
@@ -459,6 +462,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
     <*> resolveLabel lang "SERVICE_CHARGE"
     <*> resolveLabel lang "PAYMENT_CHARGE"
+    <*> resolveLabel lang "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =

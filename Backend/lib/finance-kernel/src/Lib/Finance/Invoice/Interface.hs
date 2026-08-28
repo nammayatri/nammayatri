@@ -71,6 +71,8 @@ data LineItemDescription
   | ParkingRefundTax
   | CommissionRefund
   | PlatformCommissionTax
+  | PaymentCharge
+  | PaymentChargeTax
   | CommissionRefundTax
   | CancellationCommission
   | CancellationCommissionTax
