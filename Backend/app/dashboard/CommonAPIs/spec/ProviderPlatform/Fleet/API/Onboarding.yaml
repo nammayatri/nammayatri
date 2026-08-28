@@ -207,6 +207,7 @@ types:
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
+    doNotValidateDuringOnboarding: Maybe Bool
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training,Fleet"
   DocumentFlowGrouping:

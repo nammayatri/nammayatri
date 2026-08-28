@@ -128,6 +128,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     dependencyDocumentType :: [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [FieldInfo],
     documentFlowGrouping :: DocumentFlowGrouping,

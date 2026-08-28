@@ -133,7 +133,8 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       documentOnboardingStage = SDO.castDocumentOnboardingStage <$> documentOnboardingStage,
       isReminderSupported = isReminderSupported,
       isApprovalSupported = isApprovalSupported,
-      rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument
+      rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
+      doNotValidateDuringOnboarding = doNotValidateDuringOnboarding
     }
 
 castOnboardingStageAPIEntity :: Onboarding.DocumentOnboardingStageAPIEntity -> CommonOnboarding.DocumentOnboardingStageAPIEntity
