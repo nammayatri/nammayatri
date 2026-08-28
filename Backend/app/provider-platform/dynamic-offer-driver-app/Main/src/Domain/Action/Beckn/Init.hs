@@ -51,6 +51,7 @@ import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
@@ -71,6 +72,7 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
+import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
@@ -130,6 +132,7 @@ handler ::
     EventStreamFlow m r,
     EncFlow m r,
     HasLocationService m r,
+    BPPMetrics.HasBPPMetrics m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -161,6 +164,13 @@ handler merchantId req validatedReq = do
       ValidatedQuote quote -> do
         booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing
         QRB.createBooking booking
+        cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
+        distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
+        BPPMetrics.incrementRiderAcceptanceCount
+          transporter.shortId.getShortId
+          cityLabel
+          (show booking.vehicleServiceTier)
+          (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
   -- Special zone driver demand pipeline: fires for BOTH estimate-based (normal Select → Init)
