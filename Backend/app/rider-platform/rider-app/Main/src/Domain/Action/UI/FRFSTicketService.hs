@@ -2023,12 +2023,17 @@ fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber = do
     [] -> pure ("", Nothing, Nothing)
   pure (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig)
 
+approachingNotificationKey :: Text -> Text
+approachingNotificationKey "nearing" = "BUS_APPROACHING_NEARING"
+approachingNotificationKey _ = "BUS_APPROACHING_RELAXED"
+
 -- | Distance-threshold ("relaxed"/"nearing") stop-approach notification.
 notifyBusApproachingStopForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
 notifyBusApproachingStopForTrip tripId stopCode req = do
   (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, _) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber
   unless (null stopBookings) $ do
     let distanceDisplay = formatApproachingDistance req.distanceMeters
+        notificationKey = approachingNotificationKey req.thresholdType
     forM_ stopBookings $ \booking -> do
       let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
           mbJourneyId = (.journeyId) <$> mbJourneyLeg
@@ -2045,7 +2050,7 @@ notifyBusApproachingStopForTrip tripId stopCode req = do
                 vehicleNo = fromMaybe "" booking.vehicleNumber
                 stopName = fromMaybe "-" booking.fromStationName
             logInfo $ "Notifying passenger " <> person.id.getId <> " that bus is " <> distanceDisplay <> " from stop " <> stopCode <> " on trip " <> tripId
-            Notifications.notifyBusApproachingStop person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode stopName "BUS_APPROACHING" distanceDisplay mbJourneyId (Just booking.id.getId)
+            Notifications.notifyBusApproachingStop person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode stopName notificationKey distanceDisplay mbJourneyId (Just booking.id.getId)
 
 -- | Watermark-based "crossed" notification — fired when the bus leaves the stop right before this
 -- one. Kept separate from the distance-threshold flow above so a future lookahead change (e.g.
