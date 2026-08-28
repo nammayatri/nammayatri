@@ -57,6 +57,12 @@ addSearchRequestExpiredCount merchantId merchantOpCityId vehicleServiceTier coun
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.searchRequestExpiredCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
 
+incrementRiderAcceptanceCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
+incrementRiderAcceptanceCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.riderAcceptanceCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+
 incrementBookingCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
 incrementBookingCreatedCount merchantId merchantOpCityId vehicleServiceTier = do
   bmContainer <- asks (.bppMetrics)
