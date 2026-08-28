@@ -227,3 +227,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN initiated_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_new boolean;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN latest_scheduled_commission_aggregation_period_end timestamp with time zone ;

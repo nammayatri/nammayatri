@@ -111,13 +111,18 @@ runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId
               | periodStart <= lastEnd ->
                 pure $ Terminate $ "AggCom: jobData.periodStart " <> show periodStart <> " <= lastAggThrough " <> show lastEnd <> " for " <> recipient <> "; periodStart overlaps already-covered range"
             _ -> do
-              tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
-              scheduleNextRun mId mocId issuedToId issuedToType periodEnd transporterConfig
-              pure Complete
+              mbRecipient <- resolveRecipientInfo issuedToType issuedToId
+              case mbRecipient of
+                Nothing -> pure $ Terminate $ "AggCom: " <> recipient <> " no longer exists; chain ends"
+                Just rinfo -> do
+                  tryEmitInvoice mId mocId issuedToId issuedToType rinfo periodStart periodEnd mbInvoiceConfig
+                  scheduleNextRun mId mocId issuedToId issuedToType periodEnd transporterConfig
+                  pure Complete
 
   case result of
     Right r -> pure r
-    Left _ -> pure Complete -- another firing holds the lock and is processing this period; nothing to do
+    -- Another firing holds this period's lock, so this one is a duplicate by definition.
+    Left _ -> pure $ Terminate $ "AggCom: another firing holds the period lock for " <> recipient <> " period " <> show periodEnd <> "; duplicate"
 
 tryEmitInvoice ::
   ( BeamFlow m r,
@@ -129,12 +134,12 @@ tryEmitInvoice ::
   Id DMOC.MerchantOperatingCity ->
   Text ->
   BeckInvoice.IssuedToType ->
+  RecipientInfo ->
   UTCTime ->
   UTCTime ->
   Maybe DTC.InvoiceConfig ->
   m ()
-tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig = do
-  rinfo <- resolveRecipientInfo issuedToType issuedToId
+tryEmitInvoice mId mocId issuedToId issuedToType rinfo periodStart periodEnd mbInvoiceConfig = do
   merchant <- CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
   mocCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
   -- Seller name/address are config-only — no merchant fallback. If unset, the
@@ -153,31 +158,34 @@ data RecipientInfo = RecipientInfo
     riPanNumberDec :: Maybe Text
   }
 
+-- | 'Nothing' when the recipient has been deleted — the chain must end cleanly, not crash.
 resolveRecipientInfo ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   BeckInvoice.IssuedToType ->
   Text ->
-  m RecipientInfo
+  m (Maybe RecipientInfo)
 resolveRecipientInfo BeckInvoice.FLEET_OWNER recipientId = do
-  f <- QFOI.findByPrimaryKey (Id recipientId) >>= fromMaybeM (FleetOwnerNotFound recipientId)
-  pure
-    RecipientInfo
-      { riName = f.fleetName,
-        riAddress = f.stripeAddress <&> Wallet.formatStripeAddress,
-        riGstin = f.gstNumberDec,
-        riVatNumber = f.vatNumber,
-        riPanNumberDec = f.panNumberDec
-      }
+  mbFoi <- QFOI.findByPrimaryKey (Id recipientId)
+  pure $
+    mbFoi <&> \f ->
+      RecipientInfo
+        { riName = f.fleetName,
+          riAddress = f.stripeAddress <&> Wallet.formatStripeAddress,
+          riGstin = f.gstNumberDec,
+          riVatNumber = f.vatNumber,
+          riPanNumberDec = f.panNumberDec
+        }
 resolveRecipientInfo BeckInvoice.DRIVER recipientId = do
-  p <- QPerson.findById (Id recipientId) >>= fromMaybeM (PersonNotFound recipientId)
-  pure
-    RecipientInfo
-      { riName = Just (p.firstName <> maybe "" (" " <>) p.lastName),
-        riAddress = Nothing,
-        riGstin = Nothing,
-        riVatNumber = Nothing,
-        riPanNumberDec = Nothing
-      }
+  mbPerson <- QPerson.findById (Id recipientId)
+  pure $
+    mbPerson <&> \p ->
+      RecipientInfo
+        { riName = Just (p.firstName <> maybe "" (" " <>) p.lastName),
+          riAddress = Nothing,
+          riGstin = Nothing,
+          riVatNumber = Nothing,
+          riPanNumberDec = Nothing
+        }
 resolveRecipientInfo other _ =
   -- Bootstrap only enqueues DRIVER/FLEET_OWNER chains; reaching RIDER/CUSTOMER is an invariant violation.
   throwError $ InternalError $ "AggCom: unexpected issuedToType " <> show other
@@ -336,8 +344,8 @@ scheduleNextRun mId mocId issuedToId issuedToType prevPeriodEnd transporterConfi
 
 -- | Bootstrap the chain at fleet/driver onboarding (also reachable via the admin
 -- '/scheduler/trigger' endpoint). Anchors the first job to the calendar period
--- containing 'now'. No bootstrap-time idempotency check — runtime checks in
--- 'runAggregatedCommissionInvoiceCreationJob' handle accidental duplicate chains.
+-- containing 'now'. Safe to call repeatedly — 'enqueueJob' refuses a second job
+-- for a period already scheduled.
 bootstrapAggregatedCommissionChain ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -389,19 +397,42 @@ enqueueJob ::
   Text -> -- log verb (e.g. "scheduled next" / "bootstrapped")
   m ()
 enqueueJob mId mocId issuedToId issuedToType periodStart periodEnd fireAt freq verb = do
-  now <- getCurrentTime
-  let scheduleAfter = max 0 (diffUTCTime fireAt now)
-      jobData =
-        AggregatedCommissionInvoiceCreationJobData
-          { merchantId = mId,
-            merchantOperatingCityId = mocId,
-            issuedToId = issuedToId,
-            issuedToType = issuedToType,
-            periodStart = periodStart,
-            periodEnd = periodEnd
-          }
-  JC.createJobIn @_ @'AggregatedCommissionInvoiceCreation (Just mId) (Just mocId) scheduleAfter jobData
-  logInfo $ "AggCom " <> verb <> " for " <> show issuedToType <> " " <> issuedToId <> ": fireAt=" <> show fireAt <> " period=[" <> show periodStart <> ", " <> show periodEnd <> "] freq=" <> show freq
+  let recipient = show issuedToType <> " " <> issuedToId
+      enqueueLockKey = "AggCommEnqueue:" <> mocId.getId <> ":" <> issuedToId
+  -- The only place chain jobs are created, so this is where one-job-per-period is
+  -- enforced. The lock serialises concurrent callers (bootstrap vs. admin trigger vs.
+  -- duplicate firings); the FleetOwnerInformation marker makes the decision durable.
+  Hedis.whenWithLockRedis enqueueLockKey 10 $ do
+    shouldEnqueue <- case issuedToType of
+      BeckInvoice.FLEET_OWNER -> do
+        mbFoi <- QFOI.findByPrimaryKey (Id issuedToId)
+        case mbFoi of
+          Nothing -> do
+            logWarning $ "AggCom: " <> recipient <> " has no FleetOwnerInformation; not " <> verb
+            pure False
+          Just foi
+            | maybe False (>= periodEnd) foi.latestScheduledCommissionAggregationPeriodEnd -> do
+              logInfo $ "AggCom: " <> recipient <> " already scheduled through " <> show periodEnd <> "; skipping " <> verb
+              pure False
+          Just _ -> pure True
+      -- DRIVER chains carry no durable marker (no DRIVER bootstrap exists today).
+      _ -> pure True
+    when shouldEnqueue $ do
+      now <- getCurrentTime
+      let scheduleAfter = max 0 (diffUTCTime fireAt now)
+          jobData =
+            AggregatedCommissionInvoiceCreationJobData
+              { merchantId = mId,
+                merchantOperatingCityId = mocId,
+                issuedToId = issuedToId,
+                issuedToType = issuedToType,
+                periodStart = periodStart,
+                periodEnd = periodEnd
+              }
+      JC.createJobIn @_ @'AggregatedCommissionInvoiceCreation (Just mId) (Just mocId) scheduleAfter jobData
+      when (issuedToType == BeckInvoice.FLEET_OWNER) $
+        QFOI.updateLatestScheduledCommissionAggregationPeriodEnd (Just periodEnd) (Id issuedToId)
+      logInfo $ "AggCom " <> verb <> " for " <> recipient <> ": fireAt=" <> show fireAt <> " period=[" <> show periodStart <> ", " <> show periodEnd <> "] freq=" <> show freq
 
 -- | Smallest period-end timestamp strictly greater than @t@. Computed in merchant-local
 -- time then converted back to UTC so DAILY/WEEKLY/MONTHLY align to local midnights / Sundays / month-ends.

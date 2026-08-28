@@ -69,6 +69,7 @@ FleetOwnerInformation:
     isNew: Maybe Bool
     disabledReasonFlag: Maybe DisabledReasonFlag
     initiatedBy: Maybe InitiatedBy
+    latestScheduledCommissionAggregationPeriodEnd: Maybe UTCTime # latest period an AggregatedCommission job has been enqueued for; enqueue-time idempotency marker
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -193,6 +194,10 @@ FleetOwnerInformation:
     updateLocalAddressDetails:
       kvFunction: updateOneWithKV
       params: [address, addressState, addressDocumentType, updatedAt]
+      where: fleetOwnerPersonId
+    updateLatestScheduledCommissionAggregationPeriodEnd:
+      kvFunction: updateOneWithKV
+      params: [latestScheduledCommissionAggregationPeriodEnd]
       where: fleetOwnerPersonId
 
   excludedDefaultQueries:

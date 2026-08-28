@@ -429,7 +429,8 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             addressDocumentType = Nothing,
             approved = Nothing,
             disabledReasonFlag = Nothing,
-            initiatedBy = Nothing
+            initiatedBy = Nothing,
+            latestScheduledCommissionAggregationPeriodEnd = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
