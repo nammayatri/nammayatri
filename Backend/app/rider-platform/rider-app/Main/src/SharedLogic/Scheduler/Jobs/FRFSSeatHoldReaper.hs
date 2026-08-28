@@ -4,6 +4,7 @@ module SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
   )
 where
 
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (FRFS_SEAT_HOLD_REAPER))
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -17,6 +18,7 @@ import SharedLogic.FRFSSeatBooking
   )
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 
 frfsSeatHoldReaper ::
   ( MonadFlow m,
@@ -31,7 +33,8 @@ frfsSeatHoldReaper Job {jobInfo} = do
   let jobData = jobInfo.jobData
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
-  void $ seatHoldReaperImpl
+  excluded <- CQLF.isFeatureExcluded FRFS_SEAT_HOLD_REAPER
+  unless excluded $ void seatHoldReaperImpl
   createJobIn @_ @'FRFSSeatHoldReaper (Just merchantId') (Just merchantOperatingCityId') (intToNominalDiffTime 120) (jobData :: FRFSSeatHoldReaperJobData)
   logInfo "Scheduled next FRFSSeatHoldReaper job to run in 120 seconds"
   pure Complete

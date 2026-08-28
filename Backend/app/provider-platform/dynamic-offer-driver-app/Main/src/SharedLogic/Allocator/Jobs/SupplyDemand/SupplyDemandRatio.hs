@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
   )
 where
 
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (SUPPLY_DEMAND))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Types (SchedulerFlow)
@@ -29,6 +30,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), SupplyDemandRequestJobData (..))
 import SharedLogic.DynamicPricing
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.Clickhouse.SearchRequestForDriver as SRFD
 
 calculateSupplyDemand ::
@@ -43,15 +45,17 @@ calculateSupplyDemand ::
 calculateSupplyDemand Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   now <- getCurrentTime
   let SupplyDemandRequestJobData {..} = jobInfo.jobData
-  let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
   let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
-  calculateAndUpdateCityQAR now from supplyDemandRatioTTLInSec
-  calculateAndUpdateGeohashAndDistanceBinQAR now from supplyDemandRatioTTLInSec
-  query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
-  query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
-  let queryResult = SRFD.concatFun query1Result query2Result
-  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
-  mapM_ (updateSupplyDemandRatio supplyDemandRatioTTLInSec) queryResult
+  supplyDemandExcluded <- CQLF.isFeatureExcluded SUPPLY_DEMAND
+  unless supplyDemandExcluded $ do
+    let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
+    calculateAndUpdateCityQAR now from supplyDemandRatioTTLInSec
+    calculateAndUpdateGeohashAndDistanceBinQAR now from supplyDemandRatioTTLInSec
+    query1Result <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
+    query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
+    let queryResult = SRFD.concatFun query1Result query2Result
+    logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
+    mapM_ (updateSupplyDemandRatio supplyDemandRatioTTLInSec) queryResult
   return (ReSchedule nextScheduleT)
 
 updateSupplyDemandRatio ::
