@@ -145,7 +145,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
                 return $ emptyValidateDocumentImageResponse imageId
         DVC.PanCard -> do
           Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:PanCard:" <> personId.getId)
-          resp <- Verification.extractPanImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          resp <- Verification.extractPanImageWithPriorityList merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           if resp.provider == Just VT.InternalOCR
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
             else case resp.extractedPan of

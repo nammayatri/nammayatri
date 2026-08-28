@@ -26,6 +26,7 @@ module Tools.Verification
     extractRCImage,
     extractDLImage,
     extractPanImage,
+    extractPanImageWithPriorityList,
     extractGSTImage,
     extractAadhaarImage,
     validateFaceImage,
@@ -322,6 +323,18 @@ extractPanImage ::
   ExtractPanImage ->
   m ExtractedPanImageResp
 extractPanImage = runWithServiceConfig Verification.extractPanImage (.verificationService)
+
+extractPanImageWithPriorityList ::
+  ( ServiceFlow m r,
+    Forkable m,
+    HasField "imageExtractionTimeoutSec" r Seconds
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  ExtractPanImage ->
+  m ExtractedPanImageResp
+extractPanImageWithPriorityList _merchantId merchantOpCityId req =
+  Verification.extractPanImageMulti (mkImageExtractionHandler merchantOpCityId) req
 
 extractGSTImage ::
   ServiceFlow m r =>

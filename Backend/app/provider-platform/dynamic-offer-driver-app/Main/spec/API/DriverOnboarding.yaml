@@ -97,6 +97,7 @@ types:
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
+    doNotValidateDuringOnboarding: Maybe Bool
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
