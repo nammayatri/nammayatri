@@ -2966,21 +2966,19 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
 
 mkManualPaymentEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => INV.Invoice -> Map (Id DDF.DriverFee) DDF.DriverFee -> TransporterConfig -> m (Maybe ManualInvoiceHistory)
 mkManualPaymentEntity manualInvoice mapDriverFeeByDriverFeeId' transporterConfig = do
-  allEntriesByInvoiceId <- QINV.findAllByInvoiceId manualInvoice.id
-  allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntriesByInvoiceId <&> (.driverFeeId))
-  let amount = sum $ mapToAmount $ filter ((DDF.CLEARED_BY_YATRI_COINS /=) . (.status)) allDriverFeeForInvoice
   case mapDriverFeeByDriverFeeId' M.!? (manualInvoice.driverFeeId) of
-    Just dfee ->
+    Just dfee -> do
+      let amount = sum $ mapToAmount $ filter ((DDF.CLEARED_BY_YATRI_COINS /=) . (.status)) [dfee]
       return $
         Just
           ManualInvoiceHistory
             { invoiceId = manualInvoice.invoiceShortId,
-              rideDays = length allDriverFeeForInvoice,
-              rideTakenOn = if length allDriverFeeForInvoice == 1 then addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) . (.createdAt) <$> listToMaybe allDriverFeeForInvoice else Nothing,
+              rideDays = 1,
+              rideTakenOn = Just $ addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
               amount,
               amountWithCurrency = PriceAPIEntity amount dfee.currency,
               createdAt = manualInvoice.createdAt,
-              feeType = if any (\dfee' -> dfee'.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
+              feeType = if dfee.feeType == DDF.MANDATE_REGISTRATION then DDF.MANDATE_REGISTRATION else DDF.RECURRING_INVOICE,
               paymentStatus = manualInvoice.invoiceStatus,
               isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = dfee.amountPaidByCoin,
