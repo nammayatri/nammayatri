@@ -22,6 +22,7 @@ data PersonPTStats = PersonPTStats
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     passTypeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType),
+    personCreatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     productType :: Domain.Types.PersonPTStats.FRFSProductType,
     purchaseCount :: Kernel.Prelude.Int,

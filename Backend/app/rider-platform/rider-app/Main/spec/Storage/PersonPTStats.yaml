@@ -26,6 +26,7 @@ PersonPTStats:
     ticketCount: Maybe Int
     purchaseCount: Int
     lastPurchasedAt: UTCTime
+    personCreatedAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -71,6 +72,10 @@ PersonPTStats:
     updatePersonIdById:
       kvFunction: updateOneWithKV
       params: [personId]
+      where: id
+    updatePersonCreatedAtById:
+      kvFunction: updateOneWithKV
+      params: [personCreatedAt]
       where: id
     updateStaticPersonIdById:
       kvFunction: updateOneWithKV
