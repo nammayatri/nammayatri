@@ -96,8 +96,8 @@ resolveBPPInvoiceInfo res = do
           issuedByAddress = merchantAddress,
           supplierName = Just mName,
           supplierAddress = merchantAddress,
-          supplierGSTIN = merchant.gstin,
-          supplierTaxNo = merchant.vatNumber <|> merchant.gstin,
+          supplierGSTIN = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
+          supplierTaxNo = merchant.vatNumber <|> (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
           supplierId = Just mid
         }
 

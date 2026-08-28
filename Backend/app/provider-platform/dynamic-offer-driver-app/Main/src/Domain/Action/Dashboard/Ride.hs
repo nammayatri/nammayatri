@@ -559,7 +559,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
   stopInformationDomain <- runInReplica $ QSI.findAllByRideId ride.id
   let stopInformation = Just $ mkStopInformation <$> stopInformationDomain
   -- Finance data (populated only when financeData=true)
-  (grossRideValue, subscriptionOffsetAmount, cancellationCharges, gstApplicableFlag, gstRate, gstAmount, tdsApplicableFlag, tdsRate, tdsAmount, netPayableToDriver, paymentMode, paymentStatus, paymentReferenceInternal, walletTransactions, invoiceIds) <-
+  (grossRideValue, subscriptionOffsetAmount, cancellationCharges, gstApplicableFlag, gstRate, gstAmount, cgstAmount, sgstAmount, igstAmount, tdsApplicableFlag, tdsRate, tdsAmount, netPayableToDriver, paymentMode, paymentStatus, paymentReferenceInternal, walletTransactions, invoiceIds) <-
     if mbFinanceData == Just True
       then do
         let bookingIdStr = booking.id.getId
@@ -614,6 +614,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         let gstFlag = Just (isJust mbRideFareTxn)
         let gstR = mbRideFareTxn <&> (.gstRate)
         let gstAmt = mbRideFareTxn <&> (.totalGstAmount)
+        let cgstAmt = mbRideFareTxn <&> (.cgstAmount)
+        let sgstAmt = mbRideFareTxn <&> (.sgstAmount)
+        let igstAmt = mbRideFareTxn <&> (.igstAmount)
         let invoiceNums = mapMaybe (.invoiceNumber) indirectTaxTxns
         -- Direct tax (TDS)
         directTaxTxns <- QDirectTax.findByReferenceId bookingIdStr
@@ -628,6 +631,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
             gstFlag,
             gstR,
             gstAmt,
+            cgstAmt,
+            sgstAmt,
+            igstAmt,
             tdsFlag,
             tdsR,
             tdsAmt,
@@ -638,7 +644,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
             walletTxns,
             invoiceNums
           )
-      else pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, [], [])
+      else pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, [], [])
 
   feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
   let mbFeedback = listToMaybe feedbacks
@@ -722,6 +728,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         gstApplicableFlag,
         gstRate,
         gstAmount,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
         tdsApplicableFlag,
         tdsRate,
         tdsAmount,
