@@ -53,6 +53,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    latestScheduledCommissionAggregationPeriodEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

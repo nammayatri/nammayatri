@@ -63,6 +63,17 @@ updateIsNew isNew fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateLatestScheduledCommissionAggregationPeriodEnd ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLatestScheduledCommissionAggregationPeriodEnd latestScheduledCommissionAggregationPeriodEnd fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.latestScheduledCommissionAggregationPeriodEnd latestScheduledCommissionAggregationPeriodEnd,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateLocalAddressDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
