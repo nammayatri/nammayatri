@@ -224,11 +224,14 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       let timedOutQueueDrivers = filter (.pickupZone) unrespondedSRFDs
       forM_ timedOutQueueDrivers $ \srfd ->
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ do
-    -- these unresponded requests are being retracted here: count them as expired
-    forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) unrespondedSRFDs) $ \(serviceTier, expiredCount) ->
-      TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
-    QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
+  let dispatchDriverIds = map (\dp -> dp.driverPoolResult.driverId.getId) dispatchPool
+      reOfferedSRFDs = filter (\srfd -> srfd.driverId.getId `elem` dispatchDriverIds) unrespondedSRFDs
+  unless (null reOfferedSRFDs) $
+    whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ do
+      -- these unresponded requests are being retracted here: count them as expired
+      forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) reOfferedSRFDs) $ \(serviceTier, expiredCount) ->
+        TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
+      QSRD.setInactiveAndPulledByIds reOfferedSRFDs
   _ <- QSRD.createMany searchRequestsForDrivers
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
