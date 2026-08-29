@@ -246,9 +246,9 @@ data DriverRideRes = DriverRideRes
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
     driverCancellationNotAllowed :: Maybe Bool,
+    isAutoAccepted :: Maybe Bool,
     freeWaitingTimeInMin :: Maybe Minutes,
     waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
-    isAutoAccepted :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -702,13 +702,24 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
         customerLanguage = booking.customerLanguage,
+        isAutoAccepted = booking.isAutoAccepted,
         freeWaitingTimeInMin = (.freeWaitingTime) <$> mbWaitingChargeInfo,
         waitingChargePerMinWithCurrency =
           mbWaitingChargeInfo >>= \wci -> case wci.waitingCharge of
             DFPC.PerMinuteWaitingCharge rate -> Just $ PriceAPIEntity (roundAmountByCurrency' ride.currency rate) ride.currency
             DFPC.ConstantWaitingCharge _ -> Nothing
-        isAutoAccepted = booking.isAutoAccepted
       }
+
+-- Slabs/Ambulance fare policies price waiting per-slab (by distance/vehicle age);
+-- surfacing that would need the same slab-selection logic as fare calculation,
+-- so this display-only field only covers the common policy types.
+getWaitingChargeInfo :: FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo
+getWaitingChargeInfo fp = case fp.farePolicyDetails of
+  FarePolicyD.ProgressiveDetails d -> d.waitingChargeInfo
+  FarePolicyD.RentalDetails d -> d.waitingChargeInfo
+  FarePolicyD.InterCityDetails d -> d.waitingChargeInfo
+  FarePolicyD.SlabsDetails _ -> Nothing
+  FarePolicyD.AmbulanceDetails _ -> Nothing
 
 -- Slabs/Ambulance fare policies price waiting per-slab (by distance/vehicle age);
 -- surfacing that would need the same slab-selection logic as fare calculation,
