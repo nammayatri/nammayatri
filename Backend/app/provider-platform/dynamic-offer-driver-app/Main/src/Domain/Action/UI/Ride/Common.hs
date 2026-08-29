@@ -50,6 +50,8 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFareParams
+import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
@@ -66,7 +68,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -78,6 +80,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
@@ -242,7 +245,9 @@ data DriverRideRes = DriverRideRes
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    freeWaitingTimeInMin :: Maybe Minutes,
+    waitingChargePerMinWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -474,7 +479,8 @@ mkExoPhone mbExophone booking =
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    CacheFlow m r
   ) =>
   KET.Language ->
   Maybe EarningsLabels ->
@@ -514,6 +520,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
       displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
+  mbFullFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let mbWaitingChargeInfo = mbFullFarePolicy >>= getWaitingChargeInfo
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -694,8 +702,24 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
-        customerLanguage = booking.customerLanguage
+        customerLanguage = booking.customerLanguage,
+        freeWaitingTimeInMin = (.freeWaitingTime) <$> mbWaitingChargeInfo,
+        waitingChargePerMinWithCurrency =
+          mbWaitingChargeInfo >>= \wci -> case wci.waitingCharge of
+            DFPC.PerMinuteWaitingCharge rate -> Just $ PriceAPIEntity (roundAmountByCurrency' ride.currency rate) ride.currency
+            DFPC.ConstantWaitingCharge _ -> Nothing
       }
+
+-- Slabs/Ambulance fare policies price waiting per-slab (by distance/vehicle age);
+-- surfacing that would need the same slab-selection logic as fare calculation,
+-- so this display-only field only covers the common policy types.
+getWaitingChargeInfo :: FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo
+getWaitingChargeInfo fp = case fp.farePolicyDetails of
+  FarePolicyD.ProgressiveDetails d -> d.waitingChargeInfo
+  FarePolicyD.RentalDetails d -> d.waitingChargeInfo
+  FarePolicyD.InterCityDetails d -> d.waitingChargeInfo
+  FarePolicyD.SlabsDetails _ -> Nothing
+  FarePolicyD.AmbulanceDetails _ -> Nothing
 
 -- calculateLocations moved from UI.Ride
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
