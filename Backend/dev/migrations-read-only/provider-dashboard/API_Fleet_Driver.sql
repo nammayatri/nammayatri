@@ -151,3 +151,9 @@ INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_
 
 -- {"api":"GetDriverFleetAssignments","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ASSIGNMENTS_INFORMATION","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_ASSIGNMENTS' FROM atlas_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'FLEET_ASSIGNMENTS_INFORMATION' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverFleetVehicleChangeFleetOwner","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VEHICLE_CHANGE_FLEET_OWNER' ) ON CONFLICT DO NOTHING;

@@ -1585,6 +1585,79 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
 
 {- Run this to trigger realtime GRPC notifications. `mbTtl` is forwarded to
    notifyWithGRPCProvider; see its docs. -}
+data OnboardingChangeEntityData = OnboardingChangeEntityData
+  { driverId :: Text,
+    driverName :: Text,
+    fleetOwnerId :: Maybe Text,
+    onboardingAs :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data FleetUnlinkEntityData = FleetUnlinkEntityData
+  { driverId :: Maybe Text,
+    driverName :: Maybe Text,
+    fleetOwnerId :: Maybe Text,
+    vehicleNo :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+buildMerchantPNContent ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Language ->
+  Text ->
+  [(Text, Text)] ->
+  m (Maybe (Text, Text))
+buildMerchantPNContent merchantOpCityId mbLanguage messageKey dynamicParams = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH mbLanguage) Nothing
+  case mbMerchantPN of
+    Nothing -> do
+      logWarning $ "MISSED_FCM - no merchant_push_notification row for key: " <> messageKey
+      pure Nothing
+    Just merchantPN -> pure $ Just (buildTemplate dynamicParams merchantPN.title, buildTemplate dynamicParams merchantPN.body)
+
+notifyDriverOnMerchantPN ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r,
+    ToJSON a
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  Text ->
+  Notification.Category ->
+  [(Text, Text)] ->
+  a ->
+  m ()
+notifyDriverOnMerchantPN merchantOpCityId driver messageKey category dynamicParams entityData = do
+  mbContent <- buildMerchantPNContent merchantOpCityId driver.language messageKey dynamicParams
+  whenJust mbContent $ \(title, body) ->
+    notifyDriverWithProviders merchantOpCityId category title body driver driver.deviceToken Nothing entityData
+
+notifyFleetOwnerOnMerchantPN ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ToJSON a
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  Text ->
+  Notification.Category ->
+  [(Text, Text)] ->
+  a ->
+  m ()
+notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner messageKey category dynamicParams entityData = do
+  mbContent <- buildMerchantPNContent merchantOpCityId fleetOwner.language messageKey dynamicParams
+  whenJust mbContent $ \(title, body) ->
+    notifyWithGRPCProvider merchantOpCityId category title body fleetOwner.id Nothing entityData
+
 notifyFleetWithGRPCProvider ::
   ( ServiceFlow m r,
     CacheFlow m r,

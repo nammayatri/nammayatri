@@ -201,7 +201,8 @@ postDriverEnable merchantShortId opCity reqDriverId = do
   when (transporterConfig.separateDriverVehicleEnablement /= Just True && isNothing mVehicle && not hasValidRC) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no valid RCs are linked to them")
 
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Enable (SGuard.TargetDriver personId) $
+  let enableTarget = if DCommon.checkFleetOwnerRole driver.role then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Enable enableTarget $
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then SFlags.markEnableDisableReasonFlags True driver SFlags.AdminEnable
       else enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
@@ -937,7 +938,6 @@ postDriverAddVehicle ::
   Common.AddVehicleReq ->
   Flow APISuccess
 postDriverAddVehicle merchantShortId opCity reqDriverId req = do
-  runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -950,6 +950,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   let merchantId = requestor.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == requestor.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  runRequestValidation (Common.validateAddVehicleReq transporterConfig.preProcessDocumentIdentifiers) req
 
   when (requestor.role == DP.DRIVER) $ do
     mbLinkedVehicle <- QVehicle.findById personId
@@ -1020,13 +1021,13 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         DP.DRIVER -> do
           mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
           when (isNothing mbAssoc) $ do
-            SGuard.withOnboardingAction transporterConfig (SGuard.ActorDriver personId) SGuard.LinkVehicle (SGuard.TargetVehicleById rc.id) $
+            SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.LinkVehicle (SGuard.TargetVehicleById rc.id) $
               createDriverRCAssociationIfPossible transporterConfig personId rc
         role | DCommon.checkFleetOwnerRole role -> do
           Driver.checkRCAssociationForFleet personId.getId rc
           mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId personId rc.id now
           when (isNothing mbFleetAssoc) $ do
-            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleet personId) SGuard.LinkVehicle (SGuard.TargetVehicleById rc.id) $
+            SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.LinkVehicle (SGuard.TargetVehicleById rc.id) $
               createFleetRCAssociationIfPossible transporterConfig personId rc
         _ -> pure ()
 

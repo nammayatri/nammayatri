@@ -1467,8 +1467,8 @@ instance IsBaseError DriverOnboardingError where
     RCAssociationNotFound -> Just "RC association not found."
     DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
     DriverDLNotFound id_ -> Just $ "Driver DL not found for driverId \"" <> id_ <> "\"."
-    DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
-    DriverChargesDisabled id_ -> Just $ "Bank account is not verified for driverId \"" <> id_ <> "\"."
+    DriverBankAccountNotFound _ -> Just $ "Driver Bank Account not found."
+    DriverChargesDisabled _ -> Just $ "Bank account is not verified."
     DocumentAlreadyLinkedToAnotherDriver docName -> Just $ "Document Already linked to another driver " <> docName
     UnsyncedImageNotFound -> Just "Unsynced image not found"
     DocumentAlreadyInSync -> Just "Document already in sync"

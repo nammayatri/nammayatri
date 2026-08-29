@@ -90,7 +90,7 @@ findByVerifiedAndApprovedAndEnabled merchantOpCityId isVerified mbApproved mbEna
 -- | Stamp `disabledReasonFlag = FleetDisabled` as part of a fleet-disable cascade.
 --   `enabled` is not written here — the funnel derives it via the explicitlyDisabled
 --   gate on the next recompute. Caller must trigger a refresh to converge state.
-markDisabledForFleetCascade :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
+markDisabledForFleetCascade :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> m ()
 markDisabledForFleetCascade (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -98,6 +98,8 @@ markDisabledForFleetCascade (Id driverId) = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+  LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+    LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set True}
 
 -- | Inverse of 'markDisabledForFleetCascade'. Re-enables a driver and clears
 --   the FleetDisabled flag only if that's the active disable reason — leaves
@@ -117,7 +119,7 @@ clearFleetCascadeAndEnable driverId = do
         ]
     ]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True}
+    LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True, LTSSync.isDisabledReasonFlag = LTSSync.Set False}
 
 updateVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateVerifiedState driverId isVerified = do
@@ -142,14 +144,18 @@ updateVerifiedAndApprovedState driverId isVerified isApproved = do
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
   when isVerified $ stampFirstVerifiedAtIfNull driverId
 
-updateDisabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.DisabledReasonFlag -> Id Person.Driver -> m ()
+updateDisabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe DriverInfo.DisabledReasonFlag -> Id Person.Driver -> m ()
 updateDisabledReasonFlag mbReason driverId = do
   now <- getCurrentTime
+  mbDriverInfo <- findById driverId
   updateOneWithKV
     [ Se.Set BeamDI.disabledReasonFlag mbReason,
       Se.Set BeamDI.updatedAt now
     ]
     ([Se.Is BeamDI.driverId (Se.Eq driverId.getId)] <> [Se.Is BeamDI.enabled (Se.Eq True) | isJust mbReason])
+  when (isNothing mbReason || maybe False (.enabled) mbDriverInfo) $
+    LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+      LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set (isJust mbReason)}
 
 updateEnabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.EnabledReasonFlag -> Id Person.Driver -> m ()
 updateEnabledReasonFlag mbReason driverId = do

@@ -10,6 +10,8 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
     OnboardingBuckets (..),
     OnboardingCounts (..),
     readOnboardingCounts,
+    removeDriverFromOnboardingCounters,
+    removeFleetOwnerFromOnboardingCounters,
     BlockChange (..),
     BlockPayload (..),
     SimplePayload (..),
@@ -27,6 +29,7 @@ import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -464,6 +467,49 @@ adjustOnboardingCounters useUnifiedOnboardingFlagsRecompute entity merchantOpCit
           ("blocked", step old.obBlocked new.obBlocked),
           ("disabled", step old.obDisabled new.obDisabled)
         ]
+
+emptyOnboardingBuckets :: OnboardingBuckets
+emptyOnboardingBuckets =
+  OnboardingBuckets
+    { obTotal = False,
+      obVerified = False,
+      obApproved = False,
+      obRejected = False,
+      obEnabled = False,
+      obBlocked = False,
+      obDisabled = False
+    }
+
+-- | Drop a permanently deleted driver out of every counter it currently occupies, `total`
+--   included. Mirrors the bucket derivation and the key scoping of 'recomputeDriverFlagsArm' so
+--   the decrements land on exactly the keys that recompute incremented. An entity that never went
+--   through a recompute (`isNew` still unset) was never counted into `total`, and
+--   'asAlreadyCounted' keeps it out of the decrement too.
+removeDriverFromOnboardingCounters :: OnboardingFlow m r => Bool -> DTC.TransporterConfig -> DP.Person -> DI.DriverInformation -> m ()
+removeDriverFromOnboardingCounters useUnifiedOnboardingFlagsRecompute transporterConfig person driverInfo = do
+  let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
+  mbFleetAssoc <-
+    if effectiveOnboardingAs == DI.FLEET_DRIVER
+      then QFDA.findOneByDriverIdWithStatus person.id
+      else pure Nothing
+  adjustOnboardingCounters
+    useUnifiedOnboardingFlagsRecompute
+    CounterDriver
+    person.merchantOperatingCityId
+    ((.fleetOwnerId) <$> mbFleetAssoc)
+    (asAlreadyCounted driverInfo.isNew $ bucketsOfFlags' driverInfo.verified driverInfo.approved driverInfo.enabled driverInfo.blocked (isJust driverInfo.disabledReasonFlag))
+    emptyOnboardingBuckets
+
+-- | 'removeDriverFromOnboardingCounters' for a fleet owner.
+removeFleetOwnerFromOnboardingCounters :: OnboardingFlow m r => Bool -> DP.Person -> DFOI.FleetOwnerInformation -> m ()
+removeFleetOwnerFromOnboardingCounters useUnifiedOnboardingFlagsRecompute person fleetOwnerInfo =
+  adjustOnboardingCounters
+    useUnifiedOnboardingFlagsRecompute
+    CounterFleetOwner
+    person.merchantOperatingCityId
+    (Just person.id.getId)
+    (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
+    emptyOnboardingBuckets
 
 data BlockChange
   = Block BlockPayload

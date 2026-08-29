@@ -55,6 +55,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     -- Class 1 fields (sync, driver DB authoritative)
     enabled :: SetField Bool,
     blocked :: SetField Bool,
+    isDisabledReasonFlag :: SetField Bool,
     subscribed :: SetField Bool,
     canSwitchToRental :: SetField Bool,
     canSwitchToInterCity :: SetField Bool,
@@ -111,6 +112,7 @@ emptyUpdate =
       selectedAutoAcceptTiers = Unchanged,
       enabled = Unchanged,
       blocked = Unchanged,
+      isDisabledReasonFlag = Unchanged,
       subscribed = Unchanged,
       canSwitchToRental = Unchanged,
       canSwitchToInterCity = Unchanged,
@@ -230,6 +232,7 @@ applyUpdate now u d =
       DPD.selectedAutoAcceptTiers = applyField u.selectedAutoAcceptTiers d.selectedAutoAcceptTiers,
       DPD.enabled = applyField u.enabled d.enabled,
       DPD.blocked = applyField u.blocked d.blocked,
+      DPD.isDisabledReasonFlag = applyField u.isDisabledReasonFlag d.isDisabledReasonFlag,
       DPD.subscribed = applyField u.subscribed d.subscribed,
       DPD.canSwitchToRental = applyField u.canSwitchToRental d.canSwitchToRental,
       DPD.canSwitchToInterCity = applyField u.canSwitchToInterCity d.canSwitchToInterCity,

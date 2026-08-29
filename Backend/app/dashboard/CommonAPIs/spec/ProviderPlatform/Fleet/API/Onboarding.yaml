@@ -340,6 +340,7 @@ types:
     isVerified: Bool
     isActive: Bool
     isApproved: Bool
+    isApprovedV2: Maybe Bool
     vehicleModel: Maybe Text
     documents: [DocumentStatusItem]
     dateOfUpload: UTCTime

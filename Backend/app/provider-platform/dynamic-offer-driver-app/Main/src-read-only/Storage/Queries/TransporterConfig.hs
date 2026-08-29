@@ -103,6 +103,8 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.acStatusCheckGap acStatusCheckGap,
       Se.Set Beam.actualRideDistanceDiffThreshold actualRideDistanceDiffThreshold,
       Se.Set Beam.actualRideDistanceDiffThresholdIfWithinPickupDrop actualRideDistanceDiffThresholdIfWithinPickupDrop,
+      Se.Set Beam.addDriverCountThreshold addDriverCountThreshold,
+      Se.Set Beam.addDriverCountWindow addDriverCountWindow,
       Se.Set Beam.airportEntryFeeCheckAtStartRide airportEntryFeeCheckAtStartRide,
       Se.Set Beam.airportEntryFeeEnabled airportEntryFeeEnabled,
       Se.Set Beam.allowAadhaarReupload allowAadhaarReupload,

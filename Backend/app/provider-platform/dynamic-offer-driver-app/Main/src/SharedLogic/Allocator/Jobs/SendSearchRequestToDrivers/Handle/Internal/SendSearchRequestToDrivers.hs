@@ -615,7 +615,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- window between debit commit and revoke strip is the accepted trade-off, chosen
             -- over one wallet DB read per candidate in the dispatch hot loop.
             let isStillLive =
-                  maybe False (\d -> not d.blocked && d.enabled && d.subscribed && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+                  maybe False (\d -> not d.blocked && d.enabled && not d.isDisabledReasonFlag && d.subscribed && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.

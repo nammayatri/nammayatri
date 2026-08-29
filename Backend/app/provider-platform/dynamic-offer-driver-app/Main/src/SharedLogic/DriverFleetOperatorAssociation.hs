@@ -45,6 +45,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -112,14 +113,8 @@ endDriverAssociations merchantOpCityId transporterConfig driver = do
             DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
         )
 
-      -- send notification to existing fleet owner about driver unlink
-      mbExistingFleetOwner <- B.runInReplica $ QP.findById (Id existingAssociation.fleetOwnerId :: Id DP.Person)
-      whenJust mbExistingFleetOwner $ \existingFleetOwner -> do
-        mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId (show Notification.DRIVER_UNLINK_FROM_FLEET) Nothing Nothing existingFleetOwner.language Nothing
-        whenJust mbMerchantPN $ \merchantPN -> do
-          let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
-          let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
-          TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_FLEET title body (Id existingAssociation.fleetOwnerId) Nothing ()
+      fork "Driver fleet unlink notification" $
+        SOnboardingComms.notifyOnDriverFleetUnlink merchantOpCityId driver existingAssociation.fleetOwnerId SOnboardingComms.ByFleetOwner
 
   existingDOAssociations <- QDOA.findAllByDriverId driver.id True
   unless (null existingDOAssociations) $ do

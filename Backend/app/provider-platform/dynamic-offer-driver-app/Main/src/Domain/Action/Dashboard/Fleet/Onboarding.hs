@@ -439,6 +439,8 @@ castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
     { documents = castDocumentStatusItem <$> documents,
       expiryDate = documentExpiry,
       docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
+      isApproved = fromMaybe False isApproved,
+      isApprovedV2 = isApproved,
       ..
     }
 

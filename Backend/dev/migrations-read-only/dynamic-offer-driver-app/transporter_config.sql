@@ -1135,3 +1135,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN min_booking_wi
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_booking_window;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN scheduled_ride_avg_speed_kmph;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_scheduled_holds_per_driver;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_window text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_threshold integer ;
+
+
+
+------- SQL updates -------
+

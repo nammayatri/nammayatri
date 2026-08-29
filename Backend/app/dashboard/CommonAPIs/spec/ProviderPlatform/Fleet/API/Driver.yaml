@@ -362,7 +362,6 @@ apis:
       auth: ApiAuthV2
       query:
         fleetOwnerId: Text
-        notifyDriver: Bool
       params:
         driverId: Id Driver
         vehicleNo: Text
@@ -380,7 +379,6 @@ apis:
               requestorId: Text
             query:
               fleetOwnerId: Text
-              notifyDriver: Bool
             response:
               type: APISuccess
 
@@ -1383,9 +1381,21 @@ apis:
       params:
         driverId: Id Driver
       request:
-        type: ChangeDriverFleetOwnerReq
+        type: ChangeFleetOwnerReq
       response:
         type: APISuccess
+
+  - POST: # ChangeVehicleFleetOwnerAPI
+      endpoint: /fleet/vehicle/{rcNo}/changeFleetOwner
+      auth: ApiAuthV2
+      params:
+        rcNo: Text
+      request:
+        type: ChangeFleetOwnerReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.onboarding.write
 
   - GET: # GetDriverDetailsAPI
       endpoint: /fleet/driver/details
@@ -1597,10 +1607,9 @@ types:
     - approve: Maybe Bool
     - reason: Maybe Text
     - derive: "'HideSecrets"
-  ChangeDriverFleetOwnerReq:
+  ChangeFleetOwnerReq:
     - newFleetOwnerId: Text
     - reason: Maybe Text
-    - rcNo: Maybe Text
     - derive: "'HideSecrets"
 
   UpdateDriverReq:

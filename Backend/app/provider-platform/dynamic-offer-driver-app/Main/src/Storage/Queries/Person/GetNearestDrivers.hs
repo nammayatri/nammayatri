@@ -243,6 +243,7 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   dpd <- HashMap.lookup location.driverId poolDataMap
   guard $ not dpd.blocked
   guard $ dpd.enabled
+  guard $ not dpd.isDisabledReasonFlag
   guard $ dpd.subscribed
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
