@@ -726,7 +726,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       let dontAutoEnable = fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         let allVehicleDocsEnabled = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
-            inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
+            inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved == Just True
             isVehicleCategoryExcludedFromVerification = (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) `elem` (fromMaybe [] vehicleCategoryExcludedFromVerification)
             -- When separated: only check vehicle docs. When combined: check both driver and vehicle docs
             allDriverDocsVerified = separateEnablement || checkAllDriverDocsValidForEnabling (Right driverDocConfs) role driverDocuments (fromMaybe userSelectedVehicleCategory verifiedVehicleCategory) makeSelfieAadhaarPanMandatory
@@ -753,8 +753,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             allowAutoActivate =
               isActive
                 || (firstTimeOnboarding && not dontAutoEnable)
+            driverLiveForAutoActivate = maybe False (\driverInfo -> driverInfo.enabled && isNothing driverInfo.disabledReasonFlag) mbDriverInfo
         let unifiedRecompute = entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && firstTimeOnboarding) $ do
+        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && driverLiveForAutoActivate) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler:unifiedRecompute" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && allowAutoActivate) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
@@ -770,7 +771,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           then do
             let allVehicleDocsValidForVerified = checkAllVehicleDocsValidForVerified driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
                 derivedApproved = computeApprovedFromDocs Nothing (Right driverDocConfs) DP.DRIVER vehicleDoc.documents
-            return VehicleDocumentItem {isVerified = allVehicleDocsValidForVerified, isApproved = allVehicleDocsEnabled && derivedApproved == Just True, ..}
+            return VehicleDocumentItem {isVerified = allVehicleDocsValidForVerified, isApproved = derivedApproved, ..}
           else if allVehicleDocsEnabled then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
     convertDLToDLDetails dl = do

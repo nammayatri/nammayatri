@@ -55,6 +55,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
@@ -483,6 +484,9 @@ postFleetConsentDecline (mbDriverId, _merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetDriverAssociation.fleetOwnerId) (cast driverId)) SGuard.DeactivateFromFleet (SGuard.TargetDriver (cast driverId)) $
     FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
+  fork "Driver fleet unlink notification" $ do
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    SOnboardingComms.notifyOnDriverFleetUnlink merchantOperatingCityId driver fleetDriverAssociation.fleetOwnerId SOnboardingComms.ByDriverConsentDecline
   pure Success
 
 postFleetConsent ::

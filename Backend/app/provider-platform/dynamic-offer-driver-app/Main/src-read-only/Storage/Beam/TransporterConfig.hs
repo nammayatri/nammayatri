@@ -29,6 +29,8 @@ data TransporterConfigT f = TransporterConfigT
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: B.C f Kernel.Types.Common.HighPrecMeters,
+    addDriverCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    addDriverCountWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     airportEntryFeeCheckAtStartRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     airportEntryFeeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowAadhaarReupload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

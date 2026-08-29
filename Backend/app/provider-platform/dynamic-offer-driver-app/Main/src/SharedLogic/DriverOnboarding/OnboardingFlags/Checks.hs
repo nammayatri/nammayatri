@@ -430,7 +430,7 @@ onboardingFlow = do
   whenConfig blocksDriverOwnRc $ do
     checkM LinkVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
     checkM ActivateVehicle AnyActor RcTarget rcNotActiveWithAnotherDriver -- RC not driven by someone else
-  unified $ checkV AnyVerb FleetActor AnyTarget actingFleetOwnerFit -- acting fleet owner is live
+  unified $ check AnyVerb FleetActor AnyTarget actingFleetOwnerFit -- acting fleet owner is live
   unified $ check LinkVehicle DriverActor AnyTarget actingDriverFit -- acting driver is live
   unified $ check ActivateVehicle DriverActor AnyTarget actingDriverFit -- acting driver is live
   unified $ check Enable AnyActor DriverTarget driverEnableable -- only a driver who is down comes up
@@ -522,16 +522,14 @@ onboardingFlow = do
       whenJust mbActiveDriverAssoc $ \_ -> throwError RCActiveOnOtherAccount
       linkedDriverAssocs <- DRAQuery.findAllActiveAssociationByRCId rcId
       forM_ linkedDriverAssocs $ \assoc -> DRAQuery.endAssociationForRC assoc.driverId rcId
-    actingFleetOwnerFit :: ActionVerb -> ActorFleetCtx -> TargetCtx -> Either GuardViolation ()
-    actingFleetOwnerFit verb actorFleet targetCtx
-      | verb == ChangeFleetOwner = ok
-      | otherwise = case (targetCtx.tcEntity, actorFleet.afInfo) of
-        (EFleet _, _) -> ok
-        (_, Nothing) -> ok
-        (_, Just fleetInfo) -> do
-          ensure (not fleetInfo.blocked) "ACTOR-2" "acting fleet owner is blocked"
-          ensure (isNothing fleetInfo.disabledReasonFlag) "ACTOR-3" "acting fleet owner is disabled"
-          ensure fleetInfo.enabled "ACTOR-1" "acting fleet owner is not enabled"
+    actingFleetOwnerFit :: ActorFleetCtx -> TargetCtx -> Either GuardViolation ()
+    actingFleetOwnerFit actorFleet targetCtx = case (targetCtx.tcEntity, actorFleet.afInfo) of
+      (EFleet _, _) -> ok
+      (_, Nothing) -> ok
+      (_, Just fleetInfo) -> do
+        ensure (not fleetInfo.blocked) "ACTOR-2" "acting fleet owner is blocked"
+        ensure (isNothing fleetInfo.disabledReasonFlag) "ACTOR-3" "acting fleet owner is disabled"
+        ensure fleetInfo.enabled "ACTOR-1" "acting fleet owner is not enabled"
     actingDriverFit :: ActorDriverCtx -> TargetCtx -> Either GuardViolation ()
     actingDriverFit actorDriver targetCtx = case (targetCtx.tcEntity, actorDriver.adInfo) of
       (EFleet _, _) -> ok

@@ -18,6 +18,8 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
@@ -28,7 +30,8 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
-  runRequestValidation validateDriverOperationHubRequest req
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  runRequestValidation (validateDriverOperationHubRequest transporterConfig.preProcessDocumentIdentifiers) req
   let creatorId = fromMaybe (Id req.creatorId) mbPersonId
   -- Lock and duplicate check by entity (driver or RC), not creator: so same driver/RC cannot have duplicate PENDING from any creator
   lockKey <- case req.requestType of
@@ -107,14 +110,13 @@ opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
 opsHubVehicleLockKey :: Text -> Text
 opsHubVehicleLockKey rcNo = "opsHub:vehicle:rc-" <> rcNo
 
-validateDriverOperationHubRequest :: Validate DriverOperationHubRequest
-validateDriverOperationHubRequest DriverOperationHubRequest {..} =
-  sequenceA_
-    [ -- Validate registrationNo if provided
-      whenJust registrationNo $ \rcNo ->
-        validateField "registrationNo" rcNo $
-          LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
-    ]
+validateDriverOperationHubRequest :: Bool -> Validate DriverOperationHubRequest
+validateDriverOperationHubRequest preProcessDocumentIdentifiers DriverOperationHubRequest {..} =
+  when preProcessDocumentIdentifiers $
+    -- Validate registrationNo if provided
+    whenJust registrationNo $ \rcNo ->
+      validateField "registrationNo" rcNo $
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
 
 castHubRequests :: (OperationHubRequests, Maybe Person, OperationHub) -> Flow OperationHubDriverRequest
 castHubRequests (hubReq, mbPerson, hub) = do

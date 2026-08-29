@@ -130,6 +130,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             selectedServiceTiers = v.selectedServiceTiers,
             enabled = di.enabled,
             blocked = di.blocked,
+            isDisabledReasonFlag = isJust di.disabledReasonFlag,
             subscribed = di.subscribed,
             canSwitchToRental = di.canSwitchToRental,
             canSwitchToInterCity = di.canSwitchToInterCity,

@@ -30,12 +30,11 @@ import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 
-validateAddVehicleReq :: Validate AddVehicleReq
-validateAddVehicleReq AddVehicleReq {..} =
-  sequenceA_
-    [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
-    ]
+validateAddVehicleReq :: Bool -> Validate AddVehicleReq
+validateAddVehicleReq preProcessDocumentIdentifiers AddVehicleReq {..} =
+  when preProcessDocumentIdentifiers $
+    validateField "registrationNo" registrationNo $
+      LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
 
 -- Create Drivers using csv --
 

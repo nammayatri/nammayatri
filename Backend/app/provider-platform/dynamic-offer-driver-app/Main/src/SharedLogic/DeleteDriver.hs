@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (isFleetRole)
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
@@ -81,6 +82,8 @@ deleteDriver merchantShortId reqDriverId = do
         role | isFleetRole role -> do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
           SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetFleetOwner person.id)
+          mbFleetOwnerInfo <- QFleetOwnerInformation.findByPrimaryKey person.id
+          whenJust mbFleetOwnerInfo $ OF.removeFleetOwnerFromOnboardingCounters (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) person
           QFleetOperatorAssociation.deleteByFleetOwnerId person.id.getId
           QFleetRCAssociation.deleteByFleetOwnerId person.id
           QFleetDriverAssociation.deleteByFleetOwnerId person.id.getId
@@ -101,6 +104,8 @@ deleteDriver merchantShortId reqDriverId = do
           driverDeleteCheck <- validateDriver merchant person (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
           when driverDeleteCheck $ throwError $ InvalidRequest "Driver can't be deleted"
           SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetDriver person.id)
+          driverInfo <- QDriverInfo.findById (cast person.id) >>= fromMaybeM DriverInfoNotFound
+          OF.removeDriverFromOnboardingCounters (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) transporterConfig person driverInfo
           -- this function uses tokens from db, so should be called before transaction
           Auth.clearDriverSession person.id
           -- Esq.runTransaction $ do

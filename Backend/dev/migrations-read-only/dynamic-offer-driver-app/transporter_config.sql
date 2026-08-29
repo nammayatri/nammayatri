@@ -1099,3 +1099,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pre_process_doc
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_strong_name_check_required boolean  default true;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_window text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_threshold integer ;

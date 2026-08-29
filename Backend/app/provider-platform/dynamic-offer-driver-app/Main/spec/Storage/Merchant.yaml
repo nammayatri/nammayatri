@@ -1131,6 +1131,8 @@ TransporterConfig:
     fraudAuthCountWindow: Maybe SlidingWindowOptions
     stripeStatusRefreshCountThreshold: Maybe Int
     stripeStatusRefreshCountWindow: Maybe SlidingWindowOptions
+    addDriverCountThreshold: Maybe Int
+    addDriverCountWindow: Maybe SlidingWindowOptions
     authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters

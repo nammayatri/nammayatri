@@ -151,7 +151,6 @@ postDriverEndRCAssociation merchantShortId opCity apiTokenInfo driverId = do
 
 postDriverAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> CommonFleet.AddVehicleReq -> Flow APISuccess
 postDriverAddVehicle merchantShortId opCity apiTokenInfo driverId req = do
-  runRequestValidation CommonFleet.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $

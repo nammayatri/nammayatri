@@ -548,6 +548,7 @@ library
       SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.DocumentIdentifier
+      SharedLogic.DriverOnboarding.OnboardingComms
       SharedLogic.DriverOnboarding.OnboardingFlags.Checks
       SharedLogic.DriverOnboarding.OnboardingFlags.Flow
       SharedLogic.DriverOnboarding.OnboardingFlags.Guard

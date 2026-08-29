@@ -56,6 +56,7 @@ data DriverPoolData = DriverPoolData
     -- Class 1 (preferences)
     enabled :: Bool,
     blocked :: Bool,
+    isDisabledReasonFlag :: Bool,
     subscribed :: Bool,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
@@ -194,6 +195,7 @@ defaultDriverPoolData dId =
       selectedServiceTiers = [],
       enabled = False,
       blocked = False,
+      isDisabledReasonFlag = False,
       subscribed = False,
       canSwitchToRental = False,
       canSwitchToInterCity = False,

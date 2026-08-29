@@ -71,6 +71,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetTripTransactionsV2,
     postDriverFleetDriverUpdate,
     postDriverFleetDriverChangeFleetOwner,
+    postDriverFleetVehicleChangeFleetOwner,
     postDriverFleetApproveDriver,
     getDriverFleetDriverListStats,
     getDriverFleetVehicleListStats,
@@ -250,7 +251,6 @@ getDriverFleetAccessList merchantShortId opCity apiTokenInfo _ = do
 postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Maybe Text -> Maybe Common.Role -> Common.AddVehicleReq -> Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId mbRole req = do
   checkFleetOwnerVerification apiTokenInfo.personId
-  runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole req -- apiTokenInfo may contain opertaor or fleet
@@ -361,12 +361,12 @@ postDriverDashboardFleetWmbTripEnd merchantShortId opCity apiTokenInfo tripTrans
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
   T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetWmbTripEnd) tripTransactionId fleetOwnerId mbTerminationSource
 
-postDriverFleetUnlink :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Maybe Text -> Maybe Bool -> Flow APISuccess
-postDriverFleetUnlink merchantShortId opCity apiTokenInfo driverId vehicleNo mbFleetOwnerId mbNotifyDriver = do
+postDriverFleetUnlink :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Maybe Text -> Flow APISuccess
+postDriverFleetUnlink merchantShortId opCity apiTokenInfo driverId vehicleNo mbFleetOwnerId = do
   checkFleetOwnerVerification apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetUnlink) requestorId driverId vehicleNo mbFleetOwnerId' mbNotifyDriver
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetUnlink) requestorId driverId vehicleNo mbFleetOwnerId'
 
 postDriverFleetRemoveVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Flow APISuccess
 postDriverFleetRemoveVehicle merchantShortId opCity apiTokenInfo vehicleNo mbFleetOwnerId = do
@@ -754,9 +754,16 @@ getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverVehicleInfo) vehicleNo rcId
 
-postDriverFleetDriverChangeFleetOwner :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Common.ChangeDriverFleetOwnerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetDriverChangeFleetOwner :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Common.ChangeFleetOwnerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetDriverChangeFleetOwner merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverChangeFleetOwner) driverId req
+
+postDriverFleetVehicleChangeFleetOwner :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Common.ChangeFleetOwnerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetVehicleChangeFleetOwner merchantShortId opCity apiTokenInfo rcNo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Kernel.Prelude.Nothing (Just req)
+  T.withTransactionStoring transaction $
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleChangeFleetOwner) rcNo req
