@@ -131,7 +131,8 @@ data TNSTCConfig = TNSTCConfig
     counterCode :: Maybe Text,
     soapActionPrefix :: Maybe Text,
     maxPassengersPerBooking :: Maybe Int,
-    maxAdvanceBookingDays :: Maybe Int
+    maxAdvanceBookingDays :: Maybe Int,
+    createdBy :: Maybe Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

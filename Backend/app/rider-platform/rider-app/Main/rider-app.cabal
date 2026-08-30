@@ -437,6 +437,7 @@ library
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
       ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Booking
       ExternalBPP.ExternalAPI.Bus.TNSTC.Client
       ExternalBPP.ExternalAPI.Bus.TNSTC.Error
       ExternalBPP.ExternalAPI.Bus.TNSTC.Layout

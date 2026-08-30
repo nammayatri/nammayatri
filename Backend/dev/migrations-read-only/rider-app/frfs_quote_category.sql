@@ -233,3 +233,8 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN hold_id text ;
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY frfs_quote_category_idx_quote_id ON atlas_app.frfs_quote_category USING btree (quote_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN provider_block_ids text[] ;
