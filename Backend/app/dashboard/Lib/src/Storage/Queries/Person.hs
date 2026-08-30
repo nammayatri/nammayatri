@@ -22,6 +22,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Database.Beam as B
 import Database.Beam.Postgres (Pg)
+import qualified Domain.Types.Entity as DEntity
 import Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantAccess as MerchantAccess
 import Domain.Types.Person as Person
@@ -39,6 +40,7 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Common as SBC
+import qualified Storage.Beam.EntityAccess as BeamEA
 import qualified Storage.Beam.MerchantAccess as BeamMA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Role as BeamR
@@ -58,7 +60,7 @@ createPersonsWithAccessAtomic [] = pure ()
 createPersonsWithAccessAtomic pairs = do
   let personRows = map (toTType' . fst) pairs
       accessRows = map (toTType' . snd) pairs
-  runMasterTransaction "PT bulkCreate" $ do
+  runMasterTransaction "PT bulkUpsert" $ do
     L.insertRows $ B.insert (SBC.person SBC.atlasDB) (B.insertValues personRows)
     L.insertRows $ B.insert (SBC.merchantAccess SBC.atlasDB) (B.insertValues accessRows)
 
@@ -127,6 +129,43 @@ findAllByIds ::
   [Id Person] ->
   m [Person]
 findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
+
+-- Master read: runs once per bulkUpsert (inside the per-merchant lock) with the
+-- whole batch's tokenNo hashes, so a 500-row CSV costs one round-trip instead of
+-- 500. Reads master so replica lag can't hide a just-committed tokenNo from a prior
+-- batch in the same lock section.
+findTokenNoConflictsForMerchant ::
+  BeamFlow m r =>
+  Id Merchant.Merchant ->
+  [DbHash] ->
+  m [(DbHash, Id Person)]
+findTokenNoConflictsForMerchant _ [] = pure []
+findTokenNoConflictsForMerchant merchantId tokenHashes = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+        person <- B.join_' (SBC.person SBC.atlasDB) (\person -> BeamMA.personId access B.==?. BeamP.id person)
+        B.guard_' (BeamMA.merchantId access B.==?. B.val_ (getId merchantId) B.&&?. B.sqlBool_ (BeamP.tokenNoHash person `B.in_` (B.val_ . Just <$> tokenHashes)))
+        pure (BeamP.tokenNoHash person, BeamP.id person)
+  case res of
+    -- A swallowed error here would read as "tokenNo is free" and let duplicates through.
+    Left err -> throwError (InternalError $ "findTokenNoConflictsForMerchant failed: " <> T.pack (show err))
+    Right rows -> pure [(h, Id pid) | (Just h, pid) <- rows]
+
+-- Keeps the legacy hash-only row lossless across a read/modify/write cycle: the placeholder
+-- ciphertext rebuilt in FromTType' maps back to NULL, not to ''.
+tokenNoEncryptedColumn :: Maybe (EncryptedHashedField 'AsEncrypted Text) -> Maybe Text
+tokenNoEncryptedColumn mbTokenNo =
+  mbTokenNo >>= \t ->
+    if DPT.isLegacyTokenNoPlaceholder t then Nothing else Just (unEncrypted t.encrypted)
+
+requireTokenNoFree :: MonadFlow m => [(DbHash, Id Person)] -> DbHash -> Maybe (Id Person) -> Text -> m ()
+requireTokenNoFree conflicts tokenHash mbSelfId rowTag =
+  whenJust (lookup tokenHash conflicts) $ \conflictId ->
+    when (mbSelfId /= Just conflictId) $
+      throwError (InvalidRequest (rowTag <> "tokenNo is already in use for this merchant"))
 
 findAllByIdsAndReceiveNotification ::
   BeamFlow m r =>
@@ -265,8 +304,10 @@ updatePersonUpsertableFields p =
       Se.Set BeamP.emailEncrypted (p.email <&> (unEncrypted . (.encrypted))),
       Se.Set BeamP.emailHash (p.email <&> (.hash)),
       Se.Set BeamP.dashboardAccessType p.dashboardAccessType,
-      Se.Set BeamP.tokenNoHash p.tokenNoHash,
-      Se.Set BeamP.entityId (p.entityId <&> getId),
+      Se.Set BeamP.tokenNoEncrypted (tokenNoEncryptedColumn p.tokenNo),
+      Se.Set BeamP.tokenNoHash (p.tokenNo <&> (.hash)),
+      Se.Set BeamP.vpaEncrypted (p.vpa <&> (unEncrypted . (.encrypted))),
+      Se.Set BeamP.vpaHash (p.vpa <&> (.hash)),
       Se.Set BeamP.verified p.verified,
       Se.Set BeamP.updatedAt p.updatedAt
     ]
@@ -332,6 +373,111 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
           cities = merchantAccessList <&> (.operatingCity)
           merchantIds = merchantAccessList <&> MerchantAccess.merchantShortId
        in (person, role, merchantIds, cities)
+
+-- PT staff page plus the total behind it. Same tenancy rule as findAllWithLimitOffset, narrowed
+-- to people who hold a tokenNo (what makes an account a PT login) and optionally to one role or
+-- one depot. Returns (person, role) only; grants and entities are batch-fetched per page by the
+-- caller.
+--
+-- The filter is spelled out twice rather than shared: aggregate_ nests its inner query at a
+-- different Beam scope than the paged select, so a local binding closing over these arguments
+-- cannot be used by both. KEEP THE TWO COPIES IN SYNC -- a page that disagrees with its own
+-- count is worse than the duplication.
+findAllPTWithLimitOffset ::
+  BeamFlow m r =>
+  Id Merchant.Merchant ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe Text ->
+  Maybe (Id DEntity.Entity) ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ([(Person, Role)], Int)
+findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbLimit mbOffset = do
+  dbConf <- getReplicaBeamConfig
+  pageRes <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ limitVal $
+          B.offset_ offsetVal $
+            B.orderBy_ (\(person, _role) -> B.desc_ person.createdAt) $
+              B.filter_'
+                ( \(person, role) ->
+                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                    )
+                      -- A tokenNo is what makes an account a PT login, so it defines the base set.
+                      B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\roleName -> BeamR.name role B.==?. B.val_ roleName) mbRoleName
+                      B.&&?. B.sqlBool_
+                        ( B.exists_ $ do
+                            access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+                            B.guard_' (BeamMA.personId access B.==?. BeamP.id person B.&&?. BeamMA.merchantId access B.==?. B.val_ (getId callerMerchantId))
+                            pure access
+                        )
+                      B.&&?. maybe
+                        (B.sqlBool_ $ B.val_ True)
+                        ( \entityId ->
+                            B.sqlBool_
+                              ( B.exists_ $ do
+                                  grant <- B.all_ (SBC.entityAccess SBC.atlasDB)
+                                  B.guard_' (BeamEA.personId grant B.==?. BeamP.id person B.&&?. BeamEA.entityId grant B.==?. B.val_ (getId entityId))
+                                  pure grant
+                              )
+                        )
+                        mbEntityId
+                )
+                $ do
+                  person <- B.all_ (SBC.person SBC.atlasDB)
+                  role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+                  pure (person, role)
+  countRes <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            ( \(person, role) ->
+                ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString
+                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                )
+                  -- A tokenNo is what makes an account a PT login, so it defines the base set.
+                  B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
+                  B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\roleName -> BeamR.name role B.==?. B.val_ roleName) mbRoleName
+                  B.&&?. B.sqlBool_
+                    ( B.exists_ $ do
+                        access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+                        B.guard_' (BeamMA.personId access B.==?. BeamP.id person B.&&?. BeamMA.merchantId access B.==?. B.val_ (getId callerMerchantId))
+                        pure access
+                    )
+                  B.&&?. maybe
+                    (B.sqlBool_ $ B.val_ True)
+                    ( \entityId ->
+                        B.sqlBool_
+                          ( B.exists_ $ do
+                              grant <- B.all_ (SBC.entityAccess SBC.atlasDB)
+                              B.guard_' (BeamEA.personId grant B.==?. BeamP.id person B.&&?. BeamEA.entityId grant B.==?. B.val_ (getId entityId))
+                              pure grant
+                          )
+                    )
+                    mbEntityId
+            )
+            $ do
+              person <- B.all_ (SBC.person SBC.atlasDB)
+              role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+              pure (person, role)
+  totalCount <- case countRes of
+    Left err -> throwError (InternalError $ "findAllPTWithLimitOffset count failed: " <> T.pack (show err))
+    Right rows -> pure $ if null rows then 0 else head rows
+  case pageRes of
+    Left err -> throwError (InternalError $ "findAllPTWithLimitOffset failed: " <> T.pack (show err))
+    Right rows -> do
+      page <- fmap catMaybes $
+        forM rows $ \(person, role) ->
+          runMaybeT $ (,) <$> MaybeT (fromTType' person) <*> MaybeT (fromTType' role)
+      pure (page, totalCount)
+  where
+    limitVal = fromMaybe 100 mbLimit
+    offsetVal = fromMaybe 0 mbOffset
 
 updatePersonRole :: BeamFlow m r => Id Person -> Role -> m ()
 updatePersonRole personId role = do
@@ -477,12 +623,17 @@ instance FromTType' BeamP.Person Person.Person where
               (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
               _ -> Nothing,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            tokenNo = case tokenNoHash of
+              Just hash -> Just $ EncryptedHashed (Encrypted (fromMaybe "" tokenNoEncrypted)) hash
+              Nothing -> Nothing,
+            vpa = case (vpaEncrypted, vpaHash) of
+              (Just vpa, Just hash) -> Just $ EncryptedHashed (Encrypted vpa) hash
+              _ -> Nothing,
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
             merchantId = merchantId <&> Id,
             language = language,
-            entityId = entityId <&> Id,
             ..
           }
 
@@ -495,12 +646,15 @@ instance ToTType' BeamP.Person Person.Person where
         emailHash = email <&> (.hash),
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber.hash,
+        tokenNoEncrypted = tokenNoEncryptedColumn tokenNo,
+        tokenNoHash = tokenNo <&> (.hash),
+        vpaEncrypted = vpa <&> (unEncrypted . (.encrypted)),
+        vpaHash = vpa <&> (.hash),
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
         merchantId = merchantId <&> getId,
         language = language,
-        entityId = entityId <&> getId,
         ..
       }
 

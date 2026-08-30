@@ -23,6 +23,7 @@ import qualified Storage.Beam.Capability as BeamC
 import qualified Storage.Beam.CapabilityEndpoint as BeamCE
 import qualified Storage.Beam.DeletedUser as BeamDU
 import qualified Storage.Beam.Entity as BeamE
+import qualified Storage.Beam.EntityAccess as BeamEA
 import qualified Storage.Beam.Merchant as BeamM
 import qualified Storage.Beam.MerchantAccess as BeamMA
 import qualified Storage.Beam.MerchantPair as BeamMPair
@@ -48,6 +49,7 @@ type BeamFlow' =
     HasSchemaName BeamCE.CapabilityEndpointT,
     HasSchemaName BeamDU.DeletedUserT,
     HasSchemaName BeamE.EntityT,
+    HasSchemaName BeamEA.EntityAccessT,
     HasSchemaName BeamM.MerchantT,
     HasSchemaName BeamMA.MerchantAccessT,
     HasSchemaName BeamMPair.MerchantPairT,

@@ -16,7 +16,7 @@
 module Domain.Types.Person.Type where
 
 import Data.Aeson
-import qualified Domain.Types.Entity as Entity
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
@@ -57,8 +57,8 @@ data PersonE e = Person
     language :: Maybe KET.Language,
     secretKey :: Maybe Text,
     is2faEnabled :: Bool,
-    tokenNoHash :: Maybe DbHash,
-    entityId :: Maybe (Id Entity.Entity)
+    tokenNo :: Maybe (EncryptedHashedField e Text),
+    vpa :: Maybe (EncryptedHashedField e Text)
   }
   deriving (Generic)
 
@@ -66,16 +66,30 @@ type Person = PersonE 'AsEncrypted
 
 type DecryptedPerson = PersonE 'AsUnencrypted
 
+-- Rows written before token_no_encrypted existed carry a hash with no ciphertext; reads
+-- rebuild them with empty ciphertext, which must never be decrypted nor written back over
+-- the NULL. Real tokenNos can't be blank -- bulk input is nonBlank-filtered before encrypt.
+isLegacyTokenNoPlaceholder :: EncryptedHashedField 'AsEncrypted Text -> Bool
+isLegacyTokenNoPlaceholder = T.null . unEncrypted . (.encrypted)
+
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem (mobileNumber, salt)
     email_ <- encryptItem $ (,salt) <$> email
-    return Person {mobileNumber = mobileNumber_, email = email_, ..}
+    tokenNo_ <- encryptItem $ (,salt) <$> tokenNo
+    vpa_ <- encryptItem $ (,salt) <$> vpa
+    return Person {mobileNumber = mobileNumber_, email = email_, tokenNo = tokenNo_, vpa = vpa_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fst <$> decryptItem mobileNumber
     email_ <- fmap fst <$> decryptItem email
-    return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
+    tokenNo_ <- case tokenNo of
+      Just t
+        | isLegacyTokenNoPlaceholder t -> pure $ Just ""
+        | otherwise -> Just . fst <$> decryptItem t
+      Nothing -> pure Nothing
+    vpa_ <- fmap fst <$> decryptItem vpa
+    return (Person {mobileNumber = mobileNumber_, email = email_, tokenNo = tokenNo_, vpa = vpa_, ..}, "")
 
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson

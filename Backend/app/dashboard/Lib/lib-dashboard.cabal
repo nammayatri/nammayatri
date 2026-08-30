@@ -46,6 +46,7 @@ library
       Domain.Types.Capability
       Domain.Types.DeletedUser
       Domain.Types.Entity
+      Domain.Types.EntityAccess
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
       Domain.Types.MerchantPair
@@ -66,6 +67,7 @@ library
       Storage.Beam.Common
       Storage.Beam.DeletedUser
       Storage.Beam.Entity
+      Storage.Beam.EntityAccess
       Storage.Beam.Merchant
       Storage.Beam.MerchantAccess
       Storage.Beam.MerchantPair
@@ -83,6 +85,7 @@ library
       Storage.Queries.CapabilityEndpoint
       Storage.Queries.DeletedUser
       Storage.Queries.Entity
+      Storage.Queries.EntityAccess
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
       Storage.Queries.MerchantPair

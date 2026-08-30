@@ -12,13 +12,19 @@ import "lib-dashboard" Tools.Auth
 -- DashboardAuth is coarse; fine-grained RBAC via verifyAccessLevel DASHBOARD_USER_BULK_CREATE inside the handler.
 type API =
   "person"
-    :> "bulkCreate"
-    :> DashboardAuth 'DASHBOARD_USER
-    :> ReqBody '[JSON] DPerson.BulkCreatePersonReq
-    :> Post '[JSON] DPerson.BulkCreatePersonResp
+    :> ( "bulkUpsert"
+           :> DashboardAuth 'DASHBOARD_USER
+           :> ReqBody '[JSON] DPerson.BulkUpsertPersonReq
+           :> Post '[JSON] DPerson.BulkUpsertPersonResp
+           -- TODO : Deprecated alias for bulkUpsert, remove once every CSV caller has moved.
+           :<|> "bulkCreate"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> ReqBody '[JSON] DPerson.BulkUpsertPersonReq
+             :> Post '[JSON] DPerson.BulkUpsertPersonResp
+       )
 
 handler :: BeamFlow' => ShortId DMerchant.Merchant -> FlowServer API
-handler merchantId = bulkCreate merchantId
+handler merchantId = bulkUpsert merchantId :<|> bulkUpsert merchantId
 
-bulkCreate :: BeamFlow' => ShortId DMerchant.Merchant -> TokenInfo -> DPerson.BulkCreatePersonReq -> FlowHandler DPerson.BulkCreatePersonResp
-bulkCreate merchantId tokenInfo req = withFlowHandlerAPI' (DPerson.bulkCreate tokenInfo merchantId req)
+bulkUpsert :: BeamFlow' => ShortId DMerchant.Merchant -> TokenInfo -> DPerson.BulkUpsertPersonReq -> FlowHandler DPerson.BulkUpsertPersonResp
+bulkUpsert merchantId tokenInfo req = withFlowHandlerAPI' (DPerson.bulkUpsert tokenInfo merchantId req)
