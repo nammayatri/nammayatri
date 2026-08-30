@@ -408,7 +408,7 @@ findBookingDetialsByBookingId bookingId = do
           DRB.RentalDetails _ -> True
           DRB.InterCityDetails _ -> True
           _ -> False
-  if isOtpRideOrRentalIntercityRide
+  if isOtpRideOrRentalIntercityRide || booking.isScheduled
     then pure (Just booking)
     else do
       ride <- findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq $ getId booking.id]
@@ -487,7 +487,7 @@ findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mb
                 DRB.RentalDetails _ -> True
                 DRB.InterCityDetails _ -> True
                 _ -> False
-           in isJust maybeRide || isJust otpCode || isRentalOrInterCity
+           in isJust maybeRide || isJust otpCode || isRentalOrInterCity || booking.isScheduled
 
 findAllByRiderIdAndDriverNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> DbHash -> m [Ride]
 findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driverNumber = do

@@ -177,6 +177,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
+            OneWay OneWayOnDemandStaticOffer -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId []
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
         Nothing ->
           case fareProductType of
@@ -220,6 +221,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
+            OneWay OneWayOnDemandStaticOffer -> DRB.OneWayDetails <$> buildOneWayDetails toLocId stops
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
         Nothing ->
           case fareProductType of

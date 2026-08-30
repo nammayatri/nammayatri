@@ -3374,7 +3374,6 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) Nothing Nothing Nothing personId cityId
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
-              walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides personId.getId
               now <- getCurrentTime
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
               let cityServiceTierByType = HM.fromList $ (\serviceTier -> (serviceTier.serviceTierType, serviceTier)) <$> cityServiceTiers
@@ -3390,7 +3389,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                   isDriverTagEligibleForTier scheduledBooking =
                     scheduledTierEligibleForDriver True False driverActiveTags cityServiceTierByType scheduledBooking.vehicleServiceTier
                   isBookingVisibleToDriver scheduledBooking =
-                    (isDriverTagEligibleForTier scheduledBooking && walletOk)
+                    isDriverTagEligibleForTier scheduledBooking
                       || isWithinOpenToAllWindow scheduledBooking
               scheduledBookings <- getScheduledBookings from cityId availableServiceTiers (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
               -- Board feasibility: drop candidates that overlap the driver's already-committed intervals.
@@ -3543,8 +3542,10 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
   nowT <- getCurrentTime
   let scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT
   unless scheduledOpenToAll $ do
-    walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides driver.id.getId
-    unless walletOk $ throwError (InvalidRequest "Insufficient wallet balance to accept scheduled ride")
+    let minScheduledRideBalance = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+    walletOk <- FWallet.hasMinWalletBalance counterpartyDriver minScheduledRideBalance driver.id.getId
+    unless walletOk $
+      throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> maybe "" show minScheduledRideBalance <> ".")
     -- Schedule-tag eligibility gate: reuse the same predicate the dispatch path applies, so a
     -- tag-excluded driver can't accept directly what they'd never be offered.
     cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing

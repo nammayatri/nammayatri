@@ -471,7 +471,7 @@ processActiveBooking booking mbIsDashBoardRequest cancellationStage = do
         unless (ride.status == DRide.UPCOMING) $ throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
       Nothing -> do
         now <- getCurrentTime
-        if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)
+        if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails || booking.isScheduled) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)
           then do
             let cancelReq =
                   DCancel.CancelReq
