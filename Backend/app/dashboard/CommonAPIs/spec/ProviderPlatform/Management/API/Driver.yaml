@@ -630,6 +630,29 @@ apis:
             response:
               type: EarningPeriodStatsRes
 
+  - GET: # DriverOnlineDurationAPI
+      endpoint: /onlineDuration
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Driver
+        - from: Day
+        - to: Day
+      response:
+        type: DriverOnlineDurationRes
+      helperApi:
+        - GET:
+            endpoint: /onlineDuration
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - driverId: Id Driver
+              - from: Day
+              - to: Day
+              - requestorId: Text
+            response:
+              type: DriverOnlineDurationRes
+      migrate:
+        capability: city-operations.driver.read
+
   - POST: # UpdateTdsRateAPI
       endpoint: /tdsRate/update
       auth: ApiAuthV2
@@ -1004,6 +1027,14 @@ types:
     - totalRides: Int
     - cancellationCharges: Money
     - tipAmount: Money
+  DriverOnlineDurationRes:
+    - driverId: Id Driver
+    - totalOnlineDuration: Seconds
+    - dataComplete: Bool
+    - days: [DriverOnlineDurationDay]
+  DriverOnlineDurationDay:
+    - date: Day
+    - onlineDuration: Seconds
   TdsOwnerType:
     enum: "DRIVER, FLEET_OWNER"
   UpdateTdsRateReq:

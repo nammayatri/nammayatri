@@ -55,6 +55,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverBulkSubscriptionServiceUpdate,
     getDriverStats,
     getDriverEarnings,
+    getDriverOnlineDuration,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
@@ -375,6 +376,12 @@ getDriverEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Day ->
 getDriverEarnings merchantShortId opCity apiTokenInfo from to earningType entityId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverEarnings) from to earningType entityId apiTokenInfo.personId.getId
+
+-- Read-only, so no transaction storing.
+getDriverOnlineDuration :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Day -> Day -> Environment.Flow Common.DriverOnlineDurationRes)
+getDriverOnlineDuration merchantShortId opCity apiTokenInfo driverId from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverOnlineDuration) driverId from to apiTokenInfo.personId.getId
 
 postDriverUpdateTagBulk :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateTagBulkReq -> Environment.Flow [Common.UpdateTagBulkRes]
 postDriverUpdateTagBulk merchantShortId opCity apiTokenInfo req = do

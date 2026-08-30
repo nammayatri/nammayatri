@@ -58,6 +58,7 @@ module Domain.Action.Dashboard.Management.Driver
     checkFleetOperatorAssociation,
     checkFleetDriverAssociation,
     getDriverEarnings,
+    getDriverOnlineDuration,
     isAssociationBetweenTwoPerson,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
@@ -153,6 +154,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnlineDuration as SDOD
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -165,6 +167,7 @@ import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.DriverInformation as CHDriverInfo
 import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -1504,14 +1507,72 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
     isValid <- isAssociationWithDriver requestor driver
     unless isValid $ throwError AccessDenied
   DDriver.getEarnings (driverId, merchant.id, merchantOpCityId) from to earningType
+
+-- | Whether the requestor is allowed to see this driver's data. Shared by the endpoints
+-- that take a requestorId alongside a driverId.
+isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+isAssociationWithDriver requestedPersonDetails driverDetails = do
+  case (requestedPersonDetails.role, driverDetails.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+    _ -> return False
+
+-- | Cap on the changelog scan. Reaching it means the history was truncated, which is
+-- reported as incomplete data rather than as a plausible-looking but wrong duration.
+onlineDurationRowLimit :: Int
+onlineDurationRowLimit = 20000
+
+-- | The ClickHouse scan is proportional to the requested range, so the range is bounded.
+maxOnlineDurationRangeDays :: Integer
+maxOnlineDurationRangeDays = 31
+
+-- | Online minutes per merchant-local day, reconstructed from the driver_information
+-- changelog in ClickHouse rather than read from daily_stats.online_duration. See
+-- docs/superpowers/specs/2026-08-18-driver-online-duration-design.md.
+getDriverOnlineDuration :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Day -> Day -> Text -> Flow Common.DriverOnlineDurationRes
+getDriverOnlineDuration merchantShortId opCity reqDriverId fromDate toDate requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  when (toDate < fromDate) $
+    throwError $ InvalidRequest "toDate must be >= fromDate"
+  when (diffDays toDate fromDate >= maxOnlineDurationRangeDays) $
+    throwError $ InvalidRequest ("Date range cannot exceed " <> show maxOnlineDurationRangeDays <> " days")
+  let driverId = cast @Common.Driver @DP.Person reqDriverId
+  -- Also scopes the driver to this merchant operating city, which ClickHouse cannot do:
+  -- the columns read there carry no city.
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, driverId] merchantOpCityId
+  driver <- find (\e -> e.id == driverId) entities & fromMaybeM (PersonDoesNotExist driverId.getId)
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- isAssociationWithDriver requestor driver
+    unless isValid $ throwError AccessDenied
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getCurrentTime
+  let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
+      localToUtc = addUTCTime (negate $ secondsToNominalDiffTime timeDiffFromUtc)
+      windowStart = localToUtc (UTCTime fromDate 0)
+      windowEnd = localToUtc (UTCTime (addDays 1 toDate) 0)
+  mbModeAtStart <- CHDriverInfo.findLastModeBefore driverId windowStart
+  changeRows <- CHDriverInfo.findModeChanges driverId windowStart windowEnd onlineDurationRowLimit
+  let changes = mapMaybe (\(mbMode, mbChangedAt) -> (isOnline mbMode,) <$> mbChangedAt) changeRows
+      truncated = length changeRows >= onlineDurationRowLimit
+      result = SDOD.foldOnlineIntervals timeDiffFromUtc fromDate toDate now (isOnline <$> mbModeAtStart) changes
+      perDayTotals = SDOD.perDay result
+  when truncated $
+    logWarning ("Online duration changelog truncated at " <> show onlineDurationRowLimit <> " rows. DriverId: " <> driverId.getId)
+  pure $
+    Common.DriverOnlineDurationRes
+      { driverId = reqDriverId,
+        totalOnlineDuration = sum (map snd perDayTotals),
+        dataComplete = SDOD.dataComplete result && not truncated,
+        days = map (\(day, onlineDuration) -> Common.DriverOnlineDurationDay {date = day, onlineDuration}) perDayTotals
+      }
   where
-    isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
-    isAssociationWithDriver requestedPersonDetails driverDetails = do
-      case (requestedPersonDetails.role, driverDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
-        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
-        (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
-        _ -> return False
+    isOnline :: Maybe DI.DriverMode -> Bool
+    isOnline = (== Just DI.ONLINE)
 
 ---------------------------------------------------------------------
 postDriverTdsRateUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateTdsRateReq -> Flow APISuccess
