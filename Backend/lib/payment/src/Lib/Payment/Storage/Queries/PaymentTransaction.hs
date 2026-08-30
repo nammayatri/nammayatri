@@ -150,6 +150,18 @@ updateAmount id amount feeAmount = do
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId id]
 
+-- | Records the outcome of an after-the-fact split payout pushed to the PG. Written by
+-- the split-payout cron, which also reads it back to decide what still needs sending.
+updateSplitPayoutResponse :: BeamFlow m r => Id PaymentTransaction -> Maybe A.Value -> Maybe Bool -> m ()
+updateSplitPayoutResponse id response success = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPT.splitPayoutResponse response,
+      Se.Set BeamPT.splitPayoutSuccess success,
+      Se.Set BeamPT.updatedAt now
+    ]
+    [Se.Is BeamPT.id $ Se.Eq $ getId id]
+
 updateRetryCountAndError :: BeamFlow m r => Id PaymentTransaction -> Int -> Maybe Text -> Maybe Text -> m ()
 updateRetryCountAndError id retryCount errorCode errorMessage = do
   now <- getCurrentTime

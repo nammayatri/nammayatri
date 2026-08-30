@@ -1875,6 +1875,8 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         juspayResponse = respDump,
         bankErrorCode,
         bankErrorMessage,
+        splitPayoutResponse = Nothing,
+        splitPayoutSuccess = Nothing, -- Written later, and only by the split-payout cron.
         merchantOperatingCityId = order.merchantOperatingCityId,
         ..
       }

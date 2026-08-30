@@ -205,6 +205,7 @@ getServiceName msc = case msc.serviceConfig of
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
+  SplitPayoutServiceConfig _ -> SplitPayoutService CCAvenue
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

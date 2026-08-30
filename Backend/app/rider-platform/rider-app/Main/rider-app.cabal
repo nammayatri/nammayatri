@@ -424,6 +424,10 @@ library
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
+      External.CCAvenue.Encryption
+      External.CCAvenue.Split
+      External.CCAvenue.SplitPayout
+      External.CCAvenue.Types
       ExternalBPP.CallAPI
       ExternalBPP.CallAPI.Cancel
       ExternalBPP.CallAPI.Confirm
@@ -584,6 +588,7 @@ library
       SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
       SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+      SharedLogic.Scheduler.Jobs.FRFSCCAvenueSplitPayout
       SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
@@ -690,8 +695,11 @@ library
       Storage.Clickhouse.FareBreakupInfo
       Storage.Clickhouse.FRFSLiveAlerts
       Storage.Clickhouse.FRFSQuoteCategory
+      Storage.Clickhouse.FRFSSplitPayoutCandidate
       Storage.Clickhouse.FRFSTicketBooking
+      Storage.Clickhouse.FRFSTicketBookingPayment
       Storage.Clickhouse.Location
+      Storage.Clickhouse.PaymentOrder
       Storage.Clickhouse.Person
       Storage.Clickhouse.PurchasedPassPayment
       Storage.Clickhouse.Quote

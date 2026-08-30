@@ -52,6 +52,8 @@ data PaymentTransaction = PaymentTransaction
     mandateFrequency :: Maybe Payment.MandateFrequency,
     mandateMaxAmount :: Maybe HighPrecMoney,
     splitSettlementResponse :: Maybe KPayment.SplitSettlementResponse,
+    splitPayoutResponse :: Maybe Value,
+    splitPayoutSuccess :: Maybe Bool,
     customerName :: Maybe Text,
     gatewayName :: Maybe Text,
     cardType :: Maybe Text,

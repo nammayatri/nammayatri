@@ -166,3 +166,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
   PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
+  SplitPayoutServiceConfig _ -> SplitPayoutService CCAvenue
