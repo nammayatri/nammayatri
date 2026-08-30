@@ -4,6 +4,7 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Layout
   ( GetConcessionTypesReq (..),
     GetServiceSeatDetailsReq (..),
     getConcessionTypes,
+    getAddressPlaceList,
     getServiceSeatDetails,
   )
 where
@@ -39,7 +40,7 @@ data GetConcessionTypesReq = GetConcessionTypesReq
     rqctCounterCode :: Text,
     rqctEndPlaceId :: Text,
     rqctJourneyDate :: Day,
-    rqctSeatNumber :: Text,
+    rqctSeatNumbers :: [Text],
     rqctServiceId :: Text,
     rqctStartPlaceId :: Text,
     rqctTotalSeats :: Int,
@@ -55,7 +56,7 @@ instance ToXML GetConcessionTypesReq where
         el "endPlaceID" req.rqctEndPlaceId
         el "franchiseeUser" "false"
         el "journeyDate" (fmtDate req.rqctJourneyDate)
-        el "seatNumber" req.rqctSeatNumber
+        forM_ req.rqctSeatNumbers (el "seatNumber")
         el "serviceID" req.rqctServiceId
         el "startPlaceID" req.rqctStartPlaceId
         el "totalNumberOfSeats" (show req.rqctTotalSeats)
@@ -86,6 +87,16 @@ instance ToXML GetServiceSeatDetailsReq where
           el "totFemales" "1"
           el "totMales" "0"
         el "userName" req.rqssUserName
+
+-- | The whole place master (569 rows). Takes no arg0 at all -- sending one is an
+-- unmarshalling error. Used for the placeID -> stateCode mapping.
+data GetAddressPlaceListReq = GetAddressPlaceListReq
+
+instance ToXML GetAddressPlaceListReq where
+  toXML _ = element (op "GetAddressPlaceList") (pure () :: XML)
+
+getAddressPlaceList :: TnstcFlow m r => TNSTCConfig -> m [TnstcPlace]
+getAddressPlaceList config = callTnstc config "GetAddressPlaceList" GetAddressPlaceListReq parsePlaces
 
 getServiceSeatDetails :: TnstcFlow m r => TNSTCConfig -> GetServiceSeatDetailsReq -> m TnstcSeatSets
 getServiceSeatDetails config req = callTnstc config "GetServiceSeatDetails" req parseSeatSets
