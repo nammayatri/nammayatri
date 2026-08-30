@@ -86,7 +86,8 @@ data SchedulerConfig = SchedulerConfig
     -- | How often (seconds) each pod heartbeats its consumer into the liveness registry.
     heartbeatIntervalSec :: Seconds,
     -- | A consumer whose last heartbeat is older than this (seconds) is considered dead and pruned.
-    deadConsumerThresholdSec :: Integer
+    deadConsumerThresholdSec :: Integer,
+    runConsumerCleanupThreads :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -125,6 +126,7 @@ data SchedulerEnv = SchedulerEnv
     reclaimBatch :: Integer,
     heartbeatIntervalSec :: Seconds,
     deadConsumerThresholdSec :: Integer,
+    runConsumerCleanupThreads :: Bool,
     port :: Int,
     isShuttingDown :: Shutdown,
     version :: Metrics.DeploymentVersion,
