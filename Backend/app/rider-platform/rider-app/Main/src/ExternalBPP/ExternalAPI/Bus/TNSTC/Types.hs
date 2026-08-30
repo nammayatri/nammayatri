@@ -15,17 +15,21 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Types
     TnstcBlockResult (..),
     TnstcFareResult (..),
     parsePickupPoints,
+    parsePlaces,
+    TnstcPlace (..),
     parseConcessionTypes,
     parseBlockResult,
     parseFareResult,
   )
 where
 
-import Data.Maybe (mapMaybe)
+import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Text.Read (readMaybe)
 import Text.XML.Cursor
+import GHC.Generics (Generic)
 import Prelude
 
 setcNamespace :: Text
@@ -151,12 +155,8 @@ data TnstcConcessionType = TnstcConcessionType
   }
   deriving (Show, Eq)
 
-data TnstcBlockResult = TnstcBlockResult
-  { tbrSeatBlockIds :: Maybe Text,
-    tbrBlockedReferenceNo :: Maybe Text,
-    tbrBlockingKeyNo :: Maybe Text,
-    tbrStatus :: Maybe Text,
-    tbrErrorMessage :: Maybe Text
+newtype TnstcBlockResult = TnstcBlockResult
+  { tbrSeatBlockIds :: [Text]
   }
   deriving (Show, Eq)
 
@@ -165,9 +165,36 @@ data TnstcFareResult = TnstcFareResult
     tfrBasicFare :: Maybe Double,
     tfrStatus :: Maybe Text,
     tfrErrorMessage :: Maybe Text,
+    tfrWsRefNo :: Maybe Text,
+    tfrAdultFare :: Maybe Double,
+    tfrChildFare :: Maybe Double,
     tfrComponents :: [(Text, Double)]
   }
   deriving (Show, Eq)
+
+-- | Every element in the response with its text, for diagnosing a parse that yields
+-- nothing. These payloads are parsed against field names we inferred, so a silent empty
+-- result is far more likely to be a name mismatch than an genuinely empty response.
+data TnstcPlace = TnstcPlace
+  { tpPlaceId :: Text,
+    tpPlaceCode :: Text,
+    tpStateCode :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | GetAddressPlaceList rows: <placeList> with placeID / placeCode / stateCode / placeName.
+-- The state code is what tells intrastate (TN) travel from interstate.
+parsePlaces :: Cursor -> [TnstcPlace]
+parsePlaces cur = mapMaybe toPlace (cur $// laxElement "placeList")
+  where
+    toPlace row = do
+      pid <- nonEmptyText (childText row "placeID")
+      pure
+        TnstcPlace
+          { tpPlaceId = pid,
+            tpPlaceCode = childText row "placeCode",
+            tpStateCode = childText row "stateCode"
+          }
 
 parsePickupPoints :: Cursor -> [TnstcPickupPoint]
 parsePickupPoints cur = mapMaybe toPoint (cur $// laxElement "GetAllServicePickupPointsByServiceID")
@@ -200,14 +227,8 @@ parseConcessionTypes cur = mapMaybe toC (cur $// laxElement "GetAllConcessionTyp
 parseBlockResult :: Cursor -> TnstcBlockResult
 parseBlockResult cur =
   TnstcBlockResult
-    { tbrSeatBlockIds = firstOf "seatBlockIds",
-      tbrBlockedReferenceNo = firstOf "blockedReferenceNo",
-      tbrBlockingKeyNo = firstOf "blockingKeyNo",
-      tbrStatus = firstOf "status",
-      tbrErrorMessage = firstOf "errorMessage"
+    { tbrSeatBlockIds = mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement "seatBlockIds")
     }
-  where
-    firstOf n = nonEmptyText (T.concat (cur $// laxElement n &/ content))
 
 fareComponentNames :: [Text]
 fareComponentNames =
@@ -221,7 +242,8 @@ fareComponentNames =
     "accidentReliefFund",
     "entryFee",
     "otherLevies",
-    "otherConcession"
+    "weekdayConcession",
+    "discounts"
   ]
 
 parseFareResult :: Cursor -> TnstcFareResult
@@ -231,8 +253,13 @@ parseFareResult cur =
       tfrBasicFare = num "basicFare",
       tfrStatus = txt "status",
       tfrErrorMessage = txt "errorMessage",
+      tfrWsRefNo = txt "WSRefNo",
+      tfrAdultFare = num "adultFare",
+      tfrChildFare = num "childFare",
       tfrComponents = mapMaybe (\n -> (n,) <$> num n) fareComponentNames
     }
   where
-    txt n = nonEmptyText (T.concat (cur $// laxElement n &/ content))
+    -- TNSTC repeats some elements once per seat, so take the first rather than
+    -- concatenating every match into one unparseable string.
+    txt n = listToMaybe (mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement n))
     num n = readMaybe . T.unpack =<< txt n

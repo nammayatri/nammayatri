@@ -68,6 +68,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
       Se.Set Beam.offeredPrice ((.amount) offeredPrice),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
+      Se.Set Beam.providerBlockIds providerBlockIds,
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.seatIds (fmap Kernel.Types.Id.getId <$> seatIds),
       Se.Set Beam.seatLabels seatLabels,

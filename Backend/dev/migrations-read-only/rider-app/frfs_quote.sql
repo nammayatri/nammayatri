@@ -187,3 +187,68 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN arrival_date text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_ref_no text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN extra_fees double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN concession_type_id text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -206,3 +206,23 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN is_single_lady boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

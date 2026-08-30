@@ -166,6 +166,10 @@ data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSFareBreakupItem = FRFSFareBreakupItem {amount :: Kernel.Types.Common.HighPrecMoney, title :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSGtfsFareAPI = FRFSGtfsFareAPI {code :: Data.Text.Text, name :: Data.Maybe.Maybe Data.Text.Text, providerCode :: Data.Maybe.Maybe Data.Text.Text, validityDuration :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -206,6 +210,10 @@ data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPassengerDetail = FRFSPassengerDetail {gender :: Domain.Types.Person.Gender, isChild :: Kernel.Prelude.Bool, seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPaymentAttemptWithRefundsAPI = FRFSPaymentAttemptWithRefundsAPI
   { amount :: Kernel.Types.Common.HighPrecMoney,
     bankErrorCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -228,6 +236,10 @@ data FRFSPaymentAttemptsListAPIRes = FRFSPaymentAttemptsListAPIRes {orders :: [F
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSPaymentOrderAttemptsAPI = FRFSPaymentOrderAttemptsAPI {domain :: Data.Maybe.Maybe Data.Text.Text, orderId :: Data.Text.Text, paymentShortId :: Data.Text.Text, transactions :: [FRFSPaymentAttemptWithRefundsAPI]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSPickupPoint = FRFSPickupPoint {name :: Data.Text.Text, placeId :: Data.Text.Text, platformNo :: Data.Maybe.Maybe Data.Text.Text, time :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -379,6 +391,21 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
 
 data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSelectReq = FRFSSelectReq {concessionTypeId :: Data.Text.Text, dropOffPointPlaceId :: Data.Text.Text, passengers :: [FRFSPassengerDetail], pickupPointPlaceId :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSelectRes = FRFSSelectRes
+  { blockExpiresAt :: Kernel.Prelude.UTCTime,
+    categories :: [CategoryInfoResponse],
+    fareBreakup :: [FRFSFareBreakupItem],
+    quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    seatBlockIds :: Data.Maybe.Maybe Data.Text.Text,
+    totalFare :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSStationAPI = FRFSStationAPI
@@ -547,7 +574,13 @@ data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.S
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SeatLayoutResp = SeatLayoutResp {concessions :: Data.Maybe.Maybe [FRFSConcession], seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
+data SeatLayoutResp = SeatLayoutResp
+  { concessions :: Data.Maybe.Maybe [FRFSConcession],
+    dropOffPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
+    pickupPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
+    seatLayout :: Domain.Types.SeatLayout.SeatLayout,
+    seats :: [SeatWithStatus]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

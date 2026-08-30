@@ -414,6 +414,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.vehicleNumber = search.vehicleNumber,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
+            Quote.providerRefNo = Nothing,
+            Quote.extraFees = Nothing,
+            Quote.concessionTypeId = Nothing,
             Quote.offerSegment = offerSegment,
             ..
           }
@@ -439,7 +442,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             updatedAt = now,
             seatIds = Nothing,
             seatLabels = Nothing,
-            holdId = Nothing
+            holdId = Nothing,
+            providerBlockIds = Nothing
           }
 
   return (frfsQuote, frfsQuoteCategories)
@@ -556,7 +560,10 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.departureTime = quotesFromOnSearch.departureTime,
       Quote.arrivalTime = quotesFromOnSearch.arrivalTime,
       Quote.arrivalDate = quotesFromOnSearch.arrivalDate,
-      Quote.availableSeats = quotesFromOnSearch.availableSeats
+      Quote.availableSeats = quotesFromOnSearch.availableSeats,
+      Quote.providerRefNo = quotesFromOnSearch.providerRefNo,
+      Quote.extraFees = quotesFromOnSearch.extraFees,
+      Quote.concessionTypeId = quotesFromOnSearch.concessionTypeId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text
