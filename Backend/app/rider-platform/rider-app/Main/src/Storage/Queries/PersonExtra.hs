@@ -306,8 +306,8 @@ updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
-findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe (Id Person) -> m [Person]
-findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbPersonId = do
+findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m [Person]
+findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbCountryCode mbPersonId = do
   findAllWithOptionsDb
     [ Se.And
         ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
@@ -316,6 +316,7 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
             <> [Se.Is BeamP.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
             <> [Se.Is BeamP.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked]
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
+            <> ([Se.Is BeamP.mobileCountryCode $ Se.Eq mbCountryCode | isJust mbCountryCode])
             <> [ Se.Or
                    ( [Se.Is BeamP.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
                        <> [Se.Is BeamP.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]

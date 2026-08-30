@@ -699,6 +699,8 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
         unless (null redeemableEntryIds) $
           Redis.setExp (makePayoutEntryIdsKey pr.id.getId) redeemableEntryIds 86400 -- 24h TTL
         Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
+      PayoutRequest.PayoutProcessing pr status ->
+        logInfo $ "Wallet payout already in flight for driver " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> " | status: " <> show status
       PayoutRequest.PayoutFailed _ err ->
         logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
 

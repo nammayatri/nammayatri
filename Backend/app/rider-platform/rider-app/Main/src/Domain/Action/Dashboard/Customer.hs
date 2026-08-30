@@ -168,14 +168,14 @@ getCustomerInfo merchantShortId opCity customerId = do
       }
 
 ---------------------------------------------------------------------
-getCustomerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
-getCustomerList merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbPersonId = do
+getCustomerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
+getCustomerList merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbCountryCode mbPersonId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  customers <- runInReplica $ QP.findAllCustomers merchant merchantOpCity limit offset mbEnabled mbBlocked mbSearchPhoneDBHash (cast @Common.Customer @DP.Person <$> mbPersonId)
+  customers <- runInReplica $ QP.findAllCustomers merchant merchantOpCity limit offset mbEnabled mbBlocked mbSearchPhoneDBHash mbCountryCode (cast @Common.Customer @DP.Person <$> mbPersonId)
   items <- mapM buildCustomerListItem customers
   let count = length items
   let summary = Common.Summary {totalCount = 10000, count}

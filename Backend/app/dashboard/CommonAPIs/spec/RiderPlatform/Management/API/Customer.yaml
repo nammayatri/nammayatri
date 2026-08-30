@@ -21,6 +21,7 @@ apis:
         - enabled: Bool
         - blocked: Bool
         - phone: Text
+        - countryCode: Text
         - personId: Id Customer
       response:
         type: CustomerListRes

@@ -179,6 +179,14 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
           <> " amount="
           <> show totalAmount
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
+    PayoutRequest.PayoutProcessing pr status ->
+      logInfo $
+        "Cashback payout already in flight, leaving entries reserved. person="
+          <> person.id.getId
+          <> " payoutRequestId="
+          <> pr.id.getId
+          <> " status="
+          <> show status
     PayoutRequest.PayoutFailed _ err -> do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
