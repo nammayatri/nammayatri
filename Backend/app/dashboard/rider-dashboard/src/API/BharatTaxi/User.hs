@@ -363,7 +363,7 @@ invoice apiTokenInfo bookingId riderId =
     let personId = Id riderId
         customerId = cast @Common.Person @Common.Customer personId
     -- Get customer information from rider-app using getCustomerList
-    customerListRes <- Customer.getCustomerList apiTokenInfo.merchant.shortId apiTokenInfo.city apiTokenInfo Nothing Nothing Nothing Nothing Nothing (Just customerId)
+    customerListRes <- Customer.getCustomerList apiTokenInfo.merchant.shortId apiTokenInfo.city apiTokenInfo Nothing Nothing Nothing Nothing Nothing Nothing (Just customerId)
     -- Extract the first customer from the list
     customer <- fromMaybeM (PersonDoesNotExist riderId) (listToMaybe customerListRes.customers)
     -- Extract phone number and name from customer

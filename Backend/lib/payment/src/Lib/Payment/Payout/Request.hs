@@ -5,6 +5,7 @@ module Lib.Payment.Payout.Request
     PayoutRequestStatus (..),
     PayoutSubmission (..),
     PayoutResult (..),
+    PayoutExecutionResult (..),
     createPayoutRequest,
     submitPayoutRequest,
     executePayoutRequest,
@@ -74,7 +75,14 @@ data PayoutSubmission = PayoutSubmission
 -- | Result of a payout submission or execution.
 data PayoutResult
   = PayoutInitiated PayoutRequest PayoutOrder.PayoutOrder
+  | PayoutProcessing PayoutRequest PayoutRequestStatus
   | PayoutFailed PayoutRequest Text
+
+-- | Outcome of a single execution attempt on an existing PayoutRequest.
+data PayoutExecutionResult
+  = PayoutExecuted PayoutOrder.PayoutOrder
+  | PayoutNotExecutable PayoutRequestStatus
+  | PayoutExecutionFailed Text
 
 -- ---------------------------------------------------------------------------
 -- CRUD
@@ -214,10 +222,11 @@ submitPayoutRequest submission payoutCall = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  mbPayoutOrder <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
-  case mbPayoutOrder of
-    Just po -> pure $ PayoutInitiated payoutRequest po
-    Nothing -> pure $ PayoutFailed payoutRequest "Payout service call failed"
+  executionResult <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
+  case executionResult of
+    PayoutExecuted po -> pure $ PayoutInitiated payoutRequest po
+    PayoutNotExecutable status -> pure $ PayoutProcessing payoutRequest status
+    PayoutExecutionFailed err -> pure $ PayoutFailed payoutRequest err
 
 -- | Execute a previously created PayoutRequest by calling the external payout service.
 --   Builds 'CreatePayoutOrderReq' from the stored fields in PayoutRequest.
@@ -235,7 +244,11 @@ executePayoutRequest ::
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequest = executePayoutRequestInternal Nothing
+executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall = do
+  executionResult <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall
+  pure $ case executionResult of
+    PayoutExecuted po -> Just po
+    _ -> Nothing
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers
@@ -253,12 +266,12 @@ executePayoutRequestInternal ::
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
-  m (Maybe PayoutOrder.PayoutOrder)
+  m PayoutExecutionResult
 executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
-      pure Nothing
+      pure $ PayoutNotExecutable payoutRequest.status
     else do
       orderId <- generateGUID
       createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow mbTransferAmount
@@ -275,12 +288,12 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
           updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
-          pure Nothing
+          pure $ PayoutExecutionFailed $ "Payout service error: " <> show err
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
           updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
-          pure mbPayoutOrder
+          pure $ maybe (PayoutNotExecutable PROCESSING) PayoutExecuted mbPayoutOrder
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.
