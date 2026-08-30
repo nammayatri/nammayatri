@@ -208,6 +208,9 @@ FRFSQuote:
     arrivalTime: Maybe Text
     arrivalDate: Maybe Text
     availableSeats: Maybe Int
+    providerRefNo: Maybe Text
+    extraFees: Maybe HighPrecMoney
+    concessionTypeId: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -286,6 +289,18 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+    updateProviderRefNoById:
+      kvFunction: updateWithKV
+      params: [providerRefNo]
+      where: id
+    updateExtraFeesById:
+      kvFunction: updateWithKV
+      params: [extraFees]
+      where: id
+    updateConcessionTypeIdById:
+      kvFunction: updateWithKV
+      params: [concessionTypeId]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -307,7 +322,7 @@ FRFSQuoteCategory:
     merchantOperatingCityId: Id MerchantOperatingCity
     seatIds: Maybe [Id Seat]
     seatLabels: Maybe [Text]
-    concessionTypeId: Maybe Text
+    providerBlockIds: Maybe [Text]
     holdId: Maybe Text
   constraints:
     id: PrimaryKey
@@ -358,6 +373,7 @@ FRFSQuoteCategory:
   sqlType:
     seatIds: "text[]"
     seatLabels: "text[]"
+    providerBlockIds: "text[]"
 
   types:
     QuoteCategoryMetadata:

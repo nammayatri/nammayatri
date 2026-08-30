@@ -71,7 +71,16 @@ multimodalDiscoverySearch = searchImpl True
 searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
   quotes <- case integratedBPPConfig.providerConfig of
-    TNSTC _ -> buildTnstcQuotes
+    -- TNSTC is reserved-seat intercity: every downstream call needs a journeyDate, and a
+    -- search without one is a public-transport search that merely happens to reach this
+    -- config. Gating here keeps those from making SOAP calls and creating quotes the caller
+    -- never asked for. Note the tier blacklist cannot do this job: it matches on tier name
+    -- with no provider context, and ORDINARY/AC/DELUXE are shared with public transport.
+    TNSTC _
+      | isJust searchReq.journeyDate -> buildTnstcQuotes
+      | otherwise -> do
+        logInfo $ "Skipping TNSTC quotes for searchId=" <> searchReq.id.getId <> ": no journeyDate on the search"
+        return []
     _ -> bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
@@ -536,7 +545,11 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         { bppItemId = CallAPI.getProviderName integratedBPPConfig,
           quantity = quoteCategory.selectedQuantity,
           category = quoteCategory.category,
-          price = quoteCategory.offeredPrice
+          -- Mirror ExternalBPP/CallAPI/Confirm.hs: prefer the price the provider actually
+          -- quoted at select. OnInit overwrites finalPrice with whatever arrives here, so
+          -- sending offeredPrice would discard it and then fail the
+          -- CategoriesAndTotalPriceMismatch guard against booking.totalPrice.
+          price = fromMaybe quoteCategory.offeredPrice quoteCategory.finalPrice
         }
     mkPaymentDetails = \case
       Spec.BAP -> do

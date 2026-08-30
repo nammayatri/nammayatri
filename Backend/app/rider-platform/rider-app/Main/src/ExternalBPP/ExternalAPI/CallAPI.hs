@@ -234,7 +234,10 @@ mkTnstcFare svc = do
           catMaybes
             [ mkCategory CHILD <$> nonZeroFare svc.svcChildFare,
               mkCategory ADULT_SLEEPER <$> nonZeroFare svc.svcAdultSlpFare,
-              mkCategory CHILD_SLEEPER <$> nonZeroFare svc.svcChildSlpFare
+              -- TNSTC leaves childSLPFare empty on sleeper services because a child
+              -- occupying a berth is charged the adult sleeper fare; without this
+              -- fallback the category is missing and child-on-berth cannot be booked.
+              mkCategory CHILD_SLEEPER <$> (maybe (nonZeroFare svc.svcAdultSlpFare) Just (nonZeroFare svc.svcChildSlpFare))
             ],
         fareDetails = Nothing,
         vehicleServiceTier =

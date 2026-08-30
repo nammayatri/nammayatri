@@ -323,7 +323,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               if isMultiInitAllowed
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
-                      totalPrice = fareParameters.totalPrice
+                      -- Booking-level charges (e.g. TNSTC reservation/service fees) are not
+                      -- attributable to any one category, so they live on the quote and are
+                      -- added once here.
+                      totalPrice = modifyPrice fareParameters.totalPrice (+ fromMaybe 0 quote.extraFees)
                       mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
                   let passResolutionTime = case booking.startTime of
                         Just startTime | startTime > now -> startTime
@@ -475,7 +478,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 createdAt = now,
                 updatedAt = now,
                 merchantId = quote'.merchantId,
-                totalPrice = fareParameters.totalPrice,
+                totalPrice = modifyPrice fareParameters.totalPrice (+ fromMaybe 0 quote'.extraFees),
                 -- Reschedule pin: reuse the old payment (findTicketBookingPayment resolves it); Nothing on the normal path.
                 frfsTicketBookingPaymentIdForTicketGeneration = (.getId) <$> (mbRescheduleCtx >>= (.oldFrfsPaymentId)),
                 paymentTxnId = Nothing,

@@ -683,6 +683,9 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.providerServiceId = Nothing,
                 DFRFSQuote.providerLayoutId = Nothing,
                 DFRFSQuote.providerClassId = Nothing,
+                DFRFSQuote.providerRefNo = Nothing,
+                DFRFSQuote.extraFees = Nothing,
+                DFRFSQuote.concessionTypeId = Nothing,
                 DFRFSQuote.providerTripCode = Nothing,
                 DFRFSQuote.departureTime = Nothing,
                 DFRFSQuote.arrivalTime = Nothing,
@@ -746,7 +749,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   updatedAt = now,
                   seatIds = Nothing,
                   seatLabels = Nothing,
-                  holdId = Nothing
+                  holdId = Nothing,
+                  providerBlockIds = Nothing
                 }
             ]
       return $ Just (quote, quoteCategories)
