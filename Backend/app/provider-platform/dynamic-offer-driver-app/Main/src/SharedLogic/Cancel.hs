@@ -228,18 +228,22 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
     handleDriverSearchBatch driverSearchBatchInput newBooking estimateId isStatic = do
-      result <- withTryCatch "initiateDriverSearchBatch:handleDriverSearchBatch" (initiateDriverSearchBatch driverSearchBatchInput)
-      case result of
-        Right _ ->
-          if isValueAddNP
-            then do
-              if isStatic then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle else BP.sendEstimateRepetitionUpdateToBAP booking ride (Id estimateId) bookingCReason.source driver vehicle
+      -- Static reallocation has already persisted its replacement booking, so a cleanup here must cancel it.
+      let mbBookingToCancel = if isStatic then Just newBooking else Nothing
+      if not isValueAddNP
+        then cancelRideTransactionForNonReallocation mbBookingToCancel (Just estimateId)
+        else do
+          if isStatic then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle else BP.sendEstimateRepetitionUpdateToBAP booking ride (Id estimateId) bookingCReason.source driver vehicle
+          result <- withTryCatch "initiateDriverSearchBatch:handleDriverSearchBatch" (initiateDriverSearchBatch driverSearchBatchInput)
+          case result of
+            Right _ -> do
               -- Reallocation-success branch skips sendBookingCancelledUpdateToBAP, so cancel the old FE trip here.
               fork "FleetEngine: cancel old trip on reallocation success" $
                 FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
               return True
-            else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
-        Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)
+            Left err -> do
+              logError $ "Reallocation sent to BAP but search failed for bookingId " <> booking.id.getId <> ": " <> show err
+              cancelRideTransactionForNonReallocation mbBookingToCancel (Just estimateId)
 
     createTripQuoteDetails ::
       ( MonadFlow m,
