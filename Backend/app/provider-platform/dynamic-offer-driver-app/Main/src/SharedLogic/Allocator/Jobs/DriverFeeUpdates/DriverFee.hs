@@ -64,6 +64,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as SLOSO
+import SharedLogic.DriverCancellationPenalty (applyCancellationPenaltyGst)
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, jobDuplicationPreventionKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -1039,7 +1040,7 @@ updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant
     let disputeEndTime = addUTCTime disputeWindowSeconds penalty.endTime
     when (now >= disputeEndTime) $ do
       let penaltyAmount = fromMaybe 0.0 penalty.cancellationPenaltyAmount
-          amountWithGst = penaltyAmount * 1.18
+          amountWithGst = applyCancellationPenaltyGst penaltyAmount
       QDF.moveCancellationPenaltyToPaymentPending penalty.id amountWithGst
   logInfo $ "updateCancellationPenaltyAccumulationFees: Processed cancellation penalty status changes for service: " <> show serviceName <> " merchant: " <> merchantId.getId <> " operatingCity: " <> merchantOperatingCityId.getId
 

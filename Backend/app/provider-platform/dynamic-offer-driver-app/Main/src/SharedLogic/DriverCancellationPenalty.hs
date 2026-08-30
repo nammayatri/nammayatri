@@ -16,6 +16,7 @@ module SharedLogic.DriverCancellationPenalty
   ( mkCancellationPenaltyFee,
     accumulateCancellationPenalty,
     chargeDriverPenaltyFee,
+    applyCancellationPenaltyGst,
   )
 where
 
@@ -279,3 +280,17 @@ chargeDriverPenaltyFee merchantId merchantOpCityId driverId penaltyAmount curren
 
 cancellationPenaltyLockKey :: Text -> Text
 cancellationPenaltyLockKey id' = "Driver:Cancellation:Penalty:DriverFeeId-" <> id'
+
+-- | Cancellation-consequence-matrix amounts (and DriverFee.cancellationPenaltyAmount,
+-- while ONGOING/in its dispute window) are stored GST-EXCLUSIVE. The scheduler job that
+-- moves a penalty to PAYMENT_PENDING once its dispute window closes
+-- (SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee.updateCancellationPenaltyAccumulationFees)
+-- grosses the stored amount up by this multiplier to arrive at what is actually collected
+-- from the driver. Any place that previews the charge to the driver ahead of time (e.g.
+-- the pre-cancel warning popup) must apply the SAME multiplier, or it undershows the
+-- amount the driver will actually be charged.
+cancellationPenaltyGstMultiplier :: HighPrecMoney
+cancellationPenaltyGstMultiplier = 1.18
+
+applyCancellationPenaltyGst :: HighPrecMoney -> HighPrecMoney
+applyCancellationPenaltyGst = (* cancellationPenaltyGstMultiplier)
