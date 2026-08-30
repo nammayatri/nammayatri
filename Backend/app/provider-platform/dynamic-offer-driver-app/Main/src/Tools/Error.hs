@@ -400,6 +400,23 @@ instance IsHTTPError SearchRequestErrorARDU where
 instance IsAPIError SearchRequestErrorARDU
 
 --
+data SyncSearchError = SearchAlreadyProcessed Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SyncSearchError
+
+instance IsBaseError SyncSearchError where
+  toMessage (SearchAlreadyProcessed txnId) = Just $ "Search already processed by beckn for txn " <> txnId
+
+instance IsHTTPError SyncSearchError where
+  toErrorCode = \case
+    SearchAlreadyProcessed _ -> "SEARCH_ALREADY_PROCESSED"
+  toHttpCode = \case
+    SearchAlreadyProcessed _ -> E409
+
+instance IsAPIError SyncSearchError
+
+--
 data DriverQuoteError
   = FoundActiveQuotes
   | DriverOnRide
