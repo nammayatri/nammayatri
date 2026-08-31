@@ -14,10 +14,14 @@
 
 -- | Assembles the pure engine's @Map SupportedLanguage LanguageStrings@ from the
 -- DB-backed @atlas_app.translations@ table. A field, once wired here, is a HARD
--- requirement: a missing row throws 'WhatsappBotTranslationNotFound' rather than
--- silently falling back to static copy — by design, per product decision, so a
--- missing seed row is a loud, caught-immediately data bug, not a silent
--- stale-copy regression.
+-- requirement for at least English: a row missing in EVERY language throws
+-- 'WhatsappBotTranslationNotFound', so a completely missing seed row is a loud,
+-- caught-immediately data bug, not a silent stale-copy regression. A row
+-- missing only for the REQUESTED language falls back to the global English row
+-- instead (logged loudly, see 'lookupKey') — this bounds the blast radius of
+-- one missing translation to a single field/language, rather than the whole
+-- bot going silent for every user (a single-language gap used to fail the
+-- entire 'getTranslationsMap' call, since it built every language eagerly).
 --
 -- The actual "which field needs which key(s)" mapping lives in
 -- 'WhatsappBot.I18n.Build.buildLanguageStringsM', shared with the golden test
@@ -50,7 +54,7 @@ import Environment (Flow)
 import Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Types.Id (Id)
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, logError)
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Tools.Error (WhatsappBotTranslationError (WhatsappBotTranslationNotFound))
 import WhatsappBot.I18n.Build (buildLanguageStringsM)
@@ -69,19 +73,26 @@ toKernelLanguage = \case
 
 -- | The shared cached lookup's Level 3 falls back to the GLOBAL ENGLISH row
 -- when the requested language has no row at all (city or global) — the right
--- behaviour for its other callers (show something rather than nothing), but
--- wrong here: a language unseeded for a given field would silently resolve to
--- our seeded English text instead of a clean "not found". Guard against it by
--- rejecting a row whose language doesn't match what was asked for — that only
--- ever happens via that Level 3 fallback, since Levels 1-2 only match on the
--- exact requested language.
+-- behaviour for its other callers (show something rather than nothing). We
+-- now ACCEPT that fallback here too (previously rejected it, treating it as a
+-- clean "not found" -- see git history), because rejecting it meant one
+-- missing row for one language failed the WHOLE 'getTranslationsMap' build
+-- (every language, eagerly, all-or-nothing), silently taking down the bot for
+-- every user in every language on a single bad row. Accepting the fallback
+-- bounds the damage to just this one field, for just this one language --
+-- but it must never be SILENT, so a mismatch (requested vs. actual row
+-- language) is always logged loudly: it means a translation is genuinely
+-- missing and needs a real fix, not that the mismatch is fine to ignore.
 lookupKey :: Id DMOC.MerchantOperatingCity -> SupportedLanguage -> Text -> Flow (Maybe Text)
 lookupKey mocId lang key = do
   let wantLang = toKernelLanguage lang
   mRow <- CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache mocId key wantLang
-  pure $ case mRow of
-    Just row | row.language == wantLang -> Just row.message
-    _ -> Nothing
+  case mRow of
+    Just row | row.language == wantLang -> pure (Just row.message)
+    Just row -> do
+      logError $ "Translations: missing row for key=" <> key <> " language=" <> show lang <> " -- using English fallback (got " <> show row.language <> ")"
+      pure (Just row.message)
+    Nothing -> pure Nothing
 
 -- | Required DB lookup for a wired field — throws 'WhatsappBotTranslationNotFound'
 -- if the row is missing, rather than silently falling back to static copy. A
