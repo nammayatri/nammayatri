@@ -23,7 +23,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.IntegratedBPPConfig (getProviderTag)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
@@ -126,6 +125,6 @@ checkCrisViaRoutesEnabled :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Inte
 checkCrisViaRoutesEnabled integratedBPPConfig searchReq mbProviderRouteId =
   case (integratedBPPConfig.providerConfig, searchReq.vehicleType) of
     (CRIS _, Spec.SUBWAY) | isNothing mbProviderRouteId && isNothing searchReq.routeCode -> do
-      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchReq.merchantOperatingCityId))
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing
       return $ fromMaybe False (mbRiderConfig >>= (.enableSubwayFrfsSearch))
     _ -> return False
