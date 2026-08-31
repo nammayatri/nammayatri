@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Internal.Auth as Auth
+import qualified API.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
@@ -60,6 +61,7 @@ type API =
            :<|> ReportIssue.API
            :<|> Auth.API
            :<|> BulkLocUpdate.API
+           :<|> BulkLocPickupUpdate.API
            :<|> CustomerCancellationDues.API
            :<|> DriverInactiveFCM.API
            :<|> CallCustomerFCM.API
@@ -110,6 +112,7 @@ handler env =
     :<|> ReportIssue.handler
     :<|> Auth.handler
     :<|> BulkLocUpdate.handler
+    :<|> BulkLocPickupUpdate.handler
     :<|> CustomerCancellationDues.handler
     :<|> DriverInactiveFCM.handler
     :<|> CallCustomerFCM.handler

@@ -31,6 +31,7 @@ module Lib.LocationUpdates.Internal
     isDistanceCalculationFailedImplementation,
     wrapDistanceCalculationImplementation,
     processWaypoints,
+    processWaypointsPickup,
     mkRideInterpolationHandler,
     getPassedThroughDrop,
     getTravelledDistanceOutsideThreshold,
@@ -136,6 +137,25 @@ processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTol
     whenJust (nonEmpty accWaypointsWithTime) $ addEditDestinationPoints driverId
     whenJust (nonEmpty accWaypoints) $ addPoints driverId
     recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications accWaypoints allWaypoints calculationFailed passedThroughDrop isMeterRide
+
+-- | Pickup variant of 'processWaypoints'.
+processWaypointsPickup ::
+  (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) =>
+  RideInterpolationHandler person m ->
+  Id person ->
+  Bool ->
+  [(LatLong, Int64)] ->
+  NonEmpty (LatLong, Int64) ->
+  m ()
+processWaypointsPickup ih@RideInterpolationHandler {..} driverId ending accWaypointsWithTime allWaypointsWithTime = do
+  let accWaypoints = map fst accWaypointsWithTime
+      allWaypoints = fmap fst allWaypointsWithTime
+  calculationFailed <- isDistanceCalculationFailed driverId
+  when calculationFailed do
+    logWarning "Failed to calculate actual pickup distance for this ride, ignoring"
+  wrapDistanceCalculation driverId $ do
+    whenJust (nonEmpty accWaypoints) $ addPoints driverId
+    recalcDistanceBatches ih ending driverId 0 Nothing Nothing Nothing ending Nothing False False accWaypoints allWaypoints calculationFailed False False
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId

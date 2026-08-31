@@ -48,6 +48,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
+      API.Internal.BulkLocPickupUpdate
       API.Internal.BulkLocUpdate
       API.Internal.Cac
       API.Internal.CallCustomerFCM
@@ -244,6 +245,7 @@ library
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BulkLocPickupUpdate
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
       Domain.Action.Internal.CallCustomerFCM
@@ -581,6 +583,7 @@ library
       SharedLogic.External.LocationTrackingService.API.ManualQueueRemove
       SharedLogic.External.LocationTrackingService.API.NearBy
       SharedLogic.External.LocationTrackingService.API.NearByTag
+      SharedLogic.External.LocationTrackingService.API.PickupDriverLocation
       SharedLogic.External.LocationTrackingService.API.QueueHistory
       SharedLogic.External.LocationTrackingService.API.RideDetails
       SharedLogic.External.LocationTrackingService.API.StartRide

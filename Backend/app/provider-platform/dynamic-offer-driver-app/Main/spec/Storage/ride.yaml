@@ -65,6 +65,7 @@ Ride:
     fare: Maybe HighPrecMoney
     currency: Currency
     traveledDistance: HighPrecMeters
+    distanceToPickup: Maybe HighPrecMeters
     chargeableDistance: Maybe Meters
     distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
@@ -84,6 +85,7 @@ Ride:
     toLocation: Maybe Location
     fareParametersId: Maybe (Id FareParameters)
     distanceCalculationFailed: Maybe Bool
+    pickupDistanceCalculationFailed: Maybe Bool
     pickupDropOutsideOfThreshold: Maybe Bool
     startOdometerReading: Maybe OdometerReading
     endOdometerReading: Maybe OdometerReading
@@ -164,6 +166,7 @@ Ride:
     otp: character(4)
     trackingUrl: character varying(255)
     traveledDistance: double precision
+    distanceToPickup: double precision
     fareParametersId: character(36)
     merchantId: character(36)
     merchantOperatingCityId: character(36)

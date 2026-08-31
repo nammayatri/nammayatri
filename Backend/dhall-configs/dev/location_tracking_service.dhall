@@ -649,6 +649,8 @@ in  { logger_cfg
     , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
     , bulk_location_callback_url =
         "http://127.0.0.1:${driverAppPort}/internal/bulkLocUpdate"
+    , bulk_location_pickup_callback_url =
+        "http://127.0.0.1:${driverAppPort}/internal/bulkLocPickupUpdate"
     , stop_detection = stop_detection_config
     , auth_token_expiry = 86400
     , min_location_accuracy = 50.0
