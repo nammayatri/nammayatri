@@ -142,3 +142,20 @@ findAllConfirmedByWaybillNo waybillNo = do
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
         ]
     ]
+
+-- | All CONFIRMED bookings for a rider of a given vehicle category, oldest first. Used by shuttle-nudge
+-- eligibility to derive per-direction confirmed counts and the rider's primary (first-ever) direction --
+-- a rider's FRFS history is always small, so one fetch + in-memory grouping is simpler than a bespoke
+-- count/group-by query.
+findAllConfirmedByRiderIdAndVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Spec.VehicleCategory -> m [FRFSTicketBooking]
+findAllConfirmedByRiderIdAndVehicleType riderId vehicleType = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    Nothing
+    Nothing

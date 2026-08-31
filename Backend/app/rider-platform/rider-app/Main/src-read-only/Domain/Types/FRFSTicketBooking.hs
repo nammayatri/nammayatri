@@ -6,6 +6,7 @@ module Domain.Types.FRFSTicketBooking where
 import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.FRFSBookingGroup
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -29,6 +30,7 @@ import qualified Tools.Beam.UtilsTH
 data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingAuthCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bookingGroupId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup),
     bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

@@ -51,6 +51,7 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
+  FRFSBookingGroup: Domain.Types.FRFSBookingGroup
 
 FRFSSearch:
   tableName: frfs_search
@@ -468,6 +469,10 @@ FRFSTicketBooking:
     ondcOnInitReceivedAt: Maybe UTCTime
     fromStopIdx: Maybe Int
     toStopIdx: Maybe Int
+    # DEPRECATED, do not read this for seat-hold finalization/release -- it is only ever set on
+    # booking creation and never refreshed on a reused/retried confirm, so it goes stale on any
+    # retry. FRFSQuoteCategory.holdId is the source of truth (refreshed on every confirm call);
+    # this column is kept only as a last-resort fallback that should effectively never trigger.
     holdId: Maybe Text
     tripId: Maybe Text
     parentBookingId: Maybe (Id FRFSTicketBooking)
@@ -477,6 +482,7 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
+    bookingGroupId: Maybe (Id FRFSBookingGroup)
 
   default:
     customerCancelled: "false"
@@ -546,6 +552,7 @@ FRFSTicketBooking:
     tripId: "!SecondaryKey"
     waybillNo: "!SecondaryKey"
     overrideAppliedEntityId: "!SecondaryKey"
+    bookingGroupId: SecondaryKey
 
   queries:
     findById:
@@ -563,6 +570,9 @@ FRFSTicketBooking:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
+    findAllByBookingGroupId:
+      kvFunction: findAllWithKV
+      where: bookingGroupId
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -624,6 +634,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]
       where: id
+    updateBookingGroupIdById:
+      kvFunction: updateOneWithKV
+      params: [bookingGroupId, updatedAt]
+      where: id
     updateOnInitDoneBySearchId:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]
@@ -664,6 +678,55 @@ FRFSTicketBooking:
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table
+
+FRFSBookingGroup:
+  tableName: frfs_booking_group
+
+  fields:
+    id: Id FRFSBookingGroup
+    riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: FRFSBookingGroupStatus
+    totalPrice: Price
+    paymentOrderShortId: Maybe (ShortId PaymentOrder)
+    totalSlots: Int
+
+  beamFields:
+    totalPrice:
+      currency: Maybe Currency
+      price: HighPrecMoney
+
+  types:
+    FRFSBookingGroupStatus:
+      enum: "NEW, INITIATED, PAYMENT_PENDING, CONFIRMED, PARTIALLY_FAILED, FAILED, CANCELLED"
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+
+  fromTType:
+    totalPrice: Kernel.Types.Common.mkPrice currency price|E
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+    updateTotalPriceAndStatusById:
+      kvFunction: updateWithKV
+      params: [totalPrice, status, updatedAt]
+      where: id
+    updatePaymentOrderShortIdById:
+      kvFunction: updateWithKV
+      params: [paymentOrderShortId, updatedAt]
+      where: id
 
 FRFSTicket:
   tableName: frfs_ticket

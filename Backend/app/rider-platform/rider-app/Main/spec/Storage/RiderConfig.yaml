@@ -210,6 +210,7 @@ RiderConfig:
     passExtraConfig: Maybe PassExtraConfig
     isDeviceIdCheckDisabled: Maybe Bool
     enableBusFiltering: Maybe Bool
+    shuttleMultiSelectNudgeThreshold: Maybe Int
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
     fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
     blockedUntilInMins : Maybe Minutes
