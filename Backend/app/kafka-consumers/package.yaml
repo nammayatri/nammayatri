@@ -107,6 +107,7 @@ dependencies:
   - unliftio
   - utils
   - finance-kernel
+  - payment
 
 ghc-options:
   - -Wall

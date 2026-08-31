@@ -6,38 +6,23 @@ module Storage.CachedQueries.IncentiveJourneyMilestone
   )
 where
 
-import Data.List (sortOn)
-import qualified Domain.Types.IncentiveJourney as DIJ
-import qualified Domain.Types.IncentiveJourneyMilestone as DIJM
-import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.IncentiveJourneyMilestone as Queries
+import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone as LibCQ
+import Storage.Beam.IncentiveJourney ()
+
+actor :: IJ.JourneyActor
+actor = IJ.DriverActor
 
 findByJourneyId ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r) =>
   Id DIJ.IncentiveJourney ->
   m [DIJM.IncentiveJourneyMilestone]
-findByJourneyId journeyId =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeByJourneyIdKey journeyId)) >>= \case
-    Just milestones -> pure milestones
-    Nothing -> do
-      milestones <- sortOn (.order) <$> Queries.findByJourneyId Nothing Nothing journeyId
-      cacheByJourneyId journeyId milestones
-      pure milestones
-
-cacheByJourneyId :: (MonadFlow m, CacheFlow m r) => Id DIJ.IncentiveJourney -> [DIJM.IncentiveJourneyMilestone] -> m ()
-cacheByJourneyId journeyId milestones = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeByJourneyIdKey journeyId) milestones expTime
+findByJourneyId = LibCQ.findByJourneyId actor
 
 clearCacheByJourneyId :: (CacheFlow m r) => Id DIJ.IncentiveJourney -> m ()
-clearCacheByJourneyId journeyId =
-  Hedis.runInMultiCloudRedisWrite $
-    Hedis.withCrossAppRedis $
-      void $
-        Hedis.del (makeByJourneyIdKey journeyId)
-
-makeByJourneyIdKey :: Id DIJ.IncentiveJourney -> Text
-makeByJourneyIdKey journeyId = "driver-offer:CachedQueries:IncentiveJourneyMilestone:JourneyId-" <> journeyId.getId
+clearCacheByJourneyId = LibCQ.clearCacheByJourneyId actor

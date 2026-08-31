@@ -8,16 +8,17 @@ module Storage.ConfigPilot.Config.IncentiveJourneyMilestone
   )
 where
 
-import qualified Domain.Types.IncentiveJourney as DIJ
-import qualified Domain.Types.IncentiveJourneyMilestone as DT
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DT
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Storage.CachedQueries.IncentiveJourneyMilestone as SQMilestone
@@ -29,19 +30,19 @@ data IncentiveJourneyMilestoneDimensions = IncentiveJourneyMilestoneDimensions
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'IncentiveJourneyMilestoneConfig where
-  type DimensionsFor 'IncentiveJourneyMilestoneConfig = IncentiveJourneyMilestoneDimensions
-  configTypeValue = IncentiveJourneyMilestoneConfig
-  sConfigType = SIncentiveJourneyMilestoneConfig
+instance ConfigTypeInfo 'IncentiveJourneyMilestoneConfigDriver where
+  type DimensionsFor 'IncentiveJourneyMilestoneConfigDriver = IncentiveJourneyMilestoneDimensions
+  configTypeValue = IncentiveJourneyMilestoneConfigDriver
+  sConfigType = SIncentiveJourneyMilestoneConfigDriver
 
 instance ConfigDimensions IncentiveJourneyMilestoneDimensions where
-  type ConfigTypeOf IncentiveJourneyMilestoneDimensions = 'IncentiveJourneyMilestoneConfig
+  type ConfigTypeOf IncentiveJourneyMilestoneDimensions = 'IncentiveJourneyMilestoneConfigDriver
   type ConfigValueTypeOf IncentiveJourneyMilestoneDimensions = [DT.IncentiveJourneyMilestone]
-  getConfigType _ = IncentiveJourneyMilestoneConfig
+  getConfigType _ = IncentiveJourneyMilestoneConfigDriver
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.DRIVER_CONFIG IncentiveJourneyMilestoneConfig)
+      (LYT.DRIVER_CONFIG IncentiveJourneyMilestoneConfigDriver)
       (Id a.merchantOperatingCityId)
       (fetchMilestones a)
       [ LCP.DimMatcher (.journeyId) (Just . (.journeyId)) (==),
