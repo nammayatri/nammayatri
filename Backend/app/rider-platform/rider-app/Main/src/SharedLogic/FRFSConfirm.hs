@@ -27,6 +27,7 @@ import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.Seat as Seat
+import qualified Domain.Types.StationType as DStationType
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust)
@@ -770,6 +771,33 @@ syncFRFSBookingVehicleData booking integratedBppConfig = do
     effectiveDriverMobileNumber
     booking.id
 
+-- | Per sub-leg values for one 'DRD.RouteDetails' row.
+--
+-- A booking covers one journey leg, but that leg can be several seated rides: a metro or
+-- subway journey with an interchange changes route part way. Each ride needs its own route,
+-- stops and platforms, so the varying fields are gathered here and the record built once.
+data SubLegInput = SubLegInput
+  { subLegId :: Id DRD.RouteDetails,
+    sequenceNo :: Int,
+    mbStation :: Maybe FRFSTicketService.FRFSRouteStationsAPI,
+    fromCode :: Text,
+    fromName :: Maybe Text,
+    fromPlatform :: Maybe Text,
+    fromLat :: Double,
+    fromLon :: Double,
+    toCode :: Text,
+    toName :: Maybe Text,
+    toPlatform :: Maybe Text,
+    toLat :: Double,
+    toLon :: Double
+  }
+
+legBoundaries :: [FRFSTicketService.FRFSStationAPI] -> [(FRFSTicketService.FRFSStationAPI, FRFSTicketService.FRFSStationAPI)]
+legBoundaries = pairUp . filter (\station -> station.stationType /= Just DStationType.INTERMEDIATE)
+  where
+    pairUp (boarding : alighting : rest) = (boarding, alighting) : pairUp rest
+    pairUp _ = []
+
 buildJourneyAndLeg ::
   ( HasBAPMetrics m r,
     EsqDBReplicaFlow m r,
@@ -895,6 +923,7 @@ buildJourneyAndLeg booking fareParameters = do
 
     let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
         mbRouteStation = listToMaybe =<< mbRouteStations
+        mbLastRouteStation = listToMaybe . reverse =<< mbRouteStations
 
     routeLiveInfo <-
       case (mbRouteStation, booking.vehicleNumber) of
@@ -903,12 +932,16 @@ buildJourneyAndLeg booking fareParameters = do
 
     -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups don't have them),
     -- so fetch the route's example trip and read the per-stop platform code from it.
-    mbTrip <-
+    mbFirstTrip <-
       case mbRouteStation of
         Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
         Nothing -> return Nothing
-    let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
-        toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+    mbLastTrip <-
+      case mbLastRouteStation of
+        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+        Nothing -> return Nothing
+    let fromStopPlatformCode = mbFirstTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
+        toStopPlatformCode = mbLastTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
         fromStopDetail =
           MultiModalStopDetails
             { stopCode = Just booking.fromStationCode,
@@ -923,6 +956,62 @@ buildJourneyAndLeg booking fareParameters = do
               name = booking.toStationName,
               gtfsId = Just booking.toStationCode
             }
+
+    -- One RouteDetails per route station, ordered by subLegOrder.
+    --
+    -- An interchange journey is several seated rides under a single booking, and each ride
+    -- needs its own route code, stops and platforms. Only the first route station used to be
+    -- recorded, so an interchange booking stored the first leg's route against the whole
+    -- journey and dropped the rest.
+    --
+    -- Zero or one route stations keeps the booking's own endpoints and the journey-level
+    -- platform lookup above, so a non-interchange booking is unchanged.
+    subLegInputs <-
+      case mbRouteStations of
+        Just routeStations@(_ : _ : _)
+          | boundaries <- legBoundaries (maybe [] (.stations) (listToMaybe routeStations)),
+            length boundaries == length routeStations ->
+            mapM
+              ( \(sequenceNo', routeStation, (boardingStop, alightingStop)) -> do
+                  subLegGuid <- generateGUID
+                  mbSubLegTrip <- OTPRest.getExampleTrip integratedBppConfig routeStation.code
+                  let platformAt stopCode = mbSubLegTrip >>= \trip -> OTPRest.findTripStopByStopCode trip stopCode >>= (.platformCode)
+                  pure
+                    SubLegInput
+                      { subLegId = subLegGuid,
+                        sequenceNo = sequenceNo',
+                        mbStation = Just routeStation,
+                        fromCode = boardingStop.code,
+                        fromName = boardingStop.name,
+                        fromPlatform = platformAt boardingStop.code,
+                        fromLat = fromMaybe fromLocation.lat boardingStop.lat,
+                        fromLon = fromMaybe fromLocation.lon boardingStop.lon,
+                        toCode = alightingStop.code,
+                        toName = alightingStop.name,
+                        toPlatform = platformAt alightingStop.code,
+                        toLat = fromMaybe toLocation.lat alightingStop.lat,
+                        toLon = fromMaybe toLocation.lon alightingStop.lon
+                      }
+              )
+              (zip3 [1 ..] routeStations boundaries)
+        _ ->
+          pure
+            [ SubLegInput
+                { subLegId = journeyRouteDetailsId,
+                  sequenceNo = 1,
+                  mbStation = mbRouteStation,
+                  fromCode = booking.fromStationCode,
+                  fromName = booking.fromStationName,
+                  fromPlatform = fromStopPlatformCode,
+                  fromLat = fromLocation.lat,
+                  fromLon = fromLocation.lon,
+                  toCode = booking.toStationCode,
+                  toName = booking.toStationName,
+                  toPlatform = toStopPlatformCode,
+                  toLat = toLocation.lat,
+                  toLon = toLocation.lon
+                }
+            ]
 
     let journeyLeg =
           DJL.JourneyLeg
@@ -943,52 +1032,55 @@ buildJourneyAndLeg booking fareParameters = do
               fromStopDetails = Just fromStopDetail,
               toStopDetails = Just toStopDetail,
               routeDetails =
-                [ DRD.RouteDetails
-                    { agencyGtfsId = Just integratedBppConfig.feedKey,
-                      agencyName = Just integratedBppConfig.agencyKey,
-                      alternateShortNames = [],
-                      alternateRouteIds = Nothing,
-                      endLocationLat = toLocation.lat,
-                      endLocationLon = toLocation.lon,
-                      frequency = Nothing,
-                      fromArrivalTime = Nothing,
-                      fromDepartureTime = Just booking.createdAt,
-                      fromStopCode = Just booking.fromStationCode,
-                      fromStopGtfsId = Just booking.fromStationCode,
-                      fromStopName = booking.fromStationName,
-                      fromStopPlatformCode = fromStopPlatformCode,
-                      id = journeyRouteDetailsId,
-                      journeyLegId = journeyLegGuid.getId,
-                      legStartTime = Just booking.createdAt,
-                      legEndTime =
-                        duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
-                      routeCode = mbRouteStation <&> (.code),
-                      routeColorCode = mbRouteStation >>= (.color),
-                      routeColorName = mbRouteStation >>= (.color),
-                      routeGtfsId = mbRouteStation <&> (.code),
-                      routeLongName = mbRouteStation <&> (.longName),
-                      routeShortName = mbRouteStation <&> (.shortName),
-                      userBookedRouteShortName = Nothing,
-                      startLocationLat = fromLocation.lat,
-                      startLocationLon = fromLocation.lon,
-                      subLegOrder = Just 1,
-                      toArrivalTime =
-                        duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
-                      toDepartureTime = Nothing,
-                      toStopCode = Just booking.toStationCode,
-                      toStopGtfsId = Just booking.toStationCode,
-                      toStopName = booking.toStationName,
-                      toStopPlatformCode = toStopPlatformCode,
-                      trackingStatus = Nothing,
-                      trackingStatusLastUpdatedAt = Just now,
-                      merchantId = Just booking.merchantId,
-                      merchantOperatingCityId = Just booking.merchantOperatingCityId,
-                      createdAt = now,
-                      updatedAt = now
-                    }
-                ],
+                map
+                  ( \subLeg ->
+                      DRD.RouteDetails
+                        { agencyGtfsId = Just integratedBppConfig.feedKey,
+                          agencyName = Just integratedBppConfig.agencyKey,
+                          alternateShortNames = [],
+                          alternateRouteIds = Nothing,
+                          endLocationLat = subLeg.toLat,
+                          endLocationLon = subLeg.toLon,
+                          frequency = Nothing,
+                          fromArrivalTime = Nothing,
+                          fromDepartureTime = Just booking.createdAt,
+                          fromStopCode = Just subLeg.fromCode,
+                          fromStopGtfsId = Just subLeg.fromCode,
+                          fromStopName = subLeg.fromName,
+                          fromStopPlatformCode = subLeg.fromPlatform,
+                          id = subLeg.subLegId,
+                          journeyLegId = journeyLegGuid.getId,
+                          legStartTime = Just booking.createdAt,
+                          legEndTime =
+                            duration >>= \duration' ->
+                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                          routeCode = subLeg.mbStation <&> (.code),
+                          routeColorCode = subLeg.mbStation >>= (.color),
+                          routeColorName = subLeg.mbStation >>= (.color),
+                          routeGtfsId = subLeg.mbStation <&> (.code),
+                          routeLongName = subLeg.mbStation <&> (.longName),
+                          routeShortName = subLeg.mbStation <&> (.shortName),
+                          userBookedRouteShortName = Nothing,
+                          startLocationLat = subLeg.fromLat,
+                          startLocationLon = subLeg.fromLon,
+                          subLegOrder = Just subLeg.sequenceNo,
+                          toArrivalTime =
+                            duration >>= \duration' ->
+                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                          toDepartureTime = Nothing,
+                          toStopCode = Just subLeg.toCode,
+                          toStopGtfsId = Just subLeg.toCode,
+                          toStopName = subLeg.toName,
+                          toStopPlatformCode = subLeg.toPlatform,
+                          trackingStatus = Nothing,
+                          trackingStatusLastUpdatedAt = Just now,
+                          merchantId = Just booking.merchantId,
+                          merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                          createdAt = now,
+                          updatedAt = now
+                        }
+                  )
+                  subLegInputs,
               liveVehicleAvailableServiceTypes = Nothing,
               estimatedMinFare = estimatedPrice <&> (.amount),
               estimatedMaxFare = estimatedPrice <&> (.amount),

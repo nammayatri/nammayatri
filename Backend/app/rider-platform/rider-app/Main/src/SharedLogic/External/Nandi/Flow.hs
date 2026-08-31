@@ -78,6 +78,15 @@ getStationsByGtfsIdAndStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, 
 getStationsByGtfsIdAndStopCode baseUrl gtfsId stopCode = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiStopsByGtfsIdAndStopCode gtfsId stopCode) "getStationsByGtfsIdAndStopCode" NandiAPI.nandiStopsByGtfsIdAndStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_STATIONS_BY_GTFS_ID_AND_STOP_CODE_API") baseUrl)
 
+-- | Ask the hopper index for the metro journey between two stations.
+--
+-- Returns the whole response rather than only the legs, so the caller can tell "nothing
+-- connects these two today" (@legs@ absent) apart from an unknown stop or feed, which the
+-- server answers with a 404 and therefore arrives here as a thrown error.
+getMetroHop :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Text -> m MetroHopResponse
+getMetroHop baseUrl gtfsId fromStopCode toStopCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiMetroHop gtfsId (Just fromStopCode) (Just toStopCode)) "getMetroHop" NandiAPI.nandiMetroHopAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_METRO_HOP_API") baseUrl)
+
 getStationsByGtfsIdFuzzySearch :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
 getStationsByGtfsIdFuzzySearch baseUrl gtfsId query = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiStopsByGtfsIdFuzzySearch gtfsId query) "getStationsByGtfsIdFuzzySearch" NandiAPI.nandiStopsByGtfsIdFuzzySearchAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_STATIONS_BY_GTFS_ID_FUZZY_SEARCH_API") baseUrl)
