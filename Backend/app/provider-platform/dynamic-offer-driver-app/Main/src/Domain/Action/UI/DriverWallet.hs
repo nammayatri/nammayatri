@@ -410,6 +410,12 @@ referenceTypeToItemName ref
   | ref == walletReferenceCancellationCommission = "Cancellation Commission"
   | ref == walletReferenceCancellationCommissionVAT = "Cancellation Commission VAT"
   | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
+  | ref == walletReferencePaymentChargePaidByCustomer = "Payment Charge Paid by Customer"
+  | ref == walletReferencePaymentChargeVatPaidByCustomer = "Payment Charge VAT Paid by Customer"
+  | ref == walletReferencePGPaymentCharges = "Payment Charge"
+  | ref == walletReferencePGPaymentChargesVAT = "Payment Charge VAT"
+  | ref == walletReferencePGPayoutCharges = "Payout Charge"
+  | ref == walletReferenceConnectAccountCharges = "Connect Account Charge"
   | otherwise = ref
 
 --------------------------------------------------------------------------------
@@ -627,9 +633,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
 computePayoutFee :: Maybe DTConf.PayoutFeeConfig -> HighPrecMoney -> HighPrecMoney
 computePayoutFee Nothing _ = 0
 computePayoutFee (Just feeConfig) amount =
-  case feeConfig.feeType of
-    DTConf.PERCENTAGE -> SPayment.roundToTwoDecimalPlaces $ amount * feeConfig.feeValue / 100
-    DTConf.FIXED -> min feeConfig.feeValue amount -- fee cannot exceed the amount
+  min amount . SPayment.roundToTwoDecimalPlaces $ computeStripePayoutFee feeConfig amount
 
 -- | Create a PayoutRequest (INITIATED), then call Juspay createPayoutService (→ PROCESSING).
 --   No ledger entry here — that happens in the webhook handler on SUCCESS.

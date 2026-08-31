@@ -47,6 +47,18 @@
   │                                  │   OwnerLiability       │   OwnerControl           │
   │                                  │ (customer paid via     │ (tip paid directly to    │
   │                                  │  platform)             │  driver)                 │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ Payment charge — customer-borne  │ BuyerAsset →           │ BuyerControl →           │
+  │   (PaymentChargePaidByCustomer,  │   BuyerExternal →      │   OwnerControl           │
+  │    + its VAT; only when the      │   OwnerLiability       │ (rider handed the driver │
+  │    bearer is PAYMENT_CUSTOMER)   │                        │  the grossed-up cash)    │
+  ├──────────────────────────────────┼────────────────────────┼──────────────────────────┤
+  │ Payment charge — deduction       │ OwnerLiability →       │ same (driver owes the    │
+  │   (PGPaymentCharges + VAT;       │   SellerLiability      │  gateway fee regardless  │
+  │    levied on every payment mode) │                        │  of mode; for cash +     │
+  │                                  │                        │  customer bearer the     │
+  │                                  │                        │  credit lands in Control │
+  │                                  │                        │  so the wallet nets -P)  │
   └──────────────────────────────────┴────────────────────────┴──────────────────────────┘
 
   Semantics legend:
@@ -89,6 +101,9 @@ module SharedLogic.Finance.Wallet
     walletReferencePGPaymentCharges,
     walletReferencePGPayoutCharges,
     walletReferenceConnectAccountCharges,
+    walletReferencePGPaymentChargesVAT,
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePaymentChargeVatPaidByCustomer,
     StripeChargeFunder (..),
     recordStripeChargeLedger,
     buildDriverChargeCtx,
@@ -236,6 +251,15 @@ walletReferencePGPayoutCharges = "PGPayoutCharges"
 
 walletReferenceConnectAccountCharges :: Text
 walletReferenceConnectAccountCharges = "ConnectAccountCharges"
+
+walletReferencePGPaymentChargesVAT :: Text
+walletReferencePGPaymentChargesVAT = "PGPaymentChargesVAT"
+
+walletReferencePaymentChargePaidByCustomer :: Text
+walletReferencePaymentChargePaidByCustomer = "PaymentChargePaidByCustomer"
+
+walletReferencePaymentChargeVatPaidByCustomer :: Text
+walletReferencePaymentChargeVatPaidByCustomer = "PaymentChargeVatPaidByCustomer"
 
 walletReferenceDriverCancellationCharges :: Text
 walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
@@ -413,7 +437,13 @@ walletCreditRefs =
     walletReferenceTips,
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
-    walletReferenceDeductedAtPaymentByPlatform
+    walletReferenceDeductedAtPaymentByPlatform,
+    walletReferencePGPaymentCharges,
+    walletReferencePGPaymentChargesVAT,
+    walletReferencePaymentChargePaidByCustomer,
+    walletReferencePaymentChargeVatPaidByCustomer,
+    walletReferencePGPayoutCharges,
+    walletReferenceConnectAccountCharges
   ]
 
 -- | Reference types for entries that represent merchant-to-driver transfers
@@ -745,6 +775,7 @@ recordStripeChargeLedger ctx funder amount refType
     result <- runFinance ctx $ case funder of
       FundByPlatform -> void $ transfer BuyerAsset SellerExpense amount refType Nothing
       FundByCustomer -> do
+        -- owner liablity to seller liablity
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer BuyerAsset SellerRevenue amount refType Nothing
       FundByDriver -> do

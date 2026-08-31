@@ -181,7 +181,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
   cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
-  let (mbPaymentCharge, mbPaymentChargeBearer) = FC.calculatePaymentCharge (Just transporterConfig.driverWalletConfig) booking.fareParams
+  let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED

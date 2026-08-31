@@ -77,7 +77,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.FareCalculator (fareSum)
+import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
@@ -227,6 +227,7 @@ data DriverRideRes = DriverRideRes
     paymentMode :: Maybe DMPM.PaymentMode,
     commissionCharges :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
+    customerPaymentCharge :: Maybe HighPrecMoney,
     discountAmount :: Maybe HighPrecMoney,
     pickupZoneGateId :: Maybe Text,
     pickupZoneGateName :: Maybe Text,
@@ -299,13 +300,13 @@ buildRideEarnings ::
   Bool ->
   Bool ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam onlinePaymentCharge customerBearsCharge driverBearsCharge = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam ridePaymentChargeAmt customerBearsCharge driverBearsCharge = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
-      amountPaidByCustomer = fare - (if customerBearsCharge then onlinePaymentCharge else 0) - discount + tips
+      amountPaidByCustomer = fare - (if customerBearsCharge then ridePaymentChargeAmt else 0) - discount + tips
       EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge} = labels
       cancellationDues =
         fromMaybe 0 $
@@ -329,11 +330,12 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam onl
           else Nothing
       fareBreakupItems =
         catMaybes
-          [ mkComp FareBreakup "AMOUNT_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
+          [ mkComp FareBreakup "FARE_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge onlinePaymentCharge (driverBearsCharge && onlinePaymentCharge > 0),
+
+            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge ridePaymentChargeAmt ((customerBearsCharge || driverBearsCharge) && ridePaymentChargeAmt > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
             mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0)
@@ -450,7 +452,9 @@ fetchEarningsLabels ::
   m EarningsLabels
 fetchEarningsLabels lang =
   EarningsLabels
-    <$> resolveLabel lang "AMOUNT_PAID_BY_CUSTOMER"
+
+  -- TODO MAKE THIS AMOUNT PAID BY CUST TO KEEP IT BACKWARD COMPATIBLE.. WE WILL CHANGBE IN DB.
+    <$> resolveLabel lang "FARE_PAID_BY_CUSTOMER"
     <*> resolveLabel lang "DISCOUNT"
     <*> resolveLabel lang "TIPS"
     <*> resolveLabel lang "COMMISSION"
@@ -488,7 +492,6 @@ mkDriverRideRes ::
   m DriverRideRes
 mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
   let estimatedFareParams = booking.fareParams
-      isOnlineRide = maybe False (`notElem` [DMPM.Cash, DMPM.BoothOnline]) booking.paymentInstrument
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
          in ( mb == Just DTConf.PAYMENT_CUSTOMER,
@@ -496,11 +499,11 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             )
       (customerBearsCharge, driverBearsCharge) = bearerFlags ride.paymentChargeBearer
       chargeInAppFee = customerBearsCharge || driverBearsCharge
-      ridePaymentCharge = if isOnlineRide then fromMaybe 0 ride.paymentCharge else 0
-      bookingPaymentCharge = if isOnlineRide then fromMaybe 0 booking.paymentCharge else 0
-      rideAppFeeP = if chargeInAppFee then ridePaymentCharge else 0
+      ridePaymentCharge = fromMaybe 0 ride.paymentCharge
+      bookingPaymentCharge = fromMaybe 0 booking.paymentCharge
+      rideAppFeeP = driverBorneAppFee ride.paymentCharge ride.paymentChargeBearer
       bookingAppFeeP = if chargeInAppFee then bookingPaymentCharge else 0
-      estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
+      estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- driverSelectedFare should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
       estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission - bookingAppFeeP)
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
@@ -676,7 +679,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
         commissionCharges = ride.commission,
-        paymentCharge = if driverBearsCharge && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
+        paymentCharge = if chargeInAppFee && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
+        customerPaymentCharge = if customerBearsCharge && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
         discountAmount = ride.discountAmount,
         pickupZoneGateId = booking.pickupGateId,
         pickupZoneGateName = mbGateInfo <&> (.name),

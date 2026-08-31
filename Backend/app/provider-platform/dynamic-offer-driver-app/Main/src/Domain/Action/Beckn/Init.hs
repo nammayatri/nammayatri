@@ -248,7 +248,14 @@ handler merchantId req validatedReq = do
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
       cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
       mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
-      let (mbPaymentCharge, mbPaymentChargeBearer) = FC.calculatePaymentCharge ((.driverWalletConfig) <$> mbTransporterConfig) driverQuote.fareParams
+      let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount
+          chargeRes =
+            FC.finalisePaymentCharge
+              ((.driverWalletConfig) <$> mbTransporterConfig)
+              driverQuote.estimatedFare
+              (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee)
+              driverQuote.fareParams
+
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
       let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
@@ -321,8 +328,8 @@ handler merchantId req validatedReq = do
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             commission = commission,
             cancellationCommission = cancellationCommission,
-            paymentCharge = mbPaymentCharge,
-            paymentChargeBearer = mbPaymentChargeBearer,
+            paymentCharge = chargeRes.paymentCharge,
+            paymentChargeBearer = chargeRes.paymentChargeBearer,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,
@@ -335,7 +342,7 @@ handler merchantId req validatedReq = do
             pickupGateId = searchRequest.pickupGateId,
             ledgerWriteMode = Nothing,
             financeInvoiceId = Nothing,
-            discountAmount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount,
+            discountAmount = mbClampedDiscount,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
