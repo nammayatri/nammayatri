@@ -1069,12 +1069,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_mo
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_avg_speed_kmph double precision ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_scheduled_holds_per_driver integer  default 1;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
 
 
@@ -1104,9 +1098,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN area_preference
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
 
-------- MSIL scheduled rides (SWS-1 / SWS-2) -------
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_booking_window integer;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_booking_window integer;
 
 ------- SQL updates -------
 
@@ -1127,14 +1118,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_config json  default '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1}' :: json;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN min_booking_window;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_booking_window;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN scheduled_ride_avg_speed_kmph;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_scheduled_holds_per_driver;
 
 
 ------- SQL updates -------
