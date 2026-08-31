@@ -1,0 +1,70 @@
+imports:
+  CohortDetails: Lib.IncentiveJourney.Domain.Types.CohortDetails
+  IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
+  Value: Data.Aeson
+
+CohortJourneyMapping:
+  tableName: cohort_journey_mapping
+
+  fields:
+    id: Id CohortJourneyMapping
+    merchantId: Id Merchant
+    cohortId: Id CohortDetails
+    journeyId: Id IncentiveJourney
+    startDate: UTCTime
+    streakRange: Int
+    streakEndRewardType: Maybe MilestoneRewardType
+    streakEndRewardValue: Maybe Int
+    streakEndRewardExpirationAt: Maybe Int
+    # Extra fields per reward type (e.g. SubscriptionWaiveOff: serviceName, waiveOffMode).
+    # Percentage / daysValidFor reuse streakEndRewardValue / streakEndRewardExpirationAt.
+    streakEndRewardMetadata: Maybe Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    streakEndRewardType: "NULL"
+    streakEndRewardValue: "NULL"
+    streakEndRewardExpirationAt: "NULL"
+    streakEndRewardMetadata: "NULL"
+
+  sqlType:
+    streakEndRewardMetadata: json
+
+  constraints:
+    id: PrimaryKey
+    cohortId: "!SecondaryKey"
+    journeyId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByCohortId:
+      kvFunction: findAllWithKV
+      where: cohortId
+    findByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    findByCohortIdAndJourneyId:
+      kvFunction: findOneWithKV
+      where:
+        and: [cohortId, journeyId]
+
+  extraIndexes:
+    - columns: [merchantId]
+    - columns: [cohortId]
+    - columns: [journeyId]
+    - columns: [cohortId, journeyId]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

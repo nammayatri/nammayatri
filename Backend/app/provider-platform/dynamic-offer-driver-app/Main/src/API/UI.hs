@@ -40,7 +40,6 @@ import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
-import qualified API.Action.UI.IncentiveJourney as IncentiveJourney
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
@@ -79,6 +78,7 @@ import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
+import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard

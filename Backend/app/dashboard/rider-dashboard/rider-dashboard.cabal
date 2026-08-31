@@ -47,6 +47,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.AppManagement.TransitOperator
       Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
+      Domain.Action.RiderPlatform.IncentiveJourney.IncentiveJourney
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
       Domain.Action.RiderPlatform.Management.AlertIncident
@@ -99,6 +100,8 @@ library
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.AppManagement.TransitOperator
       API.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
+      API.Action.RiderPlatform.IncentiveJourney
+      API.Action.RiderPlatform.IncentiveJourney.IncentiveJourney
       API.Action.RiderPlatform.IssueManagement
       API.Action.RiderPlatform.IssueManagement.Issue
       API.Action.RiderPlatform.IssueManagement.IssueList
@@ -137,6 +140,7 @@ library
       API.Action.RiderPlatform.RideBooking.Search
       API.Action.RiderPlatform.RideBooking.Select
       API.Client.RiderPlatform.AppManagement
+      API.Client.RiderPlatform.IncentiveJourney
       API.Client.RiderPlatform.IssueManagement
       API.Client.RiderPlatform.Management
       API.Client.RiderPlatform.RideBooking
@@ -191,6 +195,7 @@ library
     , esqueleto
     , euler-hs
     , http-types
+    , incentive-journey
     , lib-dashboard
     , mobility-core
     , openapi3

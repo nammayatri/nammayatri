@@ -127,6 +127,7 @@ library:
     - rider-app
     - dynamic-offer-driver-app
     - shared-services
+    - incentive-journey
     - special-zone-a
     - payment
 

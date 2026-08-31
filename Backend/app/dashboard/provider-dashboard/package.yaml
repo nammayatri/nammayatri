@@ -143,6 +143,7 @@ library:
     - special-zone
     - special-zone-a
     - shared-services
+    - incentive-journey
     - special-zone-a
     - finance-kernel
     - payment

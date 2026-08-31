@@ -111,6 +111,7 @@ data AllocatorJobType
   | SAPPGSettlementDispatch
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
+  | BulkUserCohortMappingUpload
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -175,6 +176,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
+  restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -802,3 +804,20 @@ data SAPRideRevenueDispatchJobData = SAPRideRevenueDispatchJobData
 instance JobInfoProcessor 'SAPRideRevenueDispatch
 
 type instance JobContent 'SAPRideRevenueDispatch = SAPRideRevenueDispatchJobData
+
+data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    s3FilePath :: Text,
+    offset :: Int,
+    batchSize :: Int,
+    -- | Seconds to wait before the next chunk job (throttles DB load).
+    rescheduleDelaySeconds :: Int,
+    -- | Stable id returned to dashboard for log/correlation across chunk jobs.
+    runId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BulkUserCohortMappingUpload
+
+type instance JobContent 'BulkUserCohortMappingUpload = BulkUserCohortMappingUploadJobData

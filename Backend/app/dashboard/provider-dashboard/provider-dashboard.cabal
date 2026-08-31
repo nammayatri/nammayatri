@@ -53,6 +53,7 @@ library
       Domain.Action.ProviderPlatform.Fleet.Onboarding
       Domain.Action.ProviderPlatform.Fleet.PayoutAccount
       Domain.Action.ProviderPlatform.Fleet.RegistrationV2
+      Domain.Action.ProviderPlatform.IncentiveJourney.IncentiveJourney
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Account
       Domain.Action.ProviderPlatform.Management.Booking
@@ -71,7 +72,6 @@ library
       Domain.Action.ProviderPlatform.Management.FeedbackForm
       Domain.Action.ProviderPlatform.Management.FinanceManagement
       Domain.Action.ProviderPlatform.Management.GeohashArea
-      Domain.Action.ProviderPlatform.Management.IncentiveJourney
       Domain.Action.ProviderPlatform.Management.KnowledgeCenter
       Domain.Action.ProviderPlatform.Management.Media
       Domain.Action.ProviderPlatform.Management.MediaFileDocument
@@ -119,6 +119,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.Tickets
       Domain.Action.RiderPlatform.AppManagement.TransitOperator
       Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
+      Domain.Action.RiderPlatform.IncentiveJourney.IncentiveJourney
       Domain.Action.RiderPlatform.IssueManagement.Issue
       Domain.Action.RiderPlatform.IssueManagement.IssueList
       Domain.Action.RiderPlatform.Management.AlertIncident
@@ -175,6 +176,8 @@ library
       API.Action.ProviderPlatform.Fleet.Onboarding
       API.Action.ProviderPlatform.Fleet.PayoutAccount
       API.Action.ProviderPlatform.Fleet.RegistrationV2
+      API.Action.ProviderPlatform.IncentiveJourney
+      API.Action.ProviderPlatform.IncentiveJourney.IncentiveJourney
       API.Action.ProviderPlatform.IssueManagement
       API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
@@ -195,7 +198,6 @@ library
       API.Action.ProviderPlatform.Management.FeedbackForm
       API.Action.ProviderPlatform.Management.FinanceManagement
       API.Action.ProviderPlatform.Management.GeohashArea
-      API.Action.ProviderPlatform.Management.IncentiveJourney
       API.Action.ProviderPlatform.Management.KnowledgeCenter
       API.Action.ProviderPlatform.Management.Media
       API.Action.ProviderPlatform.Management.MediaFileDocument
@@ -245,6 +247,8 @@ library
       API.Action.RiderPlatform.AppManagement.Tickets
       API.Action.RiderPlatform.AppManagement.TransitOperator
       API.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
+      API.Action.RiderPlatform.IncentiveJourney
+      API.Action.RiderPlatform.IncentiveJourney.IncentiveJourney
       API.Action.RiderPlatform.IssueManagement
       API.Action.RiderPlatform.IssueManagement.Issue
       API.Action.RiderPlatform.IssueManagement.IssueList
@@ -284,11 +288,13 @@ library
       API.Action.RiderPlatform.RideBooking.Select
       API.Client.ProviderPlatform.AppManagement
       API.Client.ProviderPlatform.Fleet
+      API.Client.ProviderPlatform.IncentiveJourney
       API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management
       API.Client.ProviderPlatform.Operator
       API.Client.ProviderPlatform.RideBooking
       API.Client.RiderPlatform.AppManagement
+      API.Client.RiderPlatform.IncentiveJourney
       API.Client.RiderPlatform.IssueManagement
       API.Client.RiderPlatform.Management
       API.Client.RiderPlatform.RideBooking
@@ -350,6 +356,7 @@ library
     , http-client
     , http-client-tls
     , http-types
+    , incentive-journey
     , lib-dashboard
     , mobility-core
     , openapi3

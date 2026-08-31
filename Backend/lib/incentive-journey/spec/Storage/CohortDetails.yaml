@@ -1,0 +1,46 @@
+imports:
+  Value: Data.Aeson
+
+CohortDetails:
+  tableName: cohort_details
+
+  fields:
+    id: Id CohortDetails
+    name: Text
+    category: Maybe Text
+    description: Maybe Text
+    cohortRule: Maybe Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    category: "NULL"
+    description: "NULL"
+    cohortRule: "NULL"
+
+  sqlType:
+    cohortRule: json
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByName:
+      kvFunction: findOneWithKV
+      where: name
+
+  extraIndexes:
+    - columns: [category, name]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"
