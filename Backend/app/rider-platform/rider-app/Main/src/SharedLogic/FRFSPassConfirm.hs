@@ -1,17 +1,13 @@
 -- | Confirming FRFS legs whose fare is fully covered by a pass.
---
 -- A fully pass-covered leg has no payment order and no @FRFSTicketBookingPayment@ row, so nothing
 -- in the payment pipeline will ever drive it to confirm. A standalone booking is therefore confirmed
 -- inline at booking time (see @SharedLogic.FRFSConfirm.postFrfsQuoteV2ConfirmUtil@).
---
 -- A leg inside a multimodal journey must NOT be confirmed inline: its siblings may still be awaiting
 -- payment, and confirming early issues a real ticket (and spends a pass trip) for a journey the rider
 -- may abandon at the payment step. Journey legs are instead confirmed here, from exactly two places:
---
 --   * "Lib.JourneyModule.Base" — right after all legs are confirmed, when the journey has no payable
 --     leg at all (every leg pass-covered, so no payment will ever arrive to trigger anything).
 --   * "SharedLogic.FRFSStatus" — when the journey's payment succeeds.
---
 -- Both call sites are idempotent: only bookings still in 'NEW' are acted on, and the status flips to
 -- 'CONFIRMING' before the BPP call.
 module SharedLogic.FRFSPassConfirm
@@ -60,8 +56,6 @@ confirmPassCoveredLegsOfJourney booking = do
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
   whenJust mbJourneyId $ \_ -> confirmPassCoveredLegs allJourneyBookings
 
--- | Confirm the fully pass-covered bookings in the given set, skipping anything already past 'NEW'.
--- Each leg is confirmed independently; one leg failing does not abort the others.
 confirmPassCoveredLegs ::
   ( CallExternalBPP.FRFSConfirmFlow m r c,
     HasField "blackListedJobs" r [Text],
@@ -73,7 +67,10 @@ confirmPassCoveredLegs ::
 confirmPassCoveredLegs bookings = do
   let coveredLegs =
         filter
-          (\b -> FRFSPassOverride.isFullyPassCovered b.overriddenAmount && b.status == DFRFSTicketBooking.NEW)
+          ( \b ->
+              FRFSPassOverride.isFullyPassCovered b.overriddenAmount
+                && b.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
+          )
           bookings
   forM_ coveredLegs $ \booking ->
     void $ withTryCatch "FRFSPassConfirm:confirmLeg" (confirmOne booking)
@@ -114,11 +111,6 @@ confirmOne booking = do
         let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
         mRiderNumber <- mapM decrypt rider.mobileNumber
         void $ QFRFSTicketBooking.updateOnInitDone (Just True) latest.id
-        -- The pass path never calls init, and on_init is the only other writer of totalPrice, so a
-        -- reprice would otherwise leave the previous quantity's fare on the row for recon/settlement.
-        -- Carried on the record too, not just written: the CRIS confirm builds chargeableAmount from
-        -- booking.totalPrice (ExternalAPI/Subway/CRIS/BookJourney.hs:277), so passing the pre-update
-        -- record would quote the operator the previous quantity's fare.
         let repricedTotal = (mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)).totalPrice
             repriced = latest {DFRFSTicketBooking.totalPrice = repricedTotal}
         void $ QFRFSTicketBooking.updateTotalPriceById repricedTotal latest.id

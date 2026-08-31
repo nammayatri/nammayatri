@@ -63,6 +63,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Seat as DSeat
 import qualified Domain.Types.Station as Station
+import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (<|>), (||+))
 import Kernel.Beam.Functions as B
@@ -852,6 +853,38 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
+journeyFullyPassCovered ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m (Maybe (Id DJourney.Journey), [DFRFSTicketBooking.FRFSTicketBooking], Bool)
+journeyFullyPassCovered booking = do
+  mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
+  case mbJourneyLeg of
+    Nothing -> pure (Nothing, [booking], FRFSPassOverride.isFullyPassCovered booking.overriddenAmount)
+    Just leg -> do
+      legs <- QJL.getJourneyLegs leg.journeyId
+      bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+      let frfsLegs = filter (\l -> l.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs
+          live b =
+            b.status
+              `notElem` [ DFRFSTicketBooking.FAILED,
+                          DFRFSTicketBooking.CANCELLED,
+                          DFRFSTicketBooking.COUNTER_CANCELLED,
+                          DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED
+                        ]
+          covered = case frfsLegs of
+            [] -> False
+            _ ->
+              length frfsLegs == length bookings
+                && all (\b -> live b && FRFSPassOverride.isFullyPassCovered b.overriddenAmount) bookings
+      pure (Just leg.journeyId, bookings, covered)
+
 getQuoteOfferSegment ::
   (EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id DP.Person ->
@@ -1057,18 +1090,15 @@ data CancellationQuota = CancellationQuota
   }
 
 -- | Take a booking from NEW to CONFIRMING atomically, and return it as it was when claimed.
---
 -- Nothing means someone else already claimed it and the caller must not confirm. Every path that
 -- confirms with the BPP goes through this: the transition is a read then a write, so unguarded, two
 -- callers -- concurrent confirm requests for one searchId, or a retried payment webhook racing a
 -- status poll -- both see NEW, both call the BPP, and one booking gets two tickets and two debits
 -- at on_confirm.
---
 -- validTill is written inside the lock and BEFORE the status flip. Until it lands the booking is
 -- CONFIRMING while still carrying the validTill it had as NEW, and frfsBookingStatus fails a
 -- CONFIRMING booking whose validTill has passed -- so the other order lets a status poll kill a
 -- leg that is about to be confirmed.
---
 -- The lock covers ONLY the claim. Holding it across the BPP call would be worse than not locking:
 -- waiters spin on a microsecond retry delay, and a call slower than the lock TTL would let a second
 -- caller in while the first is still working, after which the first one's release deletes the
@@ -1090,9 +1120,6 @@ claimBookingForConfirm bookingId validTill =
           else do
             void $ QFRFSTicketBooking.updateValidTillById validTill latest.id
             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
-            -- Carry the validTill we just wrote, not the stale one: ACL.buildConfirmReq falls back to
-            -- booking.validTill for the confirm TTL when bapConfig.confirmTTLSec is unset, so returning
-            -- the pre-update record would send the operator an expiry we have already replaced.
             pure (Just latest {DFRFSTicketBooking.validTill = validTill})
 
 confirmClaimLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
