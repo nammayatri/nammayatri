@@ -40,6 +40,7 @@ import Lib.Finance
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
@@ -119,51 +120,55 @@ deductAirportEntryFeeAtEndRide ::
 deductAirportEntryFeeAtEndRide enabled ride booking = do
   mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId booking.fareSettlementType
   whenJust mbTotalFee $ \totalFee -> do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-    -- Derive the mode from the booking's payment method rather than hardcoding.
-    isOnline <- Wallet.resolveIsOnlineFromBooking booking
-    let gstBreakup =
-          fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
-        gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
-        airportPortion = if gstRate >= 0 then totalFee / (1 + realToFrac gstRate) else totalFee
-        gstAmount = totalFee - airportPortion
-        ctx =
-          FinanceCtx
-            { merchantId = booking.providerId.getId,
-              merchantOpCityId = booking.merchantOperatingCityId.getId,
-              currency = booking.currency,
-              isOnline = isOnline,
-              counterpartyType = DRIVER,
-              counterpartyId = ride.driverId.getId,
-              concernedIndividualId = Just ride.driverId.getId,
-              referenceId = ride.id.getId,
-              entityReferenceId = Nothing,
-              entityReferenceType = Nothing,
-              merchantName = Nothing,
-              merchantShortId = Nothing,
-              issuedByAddress = Nothing,
-              supplierName = Nothing,
-              supplierGSTIN = Nothing,
-              merchantGstin = Nothing,
-              supplierVatNumber = Nothing,
-              supplierAddress = Nothing,
-              merchantVatNumber = Nothing,
-              supplierId = Nothing,
-              panOfParty = Nothing,
-              panType = Nothing,
-              tdsRateReason = Nothing,
-              emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
-              fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-              issuedToName = Nothing,
-              enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
-            }
-    result <-
-      runFinance ctx $
-        do
-          void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
-          void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
-    case result of
-      Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
-      Right _ -> pure ()
+    existingEntries <- QLedgerEntry.findByReference Wallet.walletReferenceAirportEntryFee ride.id.getId
+    if not (null existingEntries)
+      then logInfo $ "Airport entry fee already deducted for ride " <> ride.id.getId <> ", skipping duplicate deduction."
+      else do
+        transporterConfig <-
+          getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+            >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        -- Derive the mode from the booking's payment method rather than hardcoding.
+        isOnline <- Wallet.resolveIsOnlineFromBooking booking
+        let gstBreakup =
+              fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
+            gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
+            airportPortion = if gstRate >= 0 then totalFee / (1 + realToFrac gstRate) else totalFee
+            gstAmount = totalFee - airportPortion
+            ctx =
+              FinanceCtx
+                { merchantId = booking.providerId.getId,
+                  merchantOpCityId = booking.merchantOperatingCityId.getId,
+                  currency = booking.currency,
+                  isOnline = isOnline,
+                  counterpartyType = DRIVER,
+                  counterpartyId = ride.driverId.getId,
+                  concernedIndividualId = Just ride.driverId.getId,
+                  referenceId = ride.id.getId,
+                  entityReferenceId = Nothing,
+                  entityReferenceType = Nothing,
+                  merchantName = Nothing,
+                  merchantShortId = Nothing,
+                  issuedByAddress = Nothing,
+                  supplierName = Nothing,
+                  supplierGSTIN = Nothing,
+                  merchantGstin = Nothing,
+                  supplierVatNumber = Nothing,
+                  supplierAddress = Nothing,
+                  merchantVatNumber = Nothing,
+                  supplierId = Nothing,
+                  panOfParty = Nothing,
+                  panType = Nothing,
+                  tdsRateReason = Nothing,
+                  emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
+                  fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
+                  issuedToName = Nothing,
+                  enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
+                }
+        result <-
+          runFinance ctx $
+            do
+              void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+              void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
+        case result of
+          Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
+          Right _ -> pure ()
