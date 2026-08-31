@@ -85,19 +85,32 @@ import WhatsappBot.Util (fmtInt, fmtNum)
 promptForBookingEntry :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 promptForBookingEntry env ev ctx = do
   let merchant = env.cfg.merchant
+      s = t env.cfg.translations ctx.language
   case ctx.pendingAction of
     Just PendingStatus -> do
       let ctx1 = ctx {pendingAction = Nothing}
       save env ev ctx1
       handleStatus env ev ctx1
-    _ ->
-      if flexiOffered merchant && regularOffered merchant
-        then sendRideTypePrompt env ev ctx
-        else do
-          let rt = if regularOffered merchant then Regular else Flexi
-              ctx1 = ctx {rideType = Just rt} :: FlowContext
-          save env ev ctx1
-          promptForPickup env ev ctx1 False
+    _
+      -- An empty/all-unrecognized rideTypesOrder (misconfigured merchant --
+      -- every entry failed to parse, see Adapter.Env.parseRideType) must NOT
+      -- silently fall through to the Flexi default below: flexiOffered and
+      -- regularOffered are both False in exactly this case, so it's caught
+      -- here, before the flexi/regular split, instead of being folded into
+      -- "otherwise" and booking a ride type the merchant never offered.
+      | null merchant.rideTypesOrder -> reply env ev.fromPhone s.somethingWentWrong
+      -- Count-based, not name-based: was `flexiOffered merchant &&
+      -- regularOffered merchant`, which only ever asks "is it exactly these
+      -- two named types" -- equivalent today (only 2 real types exist), but
+      -- breaks the moment a 3rd type is added (a merchant offering
+      -- [Flexi, ThirdType] would wrongly skip the chooser). Length naturally
+      -- scales to any number of ride types without this line changing again.
+      | length merchant.rideTypesOrder > 1 -> sendRideTypePrompt env ev ctx
+      | otherwise -> do
+        let rt = if regularOffered merchant then Regular else Flexi
+            ctx1 = ctx {rideType = Just rt} :: FlowContext
+        save env ev ctx1
+        promptForPickup env ev ctx1 False
 
 -- | Ask which ride type (@engine.ts:714-725@); the @ride_type:*@ intercept handles
 -- the taps, and the @more_ride_types@ intercept (Engine.hs) handles a tap on
