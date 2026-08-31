@@ -24,7 +24,21 @@ import Kernel.Prelude
 
 data MetaBotCfg = MetaBotCfg
   { merchantLabel :: Text,
-    rideMode :: Text,
+    -- Ordered list of ride-type ids this merchant offers via WhatsApp, e.g.
+    -- ["flexi", "regular"] — order is PRIORITY order, not just membership.
+    -- Replaces the old rideMode :: Text ("flexi"|"regular"|"both"), which
+    -- could only express membership, never priority, and had no room for a
+    -- 3rd ride type. Unrecognized ids are dropped (see
+    -- WhatsappBot.Adapter.Env.mkMerchantCtx) rather than failing the whole
+    -- config, so a not-yet-built future type named here doesn't break the bot.
+    rideTypesOrder :: [Text],
+    -- Per-merchant override for how many ride-type buttons show directly
+    -- before falling back to "More" (see WhatsappBot.Flow.Booking.splitRideTypes).
+    -- Nothing -> today's default nudge-toward-priority layout, unchanged.
+    -- Just n -> if all offered types fit within n (clamped to [1,2], WhatsApp's
+    -- real button ceiling), show them all directly with no "More" at all;
+    -- otherwise show n directly and hide the rest.
+    maxDirectButtons :: Maybe Int,
     flexiBaseFare :: Maybe Double,
     flexiPerKm :: Maybe Double,
     flexiServiceArea :: Maybe Text,

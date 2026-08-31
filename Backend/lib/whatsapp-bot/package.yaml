@@ -88,6 +88,7 @@ ghc-options:
 # strict. Listed as source inputs, not runtime data-files.
 extra-source-files:
   - test/resources/golden/*.json
+  - test/resources/i18n/*.json
 
 library:
   source-dirs: src

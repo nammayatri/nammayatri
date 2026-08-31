@@ -38,12 +38,9 @@ data FlowState
 data PendingAction = PendingStatus | PendingBook
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- | Chosen ride type for this booking (@states.ts:35@).
+-- | A ride type: both the chosen type for one booking (@states.ts:35@) AND
+-- one entry in a merchant's offered-types list ('MerchantCtx.rideTypesOrder').
 data RideType = Flexi | Regular
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
--- | Which ride types a merchant offers (@config.ts:2@).
-data RideMode = RideModeFlexi | RideModeRegular | RideModeBoth
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | A disambiguation option for a typed drop (@states.ts:27@).
@@ -184,9 +181,15 @@ newtype BotProfileUpdate = BotProfileUpdate {language :: Maybe Text}
 -- value projected as @merchant@ in outbound records (e.g. "FLEXI"/"REG").
 data MerchantCtx = MerchantCtx
   { merchantLabel :: Text,
-    rideMode :: RideMode,
-    flexiEnabled :: Bool,
-    regularEnabled :: Bool,
+    -- Ordered list of ride types this merchant offers, PRIORITY order first.
+    -- Replaces the old rideMode/flexiEnabled/regularEnabled trio: membership
+    -- in this list is "is it offered", and position drives the WhatsApp
+    -- button layout (see WhatsappBot.Flow.Booking.rideTypeButtons).
+    rideTypesOrder :: [RideType],
+    -- Per-merchant override for how many ride-type buttons show directly
+    -- before "More" (see WhatsappBot.Flow.Booking.splitRideTypes). Nothing
+    -- keeps the default nudge-toward-priority layout.
+    maxDirectButtons :: Maybe Int,
     flexiBaseFare :: Maybe Double,
     flexiPerKm :: Maybe Double,
     flexiServiceArea :: Maybe Text,

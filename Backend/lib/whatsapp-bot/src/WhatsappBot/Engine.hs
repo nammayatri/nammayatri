@@ -43,7 +43,7 @@ import Kernel.Prelude
 -- edge runs Engine -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, mkUserKey, rawInput, reply, replyButtons, resetContext, save, scopedSessionId)
 -- Booking CREATION now lives in Flow.Booking (Engine -> Flow.Booking -> {Ride, Env}).
-import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, flexiOffered, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, regularOffered, sendPickupConfirm, sendRegularFareConfirm)
+import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, flexiOffered, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, hiddenRideTypeButtons, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, regularOffered, sendPickupConfirm, sendRegularFareConfirm)
 import WhatsappBot.Handles (StoredPerson (..))
 import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
@@ -137,6 +137,14 @@ runEngine env ev ctx = do
         save env ev ctx {state = Tracking}
         handleTracking env ev ctx {state = Tracking}
       | "ride_type:" `T.isPrefixOf` input -> handleRideType env ev ctx (T.drop 10 input) -- :276-292
+      -- The ride-type chooser has no dedicated FlowState of its own (ctx.state
+      -- stays Idle while it's shown -- see sendRideTypePrompt), unlike
+      -- pickup_confirm below (ConfirmingPickup). Guard on Idle anyway: without
+      -- it, a stale "More" tap from an old message fires this handler even
+      -- mid-ride (e.g. while Tracking), re-showing ride-type buttons out of
+      -- context. Idle is the correct proxy here -- nothing else runs the
+      -- booking-entry flow in any other state.
+      | input == "more_ride_types" && ctx.state == Idle -> replyButtons env to s.rideTypePrompt (hiddenRideTypeButtons s env.cfg.merchant.maxDirectButtons env.cfg.merchant.rideTypesOrder)
       | input == "pickup_confirm" && isJust ctx.personId && isJust ctx.origin && ctx.state == ConfirmingPickup ->
         handlePickupConfirm env ev ctx -- :293-305
       | input == "pickup_adjust" -> promptForPickup env ev ctx True -- :306-310
@@ -254,7 +262,7 @@ handleChooseLanguage env ev ctx input = do
             btn s.moreLanguages "more_languages"
           ]
       | input == "more_languages" ->
-        replyButtons env to s.selectLanguage [btn (li.nativeName <> " (" <> li.name <> ")") ("lang:" <> languageCode li.code) | li <- getAllLanguages]
+        replyButtons env to s.selectLanguage [btn (li.nativeName <> " (" <> li.name <> ")") ("lang:" <> languageCode li.code) | li <- getAllLanguages env.cfg.translations]
       | otherwise -> pure ()
 
 -- | A @lang:<code>@ command is anchored to word-chars after the prefix; @lang:@

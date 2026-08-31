@@ -115,6 +115,7 @@ en =
       rideTypePrompt = "How would you like to travel?",
       rideTypeFlexi = "🛺 Quick Ride",
       rideTypeRegular = "🚗 Ride with destination",
+      moreRideTypes = "➕ More options",
       rideStartedSimple = "🚦 Your ride has started. Enjoy the trip!",
       regularDropPrompt = "Where are you going? 📍\n\nShare your drop location, or type the address.",
       regularSelectDrop = "Which one? Pick your drop:",
