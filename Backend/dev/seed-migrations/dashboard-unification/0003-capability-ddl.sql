@@ -18,7 +18,7 @@ capability_id character varying(255) NOT NULL REFERENCES atlas_dashboard.capabil
 server_name character varying(64) NOT NULL,
 endpoint_id character varying(512) NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT capability_endpoint_pkey PRIMARY KEY (server_name, endpoint_id)
+,CONSTRAINT capability_endpoint_pkey PRIMARY KEY (capability_id, server_name, endpoint_id)
 );
 ALTER TABLE atlas_dashboard.capability_endpoint OWNER TO atlas_dashboard_user;
 CREATE INDEX idx_capability_endpoint_capability ON atlas_dashboard.capability_endpoint (capability_id);
