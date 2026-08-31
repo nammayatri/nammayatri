@@ -55,6 +55,7 @@ import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.FinancialYear (financialYearOf)
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
@@ -107,6 +108,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
+import qualified SharedLogic.DriverFyEarnings as SDFE
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
@@ -566,23 +568,43 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         pure $ (Nothing,) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-    -- For threshold-benefit gating (section 194O), look up the counterparty's
-    -- cumulative earnings. Driver rides use driver_stats.totalEarnings (lifetime
-    -- ride.fare sum, interim — TODO(MSIL-TDS-FY) switch to FY-scoped).
-    -- Fleet rides return Nothing → applyThresholdBenefit skips the gate (always
-    -- deducts) until a fleet accumulator is added.
-    mbCumulativeEarnings <- case ride.fleetOwnerId of
-      Just _ -> pure Nothing
-      Nothing -> do
-        mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
-        pure $ (.totalEarnings) <$> mbStats
-    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
-        baseFareForTds = max 0 baseFare
-        mbTdsAmount = do
-          rate <- effectiveTdsRate
-          let rawAmount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
-              gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseFareForTds rawAmount
-          if gatedAmount > 0 then Just gatedAmount else Nothing
+    -- TDS base = Total Ride Fare - GST. Tolls and parking stay IN the base (they
+    -- are part of the amount paid/credited); only tax comes out. Summing the
+    -- tax-exclusive components gets that on both the GST and the VAT path, where
+    -- the tax figure differs -- see the (taxAmount, baseFare, absorbedVat) binding
+    -- above. NOTE: distinct from 'baseFare', which excludes tolls/parking and
+    -- drives the walletReferenceBaseRide ledger posting; do not conflate them.
+    let tdsBaseAmount = max 0 (baseFare + tollAmount + parkingAmount)
+        effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
+        fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+    -- Bucket by the ride's own merchant-local date, never by "now" elsewhere.
+    rideLocalDate <- utctDay <$> getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    -- Threshold gating (section 194O) against FY-to-date net take home.
+    -- Keyed on driverOrFleetPersonId so a fleet owner's threshold is their own;
+    -- this read-decide-write must be serialised per person, hence the dedicated
+    -- lock -- the enclosing wallet lock is keyed on driverId and so would not
+    -- serialise two drivers of the same fleet.
+    mbTdsAmount <-
+      -- withWaitAndLockRedis (not withWaitOnLockRedisWithExpiry) because the gate's
+      -- decision has to come back out of the lock. 10s expiry, 1ms retry backoff --
+      -- note it sleeps once even on an uncontended acquire, so keep the delay small.
+      Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey driverOrFleetPersonId.getId) 10 1000 $ do
+        mbPersistedFareParams <- join <$> forM ride.fareParametersId QFare.findById
+        case mbPersistedFareParams of
+          Just fp | isJust fp.tdsProcessedAt -> pure fp.tdsAmount
+          _ -> do
+            fyToDate <- SDFE.getFyToDateNetEarnings driverOrFleetPersonId (financialYearOf fyStartMonth rideLocalDate)
+            let mbAmount = do
+                  rate <- effectiveTdsRate
+                  let rawAmount = tdsBaseAmount * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+                      gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just fyToDate) mbPanCard tdsBaseAmount rawAmount
+                  if gatedAmount > 0 then Just gatedAmount else Nothing
+            -- Net take home = TDS base - TDS. Written after the gate, since the
+            -- deduction is not known until it runs.
+            SDFE.addQuarterNetEarnings driverOrFleetPersonId fyStartMonth rideLocalDate (tdsBaseAmount - fromMaybe 0 mbAmount) (fromMaybe 0 mbAmount)
+            processedAt <- getCurrentTime
+            whenJust ride.fareParametersId $ QFare.updateTdsDeduction mbAmount effectiveTdsRate processedAt
+            pure mbAmount
 
     let serviceVatAmount =
           case transporterConfig.taxConfig.serviceVatPercentage of
