@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - "backend/feat/frfs-seller-phase-1"
   workflow_dispatch:
 
 concurrency:
