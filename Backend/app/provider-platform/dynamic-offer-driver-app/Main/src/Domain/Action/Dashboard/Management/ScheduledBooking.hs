@@ -92,17 +92,17 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbLimit
       toTime = fromMaybe (addUTCTime (secondsToNominalDiffTime $ Seconds defaultLookaheadSeconds) now) mbTo
       limit = min maxLimit $ fromMaybe defaultLimit mbLimit
       offset = fromMaybe 0 mbOffset
-  liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id [SRB.NEW, SRB.TRIP_ASSIGNED] fromTime toTime limit offset
-  withRides <- forM liteBookings $ \b -> do
+  let statuses = case mbAssignmentStatus of
+        Just Common.ASSIGNED -> [SRB.TRIP_ASSIGNED]
+        Just Common.UNASSIGNED -> [SRB.NEW]
+        Nothing -> [SRB.NEW, SRB.TRIP_ASSIGNED]
+  liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
+  let pageRows = take limit liteBookings
+      hasMorePages = length liteBookings > limit
+  bookings <- forM pageRows $ \b -> do
     mbRide <- QRideLite.findActiveByRBIdLite b.id
-    pure (b, mbRide)
-  let matchesAssignment (_, mbRide) = case mbAssignmentStatus of
-        Just Common.ASSIGNED -> isJust mbRide
-        Just Common.UNASSIGNED -> isNothing mbRide
-        Nothing -> True
-      pageRows = filter matchesAssignment withRides
-  bookings <- mapM (uncurry buildListItem) pageRows
-  pure Common.ScheduledBookingListRes {totalItems = length bookings, bookings}
+    buildListItem b mbRide
+  pure Common.ScheduledBookingListRes {totalItems = offset + length pageRows + (if hasMorePages then 1 else 0), bookings}
 
 buildListItem :: QBookingLite.BookingLite -> Maybe QRideLite.RideLite -> Flow Common.ScheduledBookingListItem
 buildListItem booking mbRide = do
