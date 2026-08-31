@@ -48,9 +48,17 @@ findAllByEntityIdAndOrderNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r
 findAllByEntityIdAndOrderNewEntity entityId order =
   withFallback "findAllByEntityIdAndOrderNewEntity" (findAllByEntityIdAndOrder entityId order) (pure [])
 
+-- Called from Booking's FromTType' instance (fromTType'), whose constraint set is fixed to
+-- (MonadFlow m, CacheFlow m r, EsqDBFlow m r) by the FromTType' class itself, so this can't
+-- require Metrics.CoreMetrics like the other WithFallback-style functions in this file do.
 upsert :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LocationMapping -> m ()
 upsert mapping = do
-  allEntityIdAndOrder <- findAllWithKVAndConditionalDB [Se.And [Se.Is BeamLM.entityId $ Se.Eq mapping.entityId, Se.Is BeamLM.order $ Se.Eq mapping.order, Se.Is BeamLM.version $ Se.Eq latestTag]] Nothing
+  eRes <- withTryCatch "LocationMapping.upsert" (findAllWithKVAndConditionalDB [Se.And [Se.Is BeamLM.entityId $ Se.Eq mapping.entityId, Se.Is BeamLM.order $ Se.Eq mapping.order, Se.Is BeamLM.version $ Se.Eq latestTag]] Nothing)
+  allEntityIdAndOrder <- case eRes of
+    Right res -> pure res
+    Left err -> do
+      logWarning ("LocationMapping.upsert: findAllWithKVAndConditionalDB failed (" <> show err <> "), treating as empty")
+      pure []
   when (null allEntityIdAndOrder) $ createWithKV mapping
 
 getLatestStartByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe LocationMapping)
