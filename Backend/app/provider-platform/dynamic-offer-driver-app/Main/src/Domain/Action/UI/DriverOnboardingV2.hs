@@ -593,17 +593,18 @@ computeAutoAcceptSignal hasAutoAssignTag vehicle driverServiceTier mbTierRequest
             -- An active base-tier turn-off always wins over a stale autoAcceptance.isSelected:true.
             wasBaseSelectedBefore = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
             driverIsActivelyDeselectingBaseTier = wasBaseSelectedBefore && maybe False (not . (.isSelected)) mbTierRequest
-            wantsAutoAccept = case mbRequestedAutoAccept of
-              Just requested -> requested && not driverIsActivelyDeselectingBaseTier
-              Nothing -> case cfg.mode of
-                DC.AutoAcceptOnly -> maybe True (.isSelected) mbTierRequest
+            wantsAutoAccept = case cfg.mode of
+              DC.AutoAcceptOnly -> maybe True (.isSelected) mbTierRequest
+              DC.AutoAcceptOptional -> case mbRequestedAutoAccept of
+                Just requested -> requested && not driverIsActivelyDeselectingBaseTier
                 -- Old client, omitted the field: preserve prior state, don't derive it from base-tier selection.
-                DC.AutoAcceptOptional -> driverServiceTier.serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
+                Nothing -> driverServiceTier.serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
             -- AutoAcceptOnly's base tier mirrors wantsAutoAccept -- the VST can't exist without silent-assignment.
-            shouldForceBaseTier = case (cfg.mode, mbRequestedAutoAccept) of
-              (DC.AutoAcceptOnly, _) -> wantsAutoAccept
-              (DC.AutoAcceptOptional, Just True) -> not driverIsActivelyDeselectingBaseTier
-              _ -> False
+            shouldForceBaseTier = case cfg.mode of
+              DC.AutoAcceptOnly -> wantsAutoAccept
+              DC.AutoAcceptOptional -> case mbRequestedAutoAccept of
+                Just True -> not driverIsActivelyDeselectingBaseTier
+                _ -> False
          in AutoAcceptSignal {wantsAutoAccept, shouldForceBaseTier}
     _ -> AutoAcceptSignal {wantsAutoAccept = False, shouldForceBaseTier = False}
 
