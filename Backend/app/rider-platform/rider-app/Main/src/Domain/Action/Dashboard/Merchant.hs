@@ -715,10 +715,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant push notification
   mbMerchantPushNotification <- do
-    merchantPushNotifications <- SQMPN.findAllByMerchantOpCityId baseOperatingCityId
-    logDebug $ "createOperatingCity: base MerchantPushNotifications: " <> show merchantPushNotifications
-    newMerchantPushNotifications <- mapM (buildMerchantPushNotification newMerchantId newMerchantOperatingCityId now) merchantPushNotifications
-    return $ Just newMerchantPushNotifications
+    existingMerchantPushNotifications <- SQMPN.findAllByMerchantOpCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantPushNotifications for new city: " <> show existingMerchantPushNotifications
+    case existingMerchantPushNotifications of
+      [] -> do
+        merchantPushNotifications <- SQMPN.findAllByMerchantOpCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base MerchantPushNotifications: " <> show merchantPushNotifications
+        newMerchantPushNotifications <- mapM (buildMerchantPushNotification newMerchantId newMerchantOperatingCityId now) merchantPushNotifications
+        return $ Just newMerchantPushNotifications
+      _ -> return Nothing
 
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   let uniqueKeyId = baseMerchant.bapUniqueKeyId
