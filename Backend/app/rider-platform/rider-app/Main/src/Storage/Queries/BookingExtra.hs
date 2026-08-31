@@ -1,4 +1,7 @@
-module Storage.Queries.BookingExtra where
+module Storage.Queries.BookingExtra
+  ( module Storage.Queries.BookingExtra,
+  )
+where
 
 import Control.Applicative
 import Data.List.Extra (notNull)
@@ -566,3 +569,31 @@ updateEstimatedFare bookingId newFare = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+-- | Fallback for bookings created before the denormalized `locationNames`
+-- column existed: fetch the domain Booking (which resolves fromLocation /
+-- bookingDetails via its FromTType') and build the [from, ...stops, to] array.
+-- This DOES pay the location decode, but only for old rows on the page (a
+-- shrinking set) — new bookings read the column and never reach here.
+-- Returns bookingId -> [from, ...stops, to].
+resolveLocationNamesFallback ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  [Id Booking] ->
+  m [(Id Booking, [Text])]
+resolveLocationNamesFallback [] = pure []
+resolveLocationNamesFallback bookingIds = do
+  bookings <- findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]
+  pure $ map (\b -> (b.id, bookingLocationNames b)) bookings
+  where
+    bookingLocationNames booking =
+      let (mbToLocation, stops) = case booking.bookingDetails of
+            DRB.OneWayDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.RentalDetails detail -> (detail.stopLocation, [])
+            DRB.DriverOfferDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.OneWaySpecialZoneDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.InterCityDetails detail -> (Just detail.toLocation, [])
+            DRB.AmbulanceDetails detail -> (Just detail.toLocation, [])
+            DRB.DeliveryDetails detail -> (Just detail.toLocation, [])
+            DRB.MeterRideDetails detail -> (detail.toLocation, [])
+            DRB.EasyBookingDetails detail -> (detail.stopLocation, [])
+       in SLM.mkLocationNames booking.fromLocation stops mbToLocation

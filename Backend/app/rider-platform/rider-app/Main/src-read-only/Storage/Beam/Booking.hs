@@ -82,16 +82,17 @@ data BookingT f = BookingT
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isWhatsappRequest :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isWhatsappRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issuedByAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     issuedByName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    locationNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     offersFraudCheckFailureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    paymentCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    paymentCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    paymentChargeBearer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
@@ -138,6 +139,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG (''BookingT) [('id)] [[('otpCode)], [('bppBookingId)], [('quoteId)], [('riderId)], [('riderTransactionId)]])
+$(enableKVPG ''BookingT ['id] [['otpCode], ['bppBookingId], ['quoteId], ['riderId], ['riderTransactionId]])
 
-$(mkTableInstancesWithTModifier (''BookingT) "booking" [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")])
+$(mkTableInstancesWithTModifier ''BookingT "booking" [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")])
