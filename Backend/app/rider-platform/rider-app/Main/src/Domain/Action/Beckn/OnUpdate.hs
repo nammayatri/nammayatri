@@ -493,12 +493,12 @@ onUpdate = \case
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
-    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     -- make all the booking parties inactive during rellocation
     QBPL.makeAllInactiveByBookingId booking.id
-    -- notify customer
-    Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
     SharedCancel.releaseCancellationLock booking.transactionId
+    fork "estimateRepetition: cancel payment intent and notify customer" $ do
+      void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+      Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
     when (cancellationSource /= DBCR.ByUser) $ do
       -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
@@ -536,10 +536,11 @@ onUpdate = \case
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus
-    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-    -- notify customer
-    Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
     SharedCancel.releaseCancellationLock booking.transactionId
+    -- Same reasoning as the estimate-repetition branch above.
+    fork "quoteRepetition: cancel payment intent and notify customer" $ do
+      void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+      Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
