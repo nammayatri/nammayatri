@@ -354,7 +354,10 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
           <> "; vehicleDocumentTypes: "
           <> show vehicleDocumentTypes
       pure vehicleDocumentTypes
-    else pure $ if null allVehicleDocumentTypes then SDO.defaultVehicleDocumentTypes else allVehicleDocumentTypes
+    else do
+      let docTypes = if null allVehicleDocumentTypes then SDO.defaultVehicleDocumentTypes else allVehicleDocumentTypes
+      -- VehicleInspectionForm is the aggregate over these photos; surface them even without their own configs, as validateImageHandler does on upload.
+      pure $ if DVC.VehicleInspectionForm `elem` docTypes then nub (docTypes <> vehicleDocsByRcIdList) else docTypes
 
 fetchProcessedVehicleDocumentsWithRC ::
   OnboardingFlow m r =>
