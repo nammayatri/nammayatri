@@ -55,6 +55,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverBulkSubscriptionServiceUpdate,
     getDriverStats,
     getDriverEarnings,
+    getDriverFyEarnings,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
@@ -451,3 +452,8 @@ postDriverAssociationChange merchantShortId opCity apiTokenInfo subjectId req = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just (Id subjectId)) Nothing (Just req)
   T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAssociationChange) apiTokenInfo.personId.getId subjectId req)
+
+getDriverFyEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Int -> Id Common.Driver -> Environment.Flow Common.FyEarningsRes)
+getDriverFyEarnings merchantShortId opCity apiTokenInfo mbQuarter financialYear entityId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverFyEarnings) mbQuarter financialYear entityId apiTokenInfo.personId.getId

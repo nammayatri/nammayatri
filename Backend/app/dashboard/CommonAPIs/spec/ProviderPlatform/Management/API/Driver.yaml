@@ -630,6 +630,35 @@ apis:
             response:
               type: EarningPeriodStatsRes
 
+  # FY / quarter earnings for a driver OR a fleet owner. entityId is a person id
+  # (the accumulator is keyed on personId), so pass either. Dashboard-only:
+  # ApiAuthV2, no TokenAuth/UI variant. The helperApi is the BPP-side endpoint the
+  # dashboard calls through Client.callManagementAPI, carrying requestorId.
+  - GET: # DriverFyEarningsAPI
+      endpoint: /fyEarnings
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - financialYear: Int
+        - entityId: Id Driver
+      query:
+        - quarter: Int
+      response:
+        type: FyEarningsRes
+      migrate:
+        capability: finance.earnings.read
+      helperApi:
+        - GET:
+            endpoint: /fyEarnings
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - financialYear: Int
+              - entityId: Id Driver
+              - requestorId: Text
+            query:
+              - quarter: Int
+            response:
+              type: FyEarningsRes
+
   - POST: # UpdateTdsRateAPI
       endpoint: /tdsRate/update
       auth: ApiAuthV2
@@ -995,6 +1024,15 @@ types:
     - totalEarningsPerKmWithCurrency: PriceAPIEntity
     - bonusEarningsWithCurrency: PriceAPIEntity
     - onlineDuration: Seconds
+  FyQuarterEarnings:
+    - quarter: Int
+    - netEarnings: HighPrecMoney
+    - tdsDeducted: HighPrecMoney
+  FyEarningsRes:
+    - financialYear: Int
+    - quarters: [FyQuarterEarnings]
+    - totalNetEarnings: HighPrecMoney
+    - totalTdsDeducted: HighPrecMoney
   EarningPeriodStatsRes:
     - earnings: [EarningPeriodStats]
   EarningPeriodStats:

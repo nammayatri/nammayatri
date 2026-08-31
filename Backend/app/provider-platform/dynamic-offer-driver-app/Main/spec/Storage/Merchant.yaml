@@ -1015,6 +1015,7 @@ TransporterConfig:
     AnalyticsConfig:
       weekStartMode: Int
       earningsWindowSize: Int
+      financialYearStartMonth: Int # calendar month the financial year begins; 4 = April (India)
       allowCacheDriverFlowStatus: Bool
       enableFleetOperatorDashboardAnalytics: Bool
       maxOnlineDurationDays: Int
@@ -2055,7 +2056,7 @@ TransporterConfig:
       "allowCacheDriverFlowStatus": false,
       "enableFleetOperatorDashboardAnalytics": false,
       "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null,
-      "useDbForEarningAndMetrics": false}'' :: json'
+      "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}'' :: json'
     subscriptionConfig: '''{"prepaidSubscriptionThreshold":
       null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
