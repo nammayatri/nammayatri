@@ -587,12 +587,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
   now <- getCurrentTime
-  let isFullyPassCovered = FRFSPassOverride.isFullyPassCovered dConfirmRes.overriddenAmount
+  let skipPayment = FRFSUtils.noPaymentRequired integratedBppConfig dConfirmRes
   -- Only a standalone booking may confirm inline. A journey leg is deferred to
   -- SharedLogic.FRFSPassConfirm, driven either by the journey's payment success or -- when no leg is
   -- payable at all -- by Lib.JourneyModule.Base once every leg is confirmed. Confirming a leg here
   -- would issue a ticket and spend a pass trip before the rider has paid for the journey's other legs.
-  if isFullyPassCovered && dConfirmRes.status == DFRFSTicketBooking.NEW && isNothing mbJourneyId
+  if skipPayment && dConfirmRes.status == DFRFSTicketBooking.NEW && isNothing mbJourneyId
     then do
       bapConfig <-
         getOneConfig

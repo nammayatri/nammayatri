@@ -24,6 +24,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
@@ -77,10 +78,17 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
                 )
                 quoteCategories
         let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
-        bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
-        paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound bookingPayment.paymentOrderId.getId)
-        let paymentId = fromMaybe paymentOrder.shortId.getShortId booking.bppPaymentId
-        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig paymentOrder.shortId.getShortId paymentId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity filteredDCategories
+        mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+        (txnId, paymentId) <- case mbBookingPayment of
+          Just bookingPayment -> do
+            paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound bookingPayment.paymentOrderId.getId)
+            pure (paymentOrder.shortId.getShortId, fromMaybe paymentOrder.shortId.getShortId booking.bppPaymentId)
+          Nothing -> do
+            unless (isZeroAmountConfirm integratedBPPConfig) $
+              throwError (FRFSTicketBookingPaymentNotFound booking.id.getId)
+            logInfo $ "FRFS ONDC Confirm without a payment order, nothing to charge bookingId=" <> booking.id.getId
+            pure (booking.id.getId, fromMaybe booking.id.getId booking.bppPaymentId)
+        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig txnId paymentId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity filteredDCategories
         logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
       return $ Right ()
@@ -108,6 +116,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
           CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
           return $ Right ()
   where
+    isZeroAmountConfirm integratedBPPConfig = FRFSUtils.noPaymentRequired integratedBPPConfig booking
+
     someExceptionToErrorMessage exc
       | Just (CRISError err) <- fromException exc = err
       | Just (HTTPException err) <- fromException exc = show err
