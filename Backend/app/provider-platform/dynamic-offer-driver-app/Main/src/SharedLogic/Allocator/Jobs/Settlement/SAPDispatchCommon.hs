@@ -39,6 +39,7 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
     JVLeg (..),
     JVSpec (..),
     postJV,
+    skipJvIfAlreadyPostedSuccess,
 
     -- * Journal entry transaction writer
     JournalTxnRowFields (..),
@@ -663,6 +664,43 @@ data JVSpec m = JVSpec
     saveRows :: Id SJE.SapJournalEntry -> Text -> m () -- called on SUCCESS with (sapEntryId, batchId)
   }
 
+-- | Skip SAP POST when this JV label already has SUCCESS for the same period (partial re-run dedup).
+skipJvIfAlreadyPostedSuccess ::
+  (BeamFlow m r, MonadFlow m) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  SJE.TransactionType ->
+  m Bool
+skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType = do
+  mbExisting <-
+    QSJE.findSuccessForPeriod
+      mocid.getId
+      fromTime
+      toTime
+      label
+      txnType
+  case mbExisting of
+    Nothing -> pure False
+    Just existing -> do
+      logWarning $
+        "SAP JV duplicate dispatch skipped: existing SUCCESS entry for label="
+          <> label
+          <> " txnType="
+          <> show txnType
+          <> " batchId="
+          <> existing.batchId
+          <> " sapJournalEntryId="
+          <> existing.id.getId
+          <> " mocId="
+          <> mocid.getId
+          <> " periodStart="
+          <> show fromTime
+          <> " periodEnd="
+          <> show toTime
+      pure True
+
 -- | Build items for each leg, skip if all zero, post to SAP and persist.
 postJV ::
   ( BeamFlow m r,
@@ -688,21 +726,25 @@ postJV sapCfg token params currency txnType spec = do
           startTime = fromTime,
           endTime = toTime
         } = params
-  bId <- getNextBatchId
-  items <-
-    forM (zip [1 :: Int ..] spec.legs) $ \(itemNum, leg) ->
-      mkItem bId (show itemNum) leg.accountKey sapCfg.accountMapping leg.direction leg.amount currency
-  let filtered = filterZeroItems items
-  if null filtered
+  if not (any ((/= 0) . (.amount)) spec.legs)
     then do
       logInfo $ "No non-zero items for " <> spec.label <> ", skipping"
       pure True
     else do
-      logInfo $ "Dispatching " <> spec.label <> " to SAP, txnCount=" <> show spec.txnCount
-      req <- buildJournalRequestFromItems sapCfg spec.label fromTime filtered
-      logInfo $ "SAP journal entry request body = " <> show req
-      result <- callSAPWithRetry sapCfg token req spec.label maxRetries
-      handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.saveRows
+      alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime spec.label txnType
+      if alreadyPosted
+        then pure True
+        else do
+          bId <- getNextBatchId
+          items <-
+            forM (zip [1 :: Int ..] spec.legs) $ \(itemNum, leg) ->
+              mkItem bId (show itemNum) leg.accountKey sapCfg.accountMapping leg.direction leg.amount currency
+          let filtered = filterZeroItems items
+          logInfo $ "Dispatching " <> spec.label <> " to SAP, txnCount=" <> show spec.txnCount
+          req <- buildJournalRequestFromItems sapCfg spec.label fromTime filtered
+          logInfo $ "SAP journal entry request body = " <> show req
+          result <- callSAPWithRetry sapCfg token req spec.label maxRetries
+          handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.saveRows
 
 -- ---------------------------------------------------------------------------
 -- Journal Entry Transaction persistence (individual source transactions)
