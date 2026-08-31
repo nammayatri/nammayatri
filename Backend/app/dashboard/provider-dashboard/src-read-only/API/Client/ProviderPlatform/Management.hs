@@ -21,7 +21,6 @@ import qualified API.Types.ProviderPlatform.Management.FarePolicyV2
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.GeohashArea
-import qualified API.Types.ProviderPlatform.Management.IncentiveJourney
 import qualified API.Types.ProviderPlatform.Management.KnowledgeCenter
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
@@ -69,7 +68,6 @@ data ManagementAPIs = ManagementAPIs
     feedbackFormDSL :: API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormAPIs,
     financeManagementDSL :: API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementAPIs,
     geohashAreaDSL :: API.Types.ProviderPlatform.Management.GeohashArea.GeohashAreaAPIs,
-    incentiveJourneyDSL :: API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyAPIs,
     knowledgeCenterDSL :: API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterAPIs,
     mediaDSL :: API.Types.ProviderPlatform.Management.Media.MediaAPIs,
     mediaFileDocumentDSL :: API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentAPIs,
@@ -112,7 +110,6 @@ mkManagementAPIs merchantId city token = do
   let feedbackFormDSL = API.Types.ProviderPlatform.Management.FeedbackForm.mkFeedbackFormAPIs feedbackFormClientDSL
   let financeManagementDSL = API.Types.ProviderPlatform.Management.FinanceManagement.mkFinanceManagementAPIs financeManagementClientDSL
   let geohashAreaDSL = API.Types.ProviderPlatform.Management.GeohashArea.mkGeohashAreaAPIs geohashAreaClientDSL
-  let incentiveJourneyDSL = API.Types.ProviderPlatform.Management.IncentiveJourney.mkIncentiveJourneyAPIs incentiveJourneyClientDSL
   let knowledgeCenterDSL = API.Types.ProviderPlatform.Management.KnowledgeCenter.mkKnowledgeCenterAPIs knowledgeCenterClientDSL
   let mediaDSL = API.Types.ProviderPlatform.Management.Media.mkMediaAPIs mediaClientDSL
   let mediaFileDocumentDSL = API.Types.ProviderPlatform.Management.MediaFileDocument.mkMediaFileDocumentAPIs mediaFileDocumentClientDSL
@@ -136,7 +133,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> cancellationConsequenceClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> farePolicyV2ClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> geohashAreaClientDSL :<|> incentiveJourneyClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> pricingClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> scheduledBookingClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> cancellationConsequenceClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> farePolicyV2ClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> geohashAreaClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> pricingClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> scheduledBookingClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

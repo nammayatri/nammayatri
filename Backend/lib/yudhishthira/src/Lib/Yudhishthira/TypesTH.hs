@@ -32,6 +32,12 @@ class GenericDefaults a where
 instance GenericDefaults Kernel.Types.Version.DeviceType where
   genDef _ = [Kernel.Types.Version.IOS]
 
+-- | Same rationale as DeviceType: Aeson Value appears on many configs (UiDriverConfig,
+-- IncentiveJourneyMilestone.rewardMetadata, …). Without a canonical instance, each splice
+-- emits its own orphan @GenericDefaults Value@ and they overlap at use sites.
+instance GenericDefaults Value where
+  genDef _ = [object []]
+
 checkInstance :: Name -> Type -> Q Bool
 checkInstance className typ = isInstance className [typ]
 
@@ -81,6 +87,7 @@ getFieldDefaultValues fieldTypeName = do
                   ]
               )
           ]
+      | fieldTypeName == ''Value = ListE [AppE (VarE 'object) (ListE [])]
       | otherwise = ListE []
 
 -- below just to ease the process a little

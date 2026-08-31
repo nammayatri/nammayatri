@@ -44,17 +44,6 @@ data MetroRideType
   deriving stock (Eq, Show, Generic, Read, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- | Thresholds for multi-metric incentive configs.
--- Every non-Nothing metric must reach its threshold to award coins (AND logic).
-data DriverIncentiveMetrics = DriverIncentiveMetrics
-  { ridesCompleted :: Maybe Kernel.Prelude.Int,
-    totalEarnings :: Maybe Kernel.Prelude.Int,
-    totalTripDistanceMeters :: Maybe Kernel.Prelude.Int,
-    totalRideTimeSeconds :: Maybe Kernel.Prelude.Int
-  }
-  deriving stock (Eq, Ord, Generic, Show, Read)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data DriverCoinsFunctionType
   = OneOrTwoStarRating
   | FiveStarRating
@@ -75,11 +64,11 @@ data DriverCoinsFunctionType
   | RidesCompletedInSpecialLocation Area Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompleted Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompletedSlot Kernel.Prelude.Text Kernel.Prelude.Int
-  | DriverIncentiveCohortMetrics DriverIncentiveMetrics
   | QuizQuestionCompleted
   | BonusQuizCoins
   | CoinsRedemptionRefund
   | FraudCoinsReversal
+  | IncentiveJourneyMilestoneCompleted Kernel.Prelude.Text
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToSchema, ToJSON)
 
@@ -109,9 +98,10 @@ instance Show DriverCoinsFunctionType where
   show (DriverIncentiveCohortRidesCompleted n) = "DriverIncentiveCohortRidesCompleted " <> show n
   show (DriverIncentiveCohortRidesCompletedSlot slot n) =
     "DriverIncentiveCohortRidesCompletedSlot " <> T.unpack slot <> " " <> show n
-  show (DriverIncentiveCohortMetrics metrics) = "DriverIncentiveCohortMetrics " <> show metrics
   show (CoinsRedemptionRefund) = "CoinsRedemptionRefund"
   show (FraudCoinsReversal) = "FraudCoinsReversal"
+  show (IncentiveJourneyMilestoneCompleted journeyName) =
+    "IncentiveJourneyMilestoneCompleted " <> show journeyName
 
 -- These instance are for backward compatibility of the Old Events stored in the DB.
 instance Read DriverCoinsFunctionType where
@@ -239,10 +229,6 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "DriverIncentiveCohortRidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (DriverIncentiveCohortMetrics v1, r2)
-                 | r1 <- stripPrefix "DriverIncentiveCohortMetrics " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (QuizQuestionCompleted, r2)
                  | r1 <- stripPrefix "QuizQuestionCompleted" r,
                    ((), r2) <- pure ((), r1)
@@ -258,6 +244,10 @@ instance Read DriverCoinsFunctionType where
             ++ [ (FraudCoinsReversal, r2)
                  | r1 <- stripPrefix "FraudCoinsReversal" r,
                    ((), r2) <- pure ((), r1)
+               ]
+            ++ [ (IncentiveJourneyMilestoneCompleted journeyName, r2)
+                 | r1 <- stripPrefix "IncentiveJourneyMilestoneCompleted " r,
+                   (journeyName, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
     where
@@ -297,6 +287,7 @@ instance FromJSON DriverCoinsFunctionType where
       "BonusQuizCoins" -> pure BonusQuizCoins
       "CoinsRedemptionRefund" -> pure CoinsRedemptionRefund
       "FraudCoinsReversal" -> pure FraudCoinsReversal
+      "IncentiveJourneyMilestoneCompleted" -> IncentiveJourneyMilestoneCompleted <$> obj .: "contents"
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "RidesCompletedOnServiceTier" -> do
         contents <- obj .: "contents"
@@ -327,7 +318,6 @@ instance FromJSON DriverCoinsFunctionType where
             [String slot, Number n] -> pure $ DriverIncentiveCohortRidesCompletedSlot slot (round n)
             _ -> fail $ "Expected [slot, threshold] for 'DriverIncentiveCohortRidesCompletedSlot', got: " <> show contents
           _ -> fail "Unsupported format for 'DriverIncentiveCohortRidesCompletedSlot' contents"
-      "DriverIncentiveCohortMetrics" -> DriverIncentiveCohortMetrics <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       "MetroRideCompleted" -> do
         contents <- obj .: "contents"

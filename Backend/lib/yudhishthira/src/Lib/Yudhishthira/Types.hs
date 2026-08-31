@@ -438,8 +438,6 @@ isDriverOnlyConfigType = \case
   TagActionNotificationConfig -> True
   FleetOwnerDocumentVerificationConfig -> True
   CoinsConfig -> True
-  IncentiveJourneyConfig -> True
-  IncentiveJourneyMilestoneConfig -> True
   Exophone -> True
   Overlay -> True
   TranslationDriver -> True

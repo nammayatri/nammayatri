@@ -1,0 +1,53 @@
+imports:
+  CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+
+AutoApplyCohortMapping:
+  tableName: auto_apply_cohort_mapping
+
+  fields:
+    id: Id AutoApplyCohortMapping
+    cohortJourneyMappingId: Id CohortJourneyMapping
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: Maybe VehicleCategory
+    allowIfNoMapping: Bool
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # Stored as Text so lib Beam does not orphan the VehicleCategory instance.
+  beamType:
+    vehicleCategory: Maybe Text
+
+  toTType:
+    vehicleCategory: (Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show))|I
+
+  fromTType:
+    vehicleCategory: (Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+
+  constraints:
+    id: PrimaryKey
+    cohortJourneyMappingId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByCohortJourneyMappingId:
+      kvFunction: findAllWithKV
+      where: cohortJourneyMappingId
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, merchantId, vehicleCategory]
+    - columns: [cohortJourneyMappingId, vehicleCategory]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

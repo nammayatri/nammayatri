@@ -1,0 +1,41 @@
+IncentiveJourney:
+  tableName: incentive_journey
+
+  types:
+    IncentiveJourneyType:
+      enum: "Daily, Weekly, Monthly"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <IncentiveJourneyType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <IncentiveJourneyType>
+
+  fields:
+    id: Id IncentiveJourney
+    name: Text
+    description: Maybe Text
+    journeyType: IncentiveJourneyType
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    journeyType: "'Daily'"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAll:
+      kvFunction: findAllWithOptionsKV
+      orderBy: createdAt
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

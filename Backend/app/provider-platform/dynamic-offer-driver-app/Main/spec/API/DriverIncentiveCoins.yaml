@@ -86,11 +86,6 @@ types:
     # One entry per selected scoped config — match by id to the config item and
     # compare rideCount against its ridesThreshold. Empty for unscoped-only setups.
     scopedRideCounts: [DriverIncentiveScopedRideCount]
-    # From DriverIncentiveMetrics Redis JSON blob (day / active timebound window)
-    ridesCompleted: Int
-    totalEarnings: Int
-    totalTripDistanceMeters: Int
-    totalRideTimeSeconds: Int
 
   DriverIncentiveScopedRideCount:
     id: Id CoinsConfig
