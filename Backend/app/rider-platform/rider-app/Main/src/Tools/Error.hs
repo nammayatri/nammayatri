@@ -1435,3 +1435,25 @@ instance IsHTTPError MetaWebhookError where
     MetaWebhookSignatureInvalid -> E400
 
 instance IsAPIError MetaWebhookError
+
+-- | Thrown by WhatsappBot.Adapter.Translations.resolveField when a wired
+-- @wa_bot_*@ field's translation row is missing for a language, with no
+-- fallback available (not even the global English row) -- see that module's
+-- lookupKey for the fallback-to-English case this does NOT cover.
+data WhatsappBotTranslationError
+  = WhatsappBotTranslationNotFound Text Language
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''WhatsappBotTranslationError
+
+instance IsBaseError WhatsappBotTranslationError where
+  toMessage = \case
+    WhatsappBotTranslationNotFound key language -> Just $ "WhatsApp bot translation not found for key: " <> key <> ", language: " <> show language
+
+instance IsHTTPError WhatsappBotTranslationError where
+  toErrorCode = \case
+    WhatsappBotTranslationNotFound _ _ -> "WHATSAPP_BOT_TRANSLATION_NOT_FOUND"
+  toHttpCode = \case
+    WhatsappBotTranslationNotFound _ _ -> E500
+
+instance IsAPIError WhatsappBotTranslationError
