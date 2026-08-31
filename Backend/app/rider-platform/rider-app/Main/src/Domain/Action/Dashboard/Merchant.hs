@@ -798,12 +798,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
             return Nothing
           Just sub | req.city `elem` sub.city -> return Nothing
-          Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
+          Just _ -> do
+            cityStdCode <- getCityStdCode req.city req.cityStdCode >>= fromMaybeM (InvalidRequest "City std code not found")
+            Just <$> RegistryT.buildAddCityNyReq (Context.City cityStdCode :| []) uniqueKeyId subscriberId subType domain
 
   whenJust mbNewOperatingCity $ \newOperatingCity ->
     whenJust newOperatingCity.stdCode $ \stdCode -> do
       let (Context.City cityText) = newOperatingCity.city
-      void $ City.validateAndAppendCityStdCodeMapping cityText stdCode
+      mbMappingError <- City.validateAndAppendCityStdCodeMapping cityText stdCode
+      whenJust mbMappingError $ \mappingError -> throwError $ InvalidRequest mappingError
 
   -- Reject before any DB write if the requested exophone number is already in use by another operating city
   existingExophones <- CQExophone.findAllByPhone req.exophone
