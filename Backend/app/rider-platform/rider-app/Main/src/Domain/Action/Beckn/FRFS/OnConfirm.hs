@@ -257,7 +257,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
   -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
   -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
-  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId || isJust booking.frfsTicketBookingPaymentIdForTicketGeneration) $
     void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -284,7 +284,15 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
   when (FRFSPassOverride.fullyCoveredByPass booking) $
     whenJust mbJourneyId $ \journeyId ->
-      void $ withTryCatch "onConfirm:markJourneyPaid" (QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing)
+      void $
+        withTryCatch "onConfirm:markJourneyPaid" $ do
+          (_, _, allCovered) <- FRFSUtils.journeyFullyPassCovered booking
+          when allCovered $ do
+            QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing
+            mbJourney <- QJourney.findByPrimaryKey journeyId
+            whenJust mbJourney $ \journey ->
+              when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $
+                QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
   return ()
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
