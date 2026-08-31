@@ -9,16 +9,19 @@ module SharedLogic.IncentiveJourney
   ( parseJourneyTags,
     hasJourneyTag,
     selectPreferredJourney,
+    orderJourneysForDisplay,
     mkJourneyPeriodKey,
     mkWeeklyPeriodKey,
     journeyTypeOrDefault,
     isJourneyWindowActive,
     matchesJourneyVehicle,
+    matchesJourneyVehicleForDriver,
     evaluateDriverJourney,
     loadJourneyMilestones,
   )
 where
 
+import Data.List (partition)
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import Data.Time.Calendar.WeekDate (toWeekDate)
@@ -28,26 +31,34 @@ import qualified Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Domain.Types.IncentiveJourneyStats as DIJS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Overlay as DOverlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DTV
-import qualified Domain.Types.VehicleVariant as DTVV
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Hedis (HedisLTSFlowEnv)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
 import qualified Storage.CachedQueries.IncentiveJourneyStats as CQStats
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import Storage.ConfigPilot.Config.IncentiveJourney (IncentiveJourneyDimensions (..))
 import Storage.ConfigPilot.Config.IncentiveJourneyMilestone (IncentiveJourneyMilestoneDimensions (..))
-import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.IncentiveJourneyStats as QStats
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error
+import Tools.Notifications (mkOverlayReq, sendOverlay)
 
 -- | Parse Journey#<tag> values from driver tags. Value may contain "&"-separated segments.
 parseJourneyTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
@@ -66,13 +77,13 @@ hasJourneyTag = not . null . parseJourneyTags
 journeyTypeOrDefault :: Maybe DIJ.IncentiveJourneyType -> DIJ.IncentiveJourneyType
 journeyTypeOrDefault = fromMaybe DIJ.Daily
 
--- | Prefer a journey that is currently inside start/end date AND active timebound peak.
--- Else fall back to first matching journey (for "come back later" UI).
 selectPreferredJourney :: UTCTime -> [DIJ.IncentiveJourney] -> Maybe DIJ.IncentiveJourney
-selectPreferredJourney localTime journeys =
-  case filter (isJourneyWindowActive localTime) journeys of
-    (j : _) -> Just j
-    [] -> listToMaybe journeys
+selectPreferredJourney localTime = listToMaybe . orderJourneysForDisplay localTime
+
+orderJourneysForDisplay :: UTCTime -> [DIJ.IncentiveJourney] -> [DIJ.IncentiveJourney]
+orderJourneysForDisplay localTime journeys =
+  let (active, inactive) = partition (isJourneyWindowActive localTime) journeys
+   in active <> inactive
 
 isJourneyWindowActive :: UTCTime -> DIJ.IncentiveJourney -> Bool
 isJourneyWindowActive localTime journey =
@@ -86,14 +97,18 @@ isJourneyWindowActive localTime journey =
         _ -> True
    in inDateRange && inTimeBound
 
-matchesJourneyVehicle :: DIJ.IncentiveJourney -> DTV.VehicleCategory -> Maybe DTVV.VehicleVariant -> Bool
-matchesJourneyVehicle journey vehCategory mbVehicleVariant =
+matchesJourneyVehicle :: DIJ.IncentiveJourney -> DTV.VehicleCategory -> Maybe DCommon.ServiceTierType -> Bool
+matchesJourneyVehicle journey vehCategory mbServiceTier =
   (isNothing journey.vehicleCategory || journey.vehicleCategory == Just vehCategory)
-    && (isNothing journey.vehicleVariant || journey.vehicleVariant == mbVehicleVariant)
+    && (isNothing journey.serviceTierType || journey.serviceTierType == mbServiceTier)
 
--- | Stats uniqueness bucket for one evaluation window.
--- Daily (default): Day:YYYY-MM-DD or TimeBound:YYYY-MM-DD:<peak>
--- Weekly: Week:YYYY-Www (ISO week) — progress accumulates across the week in DB.
+matchesJourneyVehicleForDriver :: DIJ.IncentiveJourney -> DTV.VehicleCategory -> [DCommon.ServiceTierType] -> Bool
+matchesJourneyVehicleForDriver journey vehCategory selectedServiceTiers =
+  (isNothing journey.vehicleCategory || journey.vehicleCategory == Just vehCategory)
+    && ( isNothing journey.serviceTierType
+           || maybe False (`elem` selectedServiceTiers) journey.serviceTierType
+       )
+
 mkJourneyPeriodKey :: UTCTime -> DIJ.IncentiveJourney -> Text
 mkJourneyPeriodKey localTime journey =
   case journeyTypeOrDefault journey.journeyType of
@@ -191,17 +206,132 @@ loadJourneyMilestones merchantOpCityId journeyId =
     )
     (Just $ CQMilestone.findByJourneyId journeyId)
 
+milestoneCompletedOverlayKey :: Text
+milestoneCompletedOverlayKey = "INCENTIVE_JOURNEY_MILESTONE_COMPLETED"
+
+overlayTemplateText :: Text -> Text
+overlayTemplateText txt = "{#" <> txt <> "#}"
+
+formatRidesCompleted :: Int -> Maybe Text -> Text
+formatRidesCompleted n mbQualifier =
+  let rideWord = if n == 1 then "ride" else "rides"
+   in case mbQualifier of
+        Nothing -> show n <> " " <> rideWord <> " completed"
+        Just qualifier -> show n <> " " <> qualifier <> " " <> rideWord <> " completed"
+
+formatEarningsCompleted :: Int -> Text
+formatEarningsCompleted n = "Rs " <> show n <> " earned"
+
+formatDistanceCompleted :: Int -> Text
+formatDistanceCompleted meters
+  | meters >= 1000 && meters `mod` 1000 == 0 =
+    show (meters `div` 1000) <> " km covered"
+  | otherwise =
+    show meters <> " m covered"
+
+formatDurationCompleted :: Int -> Text
+formatDurationCompleted seconds
+  | seconds >= 3600 && seconds `mod` 3600 == 0 =
+    show (seconds `div` 3600) <> " hr completed"
+  | seconds >= 60 && seconds `mod` 60 == 0 =
+    show (seconds `div` 60) <> " min completed"
+  | otherwise =
+    show seconds <> " sec completed"
+
+resolveSpecialLocationNameFromId ::
+  (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Maybe Text ->
+  m Text
+resolveSpecialLocationNameFromId = \case
+  Nothing -> pure "special location"
+  Just slIdText -> do
+    mbSpecialLocation <- QSpecialLocation.findById (Id slIdText)
+    pure $ maybe slIdText (.locationName) mbSpecialLocation
+
+buildMilestoneTargetDescription ::
+  (MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Maybe Text ->
+  Maybe Text ->
+  DIJM.IncentiveJourneyMilestone ->
+  m Text
+buildMilestoneTargetDescription mbRidePickupSpecialLocationId mbRideDropSpecialLocationId milestone =
+  case milestone.conditionType of
+    DIJM.RideCompleted ->
+      pure $ formatRidesCompleted milestone.conditionValue Nothing
+    DIJM.Earnings ->
+      pure $ formatEarningsCompleted milestone.conditionValue
+    DIJM.Distance ->
+      pure $ formatDistanceCompleted milestone.conditionValue
+    DIJM.RideDuration ->
+      pure $ formatDurationCompleted milestone.conditionValue
+    DIJM.PickupSpecialLocation -> do
+      pickupLabel <- resolveSpecialLocationNameFromId mbRidePickupSpecialLocationId
+      pure $ formatRidesCompleted milestone.conditionValue (Just pickupLabel)
+    DIJM.DropSpecialLocation -> do
+      dropLabel <- resolveSpecialLocationNameFromId mbRideDropSpecialLocationId
+      pure $ formatRidesCompleted milestone.conditionValue (Just dropLabel)
+    DIJM.PickupDropSpecialLocation -> do
+      pickupLabel <- resolveSpecialLocationNameFromId mbRidePickupSpecialLocationId
+      dropLabel <- resolveSpecialLocationNameFromId mbRideDropSpecialLocationId
+      pure $ formatRidesCompleted milestone.conditionValue (Just $ pickupLabel <> " to " <> dropLabel)
+
+applyMilestoneOverlayTemplates :: DIJ.IncentiveJourney -> Text -> DIJM.IncentiveJourneyMilestone -> Int -> Text -> Text
+applyMilestoneOverlayTemplates journey milestoneTarget milestone displayReward txt =
+  T.replace (overlayTemplateText "journeyName") journey.name
+    . T.replace (overlayTemplateText "milestoneDescription") milestoneTarget
+    . T.replace (overlayTemplateText "milestoneOrder") (show milestone.order)
+    . T.replace (overlayTemplateText "rewardAmount") (show displayReward)
+    . T.replace (overlayTemplateText "rewardType") (show milestone.rewardType)
+    $ txt
+
+displayMilestoneRewardAmount :: Int -> DIJM.IncentiveJourneyMilestone -> Int
+displayMilestoneRewardAmount awarded milestone =
+  if awarded > 0 then awarded else fromMaybe 0 milestone.rewardValue
+
+sendMilestoneCompletedOverlay ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  DIJ.IncentiveJourney ->
+  DIJM.IncentiveJourneyMilestone ->
+  Maybe Text ->
+  Maybe Text ->
+  Int ->
+  m ()
+sendMilestoneCompletedOverlay merchantOpCityId driverId journey milestone mbRidePickupSpecialLocationId mbRideDropSpecialLocationId awarded = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  mOverlay <-
+    CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory
+      merchantOpCityId
+      milestoneCompletedOverlayKey
+      (fromMaybe ENGLISH driver.language)
+      Nothing
+      Nothing
+      Nothing
+  whenJust mOverlay $ \overlay -> do
+    milestoneTarget <- buildMilestoneTargetDescription mbRidePickupSpecialLocationId mbRideDropSpecialLocationId milestone
+    let displayReward = displayMilestoneRewardAmount awarded milestone
+        applyTemplates = applyMilestoneOverlayTemplates journey milestoneTarget milestone displayReward
+        overlay' =
+          overlay
+            { DOverlay.title = fmap applyTemplates overlay.title,
+              DOverlay.description = fmap applyTemplates overlay.description,
+              DOverlay.okButtonText = fmap applyTemplates overlay.okButtonText,
+              DOverlay.cancelButtonText = fmap applyTemplates overlay.cancelButtonText,
+              DOverlay.toastMessage = fmap applyTemplates overlay.toastMessage,
+              DOverlay.actions = [milestoneCompletedOverlayKey]
+            }
+    sendOverlay merchantOpCityId driver $ mkOverlayReq overlay'
+
 -- | EndRide journey evaluation. Call only when driver has a Journey# tag.
--- Progress is stored in incentive_journey_stats (DB); does not read Redis metrics.
 evaluateDriverJourney ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Coins.EventFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Coins.EventFlow m r, HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Maybe [LYT.TagNameValueExpiry] ->
   DTV.VehicleCategory ->
-  Maybe DTVV.VehicleVariant ->
   Maybe DCommon.ServiceTierType ->
   Maybe Text ->
   Maybe Text ->
@@ -209,7 +339,7 @@ evaluateDriverJourney ::
   UTCTime ->
   IncentiveMetrics.RideIncentiveDeltas ->
   m ()
-evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig driverTag vehCategory mbVehicleVariant mbServiceTier mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
+evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig driverTag vehCategory mbServiceTier mbEntityId mbPickupSpecialLocationId mbDropSpecialLocationId timeBoundReferenceUtc rideDeltas = do
   let journeyTags = parseJourneyTags driverTag
   when (null journeyTags) $
     logInfo $ "evaluateDriverJourney called with no Journey tags for driver " <> driverId.getId
@@ -222,7 +352,7 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig dri
               journeyId = Nothing,
               enabled = Just True,
               vehicleCategory = Nothing,
-              vehicleVariant = Nothing
+              serviceTierType = Nothing
             }
         )
         (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -231,32 +361,35 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig dri
             ( \j ->
                 j.merchantId == merchantId
                   && j.driverTag `elem` journeyTags
-                  && matchesJourneyVehicle j vehCategory mbVehicleVariant
+                  && matchesJourneyVehicle j vehCategory mbServiceTier
             )
             enabledJourneys
-    case selectPreferredJourney localTime matching of
-      Nothing ->
-        logInfo $ "No matching IncentiveJourney for driver " <> driverId.getId <> " tags=" <> show journeyTags
-      Just journey -> do
-        if not (isJourneyWindowActive localTime journey)
-          then
+        activeMatching = filter (isJourneyWindowActive localTime) matching
+    case activeMatching of
+      [] ->
+        if null matching
+          then logInfo $ "No matching IncentiveJourney for driver " <> driverId.getId <> " tags=" <> show journeyTags
+          else
             logInfo $
-              "IncentiveJourney "
-                <> journey.id.getId
-                <> " matched but outside active window; skipping evaluation"
-          else do
-            let periodKey = mkJourneyPeriodKey localTime journey
-            milestones <- loadJourneyMilestones merchantOpCityId journey.id
-            ensureMilestoneStatsRows driverId merchantId merchantOpCityId journey.id periodKey milestones
-            logInfo $
-              "Evaluating IncentiveJourney "
-                <> journey.id.getId
-                <> " journeyType="
-                <> show (journeyTypeOrDefault journey.journeyType)
-                <> " periodKey="
-                <> periodKey
-                <> " milestones="
-                <> show (length milestones)
+              "IncentiveJourney(s) matched for driver "
+                <> driverId.getId
+                <> " but outside active window; skipping evaluation tags="
+                <> show journeyTags
+      journeysToEvaluate ->
+        forM_ journeysToEvaluate $ \journey -> do
+          let periodKey = mkJourneyPeriodKey localTime journey
+          milestones <- loadJourneyMilestones merchantOpCityId journey.id
+          ensureMilestoneStatsRows driverId merchantId merchantOpCityId journey.id periodKey milestones
+          logInfo $
+            "Evaluating IncentiveJourney "
+              <> journey.id.getId
+              <> " journeyType="
+              <> show (journeyTypeOrDefault journey.journeyType)
+              <> " periodKey="
+              <> periodKey
+              <> " milestones="
+              <> show (length milestones)
+          void $
             evaluateMilestonesInOrder
               driverId
               merchantId
@@ -272,7 +405,6 @@ evaluateDriverJourney driverId merchantId merchantOpCityId transporterConfig dri
               mbEntityId
               milestones
 
--- | Create NotStarted / 0 rows for milestones missing stats in this period.
 ensureMilestoneStatsRows ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DP.Person ->
@@ -310,7 +442,7 @@ ensureMilestoneStatsRows driverId merchantId merchantOpCityId journeyId periodKe
             }
 
 evaluateMilestonesInOrder ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Coins.EventFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Coins.EventFlow m r, HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -376,15 +508,11 @@ evaluateMilestonesInOrder driverId merchantId merchantOpCityId transporterConfig
               merchantId
               merchantOpCityId
               transporterConfig
+              journey
               milestone
               vehCategory
               mbServiceTier
-              mbEntityId
-          let shouldComplete =
-                case milestone.rewardType of
-                  DIJM.Coins -> awarded > 0
-                  DIJM.Cash -> True
-                  DIJM.Coupons -> True
+          let shouldComplete = awarded > 0
           if shouldComplete
             then do
               void $
@@ -393,6 +521,9 @@ evaluateMilestonesInOrder driverId merchantId merchantOpCityId transporterConfig
                     { DIJS.status = DIJS.Completed,
                       DIJS.rewardValue = Just awarded
                     }
+              void $
+                withTryCatch "IncentiveJourney:sendMilestoneCompletedOverlay" $
+                  sendMilestoneCompletedOverlay merchantOpCityId driverId journey milestone mbPickupSpecialLocationId mbDropSpecialLocationId awarded
               evaluateMilestonesInOrder driverId merchantId merchantOpCityId transporterConfig journey periodKey rideDeltas mbPickupSpecialLocationId mbDropSpecialLocationId vehCategory mbServiceTier mbEntityId rest
             else do
               void $ CQStats.upsertJourneyStats baseStats {DIJS.status = DIJS.InProgress, DIJS.rewardValue = Nothing}
@@ -404,56 +535,51 @@ awardMilestoneReward ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
+  DIJ.IncentiveJourney ->
   DIJM.IncentiveJourneyMilestone ->
   DTV.VehicleCategory ->
   Maybe DCommon.ServiceTierType ->
-  Maybe Text ->
   m Int
-awardMilestoneReward driverId merchantId merchantOpCityId transporterConfig milestone vehCategory mbServiceTier mbEntityId =
+awardMilestoneReward driverId merchantId merchantOpCityId transporterConfig journey milestone vehCategory mbServiceTier =
   case milestone.rewardType of
     DIJM.Coins ->
-      case milestone.rewardConfigId of
+      case milestone.rewardValue of
         Nothing -> do
           logInfo $
             "Journey milestone "
               <> milestone.id.getId
-              <> " has Coins rewardType but no rewardConfigId; skipping award"
+              <> " has Coins rewardType but no rewardValue; skipping award"
           pure 0
-        Just configId -> do
-          mbConfig <- SQCC.findById configId
-          case mbConfig of
-            Nothing -> do
-              logError $
-                "CoinsConfig "
-                  <> configId.getId
-                  <> " not found for journey milestone "
-                  <> milestone.id.getId
-              pure 0
-            Just coinsConfig -> do
-              let coinsToAward = coinsConfig.coins
-              awarded <-
-                Coins.updateEventAndGetCoinsvalue
-                  driverId
-                  merchantId
-                  merchantOpCityId
-                  coinsConfig.eventFunction
-                  coinsConfig.expirationAt
-                  coinsToAward
-                  mbEntityId
-                  vehCategory
-                  mbServiceTier
-              when (awarded > 0) $
-                Coins.updateDriverCoins driverId awarded transporterConfig.timeDiffFromUtc
-              logInfo $
-                "Awarded "
-                  <> show awarded
-                  <> " coins for journey milestone "
-                  <> milestone.id.getId
-                  <> " driver "
-                  <> driverId.getId
-                  <> " from coinsConfig "
-                  <> configId.getId
-              pure awarded
+        Just coinsToAward | coinsToAward <= 0 -> do
+          logInfo $
+            "Journey milestone "
+              <> milestone.id.getId
+              <> " has non-positive rewardValue; skipping award"
+          pure 0
+        Just coinsToAward -> do
+          awarded <-
+            Coins.awardJourneyMilestoneCoins
+              driverId
+              merchantId
+              merchantOpCityId
+              journey.name
+              milestone.rewardExpirationAt
+              coinsToAward
+              (Just milestone.id.getId)
+              vehCategory
+              mbServiceTier
+          when (awarded > 0) $
+            Coins.updateDriverCoins driverId awarded transporterConfig.timeDiffFromUtc
+          logInfo $
+            "Awarded "
+              <> show awarded
+              <> " coins for journey milestone "
+              <> milestone.id.getId
+              <> " driver "
+              <> driverId.getId
+              <> " journey "
+              <> journey.name
+          pure awarded
     DIJM.Cash -> do
       logInfo $ "Cash reward deferred for journey milestone " <> milestone.id.getId
       pure 0

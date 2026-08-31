@@ -1,9 +1,8 @@
 imports:
   IncentiveJourney: Dashboard.Common
   IncentiveJourneyMilestone: Dashboard.Common
-  CoinsConfig: Dashboard.Common
   VehicleCategory: Domain.Types.VehicleCategory
-  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
   TimeBound: Kernel.Types.TimeBound
 
 module: IncentiveJourney
@@ -97,7 +96,7 @@ types:
     - startDate: UTCTime
     - endDate: UTCTime
     - vehicleCategory: Maybe VehicleCategory
-    - vehicleVariant: Maybe VehicleVariant
+    - serviceTierType: Maybe ServiceTierType
     - enabled: Bool
     - derive: "'HideSecrets"
 
@@ -114,7 +113,7 @@ types:
     - startDate: Maybe UTCTime
     - endDate: Maybe UTCTime
     - vehicleCategory: Maybe VehicleCategory
-    - vehicleVariant: Maybe VehicleVariant
+    - serviceTierType: Maybe ServiceTierType
     - enabled: Maybe Bool
     - derive: "'HideSecrets"
 
@@ -128,7 +127,7 @@ types:
     - startDate: UTCTime
     - endDate: UTCTime
     - vehicleCategory: Maybe VehicleCategory
-    - vehicleVariant: Maybe VehicleVariant
+    - serviceTierType: Maybe ServiceTierType
     - enabled: Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
@@ -146,8 +145,8 @@ types:
     - pickupSpecialLocationIds: Maybe [Text]
     - dropSpecialLocationIds: Maybe [Text]
     - rewardType: MilestoneRewardType
-    - rewardConfigId: Maybe (Id CoinsConfig)
     - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
     - derive: "'HideSecrets"
 
   CreateIncentiveJourneyMilestoneRes:
@@ -163,8 +162,8 @@ types:
     - pickupSpecialLocationIds: Maybe [Text]
     - dropSpecialLocationIds: Maybe [Text]
     - rewardType: Maybe MilestoneRewardType
-    - rewardConfigId: Maybe (Id CoinsConfig)
     - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
     - derive: "'HideSecrets"
 
   IncentiveJourneyMilestoneListItem:
@@ -178,8 +177,8 @@ types:
     - pickupSpecialLocationIds: Maybe [Text]
     - dropSpecialLocationIds: Maybe [Text]
     - rewardType: MilestoneRewardType
-    - rewardConfigId: Maybe (Id CoinsConfig)
     - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
 

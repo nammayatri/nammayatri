@@ -30,53 +30,53 @@ handler merchantId city = getIncentiveJourneyList merchantId city :<|> postIncen
 
 type GetIncentiveJourneyList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.GET_INCENTIVE_JOURNEY_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.GET_INCENTIVE_JOURNEY_LIST)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.GetIncentiveJourneyList
   )
 
 type PostIncentiveJourneyCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.POST_INCENTIVE_JOURNEY_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.POST_INCENTIVE_JOURNEY_CREATE)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.PostIncentiveJourneyCreate
   )
 
 type PutIncentiveJourneyUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.PUT_INCENTIVE_JOURNEY_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.PUT_INCENTIVE_JOURNEY_UPDATE)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.PutIncentiveJourneyUpdate
   )
 
 type GetIncentiveJourneyMilestoneList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.GET_INCENTIVE_JOURNEY_MILESTONE_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.GET_INCENTIVE_JOURNEY_MILESTONE_LIST)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.GetIncentiveJourneyMilestoneList
   )
 
 type PostIncentiveJourneyMilestoneCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.POST_INCENTIVE_JOURNEY_MILESTONE_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.POST_INCENTIVE_JOURNEY_MILESTONE_CREATE)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.PostIncentiveJourneyMilestoneCreate
   )
 
 type PutIncentiveJourneyMilestoneUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY) / ('API.Types.ProviderPlatform.Management.IncentiveJourney.PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.INCENTIVE_JOURNEY / 'API.Types.ProviderPlatform.Management.IncentiveJourney.PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE)
       :> API.Types.ProviderPlatform.Management.IncentiveJourney.PutIncentiveJourneyMilestoneUpdate
   )
 
-getIncentiveJourneyList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyListRes)
+getIncentiveJourneyList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyListRes)
 getIncentiveJourneyList merchantShortId opCity apiTokenInfo limit offset enabled driverTag = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.IncentiveJourney.getIncentiveJourneyList merchantShortId opCity apiTokenInfo limit offset enabled driverTag
 
 postIncentiveJourneyCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.IncentiveJourney.CreateIncentiveJourneyReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.CreateIncentiveJourneyRes)
@@ -85,7 +85,7 @@ postIncentiveJourneyCreate merchantShortId opCity apiTokenInfo req = withFlowHan
 putIncentiveJourneyUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.IncentiveJourney.UpdateIncentiveJourneyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putIncentiveJourneyUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.IncentiveJourney.putIncentiveJourneyUpdate merchantShortId opCity apiTokenInfo req
 
-getIncentiveJourneyMilestoneList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyMilestoneListRes)
+getIncentiveJourneyMilestoneList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyMilestoneListRes)
 getIncentiveJourneyMilestoneList merchantShortId opCity apiTokenInfo limit offset journeyId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.IncentiveJourney.getIncentiveJourneyMilestoneList merchantShortId opCity apiTokenInfo limit offset journeyId
 
 postIncentiveJourneyMilestoneCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.IncentiveJourney.CreateIncentiveJourneyMilestoneReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.IncentiveJourney.CreateIncentiveJourneyMilestoneRes)

@@ -702,15 +702,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               expirationPeriod
               thresholdConfig.timeDiffFromUtc
               timeBoundReferenceUtc
-            DC.incrementIncentiveMetricsForRide
-              driverId
-              booking.providerId
-              booking.merchantOperatingCityId
-              vehCategory
-              rideDeltas
-              expirationPeriod
-              thresholdConfig.timeDiffFromUtc
-              timeBoundReferenceUtc
             DC.incrementScopedValidRideCounts DCT.DynamicOfferTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
             -- Journey# tag takes precedence: skip Incentive# / legacy coin flow.
             if SLJourney.hasJourneyTag driverTag
@@ -722,7 +713,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   thresholdConfig
                   driverTag
                   vehCategory
-                  ride.vehicleVariant
                   (Just booking.vehicleServiceTier)
                   (Just ride.id.getId)
                   mbPickupSpecialLocationId
@@ -737,7 +727,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 driverTag = mbDriver >>= (.driverTag)
                 mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
                 mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
-            -- Scoped valid-ride counters for OTP rides (variant / pickup SL / drop SL).
             DC.incrementScopedValidRideCounts DCT.OTPRideTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
             DC.incrementValidRideCountForTimeBoundCohort
               driverId
@@ -748,7 +737,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               expirationPeriod
               thresholdConfig.timeDiffFromUtc
               timeBoundReferenceUtc
-            -- Journey# drivers skip legacy/incentive coin awards on OTP rides too.
             unless (SLJourney.hasJourneyTag driverTag) $
               DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
 

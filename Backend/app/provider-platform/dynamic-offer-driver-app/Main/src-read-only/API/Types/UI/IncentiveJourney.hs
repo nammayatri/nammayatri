@@ -4,11 +4,11 @@ module API.Types.UI.IncentiveJourney where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.Common
 import qualified Domain.Types.IncentiveJourney
 import qualified Domain.Types.IncentiveJourneyMilestone
 import qualified Domain.Types.IncentiveJourneyStats
 import qualified Domain.Types.VehicleCategory
-import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -50,10 +50,10 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     journeyType :: Kernel.Prelude.Maybe Domain.Types.IncentiveJourney.IncentiveJourneyType,
     milestones :: [IncentiveJourneyMilestoneItem],
     name :: Data.Text.Text,
+    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,
     startDate :: Kernel.Prelude.UTCTime,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

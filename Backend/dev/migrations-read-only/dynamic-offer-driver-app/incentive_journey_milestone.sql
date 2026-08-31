@@ -8,7 +8,6 @@ ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN descri
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN journey_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN "order" integer NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN reward_config_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN reward_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN reward_value integer ;
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
@@ -27,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN drop_s
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY incentive_journey_milestone_idx_journey_id ON atlas_driver_offer_bpp.incentive_journey_milestone USING btree (journey_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey_milestone ADD COLUMN reward_expiration_at integer ;

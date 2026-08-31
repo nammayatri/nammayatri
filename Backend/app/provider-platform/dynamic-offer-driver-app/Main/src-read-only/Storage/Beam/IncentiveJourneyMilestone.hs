@@ -12,22 +12,22 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data IncentiveJourneyMilestoneT f = IncentiveJourneyMilestoneT
-  { conditionOperator :: (B.C f (Kernel.Prelude.Maybe Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator)),
-    conditionType :: (B.C f Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType),
-    conditionValue :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    dropSpecialLocationIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    id :: (B.C f Kernel.Prelude.Text),
-    journeyId :: (B.C f Kernel.Prelude.Text),
-    order :: (B.C f Kernel.Prelude.Int),
-    pickupSpecialLocationIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    rewardConfigId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    rewardType :: (B.C f Domain.Types.IncentiveJourneyMilestone.MilestoneRewardType),
-    rewardValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { conditionOperator :: B.C f (Kernel.Prelude.Maybe Domain.Types.IncentiveJourneyMilestone.MilestoneConditionOperator),
+    conditionType :: B.C f Domain.Types.IncentiveJourneyMilestone.MilestoneConditionType,
+    conditionValue :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dropSpecialLocationIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    id :: B.C f Kernel.Prelude.Text,
+    journeyId :: B.C f Kernel.Prelude.Text,
+    order :: B.C f Kernel.Prelude.Int,
+    pickupSpecialLocationIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    rewardExpirationAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    rewardType :: B.C f Domain.Types.IncentiveJourneyMilestone.MilestoneRewardType,
+    rewardValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -37,6 +37,6 @@ instance B.Table IncentiveJourneyMilestoneT where
 
 type IncentiveJourneyMilestone = IncentiveJourneyMilestoneT Identity
 
-$(enableKVPG (''IncentiveJourneyMilestoneT) [('id)] [[('journeyId)]])
+$(enableKVPG ''IncentiveJourneyMilestoneT ['id] [['journeyId]])
 
-$(mkTableInstances (''IncentiveJourneyMilestoneT) "incentive_journey_milestone")
+$(mkTableInstances ''IncentiveJourneyMilestoneT "incentive_journey_milestone")
