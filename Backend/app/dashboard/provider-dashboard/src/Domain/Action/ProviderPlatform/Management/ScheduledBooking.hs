@@ -4,6 +4,7 @@ module Domain.Action.ProviderPlatform.Management.ScheduledBooking
   ( getScheduledBookingList,
     getScheduledBookingInfo,
     getScheduledBookingDriverDistance,
+    getScheduledBookingNearbyDrivers,
     postScheduledBookingAssign,
     postScheduledBookingUnassign,
   )
@@ -51,3 +52,8 @@ postScheduledBookingUnassign merchantShortId opCity apiTokenInfo transactionId =
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.scheduledBookingDSL.postScheduledBookingUnassign) transactionId (Kernel.Prelude.Just apiTokenInfo.personId.getId)
+
+getScheduledBookingNearbyDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Double) -> Environment.Flow API.Types.ProviderPlatform.Management.ScheduledBooking.NearbyDriversRes)
+getScheduledBookingNearbyDrivers merchantShortId opCity apiTokenInfo transactionId radiusKm = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.scheduledBookingDSL.getScheduledBookingNearbyDrivers) transactionId radiusKm
