@@ -84,6 +84,7 @@ data RiderConfigT f = RiderConfigT
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableIGMIssueFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
+    enableMetroFrfsSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableMultiModalForAllUsers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOnlinePaymentRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePaymentRefunds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
