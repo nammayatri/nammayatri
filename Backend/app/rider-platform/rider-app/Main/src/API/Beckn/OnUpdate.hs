@@ -66,6 +66,8 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ 
             if req.isSynchronousOnUpdateProcessing
               then onUpdateProcessAction
               else fork "on update processing" $ onUpdateProcessAction
+          DOnUpdate.OUValidatedEstimateRepetitionReq _ -> onUpdateProcessAction
+          DOnUpdate.OUValidatedQuoteRepetitionReq _ -> onUpdateProcessAction
           _ -> fork "on update processing" $ onUpdateProcessAction
         fork "on update received pushing ondc logs" do
           booking <- case validatedOnUpdateReq of
