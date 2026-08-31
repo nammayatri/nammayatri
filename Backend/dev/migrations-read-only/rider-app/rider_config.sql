@@ -860,3 +860,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_subway_frfs_search boolean 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_metro_frfs_search boolean ;
+
+
+------- SQL updates -------
+
