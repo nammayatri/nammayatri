@@ -131,6 +131,9 @@ data GetQuotesRes = GetQuotesRes
 data SuggestedEstimates = SuggestedEstimates
   { -- | The search request these estimates belong to. Selecting any of them books this one.
     searchId :: Id SSR.SearchRequest,
+    -- | Which end (or ends) of the ride this moves, stated rather than left to be inferred
+    -- from which of the two points below is set.
+    kind :: Maybe BRP.BetterPointKind,
     estimates :: [UEstimate.EstimateAPIEntity],
     -- | Where to walk from, and to. Absent when that end of the ride is unchanged.
     suggestedPickup :: Maybe DL.LocationAPIEntity,
@@ -369,15 +372,18 @@ loadSuggestedEstimates mbRiderConfig searchRequest
   | searchRequest.hasBetterPointSuggestion /= Just True = pure Nothing
   | isJust searchRequest.parentSearchRequestId = pure Nothing
   | otherwise =
-    QSR.findFirstByParentSearchRequestId searchRequest.id >>= \case
+    BRPC.getSuggestedSearchCtx searchRequest.id >>= \case
       Nothing -> pure Nothing
-      Just shadow -> do
-        shadowEstimates <- QEstimate.findAllBySRId shadow.id
+      Just ctx -> runMaybeT $ do
+        -- The shadow is named by the context, never searched for: all of a search's shadows
+        -- share the parent's 'createdAt', so any ordering over them picks an arbitrary one,
+        -- and the customer is shown a shape that was not the one we chose for them.
+        inlineSearchId <- MaybeT $ pure ctx.inlineSearchId
+        shadow <- MaybeT $ QSR.findById inlineSearchId
+        shadowEstimates <- lift $ QEstimate.findAllBySRId shadow.id
         -- Geometry only: the alternates' fares are still being fetched in the background,
-        -- and are collected separately through 'loadAlternateSuggestions'. Absent once the
-        -- search's cached context has expired.
-        alternates <- maybe [] (.alternates) <$> BRPC.getSuggestedSearchCtx searchRequest.id
-        mkSuggestedEstimates shadow shadowEstimates (mkSuggestedOption <$> alternates)
+        -- and are collected separately through 'loadAlternateSuggestions'.
+        MaybeT $ mkSuggestedEstimates shadow shadowEstimates (mkSuggestedOption <$> ctx.alternates)
 
 -- | Renders a shadow search's estimates for the customer. Takes the shadow search request
 -- itself, since that is what carries the moved pickup/drop and the saving.
@@ -396,6 +402,7 @@ mkSuggestedEstimates shadow estimateList alternatives = do
       pure . Just $
         SuggestedEstimates
           { searchId = shadow.id,
+            kind = betterPointKind shadow.betterPointWalkToPickup shadow.betterPointWalkFromDrop,
             estimates = apiEstimates,
             -- Only the end that actually moved gets a location; the other is unchanged from
             -- what the customer entered, so repeating it would imply a walk that isn't there.
@@ -407,6 +414,16 @@ mkSuggestedEstimates shadow estimateList alternatives = do
             alternatives
           }
     _ -> pure Nothing
+
+-- | The shape a shadow describes, read back off the walk distances. 'buildShadowSearchRes'
+-- sets each of those from the matching end of the 'BRP.BetterRoute', so this recovers the
+-- kind exactly rather than guessing at it.
+betterPointKind :: Maybe Meters -> Maybe Meters -> Maybe BRP.BetterPointKind
+betterPointKind mbWalkToPickup mbWalkFromDrop = case (mbWalkToPickup, mbWalkFromDrop) of
+  (Just _, Just _) -> Just BRP.BOTH
+  (Just _, Nothing) -> Just BRP.PICKUP
+  (Nothing, Just _) -> Just BRP.DROP
+  (Nothing, Nothing) -> Nothing
 
 -- | The fares for the alternate shapes, as far as they have arrived.
 --
