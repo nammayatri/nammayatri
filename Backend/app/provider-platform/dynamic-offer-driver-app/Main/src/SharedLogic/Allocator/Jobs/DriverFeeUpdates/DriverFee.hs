@@ -459,7 +459,8 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
       waiveOffValidTillIst = fmap (addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)) waiveOffValidTill
-      waiveOffMultiplier = if (waiveOffMode == DPlan.NO_WAIVE_OFF || maybe True (driverFee.startTime >) waiveOffValidTillIst) then 1.0 else (1.0 - (waiveOffPercentage / 100)) -- If there is no driver plan or waive-off validity is Nothing, no discount applies
+      isWaiveOffActive = waiveOffMode /= DPlan.NO_WAIVE_OFF && maybe False (driverFee.startTime <=) waiveOffValidTillIst
+      waiveOffMultiplier = if isWaiveOffActive then (1.0 - (waiveOffPercentage / 100)) else 1.0
       feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
       feeWithoutDiscountWithWaiveOffAndSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
@@ -470,7 +471,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
     else do
       offerResp <- do
         case waiveOffMode of
-          DPlan.WITHOUT_OFFER -> return []
+          DPlan.WITHOUT_OFFER | isWaiveOffActive -> return []
           _ -> do
             subscriptionConfig <-
               CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driverFee.merchantOperatingCityId Nothing plan.serviceName
