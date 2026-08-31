@@ -21,7 +21,6 @@ module Domain.Action.UI.Quote
     AlternateSuggestionsRes (..),
     mkSuggestedEstimates,
     mkSuggestedOption,
-    loadAlternateSuggestions,
     getQuotes,
     getQuotesFromInMemory,
     estimateBuildLockKey,
@@ -119,7 +118,8 @@ data GetQuotesRes = GetQuotesRes
     paymentMethods :: [DMPM.PaymentMethodAPIEntity],
     allJourneysLoaded :: Bool,
     journey :: Maybe [JourneyData],
-    suggestedEstimates :: Maybe SuggestedEstimates
+    suggestedEstimates :: Maybe SuggestedEstimates,
+    alternateSuggestions :: Maybe AlternateSuggestionsRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -147,8 +147,8 @@ data SuggestedEstimates = SuggestedEstimates
 
 -- | A walk-and-save shape other than the default, described well enough to draw on a map
 -- the moment the search answers. Its fare is not here: pricing was dispatched in the
--- background, and lands via /alternateSuggestion/{searchId}/result -- match it up by
--- 'searchId'. Points are bare coordinates because the app names them with its own
+-- background, and lands in 'alternateSuggestions' on a later results poll -- match it up
+-- by 'searchId'. Points are bare coordinates because the app names them with its own
 -- geocoder, and sends the name back when the customer selects one.
 data SuggestedOption = SuggestedOption
   { -- | The shadow search being priced for this shape.
@@ -201,7 +201,7 @@ data AlternateSuggestion = AlternateSuggestion
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- | Alternates are priced in the background, so this is a poll: 'allLoaded' is False while
--- any of them is still outstanding, and the list grows across calls.
+-- any of them is still outstanding, and the list grows across results polls.
 --
 -- 'allLoaded' means nothing further is coming, not that everything succeeded -- a shape the
 -- provider declined to price settles the same as one it answered, it is simply missing from
@@ -299,7 +299,8 @@ getQuotes searchRequestId mbAllowMultiple = do
     -- polling path the shadow search has been persisting its estimates in the background
     -- since /rideSearch, so read them here.
     mbSuggested <- loadSuggestedEstimates riderConfig searchRequest
-    pure res {suggestedEstimates = mbSuggested}
+    mbAlternates <- loadAlternateSuggestions searchRequest
+    pure res {suggestedEstimates = mbSuggested, alternateSuggestions = mbAlternates}
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
 -- produced by 'Domain.Action.Beckn.OnSearch.onSearch'. Skips the Redis
@@ -350,7 +351,8 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
         journey = journeyData,
         -- Filled in by the caller: the sync path passes it inline, the polling path reads
         -- it from the shadow search. See loadSuggestedEstimates.
-        suggestedEstimates = Nothing
+        suggestedEstimates = Nothing,
+        alternateSuggestions = Nothing
       }
 
 -- | The better-route-point suggestion for a search, if a shadow search was created for it
@@ -409,18 +411,22 @@ mkSuggestedEstimates shadow estimateList alternatives = do
 -- | The fares for the alternate shapes, as far as they have arrived.
 --
 -- Their shadow searches were created and dispatched during /rideSearch and never waited
--- on, so this is a poll: an alternate the provider has not answered for yet is simply
--- absent, and 'allLoaded' stays False until every one of them is in.
-loadAlternateSuggestions :: SSR.SearchRequest -> Flow AlternateSuggestionsRes
+-- on, so this rides along on the results poll: an alternate the provider has not answered
+-- for yet is simply absent, and 'allLoaded' stays False until every one of them is in.
+--
+-- 'Nothing' means no shape was ever offered for this search, so nothing is coming and
+-- there is nothing to poll for -- the same thing an absent 'suggestedEstimates' says.
+loadAlternateSuggestions :: SSR.SearchRequest -> Flow (Maybe AlternateSuggestionsRes)
 loadAlternateSuggestions parent
-  -- Nothing was ever offered for this search, so nothing is still coming.
-  | parent.hasBetterPointSuggestion /= Just True =
-    pure AlternateSuggestionsRes {alternates = [], allLoaded = True}
+  | parent.hasBetterPointSuggestion /= Just True = pure Nothing
+  -- A shadow built by /rideSearch/suggestedFare copies the parent row after the flag was
+  -- set, so it inherits it; it has no shapes of its own.
+  | isJust parent.parentSearchRequestId = pure Nothing
 loadAlternateSuggestions parent = do
   BRPC.getSuggestedSearchCtx parent.id >>= \case
-    -- No context means no suggestion was ever found for this search, or it has expired.
-    -- Either way there is nothing still coming, so this is loaded, not pending.
-    Nothing -> pure AlternateSuggestionsRes {alternates = [], allLoaded = True}
+    -- No context means the search's cached shapes have expired. Nothing is still coming,
+    -- so this is loaded, not pending.
+    Nothing -> pure . Just $ AlternateSuggestionsRes {alternates = [], allLoaded = True}
     Just ctx -> do
       resolved <- forM ctx.alternates $ \alternate -> runMaybeT $ do
         shadow <- MaybeT $ QSR.findById alternate.searchId
@@ -430,7 +436,7 @@ loadAlternateSuggestions parent = do
       -- pass has finished and whatever is missing is not coming.
       dispatched <- BRPC.alternatesDispatched parent.id
       let loaded = catMaybes resolved
-      pure
+      pure . Just $
         AlternateSuggestionsRes
           { alternates = loaded,
             allLoaded = dispatched || length loaded == length ctx.alternates

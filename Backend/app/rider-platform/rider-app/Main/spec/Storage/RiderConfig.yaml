@@ -306,7 +306,7 @@ RiderConfig:
     betterPointMaxOffRouteDistance: Maybe Meters
     # Off/unset: the shape we would pick is priced before /rideSearch answers, so it arrives
     # with the estimates. On: it is dispatched with the others and collected from
-    # /alternateSuggestion/{searchId}/result instead, which keeps the provider round trip off
+    # 'alternateSuggestions' on the results poll instead, which keeps the provider round trip off
     # the search's critical path at the cost of the suggestion appearing a beat later.
     betterPointLoadSuggestionsAsync: Maybe Bool
     # Whether select may reverse-geocode a moved walk-and-save pickup/drop that the app did

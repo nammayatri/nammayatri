@@ -17,7 +17,7 @@
 -- redoing any of it.
 --
 -- Two things are parked here. The alternate shapes and the shadow searches created for
--- them, so /alternateSuggestion/{searchId}/result can collect their fares by search id
+-- them, so the results poll can collect their fares by search id
 -- without the customer's app having to hand the geometry back. And the parent's route and
 -- Beckn taggings, because pricing a point the customer invents later means trimming that
 -- same polyline and re-sending those same tags; without them the only way to answer is a

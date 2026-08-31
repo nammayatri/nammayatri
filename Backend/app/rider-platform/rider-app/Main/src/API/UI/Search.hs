@@ -148,7 +148,7 @@ data SearchResp = SearchResp
     -- to polling /rideSearch/:id/results (legacy behaviour).
     -- Backward-compatible: legacy clients ignore the unknown field.
     results :: Maybe DQuote.GetQuotesRes,
-    -- | Whether GET /alternateSuggestion/:searchId/result has anything to return, so the
+    -- | Whether 'alternateSuggestions' on /rideSearch/:id/results has anything to return, so the
     -- frontend polls it only when there is something coming. False for the overwhelming
     -- majority of searches, which produce no walk-and-save shapes at all.
     --
@@ -375,8 +375,8 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
     _ -> pure Nothing
   -- Everything else is never waited on: those fares are for a decision the customer has not
   -- made yet, so they must not sit in front of the estimates they are shown beside. Each
-  -- one's on_search persists its own estimates, which /alternateSuggestion/{id}/result
-  -- collects whenever the app asks.
+  -- one's on_search persists its own estimates, which the results poll collects whenever
+  -- the app asks.
   whenJust mbSuggestedBuild $ \build ->
     unless (null build.backgroundSearchRes) $
       fork "betterRoutePointAlternates" $ do
@@ -407,7 +407,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           (\url r -> void $ CallBPP.searchV2 url r merchantId)
           (\url mappedAction jsonBody -> void $ CallBPP.callBecknAPIUnsigned mappedAction url jsonBody)
   -- Everything the background dispatch will answer for, which is exactly what
-  -- /alternateSuggestion/:searchId/result serves.
+  -- 'alternateSuggestions' on the results poll serves.
   let hasAlternates = maybe False (not . null . (.alternates)) mbSuggestedBuild
   if shouldSync
     then do

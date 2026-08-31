@@ -63,7 +63,7 @@ import qualified Tools.Maps as Maps
 -- Every one of them gets a shadow search request here, including the alternates. What
 -- separates them is only how their fare is awaited: the default is joined before the
 -- search response goes out, the alternates are dispatched fire-and-forget and collected
--- later through /alternateSuggestion/{searchId}/result.
+-- later through 'alternateSuggestions' on the results poll.
 data SuggestedSearchBuild = SuggestedSearchBuild
   { -- | The shape to price before answering the search, when the city wants one priced
     -- inline. 'Nothing' when suggestions are loaded asynchronously -- then every shape, the
