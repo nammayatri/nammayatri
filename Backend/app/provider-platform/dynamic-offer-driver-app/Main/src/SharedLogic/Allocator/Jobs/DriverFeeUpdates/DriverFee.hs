@@ -217,11 +217,30 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
             let driverFeeIds = map (.id) dueDriverFees
                 due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
-            if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
+            let dueForBlocking = roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee)
+                effectiveMaxCreditLimit = fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
+                subscribedFlagToggleAllowed = fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel
+                shouldBlock = dueForBlocking >= effectiveMaxCreditLimit
+            -- mirror image of updatePaymentStatus: block and unblock decisions are both greppable
+            logInfo $
+              "driverFeeScheduler: shouldBlock="
+                <> show shouldBlock
+                <> " driverId="
+                <> driverFee.driverId.getId
+                <> " serviceName="
+                <> show serviceName
+                <> " due="
+                <> show dueForBlocking
+                <> " maxCreditLimit="
+                <> show effectiveMaxCreditLimit
+                <> " subscribedFlagToggleAllowed="
+                <> show subscribedFlagToggleAllowed
+            if shouldBlock
               then do
                 updateDriverFeeToManual $ driverFeeIds <> [driverFee.id]
-                when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
+                when subscribedFlagToggleAllowed $ do
                   updateSubscription False (cast driverFee.driverId)
+                  logInfo $ "driverFeeScheduler: subscribed -> False driverId=" <> driverFee.driverId.getId <> " reason=due(" <> show dueForBlocking <> ") >= maxCreditLimit(" <> show effectiveMaxCreditLimit <> ")"
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
               else do
                 unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig

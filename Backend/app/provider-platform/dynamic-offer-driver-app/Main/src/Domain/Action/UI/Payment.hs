@@ -889,8 +889,29 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
   case plan of
-    Nothing -> QDI.updateSubscription True (cast driverId)
-    Just plan_ -> when (totalDue < plan_.maxCreditLimit && plan_.subscribedFlagToggleAllowed) $ QDI.updateSubscription True (cast driverId)
+    Nothing -> do
+      QDI.updateSubscription True (cast driverId)
+      logInfo $ "updatePaymentStatus: subscribed -> True driverId=" <> driverId.getId <> " serviceName=" <> show serviceName <> " totalDue=" <> show totalDue <> " reason=no plan found, unblocking unconditionally"
+    Just plan_ -> do
+      let underCreditLimit = totalDue < plan_.maxCreditLimit
+          shouldSubscribe = underCreditLimit && plan_.subscribedFlagToggleAllowed
+      -- logged on both outcomes: when the guard fails this used to be a silent no-op
+      logInfo $
+        "updatePaymentStatus: shouldSubscribe="
+          <> show shouldSubscribe
+          <> " driverId="
+          <> driverId.getId
+          <> " serviceName="
+          <> show serviceName
+          <> " totalDue="
+          <> show totalDue
+          <> " maxCreditLimit="
+          <> show plan_.maxCreditLimit
+          <> " underCreditLimit="
+          <> show underCreditLimit
+          <> " subscribedFlagToggleAllowed="
+          <> show plan_.subscribedFlagToggleAllowed
+      when shouldSubscribe $ QDI.updateSubscription True (cast driverId)
   where
     calcDueAmount =
       map
@@ -1088,6 +1109,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       QDP.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverId) serviceName
       mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))
       let subcribeToggleAllowed = maybe False (.subscribedFlagToggleAllowed) mbPlan
+      logInfo $ "processMandate: subscribed -> True? " <> show subcribeToggleAllowed <> " driverId=" <> driverId.getId <> " serviceName=" <> show serviceName <> " mandateId=" <> mandateId.getId <> " reason=subscribedFlagToggleAllowed on mandate ACTIVE"
       when subcribeToggleAllowed $ QDI.updateSubscription True (cast driverId)
       ADPlan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (castAutoPayStatus mandateStatus) payerVpa'
       maybe (pure ()) (\plan -> fork "track autopay status" $ SEVT.trackAutoPayStatusChange plan $ show (castAutoPayStatus mandateStatus)) mbDriverPlan

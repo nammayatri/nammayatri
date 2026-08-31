@@ -286,6 +286,19 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
     now <- getCurrentTime
     QDriverInfo.updatePendingPayment False driverId
     QDriverInfo.updateSubscription True driverId
+    logInfo $
+      "recordPayment: manually cleared dues, subscribed -> True driverId="
+        <> driverId.getId
+        <> " serviceName="
+        <> show serviceName
+        <> " isExempted="
+        <> show isExempted
+        <> " requestorId="
+        <> requestorId
+        <> " totalFee="
+        <> show totalFee
+        <> " driverFeeIds="
+        <> show (map ((.getId) . (.id)) driverFees)
     mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now mbVendorId) ((.id) <$> driverFees)
     invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
     mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
