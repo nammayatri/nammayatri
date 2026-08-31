@@ -111,6 +111,7 @@ library
     , openapi3
     , passetto-client
     , passetto-lib
+    , payment
     , persistent
     , persistent-postgresql
     , postgresql-simple
@@ -210,6 +211,7 @@ executable kafka-consumers-exe
     , openapi3
     , passetto-client
     , passetto-lib
+    , payment
     , persistent
     , persistent-postgresql
     , postgresql-simple

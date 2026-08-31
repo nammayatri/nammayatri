@@ -1,0 +1,333 @@
+imports:
+  IncentiveJourney: Dashboard.Common
+  IncentiveJourneyMilestone: Dashboard.Common
+  CohortDetails: Dashboard.Common
+  CohortJourneyMapping: Dashboard.Common
+  Person: Dashboard.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.ServiceTierType
+  TimeBound: Kernel.Types.TimeBound
+  Day: Data.Time
+
+module: IncentiveJourney
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - enabled: Bool
+      response:
+        type: IncentiveJourneyListRes
+      migrate:
+        capability: system-config.coins.read
+
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateIncentiveJourneyReq
+      response:
+        type: CreateIncentiveJourneyRes
+      migrate:
+        capability: system-config.coins.write
+
+  - PUT:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateIncentiveJourneyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - GET:
+      endpoint: /milestone/list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        journeyId: Id IncentiveJourney
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: IncentiveJourneyMilestoneListRes
+      migrate:
+        capability: system-config.coins.read
+
+  - POST:
+      endpoint: /milestone/create
+      auth: ApiAuthV2
+      request:
+        type: CreateIncentiveJourneyMilestoneReq
+      response:
+        type: CreateIncentiveJourneyMilestoneRes
+      migrate:
+        capability: system-config.coins.write
+
+  - PUT:
+      endpoint: /milestone/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateIncentiveJourneyMilestoneReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - GET:
+      endpoint: /stats/history
+      auth: ApiAuthV2
+      mandatoryQuery:
+        personId: Id Person
+        fromDate: Day
+        toDate: Day
+      query:
+        - journeyId: Id IncentiveJourney
+        - limit: Int
+        - offset: Int
+      response:
+        type: IncentiveJourneyStatsHistoryRes
+      migrate:
+        capability: system-config.coins.read
+
+  - POST:
+      endpoint: /stats/waiveOff
+      auth: ApiAuthV2
+      request:
+        type: WaiveIncentiveJourneyMilestoneReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - POST:
+      endpoint: /cohort/create
+      auth: ApiAuthV2
+      request:
+        type: CreateCohortDetailsReq
+      response:
+        type: CreateCohortDetailsRes
+      migrate:
+        capability: system-config.coins.write
+
+  - POST:
+      endpoint: /cohortJourney/create
+      auth: ApiAuthV2
+      request:
+        type: CreateCohortJourneyMappingReq
+      response:
+        type: CreateCohortJourneyMappingRes
+      migrate:
+        capability: system-config.coins.write
+
+  - PUT:
+      endpoint: /cohortJourney/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateCohortJourneyMappingReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - POST:
+      endpoint: /assign
+      auth: ApiAuthV2
+      request:
+        type: AssignUserToIncentiveJourneyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+  - DELETE:
+      endpoint: /unassign
+      auth: ApiAuthV2
+      request:
+        type: UnassignUserFromIncentiveJourneyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
+types:
+  MilestoneConditionType:
+    - enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+
+  MilestoneAreaType:
+    - enum: "Default, Pickup, Drop, PickupDrop"
+
+  MilestoneConditionOperator:
+    - enum: "GTE, GT, EQ, LTE, LT"
+
+  MilestoneRewardType:
+    - enum: "Coins, Cash, Coupons, WalletMoney, SubscriptionWaiveOff, PoolingPriority, NoReward"
+
+  IncentiveJourneyType:
+    - enum: "Daily, Weekly, Monthly"
+
+  JourneyMilestoneStatus:
+    - enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff"
+
+  CreateIncentiveJourneyReq:
+    - name: Text
+    - description: Maybe Text
+    - journeyType: IncentiveJourneyType
+    - enabled: Bool
+    - maxWaiveOffCount: Maybe Int
+    - derive: "'HideSecrets"
+
+  CreateIncentiveJourneyRes:
+    - journeyId: Id IncentiveJourney
+
+  UpdateIncentiveJourneyReq:
+    - journeyId: Id IncentiveJourney
+    - name: Maybe Text
+    - description: Maybe Text
+    - journeyType: Maybe IncentiveJourneyType
+    - enabled: Maybe Bool
+    - maxWaiveOffCount: Maybe Int
+    - derive: "'HideSecrets"
+
+  IncentiveJourneyListItem:
+    - journeyId: Id IncentiveJourney
+    - name: Text
+    - description: Maybe Text
+    - journeyType: Maybe IncentiveJourneyType
+    - enabled: Bool
+    - maxWaiveOffCount: Maybe Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  IncentiveJourneyListRes:
+    - journeys: "[IncentiveJourneyListItem]"
+
+  CreateIncentiveJourneyMilestoneReq:
+    - journeyId: Id IncentiveJourney
+    - name: Maybe Text
+    - description: Maybe Text
+    - order: Int
+    - conditionType: MilestoneConditionType
+    - conditionOperator: MilestoneConditionOperator
+    - conditionValue: Int
+    - areaType: Maybe MilestoneAreaType
+    - specialLocationIds: Maybe [Text]
+    - vehicleCategory: Maybe VehicleCategory
+    - serviceTierType: Maybe ServiceTierType
+    - rewardType: MilestoneRewardType
+    - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+
+  CreateIncentiveJourneyMilestoneRes:
+    - milestoneId: Id IncentiveJourneyMilestone
+
+  UpdateIncentiveJourneyMilestoneReq:
+    - milestoneId: Id IncentiveJourneyMilestone
+    - name: Maybe Text
+    - description: Maybe Text
+    - order: Maybe Int
+    - conditionType: Maybe MilestoneConditionType
+    - conditionOperator: Maybe MilestoneConditionOperator
+    - conditionValue: Maybe Int
+    - areaType: Maybe MilestoneAreaType
+    - specialLocationIds: Maybe [Text]
+    - vehicleCategory: Maybe VehicleCategory
+    - serviceTierType: Maybe ServiceTierType
+    - rewardType: Maybe MilestoneRewardType
+    - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
+    - timeBounds: Maybe TimeBound
+    - derive: "'HideSecrets"
+
+  IncentiveJourneyMilestoneListItem:
+    - milestoneId: Id IncentiveJourneyMilestone
+    - journeyId: Id IncentiveJourney
+    - name: Maybe Text
+    - description: Maybe Text
+    - order: Int
+    - conditionType: MilestoneConditionType
+    - conditionOperator: MilestoneConditionOperator
+    - conditionValue: Int
+    - areaType: Maybe MilestoneAreaType
+    - specialLocationIds: Maybe [Text]
+    - vehicleCategory: Maybe VehicleCategory
+    - serviceTierType: Maybe ServiceTierType
+    - rewardType: MilestoneRewardType
+    - rewardValue: Maybe Int
+    - rewardExpirationAt: Maybe Int
+    - timeBounds: Maybe TimeBound
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  IncentiveJourneyMilestoneListRes:
+    - milestones: "[IncentiveJourneyMilestoneListItem]"
+
+  IncentiveJourneyStatsHistoryItem:
+    - statsId: Text
+    - personId: Id Person
+    - journeyId: Id IncentiveJourney
+    - milestoneId: Id IncentiveJourneyMilestone
+    - periodKey: Text
+    - conditionType: MilestoneConditionType
+    - conditionValue: Int
+    - currentValue: Int
+    - status: JourneyMilestoneStatus
+    - rewardType: MilestoneRewardType
+    - rewardValue: Maybe Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  IncentiveJourneyStatsHistoryRes:
+    - stats: "[IncentiveJourneyStatsHistoryItem]"
+
+  WaiveIncentiveJourneyMilestoneReq:
+    - personId: Id Person
+    - journeyId: Id IncentiveJourney
+    - milestoneId: Id IncentiveJourneyMilestone
+    - periodKey: Text
+    - derive: "'HideSecrets"
+
+  CreateCohortDetailsReq:
+    - name: Text
+    - derive: "'HideSecrets"
+
+  CreateCohortDetailsRes:
+    - cohortId: Id CohortDetails
+
+  CreateCohortJourneyMappingReq:
+    - cohortId: Id CohortDetails
+    - journeyId: Id IncentiveJourney
+    - startDate: UTCTime
+    - streakRange: Int
+    - streakEndRewardType: Maybe MilestoneRewardType
+    - streakEndRewardValue: Maybe Int
+    - streakEndRewardExpirationAt: Maybe Int
+    - derive: "'HideSecrets"
+
+  CreateCohortJourneyMappingRes:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+
+  UpdateCohortJourneyMappingReq:
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - startDate: Maybe UTCTime
+    - streakRange: Maybe Int
+    - streakEndRewardType: Maybe MilestoneRewardType
+    - streakEndRewardValue: Maybe Int
+    - streakEndRewardExpirationAt: Maybe Int
+    - derive: "'HideSecrets"
+
+  AssignUserToIncentiveJourneyReq:
+    - personId: Id Person
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - isTestGroup: Bool
+    - derive: "'HideSecrets"
+
+  UnassignUserFromIncentiveJourneyReq:
+    - personId: Id Person
+    - cohortJourneyMappingId: Id CohortJourneyMapping
+    - derive: "'HideSecrets"

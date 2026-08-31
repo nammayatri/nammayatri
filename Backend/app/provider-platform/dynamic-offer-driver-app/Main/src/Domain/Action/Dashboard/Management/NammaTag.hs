@@ -69,8 +69,6 @@ import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Exophone as DTEXO
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DFODVC
 import qualified Domain.Types.GoHomeConfig as DGHC
-import qualified Domain.Types.IncentiveJourney as DIJ
-import qualified Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified "beckn-spec" Domain.Types.Invoice as DTI
 import qualified Domain.Types.LeaderBoardConfigs as DLBC
 import qualified Domain.Types.Merchant
@@ -103,6 +101,10 @@ import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as SQIJ
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as SQIJM
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
@@ -158,8 +160,6 @@ import qualified Storage.Queries.DriverPoolConfig as SQDPC
 import qualified Storage.Queries.Exophone as SQEXO
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as SQFODVC
 import qualified Storage.Queries.GoHomeConfig as SQGHC
-import qualified Storage.Queries.IncentiveJourney as SQIJ
-import qualified Storage.Queries.IncentiveJourneyMilestone as SQIJM
 import qualified Storage.Queries.LeaderBoardConfigs as SQLBC
 import qualified Storage.Queries.MerchantMessage as SQMM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -536,12 +536,12 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DCC.CoinsConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DCC.CoinsConfig)) transporterConfig.referralLinkPassword req logicData
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "IncentiveJourney config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIJ.IncentiveJourney))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DIJ.IncentiveJourney) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DIJ.IncentiveJourney)) transporterConfig.referralLinkPassword req logicData
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "IncentiveJourneyMilestone config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIJM.IncentiveJourneyMilestone))
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DIJM.IncentiveJourneyMilestone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
@@ -842,14 +842,14 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DCC.CoinsConfig))
           }
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "IncentiveJourney default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIJ.IncentiveJourney))
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DIJ.IncentiveJourney))
           }
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "IncentiveJourneyMilestone default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIJM.IncentiveJourneyMilestone))
       return $
         LYT.DomainSchemaResp
@@ -1043,10 +1043,10 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
     LYT.CoinsConfig -> do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
-    LYT.IncentiveJourneyConfig -> do
-      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims, vehicleVariant = dimLookup "vehicleVariant" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
+    LYT.IncentiveJourneyConfigDriver -> do
+      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast merchantOpCityId)))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
-    LYT.IncentiveJourneyMilestoneConfig -> do
+    LYT.IncentiveJourneyMilestoneConfigDriver -> do
       cfgs <- getConfig (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, milestoneId = dimLookup "milestoneId" dims}) Nothing
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.MerchantServiceConfigDriver -> do
@@ -1091,8 +1091,8 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType =
     LYT.TagActionNotificationConfig -> pure $ mkDimSchema (Proxy @TagActionNotificationConfigDimensions)
     LYT.FleetOwnerDocumentVerificationConfig -> pure $ mkDimSchema (Proxy @FleetOwnerDocumentVerificationConfigDimensions)
     LYT.CoinsConfig -> pure $ mkDimSchema (Proxy @CoinsConfigDimensions)
-    LYT.IncentiveJourneyConfig -> pure $ mkDimSchema (Proxy @IncentiveJourneyDimensions)
-    LYT.IncentiveJourneyMilestoneConfig -> pure $ mkDimSchema (Proxy @IncentiveJourneyMilestoneDimensions)
+    LYT.IncentiveJourneyConfigDriver -> pure $ mkDimSchema (Proxy @IncentiveJourneyDimensions)
+    LYT.IncentiveJourneyMilestoneConfigDriver -> pure $ mkDimSchema (Proxy @IncentiveJourneyMilestoneDimensions)
     LYT.MerchantServiceConfigDriver -> pure $ mkDimSchema (Proxy @MerchantServiceConfigDimensions)
     LYT.Exophone -> pure $ mkDimSchema (Proxy @ExophoneDimensions)
     LYT.Overlay -> pure $ mkDimSchema (Proxy @OverlayDimensions)
@@ -1192,14 +1192,14 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity req = do
       cfg :: DIC.IssueConfig <- parseConfigData req.configData
       SQICfg.create cfg
       invalidateConfigInMem LYT.IssueConfigDriver
-    LYT.IncentiveJourneyConfig -> do
+    LYT.IncentiveJourneyConfigDriver -> do
       cfg :: DIJ.IncentiveJourney <- parseConfigData req.configData
       SQIJ.create cfg
-      invalidateConfigInMem LYT.IncentiveJourneyConfig
-    LYT.IncentiveJourneyMilestoneConfig -> do
+      invalidateConfigInMem LYT.IncentiveJourneyConfigDriver
+    LYT.IncentiveJourneyMilestoneConfigDriver -> do
       cfg :: DIJM.IncentiveJourneyMilestone <- parseConfigData req.configData
       SQIJM.create cfg
-      invalidateConfigInMem LYT.IncentiveJourneyMilestoneConfig
+      invalidateConfigInMem LYT.IncentiveJourneyMilestoneConfigDriver
     LYT.UiDriverConfig -> do
       cfg :: DTDC.UiDriverConfig <- parseConfigData req.configData
       SQU.create cfg

@@ -210,6 +210,7 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.FRFSAlerts
       Domain.Action.Dashboard.FRFSTicket
+      Domain.Action.Dashboard.IncentiveJourney
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.IssueManagement.IssueList
@@ -542,6 +543,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
+      SharedLogic.IncentiveJourney
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
@@ -621,6 +623,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
+      Storage.Beam.IncentiveJourney
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
@@ -639,6 +642,9 @@ library
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
+      Storage.CachedQueries.IncentiveJourney
+      Storage.CachedQueries.IncentiveJourneyMilestone
+      Storage.CachedQueries.IncentiveJourneyStats
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.JourneyLeg
@@ -705,6 +711,8 @@ library
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FRFSConfig
       Storage.ConfigPilot.Config.HotSpotConfig
+      Storage.ConfigPilot.Config.IncentiveJourney
+      Storage.ConfigPilot.Config.IncentiveJourneyMilestone
       Storage.ConfigPilot.Config.InsuranceConfig
       Storage.ConfigPilot.Config.IntegratedBPPConfig
       Storage.ConfigPilot.Config.IssueConfig
@@ -749,6 +757,7 @@ library
       Storage.Queries.FRFSTicketBookingPaymentExtra
       Storage.Queries.Geometry
       Storage.Queries.GeometryGeom
+      Storage.Queries.IncentiveJourneyStatsExtra
       Storage.Queries.IntegratedBPPConfigExtra
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
@@ -902,6 +911,7 @@ library
       API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.FRFSAlerts
       API.Action.Dashboard.Management.FRFSTicket
+      API.Action.Dashboard.Management.IncentiveJourney
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.Merchant
@@ -1787,6 +1797,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt
@@ -1932,6 +1943,7 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt
@@ -2073,6 +2085,7 @@ test-suite rider-app-test
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt

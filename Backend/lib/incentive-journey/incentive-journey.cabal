@@ -1,0 +1,142 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           incentive-journey
+version:        0.1.0.0
+description:    Shared incentive-journey engine and storage — cohort assignment, period keys, window checks, sequential milestone eval, reward dispatcher, and dual-schema Beam tables for rider-app and dynamic-offer-driver-app.
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2026 Moving Innovation Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Lib.IncentiveJourney
+      Lib.IncentiveJourney.Assignment
+      Lib.IncentiveJourney.Condition
+      Lib.IncentiveJourney.Convert
+      Lib.IncentiveJourney.Domain.Action.Evaluate
+      Lib.IncentiveJourney.Domain.Types.Common
+      Lib.IncentiveJourney.Eval
+      Lib.IncentiveJourney.Idempotency
+      Lib.IncentiveJourney.Period
+      Lib.IncentiveJourney.Reward
+      Lib.IncentiveJourney.Storage.Beam.BeamFlow
+      Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney
+      Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMilestone
+      Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats
+      Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra
+      Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra
+      Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyExtra
+      Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStatsExtra
+      Lib.IncentiveJourney.Storage.Queries.UserCohortMappingExtra
+      Lib.IncentiveJourney.Streak
+      Lib.IncentiveJourney.StreakEnd
+      Lib.IncentiveJourney.Types
+      Lib.IncentiveJourney.Types.Actor
+      Lib.IncentiveJourney.Window
+      Tools.Beam.UtilsTH
+      Lib.IncentiveJourney.Domain.Types.CohortDetails
+      Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
+      Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+      Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+      Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats
+      Lib.IncentiveJourney.Domain.Types.UserCohortMapping
+      Lib.IncentiveJourney.Storage.Beam.CohortDetails
+      Lib.IncentiveJourney.Storage.Beam.CohortJourneyMapping
+      Lib.IncentiveJourney.Storage.Beam.IncentiveJourney
+      Lib.IncentiveJourney.Storage.Beam.IncentiveJourneyMilestone
+      Lib.IncentiveJourney.Storage.Beam.IncentiveJourneyStats
+      Lib.IncentiveJourney.Storage.Beam.UserCohortMapping
+      Lib.IncentiveJourney.Storage.Queries.CohortDetails
+      Lib.IncentiveJourney.Storage.Queries.CohortJourneyMapping
+      Lib.IncentiveJourney.Storage.Queries.IncentiveJourney
+      Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone
+      Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyStats
+      Lib.IncentiveJourney.Storage.Queries.OrphanInstances.CohortDetails
+      Lib.IncentiveJourney.Storage.Queries.OrphanInstances.CohortJourneyMapping
+      Lib.IncentiveJourney.Storage.Queries.OrphanInstances.IncentiveJourney
+      Lib.IncentiveJourney.Storage.Queries.OrphanInstances.IncentiveJourneyStats
+      Lib.IncentiveJourney.Storage.Queries.OrphanInstances.UserCohortMapping
+      Lib.IncentiveJourney.Storage.Queries.UserCohortMapping
+  other-modules:
+      Paths_incentive_journey
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-spec
+    , containers
+    , euler-hs
+    , mobility-core
+    , openapi3
+    , postgresql-simple
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4

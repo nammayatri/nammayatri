@@ -1,0 +1,94 @@
+imports:
+  IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+  MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.ServiceTierType
+
+IncentiveJourneyMilestone:
+  tableName: incentive_journey_milestone
+
+  types:
+    MilestoneConditionType:
+      enum: "RideCompleted, Earnings, Distance, RideDuration, BookingTicket"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    MilestoneConditionOperator:
+      enum: "GTE, GT, EQ, LTE, LT"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    MilestoneAreaType:
+      enum: "Default, Pickup, Drop, PickupDrop"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneConditionType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneConditionType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneConditionOperator>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneConditionOperator>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneAreaType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneAreaType>
+
+  fields:
+    id: Id IncentiveJourneyMilestone
+    journeyId: Id IncentiveJourney
+    name: Maybe Text
+    description: Maybe Text
+    order: Int
+    conditionType: MilestoneConditionType
+    conditionOperator: Maybe MilestoneConditionOperator
+    conditionValue: Int
+    areaType: Maybe MilestoneAreaType
+    specialLocationIds: "Maybe [Text]"
+    vehicleCategory: Maybe VehicleCategory
+    serviceTierType: Maybe ServiceTierType|NoRelation
+    rewardType: MilestoneRewardType
+    rewardValue: Maybe Int
+    rewardExpirationAt: Maybe Int
+    timeBounds: Maybe TimeBound
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    conditionOperator: "'GTE'"
+    areaType: "NULL"
+    specialLocationIds: 'NULL'
+
+  constraints:
+    id: PrimaryKey
+    journeyId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByJourneyId:
+      kvFunction: findAllWithOptionsKV
+      where: journeyId
+      orderBy: order
+
+  extraIndexes:
+    - columns: [journeyId]
+
+  extraOperations:
+    - GENERATE_INDEXES
+
+  # Stored as Text so lib Beam does not orphan VehicleCategory/ServiceTierType/MilestoneAreaType
+  # instances that already exist in driver-app Domain.Types.Common.
+  beamType:
+    vehicleCategory: Maybe Text
+    serviceTierType: Maybe Text
+    areaType: Maybe Text
+
+  toTType:
+    vehicleCategory: (Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show))|I
+    serviceTierType: (Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show))|I
+    areaType: (Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show))|I
+
+  fromTType:
+    vehicleCategory: (Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    serviceTierType: (Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    areaType: (Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

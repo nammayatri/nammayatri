@@ -29,7 +29,6 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as BODUC
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
 import Data.Either.Extra (eitherToMaybe)
@@ -60,7 +59,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleCategory as DVC
-import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
@@ -90,8 +88,6 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
-import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
-import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
@@ -106,7 +102,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
-import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
@@ -136,7 +131,7 @@ import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
-import Tools.Utils
+import Tools.Utils (isDropInsideThreshold)
 import Utils.Common.Cac.KeyNameConstants
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
@@ -669,100 +664,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId rideFareParams thresholdConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
-    logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
-    fork "DriverRideCompletedCoin Event : " $ do
-      expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
-      let validRideTaken = isValidRide updRide
-          metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
-      logDebug $ "MetroRideType : " <> show metroRideType
-      dailyCoinsAlreadyBlocked <- isDriverCoinsBlockedForDay driverId
-      let shouldBlockCoins = shouldFlagRiderForRepeatCustomerFraud || dailyCoinsAlreadyBlocked
-      if shouldBlockCoins
-        then blockDriverCoinsForToday driverId thresholdConfig.timeDiffFromUtc
-        else do
-          when (DCT.isMetroRideType metroRideType && validRideTaken) $ do
-            DC.incrementMetroRideCount driverId metroRideType expirationPeriod 1
-          when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
-            DC.incrementValidRideCount driverId expirationPeriod 1
-            let earningsDelta = maybe 0 (roundToIntegral . getHighPrecMoney) updRide.fare
-                distanceDelta = maybe 0 getMeters updRide.chargeableDistance
-                rideTimeDelta =
-                  fromMaybe 0 $
-                    (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
-                      <$> updRide.tripStartTime
-                      <*> updRide.tripEndTime
-                vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
-                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
-                driverTag = mbDriver >>= (.driverTag)
-                mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
-                mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
-                rideDeltas =
-                  IncentiveMetrics.RideIncentiveDeltas
-                    { ridesDelta = 1,
-                      earningsDelta,
-                      distanceMetersDelta = distanceDelta,
-                      rideTimeSecondsDelta = rideTimeDelta
-                    }
-            DC.incrementValidRideCountForTimeBoundCohort
-              driverId
-              booking.providerId
-              booking.merchantOperatingCityId
-              vehCategory
-              DCT.DynamicOfferTrip
-              expirationPeriod
-              thresholdConfig.timeDiffFromUtc
-              timeBoundReferenceUtc
-            DC.incrementIncentiveMetricsForRide
-              driverId
-              booking.providerId
-              booking.merchantOperatingCityId
-              vehCategory
-              rideDeltas
-              expirationPeriod
-              thresholdConfig.timeDiffFromUtc
-              timeBoundReferenceUtc
-            DC.incrementScopedValidRideCounts DCT.DynamicOfferTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
-            -- Journey# tag takes precedence: skip Incentive# / legacy coin flow.
-            if SLJourney.hasJourneyTag driverTag
-              then
-                SLJourney.evaluateDriverJourney
-                  driverId
-                  booking.providerId
-                  booking.merchantOperatingCityId
-                  thresholdConfig
-                  driverTag
-                  vehCategory
-                  ride.vehicleVariant
-                  (Just booking.vehicleServiceTier)
-                  (Just ride.id.getId)
-                  mbPickupSpecialLocationId
-                  mbDropSpecialLocationId
-                  timeBoundReferenceUtc
-                  rideDeltas
-              else DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
-          when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
-            DC.incrementOTPValidRideCount driverId expirationPeriod 1
-            let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
-                timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
-                driverTag = mbDriver >>= (.driverTag)
-                mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
-                mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
-            -- Scoped valid-ride counters for OTP rides (variant / pickup SL / drop SL).
-            DC.incrementScopedValidRideCounts DCT.OTPRideTrip driverId booking.vehicleServiceTier mbPickupSpecialLocationId mbDropSpecialLocationId expirationPeriod
-            DC.incrementValidRideCountForTimeBoundCohort
-              driverId
-              booking.providerId
-              booking.merchantOperatingCityId
-              vehCategory
-              DCT.OTPRideTrip
-              expirationPeriod
-              thresholdConfig.timeDiffFromUtc
-              timeBoundReferenceUtc
-            -- Journey# drivers skip legacy/incentive coin awards on OTP rides too.
-            unless (SLJourney.hasJourneyTag driverTag) $
-              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions) booking.area
-
-    -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.
+    -- Driver coins / incentive-journey evaluation moved to kafka-consumers
+    -- RIDE_EVENTS_CONSUMER (SharedLogic.RideEvents.DriverCoinsAndJourney).
 
     computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -846,21 +749,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         driverRideRes = driverRideRes
       }
   where
-    mkDriverCoinsBlockedForDayKey id = "driverCoins:blocked:today:dId:" <> id.getId
-
     isFavouriteDriverRiderPair driverId' mbRiderDetailsId = case mbRiderDetailsId of
       Nothing -> pure False
       Just riderDetailsId -> isJust <$> QRiderDriverCorrelation.checkRiderFavDriver riderDetailsId driverId' True
-
-    isDriverCoinsBlockedForDay id = do
-      mbBlocked <- Redis.withCrossAppRedis $ Redis.safeGet (mkDriverCoinsBlockedForDayKey id)
-      pure $ fromMaybe False (mbBlocked :: Maybe Bool)
-
-    blockDriverCoinsForToday id timeDiffFromUtc = do
-      expirationPeriod <- DC.getExpirationSeconds timeDiffFromUtc
-      DC.resetTodayCoinsAndAdjustLifetime id timeDiffFromUtc
-      Redis.withCrossAppRedis $ do
-        Redis.setExp (mkDriverCoinsBlockedForDayKey id) True expirationPeriod
 
     clearEditDestinationWayAndSnappedPoints driverId = LocUpdInternal.deleteEditDestinationSnappedWaypoints driverId >> LocUpdInternal.deleteEditDestinationWaypoints driverId
     clearReachedStopLocations existingRideId = do
@@ -882,23 +773,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             Just NoFareProduct -> return defaultVal
             _ -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
-
-determineMetroRideType :: Maybe Text -> Text -> Text -> DCT.MetroRideType
-determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
-  case mbSplLocTag of
-    Just splLocTag ->
-      case (fromMetro, toMetro, priorityTag) of
-        (True, _, _) -> DCT.FromOrToMetro
-        (_, True, _) -> DCT.FromOrToMetro
-        _ -> DCT.None
-      where
-        tagArr = Text.splitOn "_" splLocTag
-        sourceTag = tagArr BODUC.!? 0
-        destTag = tagArr BODUC.!? 1
-        priorityTag = tagArr BODUC.!? 2
-        fromMetro = sourceTag == Just sureMetro || sourceTag == Just sureWarriorMetro
-        toMetro = destTag == Just sureMetro || destTag == Just sureWarriorMetro
-    Nothing -> DCT.None
 
 tripCategoriesForNoRecalc :: [DTC.TripCategory]
 tripCategoriesForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]

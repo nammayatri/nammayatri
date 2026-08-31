@@ -394,6 +394,10 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverId -> do
         fork "Update Payout Status and Transactions for Manual Payout" $ do
           callPayoutService (Id driverId) payoutConfig
+    Just DPayment.INCENTIVE_JOURNEY_CASHBACK -> do
+      let driverId = Id payoutOrder.customerId
+      fork "Update Payout Status and Transactions for Incentive Journey Cashback" $ do
+        callPayoutService driverId payoutConfig
     Just DPayment.REGISTRATION_REFUND -> do
       let driverId = Id payoutOrder.customerId
       fork "Update Payout Status and Transactions for Payout Registration Refund Payout" $ do
