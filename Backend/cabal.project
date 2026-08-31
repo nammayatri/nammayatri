@@ -26,6 +26,7 @@ packages:
   lib/scheduler
   lib/sessionizer-metrics
   lib/yudhishthira
+  lib/incentive-journey
   lib/config-pilot
   lib/finance-kernel
   lib/producer
