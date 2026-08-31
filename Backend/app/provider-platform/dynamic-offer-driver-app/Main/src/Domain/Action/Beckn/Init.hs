@@ -71,6 +71,7 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
+import Utils.Common.Fallback (withTimeoutOrRethrow)
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
@@ -141,7 +142,7 @@ handler ::
   ValidatedInitReq ->
   m InitRes
 handler merchantId req validatedReq = do
-  transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  transporter <- withTimeoutOrRethrow "beckn:init:findMerchant" 8 $ QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   paymentId <- generateGUID
   let searchRequest = validatedReq.searchRequest
@@ -149,7 +150,7 @@ handler merchantId req validatedReq = do
       riderPhoneNumber = req.riderPhoneNumber
   whenJust req.isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
     QSR.updateIsAdvancedBookingEnabled isAdvanceBookingEnabled' searchRequest.id
-  (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
+  (mbPaymentMethod, paymentUrl) <- withTimeoutOrRethrow "beckn:init:fetchPaymentMethodAndUrl" 8 $ fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do

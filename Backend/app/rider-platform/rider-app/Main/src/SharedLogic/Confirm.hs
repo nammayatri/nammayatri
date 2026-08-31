@@ -84,6 +84,7 @@ import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
 import TransactionLogs.Types
+import Utils.Common.Fallback (withTimeoutOrRethrow)
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
@@ -161,8 +162,11 @@ confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
   (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
-  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  (searchRequest, person) <-
+    withTimeoutOrRethrow "confirm:leadingReads" 8 $ do
+      searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      pure (searchRequest, person)
   when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     whenJust paymentMethodId $ \pmId ->

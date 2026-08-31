@@ -70,6 +70,7 @@ import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
+import Utils.Common.Fallback (withTimeoutOrRethrow)
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
@@ -117,12 +118,14 @@ data RideInfo = RideInfo
 
 handler :: DM.Merchant -> DConfirmReq -> ValidatedQuote -> Flow DConfirmResp
 handler merchant req validatedQuote = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
-  let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
-
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
-  unless isNewRider $ QRD.updateNightSafetyChecksAndConsent req.nightSafetyCheck req.consentToShareMobileNumber riderDetails.id
+  (booking, riderDetails, isNewRider) <-
+    withTimeoutOrRethrow "beckn:confirm:leadingReads" 8 $ do
+      booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+      unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
+      let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
+      (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
+      unless isNewRider $ QRD.updateNightSafetyChecksAndConsent req.nightSafetyCheck req.consentToShareMobileNumber riderDetails.id
+      pure (booking, riderDetails, isNewRider)
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails

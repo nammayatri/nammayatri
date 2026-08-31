@@ -51,6 +51,7 @@ import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import Utils.Common.Fallback (withTimeoutOrRethrow)
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -162,15 +163,16 @@ handler merchant sReq searchReq estimates = do
       catMaybes $ [safetyCharges, nyregularCharges]
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
-validateRequest merchantId sReq = do
-  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  mbEstimates <- mapM QEst.findById sReq.estimateIds
-  let estimates = catMaybes mbEstimates
-  case estimates of
-    [] -> throwError $ InvalidRequest "User need to select at least one estimate"
-    (estimate : xs) -> do
-      searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-      return (merchant, searchReq, [estimate] <> xs)
+validateRequest merchantId sReq =
+  withTimeoutOrRethrow "beckn:select:validateRequest" 8 $ do
+    merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    mbEstimates <- mapM QEst.findById sReq.estimateIds
+    let estimates = catMaybes mbEstimates
+    case estimates of
+      [] -> throwError $ InvalidRequest "User need to select at least one estimate"
+      (estimate : xs) -> do
+        searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+        return (merchant, searchReq, [estimate] <> xs)
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do

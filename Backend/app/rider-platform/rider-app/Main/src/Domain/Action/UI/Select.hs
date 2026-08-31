@@ -105,7 +105,7 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
-import Utils.Common.Fallback (withFallback)
+import Utils.Common.Fallback (withFallback, withTimeoutOrRethrow)
 
 type SelectFlow m r c =
   ( CacheFlow m r,
@@ -234,19 +234,22 @@ select personId estimateId req = do
 select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> Maybe (DJ.Journey, DJL.JourneyLeg) -> m DSelectRes
 select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   runRequestValidation validateDSelectReq req
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  when (not (fromMaybe False person.businessProfileVerified) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
-  merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
-  estimate <- QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
-  let searchRequestId = estimate.requestId
-  remainingEstimates <- catMaybes <$> (QEstimate.findByIdOutageTolerant `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
-  unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
-  let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
-  isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
-  phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
-  searchRequest <- QSearchRequest.findByIdOutageTolerant searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  (person, merchant, estimate, searchRequestId, remainingEstimateBppIds, isValueAddNP, phoneNumber, searchRequest) <-
+    withTimeoutOrRethrow "select2:leadingReads" 8 $ do
+      person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      when (not (fromMaybe False person.businessProfileVerified) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
+      merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+      SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
+      estimate <- QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
+      let searchRequestId = estimate.requestId
+      remainingEstimates <- catMaybes <$> (QEstimate.findByIdOutageTolerant `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
+      unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
+      let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
+      isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
+      phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
+      searchRequest <- QSearchRequest.findByIdOutageTolerant searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+      pure (person, merchant, estimate, searchRequestId, remainingEstimateBppIds, isValueAddNP, phoneNumber, searchRequest)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
