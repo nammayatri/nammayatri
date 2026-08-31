@@ -1139,7 +1139,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config DROP COLUMN max_scheduled_
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_window text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_window json ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_count_threshold integer ;
 
 

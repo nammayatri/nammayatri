@@ -1805,6 +1805,7 @@ TransporterConfig:
     authPhoneNumberCountWindow2: json
     fraudAuthCountWindow: json
     stripeStatusRefreshCountWindow: json
+    addDriverCountWindow: json
     authIpBlockedUntilInMins: integer
     scheduledRideOpenToAllThresholdMinutes: integer
     pickupLocThreshold: bigint
