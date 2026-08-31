@@ -1892,7 +1892,9 @@ getNearbySearchRequests ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->
@@ -2133,6 +2135,8 @@ type AcceptDynamicOfferFlow m r c =
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,

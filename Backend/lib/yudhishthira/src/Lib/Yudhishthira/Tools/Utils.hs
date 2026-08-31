@@ -71,24 +71,32 @@ runJsonLogic data' ruleText = do
 runLogics :: (MonadFlow m, ToJSON a) => [A.Value] -> a -> m LYT.RunLogicResp
 runLogics logics data_ = do
   let logicData = A.toJSON data_
-  logDebug $ "logics- " <> show logics
+  -- Rule bodies are static config (identified by their logic version) and run to hundreds of
+  -- KB. Serialising them on every call dominated this function: 'show' on [Value] goes via
+  -- String, so it allocated far more than evaluating the rules did. Full input/logic/output
+  -- capture is still available on demand through 'runLogicsWithDebugLog'.
+  logDebug $ "logics- count: " <> show (length logics)
   logDebug $ "logicData- " <> CS.cs (A.encode logicData)
   let startingPoint = LYT.RunLogicResp logicData []
   foldlM
-    ( \acc logic -> do
+    ( \acc (idx, logic) -> do
         let result = jsonLogicEither logic acc.result
         res <-
           case result of
             Left err -> do
-              logError $ "Got error: " <> show err <> " while running logic: " <> CS.cs (A.encode logics)
+              -- Identify the offending rule by position rather than dumping every rule
+              -- body. Unlike the debug lines above this is logError, so it fires even
+              -- when the service runs at ERROR level, where a few hundred KB per failed
+              -- evaluation is pure production cost. The bodies stay reachable through
+              -- 'runLogicsWithDebugLog'.
+              logError $ "Got error: " <> show err <> " while running logic " <> show (idx + 1) <> " of " <> show (length logics)
               pure $ LYT.RunLogicResp acc.result (acc.errors <> [show err])
             Right res -> pure $ LYT.RunLogicResp res acc.errors
-        logDebug $ "logic- " <> (CS.cs . A.encode $ logic)
         logDebug $ "json logic result - " <> (CS.cs . A.encode $ res)
         return res
     )
     startingPoint
-    logics
+    (zip [(0 :: Int) ..] logics)
 
 decodeText :: Text -> Maybe A.Value
 decodeText txt = A.decode (DBL.fromStrict . DTE.encodeUtf8 $ txt)
