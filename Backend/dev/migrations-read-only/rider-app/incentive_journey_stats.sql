@@ -1,0 +1,24 @@
+CREATE TABLE atlas_app.incentive_journey_stats ();
+
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN cohort_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN condition_operator text NOT NULL default 'GTE';
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN condition_type text NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN condition_value integer NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN current_value integer NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN journey_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN milestone_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN period_key text NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN reward_type text NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN reward_value integer ;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.incentive_journey_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.incentive_journey_stats ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_person_id ON atlas_app.incentive_journey_stats USING btree (person_id);
+ALTER TABLE atlas_app.incentive_journey_stats ADD CONSTRAINT incentive_journey_stats_unique_idx_journey_id_milestone_id_period_key_person_id UNIQUE (journey_id, milestone_id, period_key, person_id);
+CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_merchant_operating_city_id ON atlas_app.incentive_journey_stats USING btree (merchant_operating_city_id);
+CREATE INDEX CONCURRENTLY incentive_journey_stats_idx_cohort_id ON atlas_app.incentive_journey_stats USING btree (cohort_id);

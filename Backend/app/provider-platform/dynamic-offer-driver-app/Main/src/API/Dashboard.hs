@@ -16,6 +16,7 @@ module API.Dashboard where
 
 import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
 import qualified API.Action.Dashboard.Fleet as FleetDSL
+import qualified API.Action.Dashboard.IncentiveJourney as IncentiveJourneyDSL
 import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.Operator as OperatorDSL
@@ -37,6 +38,7 @@ type API =
            :<|> AppManagementDSLAPI
            :<|> ManagementDSLAPI
            :<|> IssueManagementDSLAPI
+           :<|> IncentiveJourneyDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
@@ -51,6 +53,7 @@ type APIV2 =
            :<|> AppManagementDSLAPI
            :<|> ManagementDSLAPI
            :<|> IssueManagementDSLAPI
+           :<|> IncentiveJourneyDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
@@ -62,6 +65,8 @@ type AppManagementDSLAPI = DashboardTokenAuth :> AppManagementDSL.API
 type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
 
 type IssueManagementDSLAPI = DashboardTokenAuth :> IssueManagementDSL.API
+
+type IncentiveJourneyDSLAPI = DashboardTokenAuth :> IncentiveJourneyDSL.API
 
 type RideBookingDSLAPI = DashboardTokenAuth :> RideBookingDSL.API
 
@@ -78,6 +83,7 @@ handler =
         :<|> appManagementDSLHandler merchantId city
         :<|> managementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
+        :<|> incentiveJourneyDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
@@ -99,6 +105,7 @@ handlerV2 =
         :<|> appManagementDSLHandler merchantId city
         :<|> managementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
+        :<|> incentiveJourneyDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
@@ -113,6 +120,9 @@ managementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId ci
 
 issueManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IssueManagementDSLAPI
 issueManagementDSLHandler merchantId city _auth = IssueManagementDSL.handler merchantId city
+
+incentiveJourneyDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IncentiveJourneyDSLAPI
+incentiveJourneyDSLHandler merchantId city _auth = IncentiveJourneyDSL.handler merchantId city
 
 rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
 rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city

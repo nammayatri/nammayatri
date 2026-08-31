@@ -76,8 +76,6 @@ data ConfigType
   | IssueConfigRider
   | IssueConfigDriver
   | MonetaryRewardConfig
-  | IncentiveJourneyConfig
-  | IncentiveJourneyMilestoneConfig
   | DocumentVerificationStagesConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 

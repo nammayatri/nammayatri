@@ -24,6 +24,7 @@ where
 
 import qualified API.Action.ProviderPlatform.AppManagement as AppManagementDSL
 import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
+import qualified API.Action.ProviderPlatform.IncentiveJourney as IncentiveJourneyDSL
 import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.Operator as OperatorDSL
@@ -65,6 +66,7 @@ type API' =
     :<|> AppManagementDSL.API
     :<|> ManagementDSL.API
     :<|> IssueManagementDSL.API
+    :<|> IncentiveJourneyDSL.API
     :<|> RideBookingDSL.API
     :<|> OperatorDSL.API
 
@@ -76,6 +78,7 @@ handler merchantId = do
       :<|> AppManagementDSL.handler merchantId city
       :<|> ManagementDSL.handler merchantId city
       :<|> IssueManagementDSL.handler merchantId city
+      :<|> IncentiveJourneyDSL.handler merchantId city
       :<|> RideBookingDSL.handler merchantId city
       :<|> OperatorDSL.handler merchantId city
     )
@@ -93,6 +96,7 @@ handlerV2 merchantId city =
     :<|> AppManagementDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
+    :<|> IncentiveJourneyDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> OperatorDSL.handler merchantId city
 

@@ -20,7 +20,6 @@ import qualified API.Types.ProviderPlatform.Management.FarePolicyV2
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.GeohashArea
-import qualified API.Types.ProviderPlatform.Management.IncentiveJourney
 import qualified API.Types.ProviderPlatform.Management.KnowledgeCenter
 import qualified API.Types.ProviderPlatform.Management.Media
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
@@ -67,7 +66,6 @@ data ManagementUserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
   | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
   | GEOHASH_AREA API.Types.ProviderPlatform.Management.GeohashArea.GeohashAreaUserActionType
-  | INCENTIVE_JOURNEY API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyUserActionType
   | KNOWLEDGE_CENTER API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
   | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
@@ -111,7 +109,6 @@ instance Text.Show.Show ManagementUserActionType where
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
     FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
     GEOHASH_AREA e -> "GEOHASH_AREA/" <> show e
-    INCENTIVE_JOURNEY e -> "INCENTIVE_JOURNEY/" <> show e
     KNOWLEDGE_CENTER e -> "KNOWLEDGE_CENTER/" <> show e
     MEDIA e -> "MEDIA/" <> show e
     MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
@@ -276,15 +273,6 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "GEOHASH_AREA/" r,
-                   ( v1,
-                     r2
-                     ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
-               ]
-            ++ [ ( INCENTIVE_JOURNEY v1,
-                   r2
-                 )
-                 | r1 <- stripPrefix "INCENTIVE_JOURNEY/" r,
                    ( v1,
                      r2
                      ) <-

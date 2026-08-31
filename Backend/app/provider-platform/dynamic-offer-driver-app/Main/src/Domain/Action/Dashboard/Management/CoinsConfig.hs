@@ -164,8 +164,6 @@ processingTranslations coinsConfig eventMessageLs = do
 -- * DriverIncentiveCohortRidesCompletedSlot slot N — conflict only with the exact
 --   same eventFunction (same slot + N) sharing a weekday; different slots may
 --   share weekdays so Ops can run multiple same-day cohorts with target N.
--- * DriverIncentiveCohortMetrics _ — conflict with any other Metrics config
---   sharing a weekday (thresholds ignored; only one Metrics window per day).
 validateIncentiveCohortTimeBoundWindow ::
   DTCC.CoinsConfig ->
   Maybe (ID.Id DTCC.CoinsConfig) ->
@@ -175,7 +173,7 @@ validateIncentiveCohortTimeBoundWindow candidate mbExcludeId = do
     (True, Just candidateTb) ->
       case incentiveCohortConflictKind candidate.eventFunction of
         Nothing -> pure ()
-        Just conflictKind -> do
+        Just ExactEventFunction -> do
           existing <-
             QCoinsConfigExtra.findActiveConfigsByCityVehicleTrip
               (ID.Id candidate.merchantOptCityId)
@@ -185,7 +183,7 @@ validateIncentiveCohortTimeBoundWindow candidate mbExcludeId = do
                 filter
                   ( \cc ->
                       maybe True (cc.id /=) mbExcludeId
-                        && matchesIncentiveCohortConflict conflictKind candidate.eventFunction cc.eventFunction
+                        && cc.eventFunction == candidate.eventFunction
                         && maybe False (incentiveCohortDaysOverlap candidateTb) (nonUnboundedTimeBound cc.timeBounds)
                   )
                   existing
@@ -193,27 +191,13 @@ validateIncentiveCohortTimeBoundWindow candidate mbExcludeId = do
             UC.throwError (InvalidRequest incentiveCohortWindowConflictMsg)
     _ -> pure ()
 
-data IncentiveCohortConflictKind
-  = ExactEventFunction
-  | AnyDriverIncentiveCohortMetrics
+data IncentiveCohortConflictKind = ExactEventFunction
 
 incentiveCohortConflictKind :: DCT.DriverCoinsFunctionType -> Maybe IncentiveCohortConflictKind
 incentiveCohortConflictKind = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> Just ExactEventFunction
   DCT.DriverIncentiveCohortRidesCompletedSlot _ _ -> Just ExactEventFunction
-  DCT.DriverIncentiveCohortMetrics _ -> Just AnyDriverIncentiveCohortMetrics
   _ -> Nothing
-
-matchesIncentiveCohortConflict ::
-  IncentiveCohortConflictKind ->
-  DCT.DriverCoinsFunctionType ->
-  DCT.DriverCoinsFunctionType ->
-  Bool
-matchesIncentiveCohortConflict ExactEventFunction candidateEf otherEf = otherEf == candidateEf
-matchesIncentiveCohortConflict AnyDriverIncentiveCohortMetrics _ otherEf =
-  case otherEf of
-    DCT.DriverIncentiveCohortMetrics _ -> True
-    _ -> False
 
 nonUnboundedTimeBound :: Maybe TB.TimeBound -> Maybe TB.TimeBound
 nonUnboundedTimeBound = \case

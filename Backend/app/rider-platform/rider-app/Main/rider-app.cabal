@@ -216,6 +216,7 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.FRFSAlerts
       Domain.Action.Dashboard.FRFSTicket
+      Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.IssueManagement.IssueList
@@ -561,6 +562,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
+      SharedLogic.IncentiveJourney
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
@@ -645,6 +647,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
+      Storage.Beam.IncentiveJourney
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
@@ -921,6 +924,8 @@ library
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.AppManagement.TransitOperator
       API.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
+      API.Action.Dashboard.IncentiveJourney
+      API.Action.Dashboard.IncentiveJourney.IncentiveJourney
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.IssueManagement.IssueList
@@ -974,6 +979,8 @@ library
       API.Action.DashboardAuth.AppManagement.Tickets
       API.Action.DashboardAuth.AppManagement.TransitOperator
       API.Action.DashboardAuth.AppManagement.VehicleSeatLayoutMapping
+      API.Action.DashboardAuth.IncentiveJourney
+      API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney
       API.Action.DashboardAuth.IssueManagement
       API.Action.DashboardAuth.IssueManagement.Issue
       API.Action.DashboardAuth.IssueManagement.IssueList
@@ -1910,6 +1917,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt
@@ -2055,6 +2063,7 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt
@@ -2196,6 +2205,7 @@ test-suite rider-app-test
     , http-client-tls
     , http-media
     , http-types
+    , incentive-journey
     , insert-ordered-containers
     , json-logic-hs
     , jwt

@@ -347,10 +347,14 @@ let AllocatorJobType =
       | ReconciliationScheduler
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
+      | BulkUserCohortMappingUpload
       >
 
 let jobRetryOnExceptionMapx =
-      [] : List { mapKey : AllocatorJobType, mapValue : Bool }
+      [ { mapKey = AllocatorJobType.BulkUserCohortMappingUpload
+        , mapValue = True
+        }
+      ]
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
@@ -436,6 +440,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.SAPRideRevenueDispatch, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationScheduler, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationSweep, mapValue = True }
+      , { mapKey = AllocatorJobType.BulkUserCohortMappingUpload
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =
