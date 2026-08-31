@@ -150,12 +150,17 @@ dispatchEntry _ _ _ _ _ entryType amount _ _ _ _currency _
     pure True
 dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime currency pgRows = do
   let label = show entryType
-  logInfo $ "Dispatching aggregated " <> label <> " entry to SAP, amount=" <> show amount <> " txnCount=" <> show txnCount
-  req <- buildJournalRequest sapCfg entryType amount fromTime currency
-  logInfo $ "SAP journal entry request body = " <> show req
-  result <- callSAPWithRetry sapCfg token req label maxRetries
-  let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId currency pgRows
-  handleSAPResponse label req result (toTransactionType entryType) txnCount mId mocid fromTime toTime currency saveTransactionAction
+      txnType = toTransactionType entryType
+  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType
+  if alreadyPosted
+    then pure True
+    else do
+      logInfo $ "Dispatching aggregated " <> label <> " entry to SAP, amount=" <> show amount <> " txnCount=" <> show txnCount
+      req <- buildJournalRequest sapCfg entryType amount fromTime currency
+      logInfo $ "SAP journal entry request body = " <> show req
+      result <- callSAPWithRetry sapCfg token req label maxRetries
+      let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId currency pgRows
+      handleSAPResponse label req result txnType txnCount mId mocid fromTime toTime currency saveTransactionAction
 
 scheduleNextSubscriptionPurchaseJob ::
   ( BeamFlow m r,
@@ -269,22 +274,27 @@ dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ _currency _ totals
     logInfo "No subscription purchase data found, skipping"
     pure True
 dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime currency subRows totals = do
-  logInfo $
-    "Dispatching aggregated subscription purchase to SAP:"
-      <> " grossAmount="
-      <> show totals.grossAmount
-      <> " cgst="
-      <> show totals.cgst
-      <> " sgst="
-      <> show totals.sgst
-      <> " igst="
-      <> show totals.igst
-      <> " netAmount="
-      <> show totals.netAmount
-  req <- buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency
-  result <- callSAPWithRetry sapCfg token req "SubscriptionPurchase" maxRetries
-  let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId currency subRows
-  handleSAPResponse "SubscriptionPurchase" req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency saveTransactionAction
+  let label = show entryType
+  alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime label SJE.SubscriptionPurchase
+  if alreadyPosted
+    then pure True
+    else do
+      logInfo $
+        "Dispatching aggregated subscription purchase to SAP:"
+          <> " grossAmount="
+          <> show totals.grossAmount
+          <> " cgst="
+          <> show totals.cgst
+          <> " sgst="
+          <> show totals.sgst
+          <> " igst="
+          <> show totals.igst
+          <> " netAmount="
+          <> show totals.netAmount
+      req <- buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency
+      result <- callSAPWithRetry sapCfg token req label maxRetries
+      let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId currency subRows
+      handleSAPResponse label req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency saveTransactionAction
 
 buildSubscriptionJournalRequest ::
   (BeamFlow m r, CacheFlow m r) =>
