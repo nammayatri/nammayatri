@@ -481,6 +481,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FinancialYear
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
@@ -583,6 +584,7 @@ library
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
+      SharedLogic.DriverFyEarnings
       SharedLogic.DriverIdentityInfo
       SharedLogic.DriverIdleTime
       SharedLogic.DriverOnboarding
@@ -1339,6 +1341,7 @@ library
       Domain.Types.DriverBlockReason
       Domain.Types.DriverBlockTransactions
       Domain.Types.DriverFee
+      Domain.Types.DriverFyEarnings
       Domain.Types.DriverGoHomeRequest
       Domain.Types.DriverGstin
       Domain.Types.DriverGullakAssociation
@@ -1534,6 +1537,7 @@ library
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverBlockTransactions
       Storage.Beam.DriverFee
+      Storage.Beam.DriverFyEarnings
       Storage.Beam.DriverGoHomeRequest
       Storage.Beam.DriverGstin
       Storage.Beam.DriverGullakAssociation
@@ -1734,6 +1738,7 @@ library
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverBlockTransactions
       Storage.Queries.DriverFee
+      Storage.Queries.DriverFyEarnings
       Storage.Queries.DriverGoHomeRequest
       Storage.Queries.DriverGstin
       Storage.Queries.DriverGullakAssociation

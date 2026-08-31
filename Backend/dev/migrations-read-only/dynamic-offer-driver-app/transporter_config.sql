@@ -1171,3 +1171,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_surge_confi
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_tag_validity_minutes integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_max_search_requests integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_daily_limit integer ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}' :: json;

@@ -28,6 +28,7 @@ import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.Communication
 import Storage.Beam.DriverFee
+import Storage.Beam.DriverFyEarnings
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
 import Storage.Beam.DriverLicense
@@ -104,6 +105,7 @@ atlasDB =
         fleetDriverAssociation = fleetDriverAssociationTable,
         fleetOperatorAssociation = fleetOperatorAssociationTable,
         fleetOperatorDailyStats = fleetOperatorDailyStatsTable,
+        driverFyEarnings = driverFyEarningsTable,
         driverOperatorAssociation = driverOperatorAssociationTable,
         route = routeTable,
         operationHub = operationHubTable,
@@ -158,6 +160,7 @@ data AtlasDB f = AtlasDB
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
     fleetOperatorAssociation :: f (B.TableEntity FleetOperatorAssociationT),
     fleetOperatorDailyStats :: f (B.TableEntity FleetOperatorDailyStatsT),
+    driverFyEarnings :: f (B.TableEntity DriverFyEarningsT),
     driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
     route :: f (B.TableEntity RouteT),
     operationHub :: f (B.TableEntity OperationHubT),
