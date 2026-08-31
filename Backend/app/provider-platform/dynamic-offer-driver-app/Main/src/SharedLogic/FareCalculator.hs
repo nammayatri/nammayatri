@@ -30,7 +30,14 @@ module SharedLogic.FareCalculator
     calculateFareParameters,
     calculateCommission,
     calculateCancellationCommission,
-    calculatePaymentCharge,
+    applyPaymentChargeOnPayableFare,
+    finalisePaymentCharge,
+    PaymentChargeResult (..),
+    paymentChargeFromFareTotal,
+    paymentChargeTotalRate,
+    driverBorneAppFee,
+    driverEffectiveFare,
+    customerBorneCharge,
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
@@ -1428,22 +1435,85 @@ isCustomerPaymentBearer = \case
   DTC.PAYMENT_CUSTOMER -> True
   _ -> False
 
--- | Stripe payment charge P = paymentChargeRate% × base fare, from the per-operating-city
---   DriverWalletConfig. Returns (P, bearer-as-Text) for ride persistence, driver UI and the
---   BAP application fee. 'base fare' subtracts any customer gross-up already folded into
---   paymentProcessingFee, so P is identical across bearers.
-calculatePaymentCharge :: Maybe DTC.DriverWalletConfig -> FareParameters -> (Maybe HighPrecMoney, Maybe Text)
-calculatePaymentCharge mbDwc fareParams =
+paymentChargeTotalRate :: DTC.DriverWalletConfig -> Double
+paymentChargeTotalRate dwc =
+  fromMaybe 0 dwc.paymentChargeRate * (1 + fromMaybe 0 dwc.paymentChargeVat / 100)
+
+driverBorneAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+driverBorneAppFee mbCharge mbBearerText =
+  case (KP.readMaybe . T.unpack) =<< mbBearerText of
+    Just DTC.PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
+    Just DTC.PAYMENT_DRIVER -> fromMaybe 0 mbCharge
+    _ -> 0
+
+driverEffectiveFare :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+driverEffectiveFare mbFare mbCharge mbBearerText =
+  fromMaybe 0 mbFare - driverBorneAppFee mbCharge mbBearerText
+
+customerBorneCharge :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+customerBorneCharge mbCharge mbBearerText =
+  case (KP.readMaybe . T.unpack) =<< mbBearerText of
+    Just DTC.PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
+    _ -> 0
+
+applyPaymentChargeOnPayableFare ::
+  Maybe DTC.DriverWalletConfig ->
+  FareParameters ->
+  HighPrecMoney ->
+  (FareParameters, Maybe HighPrecMoney, Maybe Text)
+applyPaymentChargeOnPayableFare mbDwc fareParams preChargeFare =
   case mbDwc of
-    Just dwc ->
-      case (dwc.paymentChargeRate, dwc.paymentChargeBearer) of
-        (Just rate, Just bearer)
-          | rate > 0 ->
-            let baseFareSum = fareSum fareParams Nothing - fromMaybe 0 fareParams.paymentProcessingFee
-                p = HighPrecMoney (baseFareSum.getHighPrecMoney * (toRational rate / 100))
-             in (if p > 0 then Just p else Nothing, Just (show bearer))
-        _ -> (Nothing, Nothing)
-    Nothing -> (Nothing, Nothing)
+    Just dwc
+      | Just rate <- dwc.paymentChargeRate,
+        Just bearer <- dwc.paymentChargeBearer,
+        rate > 0 ->
+        let totalRate = paymentChargeTotalRate dwc
+            p = HighPrecMoney ((max 0 preChargeFare).getHighPrecMoney * (toRational totalRate / 100))
+            mbP = if p > 0 then Just p else Nothing
+            adjusted =
+              if isCustomerPaymentBearer bearer
+                then fareParams {paymentProcessingFee = mbP}
+                else fareParams
+         in (adjusted, mbP, Just (show bearer))
+    _ -> (fareParams, Nothing, Nothing)
+
+data PaymentChargeResult = PaymentChargeResult
+  { adjustedFareParams :: FareParameters,
+    adjustedFare :: HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text
+  }
+
+finalisePaymentCharge ::
+  Maybe DTC.DriverWalletConfig ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  FareParameters ->
+  PaymentChargeResult
+finalisePaymentCharge mbDwc currentFare appliedCharge fareParams =
+  let preChargeFare = currentFare - appliedCharge
+      (adjusted, mbP, mbBearer) = applyPaymentChargeOnPayableFare mbDwc fareParams preChargeFare
+   in PaymentChargeResult
+        { adjustedFareParams = adjusted,
+          adjustedFare = preChargeFare + customerBorneCharge adjusted.paymentProcessingFee mbBearer,
+          paymentCharge = mbP,
+          paymentChargeBearer = mbBearer
+        }
+
+paymentChargeFromFareTotal :: Maybe DTC.DriverWalletConfig -> HighPrecMoney -> HighPrecMoney
+paymentChargeFromFareTotal mbDwc total =
+  case mbDwc of
+    Just dwc
+      | Just rate <- dwc.paymentChargeRate,
+        Just bearer <- dwc.paymentChargeBearer,
+        rate > 0,
+        total > 0 ->
+        let totalRate = paymentChargeTotalRate dwc
+         in case bearer of
+              DTC.PAYMENT_CUSTOMER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / toRational (100 + totalRate)))
+              DTC.PAYMENT_DRIVER -> HighPrecMoney (total.getHighPrecMoney * (toRational totalRate / 100))
+              DTC.PAYMENT_PLATFORM -> 0
+    _ -> 0
 
 -- | Gross up the fare by the payment charge when the RIDER bears it, by populating the
 --   (otherwise-dormant) paymentProcessingFee slot which 'fareSum' already sums.
@@ -1455,8 +1525,11 @@ applyPaymentChargeGrossUp mbDwc fareParams =
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0,
         isCustomerPaymentBearer bearer ->
-        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational rate / 100))
-         in fareParams {paymentProcessingFee = Just p}
+        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational (paymentChargeTotalRate dwc) / 100))
+         in fareParams
+              { paymentProcessingFee = Just p,
+                discountApplicableRideFareTaxExclusive = (+ p) <$> fareParams.discountApplicableRideFareTaxExclusive
+              }
     _ -> fareParams
 
 -- | Hardcoded list of 'FareChargeComponent' values the customer offer

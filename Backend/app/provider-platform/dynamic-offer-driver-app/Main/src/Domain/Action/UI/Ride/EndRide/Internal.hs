@@ -497,7 +497,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
-        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount
+        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - fromMaybe 0 fareParams.paymentProcessingFee
       customerDiscountAmount = fromMaybe 0 ride.discountAmount
       tipAmount = fromMaybe 0 ride.tipAmount
       -- ServiceVAT (international): platform-service VAT input credit. The base
@@ -533,22 +533,18 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+      resolvedIsOnline <-
+        if forceOnline
+          then pure True
+          else do
+            mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+              do
+                CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+                >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+            pure $ maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod
       -- Persist the computed ledger write mode on the booking for reconciliation
-      QRB.updateLedgerWriteMode booking.id (Just forceOnline)
-      if forceOnline
-        then pure True
-        else do
-          mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-            do
-              CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-              >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-          case mbPaymentMethod of
-            Nothing -> pure False -- Considering OFFLINE
-            Just paymentMethod -> do
-              case paymentMethod.paymentInstrument of
-                Cash -> pure False
-                BoothOnline -> pure False
-                _ -> pure True
+      QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
+      pure resolvedIsOnline
 
     let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 
@@ -607,6 +603,11 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
+    let mbPaymentBearer = transporterConfig.driverWalletConfig.paymentChargeBearer
+        paymentChargeGross = fromMaybe 0 ride.paymentCharge
+        (paymentChargeAmt, paymentChargeVatAmt) =
+          splitGrossByVatPct transporterConfig.driverWalletConfig.paymentChargeVat paymentChargeGross
+        customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
     let mkRideLineItems clubVatInclusive issuedToType =
           let rideInclusiveLine = rawBaseFare + rawTaxAmount
               tollInclusiveLine = tollAmount + tollVatAmount
@@ -683,7 +684,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
-                  if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
+                  if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing,
+                  if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge paymentChargeAmt else Nothing,
+                  if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         rideGstBreakdown =
@@ -857,29 +860,37 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT Nothing
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
         when shouldReverseCommissionWalletDebit $ do
-          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (commissionVatAmount > 0) $
-            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (cancellationCommissionBase > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionBase walletReferenceDeductedAtPaymentByPlatform Nothing
-          when (cancellationCommissionVat > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionVat walletReferenceDeductedAtPaymentByPlatform Nothing
+          void $ transfer SellerRevenue OwnerLiability (commissionBaseAmount + commissionVatAmount) walletReferenceDeductedAtPaymentByPlatform Nothing
+          when (cancellationCommissionBase + cancellationCommissionVat > 0) $
+            void $ transfer SellerRevenue OwnerLiability (cancellationCommissionBase + cancellationCommissionVat) walletReferenceDeductedAtPaymentByPlatform Nothing
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
 
-    -- Stripe payment charge (card / online rides only; opt-in via paymentChargeBearer).
-    -- P = paymentChargeRate% of the online cash-in total; posts SellerExpense → SellerLiability
-    -- plus the bearer's funding leg (recordStripeChargeLedger). Reuses the ride-settlement ctx,
-    -- whose counterparty is already DRIVER/FLEET_OWNER so the driver funding leg is correct.
-    whenJust transporterConfig.driverWalletConfig.paymentChargeBearer $ \paymentBearer ->
-      when isOnline $ do
-        let paymentRate = fromMaybe 0 transporterConfig.driverWalletConfig.paymentChargeRate
-            onlineCashInTotal = baseFare + taxAmount + tollWithVat + parkingWithVat + customerDiscountAmount + tipAmount
-            paymentChargeAmount = onlineCashInTotal * realToFrac paymentRate / 100
-        recordStripeChargeLedger ctx (paymentBearerToFunder paymentBearer) paymentChargeAmount walletReferencePGPaymentCharges
-          >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
+    whenJust mbPaymentBearer $ \paymentBearer ->
+      when (paymentChargeGross > 0) $ case paymentBearer of
+        PAYMENT_PLATFORM ->
+          recordStripeChargeLedger ctx FundByPlatform paymentChargeGross walletReferencePGPaymentCharges
+            >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
+        _ -> do
+          paymentChargeResult <- runFinance ctx $ do
+            let postChargePaidByCustomer amt ref =
+                  if isOnline
+                    then do
+                      transfer_ BuyerAsset BuyerExternal amt ref
+                      void $ transfer BuyerExternal OwnerLiability amt ref Nothing
+                    else void $ transfer BuyerControl OwnerControl amt ref Nothing
+            when customerBearsPayment $ do
+              postChargePaidByCustomer paymentChargeAmt walletReferencePaymentChargePaidByCustomer
+              when (paymentChargeVatAmt > 0) $
+                postChargePaidByCustomer paymentChargeVatAmt walletReferencePaymentChargeVatPaidByCustomer
+            void $ transfer OwnerLiability SellerLiability paymentChargeAmt walletReferencePGPaymentCharges Nothing
+            when (paymentChargeVatAmt > 0) $
+              void $ transfer OwnerLiability SellerLiability paymentChargeVatAmt walletReferencePGPaymentChargesVAT Nothing
+          case paymentChargeResult of
+            Left err -> fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e)) (Left err)
+            Right _ -> pure ()
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId

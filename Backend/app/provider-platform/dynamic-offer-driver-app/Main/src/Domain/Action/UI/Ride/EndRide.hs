@@ -584,23 +584,31 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             Left err -> do
               logError $ "Error getting offer discount, falling back to booking discount amount: " <> show err
               pure booking.discountAmount
-        else pure Nothing
+        else pure booking.discountAmount
     let discountAmount = Fare.clampDiscountToDiscountable baseFareParams rawDiscountAmount
     -- Airport/parking charge is already in fareParams and finalFare from estimate/quote.
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
     finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
-    let (mbPaymentCharge, mbPaymentChargeBearer) = Fare.calculatePaymentCharge (Just thresholdConfig.driverWalletConfig) baseFareParams
+    let appliedCharge = case mbUpdatedFareParams of
+          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee
+          Nothing -> Fare.customerBorneCharge booking.paymentCharge booking.paymentChargeBearer
+        chargeRes = Fare.finalisePaymentCharge (Just thresholdConfig.driverWalletConfig) finalFare appliedCharge baseFareParams
+        finalFareWithPaymentCharge = chargeRes.adjustedFare
+        mbPaymentCharge = chargeRes.paymentCharge
+        mbPaymentChargeBearer = chargeRes.paymentChargeBearer
+        rideFareParams = chargeRes.adjustedFareParams
+        mbFareParamsToPersist = chargeRes.adjustedFareParams <$ mbUpdatedFareParams
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
-               fare = Just finalFare,
+               fare = Just finalFareWithPaymentCharge,
                status = DRide.COMPLETED,
                tripEndPos = Just tripEndPoint,
                rideEndedBy = Just rideEndedBy',
-               fareParametersId = Just baseFareParams.id,
+               fareParametersId = Just rideFareParams.id,
                tollCharges = mbUpdatedFareParams >>= (.tollCharges),
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
@@ -648,7 +656,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
 
     -- we need to store fareParams only when they changed
-    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId baseFareParams thresholdConfig
+    endRideTransactionFork <- awaitableFork "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbFareParamsToPersist booking.riderId rideFareParams thresholdConfig
     clearInterpolatedPointsFork <- awaitableFork "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
@@ -751,7 +759,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide baseFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
     fork "sending dashboardSMS - CallbasedEndRide " $ do
       case req of
         CallBasedReq callBasedEndRideReq -> do

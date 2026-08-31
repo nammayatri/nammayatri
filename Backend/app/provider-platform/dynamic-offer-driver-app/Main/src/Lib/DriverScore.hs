@@ -54,6 +54,7 @@ import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
+import SharedLogic.FareCalculator (driverEffectiveFare)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
@@ -203,7 +204,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           -- allRides <- RQ.findAllRidesByDriverId driverId
           let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
               farePramIds = mapMaybe (.fareParametersId) completedRides
-              totalEarnings = sum $ map (fromMaybe 0.0 . (.fare)) completedRides
+              totalEarnings = sum $ map (\r -> driverEffectiveFare r.fare r.paymentCharge r.paymentChargeBearer) completedRides
           driverSelectedFareEarnings <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
           -- driverSelectedFareEarnings <- FPQ.findDriverSelectedFareEarnings farePramIds
           customerExtraFeeEarnings <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
@@ -218,7 +219,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           -- mbBooking <- BQ.findById ride.bookingId
           let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking' -> Just $ fromMaybe 0.0 booking'.fareParams.driverSelectedFare + fromMaybe 0.0 booking'.fareParams.customerExtraFee) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide fareParameter
-          pure (fromMaybe 0.0 ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
+          pure (driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
 
@@ -262,7 +263,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
             DDS.DailyStats
               { id = id,
                 driverId = driverId,
-                totalEarnings = fromMaybe 0.0 ride.fare,
+                totalEarnings = driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer,
                 numRides = 1,
                 totalDistance = fromMaybe 0 ride.chargeableDistance,
                 merchantLocalDate = utctDay localTime,
@@ -292,7 +293,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do
-      let totalEarnings = dailyStats.totalEarnings + fromMaybe 0.0 ride.fare
+      let totalEarnings = dailyStats.totalEarnings + driverEffectiveFare ride.fare ride.paymentCharge ride.paymentChargeBearer
           numRides = dailyStats.numRides + 1
           totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
           merchantLocalDate = utctDay localTime
@@ -320,7 +321,7 @@ createDriverStat currency distanceUnit driverId = do
           { driverId = cast driverId,
             idleSince = now,
             totalRides = length completedRides,
-            totalEarnings = sum $ map (fromMaybe 0.0 . (.fare)) completedRides,
+            totalEarnings = sum $ map (\r -> driverEffectiveFare r.fare r.paymentCharge r.paymentChargeBearer) completedRides,
             bonusEarned = driverSelectedFare + customerExtraFee + deadKmFare,
             lateNightTrips = lateNightTripsCount,
             earningsMissed = missedEarnings,

@@ -478,6 +478,7 @@ data DriverWalletConfig = DriverWalletConfig
     onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
     paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    paymentChargeVat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
     payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
   }

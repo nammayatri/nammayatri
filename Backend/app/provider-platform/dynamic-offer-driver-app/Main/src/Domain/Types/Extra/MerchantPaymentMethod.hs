@@ -28,6 +28,12 @@ data PaymentType = ON_FULFILLMENT | POSTPAID
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash | BoothOnline
   deriving (Generic, Eq, Ord)
 
+isOnlinePaymentInstrument :: PaymentInstrument -> Bool
+isOnlinePaymentInstrument instrument = case instrument of
+  Cash -> False
+  BoothOnline -> False
+  _ -> True
+
 instance ToJSON PaymentInstrument where
   toJSON = genericToJSON paymentInstrumentOptions
 
