@@ -182,7 +182,26 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     (rider, dConfirmRes) <- case confirmResult of
       Right res -> pure res
       Left err -> do
-        when (isJust mbPurchasedPassPaymentId) $
+        when (isJust mbPurchasedPassPaymentId) $ do
+          -- The selections were already persisted above, and resolvePassForFare throws AFTER that
+          -- write. Without this the rejected quantity sticks: the quote categories sit at the
+          -- refused quantity while the booking keeps the overrideType stamped by the previous,
+          -- covered confirm -- a booking marked pass-covered at a quantity the pass just refused,
+          -- which is the one thing the cap exists to prevent. Put the prior selections back so the
+          -- rejection leaves no trace.
+          void $
+            withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
+              FRFSUtils.updateQuoteCategoriesWithSelections
+                -- Nothing, not mbHoldId: the hold is released immediately below, so stamping it
+                -- back onto the restored categories would leave them pointing at a dead hold.
+                Nothing
+                -- Seats carried over from the ORIGINAL categories, not zeroed. seatIds/seatLabels
+                -- are written straight through by updateQuoteCategoriesWithSelections, so passing
+                -- Nothing here would clear the rider's seat selection as a side effect of
+                -- rejecting their pass -- on a seat-selection flow that is a worse bug than the
+                -- one this restore exists to fix.
+                (quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity qc.seatIds qc.seatLabels))
+                updatedQuoteCategories
           whenJust ((,) <$> mbTripId <*> mbHoldId) $ \(tripId, holdId) -> do
             logWarning $ "FRFSConfirm:confirmAndUpsertBooking releasing hold after a pass failure holdId=" <> holdId <> " tripId=" <> tripId <> " err=" <> show err
             void $ withTryCatch "FRFSConfirm:releaseHoldOnFailure" (SeatBooking.releaseHold tripId holdId)
@@ -319,27 +338,38 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                       totalPrice = fareParameters.totalPrice
                       mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
-                  mbResolved <- resolvePassForFare rider quote.vehicleType (fromMaybe now booking.startTime) mbNewServiceTierType fareParameters mbPurchasedPassPaymentId
+                  -- booking.startTime was stamped at the ORIGINAL confirm, and
+                  -- filterCandidatesForLeg gates a pass on startDate <= tripDay <= endDate. A
+                  -- reconfirm the next day would still be priced against yesterday and could accept
+                  -- a pass that no longer covers the trip. A start time still in the future is a
+                  -- real scheduled departure and stays authoritative; anything past means the
+                  -- reconfirm is the trip being booked, so price against now.
+                  let passResolutionTime = case booking.startTime of
+                        Just startTime | startTime > now -> startTime
+                        _ -> now
+                  mbResolved <- resolvePassForFare rider quote.vehicleType passResolutionTime mbNewServiceTierType fareParameters mbPurchasedPassPaymentId
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
                   void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
-                  -- Persist the re-priced total, not just carry it on the returned record: the status
-                  -- response is built from a re-read of this row, and on_init -- the only other writer
-                  -- of totalPrice -- is an async callback that has not landed yet, so the row would
-                  -- otherwise still hold the previous quantity's fare.
                   void $ QFRFSTicketBooking.updateTotalPriceById totalPrice booking.id
                   let mbPassOption = snd <$> mbResolved
                       resolvedType = DFRFSTicketBooking.PassOverride <$ mbPassOption
                       resolvedAmount = (.overriddenTotalPrice.amount) <$> mbPassOption
                       resolvedEntityId = (.purchasedPassPaymentId.getId) <$> mbPassOption
-                      -- A pass resolved -> stamp it. No pass and the caller is authoritative (the rider's
-                      -- own confirm) -> clear a now-stale override. No pass and NOT authoritative (on_select
-                      -- and other internal re-entries call with Nothing) -> keep the existing override, so a
-                      -- partial-pass booking is not silently stripped and billed full fare.
                       (overrideType', overriddenAmount', overrideAppliedEntityId') =
                         if isJust mbPassOption || passSelectionAuthoritative
                           then (resolvedType, resolvedAmount, resolvedEntityId)
                           else (booking.overrideType, booking.overriddenAmount, booking.overrideAppliedEntityId)
+                  -- Clearing is the correct answer to a rider who deselected the pass, but it is
+                  -- indistinguishable from a client that simply retried without the id -- and the
+                  -- rider then silently lands on a full-fare PAYMENT_PENDING with a 200. Log it so
+                  -- the transition is at least visible when a rider asks where their pass went.
+                  when (isJust booking.overrideType && isNothing overrideType') $
+                    logWarning $
+                      "FRFSConfirm: clearing pass override on reconfirm bookingId=" <> booking.id.getId
+                        <> " previousPass="
+                        <> show booking.overrideAppliedEntityId
+                        <> " (no purchasedPassPaymentId supplied by an authoritative caller)"
                   when (overrideType' /= booking.overrideType || overriddenAmount' /= booking.overriddenAmount || overrideAppliedEntityId' /= booking.overrideAppliedEntityId) $
                     QFRFSTicketBooking.updatePassOverrideById overrideType' overriddenAmount' overrideAppliedEntityId' booking.id
                   return $
@@ -641,15 +671,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
       case mbClaimed of
         Nothing -> logInfo $ "FRFSConfirm: not claiming for inline confirm (already confirming, or a payment webhook holds the booking) bookingId=" <> dConfirmRes.id.getId
         Just claimedBooking -> do
-          -- Everything past the claim runs under this: the booking is already CONFIRMING, so a throw
-          -- from any write or lookup below would leave it CONFIRMING with an empty failure_reason and
-          -- nothing to resolve it -- no payment row, and CheckMultimodalConfirmFail is only scheduled
-          -- on payment success, which never comes for a fully covered booking. Same wrapper the
-          -- journey path uses in FRFSPassConfirm.
           afterClaim <- withTryCatch "FRFSConfirm:passCoveredAfterClaim" $ do
-            -- Carried on the record too, not just written: the CRIS confirm builds chargeableAmount
-            -- from booking.totalPrice, so the pre-update record would quote the operator the
-            -- previous quantity's fare.
             let repricedBooking = claimedBooking {DFRFSTicketBooking.totalPrice = fareParameters.totalPrice}
             void $ QFRFSTicketBooking.updateTotalPriceById fareParameters.totalPrice claimedBooking.id
             void $ QFRFSTicketBooking.updateOnInitDone (Just True) claimedBooking.id
@@ -670,42 +692,23 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED claimedBooking.id
           FRFSUtils.releasePaymentSuccessLock claimedBooking.id
     else do
-      -- Only the standalone reprice case: a single-leg journey (the synthetic journey buildJourneyAndLeg
-      -- creates for a lone FRFS booking) whose sole leg is fully pass-covered, and which is still in a
-      -- confirmable state. A genuine multimodal journey has >1 leg, or a leg with no booking row yet
-      -- (a deferred, still-payable leg dropped by getAllJourneyFrfsBookings' mapMaybeM), and is left to
-      -- the existing deferred path (Base.hs / FRFSStatus on payment success) exactly as before. The
-      -- status guard mirrors the sibling branch's isMultiInitAllowed set and stops a re-confirm of an
-      -- already CONFIRMING/CONFIRMED/terminal booking from being reset to NEW and ticketed twice.
-      journeyFullyCovered <-
+      mbCoveredJourneyBookings <-
         if isFullyPassCovered
           && dConfirmRes.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.APPROVED]
           && isNothing mbRescheduleCtx
           then case mbJourneyId of
-            Nothing -> pure False
-            Just journeyId -> do
-              legs <- QJourneyLeg.getJourneyLegs journeyId
-              (_, allJourneyBookings) <- getAllJourneyFrfsBookings dConfirmRes
-              pure $
-                length legs == 1
-                  && length allJourneyBookings == 1
-                  && all (FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
-          else pure False
-      if journeyFullyCovered
-        then do
-          logInfo $ "FRFSConfirm: single pass-covered leg, confirming inline bookingId=" <> dConfirmRes.id.getId
-          -- confirmOne claims first and does every write inside its own guarded section, so a claim
-          -- that loses to a payment webhook leaves the row untouched. Going through it directly also
-          -- avoids the PAYMENT_PENDING -> NEW reset that confirmPassCoveredLegs' status == NEW filter
-          -- would otherwise require -- a transition a concurrent poll can observe.
-          FRFSPassConfirm.confirmOne dConfirmRes
-        else when isMultiInitAllowed $ do
+            Nothing -> pure Nothing
+            Just _ -> do
+              (_, allJourneyBookings, covered) <- FRFSUtils.journeyFullyPassCovered dConfirmRes
+              pure $ if covered then Just allJourneyBookings else Nothing
+          else pure Nothing
+      case mbCoveredJourneyBookings of
+        Just coveredBookings -> do
+          logInfo $ "FRFSConfirm: journey fully pass-covered, confirming " <> show (length coveredBookings) <> " leg(s) inline bookingId=" <> dConfirmRes.id.getId
+          FRFSPassConfirm.confirmPassCoveredLegs coveredBookings
+        Nothing -> when isMultiInitAllowed $ do
           case mbRescheduleCtx of
             Just ctx -> do
-              -- Load-bearing: rewrite the reused payment's categories to the new seats BEFORE the staging
-              -- confirm reads them (confirm resolves seats from findAllByPaymentId first). A fully pass-covered
-              -- reschedule has no reused payment (oldFrfsPaymentId = Nothing) and confirms via the pass path,
-              -- so there is nothing to sync — only APPROVED still applies as the multi-init marker.
               whenJust ctx.oldFrfsPaymentId $ \oldFrfsPaymentId ->
                 FRFSReschedule.syncPaymentCategories oldFrfsPaymentId updatedQuoteCategories
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED dConfirmRes.id

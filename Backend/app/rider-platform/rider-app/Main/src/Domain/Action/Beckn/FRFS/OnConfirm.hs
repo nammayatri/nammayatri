@@ -257,7 +257,15 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
   -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
   -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
-  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
+  -- frfsTicketBookingPaymentIdForTicketGeneration excludes the case where a PAYMENT generated this
+  -- ticket. The debit keyed only off the override being present, never off who actually paid, so a
+  -- payment webhook that reached the booking while the pass confirm was mid-flight -- override
+  -- already stamped, status not yet CONFIRMING -- issued the ticket AND left the trip to be spent
+  -- here. The rider was charged the fare and lost a pass trip for one ride, and the stamp then
+  -- disarmed the refund gate (ticketBookingPaymentIdMatched). Reproduced 6/6 with the confirm and
+  -- webhook ~250ms apart. A genuinely pass-covered booking has no payment row, so this cannot
+  -- suppress a legitimate debit; reschedule staging is already excluded via parentBookingId.
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId || isJust booking.frfsTicketBookingPaymentIdForTicketGeneration) $
     void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -284,7 +292,15 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
   when (FRFSPassOverride.fullyCoveredByPass booking) $
     whenJust mbJourneyId $ \journeyId ->
-      void $ withTryCatch "onConfirm:markJourneyPaid" (QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing)
+      void $
+        withTryCatch "onConfirm:markJourneyPaid" $ do
+          QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing
+          mbJourney <- QJourney.findByPrimaryKey journeyId
+          whenJust mbJourney $ \journey ->
+            when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $ do
+              (_, _, allCovered) <- FRFSUtils.journeyFullyPassCovered booking
+              when allCovered $
+                QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
   return ()
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =

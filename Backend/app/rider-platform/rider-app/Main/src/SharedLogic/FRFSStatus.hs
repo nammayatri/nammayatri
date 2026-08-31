@@ -365,7 +365,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       m (Maybe FRFSTicketService.FRFSTicketBookingStatusAPIRes)
     buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories = do
       let ticketBookingPaymentIdMatched = booking.frfsTicketBookingPaymentIdForTicketGeneration == Just paymentBooking.id.getId
-          fulfilledByPass = isJust booking.overrideType && booking.status `elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]
+          fulfilledByPass = FRFSPassOverride.fullyCoveredByPass booking && booking.status `elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]
           alreadyFulfilled = isJust booking.frfsTicketBookingPaymentIdForTicketGeneration || fulfilledByPass
       if paymentBookingStatus == FRFSTicketService.SUCCESS && not ticketBookingPaymentIdMatched && alreadyFulfilled
         then do
@@ -383,7 +383,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
               )
           return $ Just response
         else return Nothing
-
 
     buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking
       -- An external order has no session of ours behind it, so there is no payload to return and
