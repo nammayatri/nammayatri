@@ -96,6 +96,7 @@ library
     , behavior-tracker
     , bytestring
     , cereal
+    , clickhouse-haskell
     , config-pilot
     , containers
     , dynamic-offer-driver-app
@@ -124,6 +125,7 @@ library
     , sessionizer-metrics
     , special-zone-a
     , streamly
+    , string-conversions
     , template-haskell
     , text
     , time
@@ -195,6 +197,7 @@ executable kafka-consumers-exe
     , behavior-tracker
     , bytestring
     , cereal
+    , clickhouse-haskell
     , config-pilot
     , containers
     , errors
@@ -222,6 +225,7 @@ executable kafka-consumers-exe
     , sessionizer-metrics
     , special-zone-a
     , streamly
+    , string-conversions
     , template-haskell
     , text
     , time

@@ -64,6 +64,8 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - bytestring
+  - clickhouse-haskell
+  - string-conversions
   - euler-hs
   - record-dot-preprocessor
   - record-hasfield

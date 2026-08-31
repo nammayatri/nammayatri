@@ -18,10 +18,15 @@ module App where
 import AWS.S3
 import qualified App.Server as App
 import qualified Client.Main as CM
+import qualified Control.Concurrent.MVar as MV
 import qualified Data.Bool as B
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
+import qualified Data.Proxy as DP
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
+import qualified Database.ClickHouseDriver.HTTP as CHTTP
 import Environment
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.KVConnector.Metrics as KVCM
@@ -44,6 +49,7 @@ import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInt
 import Kernel.External.Verification.InternalScripts.InternalOCR (prepareInternalOCRHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -138,6 +144,10 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        chDropTables <- liftIO $ readEnvList "DRIVER_APP_CH_DROP_TABLES"
+        chDropColumns <- liftIO $ readEnvList "DRIVER_APP_CH_DROP_COLUMNS"
+        -- Background drop of unused ClickHouse tables/columns; off the startup path.
+        fork "Clickhouse schema drops" $ runClickhouseSchemaDrops chDropTables chDropColumns
         _ <- liftIO $ createCAC appCfg
         initCityMaps
         allProviders <-
@@ -173,3 +183,58 @@ convertToHashMap = HashMap.fromList . map convert . Map.toList
   where
     convert (k, v) = (toText' k, v)
     toText' = T.pack
+
+readEnvList :: String -> IO [Text]
+readEnvList var = do
+  mbVal <- lookupEnv var
+  pure $ maybe [] (filter (not . T.null) . map T.strip . T.splitOn "," . T.pack) mbVal
+
+-- | Drop DRIVER_APP_CH_DROP_TABLES / _COLUMNS (IF EXISTS) in the background;
+--   logs and skips failures. Optional per-entry cluster via '@':
+--   [cluster@][db.]table  and  [cluster@][db.]table.column.
+runClickhouseSchemaDrops ::
+  (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  [Text] ->
+  [Text] ->
+  m ()
+runClickhouseSchemaDrops [] [] = pure ()
+runClickhouseSchemaDrops dropTables dropColumns = do
+  chEnv <- CH.getClickhouseEnv (DP.Proxy @CH.APP_SERVICE_CLICKHOUSE)
+  forM_ dropTables $ \e ->
+    case splitCluster e of
+      Just (onCluster, table) | isValidName table -> runDrop chEnv $ "DROP TABLE IF EXISTS " <> table <> onCluster
+      _ -> logError $ "[CH SchemaDrop] Skipping malformed/unsafe table entry ([cluster@][db.]table): " <> e
+  forM_ dropColumns $ \e ->
+    case splitCluster e of
+      Just (onCluster, rest) ->
+        case T.breakOnEnd "." rest of
+          (tbl, col)
+            | not (T.null tbl) && not (T.null col) && isValidName rest ->
+              runDrop chEnv $ "ALTER TABLE " <> T.dropEnd 1 tbl <> onCluster <> " DROP COLUMN IF EXISTS " <> col
+          _ -> logMalformedCol e
+      Nothing -> logMalformedCol e
+  where
+    -- Split an optional leading "cluster@" prefix; returns (ON CLUSTER clause, rest).
+    -- No '@' => no cluster. Dots keep their db.table.column meaning in the rest.
+    splitCluster e = case T.splitOn "@" e of
+      [rest] -> Just ("", rest)
+      [c, rest] | isClusterName c -> Just (" ON CLUSTER `" <> c <> "`", rest)
+      _ -> Nothing
+    isClusterName c = not (T.null c) && T.all (\ch -> isIdent ch || ch == '-') c
+    isValidName t =
+      not (T.null t)
+        && not (T.isPrefixOf "." t)
+        && not (T.isSuffixOf "." t)
+        && T.all (\c -> c == '.' || isIdent c) t
+    isIdent c = c == '_' || isAsciiLower c || isAsciiUpper c || isDigit c
+    logMalformedCol e = logError $ "[CH SchemaDrop] Skipping malformed/unsafe column entry ([cluster@][db.]table.column): " <> e
+    runDrop chEnv stmt = do
+      logInfo $ "[CH SchemaDrop] Executing: " <> stmt
+      res <- L.runIO $
+        try $ do
+          connData <- MV.readMVar chEnv.connectionData
+          CHTTP.exec (T.unpack stmt) connData.connection
+      case res of
+        Left (e :: SomeException) -> logError $ "[CH SchemaDrop] FAILED: " <> stmt <> " => " <> show e
+        Right (Left errBytes) -> logError $ "[CH SchemaDrop] FAILED: " <> stmt <> " => " <> cs errBytes
+        Right (Right _) -> logInfo $ "[CH SchemaDrop] OK: " <> stmt
