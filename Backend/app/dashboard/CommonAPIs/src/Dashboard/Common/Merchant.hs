@@ -1136,6 +1136,31 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
 instance HideSecrets WhiteListOperatingCityReq where
   hideSecrets = identity
 
+-- Which backend platform a merchant belongs to. The merchant-list endpoint on provider-dashboard
+-- always returns BOTH platforms' merchants, tagged with this, each with its operating cities nested.
+data MerchantPlatform = BAP | BPP
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OperatingCityItem = OperatingCityItem
+  { operatingCityId :: Id.Id MerchantOperatingCity,
+    city :: Context.City,
+    state :: Context.IndianState
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantWithCities = MerchantWithCities
+  { platform :: MerchantPlatform,
+    merchantId :: Id.Id Merchant,
+    merchantShortId :: Id.ShortId Merchant,
+    merchantName :: Text,
+    enabled :: Bool,
+    operatingCities :: [OperatingCityItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -- Airport-ops: enable/disable a vehicle for a special location (all gates/areas, trip categories,
 -- search sources) across ALL time bounds. String lists are parsed to domain types in the handler.
 data SetFareProductEnabledReq = SetFareProductEnabledReq

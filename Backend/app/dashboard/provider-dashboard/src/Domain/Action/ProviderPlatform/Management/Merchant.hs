@@ -78,6 +78,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantListWithCities,
   )
 where
 
@@ -105,6 +106,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.GateInfo.Geometry as GGeom
 import Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
+import qualified RiderPlatformClient.RiderApp as RiderClient
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as SQM
@@ -741,3 +743,17 @@ getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types
 getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSubscriptionConfigList)
+
+-- Single endpoint that always returns BOTH platforms' merchants (each with its operating cities
+-- nested): driver-app (BPP) via the generated client + rider-app (BAP) via the bespoke
+-- RiderPlatformClient.RiderApp client, concatenated. A rider-app failure is tolerated (logged,
+-- treated as empty) so the BPP list still returns.
+getMerchantListWithCities :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Dashboard.Common.Merchant.MerchantWithCities])
+getMerchantListWithCities merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  bppMerchants <- Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantListWithCities)
+  bapMerchants <-
+    try @_ @SomeException (RiderClient.callRiderAppMerchantList merchantShortId opCity (.getMerchantListWithCities)) >>= \case
+      Right ms -> pure ms
+      Left err -> logError ("getMerchantListWithCities: rider-app (BAP) call failed, returning BPP only: " <> show err) >> pure []
+  pure (bppMerchants <> bapMerchants)

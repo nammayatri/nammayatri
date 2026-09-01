@@ -16,12 +16,14 @@
 module RiderPlatformClient.RiderApp
   ( callRiderAppExotelApi,
     callRiderAppBapFlowDebug,
+    callRiderAppMerchantList,
   )
 where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as ProviderRide
 import qualified Dashboard.Common.Exotel as Exotel
+import qualified Dashboard.Common.Merchant as CommonMerchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -95,3 +97,37 @@ callRiderAppBapFlowDebug ::
   c
 callRiderAppBapFlowDebug merchantId city =
   callServerAPI @_ @m @r APP_BACKEND_MANAGEMENT (mkBAPFlowDebugAPIs merchantId city) "callRiderAppBapFlowDebug"
+
+-- Standalone client for the hand-written BAP merchant-list endpoint on rider-app.
+-- Must match the route mounted in rider-app's API.Dashboard (MerchantListDSLAPI).
+type MerchantListAPI =
+  "dashboard"
+    :> Capture "merchantId" (ShortId DM.Merchant)
+    :> Capture "city" City.City
+    :> RiderAuth.DashboardTokenAuth
+    :> "merchant"
+    :> "listWithCities"
+    :> Get '[JSON] [CommonMerchant.MerchantWithCities]
+
+newtype MerchantListAPIs = MerchantListAPIs
+  { getMerchantListWithCities :: Euler.EulerClient [CommonMerchant.MerchantWithCities]
+  }
+
+mkMerchantListAPIs :: ShortId DM.Merchant -> City.City -> Text -> MerchantListAPIs
+mkMerchantListAPIs merchantId city token =
+  MerchantListAPIs {..}
+  where
+    getMerchantListWithCities = Euler.client (Proxy :: Proxy MerchantListAPI) merchantId city token
+
+callRiderAppMerchantList ::
+  forall m r b c.
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    CallServerAPI MerchantListAPIs m r b c
+  ) =>
+  ShortId DM.Merchant ->
+  City.City ->
+  (MerchantListAPIs -> b) ->
+  c
+callRiderAppMerchantList merchantId city =
+  callServerAPI @_ @m @r APP_BACKEND_MANAGEMENT (mkMerchantListAPIs merchantId city) "callRiderAppMerchantList"

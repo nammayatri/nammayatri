@@ -45,6 +45,7 @@ imports:
   DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  MerchantWithCities: Dashboard.Common.Merchant
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
   SpecialLocationType: Lib.Types.SpecialLocation
@@ -742,6 +743,13 @@ apis:
       auth: NoAuth
       response:
         type: CityListResp
+  - GET: # GetMerchantListWithCities - always returns BOTH BAP + BPP merchants, each with its operating cities nested
+      endpoint: /listWithCities
+      auth: ApiAuthV2
+      response:
+        type: "[MerchantWithCities]"
+      migrate:
+        capability: system-config.merchant.read
 
 types:
   MerchantUpdateReq:
