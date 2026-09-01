@@ -210,7 +210,13 @@ data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSPassengerDetail = FRFSPassengerDetail {gender :: Domain.Types.Person.Gender, isChild :: Kernel.Prelude.Bool, seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat}
+data FRFSPassengerDetail = FRFSPassengerDetail
+  { age :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    gender :: Domain.Types.Person.Gender,
+    isChild :: Kernel.Prelude.Bool,
+    name :: Data.Maybe.Maybe Data.Text.Text,
+    seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -402,7 +408,7 @@ data FRFSSelectRes = FRFSSelectRes
     categories :: [CategoryInfoResponse],
     fareBreakup :: [FRFSFareBreakupItem],
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    seatBlockIds :: Data.Maybe.Maybe Data.Text.Text,
+    seatBlockIds :: Data.Maybe.Maybe [Data.Text.Text],
     totalFare :: Kernel.Types.Common.PriceAPIEntity
   }
   deriving stock (Generic, Show)
