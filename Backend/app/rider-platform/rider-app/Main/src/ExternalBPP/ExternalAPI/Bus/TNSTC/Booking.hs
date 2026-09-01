@@ -1,7 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module ExternalBPP.ExternalAPI.Bus.TNSTC.Booking
-  ( GetPickupPointsReq (..),
+  ( ConfirmAdvSeatBookingReq (..),
+    confirmAdvSeatBooking,
+    GetPickupPointsReq (..),
+    getPickupPointsCached,
     AddBlockSeatsReq (..),
     GetTotalFareReq (..),
     getPickupPoints,
@@ -17,6 +20,7 @@ import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML
@@ -129,7 +133,6 @@ instance ToXML GetTotalFareReq where
         el "journeyDate" (fmtDate req.rqtfJourneyDate)
         el "pickupPointDropOffId" req.rqtfPickupPointDropOffId
         el "pickupPointPlaceId" req.rqtfPickupPointPlaceId
-        el "returnServiceID" "0"
         forM_ req.rqtfSeatBlockIds (el "seatBlockIds")
         forM_ req.rqtfSeatNumbers (el "seatNumber")
         el "serviceID" req.rqtfServiceId
@@ -141,6 +144,110 @@ instance ToXML GetTotalFareReq where
         el "userName" req.rqtfUserName
         el "WSRefNo" req.rqtfWsRefNo
       elementA (XML.Name "arg1" Nothing Nothing) ([] :: [(XML.Name, Text)]) ("O" :: Text)
+
+-- | ConfirmAdvSeatBooking. Field set follows the vendor's working sample; only serviceID,
+-- createdBy, totalFare, journeyDate, startPlaceID, WSRefNo and addnlAge are actually
+-- mandatory (verified by blanking each against staging), but the fee components are sent
+-- as returned because TNSTC stores them verbatim and never recomputes them.
+data ConfirmAdvSeatBookingReq = ConfirmAdvSeatBookingReq
+  { rqcAdultOrChild :: Text,
+    rqcAddnlAdultOrChilds :: [Text],
+    rqcAdultMale :: Int,
+    rqcAdultFemale :: Int,
+    rqcChildMale :: Int,
+    rqcChildFemale :: Int,
+    rqcAge :: Text,
+    rqcGender :: Text,
+    rqcPassengerName :: Text,
+    rqcAddnlPassengerNames :: [Text],
+    rqcAddnlAges :: [Text],
+    rqcAddnlGenders :: [Text],
+    rqcEmailId :: Text,
+    rqcPhoneNumber :: Text,
+    rqcBasicFare :: Text,
+    rqcTotalFare :: Text,
+    rqcClassId :: Text,
+    rqcConcessionTypeId :: Text,
+    rqcCounterCode :: Text,
+    rqcCreatedBy :: Text,
+    rqcEndPlaceCode :: Text,
+    rqcEndPlaceId :: Text,
+    rqcJourneyDate :: Day,
+    rqcPickupPointDropOffId :: Text,
+    rqcPickupPointPlaceId :: Text,
+    rqcPickupPointTime :: Text,
+    rqcPickupPointDropOffTime :: Text,
+    rqcSeatBlockIds :: [Text],
+    rqcSeatNumbers :: [Text],
+    rqcServiceId :: Text,
+    rqcStartPlaceCode :: Text,
+    rqcStartPlaceId :: Text,
+    rqcUserName :: Text,
+    rqcWsRefNo :: Text
+  }
+
+instance ToXML ConfirmAdvSeatBookingReq where
+  toXML req =
+    element (op "ConfirmAdvSeatBooking") $ do
+      element arg0 $ do
+        forM_ req.rqcAddnlAdultOrChilds (el "addnlAdultOrChild")
+        forM_ req.rqcAddnlAges (el "addnlAge")
+        forM_ req.rqcAddnlGenders (el "addnlGender")
+        forM_ req.rqcAddnlPassengerNames (el "addnlPasngrName")
+        el "adultFemale" (show req.rqcAdultFemale)
+        el "adultMale" (show req.rqcAdultMale)
+        el "adultOrChild" req.rqcAdultOrChild
+        el "advanceOrCurrentBooking" "Y"
+        el "age" req.rqcAge
+        el "basicFare" req.rqcBasicFare
+        el "childFemale" (show req.rqcChildFemale)
+        el "childMale" (show req.rqcChildMale)
+        el "classID" req.rqcClassId
+        el "concessionTypeId" req.rqcConcessionTypeId
+        el "counterCode" req.rqcCounterCode
+        el "createdBy" req.rqcCreatedBy
+        el "emailId" req.rqcEmailId
+        el "endPlaceCode" req.rqcEndPlaceCode
+        el "endPlaceID" req.rqcEndPlaceId
+        el "gender" req.rqcGender
+        el "journeyDate" (fmtDate req.rqcJourneyDate)
+        el "onewayOrReturnTrip" "O"
+        el "passengerName" req.rqcPassengerName
+        el "phoneNumber" req.rqcPhoneNumber
+        el "pickupPointDropOffId" req.rqcPickupPointDropOffId
+        el "pickupPointDropOffTime" req.rqcPickupPointDropOffTime
+        el "pickupPointPlaceId" req.rqcPickupPointPlaceId
+        el "pickupPointTime" req.rqcPickupPointTime
+        el "returnServiceID" "0"
+        forM_ req.rqcSeatBlockIds (el "seatBlockIds")
+        forM_ req.rqcSeatNumbers (const (el "seatIDs" ""))
+        forM_ req.rqcSeatNumbers (el "seatNumber")
+        el "serviceID" req.rqcServiceId
+        el "startPlaceCode" req.rqcStartPlaceCode
+        el "startPlaceID" req.rqcStartPlaceId
+        el "ticketNumber" "1"
+        el "totalFare" req.rqcTotalFare
+        el "userName" req.rqcUserName
+        el "WSRefNo" req.rqcWsRefNo
+      element (XML.Name "arg1" Nothing Nothing) $ do
+        el "counterCode" req.rqcCounterCode
+        el "createdBy" req.rqcCreatedBy
+        el "franchiseeUser" "false"
+        el "idProofLookupId" "166"
+        el "idProofRefernce" ""
+        el "userName" req.rqcUserName
+
+confirmAdvSeatBooking :: TnstcFlow m r => TNSTCConfig -> ConfirmAdvSeatBookingReq -> m TnstcBookingResult
+confirmAdvSeatBooking config req = callTnstc config "ConfirmAdvSeatBooking" req parseBookingResult
+
+-- | Boarding points for a service are fixed for the day, so they are cached for an hour and
+-- the vendor call becomes the cache-miss path. /seats fetches them first, which means confirm
+-- resolving the rider's chosen point is normally a cache hit rather than a fourth SOAP round
+-- trip on an already slow path.
+getPickupPointsCached :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> GetPickupPointsReq -> m [TnstcPickupPoint]
+getPickupPointsCached config cacheScope req =
+  IM.withInMemCache ["tnstcPickupPoints", cacheScope, req.rqppServiceId, fmtDate req.rqppJourneyDate, req.rqppPlaceId] 3600 $
+    getPickupPoints config req
 
 getPickupPoints :: TnstcFlow m r => TNSTCConfig -> GetPickupPointsReq -> m [TnstcPickupPoint]
 getPickupPoints config req = callTnstc config "GetAllServicePickupPointsByServiceID" req parsePickupPoints

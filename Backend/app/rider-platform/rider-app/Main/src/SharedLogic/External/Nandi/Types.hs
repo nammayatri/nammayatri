@@ -743,6 +743,9 @@ data NandiStop = NandiStop
 data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     providerCode :: Kernel.Prelude.Text,
+    -- Optional: only feeds that carry a state column populate it (TNSTC's stop_state).
+    -- Used to restrict concessions to intrastate journeys.
+    stateCode :: Maybe Text,
     routeCode :: Kernel.Prelude.Text,
     sequenceNum :: Kernel.Prelude.Int,
     stopCode :: Kernel.Prelude.Text,

@@ -33,6 +33,11 @@ updateAlternateShortNamesAndRouteIds alternateShortNames alternateRouteIds journ
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.alternateShortNames alternateShortNames, Se.Set Beam.alternateRouteIds alternateRouteIds, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
+updateBoardingPlatforms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateBoardingPlatforms fromStopPlatformCode toStopPlatformCode journeyLegId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.fromStopPlatformCode fromStopPlatformCode, Se.Set Beam.toStopPlatformCode toStopPlatformCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
+
 updateRoute ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
