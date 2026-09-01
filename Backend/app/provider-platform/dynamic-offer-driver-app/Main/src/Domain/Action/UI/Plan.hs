@@ -1590,7 +1590,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               | invoiceType == Just INV.AUTOPAY_INVOICE = DF.RECURRING_EXECUTION_INVOICE
               | otherwise = DF.RECURRING_INVOICE
         -- FIXME should we round to half?
-        let driverFeeAmount = roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
+        let driverFeeAmount = roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount)
         return
           DriverDuesEntity
             { autoPayStage = driverFee.autopayPaymentStage,
