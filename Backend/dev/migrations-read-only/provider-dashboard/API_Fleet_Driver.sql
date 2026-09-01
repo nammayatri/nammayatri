@@ -157,3 +157,5 @@ INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_
 
 -- {"api":"PostDriverFleetVehicleChangeFleetOwner","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VEHICLE_CHANGE_FLEET_OWNER' ) ON CONFLICT DO NOTHING;
+-- {"api":"PostDriverFleetCashRideUpdate","migration":"capability","param":"city-operations.driver_management.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_management.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_CASH_RIDE_UPDATE' ) ON CONFLICT DO NOTHING;

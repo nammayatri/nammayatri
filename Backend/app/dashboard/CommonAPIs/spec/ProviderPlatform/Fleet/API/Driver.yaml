@@ -405,6 +405,30 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # FleetCashRideUpdateAPI
+      endpoint: /fleet/cashRideUpdate
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: UpdateCashRideReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.driver_management.write
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/fleet/cashRideUpdate
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            request:
+              type: UpdateCashRideReq
+            response:
+              type: APISuccess
+
   - POST: # FleetRemoveDriverAPI
       endpoint: /{driverId}/fleet/remove/driver
       auth: ApiAuthV2
@@ -1584,6 +1608,10 @@ apis:
         type: VehicleInfo
 
 types:
+  UpdateCashRideReq:
+    - enableCashRide: Bool
+    - targetIds: Maybe [Text]
+    - derive: "'HideSecrets"
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
     - driverMobileNumberCountryCode: Text

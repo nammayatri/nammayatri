@@ -24,6 +24,7 @@ makeFleetDriverAssociation driverId fleetOwnerId onboardedOperatorId end merchan
         onboardedOperatorId,
         requestReason = Nothing,
         responseReason = Nothing,
+        enableCashRide = Nothing,
         merchantId,
         merchantOperatingCityId,
         createdAt = now,

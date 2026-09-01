@@ -31,3 +31,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN request_r
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN enable_cash_ride boolean ;

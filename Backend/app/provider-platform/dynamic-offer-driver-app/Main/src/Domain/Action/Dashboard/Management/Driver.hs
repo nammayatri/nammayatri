@@ -1468,8 +1468,10 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
 postDriverBulkSubscriptionServiceUpdate :: ShortId DM.Merchant -> Context.City -> Common.BulkServiceUpdateReq -> Flow APISuccess
 postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   merchant <- findMerchantByShortId merchantShortId
-  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
-  when (length req.driverIds > 200) $ throwError (InvalidRequest "driver ids limit exceeded")
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let maxBulkSubscriptionDriverIds = fromMaybe 200 (transporterConfig.limitsConfig >>= (.maxBulkSubscriptionDriverIds))
+  when (length req.driverIds > maxBulkSubscriptionDriverIds) $ throwError (InvalidRequest "driver ids limit exceeded")
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success

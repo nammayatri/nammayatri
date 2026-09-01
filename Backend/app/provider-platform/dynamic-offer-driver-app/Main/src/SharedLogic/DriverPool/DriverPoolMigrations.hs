@@ -21,6 +21,7 @@ import SharedLogic.DriverPool.DriverPoolData
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 
 -- | A migrator takes a batch of LTS-loaded entries and returns the same entries
@@ -66,7 +67,8 @@ migrations =
   [ MigrationEntry 1 backfillEffectiveBankAccount,
     MigrationEntry 2 backfillEnabled,
     MigrationEntry 3 backfillCloudType,
-    MigrationEntry 4 backfillEnableForAirport
+    MigrationEntry 4 backfillEnableForAirport,
+    MigrationEntry 5 backfillEnableCashRide
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -146,6 +148,45 @@ backfillEnableForAirport entries = do
   pure $
     map
       (\e -> e {enableForAirport = HashMap.lookupDefault e.enableForAirport (cast e.driverId :: Id Person.Person) airportMap})
+      entries
+
+-- | v5: backfill the new 'enableCashRide' field. While a driver has an
+-- active fleet association, the fleet governs entirely (its own flag AND
+-- this driver's association-level override) -- driver_information's admin
+-- flag is dormant and only takes effect once there's no active fleet
+-- association at all (same rule as the effective-flag computation in
+-- 'buildDriverPoolDataFromDB' and 'Storage.Queries.FleetDriverAssociationExtra'
+-- 's updateEnableCashRideFor* helpers). Without this, legacy entries would
+-- default to 'enableCashRide = True' regardless of what's actually stored,
+-- which is the safe direction (never wrongly deny cash rides) but still
+-- needs correcting once real data exists.
+backfillEnableCashRide ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillEnableCashRide entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+      -- only entries already carrying a fleetOwnerId need the fleet-scoped flags;
+      -- for the rest 'enableCashRide' comes from driver_information alone.
+      fleetDriverPersonIds = [cast e.driverId :: Id Person.Person | e <- entries, isJust e.fleetOwnerId]
+  fleetAssocs <- if null fleetDriverPersonIds then pure [] else QFDA.findAllByDriverIds fleetDriverPersonIds
+  let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId :: Id Person.Person, fa)) fleetAssocs
+      fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let driverFlagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, fromMaybe True di.enableCashRide)) dis
+  fleetOwnerInfos <- if null fleetOwnerPersonIds then pure [] else QFOI.findAllByPrimaryKeys fleetOwnerPersonIds
+  let fleetOwnerFlagMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, fromMaybe True foi.enableCashRide)) fleetOwnerInfos
+  pure $
+    map
+      ( \e ->
+          let pid = cast e.driverId :: Id Person.Person
+              mbFa = HashMap.lookup pid faMap
+              effective = case mbFa of
+                Just fa ->
+                  fromMaybe True (HashMap.lookup (Id @Person.Person fa.fleetOwnerId) fleetOwnerFlagMap)
+                    && fromMaybe True fa.enableCashRide
+                Nothing -> HashMap.lookupDefault True pid driverFlagMap
+           in e {enableCashRide = Just effective}
+      )
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

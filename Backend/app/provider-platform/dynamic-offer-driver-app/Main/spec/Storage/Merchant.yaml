@@ -948,6 +948,18 @@ TransporterConfig:
       detourCreditSec: Maybe Int
       staleFixAfterSec: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    # Per-field overrides for bulk-operation caps that were previously
+    # hardcoded in the handlers (see call sites for each field's default
+    # when unset). Once this release is out and the defaults are confirmed
+    # sufficient in production, these individual columns can be deleted.
+    LimitsConfig:
+      maxCashRideTargetIds: Maybe Int
+      maxVehiclesCsvRows: Maybe Int
+      maxDriverBusRouteMappingRows: Maybe Int
+      maxAddDriversCsvRows: Maybe Int
+      maxBulkSubscriptionDriverIds: Maybe Int
+      cashRideSyncBatchSize: Maybe Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
       cancellationRateThresholdWeekly: Int
@@ -1405,6 +1417,7 @@ TransporterConfig:
     individualPANCheck: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     pickupStallMonitoringConfig: Maybe PickupStallMonitoringConfig
+    limitsConfig: Maybe LimitsConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
     rcChangeThresholdDays: Maybe Int
@@ -1542,6 +1555,7 @@ TransporterConfig:
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
     pickupStallMonitoringConfig: Maybe Value
+    limitsConfig: Maybe Value
     feedbackNotificationConfig: Maybe Value
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
@@ -1646,6 +1660,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     pickupStallMonitoringConfig: Data.Aeson.toJSON <$> pickupStallMonitoringConfig|E
+    limitsConfig: Data.Aeson.toJSON <$> limitsConfig|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
     analyticsConfig: Just . Data.Aeson.toJSON|I
     driverWalletConfig: Just . Data.Aeson.toJSON|I
@@ -1771,6 +1786,9 @@ TransporterConfig:
     pickupStallMonitoringConfig: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       pickupStallMonitoringConfig|E
+    limitsConfig: (\val -> case Data.Aeson.fromJSON val of
+      Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
+      limitsConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
     analyticsConfig:
       Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig
@@ -1868,6 +1886,7 @@ TransporterConfig:
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
     pickupStallMonitoringConfig: json
+    limitsConfig: json
     driverCallingOption: text
     missingMappingFallbackVariant: text
     analyticsConfig: json

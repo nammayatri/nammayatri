@@ -286,6 +286,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
       Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount,
+      Se.Set Beam.enableCashRide enableCashRide,
       Se.Set Beam.enableForAirport (Kernel.Prelude.Just enableForAirport),
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
