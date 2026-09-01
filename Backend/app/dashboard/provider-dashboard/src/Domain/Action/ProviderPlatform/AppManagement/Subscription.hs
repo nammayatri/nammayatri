@@ -12,6 +12,7 @@ module Domain.Action.ProviderPlatform.AppManagement.Subscription
     getSubscriptionOrderStatus,
     getSubscriptionDriverPaymentHistoryAPIV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
+    getSubscriptionCancellationChargeHistory,
     postSubscriptionCollectManualPayments,
     postSubscriptionFeeWaiveOff,
     getSubscriptionPurchaseList,
@@ -376,4 +377,17 @@ getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit o
     limit
     offset
     status
+    (Kernel.Prelude.Just apiTokenInfo.personId.getId)
+
+getSubscriptionCancellationChargeHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Domain.Action.UI.Plan.CancellationChargeHistoryRes)
+getSubscriptionCancellationChargeHistory merchantShortId opCity apiTokenInfo driverId serviceName limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI
+    checkedMerchantId
+    opCity
+    (.subscriptionDSL.getSubscriptionCancellationChargeHistory)
+    driverId
+    serviceName
+    limit
+    offset
     (Kernel.Prelude.Just apiTokenInfo.personId.getId)
