@@ -60,6 +60,7 @@ Journey:
     isPublicTransportIncluded: Maybe Bool
     isSingleMode: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
+    skipCreateOrderCall: Maybe Bool
     journeyExpiryTime: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -121,6 +122,10 @@ Journey:
     updateHasStartedTrackingWithoutBooking:
         kvFunction: updateOneWithKV
         params: [hasStartedTrackingWithoutBooking]
+        where: id
+    updateSkipCreateOrderCall:
+        kvFunction: updateOneWithKV
+        params: [skipCreateOrderCall]
         where: id
 
   domainInstance:

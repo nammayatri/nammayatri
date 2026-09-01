@@ -45,7 +45,9 @@ import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as KT
+import qualified Kernel.External.Payment.Juspay.Types.CreateOrder as JuspayCreateOrder
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -63,8 +65,10 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
@@ -1465,8 +1469,8 @@ convertVehicleCategoryToEntityType Spec.BUS = DTRL.BUS
 convertVehicleCategoryToEntityType Spec.METRO = DTRL.METRO
 convertVehicleCategoryToEntityType Spec.SUBWAY = DTRL.SUBWAY
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
-postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment skipCreateOrderCall = do
   frfsConfig <-
     getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
@@ -1492,12 +1496,98 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
                     orderShortId = paymentOrder.shortId.getShortId,
                     splitSettlementDetails = splitDetailsAmount
                   }
-          _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion Nothing updateReq
+          -- An external order has no gateway order of ours to update: the system that opened it owns
+          -- it, so a fare change has to be agreed with them rather than pushed from here. The local
+          -- amount is still corrected below so the row matches what we will be charged for.
+          unless (paymentOrder.isExternalOrder == Just True) $
+            void $
+              TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion Nothing updateReq
           QOrder.updateAmount paymentOrder.id amountUpdated
           let updatedOrder :: DOrder.PaymentOrder
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
-    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails baskets isMockPayment
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails baskets isMockPayment skipCreateOrderCall
+
+buildExternalOrderCreationReq ::
+  ( ServiceFlow m r,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    HasField "isMetroTestTransaction" r Bool,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  DOrder.PaymentOrder ->
+  [DFRFSTicketBooking.FRFSTicketBooking] ->
+  Person ->
+  TPayment.PaymentServiceType ->
+  Maybe Bool ->
+  m JuspayCreateOrder.CreateOrderReq
+buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType mbEnableOffer = do
+  let merchantId = person.merchantId
+      merchantOperatingCityId = maybe person.merchantOperatingCityId cast paymentOrder.merchantOperatingCityId
+      bookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
+      isSingleMode = case bookings of
+        [_] -> True
+        _ -> False
+  frfsConfig <-
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOperatingCityId)
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
+  (vendorSplitDetails, _) <- createVendorSplitFromBookings bookings merchantId merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+  basket <- createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
+  isSplitEnabled <- TPayment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
+  isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+  splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled paymentOrder.amount vendorSplitDetails isPercentageSplitEnabled isSingleMode
+  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  personEmail <- mapM decrypt person.email
+  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode ((.quoteId) <$> listToMaybe bookings)
+  nwAddress <- asks (.nwAddress)
+  let interfaceReq =
+        KT.CreateOrderReq
+          { orderId = paymentOrder.id.getId,
+            orderShortId = paymentOrder.shortId.getShortId,
+            amount = paymentOrder.amount,
+            customerId = staticCustomerId,
+            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+            customerPhone = personPhone,
+            customerFirstName = person.firstName,
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateEndDate = Nothing,
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just nwAddress,
+            splitSettlementDetails = splitSettlementDetails,
+            basket = basket,
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing,
+            udf1 = udf1,
+            udf2 = udf2
+          }
+
+  -- Translated through the same function createOrder uses, so this payload cannot drift from the
+  -- one a real session call would have produced -- field renames, the basket encoding and the udf
+  -- defaults all come from there rather than being restated here.
+  serviceConfig <- TPayment.getPaymentServiceConfig merchantId merchantOperatingCityId Nothing paymentType person.clientSdkVersion
+  case serviceConfig of
+    KT.JuspayConfig cfg -> do
+      let clientId = fromMaybe cfg.merchantId cfg.pseudoClientId
+          -- Same assembly as Interface.Juspay.createOrder: host from the request, path from config.
+          -- Both must be present, so this is Nothing whenever the config carries no webhookUrl.
+          cfgWebhookUrl = do
+            reqUrl <- interfaceReq.webhookUrl
+            configPath <- cfg.webhookUrl
+            let baseHost = showBaseUrl reqUrl {baseUrlPath = ""}
+                normalizedPath = if "/" `T.isPrefixOf` configPath then configPath else "/" <> configPath
+            pure $ baseHost <> normalizedPath
+      Juspay.mkCreateOrderReq cfg.returnUrl cfg.autoRefundConflictThresholdMinutes cfgWebhookUrl clientId cfg.merchantId interfaceReq
+    _ -> throwError $ InternalError "Expected a Juspay payment service config to build an external order request"
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
 makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId

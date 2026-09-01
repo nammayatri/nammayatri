@@ -146,6 +146,7 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
 
 data JourneyConfirmResp = JourneyConfirmResp
   { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    orderCreationReq :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderReq,
     orderSdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderResp,
     result :: Kernel.Prelude.Text
   }

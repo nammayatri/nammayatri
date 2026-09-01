@@ -258,6 +258,15 @@ updatePaytmTid orderId mbPaytmTid = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+updatePaymentServiceOrderId :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> m ()
+updatePaymentServiceOrderId orderId paymentServiceOrderId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
 updateVpa :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe Text -> m ()
 updateVpa orderId vpa = do
   now <- getCurrentTime

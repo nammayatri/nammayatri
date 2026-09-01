@@ -249,14 +249,18 @@ postMultimodalConfirm ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
       isMockPayment = fromMaybe False mbIsMockPayment
+      skipCreateOrderCall = fromMaybe False mbSkipCreateOrderCall
+  when (journey.skipCreateOrderCall /= Just skipCreateOrderCall) $
+    QJourney.updateSkipCreateOrderCall (Just skipCreateOrderCall) journeyId
 
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
@@ -269,7 +273,7 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   updatedJourney <- JM.getJourney journeyId
   paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  sdkPayload <-
+  (sdkPayload, orderCreationReq) <-
     case updatedJourney.paymentOrderShortId of
       Just paymentOrderShortId -> do
         QOrder.findByShortId paymentOrderShortId
@@ -280,10 +284,17 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
               let mbQuoteId = case legs of
                     [leg] -> Id <$> leg.legPricingId
                     _ -> Nothing
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
-            Nothing -> return Nothing
-      Nothing -> return Nothing
-  pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
+              if paymentOrder.isExternalOrder == Just True
+                then do
+                  bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+                  orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder bookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
+                  return (Nothing, Just orderCreationReq')
+                else do
+                  mbSdkPayload <- buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
+                  return (mbSdkPayload, Nothing)
+            Nothing -> return (Nothing, Nothing)
+      Nothing -> return (Nothing, Nothing)
+  pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, ApiTypes.orderCreationReq = orderCreationReq, result = "Success"}
   where
     isAllFRFSLegSkipped legs journeyConfirmReqElements =
       all
@@ -333,23 +344,27 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
                       void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode (Just booking.quoteId)
-                      return (createOrderResp, Just paymentBooking.status)
-                    Nothing -> return (Nothing, Nothing)
-              Nothing -> return (Nothing, Nothing)
+                      return (createOrderResp, Just paymentBooking.status, paymentOrder.isExternalOrder == Just True)
+                    Nothing -> return (Nothing, Nothing, False)
+              Nothing -> return (Nothing, Nothing, False)
       )
       allJourneyFrfsBookings
   paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   let anyFirstBookingPaymentOrder = listToMaybe bookingsPaymentOrders
+      -- An external order never produces an SDK payload, so a missing payload cannot be what
+      -- withholds the response: the rider still has to be told whether the payment succeeded, and
+      -- the status above was just refreshed from the gateway. Every other order is gated as before.
       paymentOrder =
         case anyFirstBookingPaymentOrder of
-          Just (Just paymentOrder', Just paymentBookingStatus) ->
-            Just $
-              ApiTypes.PaymentOrder
-                { sdkPayload = Just paymentOrder',
-                  status = mkDomainPaymentStatusToAPIStatus paymentBookingStatus
-                }
+          Just (mbSdkPayload, Just paymentBookingStatus, isExternalOrder)
+            | isJust mbSdkPayload || isExternalOrder ->
+              Just $
+                ApiTypes.PaymentOrder
+                  { sdkPayload = mbSdkPayload,
+                    status = mkDomainPaymentStatusToAPIStatus paymentBookingStatus
+                  }
           _ -> Nothing
-      allPaymentOrders = all (isJust . fst) bookingsPaymentOrders
+      allPaymentOrders = all (\(mbSdkPayload, _, isExternalOrder) -> isJust mbSdkPayload || isExternalOrder) bookingsPaymentOrders
   if allPaymentOrders
     then do
       return $
@@ -392,49 +407,54 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Maybe (Id DFRFSQuote.FRFSQuote) -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId = do
-  personEmail <- mapM decrypt person.email
-  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
-  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-  nwAddress <- asks (.nwAddress)
-  udf1 <- SLUtils.getPersonUdf1 person
-  udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
-  offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderId = paymentOrder.id.getId,
-            orderShortId = paymentOrder.shortId.getShortId,
-            amount = paymentOrder.amount,
-            customerId = staticCustomerId,
-            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
-            customerPhone = personPhone,
-            customerFirstName = person.firstName,
-            customerLastName = person.lastName,
-            createMandate = Nothing,
-            mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing,
-            mandateEndDate = Nothing,
-            mandateStartDate = Nothing,
-            optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            webhookUrl = Just nwAddress,
-            splitSettlementDetails = splitSettlementDetails,
-            basket = offerBasket,
-            paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing,
-            udf1 = udf1,
-            udf2 = udf2
-          }
-  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
-  isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId
+  -- Nothing to build for an order we never opened a session for: there is no SDK payload to hand
+  -- the client, and going on would call the gateway's offer APIs -- and, through createOrderService,
+  -- expire the order -- for an order another system owns.
+  | paymentOrder.isExternalOrder == Just True = return Nothing
+  | otherwise = do
+    personEmail <- mapM decrypt person.email
+    personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+    isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
+    staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+    nwAddress <- asks (.nwAddress)
+    udf1 <- SLUtils.getPersonUdf1 person
+    udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
+    offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
+    let createOrderReq =
+          Payment.CreateOrderReq
+            { orderId = paymentOrder.id.getId,
+              orderShortId = paymentOrder.shortId.getShortId,
+              amount = paymentOrder.amount,
+              customerId = staticCustomerId,
+              customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+              customerPhone = personPhone,
+              customerFirstName = person.firstName,
+              customerLastName = person.lastName,
+              createMandate = Nothing,
+              mandateMaxAmount = Nothing,
+              mandateFrequency = Nothing,
+              mandateEndDate = Nothing,
+              mandateStartDate = Nothing,
+              optionsGetUpiDeepLinks = Nothing,
+              metadataExpiryInMins = Nothing,
+              metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+              webhookUrl = Just nwAddress,
+              splitSettlementDetails = splitSettlementDetails,
+              basket = offerBasket,
+              paymentRules = Nothing,
+              autoRefundPostSuccess = Nothing,
+              paymentFilter = Nothing,
+              udf1 = udf1,
+              udf2 = udf2
+            }
+    mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
+    isMetroTestTransaction <- asks (.isMetroTestTransaction)
+    let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+        createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+    DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing False
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

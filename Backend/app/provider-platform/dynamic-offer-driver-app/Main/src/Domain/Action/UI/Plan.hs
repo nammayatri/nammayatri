@@ -1233,6 +1233,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
       Nothing
       False
       Nothing
+      False -- skipCreateOrderCall
   createOrderResp <- mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
   now <- getCurrentTime

@@ -328,7 +328,8 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 toLocation = Just toLocation,
                 paymentOrderShortId = Nothing,
                 journeyExpiryTime = Nothing,
-                hasStartedTrackingWithoutBooking = Nothing
+                hasStartedTrackingWithoutBooking = Nothing,
+                skipCreateOrderCall = Nothing
               }
           journeyLeg =
             DJL.JourneyLeg
