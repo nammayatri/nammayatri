@@ -445,6 +445,8 @@ library
       ExternalBPP.ExternalAPI.Bus.TNSTC.Client
       ExternalBPP.ExternalAPI.Bus.TNSTC.Error
       ExternalBPP.ExternalAPI.Bus.TNSTC.Layout
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Order
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Place
       ExternalBPP.ExternalAPI.Bus.TNSTC.Services
       ExternalBPP.ExternalAPI.Bus.TNSTC.Types
       ExternalBPP.ExternalAPI.CallAPI
@@ -1170,6 +1172,7 @@ library
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
+      Domain.Types.FRFSPassengerDetail
       Domain.Types.FRFSQuote
       Domain.Types.FRFSQuoteBreakup
       Domain.Types.FRFSQuoteCategory
@@ -1345,6 +1348,7 @@ library
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
+      Storage.Beam.FRFSPassengerDetail
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSQuoteBreakup
       Storage.Beam.FRFSQuoteCategory
@@ -1525,6 +1529,7 @@ library
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
+      Storage.Queries.FRFSPassengerDetail
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSQuoteBreakup
       Storage.Queries.FRFSQuoteCategory

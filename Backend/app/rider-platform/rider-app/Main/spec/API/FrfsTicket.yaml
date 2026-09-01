@@ -452,6 +452,8 @@ types:
 
   FRFSPassengerDetail:
     seatId: Id Seat
+    name: Maybe Text
+    age: Maybe Int
     gender: Gender
     isChild: Bool
     derive: "Show"
@@ -480,7 +482,7 @@ types:
     categories: "[CategoryInfoResponse]"
     fareBreakup: "[FRFSFareBreakupItem]"
     totalFare: PriceAPIEntity
-    seatBlockIds: Maybe Text
+    seatBlockIds: Maybe [Text]
     blockExpiresAt: UTCTime
     derive: "Show"
 

@@ -11,7 +11,7 @@ data TNSTCFault = TNSTCFault
   deriving anyclass (Exception)
 
 instance IsBaseError TNSTCFault where
-  toMessage e = Just $ e.faultCode <> ": " <> e.faultMessage
+  toMessage e = Just e.faultMessage
 
 instance IsHTTPError TNSTCFault where
   toErrorCode _ = "TNSTC_FAULT"

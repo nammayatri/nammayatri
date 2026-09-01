@@ -19,17 +19,19 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Types
     TnstcPlace (..),
     parseConcessionTypes,
     parseBlockResult,
+    parseBookingResult,
+    TnstcBookingResult (..),
     parseFareResult,
   )
 where
 
-import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import GHC.Generics (Generic)
 import Text.Read (readMaybe)
 import Text.XML.Cursor
-import GHC.Generics (Generic)
 import Prelude
 
 setcNamespace :: Text
@@ -146,7 +148,7 @@ data TnstcPickupPoint = TnstcPickupPoint
     tppTime :: Maybe Text,
     tppPlatformNo :: Maybe Text
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data TnstcConcessionType = TnstcConcessionType
   { tctConcessionId :: Text,
@@ -229,6 +231,29 @@ parseBlockResult cur =
   TnstcBlockResult
     { tbrSeatBlockIds = mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement "seatBlockIds")
     }
+
+data TnstcBookingResult = TnstcBookingResult
+  { tbkPnrNumber :: Maybe Text,
+    tbkPnrMasterId :: Maybe Text,
+    tbkSeatIds :: Maybe Text,
+    tbkTicketNumber :: Maybe Text,
+    tbkStatus :: Maybe Text
+  }
+  deriving (Show, Eq)
+
+-- | ConfirmAdvSeatBooking echoes the request and adds pnrNumber / pnrMasterID / seatIDs.
+-- Failures arrive as SOAP faults, not as fields, so there is no errorMessage to read.
+parseBookingResult :: Cursor -> TnstcBookingResult
+parseBookingResult cur =
+  TnstcBookingResult
+    { tbkPnrNumber = txt "pnrNumber",
+      tbkPnrMasterId = txt "pnrMasterID",
+      tbkSeatIds = txt "seatIDs",
+      tbkTicketNumber = txt "ticketNumber",
+      tbkStatus = txt "status"
+    }
+  where
+    txt n = listToMaybe (mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement n))
 
 fareComponentNames :: [Text]
 fareComponentNames =

@@ -1,5 +1,6 @@
 imports:
   UTCTime: Kernel.Prelude
+  Gender: Domain.Types.Person
   TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -289,21 +290,53 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
-    updateProviderRefNoById:
+    updateProviderSelectionById:
       kvFunction: updateWithKV
-      params: [providerRefNo]
-      where: id
-    updateExtraFeesById:
-      kvFunction: updateWithKV
-      params: [extraFees]
-      where: id
-    updateConcessionTypeIdById:
-      kvFunction: updateWithKV
-      params: [concessionTypeId]
+      params: [providerRefNo, concessionTypeId, extraFees]
       where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+# Passenger identity for a confirmed booking. TNSTC does not require names or ages
+# (only addnlAge must be a number), so this exists for the ticket, the manifest and
+# ID checks at boarding -- not as an integration requirement.
+FRFSPassengerDetail:
+  tableName: frfs_passenger_detail
+  derives: "Generic,Show"
+  fields:
+    id: Id FRFSPassengerDetail
+    quoteId: Id FRFSQuote
+    bookingId: Maybe (Id FRFSTicketBooking)
+    seatId: Id Seat
+    seatLabel: Text
+    name: Maybe Text
+    age: Maybe Int
+    gender: Gender|NoRelation
+    isChild: Bool
+    pickupPointPlaceId: Maybe Text
+    dropOffPointPlaceId: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    bookingId: SecondaryKey
+  queries:
+    findAllByQuoteId:
+      kvFunction: findAllWithKV
+      where: quoteId
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: bookingId
+    updateBookingIdByQuoteId:
+      kvFunction: updateWithKV
+      params: [bookingId]
+      where: quoteId
+    deleteAllByQuoteId:
+      kvFunction: deleteWithKV
+      where: quoteId
+  excludedFields: [merchantOperatingCityId, merchantId]
 
 # Default FRFSQuoteCategory is for ADULT category
 FRFSQuoteCategory:

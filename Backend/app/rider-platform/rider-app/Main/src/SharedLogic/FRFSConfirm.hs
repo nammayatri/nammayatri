@@ -8,6 +8,8 @@ import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.Hashable as Hashable
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
+import qualified Data.Text as T
+import Data.Time (Day, UTCTime (..), secondsToDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -33,6 +35,8 @@ import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Booking as TNSTCBooking
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Place as TNSTCPlace
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -70,6 +74,7 @@ import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSPassengerDetail as QFRFSPassengerDetail
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -453,10 +458,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             if isJust mbPurchasedPassPaymentId'
               then mfilter (> now) (mbJourneyLeg >>= (.fromDepartureTime))
               else Nothing
+      mbTnstcBoardingTime <- getTnstcBoardingTime quote' integratedBppConfig
       -- One fetch for both bounds; the single-bound helpers issue the same schedule call.
       (mbScheduledStartTime, mbScheduledEndTime) <-
-        case (firstTripId, mbRouteCode) of
-          (Just tripId, Just routeCode) ->
+        case (mbTnstcBoardingTime, firstTripId, mbRouteCode) of
+          (Just tnstcTime, _, _) -> pure tnstcTime
+          (Nothing, Just tripId, Just routeCode) ->
             FRFSUtils.getScheduledTripWindow tripId routeCode quote'.fromStationCode quote'.toStationCode integratedBppConfig
           _ -> pure (Nothing, Nothing)
 
@@ -620,6 +627,91 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 bufferTime + max 0 timeUntilTripSec
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
+
+    -- TNSTC's departure is the time of the boarding point the rider chose at select, which is
+    -- held on the passenger rows (keyed by quoteId -- bookingId is stamped later, so keying on
+    -- it here would race the fork). Resolved off the same 1h-cached point list that /seats and
+    -- the fare call used, so this is normally a cache hit and no extra vendor round trip.
+    getTnstcBoardingTime ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c
+      ) =>
+      DFRFSQuote.FRFSQuote ->
+      DIBC.IntegratedBPPConfig ->
+      m (Maybe UTCTime)
+    getTnstcBoardingTime quote' ibppConfig =
+      case ibppConfig.providerConfig of
+        DIBC.TNSTC tnstcConfig -> do
+          res <- withTryCatch "getTnstcBoardingTime" $ do
+            paxRows <- QFRFSPassengerDetail.findAllByQuoteId quote'.id
+            search <- QFRFSSearch.findById quote'.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
+            case ( listToMaybe (mapMaybe (.pickupPointPlaceId) paxRows),
+                   quote'.providerServiceId,
+                   search.journeyDate,
+                   tnstcConfig.counterCode
+                 ) of
+              (Just placeId, Just serviceId, Just journeyDate, Just counterCode) -> do
+                placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig search.fromStationCode search.fromStationCode
+                points <-
+                  TNSTCBooking.getPickupPointsCached tnstcConfig ibppConfig.id.getId $
+                    TNSTCBooking.GetPickupPointsReq
+                      { rqppCounterCode = counterCode,
+                        rqppJourneyDate = journeyDate,
+                        rqppServiceId = serviceId,
+                        rqppPlaceId = placeCode,
+                        rqppUserName = tnstcConfig.username
+                      }
+                return $ find (\p -> p.tppPlaceId == placeId) points >>= (.tppTime) >>= istTimeOn journeyDate
+              _ -> return Nothing
+          case res of
+            Right t -> return t
+            Left err -> do
+              logWarning $ "getTnstcBoardingTime failed, falling back to booking time: " <> show err
+              return Nothing
+        _ -> return Nothing
+
+    -- TNSTC returns wall-clock "HH:MM" in IST against the journey date.
+    istTimeOn :: Day -> Text -> Maybe UTCTime
+    istTimeOn day raw = case T.splitOn ":" (T.strip raw) of
+      (hh : mm : _) -> do
+        h <- readMaybe (T.unpack (T.strip hh)) :: Maybe Integer
+        m <- readMaybe (T.unpack (T.strip mm)) :: Maybe Integer
+        guard (h >= 0 && h < 24 && m >= 0 && m < 60)
+        return $ addUTCTime (negate 19800) (UTCTime day (secondsToDiffTime (h * 3600 + m * 60)))
+      _ -> Nothing
+
+    -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
+    -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
+    -- earliest stop when the boarding stop is not present. Returns Nothing when the schedule
+    -- is unavailable or empty so callers can fall back safely.
+    getScheduledTripStartTime ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c,
+        HasBAPMetrics m r
+      ) =>
+      Text -> -- tripId (format: waybillNo-tripNumber)
+      Text -> -- routeCode
+      Text -> -- boarding stop code
+      DIBC.IntegratedBPPConfig ->
+      m (Maybe UTCTime)
+    getScheduledTripStartTime tripId routeCode boardingStopCode integratedBPPConfig = do
+      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+      mbSchedule <- withTryCatch "getScheduledTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+      case mbSchedule of
+        Left err -> do
+          logWarning $ "getScheduledTripStartTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
+          pure Nothing
+        Right schedule ->
+          case concatMap (.eta) schedule of
+            [] -> do
+              logWarning $ "getScheduledTripStartTime: empty schedule for tripId=" <> tripId
+              pure Nothing
+            allEtas -> do
+              let mbBoardingEta = listToMaybe (filter (\e -> e.stopCode == boardingStopCode) allEtas)
+                  chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
+              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
@@ -1006,10 +1098,10 @@ buildJourneyAndLeg booking fareParameters = do
               duration = duration,
               agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just integratedBppConfig.feedKey},
               fromArrivalTime = Nothing,
-              fromDepartureTime = Just booking.createdAt,
+              fromDepartureTime = Just (fromMaybe booking.createdAt booking.startTime),
               toArrivalTime =
                 duration >>= \duration' ->
-                  Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                  Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
               toDepartureTime = Nothing,
               fromStopDetails = Just fromStopDetail,
               toStopDetails = Just toStopDetail,
@@ -1023,17 +1115,17 @@ buildJourneyAndLeg booking fareParameters = do
                       endLocationLon = toLocation.lon,
                       frequency = Nothing,
                       fromArrivalTime = Nothing,
-                      fromDepartureTime = Just booking.createdAt,
+                      fromDepartureTime = Just (fromMaybe booking.createdAt booking.startTime),
                       fromStopCode = Just booking.fromStationCode,
                       fromStopGtfsId = Just booking.fromStationCode,
                       fromStopName = booking.fromStationName,
                       fromStopPlatformCode = fromStopPlatformCode,
                       id = journeyRouteDetailsId,
                       journeyLegId = journeyLegGuid.getId,
-                      legStartTime = Just booking.createdAt,
+                      legStartTime = Just (fromMaybe booking.createdAt booking.startTime),
                       legEndTime =
                         duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                          Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
                       routeCode = mbRouteStation <&> (.code),
                       routeColorCode = mbRouteStation >>= (.color),
                       routeColorName = mbRouteStation >>= (.color),
@@ -1046,7 +1138,7 @@ buildJourneyAndLeg booking fareParameters = do
                       subLegOrder = Just 1,
                       toArrivalTime =
                         duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                          Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
                       toDepartureTime = Nothing,
                       toStopCode = Just booking.toStationCode,
                       toStopGtfsId = Just booking.toStationCode,

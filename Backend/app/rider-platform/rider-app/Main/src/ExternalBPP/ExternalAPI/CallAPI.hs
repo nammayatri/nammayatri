@@ -22,6 +22,7 @@ import Domain.Types.Station
 import Domain.Types.StationType
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Status as EBIXStatus
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Order as TNSTCOrder
 import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Services as TNSTCServices
 import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Types as TNSTCTypes
 import qualified ExternalBPP.ExternalAPI.Direct.Order as DIRECTOrder
@@ -340,7 +341,8 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
         EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
         DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
         CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
-        _ -> throwError $ InternalError "Unimplemented!"
+        TNSTC config' -> TNSTCOrder.createOrder config' integrationBPPConfig booking quoteCategories (_mRiderName, mRiderNumber)
+      _ -> throwError $ InternalError "Unimplemented!"
   let countOrder = Metrics.incrementFRFSExternalBppCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (getProviderTag integrationBPPConfig) Metrics.FRFSBppOrder
   case eResp of
     Left err -> do
