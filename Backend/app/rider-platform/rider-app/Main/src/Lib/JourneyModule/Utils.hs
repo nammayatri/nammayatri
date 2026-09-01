@@ -1717,6 +1717,35 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
       return Nothing
     Right result -> return result
 
+data FleetOverrideStatus
+  = FleetOverrideUsable
+  | FleetOverrideNotYetUsable
+  | FleetOverrideFinished
+  deriving (Show, Eq)
+
+isTerminalWaybillStatus :: NandiTypes.WaybillStatus -> Bool
+isTerminalWaybillStatus status = case status of
+  NandiTypes.WaybillClosed -> True
+  NandiTypes.WaybillProcessed -> True
+  NandiTypes.WaybillAudited -> True
+  NandiTypes.WaybillOnline -> False
+  NandiTypes.WaybillUpcoming -> False
+  NandiTypes.WaybillNew -> False
+
+classifyFleetOverride :: Text -> Maybe VehicleLiveRouteInfo -> FleetOverrideStatus
+classifyFleetOverride overrideWaybillNo mbLiveRouteInfo
+  | T.null overrideWaybillNo = FleetOverrideFinished
+  | otherwise = case mbLiveRouteInfo of
+    Nothing -> FleetOverrideNotYetUsable
+    Just liveRouteInfo -> case liveRouteInfo.waybillNo of
+      Nothing -> FleetOverrideNotYetUsable
+      Just liveWaybillNo
+        | liveWaybillNo /= overrideWaybillNo -> FleetOverrideFinished
+        | otherwise -> case liveRouteInfo.waybillStatus of
+          Just NandiTypes.WaybillOnline -> FleetOverrideUsable
+          Just status -> if isTerminalWaybillStatus status then FleetOverrideFinished else FleetOverrideNotYetUsable
+          Nothing -> FleetOverrideNotYetUsable
+
 getVehicleServiceTypeFromInMem ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
@@ -2012,13 +2041,14 @@ getLiveRouteInfo' integratedBPPConfig userPassedVehicleNumber userPassedRouteCod
   mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
   mbRouteLiveInfo <-
     case mbVehicleOverrideInfo of
-      Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-        mbUpdatedVehicleRouteInfo <- getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber Nothing
-        if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
-          then do
+      Just (sourceVehicleNumber, overrideWaybillNo) -> do
+        mbSourceRouteInfo <- getVehicleLiveRouteInfo [integratedBPPConfig] sourceVehicleNumber Nothing
+        case classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+          FleetOverrideUsable -> pure mbSourceRouteInfo
+          FleetOverrideFinished -> do
             Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
             getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
-          else pure mbUpdatedVehicleRouteInfo
+          FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
       Nothing -> getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
   return $
     maybe
