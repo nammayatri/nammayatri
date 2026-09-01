@@ -93,6 +93,7 @@ import qualified "shared-services" IssueManagement.Common.Dashboard.Issue as Iss
 import qualified "shared-services" IssueManagement.Domain.Action.Dashboard.Issue as DIssue
 import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
 import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
+import qualified "shared-services" IssueManagement.Storage.Queries.Issue.IssueConfig as QIssueConfig
 import Kernel.External.Call (CallService (Exotel))
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
@@ -124,6 +125,7 @@ import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as QADLR
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
@@ -138,7 +140,6 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.HotSpotConfig as HSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -147,22 +148,24 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
-import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
-import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
+import qualified Storage.Queries.Exophone as QExophone
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.HotSpotConfig as QHSC
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantMessage as QMM
+import qualified Storage.Queries.MerchantOperatingCity as QMOC
+import qualified Storage.Queries.MerchantPaymentMethod as QMPM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
+import qualified Storage.Queries.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.ServiceCategory as SQSC
 import qualified Storage.Queries.ServiceCategoryExtra as SQSCE
 import qualified Storage.Queries.ServicePeopleCategory as SQSPC
@@ -514,15 +517,19 @@ normalizeName = T.strip . T.toLower
 
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
+  logDebug $ "postMerchantConfigOperatingCityCreate: merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show city <> ", req: " <> show req
   when (req.city == Context.City "AnyCity") $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
   baseMerchant <- findMerchantByShortId merchantShortId
+  logDebug $ "createOperatingCity: baseMerchant: " <> show baseMerchant
   baseRequestedCityMerchant <- case req.baseRequestMerchant of
     Just merchant -> findMerchantByShortId (ShortId merchant)
     Nothing -> return baseMerchant
+  logDebug $ "createOperatingCity: baseRequestedCityMerchant: " <> show baseRequestedCityMerchant
 
   baseOperatingCity <- case req.baseRequestCity of
-    Just reqCity -> CQMOC.findByMerchantIdAndCity baseRequestedCityMerchant.id reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> baseRequestedCityMerchant.id.getId <> "-city-" <> show reqCity)
-    Nothing -> CQMOC.findByMerchantIdAndCity baseMerchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> baseMerchant.id.getId <> "-city-" <> show city)
+    Just reqCity -> QMOC.findByMerchantIdAndCity baseRequestedCityMerchant.id reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> baseRequestedCityMerchant.id.getId <> "-city-" <> show reqCity)
+    Nothing -> QMOC.findByMerchantIdAndCity baseMerchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> baseMerchant.id.getId <> "-city-" <> show city)
+  logDebug $ "createOperatingCity: baseOperatingCity: " <> show baseOperatingCity
 
   now <- getCurrentTime
   let baseMerchantId = baseMerchant.id
@@ -532,14 +539,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         case req.merchantData of
           Just merchantData -> Id merchantData.subscriberId
           Nothing -> baseMerchantId
+  logDebug $ "createOperatingCity: newMerchantId: " <> newMerchantId.getId
 
   -- merchant
   mbNewMerchant <-
     case req.merchantData of
       Just merchantData -> do
-        CQM.findById newMerchantId >>= \case
+        existingMerchant <- QM.findById newMerchantId
+        logDebug $ "createOperatingCity: existing Merchant for newMerchantId: " <> show existingMerchant
+        case existingMerchant of
           Nothing -> do
-            merchant <- CQM.findById baseMerchantId >>= fromMaybeM (InvalidRequest "Base Merchant not found")
+            merchant <- QM.findById baseMerchantId >>= fromMaybeM (InvalidRequest "Base Merchant not found")
+            logDebug $ "createOperatingCity: base Merchant: " <> show merchant
             let newMerchant = buildMerchant newMerchantId merchantData now merchant
             return $ Just newMerchant
           _ -> return Nothing
@@ -548,19 +559,24 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   -- hot spot config (only for a new merchant, copied from base merchant; keyed by merchant id)
   mbHotSpotConfig <-
     case mbNewMerchant of
-      Just _ ->
-        HSC.findConfigByMerchantId newMerchantId >>= \case
+      Just _ -> do
+        existingHotSpotConfig <- QHSC.findConfigByMerchantId (Id newMerchantId.getId)
+        logDebug $ "createOperatingCity: existing HotSpotConfig for new merchant: " <> show existingHotSpotConfig
+        case existingHotSpotConfig of
           Just _ -> return Nothing
           Nothing -> do
-            baseHotSpotConfig <- HSC.findConfigByMerchantId baseRequestedCityMerchant.id
+            baseHotSpotConfig <- QHSC.findConfigByMerchantId (Id baseRequestedCityMerchant.id.getId)
+            logDebug $ "createOperatingCity: base HotSpotConfig: " <> show baseHotSpotConfig
             return $ (\cfg -> cfg {DHSC.id = Id newMerchantId.getId}) <$> baseHotSpotConfig
       Nothing -> return Nothing
 
-  cityAlreadyCreated <- CQMOC.findByMerchantIdAndCity newMerchantId req.city
+  cityAlreadyCreated <- QMOC.findByMerchantIdAndCity newMerchantId req.city
+  logDebug $ "createOperatingCity: cityAlreadyCreated: " <> show cityAlreadyCreated
   newMerchantOperatingCityId <-
     case cityAlreadyCreated of
       Just newCity -> return newCity.id
       Nothing -> generateGUID
+  logDebug $ "createOperatingCity: newMerchantOperatingCityId: " <> newMerchantOperatingCityId.getId
 
   let newMerchantShortId = maybe merchantShortId (.shortId) mbNewMerchant
   -- city
@@ -568,62 +584,80 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     case cityAlreadyCreated of
       Nothing -> do
         cityStdCode <- getCityStdCode req.city req.cityStdCode >>= fromMaybeM (InvalidRequest "City std code not found")
+        logDebug $ "createOperatingCity: cityStdCode: " <> cityStdCode
         let newOperatingCity = buildMerchantOperatingCity newMerchantId newMerchantOperatingCityId now newMerchantShortId req.driverOfferMerchantOperatingCityId cityStdCode
         return $ Just newOperatingCity
       _ -> return Nothing
 
   -- merchant message
-  mbMerchantMessages <-
-    CQMM.findAllByMerchantOpCityIdInRideFlow newMerchantOperatingCityId [] >>= \case
+  mbMerchantMessages <- do
+    existingMerchantMessages <- QMM.findAllByMerchantOpCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantMessages for new city: " <> show (existingMerchantMessages <&> (.messageKey))
+    case existingMerchantMessages of
       [] -> do
-        merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId Nothing
+        merchantMessages <- QMM.findAllByMerchantOpCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base MerchantMessages: " <> show (merchantMessages <&> (.messageKey))
         let newMerchantMessages = map (buildMerchantMessage newMerchantId newMerchantOperatingCityId now) merchantMessages
         return $ Just newMerchantMessages
       _ -> return Nothing -- ignore
 
   -- merchant payment method
-  mbMerchantPaymentMethods <-
-    getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
+  mbMerchantPaymentMethods <- do
+    existingMerchantPaymentMethods <- QMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantPaymentMethods for new city: " <> show existingMerchantPaymentMethods
+    case existingMerchantPaymentMethods of
       [] -> do
-        merchantPaymentMethods <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = baseOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId))
+        merchantPaymentMethods <- QMPM.findAllByMerchantOperatingCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base MerchantPaymentMethods: " <> show merchantPaymentMethods
         newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newMerchantId newMerchantOperatingCityId now) merchantPaymentMethods
         return $ Just newMerchantPaymentMethods
       _ -> return Nothing
 
   -- merchant service usage config
-  mbMerchantServiceUsageConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) Nothing >>= \case
+  mbMerchantServiceUsageConfig <- do
+    existingMerchantServiceUsageConfig <- QMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantServiceUsageConfig for new city: " <> show existingMerchantServiceUsageConfig
+    case existingMerchantServiceUsageConfig of
       Nothing -> do
-        merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- QMSUC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        logDebug $ "createOperatingCity: base MerchantServiceUsageConfig: " <> show merchantServiceUsageConfig
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
 
   -- merchant service config
 
-  mbMerchantServiceConfig <-
-    SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+  mbMerchantServiceConfig <- do
+    existingMerchantServiceConfigs <- SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantServiceConfigs for new city: " <> show existingMerchantServiceConfigs
+    case existingMerchantServiceConfigs of
       [] -> do
-        merchantServiceConfigs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, merchantId = baseRequestedCityMerchant.id.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId))
+        merchantServiceConfigs <- SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base MerchantServiceConfigs: " <> show merchantServiceConfigs
         let newMerchantServiceConfigs = map (buildMerchantServiceConfigs newMerchantId newMerchantOperatingCityId now) merchantServiceConfigs
         return $ Just newMerchantServiceConfigs
       _ -> return Nothing
 
   -- rider_config
   mbRiderConfig <- do
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) Nothing >>= \case
+    existingRiderConfig <- QRiderConfig.findByMerchantOperatingCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing RiderConfig for new city: " <> show existingRiderConfig
+    case existingRiderConfig of
       Nothing -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- QRiderConfig.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        logDebug $ "createOperatingCity: base RiderConfig: " <> show riderConfig
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
 
   -- cancellation reasons dynamic-logic rollout (copy-city support)
   mbCancellationReasonsRollouts <- do
-    existingRollouts <- CADLR.findByMerchantOpCityAndDomain (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
+    existingRollouts <- QADLR.findByMerchantOpCityAndDomain (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
+    logDebug $ "createOperatingCity: existing CancellationReasons rollouts for new city: " <> show existingRollouts
     case existingRollouts of
       [] -> do
-        baseRollouts <- CADLR.findByMerchantOpCityAndDomain (cast baseOperatingCityId) LYT.CANCELLATION_REASONS
+        baseRollouts <- QADLR.findByMerchantOpCityAndDomain (cast baseOperatingCityId) LYT.CANCELLATION_REASONS
+        logDebug $ "createOperatingCity: base CancellationReasons rollouts: " <> show baseRollouts
         let newRollouts :: [LYTADLR.AppDynamicLogicRollout]
             newRollouts =
               baseRollouts <&> \r ->
@@ -636,45 +670,60 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> pure Nothing
 
   -- geometry
-  mbGeometry <-
-    QGeo.findGeometryByStateAndCity req.city req.state >>= \case
-      Nothing -> do
-        Just <$> buildGeometry
+  mbGeometry <- do
+    existingGeometry <- QGeo.findGeometryByStateAndCity req.city req.state
+    logDebug $ "createOperatingCity: existing Geometry for state and city: " <> show existingGeometry
+    case existingGeometry of
+      Nothing -> Just <$> buildGeometry
       _ -> return Nothing
 
   -- exophone
-  mbExophone <-
-    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
+  mbExophone <- do
+    existingExophones <- QExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing Exophones for new city: " <> show existingExophones
+    case existingExophones of
       [] -> do
-        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId))
+        exophones <- QExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base Exophones: " <> show exophones
         return $ Just exophones
       _ -> return Nothing
 
   -- issue config
-  mbIssueConfig <-
-    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) Nothing >>= \case
+  mbIssueConfig <- do
+    existingIssueConfig <- QIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId)
+    logDebug $ "createOperatingCity: existing IssueConfig for new city: " <> show existingIssueConfig
+    case existingIssueConfig of
       Nothing -> do
-        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) Nothing >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- QIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        logDebug $ "createOperatingCity: base IssueConfig: " <> show issueConfig
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
 
   -- beckn config
   becknConfigList <- SQBC.findAllByMerchantOperatingCityId (Just baseOperatingCityId)
+  logDebug $ "createOperatingCity: base BecknConfigs: " <> show becknConfigList
   let becknConfigFRFS = find (\bcknCfg -> bcknCfg.domain == show FRFS.FRFS) becknConfigList
-  mbBecknConfig <-
-    SQBC.findAllByMerchantOperatingCityId (Just newMerchantOperatingCityId) >>= \case
+  mbBecknConfig <- do
+    existingBecknConfigs <- SQBC.findAllByMerchantOperatingCityId (Just newMerchantOperatingCityId)
+    logDebug $ "createOperatingCity: existing BecknConfigs for new city: " <> show existingBecknConfigs
+    case existingBecknConfigs of
       [] -> do
         newBecknConfig <- mapM (buildBecknConfig newMerchantId newMerchantOperatingCityId now) becknConfigList
         return $ Just newBecknConfig
       _ -> return Nothing
 
   -- merchant push notification
-  mbMerchantPushNotification <-
-    SQMPN.findAllByMerchantOpCityId baseOperatingCityId >>= \case
-      merchantPushNotifications -> do
+  mbMerchantPushNotification <- do
+    existingMerchantPushNotifications <- SQMPN.findAllByMerchantOpCityId newMerchantOperatingCityId
+    logDebug $ "createOperatingCity: existing MerchantPushNotifications for new city: " <> show existingMerchantPushNotifications
+    case existingMerchantPushNotifications of
+      [] -> do
+        merchantPushNotifications <- SQMPN.findAllByMerchantOpCityId baseOperatingCityId
+        logDebug $ "createOperatingCity: base MerchantPushNotifications: " <> show merchantPushNotifications
         newMerchantPushNotifications <- mapM (buildMerchantPushNotification newMerchantId newMerchantOperatingCityId now) merchantPushNotifications
         return $ Just newMerchantPushNotifications
+      _ -> return Nothing
 
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   let uniqueKeyId = baseMerchant.bapUniqueKeyId
@@ -683,6 +732,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       domain = Context.MOBILITY
       lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
   oldSubscriber <- Registry.registryLookup nyRegistryBaseUrl lookupReq subscriberId
+  logDebug $ "createOperatingCity: registry lookup subscriber: " <> show oldSubscriber
   case oldSubscriber of
     Just sub -> do
       whenJust mbNewMerchant $ \newMerchant -> do
@@ -765,23 +815,55 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   finally
     ( do
-        whenJust mbGeometry $ \geometry -> QGeo.create geometry
-        whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
-        whenJust mbHotSpotConfig $ \hotSpotConfig -> QHSC.create hotSpotConfig
-        whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
-        whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
-        whenJust mbMerchantPaymentMethods $ \mPM -> mapM_ CQMPM.create mPM
-        whenJust mbMerchantServiceUsageConfig $ \mSUC -> CQMSUC.create mSUC
-        whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
-        whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
-        whenJust mbRiderConfig $ \riderConfig -> QRC.create riderConfig
-        whenJust mbCancellationReasonsRollouts $ \rollouts -> CADLR.createMany rollouts
-        whenJust mbMerchantPushNotification $ \newMerchantPushNotifications -> mapM_ CQMPN.create newMerchantPushNotifications
+        whenJust mbGeometry $ \geometry -> do
+          logDebug $ "createOperatingCity: inserting Geometry: " <> show geometry
+          QGeo.create geometry
+        whenJust mbNewMerchant $ \newMerchant -> do
+          logDebug $ "createOperatingCity: inserting Merchant: " <> show newMerchant
+          QM.create newMerchant
+        whenJust mbHotSpotConfig $ \hotSpotConfig -> do
+          logDebug $ "createOperatingCity: inserting HotSpotConfig: " <> show hotSpotConfig
+          QHSC.create hotSpotConfig
+        whenJust mbNewOperatingCity $ \newOperatingCity -> do
+          logDebug $ "createOperatingCity: inserting MerchantOperatingCity: " <> show newOperatingCity
+          CQMOC.create newOperatingCity
+        whenJust mbMerchantMessages $ \merchantMessages ->
+          forM_ merchantMessages $ \merchantMessage -> do
+            logDebug $ "createOperatingCity: inserting MerchantMessage: messageKey: " <> show merchantMessage.messageKey <> ", templateId: " <> merchantMessage.templateId <> ", message: " <> merchantMessage.message
+            CQMM.create merchantMessage
+        whenJust mbMerchantPaymentMethods $ \mPM ->
+          forM_ mPM $ \merchantPaymentMethod -> do
+            logDebug $ "createOperatingCity: inserting MerchantPaymentMethod: " <> show merchantPaymentMethod
+            CQMPM.create merchantPaymentMethod
+        whenJust mbMerchantServiceUsageConfig $ \mSUC -> do
+          logDebug $ "createOperatingCity: inserting MerchantServiceUsageConfig: " <> show mSUC
+          CQMSUC.create mSUC
+        whenJust mbMerchantServiceConfig $ \merchantServiceConfigs ->
+          forM_ merchantServiceConfigs $ \merchantServiceConfig -> do
+            logDebug $ "createOperatingCity: inserting MerchantServiceConfig: " <> show merchantServiceConfig
+            SQMSC.create merchantServiceConfig
+        whenJust mbBecknConfig $ \becknConfig ->
+          forM_ becknConfig $ \becknConfig' -> do
+            logDebug $ "createOperatingCity: inserting BecknConfig: " <> show becknConfig'
+            SQBC.create becknConfig'
+        whenJust mbRiderConfig $ \riderConfig -> do
+          logDebug $ "createOperatingCity: inserting RiderConfig: " <> show riderConfig
+          QRC.create riderConfig
+        whenJust mbCancellationReasonsRollouts $ \rollouts -> do
+          logDebug $ "createOperatingCity: inserting AppDynamicLogicRollouts: " <> show rollouts
+          CADLR.createMany rollouts
+        whenJust mbMerchantPushNotification $ \newMerchantPushNotifications ->
+          forM_ newMerchantPushNotifications $ \merchantPushNotification -> do
+            logDebug $ "createOperatingCity: inserting MerchantPushNotification: " <> show merchantPushNotification
+            CQMPN.create merchantPushNotification
         whenJust mbExophone $ \exophones -> do
           whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
             exophone' <- buildNewExophone newMerchantId newMerchantOperatingCityId now exophone
+            logDebug $ "createOperatingCity: inserting Exophone: " <> show exophone'
             CQExophone.create exophone'
-        whenJust mbIssueConfig $ \issueConfig -> CQIssueConfig.create issueConfig
+        whenJust mbIssueConfig $ \issueConfig -> do
+          logDebug $ "createOperatingCity: inserting IssueConfig: " <> show issueConfig
+          CQIssueConfig.create issueConfig
 
         when (req.enableForMerchant) $ do
           let origin = maybe baseMerchant.geofencingConfig.origin (.geofencingConfig.origin) mbNewMerchant
@@ -803,7 +885,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         QRC.clearCache newMerchantOperatingCityId
         CADLR.clearDomainCache (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
-        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId))
+        exoPhone <- QExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+        logDebug $ "createOperatingCity: Exophones for new city on cache clear: " <> show exoPhone
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Redis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )

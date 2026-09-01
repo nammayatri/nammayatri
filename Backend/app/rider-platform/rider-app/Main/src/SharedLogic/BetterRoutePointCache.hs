@@ -73,6 +73,11 @@ data SuggestedSearchCtx = SuggestedSearchCtx
     -- are the bulk of the payload and every one of them is overridden downstream.
     taggings :: Maybe Beckn.Taggings,
     riderGender :: Maybe Text,
+    -- | The shadow search for the shape priced inline, when the city prices one. Recorded
+    -- rather than looked up: every shadow of a search copies the parent's 'createdAt', so
+    -- there is no ordering over them that picks this one out. 'Nothing' when the city
+    -- loads suggestions asynchronously, and on contexts cached before this field existed.
+    inlineSearchId :: Maybe (Id DSearchReq.SearchRequest),
     -- | The walk-and-save shapes other than the default, ordered best first, each with the
     -- shadow search that is being priced for it.
     alternates :: [AlternateShadow]
@@ -103,9 +108,11 @@ cacheSuggestedSearchCtx ::
   (MonadFlow m, Redis.HedisFlow m r) =>
   Id DSearchReq.SearchRequest ->
   SLS.SearchRes ->
+  -- | The shadow being priced inline, when there is one
+  Maybe (Id DSearchReq.SearchRequest) ->
   [AlternateShadow] ->
   m ()
-cacheSuggestedSearchCtx parentSearchId SLS.SearchRes {..} alternates = do
+cacheSuggestedSearchCtx parentSearchId SLS.SearchRes {..} inlineSearchId alternates = do
   -- The search's own clock reading, not a fresh one: this is written while the search is
   -- still being answered, and the two are the same instant to any precision that matters.
   let ttl = round $ diffUTCTime searchRequestExpiry now

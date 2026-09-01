@@ -50,6 +50,19 @@ updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCancellationQuoteIfCancelled ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationQuoteIfCancelled cancellationFeeIfCancelled cancellationFeeTaxIfCancelled cancellationConsequenceRowIdIfCancelled id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled,
+      Se.Set Beam.cancellationFeeTaxIfCancelled cancellationFeeTaxIfCancelled,
+      Se.Set Beam.cancellationConsequenceRowIdIfCancelled cancellationConsequenceRowIdIfCancelled,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCommission :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

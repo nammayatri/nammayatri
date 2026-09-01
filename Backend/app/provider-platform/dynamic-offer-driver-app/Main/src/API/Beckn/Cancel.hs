@@ -133,7 +133,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of
                 (Just priceEntity, Just ride) ->
-                  QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
+                  QRide.updateCancellationQuoteIfCancelled (Just priceEntity.amount) (mbChargesOutcome >>= (.tax)) (mbChargesOutcome >>= (.consequenceRowId)) ride.id
                 _ -> return ()
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2

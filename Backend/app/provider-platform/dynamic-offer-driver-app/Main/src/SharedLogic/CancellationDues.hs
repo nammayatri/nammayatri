@@ -24,6 +24,7 @@ import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -39,9 +40,6 @@ data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLe
 data ApplyCancellationChargeReq = ApplyCancellationChargeReq
   { ride :: DRide.Ride,
     riderId :: Id DRD.RiderDetails,
-    -- rider's dues balance as already fetched by the caller; the new balance is
-    -- currentDues + totalCharges
-    currentDues :: HighPrecMoney,
     -- the full amount added to the balance (base + tax)
     totalCharges :: HighPrecMoney,
     currency :: Currency,
@@ -57,52 +55,76 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
     collectionMode :: Maybe Text
   }
 
+cancellationDuesLockKey :: Id DRD.RiderDetails -> Text
+cancellationDuesLockKey riderId = "CancellationDues:riderId-" <> riderId.getId
+
+withCancellationDuesLock :: (MonadFlow m, CacheFlow m r) => Id DRD.RiderDetails -> m a -> m a
+withCancellationDuesLock riderId = Redis.withWaitAndLockRedis (cancellationDuesLockKey riderId) 10 10000
+
 -- | Add a cancellation charge to the rider's running balance and record the per-ride
 -- breakdown row that waive-off and settlement key on. Flow-specific counters
 -- (valid-cancellation counts, due-ride counts) stay with the callers.
 applyCancellationCharge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ApplyCancellationChargeReq -> m ()
-applyCancellationCharge req = do
-  -- totalCharges is SIGNED: a negative value is a credit to the customer, reducing their
-  -- outstanding dues; the balance never goes below zero and credits create no dues row.
-  void $ QRD.updateCancellationDues (max 0 (req.totalCharges + req.currentDues)) req.riderId
-  when (req.totalCharges > 0) $ do
-    duesDetailsId <- generateGUID
-    now <- getCurrentTime
-    QCDD.create
-      DCDD.CancellationDuesDetails
-        { id = duesDetailsId,
-          rideId = req.ride.id,
-          riderId = req.riderId,
-          cancellationAmount = req.totalCharges,
-          cancellationFee = req.cancellationFee,
-          cancellationFeeTax = req.cancellationFeeTax,
-          overdueCancellationCharge = req.overdueCancellationCharge,
-          overdueCancellationTax = req.overdueCancellationTax,
-          cancellationCommission = req.cancellationCommission,
-          overdueCancellationCommission = req.overdueCancellationCommission,
-          cancellationConsequenceRowId = req.consequenceRowId,
-          cancellationCollectionMode = req.collectionMode,
-          currency = req.currency,
-          paymentStatus = DCDD.PENDING,
-          createdAt = now,
-          updatedAt = now,
-          merchantId = req.ride.merchantId,
-          merchantOperatingCityId = Just req.ride.merchantOperatingCityId
-        }
+applyCancellationCharge req =
+  withCancellationDuesLock req.riderId $ do
+    mbExisting <- QCDD.findByRideId req.ride.id
+    case mbExisting of
+      Just existing ->
+        logWarning $
+          "applyCancellationCharge: charge already applied for rideId " <> req.ride.id.getId
+            <> " (dues row "
+            <> existing.id.getId
+            <> ", amount "
+            <> show existing.cancellationAmount
+            <> ", status "
+            <> show existing.paymentStatus
+            <> "); skipping repeat of "
+            <> show req.totalCharges
+      Nothing -> do
+        riderDetails <- QRD.findById req.riderId >>= fromMaybeM (RiderDetailsNotFound req.riderId.getId)
+        -- totalCharges is SIGNED: a negative value is a credit to the customer, reducing their
+        -- outstanding dues; the balance never goes below zero and credits create no dues row.
+        void $ QRD.updateCancellationDues (max 0 (req.totalCharges + riderDetails.cancellationDues)) req.riderId
+        when (req.totalCharges > 0) $ do
+          duesDetailsId <- generateGUID
+          now <- getCurrentTime
+          QCDD.create
+            DCDD.CancellationDuesDetails
+              { id = duesDetailsId,
+                rideId = req.ride.id,
+                riderId = req.riderId,
+                cancellationAmount = req.totalCharges,
+                cancellationFee = req.cancellationFee,
+                cancellationFeeTax = req.cancellationFeeTax,
+                overdueCancellationCharge = req.overdueCancellationCharge,
+                overdueCancellationTax = req.overdueCancellationTax,
+                cancellationCommission = req.cancellationCommission,
+                overdueCancellationCommission = req.overdueCancellationCommission,
+                cancellationConsequenceRowId = req.consequenceRowId,
+                cancellationCollectionMode = req.collectionMode,
+                currency = req.currency,
+                paymentStatus = DCDD.PENDING,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = req.ride.merchantId,
+                merchantOperatingCityId = Just req.ride.merchantOperatingCityId
+              }
 
 -- | Settle up to @amountCollected@ of the rider's PENDING dues rows, oldest first,
 -- decrementing the balance by exactly the collected amount rather than zeroing it —
 -- dues that accrued after the amount was quoted (e.g. a cancellation mid-ride) stay
 -- PENDING and keep riding on the next fare. Returns the rideIds of the rows marked
 -- PAID, for the BAP fee-status callback.
-settleCancellationDuesUpTo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRD.RiderDetails -> HighPrecMoney -> m [Id DRide.Ride]
-settleCancellationDuesUpTo riderDetails amountCollected = do
-  pendingDues <- QCDD.findAllPendingByRiderId riderDetails.id
-  let coveredRows = takeCovered 0 (sortOn (.createdAt) pendingDues)
-  unless (null coveredRows) $
-    QCDD.updateStatusByIds DCDD.PAID ((.id) <$> coveredRows)
-  void $ QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - amountCollected)) riderDetails.id
-  pure ((.rideId) <$> coveredRows)
+settleCancellationDuesUpTo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRD.RiderDetails -> HighPrecMoney -> m [Id DRide.Ride]
+settleCancellationDuesUpTo riderId amountCollected =
+  withCancellationDuesLock riderId $ do
+    riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    pendingDues <- QCDD.findAllPendingByRiderId riderId
+    let coveredRows = takeCovered 0 (sortOn (.createdAt) pendingDues)
+    unless (null coveredRows) $
+      QCDD.updateStatusByIds DCDD.PAID ((.id) <$> coveredRows)
+    void $ QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - amountCollected)) riderId
+    pure ((.rideId) <$> coveredRows)
   where
     takeCovered _ [] = []
     takeCovered coveredSoFar (dues : rest)
@@ -121,7 +143,7 @@ settleCustomerCancellationDues ::
 settleCustomerCancellationDues booking ride =
   case booking.riderId of
     Nothing -> logError $ "settleCustomerCancellationDues: no riderId in booking " <> booking.id.getId
-    Just rid -> do
+    Just rid -> withCancellationDuesLock rid $ do
       mbCancellationDuesDetails <- QCDD.findByRideId ride.id
       case mbCancellationDuesDetails of
         Just cancellationDuesDetails | cancellationDuesDetails.paymentStatus == DCDD.PENDING -> do

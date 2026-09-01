@@ -51,21 +51,6 @@ findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchReq
 findAllByPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq personId]
 
--- | The better-route-point shadow a search request was given up front, if any.
---
--- A parent can accumulate several shadows: the first is written during /rideSearch for
--- the shape we picked, and /rideSearch/suggestedFare adds one each time the customer asks
--- to price a different shape. Oldest-first is what makes this the up-front one -- the
--- later ones were answered inline to whoever asked for them, and are reached through
--- their own estimates.
--- Redis only, no database read. A shadow is written with the default KV ttl of five hours
--- while the search it belongs to stops being answerable after thirty minutes, so it cannot
--- have aged out of Redis by the time anything asks for it -- and this runs on the results
--- poll, where a database round trip per call is worth avoiding.
-findFirstByParentSearchRequestId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
-findFirstByParentSearchRequestId (Id parentId) =
-  findAllFromKvRedis [Se.Is BeamSR.parentSearchRequestId $ Se.Eq (Just parentId)] (Just $ Se.Asc BeamSR.createdAt) <&> listToMaybe
-
 -- | Marks a parent as having a walk-and-save suggestion, so the readers can tell without
 -- going looking. One write on the uncommon path in exchange for no read on the common one.
 updateHasBetterPointSuggestion :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> m ()

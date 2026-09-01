@@ -127,6 +127,8 @@ Ride:
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
+    cancellationFeeTaxIfCancelled: Maybe HighPrecMoney
+    cancellationConsequenceRowIdIfCancelled: Maybe Text
     cancellationFaultVerdict: Maybe Text
     cancellationFaultRule: Maybe Text
     tipAmount: Maybe HighPrecMoney
@@ -316,6 +318,10 @@ Ride:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled]
+      where: id
+    updateCancellationQuoteIfCancelled:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeIfCancelled, cancellationFeeTaxIfCancelled, cancellationConsequenceRowIdIfCancelled]
       where: id
     updateCancellationFaultVerdict:
       kvFunction: updateOneWithKV

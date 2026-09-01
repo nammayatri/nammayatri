@@ -114,7 +114,7 @@ buildSuggestedSearchRes riderConfig parentRes = do
               (\res route -> BRPC.AlternateShadow {searchId = res.searchRequest.id, route, isDefault = loadAsync && route == plan.best})
               backgroundSearchRes
               background
-      BRPC.cacheSuggestedSearchCtx parentRes.searchRequest.id parentRes alternates
+      BRPC.cacheSuggestedSearchCtx parentRes.searchRequest.id parentRes ((\res -> res.searchRequest.id) <$> inlineSearchRes) alternates
       -- Tells the readers there is something here to fetch. Every other search leaves this
       -- unset, which is what lets them skip the lookup entirely.
       QSearchRequest.updateHasBetterPointSuggestion parentRes.searchRequest.id
