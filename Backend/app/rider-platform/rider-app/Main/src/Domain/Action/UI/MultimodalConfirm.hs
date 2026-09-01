@@ -1136,13 +1136,14 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       Just vehicleNumber -> do
         mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
         case mbVehicleOverrideInfo of
-          Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-            updatedVehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs updatedVehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle override: " <> updatedVehicleNumber <> " for vehicle: " <> vehicleNumber <> ", not found on any route")
-            if Just newDeviceWaybillNo /= (snd updatedVehicleRouteInfo).waybillId
-              then do
+          Just (sourceVehicleNumber, overrideWaybillNo) -> do
+            mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+            case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+              JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
+              JLU.FleetOverrideFinished -> do
                 Dispatcher.delFleetOverrideInfo vehicleNumber
                 getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-              else pure $ Just updatedVehicleRouteInfo
+              JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
       Nothing -> return Nothing
 
@@ -2859,13 +2860,15 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
   (integratedBPPConfig, vehicleLiveRouteInfo) <- case mbVehicleOverrideInfo of
-    Just (overridenVehicleNumber, waybillNo) -> do
-      vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs overridenVehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-      if Just waybillNo /= ((.waybillId) . snd $ vehicleLiveRouteInfo)
-        then do
+    Just (sourceVehicleNumber, overrideWaybillNo) -> do
+      mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+      let scannedVehicleRouteInfo = JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+      case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+        JLU.FleetOverrideUsable -> mbSourceRouteInfo & fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+        JLU.FleetOverrideFinished -> do
           Dispatcher.delFleetOverrideInfo vehicleNumber
-          JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-        else pure vehicleLiveRouteInfo
+          scannedVehicleRouteInfo
+        JLU.FleetOverrideNotYetUsable -> scannedVehicleRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   whenJust booking.vehicleNumber $ \bookingVeh ->

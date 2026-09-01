@@ -76,6 +76,9 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
     updatedFleetInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig req.updatedFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.updatedFleetId)
     when (depotManager.depotCode.getId /= sourceFleetInfo.depot_id) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.sourceFleetId
     when (depotManager.depotCode.getId /= updatedFleetInfo.depot_id) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.updatedFleetId
+  sourceWaybillNo <-
+    sourceFleetInfo.waybill_no
+      & fromMaybeM (InvalidRequest $ "No active waybill for source fleet " <> req.sourceFleetId <> "; its schedule cannot be overridden")
   -- =========== validation done ===========
   -- Record history
   now <- getCurrentTime
@@ -103,7 +106,7 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
           }
   QVAH.create vehicleActionHistory
   -- adding fleet override info in redis for waybill.
-  Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceFleetInfo.waybill_no & fromMaybe "") 86400
+  Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceWaybillNo) 86400
   pure $ Kernel.Types.APISuccess.Success
 
 getFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m (Maybe (Text, Text))
