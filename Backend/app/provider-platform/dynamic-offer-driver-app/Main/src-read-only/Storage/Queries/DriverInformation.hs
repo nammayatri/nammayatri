@@ -157,19 +157,6 @@ updateLastACStatusCheckedAt lastACStatusCheckedAt driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateLatestScheduledBookingAndPickup ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateLatestScheduledBookingAndPickup latestScheduledBooking latestScheduledPickup driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.latestScheduledBooking latestScheduledBooking,
-      Se.Set Beam.latestScheduledPickupLat (Kernel.Prelude.fmap (.lat) latestScheduledPickup),
-      Se.Set Beam.latestScheduledPickupLon (Kernel.Prelude.fmap (.lon) latestScheduledPickup),
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegAmountRefunded payoutRegAmountRefunded driverId = do
   _now <- getCurrentTime

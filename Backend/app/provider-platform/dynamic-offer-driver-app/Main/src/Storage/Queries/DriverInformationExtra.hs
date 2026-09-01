@@ -643,6 +643,29 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
 
 -- Class 1 wrappers for src-read-only functions with LTS sync
 
+-- | Hand-written rather than generated: the scheduled-hold gate is read from LTS pool data
+-- during driver pooling, so the write must sync there too or the filter keeps seeing no hold.
+updateLatestScheduledBookingAndPickup ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe UTCTime ->
+  Maybe Maps.LatLong ->
+  Id Person.Person ->
+  m ()
+updateLatestScheduledBookingAndPickup latestScheduledBooking latestScheduledPickup driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.latestScheduledBooking latestScheduledBooking,
+      Se.Set BeamDI.latestScheduledPickupLat (fmap (.lat) latestScheduledPickup),
+      Se.Set BeamDI.latestScheduledPickupLon (fmap (.lon) latestScheduledPickup),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.latestScheduledBooking = LTSSync.Set latestScheduledBooking,
+        LTSSync.latestScheduledPickup = LTSSync.Set latestScheduledPickup
+      }
+
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
