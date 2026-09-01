@@ -167,8 +167,8 @@ updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance farePara
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> m ()
-updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimatedFare mbTierName newQuoteId mbAirConditioned mbSeatingCapacity mbIsAC = do
+updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> Maybe HighPrecMoney -> m ()
+updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimatedFare mbTierName newQuoteId mbAirConditioned mbSeatingCapacity mbIsAC mbNewCongestionCharge = do
   now <- getCurrentTime
   let baseSets =
         [ Se.Set BeamB.vehicleVariant newServiceTier,
@@ -176,6 +176,7 @@ updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimat
           Se.Set BeamB.estimatedFare newEstimatedFare,
           Se.Set BeamB.vehicleServiceTierName mbTierName,
           Se.Set BeamB.quoteId newQuoteId,
+          Se.Set BeamB.estimatedCongestionCharge mbNewCongestionCharge,
           Se.Set BeamB.updatedAt now
         ]
       acSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
