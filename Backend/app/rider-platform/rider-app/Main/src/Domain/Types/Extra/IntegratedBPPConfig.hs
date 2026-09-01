@@ -138,7 +138,8 @@ data TNSTCConfig = TNSTCConfig
     soapActionPrefix :: Maybe Text,
     maxPassengersPerBooking :: Maybe Int,
     maxAdvanceBookingDays :: Maybe Int,
-    createdBy :: Maybe Text
+    createdBy :: Maybe Text,
+    userId :: Maybe Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
