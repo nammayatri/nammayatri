@@ -75,7 +75,8 @@ finalizePickupDistanceOnRideStart merchantId merchantOpCityId rideId driverId = 
   currentTime <- getCurrentTime
   let nowTs = floor $ utcTimeToPOSIXSeconds currentTime
       mkWaypointWithTime w = (LatLong w.lat w.lon, fromMaybe nowTs w.ts)
-      remainingWaypoints = map mkWaypointWithTime remaining.loc
+      accRemaining = filter (\w -> maybe True (< 50) w.acc) remaining.loc
+      remainingWaypoints = map mkWaypointWithTime accRemaining
   -- If LTS has no remaining points, re-feed the last buffered point (0 added
   -- distance) purely to trigger the final drain of the accumulated buffer.
   mbFinalWaypoints <- case nonEmpty remainingWaypoints of
