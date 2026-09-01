@@ -5,6 +5,7 @@ module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
@@ -20,6 +21,7 @@ import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
@@ -173,9 +175,48 @@ transitOperatorUpdateWaybillFleetUtil merchantShortId city vehicleCategory req =
 transitOperatorUpdateWaybillDetailsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillDetailsReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillDetailsUtil merchantShortId city vehicleCategory req = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId req
+  gimsReq <- validateVehicleChange baseUrl gtfsId req
+  res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId gimsReq
   fanOutWaybillRefresh baseUrl gtfsId req.waybill_no
   pure res
+
+-- | The bus being replaced is read off the waybill rather than taken from the request, and both buses must
+-- share one seat layout: tickets already issued on this waybill carry seats from the old layout, which would
+-- not exist on a differently laid-out bus. A waybill with no vehicle yet is a first assignment, not a swap.
+validateVehicleChange :: BaseUrl -> Text -> UpdateWaybillDetailsReq -> Flow UpdateWaybillDetailsReq
+validateVehicleChange baseUrl gtfsId req = case req.vehicle_no of
+  Nothing -> pure req
+  Just rawVehicleNo -> do
+    newVehicleNo <- validateNonBlank rawVehicleNo
+    meta <- NandiFlow.getWaybillMetadata baseUrl gtfsId req.waybill_no
+    let currentVehicleNo = T.strip meta.vehicle_no
+    unless (T.null currentVehicleNo) $ do
+      mbCurrentLayoutId <- findSeatLayoutId currentVehicleNo
+      mbNewLayoutId <- findSeatLayoutId newVehicleNo
+      unless (mbCurrentLayoutId == mbNewLayoutId) $
+        throwError $
+          InvalidRequest $
+            mconcat
+              [ "updateWaybillDetails: seat layout mismatch on waybill ",
+                req.waybill_no,
+                " - current vehicle ",
+                currentVehicleNo,
+                " (seatLayoutId: ",
+                showLayoutId mbCurrentLayoutId,
+                ") and requested vehicle ",
+                newVehicleNo,
+                " (seatLayoutId: ",
+                showLayoutId mbNewLayoutId,
+                ") do not share the same seat layout, vehicle change is not allowed"
+              ]
+    pure (req :: UpdateWaybillDetailsReq) {vehicle_no = Just newVehicleNo}
+  where
+    validateNonBlank rawVehicleNo = do
+      let vehicleNo = T.strip rawVehicleNo
+      when (T.null vehicleNo) $ throwError $ InvalidRequest "updateWaybillDetails: vehicle_no must not be blank"
+      pure vehicleNo
+    findSeatLayoutId vehicleNo = fmap (.seatLayoutId) <$> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo gtfsId
+    showLayoutId = maybe "<none>" (.getId)
 
 -- | Reflect a waybill fleet/driver change on the customer tickets riding that waybill: for every confirmed
 -- booking on the waybill, refresh its driver + (assigned) bus from freshly-fetched waybill metadata. The
