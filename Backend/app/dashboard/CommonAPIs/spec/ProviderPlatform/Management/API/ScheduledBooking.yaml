@@ -3,6 +3,8 @@ imports:
   LatLong: Kernel.External.Maps.Types
   RideStatus: Domain.Types.RideStatus
   Driver: Dashboard.Common
+  ServiceTierType: Dashboard.Common
+
 
 module: ScheduledBooking
 
@@ -38,6 +40,18 @@ apis:
         transactionId: Text
       response:
         type: DriverDistanceRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
+
+  - GET: # ScheduledBookingNearbyDriversAPI (eligible drivers around the pickup, for ops-driven assignment)
+      endpoint: /{transactionId}/nearbyDrivers
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      query:
+        radiusKm: Double
+      response:
+        type: NearbyDriversRes
       migrate:
         capability: city-operations.scheduled-bookings.read
 
@@ -109,6 +123,10 @@ types:
     - bookingStatus: BookingStatus
     - rideStatus: Maybe RideStatus
     - reallocationCount: Int
+    - estimatedFare: HighPrecMoney
+    - currency: Currency
+    - vehicleServiceTier: ServiceTierType
+    - vehicleServiceTierName: Text
 
   ScheduledBookingInfoRes:
     - transactionId: Text
@@ -129,7 +147,21 @@ types:
     - driverEtaToPickupSeconds: Maybe Int
     - estimatedDistance: Maybe Meters
     - estimatedDurationSeconds: Maybe Int
+    - estimatedFare: HighPrecMoney
+    - currency: Currency
+    - vehicleServiceTier: ServiceTierType
+    - vehicleServiceTierName: Text
     - reallocationHistory: [ReallocationEventItem]
+
+  NearbyDriversRes:
+    - radiusKm: Double
+    - searchedAt: UTCTime
+    - drivers: [NearbyDriverItem]
+
+  NearbyDriverItem:
+    - driverId: Text
+    - serviceTiers: [ServiceTierType]
+    - straightLineDistanceMeters: Meters
 
   DriverDistanceRes:
     - assigned: Bool
