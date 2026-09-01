@@ -545,3 +545,18 @@ ALTER TABLE atlas_app.journey ADD COLUMN is_single_mode boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN skip_create_order_call boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

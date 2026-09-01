@@ -598,6 +598,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 domainEntityId = req.domainEntityId,
                 domainTransactionId = Nothing,
                 isMockPayment = Just False,
+                isExternalOrder = Nothing,
                 effectAmount = Nothing,
                 pgBaseFee = Nothing,
                 pgGst = Nothing,
@@ -824,18 +825,26 @@ createOrderService ::
   Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
   Bool ->
   Maybe Text ->
+  Bool ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId = do
-  logInfo $ "CreateOrderService: "
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId skipCreateOrderCall = do
+  logInfo $ "CreateOrderService: skipCreateOrderCall-" <> show skipCreateOrderCall
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
+    Nothing | skipCreateOrderCall -> do
+      paymentOrder <- buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq _isMockPayment mbGroupId
+      QOrder.create paymentOrder
+      return Nothing
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
       paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
       QOrder.create paymentOrder
       return $ Just createOrderResp
+    Just existingOrder
+      | existingOrder.isExternalOrder == Just True ->
+        return Nothing
     Just existingOrder -> do
       isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
       if isOrderExpired
@@ -862,6 +871,93 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
+
+-- | The payment_order row for an order this service will not open on the gateway.
+--
+-- Everything a session response would have filled in is left empty: no client auth token, no SDK
+-- payload, no gateway order id. paymentServiceOrderId is not nullable so it carries the shortId,
+-- which is the id the gateway order is opened under anyway.
+--
+-- validTill is set from the configured validity exactly as for a normal order: findAllNonTerminalOrders
+-- only picks up rows with a non-null validTill, and dropping it would leave the webhook as these
+-- orders' only route to fulfillment, with no hourly sweep behind it.
+buildExternalPaymentOrder ::
+  ( EncFlow m r,
+    BeamFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
+  Id Person ->
+  Maybe Seconds ->
+  Maybe EntityName ->
+  DOrder.PaymentServiceType ->
+  Payment.CreateOrderReq ->
+  Bool ->
+  Maybe Text ->
+  m DOrder.PaymentOrder
+buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req isMockPayment mbGroupId = do
+  now <- getCurrentTime
+  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
+      paymentOrder =
+        DOrder.PaymentOrder
+          { id = Id req.orderId,
+            shortId = ShortId req.orderShortId,
+            -- Placeholder: the column is NOT NULL and there is no session response to take the
+            -- gateway's own id from. orderStatusService overwrites this with the real id the first
+            -- time order status reports it.
+            paymentServiceOrderId = req.orderShortId,
+            requestId = Nothing,
+            service = Nothing,
+            clientId = Nothing,
+            description = Nothing,
+            returnUrl = Nothing,
+            action = Nothing,
+            personId,
+            merchantId,
+            entityName = mbEntityName,
+            paymentServiceType = Just paymentServiceType,
+            paymentMerchantId = Nothing,
+            amount = req.amount,
+            currency = INR,
+            status = Payment.NEW,
+            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
+            clientAuthToken = Nothing,
+            clientAuthTokenExpiry = Nothing,
+            getUpiDeepLinksOption = req.optionsGetUpiDeepLinks,
+            environment = Nothing,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            serviceProvider = Payment.Juspay,
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            isRetried = False,
+            isRetargeted = False,
+            retargetLink = Nothing,
+            sdkPayloadDump = Nothing,
+            validTill = paymentOrderValidTill,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = mbMerchantOpCityId,
+            paymentFulfillmentStatus = Just FulfillmentPending,
+            domainEntityId = Nothing,
+            domainTransactionId = Nothing,
+            effectAmount = Nothing,
+            isMockPayment = Just isMockPayment,
+            isExternalOrder = Just True,
+            paytmTid = Nothing,
+            groupId = mbGroupId,
+            vpa = Nothing,
+            pgBaseFee = Nothing,
+            pgGst = Nothing,
+            chargeRouting = Nothing
+          }
+  -- The vendor splits stay ours to record: they come from our own vendor configuration, and the
+  -- system opening the gateway order is expected to send the same ones.
+  buildPaymentSplit req.orderId paymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
+  pure paymentOrder
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -985,6 +1081,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
+            isExternalOrder = Nothing,
             paytmTid = Nothing,
             groupId = mbGroupId,
             vpa = Nothing,
@@ -1705,6 +1802,10 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
           txnObj.txnUuid
       mapM_ (upsertRefundStatus merchantOpCityId order) refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
+
+      whenJust paymentServiceOrderId $ \gatewayOrderId ->
+        when (order.isExternalOrder == Just True && order.paymentServiceOrderId /= gatewayOrderId) $
+          QOrder.updatePaymentServiceOrderId orderId gatewayOrderId
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
         Left e -> logError $ "buildOrderOffer failed for orderId=" <> orderId.getId <> " err=" <> show e
@@ -2313,6 +2414,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just False,
+            isExternalOrder = Nothing,
             paytmTid = Nothing,
             groupId = Nothing,
             vpa = Nothing,

@@ -886,7 +886,8 @@ buildJourneyAndLeg booking fareParameters = do
               toLocation = Just toLocation,
               paymentOrderShortId = Nothing,
               journeyExpiryTime = Nothing,
-              hasStartedTrackingWithoutBooking = Nothing
+              hasStartedTrackingWithoutBooking = Nothing,
+              skipCreateOrderCall = Nothing
             }
 
     journeyRouteDetailsId <- generateGUID

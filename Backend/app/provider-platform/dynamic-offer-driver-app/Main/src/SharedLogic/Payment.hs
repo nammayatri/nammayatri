@@ -181,7 +181,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   mCreateOrderRes <-
     if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
       then pure Nothing
-      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing
+      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId Nothing mbEntityName DOrder.Normal False createOrderReq createOrderCall Nothing False Nothing False
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
@@ -456,6 +456,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
       Nothing -- mbCreateWalletCall
       False -- isMockPayment
       Nothing -- mbGroupId
+      False -- skipCreateOrderCall
   mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
 
 -- | Create a payment order for driver wallet topup (no Invoice/DriverFee).
@@ -527,6 +528,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
       Nothing
       False
       Nothing
+      False -- skipCreateOrderCall
   case mbResp of
     Just createOrderRes ->
       pure (applyPseudoClientId pseudoClientId createOrderRes, Id orderId)
@@ -550,6 +552,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
           Nothing
           False
           Nothing
+          False -- skipCreateOrderCall
       case mbRetryResp of
         Just retryRes ->
           pure (applyPseudoClientId pseudoClientId retryRes, Id newOrderId)

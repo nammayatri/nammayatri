@@ -22,6 +22,7 @@ imports:
   UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CrisSdkResponse: API.Types.UI.FRFSTicketService
+  CreateOrderReq: Kernel.External.Payment.Juspay.Types
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
@@ -232,6 +233,10 @@ types:
     result: Text
     orderSdkPayload: Maybe CreateOrderResp
     gatewayReferenceId: Maybe Text
+    # Only set when the confirm carried skipCreateOrderCall. The gateway's own request payload,
+    # built through the same mkCreateOrderReq a real session call goes through, so whoever opens
+    # the order under our stored order short id sends exactly what we would have sent.
+    orderCreationReq: Maybe CreateOrderReq
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
@@ -489,6 +494,7 @@ apis:
       query:
         forceBookLegOrder: Int
         isMockPayment: Bool
+        skipCreateOrderCall: Bool
       response:
         type: JourneyConfirmResp
   - GET:

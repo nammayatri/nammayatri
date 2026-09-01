@@ -17,6 +17,7 @@
 module Tools.Payment
   ( module Reexport,
     createOrder,
+    getPaymentServiceConfig,
     updateOrder,
     orderStatus,
     abortOrder,
@@ -130,6 +131,16 @@ rideBookingPaymentService = Payment.PaytmEDC
 
 createOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfigAndServiceName Payment.createOrder
+
+-- | Resolve the payment service config without calling the gateway.
+--
+-- For callers that must build the gateway's own request payload but must not send it -- an order
+-- another system opens on our behalf under the same order short id. Goes through
+-- runWithServiceConfigAndServiceName so the place-based override and service-name resolution stay
+-- identical to an actual call; only the final step differs, handing back the config instead of using it.
+getPaymentServiceConfig :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Version -> m Payment.PaymentServiceConfig
+getPaymentServiceConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType clientSdkVersion =
+  runWithServiceConfigAndServiceName (\vsc _ _ -> pure vsc) merchantId merchantOperatingCityId mbPlaceId paymentServiceType Nothing clientSdkVersion Nothing ()
 
 updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
 updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder

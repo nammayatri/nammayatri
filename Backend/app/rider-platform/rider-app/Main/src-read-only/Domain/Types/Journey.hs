@@ -39,6 +39,7 @@ data Journey = Journey
     relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchRequestId :: Kernel.Prelude.Text,
+    skipCreateOrderCall :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.Journey.JourneyStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
@@ -60,6 +61,6 @@ data JourneyStatus
   | EXPIRED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JourneyStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''JourneyStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''JourneyStatus))

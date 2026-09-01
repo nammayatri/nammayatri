@@ -133,9 +133,13 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      skipCreateOrderCall <- maybe (pure False) journeySkipsCreateOrderCall mbJourneyId
+      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId skipCreateOrderCall
   where
     key journeyId = "initJourney-" <> journeyId
+
+    journeySkipsCreateOrderCall journeyId =
+      QJourney.findByPrimaryKey journeyId <&> maybe False (\journey -> fromMaybe False journey.skipCreateOrderCall)
 
 dropPassOverrideOnFareChange ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -169,17 +173,18 @@ createPayments ::
   [Payment.Basket] ->
   Maybe Bool ->
   Maybe (Id DJ.Journey) ->
+  Bool ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId skipCreateOrderCall = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   let isMockPayment = all (\booking -> fromMaybe False booking.isMockPayment) bookings
   mbPaymentOrder <-
     if and ticketBookingPaymentsExist
       then do
-        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment
+        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment skipCreateOrderCall
         return paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment skipCreateOrderCall
         return updatedPaymentOrder
   -- Only ever called with payableBookings, so a fully pass-covered booking never reaches here and
   -- needs no zero-amount escape hatch. Anything that does get here and fails to produce an order is
