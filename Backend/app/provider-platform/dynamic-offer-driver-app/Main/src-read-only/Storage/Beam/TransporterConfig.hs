@@ -228,6 +228,7 @@ data TransporterConfigT f = TransporterConfigT
     knowledgeCenterSopTypes :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],
     lastNdaysToCheckForPayoutOrderStatus :: B.C f Kernel.Prelude.Int,
+    limitsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     linkFleetToUnVerifiedExistingRC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     liveEKD :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     localAmbulanceNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

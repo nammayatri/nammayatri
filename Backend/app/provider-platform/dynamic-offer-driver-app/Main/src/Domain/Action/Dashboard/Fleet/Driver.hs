@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetGetAllVehicle,
     getDriverFleetGetAllDriver,
     postDriverFleetUnlink,
+    postDriverFleetCashRideUpdate,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -374,7 +375,7 @@ checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssocia
       let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
           rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
           driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
-      if (isJust exactMatch)
+      if isJust exactMatch
         then return True
         else do
           unless (null rcAssociations) $ throwError VehicleAlreadyLinkedToAnotherDriver
@@ -472,7 +473,7 @@ checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
   forM_ rcAssociatedDriverIds $ \driverId -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
-    when (isNothing isFleetDriver) $ throwError (VehicleLinkedToInvalidDriver)
+    when (isNothing isFleetDriver) $ throwError VehicleLinkedToInvalidDriver
 
 ---------------------------------------------------------------------
 
@@ -650,7 +651,7 @@ convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (a
             model = rc.vehicleModel,
             color = rc.vehicleColor,
             registrationNo = certificateNumber',
-            isActive = (Just association.isRcActive),
+            isActive = Just association.isRcActive,
             verified = rc.verified,
             approved = rc.approved,
             fleetOwnerId = foId,
@@ -678,7 +679,7 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
             model = vehicleModel,
             color = vehicleColor,
             registrationNo = certificateNumber',
-            isActive = (Just isActive),
+            isActive = Just isActive,
             verified = verified,
             approved = approved,
             fleetOwnerId = foId,
@@ -851,6 +852,76 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
     SOnboardingComms.notifyOnVehicleFleetUnlink merchantOpCityId vehicleNo mbRcFleetOwnerId (maybeToList mbDriver)
   pure Success
 
+postDriverFleetCashRideUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.UpdateCashRideReq ->
+  Flow APISuccess
+postDriverFleetCashRideUpdate merchantShortId opCity requestorId mbFleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+  unless (merchant.onlinePayment) $
+    throwError $ InvalidRequest "Cash ride toggle needs online payment enabled for this merchant."
+  let maxTargets = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxCashRideTargetIds))
+      syncBatchSize = fromMaybe 100 (transporterConfig.limitsConfig >>= (.cashRideSyncBatchSize))
+      enableCashRide = req.enableCashRide
+  when (syncBatchSize < 1) $ throwError $ InternalError ("cashRideSyncBatchSize must be at least 1, got " <> show syncBatchSize)
+  when (length (fromMaybe [] req.targetIds) > maxTargets) $ throwError $ MaxDriversLimitExceeded maxTargets
+
+  mbRequestor <- QPerson.findById (Id requestorId)
+  targetIds <- case (fromMaybe [] req.targetIds, mbRequestor) of
+    (ids@(_ : _), _) -> pure ids
+    ([], Just requestor) | DCommon.checkFleetOwnerRole requestor.role -> pure [requestor.id.getId]
+    ([], _) -> throwError $ InvalidRequest "targetIds must be provided"
+
+  let mbEffectiveFleetOwnerId =
+        (case mbRequestor of Just r | DCommon.checkFleetOwnerRole r.role -> Just r.id.getId; _ -> Nothing)
+          <|> mbFleetOwnerId
+
+  persons <- QPersonExtra.getDriversByIdIn (Id @DP.Person <$> targetIds)
+  let personById = Map.fromList $ map (\p -> (p.id.getId, p)) persons
+  targets <- forM targetIds $ \tid -> do
+    p <- Map.lookup tid personById & fromMaybeM (PersonDoesNotExist tid)
+    unless (merchant.id == p.merchantId && merchantOpCityId == p.merchantOperatingCityId) $ throwError (PersonDoesNotExist tid)
+    pure p
+  let fleetOwners = filter (DCommon.checkFleetOwnerRole . (.role)) targets
+      drivers = filter ((== DP.DRIVER) . (.role)) targets
+  whenJust (listToMaybe $ filter (\p -> not (DCommon.checkFleetOwnerRole p.role) && p.role /= DP.DRIVER) targets) $ \p ->
+    throwError $ InvalidRequest ("targetId " <> p.id.getId <> " is neither a driver nor a fleet owner")
+  whenJust mbRequestor $ \requestor ->
+    when (DCommon.checkFleetOwnerRole requestor.role) $ do
+      whenJust mbFleetOwnerId $ \foid ->
+        unless (requestor.id.getId == foid) $ throwError (InvalidRequesterRole $ show requestor.role)
+      forM_ fleetOwners $ \fo -> unless (requestor.id == fo.id) $ throwError (InvalidRequesterRole $ show requestor.role)
+
+  whenJust mbEffectiveFleetOwnerId $ \foid ->
+    DCommon.checkFleetOwnerVerification foid merchant.fleetOwnerEnabledCheck
+
+  driverAssocs <- case (mbEffectiveFleetOwnerId, drivers) of
+    (Just foid, _ : _) -> do
+      when enableCashRide $ do
+        mbFoi <- FOI.findByPrimaryKey (Id foid)
+        unless (maybe True (fromMaybe True . (.enableCashRide)) mbFoi) $
+          throwError (InvalidRequest "Cash rides are disabled for this fleet. Enable it for the fleet before enabling fleet's drivers.")
+      assocs <- QFDAExtra.findAllByDriverIds (map (.id) drivers)
+      let byDriver = Map.fromList [(a.driverId.getId, a) | a <- assocs, a.fleetOwnerId == foid]
+      forM_ drivers $ \d -> unless (Map.member d.id.getId byDriver) $ throwError DriverNotPartOfFleet
+      pure byDriver
+    _ -> pure Map.empty
+
+  let directDriverIds = if isJust mbEffectiveFleetOwnerId then [] else map (.id) drivers
+  unless (null fleetOwners) $
+    QFDAExtra.updateEnableCashRideForFleetOwnersWithSync (Just enableCashRide) syncBatchSize (map (.id) fleetOwners)
+  unless (Map.null driverAssocs) $
+    QFDAExtra.updateEnableCashRideForAssociations (Just enableCashRide) syncBatchSize (Map.elems driverAssocs)
+  unless (null directDriverIds) $
+    QFDAExtra.updateEnableCashRideForDriversWithSync (Just enableCashRide) syncBatchSize directDriverIds
+  pure Success
+
 unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow (Maybe Text)
 unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driver <-
@@ -982,7 +1053,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   rcReq <-
     Csv.readCsv @VehicleDetailsCSVRow @(Common.RegisterRCReq, DbHash, [DRoute.Route], Maybe Text, Maybe Text, Maybe Text) req.file $
       parseVehicleInfo merchantOpCity
-  when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
+  let maxVehiclesCsvRows = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxVehiclesCsvRows))
+  when (length rcReq > maxVehiclesCsvRows) $ throwError $ MaxVehiclesLimitExceeded maxVehiclesCsvRows
   let processVehicle func =
         foldlM
           ( \unprocessedEntities (registerRcReq, _, _, mbCountryCode, mbFleetNo, mbDriverNo) -> do
@@ -2902,7 +2974,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
+      deviceToken <- fromMaybeM DeviceTokenNotFound $ req.deviceToken
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
@@ -2983,7 +3055,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   unless driverInfo.verified $ throwError (InvalidRequest "Driver documents are not verified")
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
-  unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
+  unless (rc.verificationStatus == Documents.VALID) $ throwError RcNotValid
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SStatus.validateMandatoryVehicleDocsForRC transporterConfig rc
   validateFleetDriverAssociation fleetOwnerId driver.id
@@ -3470,9 +3542,11 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     Nothing -> throwError FleetOwnerIdRequired
     Just id -> pure id
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   driverBusRouteDetails <- Csv.readCsv @CreateDriverBusRouteMappingCSVRow @DriverBusRouteDetails req.file parseMappingInfo
 
-  when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
+  let maxDriverBusRouteMappingRows = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxDriverBusRouteMappingRows))
+  when (length driverBusRouteDetails > maxDriverBusRouteMappingRows) $ throwError $ MaxDriversLimitExceeded maxDriverBusRouteMappingRows
   let groupedDetails = groupBy (\a b -> a.driverPhoneNo == b.driverPhoneNo) $ sortOn (.driverPhoneNo) driverBusRouteDetails
 
   driverTripPlanner <-
@@ -3615,7 +3689,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   driverDetails <- Csv.readCsv @CreateDriversCSVRow @DriverDetails req.file parseDriverInfo
-  when (length driverDetails > 100) $ throwError $ MaxDriversLimitExceeded 100 -- TODO: Configure the limit
+  let maxAddDriversCsvRows = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxAddDriversCsvRows))
+  when (length driverDetails > maxAddDriversCsvRows) $ throwError $ MaxDriversLimitExceeded maxAddDriversCsvRows
   when (not (null driverDetails) && all (\d -> T.null d.driverPhoneNumber) driverDetails) $
     throwError (InvalidRequest "No valid mobile numbers found in the uploaded file. Please check the file format.")
   let process func =
@@ -4959,7 +5034,7 @@ getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity f
         rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
         pure (decryptedVehicleRC, rcActiveAssociation >>= (\assoc -> Just assoc.driverId))
       let unLinkedVehicles = map fst $ filter (\(_, driverId) -> isNothing driverId) vehicleDriverCombination
-      let linkedDriverIds = snd $ second (catMaybes) (unzip vehicleDriverCombination)
+      let linkedDriverIds = snd $ second catMaybes (unzip vehicleDriverCombination)
       pure $ (unLinkedVehicles, linkedDriverIds)
 
 getDriverFleetDriverDetails :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow Common.DriverDetailsRes

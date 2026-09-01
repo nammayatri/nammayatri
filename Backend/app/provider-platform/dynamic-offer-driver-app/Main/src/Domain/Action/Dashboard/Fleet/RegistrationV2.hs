@@ -164,7 +164,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
       when (DomainRC.isFleetRole requestor.role) $
         unless (requestor.id == fleetOwnerId) $ throwError AccessDenied
-      if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
+      if requestor.role == DP.OPERATOR then pure (Just requestor.id.getId) else pure Nothing
     Nothing -> pure Nothing
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
@@ -412,6 +412,7 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             payoutVpaStatus = Nothing,
             createdAt = now,
             updatedAt = now,
+            enableCashRide = Just True,
             registeredAt = Nothing,
             isEligibleForSubscription = True,
             ticketPlaceId = Nothing,

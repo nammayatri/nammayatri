@@ -16,6 +16,7 @@ data FleetDriverAssociationT f = FleetDriverAssociationT
     associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
+    enableCashRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isActive :: B.C f Kernel.Prelude.Bool,

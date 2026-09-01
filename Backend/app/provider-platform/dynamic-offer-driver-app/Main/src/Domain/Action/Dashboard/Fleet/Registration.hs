@@ -242,6 +242,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             stripeAddress = Nothing,
             fleetDob = Nothing,
             gstNumber = mbGstNumberEnc,
+            enableCashRide = Just True,
             gstNumberDec = Nothing,
             vatNumber = Nothing,
             gstImageId = Nothing,

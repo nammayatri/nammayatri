@@ -351,6 +351,14 @@ updateNotOnRideMultiple driverIds = do
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
   Kernel.Prelude.mapM_ (\did -> LTSSync.syncDriverPoolDataToLTS (cast did) $ LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set False}) driverIds
 
+updateEnableCashRideForDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Bool -> [Id Person.Driver] -> m ()
+updateEnableCashRideForDrivers _ [] = pure ()
+updateEnableCashRideForDrivers enableCashRide driverIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDI.enableCashRide enableCashRide, Se.Set BeamDI.updatedAt now]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+
 deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDI.driverId (Se.Eq driverId)]
 

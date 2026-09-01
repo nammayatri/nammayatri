@@ -102,6 +102,7 @@ DriverInformation:
     canSwitchToIntraCity: Bool
     enableForAirport: AirportRestrictionType
     airportBlockExpiryTime: Maybe UTCTime
+    enableCashRide: Maybe Bool
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus

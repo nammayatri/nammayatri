@@ -70,6 +70,7 @@ FleetOwnerInformation:
     disabledReasonFlag: Maybe DisabledReasonFlag
     initiatedBy: Maybe InitiatedBy
     latestScheduledCommissionAggregationPeriodEnd: Maybe UTCTime # latest period an AggregatedCommission job has been enqueued for; enqueue-time idempotency marker
+    enableCashRide: Maybe Bool
 
   excludedFields: [merchantOperatingCityId]
   default:

@@ -231,6 +231,7 @@ data TransporterConfig = TransporterConfig
     knowledgeCenterSopTypes :: Domain.Types.Extra.TransporterConfig.KnowledgeCenterSopTypesConfig,
     languagesToBeTranslated :: [Kernel.External.Types.Language],
     lastNdaysToCheckForPayoutOrderStatus :: Kernel.Prelude.Int,
+    limitsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.LimitsConfig,
     linkFleetToUnVerifiedExistingRC :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     liveEKD :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     localAmbulanceNumbers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -511,6 +512,16 @@ data InvoiceConfig = InvoiceConfig
     showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
+
+data LimitsConfig = LimitsConfig
+  { cashRideSyncBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxAddDriversCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxBulkSubscriptionDriverIds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxCashRideTargetIds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxDriverBusRouteMappingRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxVehiclesCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

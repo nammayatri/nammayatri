@@ -18,6 +18,14 @@ import qualified Storage.Queries.Transformers.FleetOwnerInformation
 import Tools.Encryption (encryptWithDefault)
 import qualified Tools.Error
 
+updateEnableCashRideForFleetOwners :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Bool -> [Id DP.Person] -> m ()
+updateEnableCashRideForFleetOwners _ [] = pure ()
+updateEnableCashRideForFleetOwners enableCashRide fleetOwnerPersonIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.enableCashRide enableCashRide, Se.Set Beam.updatedAt now]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.In (getId <$> fleetOwnerPersonIds)]
+
 updateFleetOwnerBlockedStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag -> Id DP.Person -> m ()
 updateFleetOwnerBlockedStatus blocked blockReasonFlag fleetOwnerPersonId = do
   now <- getCurrentTime

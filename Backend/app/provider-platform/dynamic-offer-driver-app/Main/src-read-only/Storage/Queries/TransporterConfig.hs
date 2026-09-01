@@ -307,6 +307,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.languagesToBeTranslated languagesToBeTranslated,
       Se.Set Beam.lastNdaysToCheckForPayoutOrderStatus lastNdaysToCheckForPayoutOrderStatus,
+      Se.Set Beam.limitsConfig (Data.Aeson.toJSON <$> limitsConfig),
       Se.Set Beam.linkFleetToUnVerifiedExistingRC linkFleetToUnVerifiedExistingRC,
       Se.Set Beam.liveEKD liveEKD,
       Se.Set Beam.localAmbulanceNumbers localAmbulanceNumbers,

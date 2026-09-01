@@ -17,6 +17,7 @@ FleetDriverAssociation:
     onboardingVehicleCategory: Maybe VehicleCategory
     onboardedOperatorId: Maybe (Id Person)
     requestReason: Maybe Text
+    enableCashRide: Maybe Bool
     responseReason: Maybe Text
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)

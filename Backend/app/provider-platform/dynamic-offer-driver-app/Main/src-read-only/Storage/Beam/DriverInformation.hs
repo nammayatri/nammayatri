@@ -62,6 +62,7 @@ data DriverInformationT f = DriverInformationT
     driverTripEndLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverTripEndLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     drunkAndDriveViolationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    enableCashRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableForAirport :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AirportRestrictionType),
     enabled :: B.C f Kernel.Prelude.Bool,
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
