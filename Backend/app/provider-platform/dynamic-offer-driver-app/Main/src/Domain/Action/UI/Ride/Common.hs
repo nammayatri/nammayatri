@@ -242,7 +242,8 @@ data DriverRideRes = DriverRideRes
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    isAutoAccepted :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -334,7 +335,6 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam rid
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-
             mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge ridePaymentChargeAmt ((customerBearsCharge || driverBearsCharge) && ridePaymentChargeAmt > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
@@ -452,8 +452,7 @@ fetchEarningsLabels ::
   m EarningsLabels
 fetchEarningsLabels lang =
   EarningsLabels
-
-  -- TODO MAKE THIS AMOUNT PAID BY CUST TO KEEP IT BACKWARD COMPATIBLE.. WE WILL CHANGBE IN DB.
+    -- TODO MAKE THIS AMOUNT PAID BY CUST TO KEEP IT BACKWARD COMPATIBLE.. WE WILL CHANGBE IN DB.
     <$> resolveLabel lang "FARE_PAID_BY_CUSTOMER"
     <*> resolveLabel lang "DISCOUNT"
     <*> resolveLabel lang "TIPS"
@@ -694,7 +693,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
-        customerLanguage = booking.customerLanguage
+        customerLanguage = booking.customerLanguage,
+        isAutoAccepted = booking.isAutoAccepted
       }
 
 -- calculateLocations moved from UI.Ride
