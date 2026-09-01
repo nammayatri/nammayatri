@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign))
+type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city
+handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> getScheduledBookingNearbyDrivers merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city
 
 type GetScheduledBookingList =
   ( ApiAuth
@@ -49,6 +49,14 @@ type GetScheduledBookingDriverDistance =
       'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SCHEDULED_BOOKING / 'API.Types.ProviderPlatform.Management.ScheduledBooking.GET_SCHEDULED_BOOKING_DRIVER_DISTANCE)
       :> API.Types.ProviderPlatform.Management.ScheduledBooking.GetScheduledBookingDriverDistance
+  )
+
+type GetScheduledBookingNearbyDrivers =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SCHEDULED_BOOKING / 'API.Types.ProviderPlatform.Management.ScheduledBooking.GET_SCHEDULED_BOOKING_NEARBY_DRIVERS)
+      :> API.Types.ProviderPlatform.Management.ScheduledBooking.GetScheduledBookingNearbyDrivers
   )
 
 type PostScheduledBookingAssign =
@@ -75,6 +83,9 @@ getScheduledBookingInfo merchantShortId opCity apiTokenInfo transactionId = with
 
 getScheduledBookingDriverDistance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.DriverDistanceRes)
 getScheduledBookingDriverDistance merchantShortId opCity apiTokenInfo transactionId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.getScheduledBookingDriverDistance merchantShortId opCity apiTokenInfo transactionId
+
+getScheduledBookingNearbyDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.NearbyDriversRes)
+getScheduledBookingNearbyDrivers merchantShortId opCity apiTokenInfo transactionId radiusKm = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.getScheduledBookingNearbyDrivers merchantShortId opCity apiTokenInfo transactionId radiusKm
 
 postScheduledBookingAssign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.ScheduledBooking.AssignDriverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postScheduledBookingAssign merchantShortId opCity apiTokenInfo transactionId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.postScheduledBookingAssign merchantShortId opCity apiTokenInfo transactionId req
