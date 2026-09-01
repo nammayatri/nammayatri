@@ -45,7 +45,7 @@ newtype WaiveOffReq = WaiveOffReq {waiveOffEntities :: [Domain.Types.DriverPlan.
 instance Kernel.Types.HideSecrets.HideSecrets WaiveOffReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("plan" :> (GetSubscriptionListPlanHelper :<|> PutSubscriptionSelectPlanHelper :<|> PutSubscriptionSuspendPlanHelper :<|> PostSubscriptionSubscribePlanHelper :<|> GetSubscriptionCurrentPlanHelper :<|> GetSubscriptionListPlanV2Helper :<|> PutSubscriptionSelectPlanV2Helper :<|> PutSubscriptionSuspendPlanV2Helper :<|> PostSubscriptionSubscribePlanV2Helper :<|> GetSubscriptionCurrentPlanV2Helper :<|> GetSubscriptionOrderStatusHelper :<|> GetSubscriptionDriverPaymentHistoryAPIV2Helper :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2Helper :<|> PostSubscriptionCollectManualPaymentsHelper :<|> PostSubscriptionFeeWaiveOffHelper :<|> GetSubscriptionPurchaseListHelper))
+type API = ("plan" :> (GetSubscriptionListPlanHelper :<|> PutSubscriptionSelectPlanHelper :<|> PutSubscriptionSuspendPlanHelper :<|> PostSubscriptionSubscribePlanHelper :<|> GetSubscriptionCurrentPlanHelper :<|> GetSubscriptionListPlanV2Helper :<|> PutSubscriptionSelectPlanV2Helper :<|> PutSubscriptionSuspendPlanV2Helper :<|> PostSubscriptionSubscribePlanV2Helper :<|> GetSubscriptionCurrentPlanV2Helper :<|> GetSubscriptionOrderStatusHelper :<|> GetSubscriptionDriverPaymentHistoryAPIV2Helper :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2Helper :<|> GetSubscriptionCancellationChargeHistoryHelper :<|> PostSubscriptionCollectManualPaymentsHelper :<|> PostSubscriptionFeeWaiveOffHelper :<|> GetSubscriptionPurchaseListHelper))
 
 type GetSubscriptionListPlan = (Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "list" :> Get '[JSON] Domain.Action.UI.Plan.PlanListAPIRes)
 
@@ -339,6 +339,37 @@ type GetSubscriptionDriverPaymentHistoryEntityDetailsV2Helper =
            Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
   )
 
+type GetSubscriptionCancellationChargeHistory =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "cancellationChargeHistory"
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.CancellationChargeHistoryRes
+  )
+
+type GetSubscriptionCancellationChargeHistoryHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "cancellationChargeHistory"
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.CancellationChargeHistoryRes
+  )
+
 type PostSubscriptionCollectManualPayments =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
       :> Capture
@@ -413,6 +444,7 @@ data SubscriptionAPIs = SubscriptionAPIs
     getSubscriptionOrderStatus :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Payment.PaymentStatusResp,
     getSubscriptionDriverPaymentHistoryAPIV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntityV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2,
+    getSubscriptionCancellationChargeHistory :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.CancellationChargeHistoryRes,
     postSubscriptionCollectManualPayments :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> CollectManualPaymentsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postSubscriptionFeeWaiveOff :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> WaiveOffReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getSubscriptionPurchaseList :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.SubscriptionPurchaseListRes
@@ -421,7 +453,7 @@ data SubscriptionAPIs = SubscriptionAPIs
 mkSubscriptionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionAPIs)
 mkSubscriptionAPIs subscriptionClient = (SubscriptionAPIs {..})
   where
-    getSubscriptionListPlan :<|> putSubscriptionSelectPlan :<|> putSubscriptionSuspendPlan :<|> postSubscriptionSubscribePlan :<|> getSubscriptionCurrentPlan :<|> getSubscriptionListPlanV2 :<|> putSubscriptionSelectPlanV2 :<|> putSubscriptionSuspendPlanV2 :<|> postSubscriptionSubscribePlanV2 :<|> getSubscriptionCurrentPlanV2 :<|> getSubscriptionOrderStatus :<|> getSubscriptionDriverPaymentHistoryAPIV2 :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> postSubscriptionCollectManualPayments :<|> postSubscriptionFeeWaiveOff :<|> getSubscriptionPurchaseList = subscriptionClient
+    getSubscriptionListPlan :<|> putSubscriptionSelectPlan :<|> putSubscriptionSuspendPlan :<|> postSubscriptionSubscribePlan :<|> getSubscriptionCurrentPlan :<|> getSubscriptionListPlanV2 :<|> putSubscriptionSelectPlanV2 :<|> putSubscriptionSuspendPlanV2 :<|> postSubscriptionSubscribePlanV2 :<|> getSubscriptionCurrentPlanV2 :<|> getSubscriptionOrderStatus :<|> getSubscriptionDriverPaymentHistoryAPIV2 :<|> getSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> getSubscriptionCancellationChargeHistory :<|> postSubscriptionCollectManualPayments :<|> postSubscriptionFeeWaiveOff :<|> getSubscriptionPurchaseList = subscriptionClient
 
 data SubscriptionUserActionType
   = GET_SUBSCRIPTION_LIST_PLAN
@@ -437,6 +469,7 @@ data SubscriptionUserActionType
   | GET_SUBSCRIPTION_ORDER_STATUS
   | GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_API_V2
   | GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_ENTITY_DETAILS_V2
+  | GET_SUBSCRIPTION_CANCELLATION_CHARGE_HISTORY
   | POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS
   | POST_SUBSCRIPTION_FEE_WAIVE_OFF
   | GET_SUBSCRIPTION_PURCHASE_LIST

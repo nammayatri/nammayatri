@@ -85,3 +85,9 @@ UPDATE atlas_dashboard.transaction
 
 -- {"api":"PostSubscriptionFeeWaiveOff","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION FEE_WAIVE_OFF","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_FEE_WAIVE_OFF' FROM atlas_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'SUBSCRIPTION' AND T1.user_action_type = 'FEE_WAIVE_OFF' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetSubscriptionCancellationChargeHistory","migration":"capability","param":"city-operations.subscription.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_CANCELLATION_CHARGE_HISTORY' ) ON CONFLICT DO NOTHING;

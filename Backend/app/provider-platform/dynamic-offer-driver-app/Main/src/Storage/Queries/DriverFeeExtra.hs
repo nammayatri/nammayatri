@@ -1017,6 +1017,40 @@ findSubscriptionFeesWithCancellationPenalties (Id driverId) serviceName =
         ]
     ]
 
+-- | All (non-zero) cancellation penalties for a driver, in any status, newest first
+-- with optional limit/offset. Unlike
+-- 'findUnbilledCancellationPenaltiesForDriver'/'findSubscriptionFeesWithCancellationPenalties'
+-- (which only surface penalties tied to still-unpaid invoices), this returns the full
+-- history so paid charges are not dropped once their parent invoice is cleared.
+-- Ordering, the zero/null-amount exclusion, and pagination are all pushed into the query
+-- so a single page does not read (and sort) a driver's entire history.
+findAllCancellationPenaltiesForDriver ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DriverFee]
+findAllCancellationPenaltiesForDriver (Id driverId) serviceName =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.cancellationPenaltyAmount $ Se.GreaterThan (Just 0.0)
+        ]
+    ]
+    (Se.Desc BeamDF.createdAt)
+
+-- | Fetch driver fees by id (used to resolve the parent invoice a penalty was folded into).
+findDriverFeesByIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id DriverFee] ->
+  m [DriverFee]
+findDriverFeesByIds [] = pure []
+findDriverFeesByIds ids =
+  findAllWithKV [Se.Is BeamDF.id $ Se.In ((.getId) <$> ids)]
+
 findOriginalCancellationPenaltiesForSubscriptionFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Id DriverFee] ->
