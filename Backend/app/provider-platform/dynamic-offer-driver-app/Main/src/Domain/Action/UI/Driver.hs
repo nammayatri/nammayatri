@@ -2399,7 +2399,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
       let scheduledTime = booking.startTime
           pickupPos = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
           keepExisting = maybe False (\existing -> existing > now && existing <= scheduledTime) driverInfo.latestScheduledBooking
-      unless keepExisting $ void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
+      unless keepExisting $ void $ QDriverInformation.updateDriverInfo driver.id [QDriverInformation.SetLatestScheduledBooking (Just scheduledTime), QDriverInformation.SetLatestScheduledPickup (Just pickupPos)]
     -- single accept guard for board + broadcast: cap on scheduled holds + feasibility vs committed set; Maps failure fails closed
     ensureNoScheduledOverlap schedulingCfg booking = do
       committed <- SBOC.getDriverCommittedRides driver.id

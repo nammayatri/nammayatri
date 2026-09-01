@@ -149,7 +149,7 @@ resetDriver driver = runARDUFlow "" $ do
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
   driverInfo <- QDI.findById (cast driver.driverId) >>= fromMaybeM DriverInfoNotFound
   DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
-  QTDrInfo.updateOnRide False (cast driver.driverId)
+  QTDrInfo.updateDriverInfo (cast driver.driverId) [QTDrInfo.SetOnRide False]
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

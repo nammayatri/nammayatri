@@ -259,7 +259,7 @@ startRideHandler ServiceHandle {..} rideId req = do
           -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
           CS.withDriverScheduledHoldLock (cast driverId) $ do
             mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig (cast driverId) booking.id
-            void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True (fst <$> mbNextHold) (snd <$> mbNextHold) (cast driverId)
+            void $ QDI.updateDriverInfo (cast driverId) [QDI.SetOnRide True, QDI.SetLatestScheduledBooking (fst <$> mbNextHold), QDI.SetLatestScheduledPickup (snd <$> mbNextHold)]
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking

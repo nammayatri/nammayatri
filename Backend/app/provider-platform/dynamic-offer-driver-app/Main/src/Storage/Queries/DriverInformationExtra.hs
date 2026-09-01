@@ -1,6 +1,7 @@
 module Storage.Queries.DriverInformationExtra where
 
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -610,61 +611,41 @@ findOnRideDriversWithRideStartedByMerchantOpCityIds merchantOpCityIds limitVal o
     (Just limitVal)
     (Just offsetVal)
 
-updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
-updateOnRide onRide driverId = do
-  now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamDI.onRide onRide, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
+data DriverInfoUpdate
+  = SetOnRide Bool
+  | SetLatestScheduledBooking (Maybe UTCTime)
+  | SetLatestScheduledPickup (Maybe Maps.LatLong)
 
-updateOnRideAndLatestScheduledBookingAndPickup ::
+interpretDriverInfoUpdate :: DriverInfoUpdate -> ([Se.Set Postgres BeamDI.DriverInformationT], Maybe (LTSSync.DriverPoolDataUpdate -> LTSSync.DriverPoolDataUpdate))
+interpretDriverInfoUpdate = \case
+  SetOnRide v ->
+    ( [Se.Set BeamDI.onRide v],
+      Just $ \u -> u {LTSSync.onRide = LTSSync.Set v}
+    )
+  SetLatestScheduledBooking v ->
+    ( [Se.Set BeamDI.latestScheduledBooking v],
+      Just $ \u -> u {LTSSync.latestScheduledBooking = LTSSync.Set v}
+    )
+  SetLatestScheduledPickup v ->
+    ( [ Se.Set BeamDI.latestScheduledPickupLat ((.lat) <$> v),
+        Se.Set BeamDI.latestScheduledPickupLon ((.lon) <$> v)
+      ],
+      Just $ \u -> u {LTSSync.latestScheduledPickup = LTSSync.Set v}
+    )
+
+updateDriverInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Bool ->
-  Maybe UTCTime ->
-  Maybe Maps.LatLong ->
   Id Person.Person ->
+  [DriverInfoUpdate] ->
   m ()
-updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking latestScheduledPickup driverId = do
+updateDriverInfo _ [] = pure ()
+updateDriverInfo driverId updates = do
   now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDI.onRide onRide,
-      Se.Set BeamDI.latestScheduledBooking latestScheduledBooking,
-      Se.Set BeamDI.latestScheduledPickupLat (fmap (.lat) latestScheduledPickup),
-      Se.Set BeamDI.latestScheduledPickupLon (fmap (.lon) latestScheduledPickup),
-      Se.Set BeamDI.updatedAt now
-    ]
-    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate
-      { LTSSync.onRide = LTSSync.Set onRide,
-        LTSSync.latestScheduledBooking = LTSSync.Set latestScheduledBooking,
-        LTSSync.latestScheduledPickup = LTSSync.Set latestScheduledPickup
-      }
-
--- Class 1 wrappers for src-read-only functions with LTS sync
-
--- | Hand-written rather than generated: the scheduled-hold gate is read from LTS pool data
--- during driver pooling, so the write must sync there too or the filter keeps seeing no hold.
-updateLatestScheduledBookingAndPickup ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Maybe UTCTime ->
-  Maybe Maps.LatLong ->
-  Id Person.Person ->
-  m ()
-updateLatestScheduledBookingAndPickup latestScheduledBooking latestScheduledPickup driverId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDI.latestScheduledBooking latestScheduledBooking,
-      Se.Set BeamDI.latestScheduledPickupLat (fmap (.lat) latestScheduledPickup),
-      Se.Set BeamDI.latestScheduledPickupLon (fmap (.lon) latestScheduledPickup),
-      Se.Set BeamDI.updatedAt now
-    ]
-    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate
-      { LTSSync.latestScheduledBooking = LTSSync.Set latestScheduledBooking,
-        LTSSync.latestScheduledPickup = LTSSync.Set latestScheduledPickup
-      }
+  let combine (accSets, accPatches) (sets, mbPatch) = (accSets <> sets, maybe accPatches (\p -> accPatches <> [p]) mbPatch)
+      (beamSets, ltsPatches) = foldl combine ([], []) (map interpretDriverInfoUpdate updates)
+  updateOneWithKV (beamSets <> [Se.Set BeamDI.updatedAt now]) [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  unless (null ltsPatches) $
+    LTSSync.syncDriverPoolDataToLTS (cast driverId) (foldl (flip ($)) LTSSync.emptyUpdate ltsPatches)
 
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>

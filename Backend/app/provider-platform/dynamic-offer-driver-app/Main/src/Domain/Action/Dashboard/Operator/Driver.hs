@@ -43,7 +43,6 @@ import qualified Domain.Types.Common as DC
 import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DDGST
-import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DDPC
 import qualified Domain.Types.DriverSSN as DDSSN
@@ -1016,14 +1015,14 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             if transporterConfig.unifiedOnboardingFlagsRecompute == Just True || driverInfo.approved == Just True
               then runReconcile
               else do
-                QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
+                QDI.updateApprovedAndVerified (Just True) driverInfo.verified driverId
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
             person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject (SGuard.TargetDriver driverId) $ do
               applyDocRejections req.entityType reqId validatedDocs
               unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-                QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
+                QDI.updateApprovedAndVerified (Just False) False driverId
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId

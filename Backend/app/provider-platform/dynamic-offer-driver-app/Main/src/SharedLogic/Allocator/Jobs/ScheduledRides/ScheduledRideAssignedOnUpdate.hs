@@ -184,7 +184,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
                           CS.withDriverScheduledHoldLock driverId $ do
                             mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig driverId bookingId
-                            void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True (fst <$> mbNextHold) (snd <$> mbNextHold) driverId
+                            void $ QDI.updateDriverInfo driverId [QDI.SetOnRide True, QDI.SetLatestScheduledBooking (fst <$> mbNextHold), QDI.SetLatestScheduledPickup (snd <$> mbNextHold)]
                           whenJust (booking.toLocation) $ \toLoc -> do
                             QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW

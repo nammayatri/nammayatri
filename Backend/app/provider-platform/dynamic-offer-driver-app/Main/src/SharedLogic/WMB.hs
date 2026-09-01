@@ -240,7 +240,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
         case tripTransaction.tripType of
           Just PILOT -> do
             -- For PILOT, just update driver status
-            QDI.updateOnRide False tripTransaction.driverId
+            QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide False]
             findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
               Just advancedTripTransaction -> do
                 psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
@@ -271,7 +271,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
                           when (not vehicleRouteMapping.blocked) $ do
                             void $ assignTripTransaction fleetConfig tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.driverId route vehicleRouteMapping tripTransaction.vehicleNumber currentLocation sourceStopInfo destinationStopInfo tripTransaction.driverFleetBadgeId tripTransaction.driverName tripTransaction.conductorFleetBadgeId tripTransaction.conductorName
                       else do
-                        QDI.updateOnRide False tripTransaction.driverId
+                        QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide False]
                         when fleetConfig.unlinkDriverAndVehicleOnTripTermination $ unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
                         unlinkFleetBadgeFromDriver tripTransaction.driverId
     )
@@ -303,7 +303,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                         -- Skip route-based operations for PILOT trips
                         case tripTransaction.tripType of
                           Just PILOT -> do
-                            QDI.updateOnRide False tripTransaction.driverId
+                            QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide False]
                             findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
                               Just advancedTripTransaction -> do
                                 psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
@@ -323,7 +323,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                                 findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
                                   Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
                                   Nothing -> do
-                                    QDI.updateOnRide False tripTransaction.driverId
+                                    QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide False]
                                     when fleetConfig.unlinkDriverAndVehicleOnTripTermination $ unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
                                     unlinkFleetBadgeFromDriver tripTransaction.driverId
                     IN_PROGRESS -> endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTerminationSource True
@@ -382,7 +382,7 @@ postAssignTripTransaction tripTransaction mbRoute isFirstBatchTrip currentLocati
             let longName = fromMaybe "None" (mbRoute <&> (.longName))
             buildBusTripInfo tripTransaction.vehicleNumber tripTransaction.routeCode source destination longName tripTransaction.driverId tripTransaction.fleetOwnerId.getId
         void $ LF.rideDetails (cast tripTransaction.id) DRide.NEW tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing (Just tripInfo)
-        QDI.updateOnRide True tripTransaction.driverId
+        QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide True]
         when notify $ do
           let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode (mbRoute <&> (.shortName)) (mbRoute >>= (.roundRouteCode)) isFirstBatchTrip
           TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" tripAssignedEntityData
@@ -411,7 +411,7 @@ startTripTransaction tripTransaction mbRoute mbClosestStop sourceStopInfo curren
 
         void $ LF.rideStart (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId (Just tripInfo)
         now <- getCurrentTime
-        QDI.updateOnRide True tripTransaction.driverId
+        QDI.updateDriverInfo tripTransaction.driverId [QDI.SetOnRide True]
 
         -- Handle tripCode and startedNearStopCode based on trip type
         let (tripCode', startedNearStopCode') = case tripTransaction.tripType of
