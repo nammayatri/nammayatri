@@ -919,7 +919,7 @@ TransporterConfig:
       weeklySlabs: "[SlabType]"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallTerminalAction:
-      enum: "REALLOCATE_RIDE,RECORD_ONLY"
+      enum: "REALLOCATE_RIDE,RECORD_ONLY,REALLOCATE_SCHEDULED_RIDE,REALLOCATE_ALL_RIDES"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupNudgeChannel:
       enum: "OVERLAY,CHAT_MESSAGE"
@@ -937,6 +937,9 @@ TransporterConfig:
       channel: Maybe PickupNudgeChannel
       chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    PickupStallCaseConfig:
+      stages: "[PickupStallStage]"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
       stages: "[PickupStallStage]"
@@ -946,6 +949,9 @@ TransporterConfig:
       detourDisplacementMeters: Maybe Int
       detourCreditSec: Maybe Int
       staleFixAfterSec: Maybe Int
+      etaFeasibilityConfig: Maybe PickupStallCaseConfig
+      runDistanceMonitorForScheduled: Maybe Bool
+      runBehaviourEngineForScheduled: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
@@ -2277,6 +2283,7 @@ RideRelatedNotificationConfig:
     onScheduledBooking: Bool
     onlyIfOffline: Bool
     eventTime: EventTime
+    repeatInterval: Maybe Seconds
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   beamType:

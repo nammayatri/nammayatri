@@ -82,11 +82,17 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  when (isNotificationRequired && booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
-    sendCommunicationToDriver $ SendCommunicationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
-  return Complete
+  now <- getCurrentTime
+  if booking.status `elem` [DB.CANCELLED, DB.REALLOCATED]
+    then return Complete
+    else do
+      when isNotificationRequired do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
+        sendCommunicationToDriver $ SendCommunicationToDriverReq {entityId = Just booking.id.getId, messageTransformer = formatMessageTransformer booking merchant.shortId, ..}
+      case jobData.repeatInterval of
+        Just interval | interval.getSeconds > 0 && now < booking.startTime -> return $ ReSchedule (addUTCTime (secondsToNominalDiffTime interval) now)
+        _ -> return Complete
   where
     formatMessageTransformer :: DB.Booking -> ShortId Merchant -> (Text, Text) -> (Text, Text)
     formatMessageTransformer booking merchantShortId (title, body) = do

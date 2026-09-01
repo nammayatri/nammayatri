@@ -30,6 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.Queries.Ride as QRide
 
 -- Per-ride monitor state kept in Redis between ticks of the CheckDriverPickupProgress job.
@@ -43,7 +44,8 @@ data PickupProgressState = PickupProgressState
     detourCreditUsedSec :: Int,
     behaviour :: DRide.PickupBehaviour,
     firedStageCount :: Int,
-    firedDarkStageCount :: Int
+    firedDarkStageCount :: Int,
+    etaBadTicks :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -59,7 +61,8 @@ emptyPickupProgressState =
       detourCreditUsedSec = 0,
       behaviour = DRide.PROGRESSING,
       firedStageCount = 0,
-      firedDarkStageCount = 0
+      firedDarkStageCount = 0,
+      etaBadTicks = Nothing
     }
 
 pickupProgressStateKey :: Id DRide.Ride -> Text
@@ -84,6 +87,15 @@ defaultDetourCreditSec = 240
 
 behaviourLabel :: DRide.PickupBehaviour -> Text
 behaviourLabel = show
+
+runBehaviourEngineForRide :: Bool -> Maybe Bool -> Bool
+runBehaviourEngineForRide isScheduled mbRunForScheduled = not isScheduled || mbRunForScheduled == Just True
+
+scheduledEtaRideTagPrefix :: Text
+scheduledEtaRideTagPrefix = "ScheduledPickupEta"
+
+mkScheduledEtaRideTag :: Text -> LYT.TagNameValue
+mkScheduledEtaRideTag status = LYT.TagNameValue $ scheduledEtaRideTagPrefix <> "#" <> status
 
 -- | The pickup-phase summary every cancellation consumer reasons over: what the driver
 -- is doing now (or was doing when monitoring ended), how much of the phase he provably

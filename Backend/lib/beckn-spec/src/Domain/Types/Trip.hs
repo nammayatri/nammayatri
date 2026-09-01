@@ -438,6 +438,15 @@ isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip (Delivery OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
 
+isReallocatableCategory :: TripCategory -> Bool
+isReallocatableCategory (OneWay OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (Ambulance OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (Delivery OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (OneWay OneWayOnDemandStaticOffer) = True
+isReallocatableCategory (Rental OnDemandStaticOffer) = True
+isReallocatableCategory (InterCity OneWayOnDemandStaticOffer _) = True
+isReallocatableCategory _ = False
+
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
 isTollApplicableForTrip AUTO_PLUS _ = False
