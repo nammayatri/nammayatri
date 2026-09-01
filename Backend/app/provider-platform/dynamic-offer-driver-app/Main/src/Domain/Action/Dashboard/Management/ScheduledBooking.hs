@@ -24,7 +24,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (sortOn)
+import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
@@ -288,8 +288,7 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm
       radiusKm = max 0 $ fromMaybe defaultNearbyRadiusKm mbRadiusKm
       radiusMeters = round (radiusKm * 1000) :: Int
       pickupLatLong = KEMT.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-  -- onRide = Just False: drivers mid-trip are excluded by LTS itself.
-  driverLocations <- LF.nearBy booking.fromLocation.lat booking.fromLocation.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
+  driverLocations <- nubBy (\x y -> x.driverId == y.driverId) <$> LF.nearBy booking.fromLocation.lat booking.fromLocation.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
   let driverIds = (.driverId) <$> driverLocations
   if null driverIds
     then pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = []}
@@ -315,16 +314,23 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm
                 isEligible pd
             ]
 
-      let drivers =
-            [ Common.NearbyDriverItem
-                { driverId = locn.driverId.getId,
-                  serviceTiers = pd.selectedServiceTiers,
-                  straightLineDistanceMeters =
-                    highPrecMetersToMeters $
-                      distanceBetweenInMeters (KEMT.LatLong {lat = locn.lat, lon = locn.lon}) pickupLatLong
-                }
-              | (locn, pd) <- eligible
-            ]
+      persons <- QPerson.getDriversByIdIn ((.driverId) . fst <$> eligible)
+      let personByDriver = Map.fromList [(p.id, p) | p <- persons]
+          -- "firstName lastName", collapsing to just firstName when lastName is absent.
+          mkName p = p.firstName <> maybe "" (" " <>) p.lastName
+      drivers <- forM eligible $ \(locn, pd) -> do
+        let mbPerson = Map.lookup locn.driverId personByDriver
+        mbPhone <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
+        pure
+          Common.NearbyDriverItem
+            { driverId = locn.driverId.getId,
+              driverName = maybe "" mkName mbPerson,
+              driverPhoneNo = mbPhone,
+              serviceTiers = pd.selectedServiceTiers,
+              straightLineDistanceMeters =
+                highPrecMetersToMeters $
+                  distanceBetweenInMeters (KEMT.LatLong {lat = locn.lat, lon = locn.lon}) pickupLatLong
+            }
       -- nearest first: the order ops actually scan
       pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = sortOn (.straightLineDistanceMeters) drivers}
 
