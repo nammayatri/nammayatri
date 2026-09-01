@@ -33,6 +33,7 @@ library
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
       Dashboard.Common.FinanceManagement
+      Dashboard.Common.GeohashArea
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Rewards.CampaignStatus
@@ -103,6 +104,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
+      API.Types.ProviderPlatform.Management.Endpoints.GeohashArea
       API.Types.ProviderPlatform.Management.Endpoints.IncentiveJourney
       API.Types.ProviderPlatform.Management.Endpoints.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Endpoints.Media
@@ -126,6 +128,7 @@ library
       API.Types.ProviderPlatform.Management.EntityInfo
       API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.FinanceManagement
+      API.Types.ProviderPlatform.Management.GeohashArea
       API.Types.ProviderPlatform.Management.IncentiveJourney
       API.Types.ProviderPlatform.Management.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Media
