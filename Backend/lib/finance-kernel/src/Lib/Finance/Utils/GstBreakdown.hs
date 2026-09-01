@@ -11,6 +11,7 @@ module Lib.Finance.Utils.GstBreakdown
   )
 where
 
+import Data.Char (isAlpha)
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -35,13 +36,15 @@ newtype GstRateInterStateBreakup = GstRateInterStateBreakup
   }
   deriving (Eq, Show)
 
+-- Letters-only lowercase form, so enum-rendered names ("TamilNadu") match
+-- free-text geocoder names ("Tamil Nadu", "tamil-nadu").
 normalizeGeoComponent :: Maybe Text -> Maybe Text
 normalizeGeoComponent mbText =
-  case T.toLower . T.strip <$> mbText of
+  case T.filter isAlpha . T.toLower <$> mbText of
     Just value | not (T.null value) -> Just value
     _ -> Nothing
 
--- | Compare two Indian state names (case-insensitive).
+-- | Compare two Indian state names (case-insensitive, ignoring non-letter characters).
 --   Returns Nothing (unknown jurisdiction) when either state is missing;
 --   state resolution must happen upstream.
 compareIndianState :: Maybe Text -> Maybe Text -> Maybe GstJurisdiction
