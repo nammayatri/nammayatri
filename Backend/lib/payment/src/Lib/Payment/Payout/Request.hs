@@ -29,10 +29,11 @@ import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
-import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -41,6 +42,7 @@ import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import Servant.Client (ClientError (..))
 
 -- | Flat data record supplied by the domain to request a payout.
 --   The lib uses this to construct both the PayoutRequest and CreatePayoutOrderReq.
@@ -72,9 +74,14 @@ data PayoutSubmission = PayoutSubmission
   deriving (Show, Generic)
 
 -- | Result of a payout submission or execution.
+--   PayoutFailed is a *confirmed* rejection (bank responded, safe to release the ledger
+--   reservation for retry). PayoutAmbiguous is a transport-level failure where we cannot
+--   confirm the bank never received the request; the reservation is intentionally left
+--   PROCESSING (not released) — callers must NOT release ledger entries for this case.
 data PayoutResult
   = PayoutInitiated PayoutRequest PayoutOrder.PayoutOrder
   | PayoutFailed PayoutRequest Text
+  | PayoutAmbiguous PayoutRequest Text
 
 -- ---------------------------------------------------------------------------
 -- CRUD
@@ -211,13 +218,20 @@ submitPayoutRequest submission payoutCall = do
   payoutRequest <- buildPayoutRequest submission
   createPayoutRequest payoutRequest
 
+  let entryIds = Id <$> submission.ledgerEntryIds
+  unless (null entryIds) $ LedgerService.markEntriesAsProcessing entryIds (Just payoutRequest.id.getId)
+
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
-  -- 2. Execute
-  mbPayoutOrder <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
-  case mbPayoutOrder of
-    Just po -> pure $ PayoutInitiated payoutRequest po
-    Nothing -> pure $ PayoutFailed payoutRequest "Payout service call failed"
+  -- 2. Execute -- executePayoutRequestInternal owns whether the reservation gets released
+  -- (only on a confirmed rejection, never on an ambiguous transport-level failure), since it's
+  -- the one that knows which shape the failure took.
+  outcome <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
+  pure $ case outcome of
+    Executed po -> PayoutInitiated payoutRequest po
+    ConfirmedFailure msg -> PayoutFailed payoutRequest msg
+    AmbiguousFailure msg -> PayoutAmbiguous payoutRequest msg
+    NotExecutable -> PayoutFailed payoutRequest "Payout service call failed"
 
 -- | Execute a previously created PayoutRequest by calling the external payout service.
 --   Builds 'CreatePayoutOrderReq' from the stored fields in PayoutRequest.
@@ -235,11 +249,34 @@ executePayoutRequest ::
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequest = executePayoutRequestInternal Nothing
+executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall = do
+  outcome <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall
+  pure $ case outcome of
+    Executed po -> Just po
+    ConfirmedFailure _ -> Nothing
+    AmbiguousFailure _ -> Nothing
+    NotExecutable -> Nothing
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers
 -- ---------------------------------------------------------------------------
+
+-- | Outcome of an execution attempt, distinguishing a confirmed rejection (safe to release
+--   the ledger reservation) from an ambiguous transport-level failure (must not release).
+data ExecutionOutcome
+  = Executed PayoutOrder.PayoutOrder
+  | ConfirmedFailure Text
+  | AmbiguousFailure Text
+  | NotExecutable
+
+-- | True only for FailureResponse -- the partner actually returned a decodable non-2xx we
+--   understood as a rejection, so it's safe to release the reservation for retry.
+isConfirmedRejection :: SomeException -> Bool
+isConfirmedRejection e = case fromException e of
+  Just (extErr :: ExternalAPICallError) -> case extErr.clientError of
+    FailureResponse _ _ -> True
+    _ -> False
+  Nothing -> False
 
 -- | Internal: call Juspay via createPayoutService, manage status transitions.
 executePayoutRequestInternal ::
@@ -253,12 +290,12 @@ executePayoutRequestInternal ::
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
-  m (Maybe PayoutOrder.PayoutOrder)
+  m ExecutionOutcome
 executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
-      pure Nothing
+      pure NotExecutable
     else do
       orderId <- generateGUID
       createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow mbTransferAmount
@@ -270,17 +307,27 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
+      let entryIds = maybe [] (map Id) payoutRequest.ledgerEntryIds
       result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing
       case result of
-        Left (err :: SomeException) -> do
-          logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-          updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
-          pure Nothing
+        Left (err :: SomeException)
+          | isConfirmedRejection err -> do
+            -- The partner returned a decodable non-2xx rejection. Safe to release and retry.
+            let msg = "Payout service error: " <> show err
+            logError $ "Payout service call rejected for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
+            updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
+            unless (null entryIds) $ LedgerService.markEntriesAsUnsettled entryIds
+            pure $ ConfirmedFailure msg
+          | otherwise -> do
+            let msg = "Payout service call outcome unknown: " <> show err
+            logError $ "Payout service call for PayoutRequest " <> payoutRequest.id.getId <> " errored ambiguously (may have reached the bank): " <> show err <> " -- leaving reservation PROCESSING, needs manual reconciliation"
+            updateStatusWithHistoryById PROCESSING (Just msg) payoutRequest
+            pure $ AmbiguousFailure msg
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
           updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
-          pure mbPayoutOrder
+          pure $ maybe (ConfirmedFailure "Payout service returned no order") Executed mbPayoutOrder
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.
@@ -289,6 +336,9 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
   vpa <- case payoutServiceFlow of
     Payout.JuspayFlow -> Just <$> fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
     Payout.StripeFlow -> pure $ pr.customerVpa
+    -- Bulk partners (HDFC CBX) are account-and-IFSC based, not VPA based; this single-order
+    -- path is rejected for them before submission anyway (Tools.Payout.createPayoutOrder).
+    Payout.BulkFlow -> pure Nothing
   pure $
     DPayment.mkCreatePayoutServiceReq
       orderId
@@ -343,6 +393,8 @@ buildPayoutRequest submission = do
         coverageFrom = submission.coverageFrom,
         coverageTo = submission.coverageTo,
         ledgerEntryIds = if null submission.ledgerEntryIds then Nothing else Just submission.ledgerEntryIds,
+        settlementRef = Nothing,
+        settlementRefType = Nothing,
         createdAt = now,
         updatedAt = now
       }

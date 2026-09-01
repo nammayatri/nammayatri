@@ -101,6 +101,9 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
     walletCreditRefs,
+    WalletScope (..),
+    counterpartyFromRole,
+    resolveWalletScope,
     getWalletAccountByOwner,
     getControlAccountByOwner,
     getWalletAndControlAccountsByOwner,
@@ -153,6 +156,7 @@ module SharedLogic.Finance.Wallet
     splitGrossByVatPct,
     getRedeemableEntryIds,
     settleWalletEntries,
+    releaseWalletEntries,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
@@ -189,6 +193,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Tools.Error (MerchantPaymentMethodError (..))
 
@@ -470,6 +475,28 @@ getNonRedeemableBalance accountId timeDiff cutOffDays now = do
   pure $ sum $ map (.amount) credits
 
 -- Account helpers (these are still needed for non-FinanceM callers like balance queries)
+
+counterpartyFromRole :: DP.Role -> CounterpartyType
+counterpartyFromRole DP.FLEET_OWNER = FLEET_OWNER
+counterpartyFromRole DP.FLEET_BUSINESS = FLEET_OWNER
+counterpartyFromRole _ = DRIVER
+
+-- | The finance-account scope a driver-facing endpoint should read/write.
+data WalletScope = WalletScope
+  { counterparty :: CounterpartyType,
+    ownerId :: Text
+  }
+
+resolveWalletScope ::
+  (BeamFlow m r) =>
+  Id DP.Person ->
+  DP.Role ->
+  m (Maybe WalletScope)
+resolveWalletScope personId role = do
+  mbActiveFleetAssoc <- QFDA.findByDriverId personId True
+  pure $ case mbActiveFleetAssoc of
+    Just _ -> Nothing
+    Nothing -> Just $ WalletScope {counterparty = counterpartyFromRole role, ownerId = personId.getId}
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
@@ -954,6 +981,13 @@ settleWalletEntries ::
   m ()
 settleWalletEntries entryIds payoutRequestId =
   markEntriesAsPaidOut entryIds payoutRequestId
+
+-- | Release ledger entries reserved (PROCESSING) for a failed payout attempt back to UNSETTLED.
+releaseWalletEntries ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  [Id LedgerEntry] -> -- entry IDs to release
+  m ()
+releaseWalletEntries = markEntriesAsUnsettled
 
 -- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
 -- model). Keyed off the cohort config being present (individualNotLinked).

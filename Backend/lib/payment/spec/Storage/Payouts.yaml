@@ -1,5 +1,6 @@
 imports:
   UTCTime: Kernel.Prelude
+  Day: Data.Time
   ShortId: Kernel.Types.Id
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -7,6 +8,7 @@ imports:
   PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
   AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
   TransferStatus: Kernel.External.Payout.Interface.Types
+  SettlementRefType: Kernel.External.Payout.Interface.Types
   EntityName : Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
@@ -43,6 +45,10 @@ PayoutOrder:
     pgBaseFee : Maybe HighPrecMoney
     pgGst : Maybe HighPrecMoney
     merchantTopUpAmount : Maybe HighPrecMoney
+    batchId : Maybe (Id PayoutBatch)
+    failureCategory : Maybe Text
+    settlementRef : Maybe Text
+    settlementRefType : Maybe SettlementRefType
   beamFields:
     amount:
       currency: Maybe Currency
@@ -65,6 +71,7 @@ PayoutOrder:
     orderId: PrimaryKey
     customerId: "!SecondaryKey"
     entityIds: "!SecondaryKey"
+    batchId: "!SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -72,6 +79,9 @@ PayoutOrder:
     findByOrderId:
       kvFunction: findOneWithKV
       where: orderId
+    findAllByBatchId:
+      kvFunction: findAllWithKV
+      where: batchId
     updatePayoutOrderStatus:
       kvFunction: updateOneWithKV
       params: [status]
@@ -87,6 +97,18 @@ PayoutOrder:
     updateRetriedOrderId:
       kvFunction: updateOneWithKV
       params: [retriedOrderId]
+      where: orderId
+    updateBatchId:
+      kvFunction: updateOneWithKV
+      params: [batchId]
+      where: orderId
+    updateFailureCategory:
+      kvFunction: updateOneWithKV
+      params: [failureCategory]
+      where: orderId
+    updateSettlementRef:
+      kvFunction: updateOneWithKV
+      params: [settlementRef, settlementRefType]
       where: orderId
 
   extraOperations:
@@ -152,7 +174,7 @@ PayoutRequest:
       derive: "HttpInstance"
 
     PayoutType:
-      enum: "INSTANT,SCHEDULED"
+      enum: "INSTANT,SCHEDULED,ADHOC"
       derive: "HttpInstance"
   fields:
     id: Id PayoutRequest
@@ -184,6 +206,8 @@ PayoutRequest:
     coverageFrom: Maybe UTCTime
     coverageTo: Maybe UTCTime
     ledgerEntryIds: Maybe [Text]
+    settlementRef: Maybe Text
+    settlementRefType: Maybe SettlementRefType
     createdAt: UTCTime
     updatedAt: UTCTime
   domainInstance:
@@ -228,5 +252,148 @@ PayoutRequest:
       kvFunction: updateOneWithKV
       params: [cashMarkedById, cashMarkedByName, cashMarkedAt]
       where: id
+    updateSettlementRef:
+      kvFunction: updateOneWithKV
+      params: [settlementRef, settlementRefType]
+      where: id
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+PayoutBatch:
+  tableName: payout_batch
+  derives: "Generic"
+
+  types:
+    PayoutBatchOrigin:
+      enum: "SCHEDULED,ADHOC,INSTANT"
+      derive: "HttpInstance"
+    PayoutBatchStatus:
+      enum: "OPEN,SEALED,SUBMITTED,SUBMIT_UNKNOWN,AWAITING_PARTNER_APPROVAL,PARTIALLY_RESOLVED,COMPLETED,REJECTED,AWAITING_BANK"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PayoutBatch
+    merchantId: Text
+    merchantOperatingCityId: Maybe Text
+    runId: Maybe Text
+    origin: PayoutBatchOrigin
+    status: PayoutBatchStatus
+    payoutRail: Text
+    valueDate: Day
+    clientRefNo: Text
+    partnerBatchRef: Maybe Text
+    itemCount: Int
+    totalAmount: HighPrecMoney
+    processedCount: Int
+    rejectedCount: Int
+    pendingCount: Int
+    inquiryAttemptsToday: Int
+    inquiryQuotaDate: Maybe Day
+    nextInquiryAt: Maybe UTCTime
+    retryOfBatchId: Maybe (Id PayoutBatch)
+    partnerResponseCode: Maybe Text
+    failureReason: Maybe Text
+    submittedAt: Maybe UTCTime
+    resolvedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    itemCount: "0"
+    totalAmount: "0"
+    processedCount: "0"
+    rejectedCount: "0"
+    pendingCount: "0"
+    inquiryAttemptsToday: "0"
+
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+    runId: "!SecondaryKey"
+    clientRefNo: "!SecondaryKey"
+
+  queries:
+    findByClientRefNo:
+      kvFunction: findOneWithKV
+      where: clientRefNo
+    findAllByRunId:
+      kvFunction: findAllWithKV
+      where: runId
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    markSubmitted:
+      kvFunction: updateOneWithKV
+      params: [status, partnerBatchRef, submittedAt]
+      where: id
+    updateInquiryState:
+      kvFunction: updateOneWithKV
+      params: [inquiryAttemptsToday, inquiryQuotaDate, nextInquiryAt]
+      where: id
+    updateResolutionCounts:
+      kvFunction: updateOneWithKV
+      params: [status, processedCount, rejectedCount, pendingCount, resolvedAt]
+      where: id
+    updateFailure:
+      kvFunction: updateOneWithKV
+      params: [status, partnerResponseCode, failureReason]
+      where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+PayoutBatchExclusion:
+  tableName: payout_batch_exclusion
+  derives: "Generic"
+
+  types:
+    PayoutBatchExclusionBeneficiaryType:
+      enum: "DRIVER,FLEET_OWNER"
+      derive: "HttpInstance"
+    PayoutBatchExclusionReason:
+      enum: "BELOW_MINIMUM,ZERO_BALANCE,PAYOUT_IN_FLIGHT,SETTLEMENT_PENDING,BANK_DETAILS_MISSING,BANK_DETAILS_UNVERIFIED,BANK_DETAILS_INVALID,ACCOUNT_BLOCKED,NOT_REGISTERED_WITH_PARTNER"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PayoutBatchExclusion
+    merchantId: Text
+    runId: Text
+    beneficiaryId: Text
+    beneficiaryType: PayoutBatchExclusionBeneficiaryType
+    reason: PayoutBatchExclusionReason
+    balanceAtEvaluation: Maybe HighPrecMoney
+    notifiedAt: Maybe UTCTime
+    correctedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+    runId: "!SecondaryKey"
+    beneficiaryId: "!SecondaryKey"
+
+  queries:
+    findAllByRunId:
+      kvFunction: findAllWithKV
+      where: runId
+    findAllByBeneficiaryId:
+      kvFunction: findAllWithKV
+      where: beneficiaryId
+    markCorrected:
+      kvFunction: updateOneWithKV
+      params: [correctedAt]
+      where: id
+
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder
 import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as Beam
@@ -25,11 +26,24 @@ create = createWithKV
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder] -> m ())
 createMany = traverse_ create
 
+findAllByBatchId ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
+findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
+
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
 findByOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq orderId]
+
+updateBatchId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) -> Kernel.Prelude.Text -> m ())
+updateBatchId batchId orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.batchId (Kernel.Types.Id.getId <$> batchId), Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
+
+updateFailureCategory :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateFailureCategory failureCategory orderId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.failureCategory failureCategory, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updatePayoutOrderStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Text -> m ())
 updatePayoutOrderStatus status orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
@@ -51,6 +65,13 @@ updatePayoutOrderTxnRespInfo responseCode responseMessage orderId = do
 updateRetriedOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 updateRetriedOrderId retriedOrderId orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retriedOrderId retriedOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
+updateSettlementRef ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType -> Kernel.Prelude.Text -> m ())
+updateSettlementRef settlementRef settlementRefType orderId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.settlementRef settlementRef, Se.Set Beam.settlementRefType settlementRefType, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
+
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
@@ -63,12 +84,14 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
     [ Se.Set Beam.accountDetailsType accountDetailsType,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.price ((.amount) amount),
+      Se.Set Beam.batchId (Kernel.Types.Id.getId <$> batchId),
       Se.Set Beam.city city,
       Se.Set Beam.customerEmailEncrypted (customerEmail & unEncrypted . encrypted),
       Se.Set Beam.customerEmailHash (customerEmail & hash),
       Se.Set Beam.customerId customerId,
       Se.Set Beam.entityIds entityIds,
       Se.Set Beam.entityName entityName,
+      Se.Set Beam.failureCategory failureCategory,
       Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,
       Se.Set Beam.merchantId merchantId,
@@ -81,6 +104,8 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.responseCode responseCode,
       Se.Set Beam.responseMessage responseMessage,
       Se.Set Beam.retriedOrderId retriedOrderId,
+      Se.Set Beam.settlementRef settlementRef,
+      Se.Set Beam.settlementRefType settlementRefType,
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId <$> shortId),
       Se.Set Beam.status status,
       Se.Set Beam.transferAmount transferAmount,

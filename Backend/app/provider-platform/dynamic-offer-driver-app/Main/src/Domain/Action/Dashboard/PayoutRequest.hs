@@ -22,6 +22,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -34,6 +35,9 @@ import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Payout.Registration as Registration
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
+import SharedLogic.Allocator (AllocatorJobType (..), ScheduledBatchPayoutJobData (..))
+import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (computeNextRunTime)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -103,6 +107,7 @@ refundRegistrationAmount merchantShortId opCity req = do
   let payoutVpaValid = case payoutServiceFlow of
         IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
         IPayout.StripeFlow -> True
+        IPayout.BulkFlow -> isJust mbPersonBankAccount
   unless (payoutVpaValid && isNothing driverInfo.payoutRegAmountRefunded) $
     throwError $ InvalidRequest $ "Driver not eligible for refund | driver id: " <> show driverId
 
@@ -162,9 +167,11 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
   case mbExisting of
     Just existing -> do
       now <- getCurrentTime
-      let updated =
+      let newIsEnabled = fromMaybe existing.isEnabled req.isEnabled
+          isResuming = newIsEnabled && not existing.isEnabled
+          updated =
             existing
-              { DSPC.isEnabled = fromMaybe existing.isEnabled req.isEnabled,
+              { DSPC.isEnabled = newIsEnabled,
                 DSPC.frequency = fromMaybe existing.frequency req.frequency,
                 DSPC.dayOfWeek = req.dayOfWeek <|> existing.dayOfWeek,
                 DSPC.dayOfMonth = req.dayOfMonth <|> existing.dayOfMonth,
@@ -176,9 +183,12 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
                 DSPC.remark = req.remark <|> existing.remark,
                 DSPC.orderType = fromMaybe existing.orderType req.orderType,
                 DSPC.timeDiffFromUtc = fromMaybe existing.timeDiffFromUtc req.timeDiffFromUtc,
+                DSPC.pausedAt = if newIsEnabled then Nothing else (existing.pausedAt <|> Just now),
                 DSPC.updatedAt = now
               }
       QSPC.updateByPrimaryKey updated
+      when isResuming $
+        resumeScheduledBatchPayoutJob updated
       logInfo $ "Updated ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
     Nothing -> do
       now <- getCurrentTime
@@ -199,9 +209,44 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
                 DSPC.remark = req.remark,
                 DSPC.orderType = fromMaybe "FULFILL_ONLY" req.orderType,
                 DSPC.timeDiffFromUtc = fromMaybe 19800 req.timeDiffFromUtc,
+                -- Batch-payout config isn't yet exposed on this dashboard request; defaults to
+                -- off until an admin surface for it exists.
+                DSPC.itemsPerBatch = Nothing,
+                DSPC.defaultPayoutRail = Nothing,
+                DSPC.pausedAt = Nothing,
+                DSPC.discontinuedAt = Nothing,
+                DSPC.settlementGatedEligibility = Nothing,
                 DSPC.createdAt = now,
                 DSPC.updatedAt = now
               }
       QSPC.create newConfig
+      when newConfig.isEnabled $
+        resumeScheduledBatchPayoutJob newConfig
       logInfo $ "Created ScheduledPayoutConfig for " <> show req.payoutCategory <> " in city " <> merchantOpCity.id.getId
   pure Success
+
+-- | (Re)creates the ScheduledBatchPayout job on enable/resume, so it no longer needs a manual
+--   dashboard trigger. First tick is scheduled via computeNextRunTime, not immediately.
+resumeScheduledBatchPayoutJob :: DSPC.ScheduledPayoutConfig -> Environment.Flow ()
+resumeScheduledBatchPayoutJob config = do
+  nextRunTime <- computeNextRunTime config
+  now <- getCurrentTime
+  let inTime = diffUTCTime nextRunTime now
+      jobData =
+        ScheduledBatchPayoutJobData
+          { merchantId = config.merchantId,
+            merchantOperatingCityId = config.merchantOperatingCityId,
+            payoutCategory = config.payoutCategory,
+            vehicleCategory = config.vehicleCategory
+          }
+  Redis.runInMasterCloudRedisCell $
+    createJobInWithCheck @_ @'ScheduledBatchPayout
+      (Just config.merchantId)
+      (Just config.merchantOperatingCityId)
+      inTime
+      (addUTCTime (-86400) now)
+      (addUTCTime (40 * 86400) now)
+      "ScheduledBatchPayout"
+      (Just 1)
+      jobData
+  logInfo $ "Resumed/created ScheduledBatchPayout job for " <> show config.payoutCategory <> " in city " <> config.merchantOperatingCityId.getId <> ", next run at " <> show nextRunTime

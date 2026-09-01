@@ -31,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig (ServiceName)
 import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
+import qualified Domain.Types.PayoutRun as DDPR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Reminder as DR
@@ -42,6 +43,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -97,6 +99,7 @@ data AllocatorJobType
   | ReconciliationScheduler
   | ReconciliationSweep
   | ScheduledBatchPayout
+  | BulkBatchPayoutPoll
   | SettlementReportIngestion
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
@@ -157,6 +160,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliationScheduler jobData = AnyJobInfo <$> restoreJobInfo SReconciliationScheduler jobData
   restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
+  restoreAnyJobInfo SBulkBatchPayoutPoll jobData = AnyJobInfo <$> restoreJobInfo SBulkBatchPayoutPoll jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
@@ -616,6 +620,20 @@ data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'ScheduledBatchPayout
 
 type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
+
+data BulkBatchPayoutPollJobData = BulkBatchPayoutPollJobData
+  { runId :: Id DDPR.PayoutRun,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    payoutServiceName :: ServiceName,
+    payoutRail :: Payout.PayoutRail,
+    deadline :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BulkBatchPayoutPoll
+
+type instance JobContent 'BulkBatchPayoutPoll = BulkBatchPayoutPollJobData
 
 data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
   { merchantId :: Id DM.Merchant,

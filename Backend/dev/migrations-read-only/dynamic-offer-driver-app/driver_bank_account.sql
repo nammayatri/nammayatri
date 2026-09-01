@@ -34,3 +34,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN payouts_enable
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN requirements json ;
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN last_synced_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN future_requirements json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN verification_status_updated_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN verification_status text ;

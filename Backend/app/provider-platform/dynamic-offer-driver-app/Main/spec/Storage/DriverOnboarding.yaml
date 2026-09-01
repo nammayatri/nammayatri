@@ -1224,6 +1224,8 @@ DriverBankAccount:
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
     lastSyncedAt: Maybe UTCTime
+    verificationStatus: Maybe VerificationStatus
+    verificationStatusUpdatedAt: Maybe UTCTime
 
   constraints:
     driverId: PrimaryKey
@@ -1253,6 +1255,10 @@ DriverBankAccount:
       where: accountId
     deleteById:
       kvFunction: deleteWithKV
+      where: driverId
+    updateVerificationStatus:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus, verificationStatusUpdatedAt]
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE

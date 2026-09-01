@@ -139,6 +139,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
         Just Stripe.Live -> Payout.Stripe
         Just Stripe.Test -> Payout.StripeTest
         Nothing -> Payout.Stripe
+    Payout.HdfcCbxConfig _ -> PayoutService Payout.HdfcCbx
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit

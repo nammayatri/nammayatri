@@ -6,6 +6,7 @@ module Lib.Payment.Storage.Beam.PayoutRequest where
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -42,6 +43,8 @@ data PayoutRequestT f = PayoutRequestT
     remark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     scheduledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    settlementRef :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    settlementRefType :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType),
     status :: B.C f Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

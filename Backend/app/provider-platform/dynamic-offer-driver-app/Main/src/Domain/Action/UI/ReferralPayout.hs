@@ -282,6 +282,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = ActorInfo
   let payoutVpaValid = case payoutServiceFlow of
         IPayout.JuspayFlow -> isJust req.customerVpa
         IPayout.StripeFlow -> True
+        IPayout.BulkFlow -> isJust mbPersonBankAccount
   unless payoutVpaValid $ throwError (InvalidRequest "customerVpa required")
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount

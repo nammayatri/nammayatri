@@ -15,23 +15,28 @@ import qualified Lib.Payment.Domain.Types.Common
 import Tools.Beam.UtilsTH
 
 data ScheduledPayoutConfigT f = ScheduledPayoutConfigT
-  { batchSize :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    dayOfMonth :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    dayOfWeek :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    frequency :: (B.C f Domain.Types.ScheduledPayoutConfig.ScheduledPayoutFrequency),
-    isEnabled :: (B.C f Kernel.Prelude.Bool),
-    maxRetriesPerDriver :: (B.C f Kernel.Prelude.Int),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    minimumPayoutAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    orderType :: (B.C f Kernel.Prelude.Text),
-    payoutCategory :: (B.C f Lib.Payment.Domain.Types.Common.EntityName),
-    remark :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    timeDiffFromUtc :: (B.C f Kernel.Types.Common.Seconds),
-    timeOfDay :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory))
+  { batchSize :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dayOfMonth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dayOfWeek :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    defaultPayoutRail :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    discontinuedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    frequency :: B.C f Domain.Types.ScheduledPayoutConfig.ScheduledPayoutFrequency,
+    isEnabled :: B.C f Kernel.Prelude.Bool,
+    itemsPerBatch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRetriesPerDriver :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minimumPayoutAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    orderType :: B.C f Kernel.Prelude.Text,
+    pausedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    payoutCategory :: B.C f Lib.Payment.Domain.Types.Common.EntityName,
+    remark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    settlementGatedEligibility :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
+    timeOfDay :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +46,6 @@ instance B.Table ScheduledPayoutConfigT where
 
 type ScheduledPayoutConfig = ScheduledPayoutConfigT Identity
 
-$(enableKVPG (''ScheduledPayoutConfigT) [('merchantOperatingCityId), ('payoutCategory)] [])
+$(enableKVPG ''ScheduledPayoutConfigT ['merchantOperatingCityId, 'payoutCategory] [])
 
-$(mkTableInstances (''ScheduledPayoutConfigT) "scheduled_payout_config")
+$(mkTableInstances ''ScheduledPayoutConfigT "scheduled_payout_config")

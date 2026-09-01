@@ -5,6 +5,7 @@ module Lib.Payment.Domain.Types.PayoutRequest where
 
 import Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
+import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -42,6 +43,8 @@ data PayoutRequest = PayoutRequest
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    settlementRef :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementRefType :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType,
     status :: Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -59,16 +62,16 @@ data PayoutRequestStatus
   | CASH_PENDING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PayoutType = INSTANT | SCHEDULED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PayoutType = INSTANT | SCHEDULED | ADHOC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutRequestStatus))
 
-$(mkHttpInstancesForEnum ''PayoutRequestStatus)
+$(mkHttpInstancesForEnum (''PayoutRequestStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutType))
 
-$(mkHttpInstancesForEnum ''PayoutType)
+$(mkHttpInstancesForEnum (''PayoutType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums ''PayoutRequestStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums (''PayoutRequestStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums ''PayoutType)
+$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums (''PayoutType))

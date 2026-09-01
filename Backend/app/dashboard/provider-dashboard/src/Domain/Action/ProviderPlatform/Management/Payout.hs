@@ -12,6 +12,10 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutVpaUpdate,
     postPayoutPayoutVpaRefundRegistration,
     postPayoutPayoutScheduledPayoutConfigUpsert,
+    getPayoutPayoutAdhocEligibility,
+    postPayoutPayoutAdhocInitiate,
+    getPayoutPayoutBatchList,
+    getPayoutPayoutBatchOrders,
   )
 where
 
@@ -27,6 +31,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.API.Payout.Types as PayoutTypes
+import qualified "payment" Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
@@ -34,6 +39,9 @@ import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 instance Common.HideSecrets ApiPayout.UpdateScheduledPayoutConfigReq where
+  hideSecrets = identity
+
+instance Common.HideSecrets ApiPayout.AdhocPayoutInitiateReq where
   hideSecrets = identity
 
 buildPayoutManagementServerTransaction ::
@@ -185,3 +193,53 @@ getPayoutPayoutOrder ::
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId
+
+getPayoutPayoutAdhocEligibility ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Text ->
+  Environment.Flow ApiPayout.AdhocPayoutEligibilityResp
+getPayoutPayoutAdhocEligibility merchantShortId opCity apiTokenInfo personId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutAdhocEligibility) personId
+
+postPayoutPayoutAdhocInitiate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  ApiPayout.AdhocPayoutInitiateReq ->
+  Environment.Flow ApiPayout.AdhocPayoutInitiateResp
+postPayoutPayoutAdhocInitiate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ do
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutAdhocInitiate) req
+
+getPayoutPayoutBatchList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DPayoutBatch.PayoutBatchOrigin ->
+  Maybe Text ->
+  Maybe DPayoutBatch.PayoutBatchStatus ->
+  Maybe UTCTime ->
+  Environment.Flow ApiPayout.PayoutBatchListRes
+getPayoutPayoutBatchList merchantShortId opCity apiTokenInfo from limit offset origin payoutRail status to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutBatchList) from limit offset origin payoutRail status to
+
+getPayoutPayoutBatchOrders ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Environment.Flow ApiPayout.PayoutBatchOrdersRes
+getPayoutPayoutBatchOrders merchantShortId opCity apiTokenInfo batchId limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutBatchOrders) batchId limit offset

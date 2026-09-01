@@ -25,7 +25,7 @@ where
 
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
-import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
+import Domain.Action.UI.DriverWallet (makePayoutEntryIdsKey)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
@@ -287,6 +287,7 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
       pure case webhookFlow of
         TPayout.StripeFlow -> service -- we should keep differentiation between Stripe and StripeTest, depending to which webhook triggered
         TPayout.JuspayFlow -> subscriptionService
+        TPayout.BulkFlow -> service -- HDFC CBX has no live/test split and no webhook (see design doc Part 2 A1); kept for exhaustiveness
 
 isPayoutOrderSuccess :: IPayout.PayoutOrderStatus -> Bool
 isPayoutOrderSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
@@ -486,6 +487,17 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
                 Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
               Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
 
+        -- Release reserved entries on terminal failure so they're eligible again; CANCELLED/
+        -- MANUAL_REVIEW stay reserved pending manual resolution.
+        when (castPayoutOrderStatus updPayoutStatus == DS.Failed) $ do
+          whenJust mbPayoutReq $ \payoutReq -> do
+            mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
+            case mbEntryIds of
+              Just entryIds -> do
+                releaseWalletEntries (map Id entryIds)
+                Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
+              Nothing -> logInfo $ "No stashed entry IDs found to release for payoutRequest " <> payoutReq.id.getId
+
         let (notificationTitle, notificationMessage, notificationType) =
               if isPayoutOrderSuccess updPayoutStatus
                 then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
@@ -587,6 +599,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       let payoutVpaValid = case payoutServiceFlow of
             TPayout.JuspayFlow -> isJust mbVpa
             TPayout.StripeFlow -> True
+            TPayout.BulkFlow -> True
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID

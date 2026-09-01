@@ -267,6 +267,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       vpa <- case (order.vpa, payoutServiceFlow) of
         (Just v, _) -> pure (Just v)
         (Nothing, Payout.StripeFlow) -> pure Nothing
+        (Nothing, Payout.BulkFlow) -> pure Nothing -- no VPA on the bulk/HDFC path; bank account + IFSC already verified in Tools.Payout.getCreatePayoutServiceFlow
         (Nothing, Payout.JuspayFlow) -> do
           logError $ "No VPA found on registration order " <> orderId.getId <> ", cannot refund"
           throwError $ InvalidRequest "No VPA captured for this registration order"

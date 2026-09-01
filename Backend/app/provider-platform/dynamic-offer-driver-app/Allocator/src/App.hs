@@ -59,6 +59,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDri
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.BulkBatchPayoutPoll (sendBulkBatchPayoutPoll)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
@@ -175,6 +176,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env processReminder
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
+          & putJobHandlerInListWrapper flowRt env sendBulkBatchPayoutPoll
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob

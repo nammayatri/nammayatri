@@ -114,6 +114,7 @@ mkPayoutServiceConfig configJSON = \case
   Payout.AAJuspay -> Payout.JuspayConfig <$> valueToMaybe configJSON
   Payout.Stripe -> Payout.StripeConfig <$> valueToMaybe configJSON
   Payout.StripeTest -> Payout.StripeConfig <$> valueToMaybe configJSON
+  Payout.HdfcCbx -> Payout.HdfcCbxConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -217,3 +218,4 @@ getPayoutServiceConfigJson = \case
     Just Stripe.Live -> (Payout.Stripe, toJSON cfg)
     Just Stripe.Test -> (Payout.StripeTest, toJSON cfg)
     Nothing -> (Payout.Stripe, toJSON cfg)
+  Payout.HdfcCbxConfig cfg -> (Payout.HdfcCbx, toJSON cfg)

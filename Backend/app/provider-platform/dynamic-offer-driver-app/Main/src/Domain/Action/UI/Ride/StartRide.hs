@@ -337,7 +337,9 @@ startRideHandler ServiceHandle {..} rideId req = do
                         coverageFrom = Nothing,
                         coverageTo = Nothing,
                         payoutType = Nothing,
-                        ledgerEntryIds = Nothing
+                        ledgerEntryIds = Nothing,
+                        settlementRef = Nothing,
+                        settlementRefType = Nothing
                       }
               PayoutRequest.createPayoutRequest payoutRequest
               when (payoutStatus == DPR.INITIATED) $ do

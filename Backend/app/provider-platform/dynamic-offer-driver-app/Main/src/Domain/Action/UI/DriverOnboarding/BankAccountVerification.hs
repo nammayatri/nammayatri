@@ -32,6 +32,7 @@ import Kernel.External.Verification.Interface.Types
 import qualified Kernel.External.Verification.Types as VerificationTypes
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Documents (VerificationStatus (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, throwError)
@@ -73,6 +74,7 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
     KEV.BankAccountResp resp -> do
       logDebug $ "Bank account verification response: " <> show resp
       now <- getCurrentTime
+      mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId
       let driverBankAccount =
             DDBA.DriverBankAccount
               { accountId = fromMaybe "" resp.bankAccountNumber,
@@ -91,13 +93,19 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
                 nameAtBank = resp.nameAtBank,
                 requirements = Nothing,
                 futureRequirements = Nothing,
-                lastSyncedAt = Nothing
+                lastSyncedAt = Nothing,
+                verificationStatus = Just VALID,
+                verificationStatusUpdatedAt = Just now
               }
-      when (resp.accountExists) $ do
-        mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId
-        case mbExistingAccount of
+      if resp.accountExists
+        then case mbExistingAccount of
           Just _ -> QDBA.updateByPrimaryKey driverBankAccount
           Nothing -> QDBA.create driverBankAccount
+        else -- Idfy says no: mark an existing account INVALID rather than fabricate one from an
+        -- empty response; there is nothing to update when the account never existed either.
+
+          when (isJust mbExistingAccount) $
+            QDBA.updateVerificationStatus (Just INVALID) (Just now) personId
       let driverBankAccountDetails =
             DDI.DriverBankAccountDetails
               { accountNumber = resp.bankAccountNumber,

@@ -297,6 +297,7 @@ executeOldSpecialZonePayout scheduledPayout = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust mbVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if not payoutVpaValid
         then do
           logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId

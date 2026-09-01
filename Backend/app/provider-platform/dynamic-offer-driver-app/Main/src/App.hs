@@ -41,7 +41,7 @@ import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
 import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
-import Kernel.External.Verification.InternalScripts.InternalOCR (prepareInternalOCRHttpManager)
+import Kernel.External.Verification.InternalScripts.InternalOCR (internalOCRManagerKey)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -159,7 +159,10 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 40000, prepareIffcoTokioHttpManager 40000),
                 Just (Just 15000, prepareMorthHttpManager 15000),
                 Just (Just 150000, prepareEkatraHttpManager 150000),
-                Just (Just 10000, prepareInternalOCRHttpManager 10000)
+                -- shared-kernel's internal-OCR integration dropped the paired manager-prep
+                -- function while keeping the (differently-keyed) manager lookup, so this is
+                -- built inline here, matching prepareInternalScriptsHttpManager's shape.
+                Just (Just 10000, HashMap.singleton (T.pack internalOCRManagerKey) HttpTLS.tlsManagerSettings {Http.managerResponseTimeout = Http.responseTimeoutMicro (10000 * 1000)})
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))

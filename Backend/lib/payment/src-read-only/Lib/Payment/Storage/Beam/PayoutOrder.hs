@@ -18,6 +18,7 @@ data PayoutOrderT f = PayoutOrderT
   { accountDetailsType :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.AccountDetailsType),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
+    batchId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     city :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     customerEmailEncrypted :: B.C f Kernel.Prelude.Text,
@@ -25,6 +26,7 @@ data PayoutOrderT f = PayoutOrderT
     customerId :: B.C f Kernel.Prelude.Text,
     entityIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     entityName :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName),
+    failureCategory :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     idAssignedByServiceProvider :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -39,6 +41,8 @@ data PayoutOrderT f = PayoutOrderT
     responseCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     responseMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retriedOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    settlementRef :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    settlementRefType :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType),
     shortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     transferAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -55,6 +59,6 @@ instance B.Table PayoutOrderT where
 
 type PayoutOrder = PayoutOrderT Identity
 
-$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['customerId], ['entityIds], ['id]])
+$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['batchId], ['customerId], ['entityIds], ['id]])
 
 $(mkTableInstancesGenericSchema ''PayoutOrderT "payout_order")

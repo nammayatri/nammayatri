@@ -19,12 +19,13 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.API.Payout.Types
+import qualified "payment" Lib.Payment.Domain.Types.PayoutBatch
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.Payout.API)
-handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city
+handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city :<|> getPayoutPayoutAdhocEligibility merchantId city :<|> postPayoutPayoutAdhocInitiate merchantId city :<|> getPayoutPayoutBatchList merchantId city :<|> getPayoutPayoutBatchOrders merchantId city
 
 getPayoutPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutHistoryRes)
 getPayoutPayoutHistory a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutHistory a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
@@ -58,3 +59,15 @@ postPayoutPayoutVpaRefundRegistration a4 a3 a2 a1 = withDashboardFlowHandlerAPI 
 
 postPayoutPayoutScheduledPayoutConfigUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Payout.UpdateScheduledPayoutConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutScheduledPayoutConfigUpsert a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.postPayoutPayoutScheduledPayoutConfigUpsert a3 a2 a1
+
+getPayoutPayoutAdhocEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutEligibilityResp)
+getPayoutPayoutAdhocEligibility a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutAdhocEligibility a3 a2 a1
+
+postPayoutPayoutAdhocInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateResp)
+postPayoutPayoutAdhocInitiate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.postPayoutPayoutAdhocInitiate a3 a2 a1
+
+getPayoutPayoutBatchList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchListRes)
+getPayoutPayoutBatchList a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutBatchList a9 a8 a7 a6 a5 a4 a3 a2 a1
+
+getPayoutPayoutBatchOrders :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchOrdersRes)
+getPayoutPayoutBatchOrders a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Payout.getPayoutPayoutBatchOrders a5 a4 a3 a2 a1

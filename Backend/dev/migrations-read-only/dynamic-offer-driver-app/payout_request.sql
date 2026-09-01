@@ -45,3 +45,9 @@ ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN coverage_from times
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN ledger_entry_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN settlement_ref_type text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN settlement_ref text ;

@@ -252,7 +252,9 @@ scheduledPayoutToPayoutRequest sp =
       coverageTo = Nothing,
       createdAt = sp.createdAt,
       updatedAt = sp.updatedAt,
-      ledgerEntryIds = Nothing
+      ledgerEntryIds = Nothing,
+      settlementRef = Nothing,
+      settlementRefType = Nothing
     }
 
 castScheduledStatus :: ScheduledPayout.ScheduledPayoutStatus -> PayoutRequest.PayoutRequestStatus

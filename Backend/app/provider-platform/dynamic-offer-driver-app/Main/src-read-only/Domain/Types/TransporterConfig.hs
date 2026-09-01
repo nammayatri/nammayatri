@@ -467,6 +467,7 @@ data DriverWalletConfig = DriverWalletConfig
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forceOnlineLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
+    instantPayoutExcludedRoles :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,

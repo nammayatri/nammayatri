@@ -2484,7 +2484,10 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
   }
 
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
-mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..} = PT.CreatePayoutOrderReq {mExternalAccountId = Nothing, ..}
+mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..} =
+  -- Bulk partners (HDFC CBX) have no single-order API -- Tools.Payout.createPayoutOrder rejects
+  -- them before this is ever called, so these three fields are never actually consumed.
+  PT.CreatePayoutOrderReq {mExternalAccountId = Nothing, mBankAccountNumber = Nothing, mBankIfscCode = Nothing, mBeneficiaryName = Nothing, ..}
 
 createPayoutService ::
   ( EncFlow m r,
@@ -2543,6 +2546,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
             PT.JuspayFlow -> Nothing
             PT.StripeFlow -> Just Payout.TRANSFER_INITIATED
+            PT.BulkFlow -> Just Payout.TRANSFER_INITIATED
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -2570,6 +2574,10 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             pgBaseFee = Nothing,
             pgGst = Nothing,
             merchantTopUpAmount = Nothing,
+            batchId = Nothing, -- set later via QPayoutOrder.updateBatchId once a bulk batch claims this order
+            failureCategory = Nothing,
+            settlementRef = Nothing, -- set later via QPayoutOrder.updateSettlementRef once the partner reports it
+            settlementRefType = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId

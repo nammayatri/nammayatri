@@ -1044,6 +1044,7 @@ TransporterConfig:
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      instantPayoutExcludedRoles: Maybe [Role]
       # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
@@ -2378,6 +2379,11 @@ ScheduledPayoutConfig:
     remark: Maybe Text
     orderType: Text
     timeDiffFromUtc: Seconds
+    itemsPerBatch: Maybe Int
+    defaultPayoutRail: Maybe Text
+    pausedAt: Maybe UTCTime
+    discontinuedAt: Maybe UTCTime
+    settlementGatedEligibility: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
   constraints:

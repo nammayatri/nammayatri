@@ -11,30 +11,35 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Tools.Beam.UtilsTH
 
 data PayoutOrderE e = PayoutOrder
   { accountDetailsType :: Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.AccountDetailsType,
     amount :: Kernel.Types.Common.Price,
+    batchId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch),
     city :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    customerEmail :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    customerEmail :: (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     customerId :: Kernel.Prelude.Text,
     entityIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
+    failureCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder,
     idAssignedByServiceProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantTopUpAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
+    mobileNo :: (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     orderId :: Kernel.Prelude.Text,
     pgBaseFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     pgGst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementRef :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    settlementRefType :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType,
     shortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder),
     status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     transferAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -45,9 +50,9 @@ data PayoutOrderE e = PayoutOrder
   }
   deriving (Generic)
 
-type PayoutOrder = PayoutOrderE 'AsEncrypted
+type PayoutOrder = PayoutOrderE ('AsEncrypted)
 
-type DecryptedPayoutOrder = PayoutOrderE 'AsUnencrypted
+type DecryptedPayoutOrder = PayoutOrderE ('AsUnencrypted)
 
 instance EncryptedItem PayoutOrder where
   type Unencrypted PayoutOrder = (DecryptedPayoutOrder, HashSalt)
@@ -58,12 +63,14 @@ instance EncryptedItem PayoutOrder where
       PayoutOrder
         { accountDetailsType = accountDetailsType entity,
           amount = amount entity,
+          batchId = batchId entity,
           city = city entity,
           createdAt = createdAt entity,
           customerEmail = customerEmail_,
           customerId = customerId entity,
           entityIds = entityIds entity,
           entityName = entityName entity,
+          failureCategory = failureCategory entity,
           id = id entity,
           idAssignedByServiceProvider = idAssignedByServiceProvider entity,
           lastStatusCheckedAt = lastStatusCheckedAt entity,
@@ -77,6 +84,8 @@ instance EncryptedItem PayoutOrder where
           responseCode = responseCode entity,
           responseMessage = responseMessage entity,
           retriedOrderId = retriedOrderId entity,
+          settlementRef = settlementRef entity,
+          settlementRefType = settlementRefType entity,
           shortId = shortId entity,
           status = status entity,
           transferAmount = transferAmount entity,
@@ -92,12 +101,14 @@ instance EncryptedItem PayoutOrder where
       ( PayoutOrder
           { accountDetailsType = accountDetailsType entity,
             amount = amount entity,
+            batchId = batchId entity,
             city = city entity,
             createdAt = createdAt entity,
             customerEmail = customerEmail_,
             customerId = customerId entity,
             entityIds = entityIds entity,
             entityName = entityName entity,
+            failureCategory = failureCategory entity,
             id = id entity,
             idAssignedByServiceProvider = idAssignedByServiceProvider entity,
             lastStatusCheckedAt = lastStatusCheckedAt entity,
@@ -111,6 +122,8 @@ instance EncryptedItem PayoutOrder where
             responseCode = responseCode entity,
             responseMessage = responseMessage entity,
             retriedOrderId = retriedOrderId entity,
+            settlementRef = settlementRef entity,
+            settlementRefType = settlementRefType entity,
             shortId = shortId entity,
             status = status entity,
             transferAmount = transferAmount entity,

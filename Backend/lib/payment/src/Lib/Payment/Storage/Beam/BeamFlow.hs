@@ -25,6 +25,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
+import qualified Lib.Payment.Storage.Beam.PayoutBatchExclusion as BeamPBE
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
@@ -45,6 +47,8 @@ type BeamFlow m r =
     HasSchemaName BeamRF.RefundsT,
     HasSchemaName BeamPOO.PayoutOrderT,
     HasSchemaName BeamPR.PayoutRequestT,
+    HasSchemaName BeamPB.PayoutBatchT,
+    HasSchemaName BeamPBE.PayoutBatchExclusionT,
     HasSchemaName BeamPOT.PayoutTransactionT,
     HasSchemaName BeamPOS.PaymentOrderSplitT,
     HasSchemaName BeamOffer.PaymentOrderOfferT,

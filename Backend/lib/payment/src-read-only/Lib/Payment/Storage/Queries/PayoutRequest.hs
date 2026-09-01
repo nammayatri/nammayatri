@@ -6,6 +6,7 @@ module Lib.Payment.Storage.Queries.PayoutRequest where
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -59,6 +60,13 @@ updatePayoutTransactionIdById payoutTransactionId id = do
 updateRetryCountById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
 updateRetryCountById retryCount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retryCount retryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateSettlementRef ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.SettlementRefType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
+updateSettlementRef settlementRef settlementRefType id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.settlementRef settlementRef, Se.Set Beam.settlementRefType settlementRefType, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusById ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequestStatus -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> m ())
@@ -107,6 +115,8 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest {..}) =
       Se.Set Beam.remark remark,
       Se.Set Beam.retryCount retryCount,
       Se.Set Beam.scheduledAt scheduledAt,
+      Se.Set Beam.settlementRef settlementRef,
+      Se.Set Beam.settlementRefType settlementRefType,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
     ]
@@ -146,6 +156,8 @@ instance FromTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Pa
             remark = remark,
             retryCount = retryCount,
             scheduledAt = scheduledAt,
+            settlementRef = settlementRef,
+            settlementRefType = settlementRefType,
             status = status,
             updatedAt = updatedAt
           }
@@ -182,6 +194,8 @@ instance ToTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Payo
         Beam.remark = remark,
         Beam.retryCount = retryCount,
         Beam.scheduledAt = scheduledAt,
+        Beam.settlementRef = settlementRef,
+        Beam.settlementRefType = settlementRefType,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

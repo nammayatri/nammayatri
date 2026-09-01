@@ -18,3 +18,16 @@ ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN time_of_da
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN vehicle_category text ;
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD PRIMARY KEY ( merchant_operating_city_id, payout_category);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN settlement_gated_eligibility boolean ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN paused_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN items_per_batch integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN instant_batch_window_seconds integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN enable_batch_payout boolean ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN discontinued_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN default_payout_rail text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN batch_payout_partner text ;

@@ -9,17 +9,21 @@ imports:
   PayoutSuccess: Lib.Payment.API.Payout.Types
   PayoutHistoryRes: Lib.Payment.API.Payout.Types
   PayoutOrderResp: Lib.Payment.API.Payout.Types
+  PayoutBatchStatus: Lib.Payment.Domain.Types.PayoutBatch
+  PayoutBatchOrigin: Lib.Payment.Domain.Types.PayoutBatch
   EntityName: Lib.Payment.Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   Driver: Dashboard.Common
   Ride: Dashboard.Common
   Summary: Dashboard.Common
   LocalTime: Data.Time
+  Day: Data.Time
 
 importPackageOverrides:
   Lib.Payment.Domain.Types.PayoutRequest: payment
   Lib.Payment.API.Payout.Types: payment
   Lib.Payment.Domain.Types.Common: payment
+  Lib.Payment.Domain.Types.PayoutBatch: payment
 
 module: Payout
 
@@ -219,6 +223,55 @@ apis:
       response:
         type: APISuccess
 
+  - GET:
+      endpoint: /payout/adhoc/eligibility
+      auth: ApiAuthV2
+      mandatoryQuery:
+        personId: Text
+      response:
+        type: AdhocPayoutEligibilityResp
+      migrate:
+        capability: finance.payout.read
+
+  - POST:
+      endpoint: /payout/adhoc/initiate
+      auth: ApiAuthV2
+      request:
+        type: AdhocPayoutInitiateReq
+      response:
+        type: AdhocPayoutInitiateResp
+      migrate:
+        capability: finance.payout.write
+
+  - GET:
+      endpoint: /payout/batch/list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        status: PayoutBatchStatus
+        origin: PayoutBatchOrigin
+        payoutRail: Text
+      response:
+        type: PayoutBatchListRes
+      migrate:
+        capability: finance.payout.read
+
+  - GET:
+      endpoint: /payout/batch/{batchId}/orders
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: PayoutBatchOrdersRes
+      migrate:
+        capability: finance.payout.read
+
 types:
   PayoutReferralHistoryRes:
     - history: [ReferralHistoryItem]
@@ -251,3 +304,84 @@ types:
     - timeDiffFromUtc: Maybe Seconds
   ScheduledPayoutFrequency:
     - enum: "DAILY, WEEKLY, MONTHLY"
+  AdhocPayoutEligibilityResp:
+    - personId: Text
+    - personName: Maybe Text
+    - role: Text
+    - merchantOperatingCityId: Text
+    - walletBalance: HighPrecMoney
+    - nonRedeemableAmount: HighPrecMoney
+    - payoutableBalance: HighPrecMoney
+    - minimumPayoutAmount: HighPrecMoney
+    - isEligible: Bool
+    - payoutServiceFlow: Text
+    - bankAccountStatus: Text
+  AdhocPayoutInitiateReq:
+    - personIds: [Text]
+  AdhocPayoutInitiateResp:
+    - results: [AdhocPayoutResultItem]
+  AdhocPayoutResultItem:
+    - personId: Text
+    - status: AdhocPayoutItemStatus
+    - reason: Maybe Text
+    - payoutOrderId: Maybe Text
+  AdhocPayoutItemStatus:
+    - enum: "INITIATED, SKIPPED, FAILED"
+
+  PayoutBatchListRes:
+    - batches: [PayoutBatchListItem]
+    - summary: Summary
+    - totalItems: Int
+  PayoutBatchListItem:
+    - id: Text
+    - runId: Maybe Text
+    - runSummary: Maybe PayoutRunSummary
+    - origin: PayoutBatchOrigin
+    - status: PayoutBatchStatus
+    - payoutRail: Text
+    - valueDate: Day
+    - clientRefNo: Text
+    - partnerBatchRef: Maybe Text
+    - itemCount: Int
+    - totalAmount: HighPrecMoney
+    - processedCount: Int
+    - rejectedCount: Int
+    - pendingCount: Int
+    - partnerResponseCode: Maybe Text
+    - failureReason: Maybe Text
+    - inquiryAttemptsToday: Int
+    - inquiryQuotaDate: Maybe Day
+    - nextInquiryAt: Maybe UTCTime
+    - submittedAt: Maybe UTCTime
+    - resolvedAt: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  PayoutRunSummary:
+    - evaluatedCount: Int
+    - excludedCount: Int
+    - includedCount: Int
+    - paidCount: Int
+    - failedCount: Int
+    - pendingCount: Int
+    - totalAmount: Maybe HighPrecMoney
+    - paidAmount: HighPrecMoney
+    - failedAmount: HighPrecMoney
+
+  PayoutBatchOrdersRes:
+    - orders: [PayoutOrderListItem]
+    - summary: Summary
+  PayoutOrderListItem:
+    - orderId: Text
+    - payoutRequestId: Maybe Text
+    - customerId: Text
+    - beneficiaryName: Maybe Text
+    - beneficiaryPhone: Maybe Text
+    - beneficiaryRole: Text
+    - status: Text
+    - transferStatus: Maybe Text
+    - amount: HighPrecMoney
+    - failureCategory: Maybe Text
+    - settlementRef: Maybe Text
+    - settlementRefType: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime

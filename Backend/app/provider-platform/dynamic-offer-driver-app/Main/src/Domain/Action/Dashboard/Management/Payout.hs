@@ -10,6 +10,10 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutVpaUpdate,
     postPayoutPayoutVpaRefundRegistration,
     postPayoutPayoutScheduledPayoutConfigUpsert,
+    getPayoutPayoutAdhocEligibility,
+    postPayoutPayoutAdhocInitiate,
+    getPayoutPayoutBatchList,
+    getPayoutPayoutBatchOrders,
   )
 where
 
@@ -17,7 +21,9 @@ import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
 import qualified "dashboard-helper-api" Dashboard.Common as DC
 import Data.Time (minutesToTimeZone, utcToLocalTime)
 import qualified Domain.Action.Common.PayoutRequest as CommonPayout
+import qualified Domain.Action.Dashboard.AdhocPayout as AdhocPayout
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.PayoutBatch as PayoutBatch
 import qualified Domain.Action.Dashboard.PayoutRequest as DashboardPayoutRequest
 import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant
@@ -38,6 +44,7 @@ import qualified Kernel.Utils.Predicates as P
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.API.Payout as PayoutAPI
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
@@ -63,9 +70,21 @@ payoutServer merchantShortId opCity =
         handleDeleteVpa = DashboardPayoutRequest.deleteVpa,
         handleUpdateVpa = DashboardPayoutRequest.updateVpa,
         handleRefundRegistrationAmount = DashboardPayoutRequest.refundRegistrationAmount merchantShortId opCity,
+        validateOwnership = validatePayoutRequestOwnership merchantShortId opCity,
         merchantCity = opCity,
         mkHistoryItemEnricher = buildHistoryItemEnricher merchantShortId opCity
       }
+
+-- | Reject a PayoutRequest that doesn't belong to this dashboard call's merchant/city -- without
+validatePayoutRequestOwnership ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  PayoutRequest.PayoutRequest ->
+  Environment.Flow ()
+validatePayoutRequestOwnership merchantShortId opCity payoutRequest = do
+  (merchant, merchantOpCity, _) <- resolveMerchantOpCityAndTz merchantShortId opCity
+  unless (payoutRequest.merchantId == merchant.id.getId && payoutRequest.merchantOperatingCityId == merchantOpCity.id.getId) $
+    throwError $ InvalidRequest "Payout request not found"
 
 -- | Look up merchant, operating city, and transporter config in one shot.
 -- Used by both the payout-history enricher and the referral-history handler
@@ -374,3 +393,44 @@ postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiReq = do
       ApiPayout.DAILY -> DSPC.DAILY
       ApiPayout.WEEKLY -> DSPC.WEEKLY
       ApiPayout.MONTHLY -> DSPC.MONTHLY
+
+getPayoutPayoutAdhocEligibility ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Environment.Flow ApiPayout.AdhocPayoutEligibilityResp
+getPayoutPayoutAdhocEligibility merchantShortId opCity personIdText =
+  AdhocPayout.lookupPayoutEligibility merchantShortId opCity (Id.Id personIdText)
+
+postPayoutPayoutAdhocInitiate ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiPayout.AdhocPayoutInitiateReq ->
+  Environment.Flow ApiPayout.AdhocPayoutInitiateResp
+postPayoutPayoutAdhocInitiate merchantShortId opCity req =
+  AdhocPayout.initiateAdhocPayouts merchantShortId opCity (map Id.Id req.personIds)
+
+-- | Arg order is alphabetical by query-param name (generator convention), not YAML order.
+getPayoutPayoutBatchList ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DPayoutBatch.PayoutBatchOrigin ->
+  Maybe Text ->
+  Maybe DPayoutBatch.PayoutBatchStatus ->
+  Maybe UTCTime ->
+  Environment.Flow ApiPayout.PayoutBatchListRes
+getPayoutPayoutBatchList merchantShortId opCity from limit offset origin payoutRail status to =
+  PayoutBatch.listPayoutBatches merchantShortId opCity limit offset from to status origin payoutRail
+
+getPayoutPayoutBatchOrders ::
+  Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Environment.Flow ApiPayout.PayoutBatchOrdersRes
+getPayoutPayoutBatchOrders merchantShortId opCity batchId limit offset =
+  PayoutBatch.listPayoutBatchOrders merchantShortId opCity batchId limit offset

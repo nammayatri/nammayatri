@@ -183,6 +183,7 @@ getServiceNameConfigJSON = \case
               Just Stripe.Test -> Payout.StripeTest
               Nothing -> Payout.Stripe
       (service, toJSON cfg)
+    Payout.HdfcCbxConfig cfg -> (Domain.PayoutService Payout.HdfcCbx, toJSON cfg)
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)

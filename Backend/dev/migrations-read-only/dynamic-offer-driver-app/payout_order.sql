@@ -76,3 +76,15 @@ ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN transfer_amount doubl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN merchant_top_up_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN settlement_ref_type text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN settlement_ref text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN failure_category text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN batch_id character varying(36) ;
+
+
+------- SQL updates -------
+

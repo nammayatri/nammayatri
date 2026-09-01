@@ -1,0 +1,28 @@
+CREATE TABLE atlas_driver_offer_bpp.payout_run ();
+
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN batch_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN currency character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN debited_amount double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN evaluated_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN excluded_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN failed_amount double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN failed_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN included_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN origin text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN paid_amount double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN paid_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN parent_job_id text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN payout_partner text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN pending_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN resolved_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN scheduled_for timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN sealed_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN total_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD COLUMN value_date date NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_run ADD PRIMARY KEY ( id);

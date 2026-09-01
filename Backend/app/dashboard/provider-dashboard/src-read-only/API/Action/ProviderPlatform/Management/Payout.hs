@@ -20,15 +20,16 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import qualified "payment" Lib.Payment.API.Payout.Types
+import qualified "payment" Lib.Payment.Domain.Types.PayoutBatch
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert))
+type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert :<|> GetPayoutPayoutAdhocEligibility :<|> PostPayoutPayoutAdhocInitiate :<|> GetPayoutPayoutBatchList :<|> GetPayoutPayoutBatchOrders))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city
+handler merchantId city = getPayoutPayoutHistory merchantId city :<|> getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutOrder merchantId city :<|> getPayoutPayout merchantId city :<|> postPayoutPayoutRetry merchantId city :<|> postPayoutPayoutCancel merchantId city :<|> postPayoutPayoutCash merchantId city :<|> postPayoutPayoutVpaDelete merchantId city :<|> postPayoutPayoutVpaUpdate merchantId city :<|> postPayoutPayoutVpaRefundRegistration merchantId city :<|> postPayoutPayoutScheduledPayoutConfigUpsert merchantId city :<|> getPayoutPayoutAdhocEligibility merchantId city :<|> postPayoutPayoutAdhocInitiate merchantId city :<|> getPayoutPayoutBatchList merchantId city :<|> getPayoutPayoutBatchOrders merchantId city
 
 type GetPayoutPayoutHistory =
   ( ApiAuth
@@ -118,6 +119,38 @@ type PostPayoutPayoutScheduledPayoutConfigUpsert =
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutScheduledPayoutConfigUpsert
   )
 
+type GetPayoutPayoutAdhocEligibility =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_ADHOC_ELIGIBILITY)
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutAdhocEligibility
+  )
+
+type PostPayoutPayoutAdhocInitiate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_ADHOC_INITIATE)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutAdhocInitiate
+  )
+
+type GetPayoutPayoutBatchList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_BATCH_LIST)
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutBatchList
+  )
+
+type GetPayoutPayoutBatchOrders =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_BATCH_ORDERS)
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutBatchOrders
+  )
+
 getPayoutPayoutHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutHistoryRes)
 getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneNo from isFailedOnly limit offset to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneNo from isFailedOnly limit offset to
 
@@ -150,3 +183,15 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = 
 
 postPayoutPayoutScheduledPayoutConfigUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.UpdateScheduledPayoutConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req
+
+getPayoutPayoutAdhocEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutEligibilityResp)
+getPayoutPayoutAdhocEligibility merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutAdhocEligibility merchantShortId opCity apiTokenInfo personId
+
+postPayoutPayoutAdhocInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.AdhocPayoutInitiateResp)
+postPayoutPayoutAdhocInitiate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutAdhocInitiate merchantShortId opCity apiTokenInfo req
+
+getPayoutPayoutBatchList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchListRes)
+getPayoutPayoutBatchList merchantShortId opCity apiTokenInfo from limit offset origin payoutRail status to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutBatchList merchantShortId opCity apiTokenInfo from limit offset origin payoutRail status to
+
+getPayoutPayoutBatchOrders :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutBatchOrdersRes)
+getPayoutPayoutBatchOrders merchantShortId opCity apiTokenInfo batchId limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutBatchOrders merchantShortId opCity apiTokenInfo batchId limit offset

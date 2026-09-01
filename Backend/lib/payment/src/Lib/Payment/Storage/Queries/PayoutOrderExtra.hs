@@ -56,6 +56,15 @@ findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFail
     (Just limit)
     (Just offset)
 
+-- | Dashboard batch drill-down, paginated at the DB level.
+findAllByBatchIdWithOptions :: BeamFlow m r => Text -> Maybe Int -> Maybe Int -> m [PayoutOrder]
+findAllByBatchIdWithOptions batchId limit offset =
+  findAllWithOptionsKV
+    [Se.Is Beam.batchId $ Se.Eq (Just batchId)]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
 findAllByCustomerIdWithLimitOffset :: BeamFlow m r => Maybe Int -> Maybe Int -> Text -> m [PayoutOrder]
 findAllByCustomerIdWithLimitOffset limit offset customerId = do
   findAllWithOptionsKV

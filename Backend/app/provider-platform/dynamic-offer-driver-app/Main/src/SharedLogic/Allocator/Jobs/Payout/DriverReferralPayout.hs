@@ -200,6 +200,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust payoutVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if payoutVpaValid
         then do
           dailyStat <- QDailyStats.findByPrimaryKey id >>= fromMaybeM (InternalError "DailyStats Not Found")
@@ -296,6 +297,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount -- bank account + IFSC already verified in Tools.Payout.getCreatePayoutServiceFlow
       when payoutVpaValid $ do
         fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
           let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId

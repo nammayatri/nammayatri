@@ -1,0 +1,97 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+PayoutRun:
+  tableName: payout_run
+  derives: "Generic"
+
+  types:
+    PayoutRunOrigin:
+      enum: "SCHEDULED,ADHOC"
+      derive: "HttpInstance"
+    PayoutRunStatus:
+      enum: "ASSEMBLING,SEALED,IN_PROGRESS,COMPLETED,PARTIALLY_RESOLVED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PayoutRun
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    payoutPartner: Text
+    origin: PayoutRunOrigin
+    parentJobId: Maybe Text
+    status: PayoutRunStatus
+    scheduledFor: UTCTime
+    valueDate: Day
+    currency: Currency
+    totalAmount: Maybe HighPrecMoney
+    evaluatedCount: Int
+    excludedCount: Int
+    includedCount: Int
+    batchCount: Int
+    paidCount: Int
+    failedCount: Int
+    pendingCount: Int
+    paidAmount: HighPrecMoney
+    failedAmount: HighPrecMoney
+    debitedAmount: HighPrecMoney
+    sealedAt: Maybe UTCTime
+    resolvedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    evaluatedCount: "0"
+    excludedCount: "0"
+    includedCount: "0"
+    batchCount: "0"
+    paidCount: "0"
+    failedCount: "0"
+    pendingCount: "0"
+    paidAmount: "0"
+    failedAmount: "0"
+    debitedAmount: "0"
+
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+    parentJobId: "!SecondaryKey"
+
+  queries:
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [id]
+    findByParentJobId:
+      kvFunction: findOneWithKV
+      where: parentJobId
+    findByParentJobIdAndValueDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [parentJobId, valueDate]
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateAssemblyCounts:
+      kvFunction: updateOneWithKV
+      params: [evaluatedCount, excludedCount, includedCount]
+      where: id
+    sealRun:
+      kvFunction: updateOneWithKV
+      params: [status, totalAmount, batchCount, sealedAt]
+      where: id
+    updateResolutionCounts:
+      kvFunction: updateOneWithKV
+      params: [status, paidCount, failedCount, pendingCount, paidAmount, failedAmount, debitedAmount, resolvedAt]
+      where: id

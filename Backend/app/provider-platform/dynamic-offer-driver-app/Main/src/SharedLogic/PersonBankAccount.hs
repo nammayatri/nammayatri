@@ -179,7 +179,9 @@ getPersonRegisterBankAccountLink h mbPaymentMode mbInitiatedBy person = do
                 nameAtBank = Nothing,
                 requirements = resp.requirements,
                 futureRequirements = resp.futureRequirements,
-                lastSyncedAt = Just now
+                lastSyncedAt = Just now,
+                verificationStatus = Nothing, -- Stripe path; verificationStatus is Idfy/HDFC-specific
+                verificationStatusUpdatedAt = Nothing
               }
       QDBA.create driverBankAccount
       QDBA.syncBankAccountToPool person.id resp.chargesEnabled (Just paymentMode)

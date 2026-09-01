@@ -319,6 +319,7 @@ let AllocatorJobType =
       | ExpireSubscriptionPurchase
       | Reconciliation
       | ScheduledBatchPayout
+      | BulkBatchPayoutPoll
       | SettlementReportIngestion
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
@@ -396,6 +397,7 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
+      , { mapKey = AllocatorJobType.BulkBatchPayoutPoll, mapValue = True }
       , { mapKey = AllocatorJobType.ConnectAccountChargeDeduction
         , mapValue = True
         }

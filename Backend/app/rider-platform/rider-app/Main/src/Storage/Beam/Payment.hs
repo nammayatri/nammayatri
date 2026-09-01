@@ -44,6 +44,8 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
+import qualified Lib.Payment.Storage.Beam.PayoutBatchExclusion as BeamPBE
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
@@ -69,6 +71,12 @@ instance HasSchemaName BeamP.PayoutOrderT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPR.PayoutRequestT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPB.PayoutBatchT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPBE.PayoutBatchExclusionT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamT.PayoutTransactionT where

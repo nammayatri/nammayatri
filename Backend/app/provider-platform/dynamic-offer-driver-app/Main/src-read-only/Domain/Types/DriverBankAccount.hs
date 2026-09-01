@@ -11,6 +11,7 @@ import qualified Domain.Types.Person
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
@@ -29,6 +30,8 @@ data DriverBankAccount = DriverBankAccount
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    verificationStatus :: Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus,
+    verificationStatusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

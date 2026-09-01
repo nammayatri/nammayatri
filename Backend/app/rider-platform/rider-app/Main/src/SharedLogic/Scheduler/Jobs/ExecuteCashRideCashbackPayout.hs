@@ -180,6 +180,12 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
           <> show totalAmount
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
     PayoutRequest.PayoutFailed _ err -> do
+      -- Confirmed rejection (bank responded) -- safe to release for retry.
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+    PayoutRequest.PayoutAmbiguous pr err -> do
+      -- Transport-level failure -- we don't know if the bank received the request. Do NOT
+      -- release; entries stay PROCESSING (stamped with pr.id below) for manual reconciliation.
+      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
+      logError $ "Cashback payout submission outcome unknown for person=" <> person.id.getId <> ": " <> err <> " -- leaving entries PROCESSING, needs manual reconciliation"

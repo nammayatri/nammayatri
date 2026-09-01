@@ -172,6 +172,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
       Domain.Action.Common.VehicleDetails
+      Domain.Action.Dashboard.AdhocPayout
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -230,6 +231,7 @@ library
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
+      Domain.Action.Dashboard.PayoutBatch
       Domain.Action.Dashboard.PayoutRequest
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
@@ -485,6 +487,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
+      SharedLogic.Allocator.Jobs.Payout.BulkBatchPayoutPoll
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
@@ -1367,6 +1370,7 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
+      Domain.Types.PayoutRun
       Domain.Types.PayoutStatusHistory
       Domain.Types.Person
       Domain.Types.PlaceNameCache
@@ -1558,6 +1562,7 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
+      Storage.Beam.PayoutRun
       Storage.Beam.PayoutStatusHistory
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
@@ -1857,6 +1862,7 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
+      Storage.Queries.PayoutRun
       Storage.Queries.PayoutStatusHistory
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache

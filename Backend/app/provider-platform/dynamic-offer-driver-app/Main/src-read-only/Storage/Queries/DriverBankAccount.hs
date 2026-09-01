@@ -12,6 +12,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -44,6 +45,18 @@ updateAccountLink currentAccountLink currentAccountLinkExpiry driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateVerificationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVerificationStatus verificationStatus verificationStatusUpdatedAt driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.verificationStatusUpdatedAt verificationStatusUpdatedAt,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverBankAccount.DriverBankAccount))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
@@ -63,6 +76,8 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.payoutsEnabled payoutsEnabled,
       Se.Set Beam.requirements (Data.Aeson.toJSON <$> requirements),
+      Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.verificationStatusUpdatedAt verificationStatusUpdatedAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

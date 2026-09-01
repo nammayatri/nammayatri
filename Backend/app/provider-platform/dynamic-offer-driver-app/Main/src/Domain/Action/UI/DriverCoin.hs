@@ -412,6 +412,7 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   vpa <- case payoutServiceFlow of
     IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
     IPayout.StripeFlow -> pure Nothing
+    IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; bank account + IFSC already verified in Tools.Payout.getCreatePayoutServiceFlow
   merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing
       entityName = DPayment.COINS_REDEMPTION

@@ -11,6 +11,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data DriverBankAccountT f = DriverBankAccountT
@@ -27,6 +28,8 @@ data DriverBankAccountT f = DriverBankAccountT
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     payoutsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requirements :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    verificationStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus),
+    verificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

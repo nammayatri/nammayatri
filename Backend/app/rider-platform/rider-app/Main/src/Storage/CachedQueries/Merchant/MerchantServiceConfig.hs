@@ -178,6 +178,7 @@ getServiceName msc = case msc.serviceConfig of
   PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> PayoutService Payout.Juspay
     Payout.StripeConfig stripeCfg -> stripePayoutService PayoutService stripeCfg
+    Payout.HdfcCbxConfig _ -> PayoutService Payout.HdfcCbx
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
