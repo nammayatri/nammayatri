@@ -1,0 +1,33 @@
+imports:
+  GeohashAreaItem: Dashboard.Common.GeohashArea
+  GeohashAreaBulkUpsertReq: Dashboard.Common.GeohashArea
+  GeohashAreaCsvReq: Dashboard.Common.GeohashArea
+
+module: GeohashArea
+
+apis:
+  - GET: # GetGeohashAreaList
+      endpoint: /list
+      auth: ApiAuthV2
+      response:
+        type: "[GeohashAreaItem]"
+      migrate:
+        capability: city-config.geo.read
+  - POST: # GeohashAreaBulkUpsertAPI -- map-selection path: caller already has the {geohash, areaName} list
+      endpoint: /upsert
+      auth: ApiAuthV2
+      request:
+        type: GeohashAreaBulkUpsertReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.geo.write
+  - POST: # GeohashAreaCsvUpsertAPI -- same underlying upsert, CSV file instead of a JSON list
+      endpoint: /upsert/csv
+      auth: ApiAuthV2
+      multipart:
+        type: GeohashAreaCsvReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.geo.write

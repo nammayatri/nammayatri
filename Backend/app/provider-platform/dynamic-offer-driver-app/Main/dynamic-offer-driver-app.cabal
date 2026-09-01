@@ -209,6 +209,7 @@ library
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
+      Domain.Action.Dashboard.Management.GeohashArea
       Domain.Action.Dashboard.Management.IncentiveJourney
       Domain.Action.Dashboard.Management.KnowledgeCenter
       Domain.Action.Dashboard.Management.Media
@@ -617,6 +618,7 @@ library
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch
+      SharedLogic.GeohashAreaUpsert
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
@@ -1086,6 +1088,7 @@ library
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
+      API.Action.Dashboard.Management.GeohashArea
       API.Action.Dashboard.Management.IncentiveJourney
       API.Action.Dashboard.Management.KnowledgeCenter
       API.Action.Dashboard.Management.Media

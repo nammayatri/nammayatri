@@ -18,6 +18,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverVehicleQuality
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
+import qualified API.Types.ProviderPlatform.Management.GeohashArea
 import qualified API.Types.ProviderPlatform.Management.IncentiveJourney
 import qualified API.Types.ProviderPlatform.Management.KnowledgeCenter
 import qualified API.Types.ProviderPlatform.Management.Media
@@ -61,6 +62,7 @@ data ManagementUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
   | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
+  | GEOHASH_AREA API.Types.ProviderPlatform.Management.GeohashArea.GeohashAreaUserActionType
   | INCENTIVE_JOURNEY API.Types.ProviderPlatform.Management.IncentiveJourney.IncentiveJourneyUserActionType
   | KNOWLEDGE_CENTER API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
@@ -101,6 +103,7 @@ instance Text.Show.Show ManagementUserActionType where
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
     FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
+    GEOHASH_AREA e -> "GEOHASH_AREA/" <> show e
     INCENTIVE_JOURNEY e -> "INCENTIVE_JOURNEY/" <> show e
     KNOWLEDGE_CENTER e -> "KNOWLEDGE_CENTER/" <> show e
     MEDIA e -> "MEDIA/" <> show e
@@ -246,6 +249,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "FINANCE_MANAGEMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( GEOHASH_AREA v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "GEOHASH_AREA/" r,
                    ( v1,
                      r2
                      ) <-
