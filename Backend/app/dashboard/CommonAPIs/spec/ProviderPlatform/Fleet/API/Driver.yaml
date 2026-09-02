@@ -2512,6 +2512,7 @@ types:
     - association: Maybe AssociationDetail
     - recentFleetInfo: Maybe DriverAssociationInfo
     - linkedDriverInfo: Maybe DriverAssociationInfo
+    - linkedDrivers: Maybe [DriverAssociationInfo]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

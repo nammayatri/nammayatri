@@ -578,7 +578,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         rejectReason = Nothing,
         createdAt = now,
         unencryptedCertificateNumber = input.registrationNumber,
-        approved = Just False,
+        approved = Nothing,
         updatedAt = now,
         vehicleImageId = Nothing,
         verified = Nothing,

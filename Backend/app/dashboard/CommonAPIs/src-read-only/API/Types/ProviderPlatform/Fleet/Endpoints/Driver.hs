@@ -1322,7 +1322,8 @@ data VehicleInfo = VehicleInfo
     updatedAt :: Kernel.Prelude.UTCTime,
     association :: Kernel.Prelude.Maybe AssociationDetail,
     recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
-    linkedDriverInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo
+    linkedDriverInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
+    linkedDrivers :: Kernel.Prelude.Maybe [Dashboard.Common.Driver.DriverAssociationInfo]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

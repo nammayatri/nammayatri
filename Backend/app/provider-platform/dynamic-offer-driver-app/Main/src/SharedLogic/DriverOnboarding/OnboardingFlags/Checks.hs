@@ -334,6 +334,9 @@ class VerbMatch v where
 instance VerbMatch ActionVerb where
   matchVerb = (==)
 
+instance VerbMatch [ActionVerb] where
+  matchVerb = flip elem
+
 data AnyVerb = AnyVerb
 
 instance VerbMatch AnyVerb where
@@ -414,17 +417,18 @@ onboardingFlow = do
   unified $ check ChangeFleetOwner AnyActor AnyTarget movableTarget -- only a driver or a vehicle moves fleet
   unified $ check ChangeFleetOwner AnyActor DriverTarget movableFleetDriver -- fleet driver with a live association
   unified $ check ChangeFleetOwner AnyActor VehicleTarget movableFleetVehicle -- vehicle currently held by a fleet
-  unified $ check LinkToFleet AnyActor DriverTarget notLiveInAnotherFleet -- a live driver moves, not links
-  unified $ check LinkToFleet FleetActor DriverTarget notActiveWithActorFleet -- no active link to the same fleet
+  unified $ check [LinkToFleet, LinkToOperator] AnyActor DriverTarget notLiveInAnotherFleet -- a live driver moves, not links
+  unified $ check [LinkToFleet, LinkToOperator] FleetActor DriverTarget notActiveWithActorFleet -- no active link to the same fleet
   unified $ check ActivateToFleet FleetActor DriverTarget actorFleetAssociationExists -- needs a link with this fleet
   unified $ check DeactivateFromFleet FleetActor DriverTarget actorFleetAssociationExists -- needs a link with this fleet
   unified $ check ActivateVehicle AnyActor DriverVehicle rcLinkedAndInactive -- RC linked and not already driven
   unified $ check DeactivateVehicle AnyActor DriverVehicle rcLinkedAndActive -- RC linked and currently driven
   unified $ check LinkVehicle FleetAndDriverActor VehicleTarget actingDriverActiveInActorFleet -- acting driver belongs to the fleet
+  unified $ check LinkVehicle FleetActor VehicleTarget vehicleNotInAnotherFleet
   unified $ check UnlinkVehicle FleetActor VehicleTarget vehicleInActorFleet -- vehicle belongs to the fleet
   unified $ check View FleetActor AnyTarget actorScopeOverTarget -- a fleet reads only what it holds
   forM_ liveRideVerbs $ \verb -> check verb AnyActor AnyTarget noLiveRide -- no change under a live ride
-  check LinkToFleet AnyActor DriverTarget ensureNoActiveFleetAssociation -- no live fleet or operator association
+  check [LinkToFleet, LinkToOperator] AnyActor DriverTarget ensureNoActiveFleetAssociation -- no live fleet or operator association
   check Delete AnyActor DriverTarget driverDeletable -- driver strands no association
   check Delete AnyActor FleetTarget fleetDeletable -- fleet strands no association
   whenConfig blocksDriverOwnRc $ do
@@ -440,7 +444,8 @@ onboardingFlow = do
   unified $ check ActivateVehicle AnyActor DriverTarget driverLiveForRcPick -- must be live to pick up an RC
   unified $ check ActivateToFleet AnyActor DriverTarget driverNotBlocked -- a blocked driver joins no fleet
   unified $ check SetOnboardingAs AnyActor DriverTarget driverOnboardingSettable -- settled before the driver goes live
-  unified $ check LinkToFleet AnyActor DriverTarget driverLinkableToFleet -- an active driver moves instead
+  unified $ check linkToFleetOrOperator AnyActor DriverTarget driverLinkableToFleet -- an active driver moves instead
+  unified $ check LinkToFleet AnyActor DriverTarget driverNotSelfEmployed
   unified $ check LinkVehicle AnyActor VehicleTarget rcClearedForRoad -- RC valid, verified and approved
   unified $ check Enable AnyActor FleetTarget fleetEnableable -- only a fleet owner who is down comes up
   unified $ check Disable AnyActor FleetTarget fleetDisableable -- only a live fleet owner goes down
@@ -484,6 +489,9 @@ onboardingFlow = do
     actingDriverActiveInActorFleet :: (ActorFleetCtx, ActorDriverCtx) -> VehicleCtx -> Either GuardViolation ()
     actingDriverActiveInActorFleet (actorFleet, actorDriver) _ =
       ensure (any (\assoc -> assoc.fleetOwnerId == actorFleet.afId.getId && assoc.isActive) actorDriver.adFleetAssociations) "FD-MISSING" "driver is not part of this fleet"
+    vehicleNotInAnotherFleet :: ActorFleetCtx -> VehicleCtx -> Either GuardViolation ()
+    vehicleNotInAnotherFleet actorFleet vehicleCtx =
+      ensure (maybe True (== actorFleet.afId.getId) vehicleCtx.vcRc.fleetOwnerId) "FR-OTHER-FLEET" "vehicle is already held by another fleet"
     vehicleInActorFleet :: ActorFleetCtx -> VehicleCtx -> Either GuardViolation ()
     vehicleInActorFleet _ vehicleCtx =
       ensure vehicleCtx.vcInActorFleet "FR-MISSING" "vehicle is not part of this fleet"
@@ -564,6 +572,9 @@ onboardingFlow = do
     driverOnboardingSettable _ driverCtx = do
       ensure (not driverCtx.dcInfo.blocked) "DI-9" "driver is blocked"
       ensure (isNothing driverCtx.dcInfo.disabledReasonFlag) "DI-10" "driver is disabled"
+    driverNotSelfEmployed :: () -> DriverCtx -> Either GuardViolation ()
+    driverNotSelfEmployed _ driverCtx =
+      ensure (driverCtx.dcInfo.onboardingAs /= Just DI.INDIVIDUAL) "FD-INDIVIDUAL" "driver is onboarded as self-employed; change the onboarding type before linking to a fleet"
     driverLinkableToFleet :: () -> DriverCtx -> Either GuardViolation ()
     driverLinkableToFleet _ driverCtx =
       unless (fleetDriverWithoutActiveAssociation driverCtx) $
