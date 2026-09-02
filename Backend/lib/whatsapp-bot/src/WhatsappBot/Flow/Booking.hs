@@ -376,7 +376,7 @@ sendFlexiDriverCard :: Monad m => BotEnv m -> InboundEvent -> BotBookingDetails 
 sendFlexiDriverCard env ev booking = do
   mctx <- getCtx env ev
   let lang = mctx >>= (\c -> c.language)
-      card = buildDriverCard env.cfg.translations booking lang
+      card = buildDriverCard env.cfg.translations env.cfg.merchant booking lang
   replyButtons env (ev.fromPhone) card.bmText card.bmButtons
 
 -- ---------------------------------------------------------------------------

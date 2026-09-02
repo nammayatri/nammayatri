@@ -9,6 +9,7 @@ module WhatsappBot.Messages
     stageKey,
     classifyStage,
     formatDialable,
+    buildTrackingLink,
     buildDriverCard,
     buildArrived,
     buildStarted,
@@ -88,9 +89,24 @@ formatDialable (Just phone)
   where
     d = T.filter isDigit phone
 
+-- | Build a tracking link (@engine.ts:1471-1477@): the merchant's URL template with
+-- the ride id substituted (falling back to the bookingId until a ride is assigned,
+-- and to the default template if the merchant's URL is unset — TS @|| default@).
+-- The link text is not golden-projected.
+buildTrackingLink :: MerchantCtx -> BotBookingDetails -> Text
+buildTrackingLink merchant b =
+  let template = if T.null merchant.nyTrackingUrl then defaultTrackingUrl else merchant.nyTrackingUrl
+   in T.replace "{rideId}" (fromMaybe b.bookingId b.rideId) template
+
+defaultTrackingUrl :: Text
+defaultTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
+
 -- | The "auto found — driver on the way" card (@flexi-messages.ts:62-87@).
-buildDriverCard :: Map.Map SupportedLanguage LanguageStrings -> BotBookingDetails -> Maybe SupportedLanguage -> BuiltMessage
-buildDriverCard translations b lang =
+-- Includes the live tracking link so the rider gets it without having to ask
+-- (previously only surfaced via the explicit "track"/"status" commands in
+-- "WhatsappBot.Ride").
+buildDriverCard :: Map.Map SupportedLanguage LanguageStrings -> MerchantCtx -> BotBookingDetails -> Maybe SupportedLanguage -> BuiltMessage
+buildDriverCard translations merchant b lang =
   BuiltMessage
     { bmText = T.intercalate "\n" msgLines,
       bmButtons = [OutButton {btnId = "cancel_confirm:" <> b.bookingId, btnTitle = s.cancelRide, btnDesc = Nothing}]
@@ -99,6 +115,7 @@ buildDriverCard translations b lang =
     s = t translations lang
     driverName = fromMaybe "" b.driverName
     dial = formatDialable b.driverNumber
+    trackingLink = buildTrackingLink merchant b
     msgLines =
       [s.flexiFoundDriver driverName]
         <> maybe [] (\(r, e) -> [s.flexiDriverMeta (fmtNum r) (fmtInt e)]) ((,) <$> b.driverRating <*> b.etaMinutes)
@@ -106,6 +123,7 @@ buildDriverCard translations b lang =
         <> maybe [] (\o -> ["", s.flexiOtpShare o]) b.rideOtp
         <> maybe [] (\dl -> ["", s.flexiCallDriver dl]) dial
         <> ["", s.flexiSafetyNote]
+        <> ["\n" <> s.track <> "\n" <> trackingLink]
 
 -- | Driver reached the pickup point; re-share the start OTP if present
 -- (@flexi-messages.ts:90-95@). @flexiArrived@ branches internally on empty OTP.

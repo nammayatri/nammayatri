@@ -182,5 +182,6 @@ buildTrackerDeps cfg = do
         tdSender = mkWaSender metaCfg,
         tdSessions = mkSessionStore sessTtl,
         tdClock = mkClock,
-        tdTranslations = translations
+        tdTranslations = translations,
+        tdMerchant = ctx
       }
