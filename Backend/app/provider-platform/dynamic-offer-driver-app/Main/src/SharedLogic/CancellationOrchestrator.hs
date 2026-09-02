@@ -360,6 +360,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
           whenJust outcome.fee $ \baseFee -> do
             let gst = fromMaybe 0 outcome.tax
                 totalCharges = baseFee + gst
+                carriesForwardDues = CancellationConsequence.shouldCarryForwardDues decision.consequenceRow
             logTagInfo ("bookingId-" <> booking.id.getId) ("cancellation charge applied: base=" <> show baseFee <> " tax=" <> show gst <> " row=" <> show outcome.consequenceRowId)
             -- a NEGATIVE total is a customer CREDIT (matrix addition): it only reduces
             -- outstanding dues inside SCD (clamped at zero) — no ride charge, no counters,
@@ -381,9 +382,9 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
                   collectionMode = outcome.collectionMode,
-                  carryForwardEnabled = CancellationConsequence.shouldCarryForwardDues decision.consequenceRow
+                  carryForwardEnabled = carriesForwardDues
                 }
-            when (ctx.source == SBCR.ByUser && totalCharges > 0) $
+            when (ctx.source == SBCR.ByUser && totalCharges > 0 && carriesForwardDues) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
             when (isWalletEnabled && totalCharges > 0) $

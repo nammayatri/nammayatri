@@ -256,7 +256,8 @@ toDomainCommissionAndTax c =
       commission =
         c.commission <&> \case
           Common.FixedRateAPIEntity amt -> DExtra.FixedRate {amount = amt}
-          Common.PercentageRateAPIEntity pct -> DExtra.PercentageRate {percentage = pct}
+          Common.PercentageRateAPIEntity pct -> DExtra.PercentageRate {percentage = pct},
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax
     }
 
 toListItem :: DCCM.CancellationConsequenceMatrix -> Common.CancellationConsequenceListItem
@@ -309,5 +310,6 @@ toAPICommissionAndTax c =
       commission =
         c.commission <&> \case
           DExtra.FixedRate {amount} -> Common.FixedRateAPIEntity amount
-          DExtra.PercentageRate {percentage} -> Common.PercentageRateAPIEntity percentage
+          DExtra.PercentageRate {percentage} -> Common.PercentageRateAPIEntity percentage,
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax
     }

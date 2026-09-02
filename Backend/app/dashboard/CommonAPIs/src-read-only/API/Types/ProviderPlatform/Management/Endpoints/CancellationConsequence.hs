@@ -61,7 +61,11 @@ data CoinDeductionAPI = CoinDeductionAPI {coins :: Kernel.Prelude.Int, expirySec
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommissionAndTaxAPI = CommissionAndTaxAPI {taxPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney, commission :: Kernel.Prelude.Maybe ChargeRateAPI}
+data CommissionAndTaxAPI = CommissionAndTaxAPI
+  { taxPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commission :: Kernel.Prelude.Maybe ChargeRateAPI,
+    amountsInclusiveOfTax :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -123,22 +127,22 @@ instance Kernel.Types.HideSecrets.HideSecrets UpsertFaultRuleRegistryReq where
 
 type API = ("cancellationConsequence" :> (GetCancellationConsequenceList :<|> PostCancellationConsequenceCreate :<|> PostCancellationConsequenceUpdate :<|> GetCancellationConsequenceRegistryList :<|> PostCancellationConsequenceRegistryUpsert))
 
-type GetCancellationConsequenceList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) CancellationConsequenceListRes)
+type GetCancellationConsequenceList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] CancellationConsequenceListRes)
 
-type PostCancellationConsequenceCreate = ("create" :> ReqBody ('[JSON]) CreateCancellationConsequenceReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostCancellationConsequenceCreate = ("create" :> ReqBody '[JSON] CreateCancellationConsequenceReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostCancellationConsequenceUpdate = ("update" :> ReqBody ('[JSON]) UpdateCancellationConsequenceReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostCancellationConsequenceUpdate = ("update" :> ReqBody '[JSON] UpdateCancellationConsequenceReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetCancellationConsequenceRegistryList = ("registry" :> "list" :> Get ('[JSON]) FaultRuleRegistryListRes)
+type GetCancellationConsequenceRegistryList = ("registry" :> "list" :> Get '[JSON] FaultRuleRegistryListRes)
 
-type PostCancellationConsequenceRegistryUpsert = ("registry" :> "upsert" :> ReqBody ('[JSON]) UpsertFaultRuleRegistryReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostCancellationConsequenceRegistryUpsert = ("registry" :> "upsert" :> ReqBody '[JSON] UpsertFaultRuleRegistryReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data CancellationConsequenceAPIs = CancellationConsequenceAPIs
-  { getCancellationConsequenceList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient CancellationConsequenceListRes),
-    postCancellationConsequenceCreate :: (CreateCancellationConsequenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postCancellationConsequenceUpdate :: (UpdateCancellationConsequenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getCancellationConsequenceRegistryList :: (EulerHS.Types.EulerClient FaultRuleRegistryListRes),
-    postCancellationConsequenceRegistryUpsert :: (UpsertFaultRuleRegistryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getCancellationConsequenceList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient CancellationConsequenceListRes,
+    postCancellationConsequenceCreate :: CreateCancellationConsequenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postCancellationConsequenceUpdate :: UpdateCancellationConsequenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getCancellationConsequenceRegistryList :: EulerHS.Types.EulerClient FaultRuleRegistryListRes,
+    postCancellationConsequenceRegistryUpsert :: UpsertFaultRuleRegistryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkCancellationConsequenceAPIs :: (Client EulerHS.Types.EulerClient API -> CancellationConsequenceAPIs)
@@ -155,4 +159,4 @@ data CancellationConsequenceUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''CancellationConsequenceUserActionType)])
+$(Data.Singletons.TH.genSingletons [''CancellationConsequenceUserActionType])

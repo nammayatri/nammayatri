@@ -20,6 +20,7 @@ module SharedLogic.CancellationDues where
 
 import Data.List (sortOn)
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.CancellationConsequenceMatrix as DCCM
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
@@ -111,6 +112,13 @@ settleCancellationDuesUpTo riderDetails amountCollected = do
       | coveredSoFar + dues.cancellationAmount <= amountCollected = dues : takeCovered (coveredSoFar + dues.cancellationAmount) rest
       | otherwise = []
 
+-- | Was this charge collected at cancel time rather than carried as a due? The row
+-- stores the mode as free text (written as @show \@ConsequenceCollectionMode@), so
+-- compare against the constructor rather than a bare literal — a rename of the
+-- constructor then fails to compile here instead of silently never matching.
+wasCollectedImmediately :: DCDD.CancellationDuesDetails -> Bool
+wasCollectedImmediately cdd = cdd.cancellationCollectionMode == Just (show DCCM.ImmediateCapture)
+
 -- | Settle exactly one ride's pending dues row (Stripe immediate-capture path):
 -- decrement the balance by that row's amount and mark it PAID.
 settleCustomerCancellationDues ::
@@ -127,9 +135,10 @@ settleCustomerCancellationDues booking ride =
       mbCancellationDuesDetails <- QCDD.findByRideId ride.id
       case mbCancellationDuesDetails of
         Just cancellationDuesDetails | cancellationDuesDetails.paymentStatus == DCDD.PENDING -> do
-          riderDetails <- QRD.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
-          QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - cancellationDuesDetails.cancellationAmount)) rid
-          QRD.updateCancellationDuesPaymentInfo cancellationDuesDetails.cancellationAmount riderDetails
+          unless (wasCollectedImmediately cancellationDuesDetails) $ do
+            riderDetails <- QRD.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
+            QRD.updateCancellationDues (max 0 (riderDetails.cancellationDues - cancellationDuesDetails.cancellationAmount)) rid
+            QRD.updateCancellationDuesPaymentInfo cancellationDuesDetails.cancellationAmount riderDetails
           QCDD.updatePaymentStatusByRideId DCDD.PAID ride.id
-          logInfo $ "Cleared customer cancellation dues for rideId: " <> ride.id.getId <> " amount=" <> show cancellationDuesDetails.cancellationAmount
+          logInfo $ "Cleared customer cancellation dues for rideId: " <> ride.id.getId <> " amount=" <> show cancellationDuesDetails.cancellationAmount <> " immediateCapture=" <> show (wasCollectedImmediately cancellationDuesDetails)
         _ -> logInfo $ "No pending cancellation dues to settle for rideId: " <> ride.id.getId

@@ -77,6 +77,7 @@ types:
   CommissionAndTaxAPI:
     - taxPercentage: Maybe HighPrecMoney
     - commission: Maybe ChargeRateAPI
+    - amountsInclusiveOfTax: Maybe Bool
   CancellationConsequenceRowAPI:
     - faultVerdict: Maybe Text
     - faultRule: Maybe Text

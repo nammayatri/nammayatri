@@ -172,8 +172,12 @@ computeCustomerCharge :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> 
 computeCustomerCharge row estimatedFare =
   case row.customerDeduction of
     Just (DExtra.MoneyDeduction money) ->
-      let (base, overdueFee) = moneyDeductionAmount money estimatedFare
-          (tax, commission) = customerTaxAndCommission row base
+      let (amount, overdueFee) = moneyDeductionAmount money estimatedFare
+          (base, tax) =
+            if amountsAreInclusiveOfTax row
+              then splitTaxInclusiveTotal row amount
+              else (amount, fst (customerTaxAndCommission row amount))
+          commission = snd (customerTaxAndCommission row base)
        in CustomerChargeBreakup {fee = Just base, tax, commission, overdueFee}
     Just (DExtra.MoneyAddition money) ->
       let (base, _overdue) = moneyDeductionAmount money estimatedFare
@@ -182,6 +186,9 @@ computeCustomerCharge row estimatedFare =
 
 shouldCarryForwardDues :: Maybe DCCM.CancellationConsequenceMatrix -> Bool
 shouldCarryForwardDues mbRow = (mbRow >>= (.collectionMode)) /= Just DCCM.ImmediateCapture
+
+amountsAreInclusiveOfTax :: DCCM.CancellationConsequenceMatrix -> Bool
+amountsAreInclusiveOfTax row = fromMaybe False ((.amountsInclusiveOfTax) =<< row.customerCommissionAndTax)
 
 customerIsCharged :: DCCM.CancellationConsequenceMatrix -> Bool
 customerIsCharged row = case row.customerDeduction of
