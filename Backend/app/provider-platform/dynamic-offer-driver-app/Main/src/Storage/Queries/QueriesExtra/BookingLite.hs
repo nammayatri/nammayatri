@@ -22,8 +22,10 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
 import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
@@ -81,6 +83,9 @@ data BookingLite = BookingLite
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
+    vehicleServiceTierName :: Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    currency :: Kernel.Utils.Common.Currency,
     tripCategory :: Domain.Types.Common.TripCategory,
     startTime :: Kernel.Prelude.UTCTime,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
@@ -104,6 +109,9 @@ instance FromTType' BookingLiteTable BookingLite where
             displayBookingId = displayBookingId,
             riderId = Kernel.Types.Id.Id <$> riderId,
             vehicleServiceTier = vehicleVariant,
+            vehicleServiceTierName = fromMaybe (show vehicleVariant) vehicleServiceTierName,
+            estimatedFare = estimatedFare,
+            currency = fromMaybe Kernel.Types.Common.INR currency,
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
             startTime = startTime,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)

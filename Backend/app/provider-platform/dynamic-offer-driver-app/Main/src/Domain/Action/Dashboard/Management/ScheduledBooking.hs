@@ -16,12 +16,16 @@ module Domain.Action.Dashboard.Management.ScheduledBooking
   ( getScheduledBookingList,
     getScheduledBookingInfo,
     getScheduledBookingDriverDistance,
+    getScheduledBookingNearbyDrivers,
     postScheduledBookingAssign,
     postScheduledBookingUnassign,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
+import qualified Data.HashMap.Strict as HashMap
+import Data.List (nubBy, sortOn)
+import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
@@ -41,15 +45,24 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Person.GetNearestDrivers as GND
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -66,6 +79,11 @@ graceWindowSeconds = 30 * 60
 -- | Upper bound used when the caller does not pass a `to` filter.
 defaultLookaheadSeconds :: Int
 defaultLookaheadSeconds = 90 * 24 * 60 * 60
+
+-- | Default search radius for the ops "nearby eligible drivers" lookup when the dashboard
+-- does not pass one.
+defaultNearbyRadiusKm :: Double
+defaultNearbyRadiusKm = 5.0
 
 maxLimit :: Int
 maxLimit = 20
@@ -125,7 +143,11 @@ buildListItem booking mbRide = do
         driverId = (\r -> r.driverId.getId) <$> mbRide,
         bookingStatus = castBookingStatus booking.status,
         rideStatus = castRideStatus . (.status) <$> mbRide,
-        reallocationCount = max 0 (length txnBookings - 1)
+        reallocationCount = max 0 (length txnBookings - 1),
+        estimatedFare = booking.estimatedFare,
+        currency = booking.currency,
+        vehicleServiceTier = booking.vehicleServiceTier,
+        vehicleServiceTierName = booking.vehicleServiceTierName
       }
 
 -- Resolve just the pickup location for one booking (2 reads: latest pickup mapping + location).
@@ -173,6 +195,10 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
         -- rental package (estimated distance/duration of the booked package; also present for other trips)
         estimatedDistance = booking.estimatedDistance,
         estimatedDurationSeconds = (.getSeconds) <$> booking.estimatedDuration,
+        estimatedFare = booking.estimatedFare,
+        currency = booking.currency,
+        vehicleServiceTier = booking.vehicleServiceTier,
+        vehicleServiceTierName = booking.vehicleServiceTierName,
         reallocationHistory
       }
 
@@ -237,6 +263,76 @@ getScheduledBookingDriverDistance merchantShortId opCity transactionId = do
             etaToPickupSeconds = (.getSeconds) <$> mbDur,
             computedAt = now
           }
+
+getScheduledBookingNearbyDrivers ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Double ->
+  Flow Common.NearbyDriversRes
+getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
+  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
+    throwError (BookingNotFound transactionId)
+  now <- getCurrentTime
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing
+  let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
+      scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now
+      radiusKm = max 0 $ fromMaybe defaultNearbyRadiusKm mbRadiusKm
+      radiusMeters = round (radiusKm * 1000) :: Int
+      pickupLatLong = KEMT.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+  driverLocations <- nubBy (\x y -> x.driverId == y.driverId) <$> LF.nearBy booking.fromLocation.lat booking.fromLocation.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
+  let driverIds = (.driverId) <$> driverLocations
+  if null driverIds
+    then pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = []}
+    else do
+      -- One batched mGet over LTS redis (primary + secondary) for the whole pool.
+      poolData <- DPD.getDriverPoolDataBatch (cast <$> driverIds)
+      let poolByDriver = Map.fromList [(pd.driverId, pd) | pd <- poolData]
+
+          driverTagTexts pd =
+            LYT.getTagNameValue . LYTU.removeTagExpiry <$> LYTU.filterExpiredTags' now (fromMaybe [] pd.driverTag)
+          tierEligible pd =
+            GND.scheduledTierEligibleForDriver True scheduledOpenToAll (driverTagTexts pd) cityServiceTiersHashMap booking.vehicleServiceTier
+          isEligible pd =
+            pd.enabled
+              && not pd.blocked
+              && not pd.onRide
+              && booking.vehicleServiceTier `elem` pd.selectedServiceTiers
+              && tierEligible pd
+          eligible =
+            [ (locn, pd)
+              | locn <- driverLocations,
+                Just pd <- [Map.lookup (cast locn.driverId) poolByDriver],
+                isEligible pd
+            ]
+
+      persons <- QPerson.getDriversByIdIn ((.driverId) . fst <$> eligible)
+      let personByDriver = Map.fromList [(p.id, p) | p <- persons]
+          -- "firstName lastName", collapsing to just firstName when lastName is absent.
+          mkName p = p.firstName <> maybe "" (" " <>) p.lastName
+      drivers <- forM eligible $ \(locn, pd) -> do
+        let mbPerson = Map.lookup locn.driverId personByDriver
+        mbPhone <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
+        pure
+          Common.NearbyDriverItem
+            { driverId = locn.driverId.getId,
+              driverName = maybe "" mkName mbPerson,
+              driverPhoneNo = mbPhone,
+              serviceTiers = pd.selectedServiceTiers,
+              straightLineDistanceMeters =
+                highPrecMetersToMeters $
+                  distanceBetweenInMeters (KEMT.LatLong {lat = locn.lat, lon = locn.lon}) pickupLatLong
+            }
+      -- nearest first: the order ops actually scan
+      pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = sortOn (.straightLineDistanceMeters) drivers}
 
 postScheduledBookingAssign ::
   ShortId DM.Merchant ->
