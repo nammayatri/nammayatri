@@ -458,6 +458,7 @@ validateRequest _merchantId req = do
     validatePaymentMode searchRequest = do
       let paymentMode = fromMaybe DMPM.LIVE req.paymentMode
           paymentMode' = fromMaybe DMPM.LIVE searchRequest.paymentMode
+      logDebug $ "paymentMode|init|fromInit=" <> show req.paymentMode <> " fromSearch=" <> show searchRequest.paymentMode <> " resolved=" <> show paymentMode
       unless (paymentMode == paymentMode') $ throwError (InvalidRequest "Wrong payment mode")
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool

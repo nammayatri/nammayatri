@@ -20,6 +20,7 @@ import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -71,9 +72,10 @@ getPersonRegisterBankAccountLink ::
   Maybe DIB.InitiatedBy ->
   Domain.Types.Person.Person ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-getPersonRegisterBankAccountLink h mbPaymentMode mbInitiatedBy person = do
+getPersonRegisterBankAccountLink h mbPaymentMode mbInitiatedBy person = withDynamicLogLevel "payment-mode" $ do
   mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
   paymentMode <- validatePaymentMode mbPaymentMode mPersonBankAccount
+  logDebug $ "paymentMode|bankAccount|personId=" <> person.id.getId <> " requested=" <> show mbPaymentMode <> " stored=" <> show (mPersonBankAccount >>= (.paymentMode)) <> " resolved=" <> show paymentMode
   now <- getCurrentTime
   case mPersonBankAccount of
     Just bankAccount -> do

@@ -186,6 +186,7 @@ getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion
     _ -> throwError $ InternalError "Unknown Service Name"
   let mbPaymentMode = mbPersonBankAccount >>= (.paymentMode)
   payoutServiceName <- modifyServiceName payoutServiceNameRaw (fromMaybe DMPM.LIVE mbPaymentMode) clientSdkVersion merchantOperatingCityId
+  logDebug $ "paymentMode|payout|personId=" <> personId.getId <> " mode=" <> show mbPaymentMode <> " service=" <> show payoutServiceName <> " connectedAccount=" <> show (mbPersonBankAccount <&> (.accountId))
   pure (payoutServiceFlow, payoutServiceName, mbPersonBankAccount)
   where
     -- Fleet-override: a fleet driver transacts on the fleet's account.

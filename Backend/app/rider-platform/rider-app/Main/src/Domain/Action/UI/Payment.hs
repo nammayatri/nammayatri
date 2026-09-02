@@ -81,6 +81,7 @@ import Kernel.Prelude hiding (head)
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -789,7 +790,8 @@ stripeWebhookHandler' ::
   Maybe Text ->
   RawByteString ->
   Flow AckResponse
-stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = withDynamicLogLevel "payment-mode" $ do
+  logDebug $ "paymentMode|webhook|endpointMode=" <> show paymentMode
   let serviceName = case paymentMode of
         DMPM.LIVE -> Payment.Stripe
         DMPM.TEST -> Payment.StripeTest
@@ -801,7 +803,7 @@ stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId
   let modeCheckedWebhookAction resp respDump =
         if resp.livemode /= (paymentMode == DMPM.LIVE)
           then do
-            logInfo $ "Stripe payment webhook livemode mismatch; ignoring. endpointMode=" <> show paymentMode <> " eventLivemode=" <> show resp.livemode
+            logInfo $ "paymentMode|webhook|livemode mismatch, ignoring. endpointMode=" <> show paymentMode <> " eventLivemode=" <> show resp.livemode
             pure Ack
           else stripeWebhookAction paymentMode merchantOperatingCity.id resp respDump
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent modeCheckedWebhookAction mbSigHeader rawBytes
@@ -830,6 +832,7 @@ isCrossModeOrder paymentMode (Just orderShortId) = do
     Nothing -> pure False
     Just order -> do
       let mismatched = order.serviceProvider `elem` [Payment.Stripe, Payment.StripeTest] && order.serviceProvider /= expectedService
+      logDebug $ "paymentMode|webhook|orderShortId=" <> orderShortId <> " orderServiceProvider=" <> show order.serviceProvider <> " expected=" <> show expectedService <> " crossMode=" <> show mismatched
       when mismatched $
         logError $
           "Stripe webhook targets an order from another environment; ignoring. orderShortId=" <> orderShortId

@@ -976,6 +976,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
       offerBasket <- TPayment.mkOfferBasket merchantId merchantOpCityId Nothing paymentServiceType effectiveAmount 1
       mbCardMetadata <- getCardMetadataForPaymentMethod personId paymentMode req.paymentMethod
       resolvedPaymentService <- TPayment.resolvePaymentServiceByMode (.createPaymentIntent) merchantOpCityId paymentMode
+      logDebug $ "paymentMode|intent|mode=" <> show paymentMode <> " resolvedService=" <> show resolvedPaymentService <> " customer=" <> req.customer <> " driverAccountId=" <> req.driverAccountId
       let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
