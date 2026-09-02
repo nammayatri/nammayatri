@@ -104,18 +104,20 @@ updateRefundsEntryByResponse ::
   Payment.RefundStatus ->
   Maybe Text ->
   Maybe UTCTime ->
+  Maybe UTCTime ->
   Maybe HighPrecMoney ->
   DRefunds.Refunds ->
   Maybe Text ->
   m ()
-updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt actualRefundedAmount refunds mbAction = do
+updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt arnGeneratedAt actualRefundedAmount refunds mbAction = do
   let historyMessage =
         "Update refunds entry by response: "
           <> RefundsHistory.getStatusMessage status
           <> maybe "" ("; action: " <>) mbAction
           <> maybe "" ("; error code: " <>) mbErrorCode
           <> maybe "" ("; error message: " <>) mbErrorMessage
-  QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt actualRefundedAmount refunds.id
+          <> maybe "" (("; arn generated at: " <>) . show) arnGeneratedAt
+  QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider mbErrorMessage mbErrorCode status arn completedAt arnGeneratedAt actualRefundedAmount refunds.id
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) status (Just historyMessage) refunds
 
 updateRefundsEntryByStripeResponse ::
@@ -128,18 +130,20 @@ updateRefundsEntryByStripeResponse ::
   Maybe Text ->
   Maybe Bool ->
   Maybe UTCTime ->
+  Maybe UTCTime ->
   Maybe HighPrecMoney ->
   DRefunds.Refunds ->
   Maybe Text ->
   m ()
-updateRefundsEntryByStripeResponse merchantOpCityId idAssignedByServiceProvider mbErrorCode status arn referenceType isApiCallSuccess completedAt actualRefundedAmount refunds mbAction = do
+updateRefundsEntryByStripeResponse merchantOpCityId idAssignedByServiceProvider mbErrorCode status arn referenceType isApiCallSuccess completedAt arnGeneratedAt actualRefundedAmount refunds mbAction = do
   let historyMessage =
         "Update refunds entry by Stripe response: "
           <> RefundsHistory.getStatusMessage status
           <> maybe "" ("; action: " <>) mbAction
           <> maybe "" ("; error code: " <>) mbErrorCode
           <> maybe "" (("; is api call success: " <>) . show) isApiCallSuccess
-  QRefunds.updateRefundsEntryByStripeResponse idAssignedByServiceProvider mbErrorCode status arn referenceType isApiCallSuccess completedAt actualRefundedAmount refunds.id
+          <> maybe "" (("; arn generated at: " <>) . show) arnGeneratedAt
+  QRefunds.updateRefundsEntryByStripeResponse idAssignedByServiceProvider mbErrorCode status arn referenceType isApiCallSuccess completedAt arnGeneratedAt actualRefundedAmount refunds.id
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) status (Just historyMessage) refunds
 
 findLatestByOrderId ::

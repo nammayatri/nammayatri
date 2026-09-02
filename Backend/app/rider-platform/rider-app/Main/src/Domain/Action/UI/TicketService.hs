@@ -787,6 +787,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             initiatedBy = Nothing,
             referenceType = Nothing, -- Juspay does not report a reference type
             completedAt = Nothing,
+            arnGeneratedAt = Nothing,
             actualRefundedAmount = Just amount,
             createdAt = now,
             updatedAt = now,

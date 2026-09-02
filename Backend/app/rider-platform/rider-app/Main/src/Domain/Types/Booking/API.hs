@@ -177,7 +177,8 @@ data RideCardInfo = RideCardInfo
     cardIsin :: Maybe Text,
     cardLastFourDigits :: Maybe Text,
     cardIssuer :: Maybe Text,
-    cardType :: Maybe Text
+    cardType :: Maybe Text,
+    paymentInitiatedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -193,7 +194,9 @@ data RideRefundInfo = RideRefundInfo
     --   forever when the payment partner has no reference scheme. Reads the refunds.arn column, which
     --   predates the non-card methods that also populate it.
     reference :: Maybe Text,
-    referenceType :: Maybe Text -- acquirer_reference_number | stan | rrn; cards only
+    referenceType :: Maybe Text, -- acquirer_reference_number | stan | rrn; cards only
+    completedAt :: Maybe UTCTime,
+    arnGeneratedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -626,7 +629,8 @@ getOrderCardInfo mbOrder = runMaybeT $ do
         cardIsin = txn.cardIsin,
         cardLastFourDigits = txn.cardLastFourDigits,
         cardIssuer = txn.cardIssuer,
-        cardType = txn.cardType
+        cardType = txn.cardType,
+        paymentInitiatedAt = txn.authorizationDateTime <|> txn.dateCreated
       }
 
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well

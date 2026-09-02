@@ -26,6 +26,7 @@ Refunds:
     arn: Maybe Text
     referenceType: Maybe Text
     completedAt: Maybe UTCTime
+    arnGeneratedAt: Maybe UTCTime
     actualRefundedAmount: Maybe HighPrecMoney
 
   constraints:
@@ -38,6 +39,7 @@ Refunds:
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
     completedAt: timestamp with time zone
+    arnGeneratedAt: timestamp with time zone
     split: "json"
 
   queries:
@@ -52,11 +54,11 @@ Refunds:
       where: orderId
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV
-      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn, completedAt, actualRefundedAmount]
+      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status, arn, completedAt, arnGeneratedAt, actualRefundedAmount]
       where: id
     updateRefundsEntryByStripeResponse:
       kvFunction: updateWithKV
-      params: [idAssignedByServiceProvider, errorCode, status, arn, referenceType, isApiCallSuccess, completedAt, actualRefundedAmount]
+      params: [idAssignedByServiceProvider, errorCode, status, arn, referenceType, isApiCallSuccess, completedAt, arnGeneratedAt, actualRefundedAmount]
       where: id
     updateIsApiCallSuccess:
       kvFunction: updateWithKV

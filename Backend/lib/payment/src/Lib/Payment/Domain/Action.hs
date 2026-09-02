@@ -726,7 +726,8 @@ refundPaymentService req refundCall = do
         Right response -> do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
-          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status response.reference response.referenceType (Just True) newCompletedAt response.amount refundsEntry mbAction
+              newArnGeneratedAt = calculateArnGeneratedAt refundsEntry.arnGeneratedAt response.status response.reference now
+          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status response.reference response.referenceType (Just True) newCompletedAt newArnGeneratedAt response.amount refundsEntry mbAction
           -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
           -- the same id the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
@@ -738,7 +739,7 @@ refundPaymentService req refundCall = do
           logError $ "Refund API Call Failure with Error: " <> show exec
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
           -- Flip status to REFUND_FAILURE so retry works (else the row is stuck at REFUND_PENDING forever).
-          HQRefunds.updateRefundsEntryByResponse req.merchantOpCityId Nothing Nothing gwErrorMessage gwErrorCode PInterface.REFUND_FAILURE Nothing Nothing Nothing refundsEntry mbAction
+          HQRefunds.updateRefundsEntryByResponse req.merchantOpCityId Nothing Nothing gwErrorMessage gwErrorCode PInterface.REFUND_FAILURE Nothing Nothing refundsEntry.arnGeneratedAt Nothing refundsEntry mbAction
           -- Surface the failed attempt so the caller links refund_request.refunds_id — the
           -- dashboard reads status/errorCode off that link, and a retry targets this row via it.
           pure $
@@ -781,8 +782,13 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
             case resp of
               Right result -> do
                 now <- getCurrentTime
-                let newCompletedAt = calculateCompletedAt result.status now
-                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status (result.reference <|> refund.arn) (result.referenceType <|> refund.referenceType) refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
+                let newCompletedAt = refund.completedAt <|> calculateCompletedAt result.status now
+                    newArn = result.reference <|> refund.arn
+                    newArnGeneratedAt =
+                      if isNothing refund.arn && isJust result.reference
+                        then calculateArnGeneratedAt refund.arnGeneratedAt result.status newArn now
+                        else refund.arnGeneratedAt
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status newArn (result.referenceType <|> refund.referenceType) refund.isApiCallSuccess newCompletedAt newArnGeneratedAt result.amount refund (Just "get refund status service")
                 -- Return the internal refunds.id (matches refundPaymentService).
                 pure $ Just result {PInterface.refundId = refund.id.getId}
               Left err -> do
@@ -2147,7 +2153,7 @@ stripeWebhookService merchantOpCityId resp respDump stripeWebhookData = do
     RefundWebhookData refundsInfo -> do
       case refundsInfo.orderShortId of
         Just orderShortId -> do
-          Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook merchantOpCityId refundsInfo -- respDump currently does not stored in refunds table
+          Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook merchantOpCityId resp.createdAt refundsInfo -- respDump currently does not stored in refunds table
         Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
     SkipWebhookData -> logInfo $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
 
@@ -2322,9 +2328,10 @@ updateRefundsByWebhook ::
     Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
+  UTCTime ->
   PEInterface.Refund ->
   m ()
-updateRefundsByWebhook merchantOpCityId refundInfo = do
+updateRefundsByWebhook merchantOpCityId eventCreatedAt refundInfo = do
   refundsId <- (Id @Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
   refunds <- HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.")
   -- The reference lands on a refund.updated whose status and errorCode are unchanged, so it has to be
@@ -2333,7 +2340,9 @@ updateRefundsByWebhook merchantOpCityId refundInfo = do
     now <- getCurrentTime
     -- Keep the first terminal timestamp; a late reference-only update would otherwise restamp it.
     let newCompletedAt = refunds.completedAt <|> calculateCompletedAt refundInfo.status now
-    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status (refundInfo.reference <|> refunds.arn) (refundInfo.referenceType <|> refunds.referenceType) refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
+        newArn = refundInfo.reference <|> refunds.arn
+        newArnGeneratedAt = calculateArnGeneratedAt refunds.arnGeneratedAt refundInfo.status newArn eventCreatedAt
+    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status newArn (refundInfo.referenceType <|> refunds.referenceType) refunds.isApiCallSuccess newCompletedAt newArnGeneratedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
 
 --- notification api ----------
 
@@ -2530,6 +2539,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         arn = Nothing,
         referenceType = Nothing,
         completedAt = Nothing,
+        arnGeneratedAt = Nothing,
         actualRefundedAmount = Nothing
       }
 
@@ -2544,8 +2554,9 @@ upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
           HQRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt (Just amount) refundEntry mbAction
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, actualRefundedAmount = Just amount}
+                let newArnGeneratedAt = calculateArnGeneratedAt refundEntry.arnGeneratedAt status arn now
+                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt newArnGeneratedAt (Just amount) refundEntry mbAction
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, arnGeneratedAt = newArnGeneratedAt, actualRefundedAmount = Just amount}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 HQRefunds.create merchantOpCityId refundEntry mbAction
@@ -2564,6 +2575,12 @@ calculateCompletedAt status now =
     Payment.REFUND_SUCCESS -> Just now
     Payment.REFUND_FAILURE -> Just now
     _ -> Nothing
+
+calculateArnGeneratedAt :: Maybe UTCTime -> Payment.RefundStatus -> Maybe Text -> UTCTime -> Maybe UTCTime
+calculateArnGeneratedAt existingArnGeneratedAt status mbArn stampedAt
+  | isJust existingArnGeneratedAt = existingArnGeneratedAt
+  | status == Payment.REFUND_SUCCESS, isJust mbArn = Just stampedAt
+  | otherwise = Nothing
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

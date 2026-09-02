@@ -60,3 +60,8 @@ ALTER TABLE atlas_app.refunds ADD COLUMN actual_refunded_amount double precision
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.refunds ADD COLUMN reference_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refunds ADD COLUMN arn_generated_at timestamp with time zone ;
