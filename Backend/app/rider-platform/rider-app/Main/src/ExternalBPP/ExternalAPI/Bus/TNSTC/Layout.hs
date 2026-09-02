@@ -5,6 +5,7 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Layout
     GetServiceSeatDetailsReq (..),
     getConcessionTypes,
     getAddressPlaceList,
+    getIdProofTypes,
     getServiceSeatDetails,
   )
 where
@@ -16,6 +17,7 @@ import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML
@@ -94,6 +96,26 @@ data GetAddressPlaceListReq = GetAddressPlaceListReq
 
 instance ToXML GetAddressPlaceListReq where
   toXML _ = element (op "GetAddressPlaceList") (pure () :: XML)
+
+-- | GetActivelookUpValues(IDPROOF, ONLINE_BOOKING) -> the ID proof types valid for online
+-- booking. Tiny, global and changes ~never, so it is cached in-process for a day: with several
+-- pods that is one vendor call per pod per day, and Redis would add a hop to every /seats for a
+-- few hundred bytes.
+data GetLookupValuesReq = GetLookupValuesReq
+  { rqlvType :: Text,
+    rqlvContext :: Text
+  }
+
+instance ToXML GetLookupValuesReq where
+  toXML req =
+    element (op "GetActivelookUpValues") $ do
+      elementA (XML.Name "arg0" Nothing Nothing) ([] :: [(XML.Name, Text)]) req.rqlvType
+      elementA (XML.Name "arg1" Nothing Nothing) ([] :: [(XML.Name, Text)]) req.rqlvContext
+
+getIdProofTypes :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> m [TnstcLookupValue]
+getIdProofTypes config cacheScope =
+  IM.withInMemCache ["tnstcIdProofTypes", cacheScope] 86400 $
+    callTnstc config "GetActivelookUpValues" (GetLookupValuesReq "IDPROOF" "ONLINE_BOOKING") parseLookupValues
 
 getAddressPlaceList :: TnstcFlow m r => TNSTCConfig -> m [TnstcPlace]
 getAddressPlaceList config = callTnstc config "GetAddressPlaceList" GetAddressPlaceListReq parsePlaces

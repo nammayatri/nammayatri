@@ -17,6 +17,8 @@ data FRFSPassengerDetailT f = FRFSPassengerDetailT
     dropOffPointPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gender :: B.C f Domain.Types.Person.Gender,
     id :: B.C f Kernel.Prelude.Text,
+    idProofLookupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    idProofNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isChild :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

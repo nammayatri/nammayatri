@@ -65,6 +65,7 @@ data DQuote = DQuote
     arrivalTime :: Maybe Text,
     arrivalDate :: Maybe Text,
     availableSeats :: Maybe Int,
+    stopBookingTime :: Maybe UTCTime,
     bppItemId :: Text,
     routeCode :: Text,
     vehicleType :: Spec.VehicleCategory,

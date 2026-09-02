@@ -316,6 +316,8 @@ FRFSPassengerDetail:
     isChild: Bool
     pickupPointPlaceId: Maybe Text
     dropOffPointPlaceId: Maybe Text
+    idProofLookupId: Maybe Text
+    idProofNumber: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
@@ -336,7 +338,11 @@ FRFSPassengerDetail:
     deleteAllByQuoteId:
       kvFunction: deleteWithKV
       where: quoteId
+      
   excludedFields: [merchantOperatingCityId, merchantId]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
 # Default FRFSQuoteCategory is for ADULT category
 FRFSQuoteCategory:
