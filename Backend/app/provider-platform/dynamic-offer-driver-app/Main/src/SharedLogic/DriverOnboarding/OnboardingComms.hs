@@ -77,10 +77,23 @@ fleetOwnerDriverDeclinedInviteKey = "FLEET_OWNER_DRIVER_DECLINED_INVITE"
 
 setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> DP.Person -> DI.OnboardingAs -> m ()
 setOnboardingAs transporterConfig driver onboardingAs = do
+  endFleetAssociationsOnLeavingFleetDriver
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver driver.id) $
     QDIExtra.updateOnboardingAs (Just onboardingAs) (cast driver.id)
   fork "Onboarding as changed notification" $ do
     notifyOnOnboardingAsChange driver onboardingAs
+  where
+    endFleetAssociationsOnLeavingFleetDriver =
+      when (onboardingAs /= DI.FLEET_DRIVER) $ do
+        mbDriverInfo <- QDIExtra.findById (cast driver.id)
+        when (((.onboardingAs) =<< mbDriverInfo) == Just DI.FLEET_DRIVER) $ do
+          activeAssociations <- QFDA.findAllByDriverId driver.id True
+          forM_ activeAssociations $ \association ->
+            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
+              logInfo $ "setOnboardingAs: ending fleet driver association for fleetOwnerId: " <> association.fleetOwnerId <> ", driverId: " <> association.driverId.getId
+              QFDA.endFleetDriverAssociation association.fleetOwnerId association.driverId
+              fork "Driver fleet unlink notification" $
+                notifyOnDriverFleetUnlink driver.merchantOperatingCityId driver association.fleetOwnerId ByDriver
 
 notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs -> m ()
 notifyOnOnboardingAsChange driver onboardingAs = do
