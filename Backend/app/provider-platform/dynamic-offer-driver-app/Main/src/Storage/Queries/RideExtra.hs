@@ -237,7 +237,7 @@ getInProgressByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Per
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
 getInProgressByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Ride]
-getInProgressByDriverIds driverIds = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]] Nothing
+getInProgressByDriverIds driverIds = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
 getActiveAdvancedRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getActiveAdvancedRideByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.NEW], Se.Is BeamR.isAdvanceBooking $ Se.Eq (Just True)]]
@@ -1193,13 +1193,12 @@ getRideId rideItem = rideItem.rideDetails.id
 -- NOTE : This query shouldn't be modified with status as parameter as it has partial index
 notOnRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Bool
 notOnRide (Id driverId) = do
-  findAllWithKVAndConditionalDB
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamR.driverId $ Se.Eq driverId,
           Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]
         ]
     ]
-    Nothing
     <&> null
 
 findRidesFromDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> m [Ride]

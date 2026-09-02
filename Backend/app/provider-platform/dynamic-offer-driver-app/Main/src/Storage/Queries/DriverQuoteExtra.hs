@@ -21,13 +21,12 @@ import Storage.Queries.OrphanInstances.DriverQuote ()
 
 findAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) =
-  findAllWithKVAndConditionalDB
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId,
           Se.Is BeamDQ.status $ Se.Eq Domain.Active
         ]
     ]
-    Nothing
 
 findAllBySTIdIgnoringStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTIdIgnoringStatus (Id searchTryId) =
