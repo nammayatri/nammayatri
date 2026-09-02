@@ -224,9 +224,16 @@ sendPickupConfirm env ev ctx mNamedPlace = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
   save env ev ctx {state = ConfirmingPickup}
-  let areaMaybe = ctx.origin >>= (\o -> o.address.area)
-      faMaybe = formatAddress <$> ctx.origin
-      label = firstNonEmpty [mNamedPlace, areaMaybe, faMaybe] "your shared location"
+  let faMaybe = formatAddress <$> ctx.origin
+      areaMaybe = ctx.origin >>= (\o -> o.address.area)
+      -- Full address (building/street/area) preferred over the bare area
+      -- name — deliberate deviation from engine.ts:1021-1038's area-first
+      -- ordering, per product decision to show the precise address instead
+      -- of a vague neighborhood name. formatAddress itself already falls
+      -- back to "lat, lon" when building/street/area are all empty, so this
+      -- is never blank; areaMaybe / "your shared location" remain as
+      -- further fallbacks for a Nothing ctx.origin.
+      label = firstNonEmpty [mNamedPlace, faMaybe, areaMaybe] "your shared location"
       body = case mNamedPlace of
         Just np -> s.flexiConfirmSavedPlace np
         Nothing -> s.flexiConfirmPickup label
