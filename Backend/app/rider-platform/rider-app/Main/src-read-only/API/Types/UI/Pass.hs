@@ -60,6 +60,7 @@ data PassAPIEntity = PassAPIEntity
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
     referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    timeOverlappingFrfsBookingsLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
