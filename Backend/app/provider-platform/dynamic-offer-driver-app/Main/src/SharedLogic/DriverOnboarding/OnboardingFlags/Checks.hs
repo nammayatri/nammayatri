@@ -444,7 +444,7 @@ onboardingFlow = do
   unified $ check ActivateVehicle AnyActor DriverTarget driverLiveForRcPick -- must be live to pick up an RC
   unified $ check ActivateToFleet AnyActor DriverTarget driverNotBlocked -- a blocked driver joins no fleet
   unified $ check SetOnboardingAs AnyActor DriverTarget driverOnboardingSettable -- settled before the driver goes live
-  unified $ check linkToFleetOrOperator AnyActor DriverTarget driverLinkableToFleet -- an active driver moves instead
+  unified $ check [LinkToFleet, LinkToOperator] AnyActor DriverTarget driverLinkableToFleet -- an active driver moves instead
   unified $ check LinkToFleet AnyActor DriverTarget driverNotSelfEmployed
   unified $ check LinkVehicle AnyActor VehicleTarget rcClearedForRoad -- RC valid, verified and approved
   unified $ check Enable AnyActor FleetTarget fleetEnableable -- only a fleet owner who is down comes up
