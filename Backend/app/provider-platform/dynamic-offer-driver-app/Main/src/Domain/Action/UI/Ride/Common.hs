@@ -242,7 +242,8 @@ data DriverRideRes = DriverRideRes
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    isAutoAccepted :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -692,7 +693,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
-        customerLanguage = booking.customerLanguage
+        customerLanguage = booking.customerLanguage,
+        isAutoAccepted = booking.isAutoAccepted
       }
 
 -- calculateLocations moved from UI.Ride

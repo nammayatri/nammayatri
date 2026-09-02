@@ -3,7 +3,8 @@ module Storage.Queries.BookingExtra where
 -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 
 import qualified Data.Aeson as A
-import Data.List.Extra (notNull)
+import Data.List.Extra (notNull, sortOn)
+import Data.Ord (Down (..))
 import qualified Data.Time as DT
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -84,12 +85,11 @@ findAllByTransactionId txnId =
 
 findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatuses transactionId statusList =
-  findAllWithKVAndConditionalDB
+  findAllWithKV
     [ Se.Is BeamB.transactionId $ Se.Eq transactionId,
       Se.Is BeamB.status $ Se.In statusList
     ]
-    (Just (Se.Desc BeamB.createdAt))
-    <&> listToMaybe
+    <&> (listToMaybe . sortOn (Down . (.createdAt)))
 
 findAllByStatusAndDateRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [BookingStatus] -> UTCTime -> UTCTime -> m [Booking]
 findAllByStatusAndDateRange merchantOpCityId statuses startTime endTime =
