@@ -193,7 +193,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool -- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -534,6 +534,15 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           case jobData' of
             Just jobData -> do
               createJobIn @_ @'AggregatedCommissionInvoiceCreation (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: AggregatedCommissionInvoiceCreationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.RetryAutopayCollectionTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe RetryAutopayCollectionJobData
+          case jobData' of
+            Just jobData -> do
+              merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
+              merchantOpCityId <- CQMOC.getMerchantOpCityId jobData.merchantOperatingCityId merchant Nothing
+              createJobIn @_ @'RetryAutopayCollection (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: RetryAutopayCollectionJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
