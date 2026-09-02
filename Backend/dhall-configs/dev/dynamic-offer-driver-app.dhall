@@ -283,6 +283,7 @@ let AllocatorJobType =
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
+      | RetryAutopayCollection
       | SendOverlay
       | SupplyDemand
       | CongestionCharge
@@ -352,6 +353,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.OrderAndNotificationStatusUpdate
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.RetryAutopayCollection, mapValue = True }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
       , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
       , { mapKey = AllocatorJobType.RetryDocumentVerification
