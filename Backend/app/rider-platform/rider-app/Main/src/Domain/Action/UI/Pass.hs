@@ -301,8 +301,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
       Just samePass -> do
         livePayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
         let overlappingPayments = filter (\livePayment -> hasDateOverlap (livePayment.startDate, livePayment.endDate) (startDate, endDate)) livePayments
-        exhaustedFlags <- mapM isExhaustedPayment overlappingPayments
-        let blockingPayments = [livePayment | (livePayment, exhausted) <- zip overlappingPayments exhaustedFlags, not exhausted]
+        blockingPayments <- filterM (fmap not . allowsOverlappingPurchase) overlappingPayments
         whenJust (listToMaybe blockingPayments) $ \blockingPayment ->
           throwError . InvalidRequest $
             if blockingPayment.startDate > DT.utctDay istTime
@@ -672,6 +671,10 @@ createPassCatalog merchantShortId opCity req = do
             minFare = req.minFare,
             maxFare = req.maxFare,
             formVerificationConfig = req.formVerificationConfig,
+            -- Overlap threshold and renewal hint are set out of band, like the FRFS override
+            -- columns below: the catalog create API does not carry them.
+            minTripsAllowingOverlap = Nothing,
+            minDaysToSuggestRenewal = Nothing,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
             -- FRFS fare/cancellation override columns are owned by the override flow,
@@ -873,7 +876,9 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         maxFare = pass.maxFare,
         verificationStatus = (.verificationStatus) <$> mbPassDetails,
         formVerificationConfig = pass.formVerificationConfig,
-        referenceNumber = (.referenceNumber) =<< mbPassDetails
+        referenceNumber = (.referenceNumber) =<< mbPassDetails,
+        minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
+        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -932,7 +937,10 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         maxFare = Nothing,
         verificationStatus = Nothing,
         formVerificationConfig = Nothing,
-        referenceNumber = Nothing
+        referenceNumber = Nothing,
+        -- Built from the PurchasedPass snapshot, which carries no catalog config columns.
+        minTripsAllowingOverlap = Nothing,
+        minDaysToSuggestRenewal = Nothing
       }
 
 -- Build PurchasedPass API Entity
@@ -1064,14 +1072,16 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
                   purchasedPass.id
                   activeLikeStatuses
                   purchasedPassPayment.startDate
-              pure $
-                listToMaybe $
-                  filter
-                    ( \p ->
-                        p.id /= purchasedPassPayment.id
-                          && hasDateOverlap (p.startDate, p.endDate) (purchasedPassPayment.startDate, purchasedPassPayment.endDate)
-                    )
-                    otherActivePayments
+              let overlappingActivePayments =
+                    filter
+                      ( \p ->
+                          p.id /= purchasedPassPayment.id
+                            && hasDateOverlap (p.startDate, p.endDate) (purchasedPassPayment.startDate, purchasedPassPayment.endDate)
+                      )
+                      otherActivePayments
+              -- The spent-down term that let this renewal be purchased must not also mark the
+              -- renewal a duplicate: that would auto-refund a payment the rider was told to make.
+              listToMaybe <$> filterM (fmap not . allowsOverlappingPurchase) overlappingActivePayments
           _ -> pure Nothing
       case mbDuplicateActivePayment of
         Just existingActive -> do
@@ -1756,11 +1766,31 @@ availableTripCountForPayment payment = do
   mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
   maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
 
-isExhaustedPayment ::
+-- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
+-- the pass's `minTripsAllowingOverlap` threshold (absent = 0, i.e. only a fully spent term lets
+-- an overlap through). Only FRFS override passes carry a per-payment trip ledger, so anything
+-- else keeps blocking, as does an unlimited benefit -- `remainingTrips` returns Nothing there.
+--
+-- Every date-overlap gate must agree on this predicate. The purchase gate, the CHARGED webhook's
+-- duplicate-payment check and the activation/reschedule gate each guard the same invariant at a
+-- different point in the lifecycle; if only one of them knows about the carve-out, a renewal the
+-- rider was allowed to buy gets auto-refunded or refuses to activate.
+allowsOverlappingPurchase ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   DPurchasedPassPayment.PurchasedPassPayment ->
   m Bool
-isExhaustedPayment payment = maybe False (<= 0) <$> availableTripCountForPayment payment
+allowsOverlappingPurchase payment =
+  maybe (pure Nothing) CQPass.findById payment.passId >>= \case
+    Just pass
+      -- Guarded before benefitFromPass: that logs an error for a pass with no override config,
+      -- and every gate runs this over passes that legitimately have none.
+      | pass.frfsPriceOverrideApplicable == Just True ->
+        FRFSPassOverride.benefitFromPass pass >>= \case
+          Nothing -> pure False
+          Just benefit -> do
+            mbRemaining <- FRFSPassOverride.remainingTrips payment benefit
+            pure $ maybe False (<= fromMaybe 0 pass.minTripsAllowingOverlap) mbRemaining
+    _ -> pure False
 
 mkPurchasedPassPaymentAPIEntity ::
   Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
@@ -1926,7 +1956,8 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
         Nothing -> filter (\p -> p.purchasedPassId /= purchasedPass.id) allPaymentsForPassCode
       overlappingPasses = filter (\p -> hasDateOverlap (newStartDate, newEndDate) (p.startDate, p.endDate)) otherPassPayments
 
-  unless (null overlappingPasses) $
+  blockingPasses <- filterM (fmap not . allowsOverlappingPurchase) overlappingPasses
+  unless (null blockingPasses) $
     throwError (PassActivationOverlap purchasedPass.id.getId)
 
   -- Pick the payment to flip: the explicit target, or the parent's primary prebooked/active payment.

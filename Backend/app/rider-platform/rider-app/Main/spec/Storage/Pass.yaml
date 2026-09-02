@@ -60,6 +60,8 @@ Pass:
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
     overrideBenefitConfigJson: Maybe Value
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
 
   beamFields:
     passConfig:

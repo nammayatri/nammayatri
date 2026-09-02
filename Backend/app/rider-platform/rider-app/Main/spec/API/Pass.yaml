@@ -76,6 +76,8 @@ types:
     verificationStatus: Maybe VerificationStatus
     formVerificationConfig: Maybe Value
     referenceNumber: Maybe Int
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
     derive: "Show"
 
   PassInfoAPIEntity:
