@@ -19,6 +19,7 @@ import qualified Kernel.External.Payment.Stripe.Types.Common as PaymentStripe
 import qualified Kernel.External.Payment.Types as TPayment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -81,7 +82,8 @@ stripeAccountWebhookAction ::
   StripeAccountTy.AccountStripeWebhookReq ->
   Text ->
   Flow AckResponse
-stripeAccountWebhookAction paymentMode _mocId req _respDump = do
+stripeAccountWebhookAction paymentMode _mocId req _respDump = withDynamicLogLevel "payment-mode" $ do
+  logDebug $ "paymentMode|accountWebhook|endpointMode=" <> show paymentMode <> " eventLivemode=" <> show req.livemode
   let livemodeMatches = req.livemode == (paymentMode == DMPM.LIVE)
   if not livemodeMatches
     then do
