@@ -172,7 +172,9 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
           rqcStartPlaceCode = startPlaceCode,
           rqcStartPlaceId = search.fromStationCode,
           rqcUserName = tnstcConfig.username,
-          rqcWsRefNo = wsRefNo
+          rqcWsRefNo = wsRefNo,
+          rqcIdProofLookupId = fromMaybe "" (listToMaybe (mapMaybe (.idProofLookupId) passengerDetails)),
+          rqcIdProofNumber = fromMaybe "" (listToMaybe (mapMaybe (.idProofNumber) passengerDetails))
         }
 
   pnr <- res.tbkPnrNumber & fromMaybeM (InternalError "TNSTC confirmed without returning a PNR")
@@ -273,4 +275,3 @@ storeBoardingDetails search mbPickup mbDropOff = do
     whenJust mbLeg $ \leg ->
       QRouteDetails.updateBoardingPlatforms (Just platform) dropOffPlatform leg.id.getId
     logInfo $ "TNSTC boarding platform searchId=" <> search.id.getId <> " platform=" <> platform
-

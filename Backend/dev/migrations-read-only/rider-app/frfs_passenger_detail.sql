@@ -22,3 +22,16 @@ ALTER TABLE atlas_app.frfs_passenger_detail ADD PRIMARY KEY ( id);
 
 
 ------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN id_proof_number text ;
+ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN id_proof_lookup_id text ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY frfs_passenger_detail_idx_booking_id ON atlas_app.frfs_passenger_detail USING btree (booking_id);
+CREATE INDEX CONCURRENTLY frfs_passenger_detail_idx_quote_id ON atlas_app.frfs_passenger_detail USING btree (quote_id);
