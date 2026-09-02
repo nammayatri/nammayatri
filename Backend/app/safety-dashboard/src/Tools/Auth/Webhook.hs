@@ -73,9 +73,10 @@ verifyDashboardAction = VerificationActionWithPayload verifyWebhook
 verifyWebhook ::
   (Common.AuthFlow m r, Redis.HedisFlow m r, EncFlow m r) =>
   DRole.DashboardAccessType ->
+  [Text] ->
   RegToken ->
   m AuthToken
-verifyWebhook _ token = do
+verifyWebhook _ _pathSegments token = do
   (authToken, merchantId) <- verifyToken token
   pure AuthToken {merchantId, authToken}
 

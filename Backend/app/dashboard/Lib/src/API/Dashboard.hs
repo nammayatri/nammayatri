@@ -20,6 +20,7 @@ import qualified API.Dashboard.EmailVerification as EmailVerification
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Person as Person
 import qualified API.Dashboard.Registration as Registration
+import qualified API.Dashboard.ResourceScope as ResourceScope
 import qualified API.Dashboard.Roles as Roles
 import Environment
 import Servant
@@ -33,6 +34,7 @@ type API =
     :<|> Roles.API
     :<|> Merchant.API
     :<|> Capability.API
+    :<|> ResourceScope.API
 
 handler :: BeamFlow' => FlowServer API
 handler =
@@ -43,3 +45,4 @@ handler =
     :<|> Roles.handler
     :<|> Merchant.handler
     :<|> Capability.handler
+    :<|> ResourceScope.handler
