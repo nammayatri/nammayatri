@@ -4,6 +4,7 @@ module SharedLogic.Finance.Prepaid
   ( counterpartyDriver,
     counterpartyFleetOwner,
     prepaidRideDebitReferenceType,
+    prepaidCancellationDebitReferenceType,
     subscriptionCreditReferenceType,
     subscriptionPurchaseReferenceType,
     subscriptionRideReferenceType,
@@ -98,6 +99,9 @@ subscriptionRideReferenceType = "RideRevenueRecognition"
 
 prepaidRideDebitReferenceType :: Text
 prepaidRideDebitReferenceType = "RideSubscriptionDebit"
+
+prepaidCancellationDebitReferenceType :: Text
+prepaidCancellationDebitReferenceType = "CancellationSubscriptionDebit"
 
 expiryRevenueRecognitionReferenceType :: Text
 expiryRevenueRecognitionReferenceType = "ExpiryRevenueRecognition"
@@ -909,7 +913,7 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerRideCredit, mbSellerLiability, mbSellerRevenue) of
     (Right ownerAccount, Right sellerRideCredit, Right sellerLiability, Right sellerRevenue) -> do
-      existing <- getEntriesByReference prepaidRideDebitReferenceType referenceId
+      existing <- getEntriesByReference prepaidCancellationDebitReferenceType referenceId
       let alreadyDebited = any (\e -> e.fromAccountId == ownerAccount.id) existing
       if alreadyDebited
         then do
@@ -926,7 +930,7 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
                       currency = currency,
                       entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
                       status = SETTLED,
-                      referenceType = prepaidRideDebitReferenceType,
+                      referenceType = prepaidCancellationDebitReferenceType,
                       referenceId = referenceId,
                       entityReferenceId = Nothing,
                       entityReferenceType = Nothing,
