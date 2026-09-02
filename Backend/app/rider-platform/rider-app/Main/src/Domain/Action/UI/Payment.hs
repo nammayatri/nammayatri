@@ -798,7 +798,13 @@ stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId
         isDuplicateStripeWebhookEvent
           (stripePaymentWebhookEventDedupKey paymentMode eventId)
           stripeWebhookEventDedupTtl7Days
-  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
+  let modeCheckedWebhookAction resp respDump =
+        if resp.livemode /= (paymentMode == DMPM.LIVE)
+          then do
+            logInfo $ "Stripe payment webhook livemode mismatch; ignoring. endpointMode=" <> show paymentMode <> " eventLivemode=" <> show resp.livemode
+            pure Ack
+          else stripeWebhookAction paymentMode merchantOperatingCity.id resp respDump
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent modeCheckedWebhookAction mbSigHeader rawBytes
 
 -- | TTL for Stripe webhook event deduplication (covers Stripe retry window with margin).
 stripeWebhookEventDedupTtl7Days :: Redis.ExpirationTime
@@ -812,61 +818,90 @@ isDuplicateStripeWebhookEvent :: (Redis.HedisFlow m env, TryException m) => Text
 isDuplicateStripeWebhookEvent key ttl =
   not <$> Redis.setNxExpire key ttl True
 
+-- | True when the event targets an order created in the other Stripe environment.
+--   Legacy orders read back as 'Juspay' (unknown) and are allowed through.
+isCrossModeOrder :: DMPM.PaymentMode -> Maybe Text -> Flow Bool
+isCrossModeOrder _ Nothing = pure False
+isCrossModeOrder paymentMode (Just orderShortId) = do
+  let expectedService = case paymentMode of
+        DMPM.LIVE -> Payment.Stripe
+        DMPM.TEST -> Payment.StripeTest
+  QOrder.findByShortId (ShortId orderShortId) >>= \case
+    Nothing -> pure False
+    Just order -> do
+      let mismatched = order.serviceProvider `elem` [Payment.Stripe, Payment.StripeTest] && order.serviceProvider /= expectedService
+      when mismatched $
+        logError $
+          "Stripe webhook targets an order from another environment; ignoring. orderShortId=" <> orderShortId
+            <> " endpointMode="
+            <> show paymentMode
+            <> " orderServiceProvider="
+            <> show order.serviceProvider
+      pure mismatched
+
 stripeWebhookAction ::
+  DMPM.PaymentMode ->
   Id DMOC.MerchantOperatingCity ->
   PEInterface.ServiceEventResp ->
   Text ->
   Flow AckResponse
-stripeWebhookAction merchantOperatingCityId resp respDump = do
+stripeWebhookAction paymentMode merchantOperatingCityId resp respDump = do
   let stripeWebhookData = DPayment.mkStripeWebhookData resp.eventData
   let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-  case stripeWebhookData of
-    DPayment.RefundWebhookData refundInfo -> do
-      orderId <- (Id @DOrder.PaymentOrder <$>) $ refundInfo.orderId & fromMaybeM (InvalidRequest "orderId not found")
-      refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
-      Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
-        void $ DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
-        QRefundRequest.findByRefundsId (Just refundsId) >>= \case
-          Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
-          Just refundRequest -> do
-            let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
-            DRidePayment.processRefundResult refundRequest updStatus Nothing
-      pure Ack
-    DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
-      ackResp <- DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
-      whenJust _mbOrderShortId $ \orderShortId -> do
-        mbOrder <- QOrder.findByShortId (ShortId orderShortId)
-        whenJust mbOrder $ \order ->
-          withRideIdFromOrderObj order $ \rideId -> do
-            let status = orderTxn.transactionStatus
-            pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
-            case pendingEntries of
-              [] -> pure ()
-              (firstEntry : _) -> do
-                let entryIds = map (.id) pendingEntries
-                case status of
-                  KPayment.CHARGED -> do
-                    let ctx =
-                          RidePaymentFinance.buildRiderFinanceCtx
-                            order.merchantId.getId
-                            (maybe "" (.getId) order.merchantOperatingCityId)
-                            firstEntry.currency
-                            True
-                            order.personId.getId
-                            rideId
-                            Nothing
-                            Nothing
-                            Nothing
-                    RidePaymentFinance.settleRidePaymentLedger ctx entryIds RidePaymentFinance.settledReasonRidePayment
-                      >>= \case
-                        Right () -> logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
-                        Left err -> logError $ "Webhook failed to settle ledger entries for ride " <> rideId <> ": " <> show err
-                  KPayment.CANCELLED -> do
-                    RidePaymentFinance.voidRidePaymentLedger entryIds
-                    logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
-                  _ -> pure ()
-      pure ackResp
-    _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+  let eventOrderShortId = case stripeWebhookData of
+        DPayment.RefundWebhookData refundInfo -> refundInfo.orderShortId
+        DPayment.OrderTxnWebhookData (mbOrderShortId, _) -> mbOrderShortId
+        _ -> Nothing
+  crossMode <- isCrossModeOrder paymentMode eventOrderShortId
+  if crossMode
+    then pure Ack
+    else case stripeWebhookData of
+      DPayment.RefundWebhookData refundInfo -> do
+        orderId <- (Id @DOrder.PaymentOrder <$>) $ refundInfo.orderId & fromMaybeM (InvalidRequest "orderId not found")
+        refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
+        Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
+          void $ DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+          QRefundRequest.findByRefundsId (Just refundsId) >>= \case
+            Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
+            Just refundRequest -> do
+              let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
+              DRidePayment.processRefundResult refundRequest updStatus Nothing
+        pure Ack
+      DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
+        ackResp <- DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
+        whenJust _mbOrderShortId $ \orderShortId -> do
+          mbOrder <- QOrder.findByShortId (ShortId orderShortId)
+          whenJust mbOrder $ \order ->
+            withRideIdFromOrderObj order $ \rideId -> do
+              let status = orderTxn.transactionStatus
+              pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
+              case pendingEntries of
+                [] -> pure ()
+                (firstEntry : _) -> do
+                  let entryIds = map (.id) pendingEntries
+                  case status of
+                    KPayment.CHARGED -> do
+                      let ctx =
+                            RidePaymentFinance.buildRiderFinanceCtx
+                              order.merchantId.getId
+                              (maybe "" (.getId) order.merchantOperatingCityId)
+                              firstEntry.currency
+                              True
+                              order.personId.getId
+                              rideId
+                              Nothing
+                              Nothing
+                              Nothing
+                      RidePaymentFinance.settleRidePaymentLedger ctx entryIds RidePaymentFinance.settledReasonRidePayment
+                        >>= \case
+                          Right () -> logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                          Left err -> logError $ "Webhook failed to settle ledger entries for ride " <> rideId <> ": " <> show err
+                    KPayment.CANCELLED -> do
+                      RidePaymentFinance.voidRidePaymentLedger entryIds
+                      logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
+                    _ -> pure ()
+        pure ackResp
+      _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
 
 withRideIdFromOrderObj :: DOrder.PaymentOrder -> (Text -> Flow ()) -> Flow ()
 withRideIdFromOrderObj order action =

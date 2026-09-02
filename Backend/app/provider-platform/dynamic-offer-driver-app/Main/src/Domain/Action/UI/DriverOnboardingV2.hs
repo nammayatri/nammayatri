@@ -1300,7 +1300,8 @@ getDriverRegisterBankAccountLink ::
     Maybe DMPM.PaymentMode ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
-getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = do
+-- paymentMode query param is intentionally ignored: assigned only via the fleet/admin dashboard.
+getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy _paymentMode = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let fetchPersonStripeInfo = do
@@ -1316,7 +1317,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = 
               businessRegistrationNumber = Nothing
             }
   let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.DriverApp mbInitiatedBy) person
+  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle Nothing (Just $ fromMaybe DIB.DriverApp mbInitiatedBy) person
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -88,20 +88,29 @@ stripeAccountWebhookAction paymentMode _mocId req _respDump = do
       logInfo $ "livemode mismatch for Stripe account webhook: paymentMode=" <> show paymentMode <> " req.livemode=" <> show req.livemode
       pure Ack
     else case req._data._object of
-      StripeAccountTy.ObjectAccount acct -> applyAccountUpdate req acct
+      StripeAccountTy.ObjectAccount acct -> applyAccountUpdate paymentMode req acct
       StripeAccountTy.AccountStripeWebhookCustomObject objType _val -> do
         logInfo $ "Unhandled Stripe account webhook object type: " <> objType
         pure Ack
 
 applyAccountUpdate ::
+  DMPM.PaymentMode ->
   StripeAccountTy.AccountStripeWebhookReq ->
   StripeAccountTy.AccountObject ->
   Flow AckResponse
-applyAccountUpdate req acct = do
+applyAccountUpdate paymentMode req acct = do
   mbRow <- QDBA.findByAccountId acct.id
   case mbRow of
     Nothing -> do
       logInfo $ "Stripe account webhook for unknown accountId=" <> show acct.id
+      pure Ack
+    Just row | fromMaybe DMPM.LIVE row.paymentMode /= paymentMode -> do
+      logInfo $
+        "Stripe account webhook mode mismatch; ignoring. accountId=" <> show acct.id
+          <> " endpointMode="
+          <> show paymentMode
+          <> " rowMode="
+          <> show row.paymentMode
       pure Ack
     Just row -> do
       let eventTime = posixSecondsToUTCTime req.created
