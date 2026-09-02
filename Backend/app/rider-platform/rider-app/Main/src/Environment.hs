@@ -82,6 +82,7 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Slack.Types (SlackNotificationConfig)
+import Storage
 import Storage.CachedQueries.Merchant as CM
 import qualified Storage.Queries.BecknConfig as QBC
 import System.Environment as SE
@@ -144,6 +145,8 @@ data AppCfg = AppCfg
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
     s3RewardsConfig :: S3Config,
+    storageServiceConfig :: StorageServiceConfig,
+    storagePublicServiceConfig :: StorageServiceConfig,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -419,9 +422,9 @@ buildAppEnv cfg@AppCfg {..} = do
         putStrLn $ "ERROR: Failed to connect to secondary hedis cluster: " ++ show e
         pure Nothing
       Right env -> pure (Just env)
-  let s3Env = buildS3Env cfg.s3Config
-      s3EnvPublic = buildS3Env cfg.s3PublicConfig
-      s3RewardsEnv = buildS3Env cfg.s3RewardsConfig
+  s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
+  s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
+  let s3RewardsEnv = buildS3Env cfg.s3RewardsConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

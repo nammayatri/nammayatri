@@ -69,6 +69,7 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Slack.Types (SlackNotificationConfig)
+import Storage
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
@@ -109,6 +110,8 @@ data AppCfg = AppCfg
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
     s3PublicConfig :: S3Config,
+    storageServiceConfig :: StorageServiceConfig,
+    storagePublicServiceConfig :: StorageServiceConfig,
     migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -410,9 +413,9 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
-      s3Env = buildS3Env cfg.s3Config
-      s3EnvPublic = buildS3Env cfg.s3PublicConfig
       searchRequestExpirationSecondsForMultimodal = fromIntegral cfg.searchRequestExpirationSecondsForMultimodal
+  s3Env <- buildStorageEnvIO loggerEnv cfg.storageServiceConfig
+  s3EnvPublic <- buildStorageEnvIO loggerEnv cfg.storagePublicServiceConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg

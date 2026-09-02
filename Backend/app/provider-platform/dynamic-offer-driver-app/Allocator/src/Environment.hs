@@ -60,6 +60,7 @@ import Passetto.Lib (mkPassettoContextAuto)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
+import Storage
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.ARDUBPPMetrics.Types
@@ -219,7 +220,7 @@ buildHandlerEnv HandlerCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
-  let s3Env = buildS3Env s3Config
+  s3Env <- buildStorageEnvIO loggerEnv appCfg.storageServiceConfig
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
