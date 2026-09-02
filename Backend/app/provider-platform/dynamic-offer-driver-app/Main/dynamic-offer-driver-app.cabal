@@ -468,6 +468,7 @@ library
       Environment
       Lib.DriverCoins.Coins
       Lib.DriverCoins.IncentiveMetrics
+      Lib.DriverCoins.IncentiveOverlay
       Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types
