@@ -84,15 +84,22 @@ verifyApi ::
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
   ) =>
   DMatrix.ApiAccessLevel ->
+  [Text] ->
   RegToken ->
   m ApiTokenInfo
-verifyApi requiredAccessLevel token = do
+verifyApi requiredAccessLevel pathSegments token = do
   logInfo "[Auth.verifyApi] START - Servant parsed request, beginning auth"
   (personId, merchantId, city) <- Common.verifyPerson token
   logInfo "[Auth.verifyApi] verifyPerson done"
+  let endpointId = Capability.mkEndpointId requiredAccessLevel
   verifiedPerson <- verifyAccessLevel requiredAccessLevel personId
+  access <- Capability.resolveAccess verifiedPerson.id verifiedPerson.roleId
+  endpoints <- Capability.endpointCapabilities endpointId
+  Capability.enforce access endpoints verifiedPerson endpointId
   verifiedMerchant <- verifyServerWithPair requiredAccessLevel.serverName personId merchantId city
   _ <- verifyCity verifiedMerchant city
+
+  Capability.enforceResourceScopeFromRequest access endpoints verifiedPerson endpointId verifiedMerchant.id city pathSegments
   pure
     ApiTokenInfo
       { personId = verifiedPerson.id,
@@ -163,12 +170,13 @@ verifyAccessLevel ::
   DMatrix.ApiAccessLevel ->
   Id DP.Person ->
   m DP.Person
-verifyAccessLevel requiredApiAccessLevel personId = do
+verifyAccessLevel _requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Unconditional: an admin-assigned password must not authorize anything at any tier.
   Common.checkForcedPasswordChange person
   maybe (pure ()) (\a -> when (a `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ Common.checkPasswordExpiry person) person.dashboardAccessType
-  Capability.enforce person (Capability.mkEndpointId requiredApiAccessLevel)
+  -- Layer A (capability) enforcement moved to verifyApi, which resolves access +
+  -- endpoint caps ONCE and shares them with the Layer C gate.
   pure person
 
 verifyServer ::

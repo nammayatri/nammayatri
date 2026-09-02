@@ -77,9 +77,10 @@ verifyDashboard ::
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
   ) =>
   DRole.DashboardAccessType ->
+  [Text] ->
   RegToken ->
   m TokenInfo
-verifyDashboard requiredAccessType token = do
+verifyDashboard requiredAccessType _pathSegments token = do
   logInfo "[Auth.verifyDashboard] START - Servant parsed request, beginning auth"
   (personId, merchantId, city) <- Common.verifyPerson token
   logInfo "[Auth.verifyDashboard] verifyPerson done"
