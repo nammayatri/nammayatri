@@ -386,7 +386,8 @@ data ProviderServiceDetails = ProviderServiceDetails
     departureTime :: Text,
     arrivalTime :: Text,
     arrivalDate :: Text,
-    availableSeats :: Maybe Int
+    availableSeats :: Maybe Int,
+    stopBookingTime :: Maybe UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)

@@ -210,6 +210,10 @@ data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSIdProofType = FRFSIdProofType {lookupId :: Data.Text.Text, name :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPassengerDetail = FRFSPassengerDetail
   { age :: Data.Maybe.Maybe Kernel.Prelude.Int,
     gender :: Domain.Types.Person.Gender,
@@ -399,7 +403,14 @@ data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSelectReq = FRFSSelectReq {concessionTypeId :: Data.Text.Text, dropOffPointPlaceId :: Data.Text.Text, passengers :: [FRFSPassengerDetail], pickupPointPlaceId :: Data.Text.Text}
+data FRFSSelectReq = FRFSSelectReq
+  { concessionTypeId :: Data.Text.Text,
+    dropOffPointPlaceId :: Data.Text.Text,
+    idProofLookupId :: Data.Maybe.Maybe Data.Text.Text,
+    idProofNumber :: Data.Maybe.Maybe Data.Text.Text,
+    passengers :: [FRFSPassengerDetail],
+    pickupPointPlaceId :: Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -583,6 +594,7 @@ data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.S
 data SeatLayoutResp = SeatLayoutResp
   { concessions :: Data.Maybe.Maybe [FRFSConcession],
     dropOffPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
+    idProofTypes :: Data.Maybe.Maybe [FRFSIdProofType],
     pickupPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
     seatLayout :: Domain.Types.SeatLayout.SeatLayout,
     seats :: [SeatWithStatus]

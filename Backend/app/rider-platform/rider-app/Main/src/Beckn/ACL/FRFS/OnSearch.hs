@@ -187,6 +187,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         arrivalTime = Nothing,
         arrivalDate = Nothing,
         availableSeats = Nothing,
+        stopBookingTime = Nothing,
         bppItemId = itemId,
         routeCode = fulfillmentId,
         vehicleType,

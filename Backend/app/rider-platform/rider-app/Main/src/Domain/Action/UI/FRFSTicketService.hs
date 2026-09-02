@@ -1741,7 +1741,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   let seatListWithStatus = map (applyQuotaLogic fromIdx toIdx) rawSeatListWithStatus
   let availCount = length $ filter (\s -> s.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
-  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus, concessions = Nothing, pickupPoints = Nothing, dropOffPoints = Nothing}
+  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus, concessions = Nothing, pickupPoints = Nothing, dropOffPoints = Nothing, idProofTypes = Nothing}
   where
     applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
     applyQuotaLogic fromIdx toIdx seatWithStatus =
@@ -2271,7 +2271,8 @@ getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
             seats = [],
             concessions = Just (map mkConcessionAPI offered),
             pickupPoints = Nothing,
-            dropOffPoints = Nothing
+            dropOffPoints = Nothing,
+            idProofTypes = Nothing
           }
     _ -> do
       seatSetsResult <-
@@ -2321,6 +2322,7 @@ getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
               }
       startPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 4 tripCode)) search.fromStationCode
       endPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 7 tripCode)) search.toStationCode
+      idProofTypes <- TNSTCLayout.getIdProofTypes tnstcConfig integratedBPPConfig.id.getId
       pickupPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq startPlaceCode)
       dropOffPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq endPlaceCode)
       return $
@@ -2329,6 +2331,7 @@ getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
             seats = seatListWithStatus,
             pickupPoints = Just (map mkPoint pickupPoints),
             dropOffPoints = Just (map mkPoint dropOffPoints),
+            idProofTypes = Just (map mkIdProofType idProofTypes),
             concessions = Nothing
           }
 
@@ -2381,9 +2384,11 @@ storeSelectPassengers ::
   Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
   Text ->
   Text ->
+  Maybe Text ->
+  Maybe Text ->
   [(FRFSTicketService.FRFSPassengerDetail, Domain.Types.Seat.Seat)] ->
   m ()
-storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId passengerRows = do
+storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId mbIdProofLookupId mbIdProofNumber passengerRows = do
   now <- getCurrentTime
   -- select can be repeated on the same quote; the previous attempt's rows are stale.
   QFRFSPassengerDetail.deleteAllByQuoteId quoteId
@@ -2402,6 +2407,8 @@ storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId p
           isChild = pax.isChild,
           pickupPointPlaceId = Just pickupPlaceId,
           dropOffPointPlaceId = Just dropOffPlaceId,
+          idProofLookupId = mbIdProofLookupId,
+          idProofNumber = mbIdProofNumber,
           merchantId = integratedBPPConfig.merchantId,
           merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
           createdAt = now,
@@ -2409,6 +2416,9 @@ storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId p
         }
   QFRFSPassengerDetail.createMany rows
   logInfo $ "FRFSTicketService:storeSelectPassengers quoteId=" <> quoteId.getId <> " count=" <> show (length rows)
+
+mkIdProofType :: TNSTCTypes.TnstcLookupValue -> FRFSTicketService.FRFSIdProofType
+mkIdProofType v = FRFSTicketService.FRFSIdProofType {lookupId = v.tlvId, name = v.tlvValue}
 
 mkPoint :: TNSTCTypes.TnstcPickupPoint -> FRFSTicketService.FRFSPickupPoint
 mkPoint pp =
@@ -2449,6 +2459,8 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
   tnstcConfig <- case integratedBPPConfig.providerConfig of
     DIBC.TNSTC cfg -> pure cfg
     _ -> throwError (InvalidRequest "select is only supported for reserved-seat intercity providers")
+  nowForExpiry <- getCurrentTime
+  unless (quote.validTill > nowForExpiry) $ throwError $ FRFSQuoteExpired quote.id.getId
   counterCode <- tnstcConfig.counterCode & fromMaybeM (InternalError "TNSTC counterCode not configured")
   search <- QFRFSSearch.findById quote.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
   journeyDate <- search.journeyDate & fromMaybeM (InvalidRequest "journeyDate missing on search")
@@ -2599,7 +2611,7 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
     (Just bookingConcessionId)
     (Just feesAmt)
     quoteId
-  storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId passengerRows
+  storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId req.idProofLookupId req.idProofNumber passengerRows
 
   now <- getCurrentTime
   forM_ quoteCategories $ \cat -> do

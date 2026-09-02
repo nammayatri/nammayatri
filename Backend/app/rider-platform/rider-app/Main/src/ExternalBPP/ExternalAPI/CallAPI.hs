@@ -5,7 +5,7 @@ import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime)
+import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import Domain.Types hiding (ONDC)
 import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
@@ -177,7 +177,8 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
               rqUserName = config'.username,
               rqUserId = riderId.getId
             }
-      return $ mapMaybe mkTnstcFare services
+      now <- getCurrentTime
+      return $ mapMaybe (mkTnstcFare now) services
     CRIS config' -> do
       SubwayFareDetail {viaPoints, changeOver, rawChangeOver, getAllFares} <- subwayFareDetail & fromMaybeM (InternalError "SubwayFareDetail not found")
       fares <- callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares
@@ -201,9 +202,21 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-mkTnstcFare :: TNSTCTypes.TnstcServiceVO -> Maybe FRFSUtils.FRFSFare
-mkTnstcFare svc = do
+parseTnstcTimestamp :: Text -> Maybe UTCTime
+parseTnstcTimestamp raw =
+  addUTCTime (negate 19800)
+    <$> parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" (T.unpack (T.strip raw))
+
+mkTnstcFare :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Maybe FRFSUtils.FRFSFare
+mkTnstcFare now svc = do
   adult <- svc.svcAdultFare
+  let mbStopBooking = svc.svcStopBookingTime >>= parseTnstcTimestamp
+  case mbStopBooking of
+    Just cutoff | cutoff <= now -> Nothing
+    _ -> mkTnstcFare' now svc adult mbStopBooking
+
+mkTnstcFare' :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Double -> Maybe UTCTime -> Maybe FRFSUtils.FRFSFare
+mkTnstcFare' _now svc adult mbStopBooking = do
   let parts = svc.svcParts
       bppItemId = parts.sipServiceId
       toPrice v = mkPrice (Just INR) (HighPrecMoney (toRational v))
@@ -228,7 +241,8 @@ mkTnstcFare svc = do
                 departureTime = parts.sipDepartureTime,
                 arrivalTime = svc.svcArrivalTime,
                 arrivalDate = svc.svcArrivalDate,
-                availableSeats = parts.sipAvailableSeats
+                availableSeats = parts.sipAvailableSeats,
+                stopBookingTime = mbStopBooking
               },
         categories =
           mkCategory ADULT adult :
