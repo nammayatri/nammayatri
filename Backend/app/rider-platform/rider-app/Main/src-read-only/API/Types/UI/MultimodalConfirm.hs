@@ -300,7 +300,12 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassingRoutes = PassingRoutes {routeCode :: Kernel.Prelude.Text}
+data PassingRoutes = PassingRoutes
+  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    isLastStop :: Kernel.Prelude.Bool,
+    isLive :: Kernel.Prelude.Bool,
+    routeCode :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -359,10 +364,6 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
 
 data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, routeCodes :: [Kernel.Prelude.Text]}
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data RouteETAResp = RouteETAResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], isLastStop :: Kernel.Prelude.Bool, isLive :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityReq = RouteServiceabilityReq

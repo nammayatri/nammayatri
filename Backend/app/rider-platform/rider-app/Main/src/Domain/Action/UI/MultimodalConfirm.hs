@@ -45,8 +45,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
-    getMultimodalStopRoutes,
-    getMultimodalRouteEta,
+    getMultimodalTrackStopRoutes,
   )
 where
 
@@ -2041,10 +2040,11 @@ postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
+postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes req =
   JMU.measureLatency
     ( do
         person <- authenticate mbPersonId
@@ -2072,19 +2072,22 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             routeId <- extractRouteCode req.routeCodes
             JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
           Nothing -> do
-            (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-            mbClusterRoutes <-
-              if fromMaybe False req.allowClusteredStops
-                then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                else pure Nothing
-            case mbClusterRoutes of
-              Just clusterRoutes@(_ : _) ->
-                JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
-              _ -> do
-                directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                if not (null directRouteCodes)
-                  then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
-                  else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+            (srcCode, mbDestCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
+            case mbDestCode of
+              Nothing -> JMU.measureLatency (handleAllPassingRoutes routeServiceabilityContext userRequestedCodes srcCode) ("handleAllPassingRoutes src=" <> srcCode)
+              Just destCode -> do
+                mbClusterRoutes <-
+                  if fromMaybe False req.allowClusteredStops
+                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                    else pure Nothing
+                case mbClusterRoutes of
+                  Just clusterRoutes@(_ : _) ->
+                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
+                  _ -> do
+                    directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                    if not (null directRouteCodes)
+                      then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+                      else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -2098,13 +2101,15 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       Maybe Text ->
       Maybe [ApiTypes.RouteCodesWithLeg] ->
       RouteServiceabilityContext ->
-      Environment.Flow (Text, Text)
+      Environment.Flow (Text, Maybe Text)
     resolveSrcAndDestCode mSrc mDest routeCodes ctx
       | isJust mSrc && isJust mDest =
-        pure (fromJust mSrc, fromJust mDest)
+        pure (fromJust mSrc, mDest)
+      | isJust mSrc && isNothing mDest && null (maybe [] (concatMap (.routeCodes)) routeCodes) && fromMaybe False mbAllPassingRoutes =
+        pure (fromJust mSrc, Nothing)
       | otherwise = do
         (firstStop, lastStop) <- JMU.measureLatency (fetchRouteBoundaryStops routeCodes ctx) ("fetchRouteBoundaryStops routeCodes=" <> show routeCodes)
-        pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
+        pure (fromMaybe firstStop mSrc, Just (fromMaybe lastStop mDest))
 
     fetchRouteBoundaryStops ::
       Maybe [ApiTypes.RouteCodesWithLeg] ->
@@ -2380,6 +2385,28 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
       JMU.measureLatency (getRouteServiceability Nothing (Just directRouteCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+
+    handleAllPassingRoutes ::
+      RouteServiceabilityContext ->
+      [Text] ->
+      Text ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleAllPassingRoutes ctx userRequestedCodes srcCode = do
+      mappings <-
+        JMU.measureLatency
+          (OTPRest.getRouteStopMappingByStopCode srcCode ctx.integratedBPPConfig)
+          ("handleAllPassingRoutes: getRouteStopMappingByStopCode stop=" <> srcCode)
+      let routeCodes = nub (map (.routeCode) mappings)
+          resolvedLegs =
+            [ ResolvedLeg
+                { rlOrder = 0,
+                  rlRouteCodes = routeCodes,
+                  rlFromStopCode = srcCode,
+                  rlToStopCode = "",
+                  rlStopsByRoute = []
+                }
+            ]
+      JMU.measureLatency (getRouteServiceability Nothing (Just routeCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     handleClusterRoute ::
       RouteServiceabilityContext ->
@@ -3199,81 +3226,77 @@ postStoreTowerInfo (mbPersonId, _) req = do
       when (areaCode < 0) $
         logWarning $ "Invalid area code: " <> show areaCode
 
-getMultimodalStopRoutes ::
+getMultimodalTrackStopRoutes ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalStopRoutes (mbPersonId, _merchantId) stopCode = do
+getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
-  let routeCodes = nub (map (.routeCode) mappings)
-  pure $ map (\routeCode -> ApiTypes.PassingRoutes {routeCode = routeCode}) routeCodes
-
-getMultimodalRouteEta ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Text ->
-  Environment.Flow ApiTypes.RouteETAResp
-getMultimodalRouteEta (mbPersonId, _merchantId) routeCode stopCode = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <-
-    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
-      =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  liveEtasFork <-
-    awaitableFork "getMultimodalRouteEta->liveEtas" $ do
-      busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
-      pure
-        [ etaEntry
-          | routeWithBuses <- busesForRoutes,
-            bus <- routeWithBuses.buses,
-            etaEntry <- fromMaybe [] bus.busData.eta_data,
-            etaEntry.stopCode == stopCode
-        ]
-  scheduleEtasFork <-
-    awaitableFork "getMultimodalRouteEta->scheduleEtas" $ do
-      schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
-      pure
-        [ etaEntry
-          | scheduleDetail <- schedules,
-            etaEntry <- scheduleDetail.eta,
-            etaEntry.stopCode == stopCode
-        ]
-  liveEtas <-
-    L.await Nothing liveEtasFork >>= \case
-      Left err -> do
-        logError $ "getMultimodalRouteEta live ETA fetch failed: " <> show err
-        pure []
-      Right result -> pure result
-  scheduleEtas <-
-    L.await Nothing scheduleEtasFork >>= \case
-      Left err -> do
-        logError $ "getMultimodalRouteEta schedule ETA fetch failed: " <> show err
-        pure []
-      Right result -> pure result
-  let (etas, isLive) =
-        if not (null liveEtas)
-          then (liveEtas, True)
-          else (scheduleEtas, False)
-  if null etas
-    then pure $ ApiTypes.RouteETAResp {eta = Nothing, isLastStop = False, isLive = False}
-    else do
-      enrichedEtas <- mapM (JMRouteServiceability.enrichBusStopETA integratedBPPConfig) etas
-      routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-      let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
-            (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
-            [] -> False
-      pure $
-        ApiTypes.RouteETAResp
-          { eta = Just enrichedEtas,
-            isLastStop = isLastStop,
-            isLive = isLive
-          }
+  -- `routeCodes` is an optional comma-separated filter; without it every route passing the stop is returned.
+  let filterRouteCodes = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbRouteCodes
+      passingRouteCodes = nub (map (.routeCode) mappings)
+      routeCodes =
+        if null filterRouteCodes
+          then passingRouteCodes
+          else filter (`elem` filterRouteCodes) passingRouteCodes
+  mapConcurrently (getRouteEtaAtStop integratedBPPConfig) routeCodes
+  where
+    getRouteEtaAtStop integratedBPPConfig routeCode = do
+      liveEtasFork <-
+        awaitableFork "getMultimodalTrackStopRoutes->liveEtas" $ do
+          busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
+          pure
+            [ etaEntry
+              | routeWithBuses <- busesForRoutes,
+                bus <- routeWithBuses.buses,
+                etaEntry <- fromMaybe [] bus.busData.eta_data,
+                etaEntry.stopCode == stopCode
+            ]
+      scheduleEtasFork <-
+        awaitableFork "getMultimodalTrackStopRoutes->scheduleEtas" $ do
+          schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
+          pure
+            [ etaEntry
+              | scheduleDetail <- schedules,
+                etaEntry <- scheduleDetail.eta,
+                etaEntry.stopCode == stopCode
+            ]
+      liveEtas <-
+        L.await Nothing liveEtasFork >>= \case
+          Left err -> do
+            logError $ "getMultimodalTrackStopRoutes live ETA fetch failed for route " <> routeCode <> ": " <> show err
+            pure []
+          Right result -> pure result
+      scheduleEtas <-
+        L.await Nothing scheduleEtasFork >>= \case
+          Left err -> do
+            logError $ "getMultimodalTrackStopRoutes schedule ETA fetch failed for route " <> routeCode <> ": " <> show err
+            pure []
+          Right result -> pure result
+      let (etas, isLive) =
+            if not (null liveEtas)
+              then (liveEtas, True)
+              else (scheduleEtas, False)
+      if null etas
+        then pure $ ApiTypes.PassingRoutes {routeCode = routeCode, eta = Nothing, isLastStop = False, isLive = False}
+        else do
+          enrichedEtas <- mapM (JMRouteServiceability.enrichBusStopETA integratedBPPConfig) etas
+          routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+          let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
+                (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
+                [] -> False
+          pure $
+            ApiTypes.PassingRoutes
+              { routeCode = routeCode,
+                eta = Just enrichedEtas,
+                isLastStop = isLastStop,
+                isLive = isLive
+              }

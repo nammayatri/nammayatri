@@ -460,17 +460,17 @@ types:
     timeStamp: UTCTime
     towerInfo: [TowerInfo]
 
-  RouteETAResp:
+  PassingRoutes:
+    routeCode: Text
     eta: "Maybe [BusStopETA]"
     isLastStop: Bool
     isLive: Bool
 
-  PassingRoutes:
-    routeCode: Text
-
 apis:
   - POST:
       endpoint: /multimodal/routeServiceability
+      query:
+        allPassingRoutes: Bool
       request:
         type: RouteServiceabilityReq
       response:
@@ -847,19 +847,11 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess
 
   - GET:
-      endpoint: /multimodal/route/{routeCode}/eta
-      auth: TokenAuth
-      params:
-        routeCode: Text
-      mandatoryQuery:
-        stopCode: Text
-      response:
-        type: RouteETAResp
-
-  - GET:
-      endpoint: /multimodal/stop/{stopCode}/routes
+      endpoint: /multimodal/track/stop/{stopCode}/routes
       auth: TokenAuth
       params:
         stopCode: Text
+      query:
+        routeCodes: Text
       response:
         type: "[PassingRoutes]"
