@@ -107,7 +107,7 @@ SELECT
   moc.merchant_id, moc.id,
   'CustomerAtFault', r.fault_rule, r.cancelled_by, NULL, NULL, NULL, NULL,
   '{"tag":"MoneyDeduction","contents":{"tag":"PercentageMoney","percentage":10.0,"minAmount":null,"maxAmount":100.0}}',
-  '{"taxPercentage":5.0,"commission":null}',
+  '{"taxPercentage":5.0,"commission":null,"amountsInclusiveOfTax":true}',
   NULL, 'ImmediateCapture',
   true, NULL,
   false, true,

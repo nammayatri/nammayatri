@@ -66,7 +66,11 @@ data CoinDeductionAPI = CoinDeductionAPI {coins :: Kernel.Prelude.Int, expirySec
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CommissionAndTaxAPI = CommissionAndTaxAPI {taxPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney, commission :: Kernel.Prelude.Maybe ChargeRateAPI}
+data CommissionAndTaxAPI = CommissionAndTaxAPI
+  { taxPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    commission :: Kernel.Prelude.Maybe ChargeRateAPI,
+    amountsInclusiveOfTax :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
