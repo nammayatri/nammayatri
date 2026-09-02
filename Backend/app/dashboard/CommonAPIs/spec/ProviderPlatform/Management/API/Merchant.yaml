@@ -1162,7 +1162,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger"
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
     - vehicleCategory: Text

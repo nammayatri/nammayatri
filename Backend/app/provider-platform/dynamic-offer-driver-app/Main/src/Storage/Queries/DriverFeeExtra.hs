@@ -812,6 +812,57 @@ updateManualToAutoPay driverFeeId = do
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
+findDriverFeeInRangeEligibleForAutopayRetry ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  Maybe Text ->
+  UTCTime ->
+  UTCTime ->
+  ServiceNames ->
+  [Domain.AutopayPaymentStage] ->
+  m [DriverFee]
+findDriverFeeInRangeEligibleForAutopayRetry merchantId merchantOperatingCityId limit mbLastDriverFeeId startTime endTime serviceName eligibleStages = do
+  findAllWithOptionsDb
+    [ Se.And
+        ( [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+            Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
+            Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE,
+            Se.Is BeamDF.autopayPaymentStage $ Se.In (Just <$> eligibleStages),
+            Se.Is BeamDF.badDebtDeclarationDate $ Se.Eq Nothing,
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+          ]
+            <> maybe [] (\lastDriverFeeId -> [Se.Is BeamDF.id $ Se.GreaterThan lastDriverFeeId]) mbLastDriverFeeId
+        )
+    ]
+    (Se.Asc BeamDF.id)
+    (Just limit)
+    Nothing
+
+updateManualToAutoPayForRetry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Domain.AutopayPaymentStage] -> Id DriverFee -> m ()
+updateManualToAutoPayForRetry eligibleStages driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.feeType RECURRING_EXECUTION_INVOICE,
+      Se.Set BeamDF.status PAYMENT_PENDING,
+      Se.Set BeamDF.autopayPaymentStage (Just NOTIFICATION_SCHEDULED),
+      Se.Set BeamDF.stageUpdatedAt (Just now),
+      Se.Set BeamDF.notificationRetryCount 0,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.Eq driverFeeId.getId),
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
+          Se.Is BeamDF.autopayPaymentStage $ Se.In (Just <$> eligibleStages),
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Eq Nothing
+        ]
+    ]
+
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateRegisterationFeeStatusByDriverIdForServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

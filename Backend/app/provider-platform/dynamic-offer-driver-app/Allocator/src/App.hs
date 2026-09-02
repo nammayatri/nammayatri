@@ -58,6 +58,7 @@ import SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance (triggerIffcoTok
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
+import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
@@ -149,6 +150,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendPDNNotificationToDriver
           & putJobHandlerInListWrapper flowRt env startMandateExecutionForDriver
           & putJobHandlerInListWrapper flowRt env notificationAndOrderStatusUpdate
+          & putJobHandlerInListWrapper flowRt env retryAutopayCollection
           & putJobHandlerInListWrapper flowRt env sendOverlayToDriver
           & putJobHandlerInListWrapper flowRt env badDebtCalculation
           & putJobHandlerInListWrapper flowRt env sendManualPaymentLink
