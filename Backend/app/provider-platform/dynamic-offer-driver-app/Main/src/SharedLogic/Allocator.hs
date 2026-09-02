@@ -296,7 +296,11 @@ type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
 data CongestionChargeCalculationRequestJobData = CongestionChargeCalculationRequestJobData
   { scheduleTimeIntervalInMin :: Int,
     congestionChargeCalculationTTLInSec :: Int,
-    calculationDataIntervalInMin :: Int
+    calculationDataIntervalInMin :: Int,
+    -- damping for the multiplier feedback loop: written = 1 + (avg - 1) * factor.
+    -- Nothing/1.0 keeps today's undamped behavior; < 1.0 stops a spike from
+    -- self-reinforcing cycle over cycle (last cycle's output is this cycle's input)
+    congestionAvgDampingFactor :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

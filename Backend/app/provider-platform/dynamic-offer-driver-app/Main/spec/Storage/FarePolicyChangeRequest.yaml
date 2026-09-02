@@ -1,0 +1,51 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FareProduct: Domain.Types.FareProduct
+
+# Maker-checker queue for destructive fare-product operations (FarePolicyV2 API).
+# A remove request is created PENDING by the maker; a DIFFERENT dashboard user
+# approves or rejects it. fareProductSnapshot keeps the combo's JSON so the
+# request stays reviewable after the product row is gone.
+FarePolicyChangeRequest:
+  tableName: fare_policy_change_request
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    FarePolicyChangeAction:
+      enum: "REMOVE_FARE_PRODUCT"
+    FarePolicyChangeStatus:
+      enum: "PENDING, APPROVED, REJECTED"
+
+  fields:
+    id: Id FarePolicyChangeRequest
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    action: FarePolicyChangeAction
+    fareProductId: Id FareProduct
+    fareProductSnapshot: Text
+    status: FarePolicyChangeStatus
+    requestedBy: Text
+    checkedBy: Maybe Text
+    reason: Maybe Text
+    remarks: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
+
+    findAllByFareProductId:
+      kvFunction: findAllWithKV
+      where:
+        fareProductId
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, checkedBy, remarks]
+      where:
+        id

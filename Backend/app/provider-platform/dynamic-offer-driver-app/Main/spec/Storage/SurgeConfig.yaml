@@ -1,0 +1,86 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceTierType: Domain.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  SurgeRow: Domain.Types.Extra.SurgeConfig
+  Centesimal: Kernel.Types.Common
+  Area: Lib.Types.SpecialLocation
+
+# Typed, versioned surge table (dev/docs/fare-policy-revamp-plan.md Phase 4).
+# One row per (city x service tier x time window) x version. Exactly one ACTIVE
+# version per key at a time (enforced by the activate handler, which archives
+# the previous ACTIVE). SHADOW versions evaluate on live searches and only log
+# their outcome. Guardrails are part of the config: outputs are clamped to
+# [minMultiplier, maxMultiplier] at evaluation time, and activation rejects a
+# multiplier jump beyond maxDeltaPerUpdate vs the previous ACTIVE version.
+SurgeConfig:
+  tableName: surge_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    SurgeConfigStatus:
+      enum: "DRAFT, SHADOW, ACTIVE, ARCHIVED"
+
+  fields:
+    id: Id SurgeConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleServiceTier: ServiceTierType
+    timeBounds: TimeBound
+    version: Int
+    status: SurgeConfigStatus
+    rows: "[SurgeRow]"
+    minMultiplier: Centesimal
+    maxMultiplier: Centesimal
+    maxDeltaPerUpdate: Maybe Centesimal
+    applyOnExtraDistanceOnly: Bool
+    # Areas this table must NOT surge: an excluded area's fare keeps the
+    # policy's static pricing. The surge key stays (city, tier, timeBounds);
+    # this is an opt-out list, not an area dimension.
+    excludedAreas: Maybe [Area]
+    description: Maybe Text
+    createdBy: Text
+
+  constraints:
+    id: PrimaryKey
+
+  # rows / excludedAreas are stored as ONE JSON text value each via the tType
+  # codecs below. Do NOT rely on beam instances for list types here: the KV
+  # drainer serializes list columns element-wise into a Postgres array literal,
+  # diverging from any whole-list HasSqlValueSyntax instance and corrupting the
+  # column (BeamRowReadError on read). With beamType Text every write path —
+  # direct beam, KV, drainer — moves the same opaque string.
+  beamType:
+    rows: Text
+    excludedAreas: Maybe Text
+
+  toTType:
+    rows: Kernel.Utils.Text.encodeToText rows|E
+    excludedAreas: (Kernel.Utils.Text.encodeToText <$> excludedAreas)|E
+
+  fromTType:
+    rows: (fromMaybe [] (Kernel.Utils.Text.decodeFromText rows))|E
+    excludedAreas: (excludedAreas >>= Kernel.Utils.Text.decodeFromText)|E
+
+  sqlType:
+    rows: text
+    excludedAreas: text
+    timeBounds: text
+
+  queries:
+    findAllByCityAndServiceTier:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleServiceTier]
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where:
+        id

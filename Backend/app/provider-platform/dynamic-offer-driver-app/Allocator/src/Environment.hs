@@ -58,7 +58,6 @@ import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
-import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -139,7 +138,6 @@ data HandlerEnv = HandlerEnv
     broadcastMessageTopic :: KafkaTopic,
     selfBaseUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
-    mlPricingInternal :: MLPricingInternal,
     inMemEnv :: CF.InMemEnv,
     bppMetrics :: BPPMetricsContainer,
     driverSearchRequestResponseMetrics :: DriverSearchRequestResponseMetricsContainer,

@@ -259,13 +259,6 @@ let appBackendBapInternal =
       , internalKey = sec.internalKey
       }
 
-let mlPricingInternal =
-      { name = "PRICING"
-      , url = "http://localhost:${mockServerPort}/mlpricing"
-      , apiKey = sec.mlPricingApiKey
-      , internalKey = sec.internalKey
-      }
-
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
         , mapValue = "http://localhost:${mockRegistryPort}/"
@@ -541,7 +534,6 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , appBackendBapInternal
-    , mlPricingInternal
     , graceTerminationPeriod = +90
     , encTools
     , authTokenCacheExpiry = +600

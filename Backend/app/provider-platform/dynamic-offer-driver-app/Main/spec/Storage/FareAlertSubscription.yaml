@@ -1,0 +1,36 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+# Email subscriptions for fare coverage alerts (FarePolicyV2 API).
+# AREA_VEHICLES fires whenever the city's (area x vehicle tier) coverage matrix
+# changes: an area gains/loses a vehicle tier, or a tier gains/loses an area.
+FareAlertSubscription:
+  tableName: fare_alert_subscription
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    FareAlertType:
+      enum: "AREA_VEHICLES"
+
+  fields:
+    id: Id FareAlertSubscription
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    email: Text
+    alertType: FareAlertType
+    subscribedBy: Text
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where:
+        id

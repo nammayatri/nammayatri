@@ -966,6 +966,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         mbActualQARCity = fullFarePolicy.mbActualQARCity,
         smartTipSuggestion = fullFarePolicy.smartTipSuggestion,
         smartTipReason = fullFarePolicy.smartTipReason,
+        shadowSurgeMultiplier = fullFarePolicy.shadowSurgeMultiplier,
+        shadowSurgeVersion = fullFarePolicy.shadowSurgeVersion,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         mbActualQARCityPast = (.mbActualQARCityPast) =<< fullFarePolicy.congestionChargeData,
@@ -1293,6 +1295,8 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
       { commissionCharges = Nothing,
         area = Nothing,
         navigationInstruction = Nothing,
+        shadowSurgeMultiplier = Nothing,
+        shadowSurgeVersion = Nothing,
         ..
       }
 

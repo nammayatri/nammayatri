@@ -240,7 +240,9 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           smartTipSuggestion = Nothing,
           smartTipReason = Nothing,
           mbActualQARFromLocGeohash = Nothing,
-          mbActualQARCity = Nothing
+          mbActualQARCity = Nothing,
+          shadowSurgeMultiplier = Nothing,
+          shadowSurgeVersion = Nothing
         }
     computePerKmFromPolicy fp farePolicy = do
       let fullFarePolicy =

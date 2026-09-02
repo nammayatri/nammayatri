@@ -81,7 +81,6 @@ import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
-import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -128,7 +127,6 @@ sendSearchRequestToDrivers ::
     CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion, "bppMetrics" ::: TM.BPPMetricsContainer],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -352,7 +350,6 @@ buildSearchRequestForDriver ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,

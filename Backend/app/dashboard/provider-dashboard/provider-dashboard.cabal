@@ -69,6 +69,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.DriverVehicleQuality
       Domain.Action.ProviderPlatform.Management.EntityInfo
+      Domain.Action.ProviderPlatform.Management.FarePolicyV2
       Domain.Action.ProviderPlatform.Management.FeedbackForm
       Domain.Action.ProviderPlatform.Management.FinanceManagement
       Domain.Action.ProviderPlatform.Management.GeohashArea
@@ -81,6 +82,7 @@ library
       Domain.Action.ProviderPlatform.Management.NammaTag
       Domain.Action.ProviderPlatform.Management.Payout
       Domain.Action.ProviderPlatform.Management.PlanManagement
+      Domain.Action.ProviderPlatform.Management.Pricing
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.ScheduledBooking
@@ -189,6 +191,7 @@ library
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.DriverVehicleQuality
       API.Action.ProviderPlatform.Management.EntityInfo
+      API.Action.ProviderPlatform.Management.FarePolicyV2
       API.Action.ProviderPlatform.Management.FeedbackForm
       API.Action.ProviderPlatform.Management.FinanceManagement
       API.Action.ProviderPlatform.Management.GeohashArea
@@ -201,6 +204,7 @@ library
       API.Action.ProviderPlatform.Management.NammaTag
       API.Action.ProviderPlatform.Management.Payout
       API.Action.ProviderPlatform.Management.PlanManagement
+      API.Action.ProviderPlatform.Management.Pricing
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.ScheduledBooking

@@ -55,16 +55,17 @@ import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DynamicPricing
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Pricing
+import qualified SharedLogic.SurgeConfig as SSC
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import qualified Storage.CachedQueries.SurgeConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.DynamicLogic
@@ -94,7 +95,7 @@ getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
         return Nothing
       Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
 
-getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicyByEstOrQuoteId mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest mbAppDynamicLogicVersion txnId configInExperimentVersions mbSpecialLocName =
   Hedis.runInMultiCloudRedisMaybeResult (Hedis.safeGet (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId)) >>= \case
     Nothing -> do
@@ -114,7 +115,7 @@ cacheFarePolicyByEstimateId estimateId fp = Hedis.setExp (makeFarePolicyByEstOrQ
 clearCachedFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
 clearCachedFarePolicyByEstOrQuoteId = Hedis.del . makeFarePolicyByEstOrQuoteIdKey
 
-getFarePolicyOnEndRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyOnEndRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicyOnEndRide mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration toLocationLatLong merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest mbAppDynamicLogicVersion txnId configInExperimentVersions mbSpecialLocName = do
   selectedFarePolicy <- case area of
     Just SL.Default -> handleFarePolicy
@@ -133,7 +134,7 @@ getFarePolicyOnEndRide mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeoha
       logInfo $ "Drop Special Location during end ride: " <> show isDropSpecialLocation <> " and area at estimate stage is: " <> show area <> ", fare policyId for end ride calc: " <> show (selectedFarePolicy'.id)
       return selectedFarePolicy'
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> Bool -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe UTCTime -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> Bool -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe UTCTime -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId isDashboard tripCategory serviceTier mbArea mbBookingStartTime mbAppDynamicLogicVersion txnId configsInExperimentVersions mbSpecialLocName = do
   case mbArea of
     Nothing -> do
@@ -192,7 +193,7 @@ isDynamicPricingTripCategory :: DTC.TripCategory -> Bool
 isDynamicPricingTripCategory (DTC.OneWay v) = v /= MeterRide
 isDynamicPricingTripCategory _ = False
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> m FarePoliciesProduct
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions mbDpInputsSharing = do
   let searchSources = FareProduct.getSearchSources isDashboard
   allFareProducts <- withTimeAPI "farePolicy" "getAllFareProducts" $ FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId tripCategory
@@ -249,7 +250,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         mbPickupDropArea = allFareProducts.mbPickupDropArea
       }
 
-getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => TransporterConfig -> Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> Maybe Text -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> m (Maybe HighPrecMoney)
+getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => TransporterConfig -> Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> Maybe Text -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> m (Maybe HighPrecMoney)
 getBaseVariantFarePolicy transporterConfig mbFromLocation mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName mbSpecialZoneId dpInputsList = do
   mbBaseVariantFarePolicy <- join <$> traverse (\fareProduct -> getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing Nothing mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct configsInExperimentVersions dpInputsList (Just transporterConfig) Nothing) mbBaseVariantCarFareProduct
   case mbBaseVariantFarePolicy of
@@ -272,7 +273,7 @@ getFareSettlementTypeForSpecialZone (Just specialZoneId) = do
   logDebug $ "getFareSettlementTypeForSpecialZone: specialZoneId: " <> specialZoneId <> ", fareSettlementType: " <> show mbFareSettlementType
   pure mbFareSettlementType
 
-getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> Maybe TransporterConfig -> Maybe (Maybe DVST.VehicleServiceTier) -> m (Maybe FarePolicyD.FullFarePolicy)
+getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> Maybe TransporterConfig -> Maybe (Maybe DVST.VehicleServiceTier) -> m (Maybe FarePolicyD.FullFarePolicy)
 getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct _configsInExperimentVersions dpInputsList mbTransporterConfig mbPreResolvedVSTItem = do
   transporterConfig <- maybe (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fareProduct.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)) pure mbTransporterConfig
   mbVehicleServiceTierItem <-
@@ -292,7 +293,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       _ -> return Nothing
   congestionChargeEndTime <- getCurrentTime
   let congestionChargeDuration = diffUTCTime congestionChargeEndTime congestionChargeStartTime
-  logInfo $ "getFullFarePolicy: calculateCongestionChargeViaML took " <> show congestionChargeDuration
+  logInfo $ "getFullFarePolicy: getCongestionChargeMultiplierFromModel took " <> show congestionChargeDuration
   mbFarePolicy' <- QFP.findById txnId fareProduct.farePolicyId
   case mbFarePolicy' of
     Nothing -> do
@@ -300,28 +301,23 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       return Nothing
     Just farePolicy' -> do
       cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy'.cancellationFarePolicyId
-      let getMlCongestionChargeMultiplier =
-            if transporterConfig.isMLBasedDynamicPricingEnabled
-              then calculateCongestionChargeViaML transporterConfig mbDistance mbFromLocation cancellationFarePolicy farePolicy' Nothing
-              else return Nothing
       (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc, smartTipSuggestion, smartTipReason, mbActualQARFromLocGeohash, mbActualQARCity, mbcongestionChargeData, mbDriverExtraFeeBounds) <-
         case congestionChargeMultiplierFromModel of
           Just details ->
             case (details.congestionChargePerMin, details.smartTipSuggestion, details.congestionChargeMultiplier) of
+              -- a SurgeConfig row may set BOTH outputs (json-logic never does); apply both
+              (Just congestionChargePerMinute, smartTip, Just congestionChargeMultiplier) -> pure (Just congestionChargePerMinute, Just congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds)
               (Just congestionChargePerMinute, smartTip, Nothing) -> pure (Just congestionChargePerMinute, Nothing, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds) -----------Need to send Nothing here for congestionChargeMultiplier
-              (Nothing, smartTip, Just congestionChargeMultiplier) -> do
-                mlCongestionChargeMultiplier <- getMlCongestionChargeMultiplier
-                pure (Nothing, mlCongestionChargeMultiplier <|> Just congestionChargeMultiplier, if isJust mlCongestionChargeMultiplier then Just "ML" else details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds) -----------Need to send Nothing here for congestionChargePerMinute
-              (Nothing, Just smartTip, Nothing) -> do
-                mlCongestionChargeMultiplier <- getMlCongestionChargeMultiplier
-                pure (Nothing, mlCongestionChargeMultiplier <|> farePolicy'.congestionChargeMultiplier, if isJust mlCongestionChargeMultiplier then Just "ML" else details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Just smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds)
-              _ -> do
-                mlCongestionChargeMultiplier <- getMlCongestionChargeMultiplier
-                pure (Nothing, mlCongestionChargeMultiplier <|> farePolicy'.congestionChargeMultiplier, if isJust mlCongestionChargeMultiplier then Just "ML" else Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing, Nothing, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds)
+              (Nothing, smartTip, Just congestionChargeMultiplier) -> pure (Nothing, Just congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds) -----------Need to send Nothing here for congestionChargePerMinute
+              (Nothing, Just smartTip, Nothing) -> pure (Nothing, farePolicy'.congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Just smartTip, details.smartTipReason, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds)
+              -- engine decided nothing: keep its dpVersion (e.g. "SurgeConfig:vN" when
+              -- surge ran and declined to surge) so engine attribution stays truthful;
+              -- "Static" only when no engine produced a version at all
+              _ -> pure (Nothing, farePolicy'.congestionChargeMultiplier, details.dpVersion <|> Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing, Nothing, details.mbActualQARFromLocGeohash, details.mbActualQARCity, Just details.congestionChargeData, details.driverExtraFeeBounds)
           Nothing -> pure (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier mbDriverExtraFeeBounds
       logDebug $ "farePolicy after updating driverExtraFeeBounds: " <> show farePolicy <> " and mbDriverExtraFeeBounds: " <> show mbDriverExtraFeeBounds
-      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity
+      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity (congestionChargeMultiplierFromModel >>= (.shadowSurgeMultiplier)) (congestionChargeMultiplierFromModel >>= (.shadowSurgeVersion))
       mbFareSettlementType <- getFareSettlementTypeForSpecialZone mbSpecialZoneId
       -- Driver cancellation block needs a double opt-in: the service tier enables it,
       -- and the fare policy can explicitly opt out with Just False for finer scopes.
@@ -355,63 +351,8 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           logInfo $ "Calling DynamicPricing 1" <> show localTimeZoneSeconds <> show fromLocGeohash <> show mbToLocGeohash <> show fareProduct.vehicleServiceTier <> show mbDistance <> show mbDuration <> show transporterConfig.isDynamicPricingQARCalEnabled <> show transporterConfig.qarCalRadiusInKm <> show mbAppDynamicLogicVersion <> show fareProduct.merchantOperatingCityId
           let vehicleCategory = maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem
               mbDpInputs = lookup vehicleCategory dpInputsList
-          getCongestionChargeMultiplierFromModel' mbDpInputs (mkDropQARConfig transporterConfig mbToLocation) localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier vehicleCategory mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing (Just fareProduct.tripCategory)
+          getCongestionChargeMultiplierFromModel' mbDpInputs (mkDropQARConfig transporterConfig mbToLocation) localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier vehicleCategory mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing (Just fareProduct.tripCategory) (txnId >>= surgePricingContextId) (Just fareProduct.area)
         else return Nothing
-    -- calculateCongestionChargeViaML :: ( MonadFlow m,
-    --     CacheFlow m r,
-    --     EsqDBFlow m r,
-    --     EsqDBReplicaFlow m r
-    --   ) =>
-    --   m (Maybe FarePolicyD.CongestionChargeMultiplier,  Maybe Double)
-    calculateCongestionChargeViaML transporterConfig (Just distance) (Just fromLocation) cancellationFarePolicy farePolicy mbcongestionChargeData = do
-      let congestionChargeDetails =
-            FarePolicyD.CongestionChargeDetails
-              { dpVersion = Nothing,
-                mbSupplyDemandRatioToLoc = Nothing,
-                mbSupplyDemandRatioFromLoc = Nothing,
-                congestionChargePerMin = Nothing,
-                smartTipSuggestion = Nothing,
-                smartTipReason = Nothing,
-                mbActualQARFromLocGeohash = Nothing,
-                mbActualQARCity = Nothing
-              }
-      mbFareSettlementType <- getFareSettlementTypeForSpecialZone mbSpecialZoneId
-      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType}
-      parameters <- calculateFareParametersForFarePolicy transporterConfig fullFarePolicy (Just distance) mbDuration fareProduct.merchantOperatingCityId
-      let fare = SFC.fareSum parameters (Just [])
-      case parameters.fareParametersDetails of
-        DFareParameters.ProgressiveDetails DFareParameters.FParamsProgressiveDetails {deadKmFare, extraKmFare} -> do
-          let baseFare = parameters.baseFare
-              distanceFare = extraKmFare
-              pickupFare = deadKmFare
-              maxDAFare = case fullFarePolicy.driverExtraFeeBounds of
-                Just nonEmptydriverExtraFeeBounds -> do
-                  Just (DDriverExtraFeeBounds.findDriverExtraFeeBoundsByDistance distance nonEmptydriverExtraFeeBounds).maxFee
-                Nothing -> Nothing
-          mlPricingInternal <- asks (.mlPricingInternal)
-          let req =
-                ML.GetCongestionChargeReq
-                  { txnId = (Just . getKeyValue) =<< txnId,
-                    fromLocation = fromLocation,
-                    toLocation = mbToLocation,
-                    distance = distance,
-                    duration = mbDuration,
-                    bookingTime = mbBookingStartTime,
-                    merchantOperatingCityId = fareProduct.merchantOperatingCityId,
-                    serviceTier = fareProduct.vehicleServiceTier,
-                    fare = Just fare,
-                    ..
-                  }
-          -- If ML call fails for any reason, fall back to no congestion multiplier to keep flow running
-          resOrErr <- withTryCatch "getCongestionCharge:getFullFarePolicy" (ML.getCongestionCharge mlPricingInternal.apiKey mlPricingInternal.url req)
-          case resOrErr of
-            Right congestionChargeRes -> return congestionChargeRes.congestionChargeMultiplier
-            Left e -> do
-              logError $ "getCongestionCharge via MLfailed, defaulting to Nothing: " <> show e <> "   :: req body is " <> show req
-              return Nothing
-        -- return fullFarePolicy.congestionChargeMultiplier
-        _ -> return Nothing
-    calculateCongestionChargeViaML _ _ _ _ _ _ = return Nothing
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds -> FarePolicyD.FarePolicy
 updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier driverExtraFeeBounds' = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, driverExtraFeeBounds = maybe driverExtraFeeBounds (NE.nonEmpty . pure) driverExtraFeeBounds', ..}
@@ -1199,6 +1140,11 @@ buildDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeo
     categoryInputs <- fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory
     pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)
 
+-- | Phase-4 surge entrypoint (dev/docs/fare-policy-revamp-plan.md): an ACTIVE
+-- typed SurgeConfig for (city, tier) replaces the json-logic path entirely; a
+-- SHADOW config evaluates on live traffic and only logs its outcome
+-- (SURGE_SHADOW_EVAL). With neither, this is a plain passthrough to the
+-- json-logic worker below.
 getCongestionChargeMultiplierFromModel' ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -1225,8 +1171,175 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Seconds ->
   Maybe Seconds ->
   Maybe DTC.TripCategory ->
+  Maybe Text ->
+  Maybe SL.Area ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromUtc (Just _fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) _radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory = do
+getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromUtc mbFromLocation mbFromLocGeohash toLocGeohash serviceTier vehicleCategory mbDistance mbDuration dpQarEnabled radius' mbSpecialLocName mbDynamicPricingLogicVersion merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory mbPricingContextId mbArea = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  surgeConfigs <- SSC.findConfigsForPricing merchantOperatingCityId serviceTier localTime
+  -- Per-transaction version pin: once a transaction is priced by surge version
+  -- N, every later evaluation of the SAME transaction — cache-miss
+  -- re-resolution at select, end-ride recompute — replays version N with fresh
+  -- signals (mirroring how mbDpVersion pins the json-logic rule version).
+  -- Activating or rolling back a config therefore only affects NEW searches.
+  mbPinnedVersion <- case mbPricingContextId of
+    Just ctxId -> Hedis.withCrossAppRedis (Hedis.safeGet (surgePinKey ctxId))
+    Nothing -> pure Nothing
+  mbPinnedConfig <- case mbPinnedVersion of
+    Nothing -> pure Nothing
+    Just (pinnedVersion :: Int) ->
+      if (Just pinnedVersion == ((.version) <$> surgeConfigs.activeConfig))
+        then pure surgeConfigs.activeConfig
+        else do
+          allConfigs <- CQSC.findAllByCityAndServiceTier merchantOperatingCityId serviceTier
+          case find (\c -> c.version == pinnedVersion) allConfigs of
+            Just c -> pure (Just c)
+            Nothing -> do
+              logWarning $ "SURGE_PIN_MISSING: pinned surge version " <> show pinnedVersion <> " not found for city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier
+              pure surgeConfigs.activeConfig
+  -- Re-pricing (mbActualDuration set) may ONLY use the pinned version: a ride
+  -- priced by json-logic or static before activation must not be surged at
+  -- end-ride, and a surge ride keeps the version that priced it. Initial
+  -- pricing uses pin-or-current-active. Shadow runs on initial pricing only.
+  let isRepricing = isJust mbActualDuration
+      mbEffectiveActive = if isRepricing then mbPinnedConfig else (mbPinnedConfig <|> surgeConfigs.activeConfig)
+      mbShadowConfigToRun = if isRepricing then Nothing else surgeConfigs.shadowConfig
+  case (mbEffectiveActive, mbShadowConfigToRun) of
+    (Nothing, Nothing) -> runWorker mbDpInputs
+    _ -> do
+      -- resolve signals once; the resolved inputs are reused by the logic path
+      mbInputs <- case (mbDpInputs, mbFromLocation, mbFromLocGeohash, mbDistance) of
+        (Just inputs, _, _, _) -> pure (Just inputs)
+        (Nothing, Just fromLocation, Just fromLocGeohash, Just (Meters d)) -> do
+          now <- getCurrentTime
+          Just <$> resolveDynamicPricingInputs now fromLocation (fromMaybe 5.0 radius') mbDropQARConfig fromLocGeohash toLocGeohash d merchantOperatingCityId.getId vehicleCategory
+        _ -> pure Nothing
+      let surgeSignals =
+            SSC.SurgeSignals
+              { qar = mbInputs >>= (.actualQAR),
+                supplyDemandRatio = mbInputs >>= (.mbSupplyDemandRatioFromLoc),
+                distanceKm = (\(Meters d) -> d `div` 1000) <$> mbDistance,
+                area = mbArea
+              }
+          mbShadowOutcome = mbShadowConfigToRun >>= \cfg -> SSC.evaluateSurgeConfig cfg surgeSignals
+          shadowMultiplier = mbShadowOutcome >>= (.multiplier)
+          shadowVersion = (.version) <$> mbShadowConfigToRun
+          attachShadow model = model {shadowSurgeMultiplier = shadowMultiplier, shadowSurgeVersion = shadowVersion}
+      whenJust mbShadowConfigToRun $ \shadowCfg ->
+        logInfo $ "SURGE_SHADOW_EVAL: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " v" <> show shadowCfg.version <> " signals " <> show surgeSignals <> " outcome " <> show mbShadowOutcome
+      case mbEffectiveActive of
+        Nothing -> do
+          result <- runWorker (mbInputs <|> mbDpInputs)
+          -- shadow-only city: persist the candidate outcome on the estimate even
+          -- when the logic path returned nothing, so comparison stays complete
+          case result of
+            Just model -> pure (Just (attachShadow model))
+            Nothing
+              | isJust mbShadowConfigToRun ->
+                pure $
+                  Just $
+                    attachShadow
+                      CongestionChargeDetailsModel
+                        { dpVersion = Nothing,
+                          mbSupplyDemandRatioToLoc = mbInputs >>= (.mbSupplyDemandRatioToLoc),
+                          mbSupplyDemandRatioFromLoc = mbInputs >>= (.mbSupplyDemandRatioFromLoc),
+                          congestionChargePerMin = Nothing,
+                          smartTipSuggestion = Nothing,
+                          smartTipReason = Nothing,
+                          mbActualQARFromLocGeohash = mbInputs >>= (.actualQAR),
+                          mbActualQARCity = Nothing,
+                          congestionChargeData = mkCongestionChargeData mbInputs,
+                          driverExtraFeeBounds = Nothing,
+                          congestionChargeMultiplier = Nothing,
+                          shadowSurgeMultiplier = Nothing,
+                          shadowSurgeVersion = Nothing
+                        }
+              | otherwise -> pure Nothing
+        Just activeCfg -> do
+          -- pin this transaction to the version that priced it (initial pricing only)
+          whenJust mbPricingContextId $ \ctxId ->
+            when (isNothing mbPinnedVersion && not isRepricing) $
+              Hedis.withCrossAppRedis $ Hedis.setExp (surgePinKey ctxId) activeCfg.version surgePinTtlSeconds
+          let mbOutcome = SSC.evaluateSurgeConfig activeCfg surgeSignals
+          logInfo $ "SURGE_ACTIVE_EVAL: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " v" <> show activeCfg.version <> " signals " <> show surgeSignals <> " outcome " <> show mbOutcome
+          return $
+            Just $
+              CongestionChargeDetailsModel
+                { dpVersion = Just ("SurgeConfig:v" <> T.pack (show activeCfg.version)),
+                  mbSupplyDemandRatioToLoc = mbInputs >>= (.mbSupplyDemandRatioToLoc),
+                  mbSupplyDemandRatioFromLoc = mbInputs >>= (.mbSupplyDemandRatioFromLoc),
+                  congestionChargePerMin = mbOutcome >>= (.perMinCharge),
+                  smartTipSuggestion = Nothing,
+                  smartTipReason = Nothing,
+                  mbActualQARFromLocGeohash = mbInputs >>= (.actualQAR),
+                  mbActualQARCity = Nothing,
+                  congestionChargeData = mkCongestionChargeData mbInputs,
+                  driverExtraFeeBounds = Nothing,
+                  congestionChargeMultiplier =
+                    (mbOutcome >>= (.multiplier)) <&> \m ->
+                      if activeCfg.applyOnExtraDistanceOnly then FarePolicyD.ExtraDistanceFare m else FarePolicyD.BaseFareAndExtraDistanceFare m,
+                  shadowSurgeMultiplier = shadowMultiplier,
+                  shadowSurgeVersion = shadowVersion
+                }
+  where
+    runWorker inputs = runDynamicPricingLogic' inputs mbDropQARConfig timeDiffFromUtc mbFromLocation mbFromLocGeohash toLocGeohash serviceTier vehicleCategory mbDistance mbDuration dpQarEnabled radius' mbSpecialLocName mbDynamicPricingLogicVersion merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory
+    mkCongestionChargeData mbInputs =
+      FarePolicyD.CongestionChargeData
+        { mbActualQARFromLocGeohashPast = mbInputs >>= (.actualQARPast),
+          mbActualQARFromLocGeohashDistance = Nothing,
+          mbActualQARFromLocGeohashDistancePast = Nothing,
+          mbActualQARCityPast = Nothing,
+          mbCongestionFromLocGeohash = mbInputs >>= (.congestionMultiplier),
+          mbCongestionFromLocGeohashPast = mbInputs >>= (.congestionMultiplierPast),
+          mbCongestionFromLocGeohashDistance = Nothing,
+          mbCongestionFromLocGeohashDistancePast = Nothing,
+          mbCongestionCity = Nothing,
+          mbCongestionCityPast = Nothing
+        }
+
+surgePinKey :: Text -> Text
+surgePinKey ctxId = "driver-offer:SurgeConfig:Pin:" <> ctxId
+
+-- | Must outlive the longest search -> end-ride span (scheduled bookings can be
+-- placed days ahead); expiry means end-ride recompute silently falls back to
+-- the json-logic path instead of the version that priced the search.
+surgePinTtlSeconds :: Int
+surgePinTtlSeconds = 30 * 86400
+
+-- | Pin only transaction-scoped contexts: a DriverId CacKey would collide
+-- across all of that driver's searches.
+surgePricingContextId :: CacKey -> Maybe Text
+surgePricingContextId (TransactionId tid) = Just tid.getId
+surgePricingContextId (DriverId _) = Nothing
+
+runDynamicPricingLogic' ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
+  ) =>
+  Maybe DynamicPricingInputs ->
+  Maybe DropQARConfig ->
+  Seconds ->
+  Maybe LatLong ->
+  Maybe Text ->
+  Maybe Text ->
+  ServiceTierType ->
+  Maybe DVC.VehicleCategory ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe Bool ->
+  Maybe Double ->
+  Maybe Text ->
+  Maybe Int ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Seconds ->
+  Maybe Seconds ->
+  Maybe DTC.TripCategory ->
+  m (Maybe CongestionChargeDetailsModel)
+runDynamicPricingLogic' mbDpInputs mbDropQARConfig timeDiffFromUtc (Just _fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) _radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   logInfo $ "Calling DynamicPricing" <> show fromLocGeohash
   now <- getCurrentTime
@@ -1258,6 +1371,9 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
       mbCongestionFromLocGeohashDistancePast = Nothing
       mbCongestionCity = Nothing
       mbCongestionCityPast = Nothing
+      -- shadow fields are attached by the surge wrapper, never by the logic path
+      shadowSurgeMultiplier = Nothing
+      shadowSurgeVersion = Nothing
 
   (allLogics, mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime (Just dynamicPricingLogicVersion) Nothing
   let estimatedDurationInS = fmap (\(Seconds s) -> s) mbEstimatedDuration
@@ -1334,7 +1450,9 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                           ..
                         }
             A.Error err -> do
-              logWarning $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+              -- DYNAMIC_PRICING_PARSE_FAILURE is a stable, alertable marker: a
+              -- broken rule silently degrades every search to static pricing
+              logError $ "DYNAMIC_PRICING_PARSE_FAILURE: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " err " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
               return $
                 Just $
                   CongestionChargeDetailsModel
@@ -1347,7 +1465,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                       driverExtraFeeBounds = Nothing,
                       ..
                     }
-getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
+runDynamicPricingLogic' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
 
 data CongestionChargeDetailsModel = CongestionChargeDetailsModel
   { dpVersion :: Maybe Text,
@@ -1360,7 +1478,11 @@ data CongestionChargeDetailsModel = CongestionChargeDetailsModel
     mbActualQARCity :: Maybe Double,
     congestionChargeData :: FarePolicyD.CongestionChargeData,
     driverExtraFeeBounds :: Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds,
-    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier
+    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier,
+    -- candidate SHADOW SurgeConfig outcome, persisted on the estimate so
+    -- applied-vs-candidate compares as a ClickHouse query, not a log grep
+    shadowSurgeMultiplier :: Maybe Centesimal,
+    shadowSurgeVersion :: Maybe Int
   }
   deriving (Generic, Show)
 

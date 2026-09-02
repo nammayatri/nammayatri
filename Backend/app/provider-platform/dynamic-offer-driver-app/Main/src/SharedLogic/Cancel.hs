@@ -50,7 +50,6 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.Types as SDT
@@ -107,7 +106,6 @@ reAllocateBookingIfPossible ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
@@ -250,7 +248,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         CacheFlow m r,
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
-        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
         HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -284,7 +281,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         CacheFlow m r,
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
-        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
         HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,

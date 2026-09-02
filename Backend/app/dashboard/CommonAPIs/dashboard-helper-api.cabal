@@ -102,6 +102,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.DriverVehicleQuality
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
+      API.Types.ProviderPlatform.Management.Endpoints.FarePolicyV2
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
       API.Types.ProviderPlatform.Management.Endpoints.GeohashArea
@@ -114,6 +115,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
       API.Types.ProviderPlatform.Management.Endpoints.Payout
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
+      API.Types.ProviderPlatform.Management.Endpoints.Pricing
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
@@ -126,6 +128,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.EntityInfo
+      API.Types.ProviderPlatform.Management.FarePolicyV2
       API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.FinanceManagement
       API.Types.ProviderPlatform.Management.GeohashArea
@@ -138,6 +141,7 @@ library
       API.Types.ProviderPlatform.Management.NammaTag
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.PlanManagement
+      API.Types.ProviderPlatform.Management.Pricing
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.ScheduledBooking

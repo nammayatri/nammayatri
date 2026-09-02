@@ -55,6 +55,8 @@ data Estimate = Estimate
     navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personalDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    shadowSurgeMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    shadowSurgeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

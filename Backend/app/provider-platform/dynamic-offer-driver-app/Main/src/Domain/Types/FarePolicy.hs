@@ -263,6 +263,10 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     mbSupplyDemandRatioFromLoc :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    -- what the SHADOW SurgeConfig would have priced (persisted on the estimate
+    -- for applied-vs-candidate comparison); Nothing when no shadow config ran
+    shadowSurgeMultiplier :: Maybe Centesimal,
+    shadowSurgeVersion :: Maybe Int,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     vatChargeConfig :: Maybe FareChargeConfig,
@@ -300,7 +304,9 @@ data CongestionChargeDetails = CongestionChargeDetails
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     mbActualQARFromLocGeohash :: Maybe Double,
-    mbActualQARCity :: Maybe Double
+    mbActualQARCity :: Maybe Double,
+    shadowSurgeMultiplier :: Maybe Centesimal,
+    shadowSurgeVersion :: Maybe Int
   }
   deriving (Generic, Show)
 

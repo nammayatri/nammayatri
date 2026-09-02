@@ -78,6 +78,43 @@ data IssueCategory
 
 data FarePolicy
 
+data FareProduct
+
+data FarePolicyChangeRequest
+
+data SurgeConfig
+
+-- Single-constructor enums need hand-written string JSON: generic aeson only
+-- string-encodes sums with two or more nullary constructors, so a lone
+-- constructor round-trips as [] and rejects the "AREA_VEHICLES" string the UI
+-- sends. Declared here (not in the DSL spec) so the instances can be explicit;
+-- extend the parsers when adding values.
+data FPV2AlertType = AREA_VEHICLES
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance ToJSON FPV2AlertType where
+  toJSON AREA_VEHICLES = String "AREA_VEHICLES"
+
+instance FromJSON FPV2AlertType where
+  parseJSON = withText "FPV2AlertType" parse
+    where
+      parse "AREA_VEHICLES" = pure AREA_VEHICLES
+      parse other = fail $ "unknown FPV2AlertType: " <> T.unpack other
+
+data FPV2ChangeAction = REMOVE_FARE_PRODUCT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance ToJSON FPV2ChangeAction where
+  toJSON REMOVE_FARE_PRODUCT = String "REMOVE_FARE_PRODUCT"
+
+instance FromJSON FPV2ChangeAction where
+  parseJSON = withText "FPV2ChangeAction" parse
+    where
+      parse "REMOVE_FARE_PRODUCT" = pure REMOVE_FARE_PRODUCT
+      parse other = fail $ "unknown FPV2ChangeAction: " <> T.unpack other
+
 data DriverHomeLocation
 
 data DriverGoHomeRequest

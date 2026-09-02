@@ -16,6 +16,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.DriverVehicleQuality
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
+import qualified API.Types.ProviderPlatform.Management.FarePolicyV2
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified API.Types.ProviderPlatform.Management.FinanceManagement
 import qualified API.Types.ProviderPlatform.Management.GeohashArea
@@ -28,6 +29,7 @@ import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
+import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.ScheduledBooking
@@ -60,6 +62,7 @@ data ManagementUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | DRIVER_VEHICLE_QUALITY API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityUserActionType
   | ENTITY_INFO API.Types.ProviderPlatform.Management.EntityInfo.EntityInfoUserActionType
+  | FARE_POLICY_V2 API.Types.ProviderPlatform.Management.FarePolicyV2.FarePolicyV2UserActionType
   | FEEDBACK_FORM API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormUserActionType
   | FINANCE_MANAGEMENT API.Types.ProviderPlatform.Management.FinanceManagement.FinanceManagementUserActionType
   | GEOHASH_AREA API.Types.ProviderPlatform.Management.GeohashArea.GeohashAreaUserActionType
@@ -72,6 +75,7 @@ data ManagementUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
+  | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
   | SCHEDULED_BOOKING API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingUserActionType
@@ -101,6 +105,7 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     DRIVER_VEHICLE_QUALITY e -> "DRIVER_VEHICLE_QUALITY/" <> show e
     ENTITY_INFO e -> "ENTITY_INFO/" <> show e
+    FARE_POLICY_V2 e -> "FARE_POLICY_V2/" <> show e
     FEEDBACK_FORM e -> "FEEDBACK_FORM/" <> show e
     FINANCE_MANAGEMENT e -> "FINANCE_MANAGEMENT/" <> show e
     GEOHASH_AREA e -> "GEOHASH_AREA/" <> show e
@@ -113,6 +118,7 @@ instance Text.Show.Show ManagementUserActionType where
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
+    PRICING e -> "PRICING/" <> show e
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
     SCHEDULED_BOOKING e -> "SCHEDULED_BOOKING/" <> show e
@@ -236,6 +242,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( FARE_POLICY_V2 v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "FARE_POLICY_V2/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( FEEDBACK_FORM v1,
                    r2
                  )
@@ -339,6 +354,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PLAN_MANAGEMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PRICING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PRICING/" r,
                    ( v1,
                      r2
                      ) <-

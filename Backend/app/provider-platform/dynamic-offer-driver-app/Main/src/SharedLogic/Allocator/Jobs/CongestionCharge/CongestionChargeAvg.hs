@@ -44,13 +44,13 @@ calculateCongestionChargeAvgTaxi Job {id, jobInfo} = withLogTag ("JobId-" <> id.
   let CongestionChargeCalculationRequestJobData {..} = jobInfo.jobData
   let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
   let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
-  calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec
-  calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec
+  calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
+  calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec congestionAvgDampingFactor
   result <- Est.calulateCongestionByGeohash from now
   -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTier from now
   -- let queryResult = SRFD.concatFun query1Result query2Result
   logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
-  mapM_ (updateGeohashCongestion congestionChargeCalculationTTLInSec) result
+  mapM_ (updateGeohashCongestion congestionChargeCalculationTTLInSec congestionAvgDampingFactor) result
   return (ReSchedule nextScheduleT)
 
 updateGeohashCongestion ::
@@ -60,15 +60,16 @@ updateGeohashCongestion ::
     EsqDBFlow m r
   ) =>
   Int ->
+  Maybe Double ->
   (Maybe Text, Maybe Double) ->
   m ()
-updateGeohashCongestion congestionChargeCalculationTTLInSec (geohash', congestionMultiplier) = do
+updateGeohashCongestion congestionChargeCalculationTTLInSec dampingFactor (geohash', congestionMultiplier) = do
   let geohash = fromMaybe "" geohash'
       key = mkCongestionKeyWithGeohash geohash
       key1 = mkCongestionKeyWithGeohashPast geohash
   (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key
   Hedis.withCrossAppRedis $ Hedis.setExp key1 val congestionChargeCalculationTTLInSec
-  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key cm congestionChargeCalculationTTLInSec)
+  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key (applyDamping dampingFactor cm) congestionChargeCalculationTTLInSec)
 
 calculateAndUpdateCityCongestion ::
   ( SchedulerFlow r,
@@ -80,13 +81,14 @@ calculateAndUpdateCityCongestion ::
   UTCTime ->
   UTCTime ->
   Int ->
+  Maybe Double ->
   m ()
-calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec = do
+calculateAndUpdateCityCongestion now from congestionChargeCalculationTTLInSec dampingFactor = do
   value <- Est.calulateCongestionByCity from now
   -- query2Result <- SRFD.calulateAcceptanceCountByCityAndServiceTier from now
   -- let queryResult = SRFD.concatFun' query2Result query1Result
   logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show value
-  mapM_ (updateCityCongestion congestionChargeCalculationTTLInSec) value
+  mapM_ (updateCityCongestion congestionChargeCalculationTTLInSec dampingFactor) value
 
 updateCityCongestion ::
   ( SchedulerFlow r,
@@ -95,15 +97,16 @@ updateCityCongestion ::
     EsqDBFlow m r
   ) =>
   Int ->
+  Maybe Double ->
   (Id DMOC.MerchantOperatingCity, Maybe Double) ->
   m ()
-updateCityCongestion congestionChargeCalculationTTLInSec (cityId, congestionMultiplier) = do
+updateCityCongestion congestionChargeCalculationTTLInSec dampingFactor (cityId, congestionMultiplier) = do
   let city = cityId.getId
       key = mkCongestionKeyWithCity city
       key1 = mkCongestionKeyWithCityPast city
   (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key
   Hedis.withCrossAppRedis $ Hedis.setExp key1 val congestionChargeCalculationTTLInSec
-  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key cm congestionChargeCalculationTTLInSec)
+  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key (applyDamping dampingFactor cm) congestionChargeCalculationTTLInSec)
 
 calculateAndUpdateGeohashAndDistanceBinCongestion ::
   ( SchedulerFlow r,
@@ -115,13 +118,14 @@ calculateAndUpdateGeohashAndDistanceBinCongestion ::
   UTCTime ->
   UTCTime ->
   Int ->
+  Maybe Double ->
   m ()
-calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec = do
+calculateAndUpdateGeohashAndDistanceBinCongestion now from congestionChargeCalculationTTLInSec dampingFactor = do
   result <- Est.calulateCongestionByGeohashAndDistanceBin from now
   -- query2Result <- SRFD.calulateAcceptanceCountByGeohashAndServiceTierAndDistanceBin from now
   -- let queryResult = SRFD.concatFun'' query1Result query2Result
   logInfo $ "CongestionChargeCalculation clickhouse result : -" <> show result
-  mapM_ (updateGeohashAndDistanceBinCongestion congestionChargeCalculationTTLInSec) result
+  mapM_ (updateGeohashAndDistanceBinCongestion congestionChargeCalculationTTLInSec dampingFactor) result
 
 updateGeohashAndDistanceBinCongestion ::
   ( SchedulerFlow r,
@@ -130,12 +134,19 @@ updateGeohashAndDistanceBinCongestion ::
     EsqDBFlow m r
   ) =>
   Int ->
+  Maybe Double ->
   (Maybe Text, Maybe Double, Text) ->
   m ()
-updateGeohashAndDistanceBinCongestion congestionChargeCalculationTTLInSec (geohash', congestionMultiplier, distanceBin) = do
+updateGeohashAndDistanceBinCongestion congestionChargeCalculationTTLInSec dampingFactor (geohash', congestionMultiplier, distanceBin) = do
   let geohash = fromMaybe "" geohash'
       key = mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin
       key1 = mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin
   (val :: Maybe Double) <- Hedis.withCrossAppRedis $ Hedis.get key
   Hedis.withCrossAppRedis $ Hedis.setExp key1 val congestionChargeCalculationTTLInSec
-  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key cm congestionChargeCalculationTTLInSec)
+  whenJust congestionMultiplier (\cm -> Hedis.withCrossAppRedis $ Hedis.setExp key (applyDamping dampingFactor cm) congestionChargeCalculationTTLInSec)
+
+-- feedback-loop damping: the multiplier written here becomes next cycle's
+-- input, so an undamped average can self-reinforce a spike. factor 1.0 (or
+-- Nothing) keeps historical behavior.
+applyDamping :: Maybe Double -> Double -> Double
+applyDamping mbFactor cm = 1 + (cm - 1) * fromMaybe 1.0 mbFactor

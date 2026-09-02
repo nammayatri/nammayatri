@@ -1,0 +1,505 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
+  Hours: Kernel.Types.Common
+  Kilometers: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  Months: Kernel.Types.Time
+  TimeBound: Kernel.Types.TimeBound
+  Area: Lib.Types.SpecialLocation
+  TripCategory: Dashboard.Common
+  ServiceTierType: Dashboard.Common
+  FarePolicy: Dashboard.Common
+  FareProduct: Dashboard.Common
+  FarePolicyChangeRequest: Dashboard.Common
+  FPV2AlertType: Dashboard.Common
+  FPV2ChangeAction: Dashboard.Common
+
+module: FarePolicyV2
+
+# Typed fare-policy management API (dev/docs/fare-policy-revamp-plan.md).
+# Replaces the 94-column CSV contract for the new fare-policy editor:
+# every field of the domain FarePolicy (all five variants) travels as typed
+# JSON, writes are full replacements validated BEFORE any DB write, and
+# dryRun returns the validation issues + field diff without writing.
+# The legacy /config/farePolicy/* endpoints stay untouched until adoption.
+apis:
+  - GET: # combo list: fare products with a fare summary per row
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - tripCategory: TripCategory
+        - area: Area
+        - serviceTier: ServiceTierType
+        - enabled: Bool
+      response:
+        type: FPV2ProductListRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - GET: # full typed policy for one fare policy id
+      endpoint: /policy/{farePolicyId}
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      response:
+        type: FPV2PolicyRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - POST: # full in-place replacement; dryRun=true validates + diffs without writing
+      endpoint: /policy/{farePolicyId}/replace
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      query:
+        - dryRun: Bool
+      request:
+        type: FPV2ReplaceReq
+      response:
+        type: FPV2ReplaceRes
+      migrate:
+        capability: system-config.fare_policy.write
+  - POST: # atomic multi-policy replacement (save-time propagation); all-or-nothing
+      endpoint: /bulkReplace
+      auth: ApiAuthV2
+      query:
+        - dryRun: Bool
+      request:
+        type: FPV2BulkReplaceReq
+      response:
+        type: FPV2BulkReplaceRes
+      migrate:
+        capability: system-config.fare_policy.write
+  - POST: # run the real fare calculator on a stored or unsaved policy
+      endpoint: /preview
+      auth: ApiAuthV2
+      request:
+        type: FPV2PreviewReq
+      response:
+        type: FPV2PreviewRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - POST: # create a policy (inline or copied from an existing one) and bind it to a combo
+      endpoint: /product/create
+      auth: ApiAuthV2
+      request:
+        type: FPV2CreateProductReq
+      response:
+        type: FPV2CreateProductRes
+      migrate:
+        capability: system-config.fare_policy.write
+  - POST: # update combo attributes in place (enabled / disableRecompute / timeBounds)
+      endpoint: /product/{fareProductId}/update
+      auth: ApiAuthV2
+      params:
+        fareProductId: Id FareProduct
+      request:
+        type: FPV2UpdateProductReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
+  - POST: # maker-checker: files a PENDING removal request; nothing is deleted yet
+      endpoint: /product/{fareProductId}/remove
+      auth: ApiAuthV2
+      params:
+        fareProductId: Id FareProduct
+      request:
+        type: FPV2RemoveProductReq
+      response:
+        type: FPV2ChangeRequestRes
+      migrate:
+        capability: system-config.fare_policy.write
+  - GET: # list change requests for the city (newest first)
+      endpoint: /changeRequest/list
+      auth: ApiAuthV2
+      query:
+        - status: FPV2ChangeRequestStatus
+      response:
+        type: FPV2ChangeRequestListRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - POST: # checker decision; approver must differ from the requester
+      endpoint: /changeRequest/{requestId}/decide
+      auth: ApiAuthV2
+      params:
+        requestId: Id FarePolicyChangeRequest
+      request:
+        type: FPV2DecideChangeRequestReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
+  - GET: # coverage-alert email subscriptions of the city
+      endpoint: /alerts/subscriptions
+      auth: ApiAuthV2
+      response:
+        type: FPV2SubscriptionListRes
+      migrate:
+        capability: system-config.fare_policy.read
+  - POST: # subscribe an email to a coverage alert type
+      endpoint: /alerts/subscribe
+      auth: ApiAuthV2
+      request:
+        type: FPV2SubscriptionReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
+  - POST: # remove a subscription
+      endpoint: /alerts/unsubscribe
+      auth: ApiAuthV2
+      request:
+        type: FPV2SubscriptionReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.fare_policy.write
+
+types:
+  # ── shared value types (mirror the domain 1:1, HighPrecMoney only — no
+  #    legacy Money/WithCurrency duplication; currency comes from the city) ──
+  FPV2NightShiftCharge:
+    - enum: "ProgressiveNightShiftCharge Float, ConstantNightShiftCharge HighPrecMoney"
+  FPV2WaitingCharge:
+    - enum: "PerMinuteWaitingCharge HighPrecMoney, ConstantWaitingCharge HighPrecMoney"
+  FPV2WaitingChargeInfo:
+    - freeWaitingTime: Minutes
+    - waitingCharge: FPV2WaitingCharge
+  FPV2CongestionChargeMultiplier:
+    - enum: "BaseFareAndExtraDistanceFare Centesimal, ExtraDistanceFare Centesimal"
+  FPV2ReturnFee:
+    - enum: "ReturnFeeFixed HighPrecMoney, ReturnFeePercentage Double"
+  FPV2BoothCharge:
+    - enum: "BoothChargeFixed HighPrecMoney, BoothChargePercentage Double"
+  FPV2PlatformFeeMethod:
+    - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge"
+  FPV2NightShiftBounds:
+    - nightShiftStart: TimeOfDay
+    - nightShiftEnd: TimeOfDay
+  FPV2AllowedTripDistanceBounds:
+    - minAllowedTripDistance: Meters
+    - maxAllowedTripDistance: Meters
+  FPV2CardCharge:
+    - perDistanceUnitMultiplier: Maybe Double
+    - fixed: Maybe HighPrecMoney
+  FPV2FareChargeComponent:
+    - enum: "RideFare, WaitingCharge, ServiceChargeComponent, TollChargesComponent, CongestionChargeComponent, ParkingChargeComponent, PetChargeComponent, PriorityChargeComponent, NightShiftChargeComponent, InsuranceChargeComponent, StopChargeComponent, LuggageChargeComponent, PlatformFeeComponent, CustomerCancellationChargeComponent, CustomerExtraFeeComponent, DeadKmFareComponent, ExtraKmFareComponent, RideDurationFareComponent, TimeBasedFareComponent, DistBasedFareComponent, TimeFareComponent, DistanceFareComponent, PickupChargeComponent, ExtraDistanceFareComponent, ExtraTimeFareComponent, StateEntryPermitChargesComponent, AmbulanceDistBasedFareComponent, RideVatComponent, TollVatComponent"
+  FPV2FareChargeConfig:
+    - value: Text
+    - appliesOn: "[FPV2FareChargeComponent]"
+  FPV2ConditionalChargeCategory:
+    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES"
+  FPV2ConditionalCharge:
+    - chargeCategory: FPV2ConditionalChargeCategory
+    - charge: HighPrecMoney
+    - cgstPercentage: HighPrecMoney
+    - sgstPercentage: HighPrecMoney
+  FPV2DriverExtraFeeBounds:
+    - startDistance: Meters
+    - stepFee: HighPrecMoney
+    - defaultStepFee: HighPrecMoney
+    - minFee: HighPrecMoney
+    - maxFee: HighPrecMoney
+  FPV2PlatformFeeCharge:
+    - enum: "ProgressivePlatformFee HighPrecMoney, ConstantPlatformFee HighPrecMoney"
+  FPV2PlatformFeeInfo:
+    - platformFeeCharge: FPV2PlatformFeeCharge
+    - cgst: Double
+    - sgst: Double
+  FPV2CancellationFarePolicy:
+    - description: Text
+    - freeCancellationTimeSeconds: Seconds
+    - maxWaitingTimeAtPickupSeconds: Seconds
+    - minCancellationCharge: HighPrecMoney
+    - maxCancellationCharge: HighPrecMoney
+    - perMetreCancellationCharge: HighPrecMoney
+    - perMinuteCancellationCharge: HighPrecMoney
+    - percentageOfRideFareToBeCharged: Centesimal
+
+  # ── variant details ──
+  FPV2PickupCharges:
+    - pickupChargesMin: HighPrecMoney
+    - pickupChargesMax: HighPrecMoney
+  FPV2PerExtraKmRateSection:
+    - startDistance: Meters
+    - perExtraKmRate: HighPrecMoney
+    - baseFareDepreciation: HighPrecMoney
+  FPV2PerMinRateSection:
+    - rideDurationInMin: Int
+    - perMinRate: HighPrecMoney
+  FPV2PerMinRateDurationBasis:
+    - enum: "TotalDuration, TrafficDelayDuration"
+  FPV2ProgressiveDetails:
+    - baseFare: HighPrecMoney
+    - baseDistance: Meters
+    - deadKmFare: HighPrecMoney
+    - pickupCharges: FPV2PickupCharges
+    - perExtraKmRateSections: "[FPV2PerExtraKmRateSection]"
+    - perMinRateSections: Maybe [FPV2PerMinRateSection]
+    - perMinRateDurationBasis: Maybe FPV2PerMinRateDurationBasis
+    - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2Slab:
+    - startDistance: Meters
+    - baseFare: HighPrecMoney
+    - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
+    - platformFeeInfo: Maybe FPV2PlatformFeeInfo
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2SlabsDetails:
+    - slabs: "[FPV2Slab]"
+  FPV2RentalDistanceBuffer:
+    - rideDuration: Seconds
+    - bufferKms: Int
+    - bufferMeters: Int
+  FPV2PricingSlab:
+    - timePercentage: Int
+    - distancePercentage: Int
+    - farePercentage: Int
+    - includeActualTimePercentage: Bool
+    - includeActualDistPercentage: Bool
+  FPV2RentalDetails:
+    - baseFare: HighPrecMoney
+    - perHourCharge: HighPrecMoney
+    - perExtraKmRate: HighPrecMoney
+    - perExtraMinRate: HighPrecMoney
+    - includedKmPerHr: Kilometers
+    - plannedPerKmRate: HighPrecMoney
+    - deadKmFare: HighPrecMoney
+    - maxAdditionalKmsLimit: Kilometers
+    - totalAdditionalKmsLimit: Kilometers
+    - distanceBuffers: "[FPV2RentalDistanceBuffer]"
+    - pricingSlabs: "[FPV2PricingSlab]"
+    - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2InterCityDetails:
+    - baseFare: HighPrecMoney
+    - perHourCharge: HighPrecMoney
+    - perKmRateOneWay: HighPrecMoney
+    - perKmRateRoundTrip: HighPrecMoney
+    - perExtraKmRate: HighPrecMoney
+    - perExtraMinRate: HighPrecMoney
+    - kmPerPlannedExtraHour: Kilometers
+    - deadKmFare: HighPrecMoney
+    - perDayMaxHourAllowance: Hours
+    - perDayMaxAllowanceInMins: Maybe Minutes
+    - defaultWaitTimeAtDestination: Minutes
+    - stateEntryPermitCharges: Maybe HighPrecMoney
+    - pricingSlabs: "[FPV2PricingSlab]"
+    - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2AmbulanceSlab:
+    - vehicleAge: Months
+    - baseFare: HighPrecMoney
+    - baseDistance: Meters
+    - perKmRate: HighPrecMoney
+    - waitingChargeInfo: Maybe FPV2WaitingChargeInfo
+    - platformFeeInfo: Maybe FPV2PlatformFeeInfo
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+  FPV2AmbulanceDetails:
+    - slabs: "[FPV2AmbulanceSlab]"
+  FPV2FarePolicyDetails:
+    - enum: "FPV2Progressive FPV2ProgressiveDetails, FPV2Slabs FPV2SlabsDetails, FPV2Rental FPV2RentalDetails, FPV2InterCity FPV2InterCityDetails, FPV2Ambulance FPV2AmbulanceDetails"
+
+  # ── the complete policy: every domain field the old CSV builder edits.
+  #    Omitted/null on replace CLEARS the field (full replacement, not merge). ──
+  FPV2Policy:
+    - farePolicyDetails: FPV2FarePolicyDetails
+    - driverExtraFeeBounds: Maybe [FPV2DriverExtraFeeBounds]
+    - serviceCharge: Maybe HighPrecMoney
+    - parkingCharge: Maybe HighPrecMoney
+    - perStopCharge: Maybe HighPrecMoney
+    - perLuggageCharge: Maybe HighPrecMoney
+    - returnFee: Maybe FPV2ReturnFee
+    - boothCharges: Maybe FPV2BoothCharge
+    - nightShiftBounds: Maybe FPV2NightShiftBounds
+    - allowedTripDistanceBounds: Maybe FPV2AllowedTripDistanceBounds
+    - tollCharges: Maybe HighPrecMoney
+    - petCharges: Maybe HighPrecMoney
+    - driverAllowance: Maybe HighPrecMoney
+    - airportConvenienceFee: Maybe HighPrecMoney
+    - businessDiscountPercentage: Maybe Double
+    - personalDiscountPercentage: Maybe Double
+    - priorityCharges: Maybe HighPrecMoney
+    - pickupBufferInSecsForNightShiftCal: Maybe Seconds
+    - tipOptions: Maybe [Int]
+    - additionalCongestionCharge: Maybe HighPrecMoney
+    - perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
+    - rideExtraTimeChargeGracePeriod: Maybe Seconds
+    - congestionChargeMultiplier: Maybe FPV2CongestionChargeMultiplier
+    - perDistanceUnitInsuranceCharge: Maybe HighPrecMoney
+    - cardCharge: Maybe FPV2CardCharge
+    - vatChargeConfig: Maybe FPV2FareChargeConfig
+    - commissionChargeConfig: Maybe FPV2FareChargeConfig
+    - cancellationCommissionChargeConfig: Maybe FPV2FareChargeConfig
+    - tollTaxChargeConfig: Maybe FPV2FareChargeConfig
+    - platformFee: Maybe HighPrecMoney
+    - platformFeeCgst: Maybe HighPrecMoney
+    - platformFeeSgst: Maybe HighPrecMoney
+    - platformFeeChargesBy: Maybe FPV2PlatformFeeMethod
+    - conditionalCharges: Maybe [FPV2ConditionalCharge]
+    - driverCancellationNotAllowed: Maybe Bool
+    - cancellationFarePolicy: Maybe FPV2CancellationFarePolicy
+    - description: Maybe Text
+
+  FPV2PolicyRes:
+    - farePolicyId: Id FarePolicy
+    - currency: Currency
+    - distanceUnit: DistanceUnit
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - policy: FPV2Policy
+
+  # ── combo list ──
+  FPV2SearchSource:
+    - enum: "ALL, DASHBOARD, MOBILE_APP"
+  FPV2FarePolicyType:
+    - enum: "Progressive, Slabs, Rental, InterCity, Ambulance"
+  FPV2PolicySummary:
+    - farePolicyType: FPV2FarePolicyType
+    - baseFare: Maybe HighPrecMoney
+    - perKmRate: Maybe HighPrecMoney
+    - perMinRate: Maybe HighPrecMoney
+    - nightShiftCharge: Maybe FPV2NightShiftCharge
+    - congestionChargeMultiplier: Maybe FPV2CongestionChargeMultiplier
+  FPV2ProductListItem:
+    - fareProductId: Id FareProduct
+    - farePolicyId: Id FarePolicy
+    - serviceTier: ServiceTierType
+    - tripCategory: TripCategory
+    - area: Area
+    - timeBounds: TimeBound
+    - searchSource: FPV2SearchSource
+    - enabled: Bool
+    - disableRecompute: Maybe Bool
+    - summary: FPV2PolicySummary
+  FPV2ProductListRes:
+    - fareProducts: "[FPV2ProductListItem]"
+
+  # ── replace / bulk replace ──
+  FPV2ReplaceReq:
+    - policy: FPV2Policy
+    - derive: "'HideSecrets"
+  FPV2ValidationIssue:
+    - field: Text
+    - message: Text
+  FPV2FieldDiff:
+    - field: Text
+    - oldValue: Maybe Text
+    - newValue: Maybe Text
+  FPV2ReplaceRes:
+    - applied: Bool
+    - issues: "[FPV2ValidationIssue]"
+    - diff: "[FPV2FieldDiff]"
+  FPV2Replacement:
+    - farePolicyId: Id FarePolicy
+    - policy: FPV2Policy
+  FPV2BulkReplaceReq:
+    - replacements: "[FPV2Replacement]"
+    - derive: "'HideSecrets"
+  FPV2BulkReplaceItem:
+    - farePolicyId: Id FarePolicy
+    - issues: "[FPV2ValidationIssue]"
+    - diff: "[FPV2FieldDiff]"
+  FPV2BulkReplaceRes:
+    - applied: Bool
+    - results: "[FPV2BulkReplaceItem]"
+
+  # ── preview ──
+  FPV2SampleTrip:
+    - distance: Meters
+    - duration: Seconds
+    - rideTime: Maybe UTCTime
+    - waitingTimeMin: Maybe Minutes
+  FPV2PreviewReq:
+    - farePolicyId: Maybe (Id FarePolicy)
+    - policy: Maybe FPV2Policy
+    - serviceTier: Maybe ServiceTierType
+    - tripCategory: Maybe TripCategory
+    - sampleTrips: "[FPV2SampleTrip]"
+    - derive: "'HideSecrets"
+  FPV2FareBreakupItem:
+    - title: Text
+    - amount: HighPrecMoney
+  FPV2TripPreview:
+    - distance: Meters
+    - duration: Seconds
+    - totalFare: HighPrecMoney
+    - minFare: HighPrecMoney
+    - maxFare: HighPrecMoney
+    - breakup: "[FPV2FareBreakupItem]"
+  FPV2PreviewRes:
+    - trips: "[FPV2TripPreview]"
+
+  # ── create / remove combo ──
+  FPV2CreateProductReq:
+    - serviceTier: ServiceTierType
+    - tripCategory: TripCategory
+    - area: Area
+    - timeBounds: TimeBound
+    - searchSource: FPV2SearchSource
+    - enabled: Bool
+    - disableRecompute: Maybe Bool
+    - sourceFarePolicyId: Maybe (Id FarePolicy)
+    - policy: Maybe FPV2Policy
+    - derive: "'HideSecrets"
+  FPV2CreateProductRes:
+    - fareProductId: Id FareProduct
+    - farePolicyId: Id FarePolicy
+  FPV2UpdateProductReq:
+    - enabled: Maybe Bool
+    - disableRecompute: Maybe Bool
+    - timeBounds: Maybe TimeBound
+    # legacy data binds one policy to many combos; True forks this combo onto
+    # its own deep copy of the policy so later edits stop affecting the others
+    - detachFarePolicy: Maybe Bool
+    - derive: "'HideSecrets"
+
+  # ── maker-checker for destructive combo operations ──
+  # FPV2ChangeAction lives in Dashboard.Common (see imports): a single-value
+  # DSL enum gets generic aeson's array encoding, not the string the UI sends.
+  FPV2ChangeRequestStatus:
+    - enum: "PENDING, APPROVED, REJECTED"
+    - derive: "HttpInstance"
+  FPV2RemoveProductReq:
+    - reason: Maybe Text
+    - requestedBy: Maybe Text
+    - derive: "'HideSecrets"
+  FPV2DecideChangeRequestReq:
+    - approve: Bool
+    - remarks: Maybe Text
+    - checkedBy: Maybe Text
+    - derive: "'HideSecrets"
+  FPV2ChangeRequestRes:
+    - requestId: Id FarePolicyChangeRequest
+    - status: FPV2ChangeRequestStatus
+  FPV2ChangeRequest:
+    - requestId: Id FarePolicyChangeRequest
+    - action: FPV2ChangeAction
+    - status: FPV2ChangeRequestStatus
+    - fareProductId: Id FareProduct
+    - comboSummary: Text
+    - requestedBy: Text
+    - checkedBy: Maybe Text
+    - reason: Maybe Text
+    - remarks: Maybe Text
+    - createdAt: UTCTime
+  FPV2ChangeRequestListRes:
+    - requests: "[FPV2ChangeRequest]"
+
+  # ── coverage-alert subscriptions ──
+  # FPV2AlertType lives in Dashboard.Common — same single-constructor reason.
+  FPV2SubscriptionReq:
+    - email: Text
+    - alertType: FPV2AlertType
+    - derive: "'HideSecrets"
+  FPV2Subscription:
+    - email: Text
+    - alertType: FPV2AlertType
+    - subscribedBy: Text
+    - createdAt: UTCTime
+  FPV2SubscriptionListRes:
+    - subscriptions: "[FPV2Subscription]"
