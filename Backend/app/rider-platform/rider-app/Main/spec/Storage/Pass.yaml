@@ -62,6 +62,7 @@ Pass:
     overrideBenefitConfigJson: Maybe Value
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
 
   beamFields:
     passConfig:
