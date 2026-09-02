@@ -461,8 +461,15 @@ types:
   FRFSSelectReq:
     passengers: "[FRFSPassengerDetail]"
     concessionTypeId: Text
+    idProofLookupId: Maybe Text
+    idProofNumber: Maybe Text
     pickupPointPlaceId: Text
     dropOffPointPlaceId: Text
+    derive: "Show"
+
+  FRFSIdProofType:
+    lookupId: Text
+    name: Text
     derive: "Show"
 
   FRFSPickupPoint:
@@ -496,6 +503,7 @@ types:
     seatLayout: SeatLayout
     seats: [SeatWithStatus]
     concessions: Maybe [FRFSConcession]
+    idProofTypes: Maybe [FRFSIdProofType]
     pickupPoints: Maybe [FRFSPickupPoint]
     dropOffPoints: Maybe [FRFSPickupPoint]
 
