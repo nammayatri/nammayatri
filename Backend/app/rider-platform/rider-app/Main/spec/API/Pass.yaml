@@ -78,6 +78,7 @@ types:
     referenceNumber: Maybe Int
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
     derive: "Show"
 
   PassInfoAPIEntity:

@@ -671,10 +671,11 @@ createPassCatalog merchantShortId opCity req = do
             minFare = req.minFare,
             maxFare = req.maxFare,
             formVerificationConfig = req.formVerificationConfig,
-            -- Overlap threshold and renewal hint are set out of band, like the FRFS override
-            -- columns below: the catalog create API does not carry them.
+            -- Overlap threshold, renewal hint and the overlapping-booking cap are set out of
+            -- band, like the FRFS override columns below: the catalog create API carries none of them.
             minTripsAllowingOverlap = Nothing,
             minDaysToSuggestRenewal = Nothing,
+            timeOverlappingFrfsBookingsLimit = Nothing,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
             -- FRFS fare/cancellation override columns are owned by the override flow,
@@ -878,7 +879,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         formVerificationConfig = pass.formVerificationConfig,
         referenceNumber = (.referenceNumber) =<< mbPassDetails,
         minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
-        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal
+        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
+        timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -940,7 +942,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         referenceNumber = Nothing,
         -- Built from the PurchasedPass snapshot, which carries no catalog config columns.
         minTripsAllowingOverlap = Nothing,
-        minDaysToSuggestRenewal = Nothing
+        minDaysToSuggestRenewal = Nothing,
+        timeOverlappingFrfsBookingsLimit = Nothing
       }
 
 -- Build PurchasedPass API Entity
