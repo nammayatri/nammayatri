@@ -23,7 +23,6 @@ module Domain.Action.Dashboard.Management.ScheduledBooking
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
-import qualified Data.HashMap.Strict as HashMap
 import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Driver as UIDriver
@@ -47,22 +46,15 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.GetNearestDrivers as GND
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
@@ -279,13 +271,7 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm
   unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
     throwError (BookingNotFound transactionId)
   now <- getCurrentTime
-  transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing
-  let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-      scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now
-      radiusKm = max 0 $ fromMaybe defaultNearbyRadiusKm mbRadiusKm
+  let radiusKm = max 0 $ fromMaybe defaultNearbyRadiusKm mbRadiusKm
       radiusMeters = round (radiusKm * 1000) :: Int
       pickupLatLong = KEMT.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
   driverLocations <- nubBy (\x y -> x.driverId == y.driverId) <$> LF.nearBy booking.fromLocation.lat booking.fromLocation.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
@@ -297,16 +283,11 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm
       poolData <- DPD.getDriverPoolDataBatch (cast <$> driverIds)
       let poolByDriver = Map.fromList [(pd.driverId, pd) | pd <- poolData]
 
-          driverTagTexts pd =
-            LYT.getTagNameValue . LYTU.removeTagExpiry <$> LYTU.filterExpiredTags' now (fromMaybe [] pd.driverTag)
-          tierEligible pd =
-            GND.scheduledTierEligibleForDriver True scheduledOpenToAll (driverTagTexts pd) cityServiceTiersHashMap booking.vehicleServiceTier
           isEligible pd =
             pd.enabled
               && not pd.blocked
               && not pd.onRide
               && booking.vehicleServiceTier `elem` pd.selectedServiceTiers
-              && tierEligible pd
           eligible =
             [ (locn, pd)
               | locn <- driverLocations,
