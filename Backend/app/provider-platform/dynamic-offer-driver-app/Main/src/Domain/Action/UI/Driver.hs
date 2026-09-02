@@ -277,6 +277,7 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -1106,15 +1107,22 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                           }
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-        when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
-          let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-          -- Track offline timestamp when driver goes offline
-          if mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE
-            then do
-              now <- getCurrentTime
-              logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
-              DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
-            else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
+        if driverInfo.active /= isActive || driverInfo.mode /= mode
+          then do
+            let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
+            -- Track offline timestamp when driver goes offline
+            if mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE
+              then do
+                now <- getCurrentTime
+                logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
+                DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
+              else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
+          else
+            LTSSync.syncDriverPoolDataToLTS driverId $
+              LTSSync.emptyUpdate
+                { LTSSync.active = LTSSync.Set isActive,
+                  LTSSync.mode = if isJust mode then LTSSync.Set mode else LTSSync.Unchanged
+                }
         when (isActive && not driverInfo.active) $
           fork "FleetEngine:notifyDriverOnline" $
             FleetEngine.notifyDriverOnline merchantOpCityId personId
