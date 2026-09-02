@@ -143,3 +143,8 @@ ALTER TABLE atlas_app.pass ADD COLUMN frfs_cancel_limit integer ;
 
 ALTER TABLE atlas_app.pass ADD COLUMN min_trips_allowing_overlap integer ;
 ALTER TABLE atlas_app.pass ADD COLUMN min_days_to_suggest_renewal integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN time_overlapping_frfs_bookings_limit integer ;
