@@ -63,6 +63,7 @@ module Tools.Payment
     refundPayment,
     getRefundStatus,
     loadLoyaltyProgramMap,
+    resolvePaymentServiceByMode,
   )
 where
 
@@ -286,6 +287,17 @@ modifyPaymentServiceByMode Payment.StripeTest _ = Payment.StripeTest
 modifyPaymentServiceByMode Payment.Juspay _ = Payment.Juspay
 modifyPaymentServiceByMode Payment.AAJuspay _ = Payment.AAJuspay
 modifyPaymentServiceByMode Payment.PaytmEDC _ = Payment.PaytmEDC
+
+-- | The payment service a call with this mode will run against. Mirrors runWithServiceConfig*.
+resolvePaymentServiceByMode ::
+  ServiceFlow m r =>
+  (DMSUC.MerchantServiceUsageConfig -> PaymentService) ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  m PaymentService
+resolvePaymentServiceByMode getCfg merchantOperatingCityId paymentMode = do
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  pure $ modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
 
 runWithServiceConfig1 ::
   ServiceFlow m r =>

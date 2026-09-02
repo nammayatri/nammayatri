@@ -975,6 +975,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
       -- On Stripe the basket has no wire representation and is dropped by createPayment.
       offerBasket <- TPayment.mkOfferBasket merchantId merchantOpCityId Nothing paymentServiceType effectiveAmount 1
       mbCardMetadata <- getCardMetadataForPaymentMethod personId paymentMode req.paymentMethod
+      resolvedPaymentService <- TPayment.resolvePaymentServiceByMode (.createPaymentIntent) merchantOpCityId paymentMode
       let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
@@ -1011,7 +1012,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,
-                domainEntityId = (.getId) <$> mbRideId
+                domainEntityId = (.getId) <$> mbRideId,
+                serviceProvider = resolvedPaymentService
               }
       mbServiceResp <- DPayment.createPaymentService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbExistingOrderId Nothing paymentServiceType serviceReq createPaymentCall cancelPaymentCall (Just incrementAuthCall)
       serviceResp <- mbServiceResp & fromMaybeM (InternalError "Payment order expired, please try again")

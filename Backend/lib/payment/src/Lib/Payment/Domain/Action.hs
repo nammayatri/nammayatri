@@ -371,7 +371,8 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     discountAmount :: Maybe HighPrecMoney,
     payoutAmount :: Maybe HighPrecMoney,
     -- Domain linkage
-    domainEntityId :: Maybe Text -- rideId or bookingId for later lookups
+    domainEntityId :: Maybe Text, -- rideId or bookingId for later lookups
+    serviceProvider :: Payment.PaymentService
   }
   deriving (Show, Eq, Generic)
 
@@ -426,6 +427,21 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
   mbExistingOrder <- case mbExistingOrderId of
     Just existingId -> QOrder.findById existingId
     Nothing -> pure Nothing
+  -- Legacy rows read back as Juspay; only compare when both sides name a Stripe variant.
+  whenJust mbExistingOrder $ \existingOrder ->
+    when
+      ( isStripeService existingOrder.serviceProvider
+          && isStripeService req.serviceProvider
+          && existingOrder.serviceProvider /= req.serviceProvider
+      )
+      $ throwError
+        ( InvalidRequest $
+            "Payment mode mismatch on retry: order " <> existingOrder.id.getId
+              <> " was created with "
+              <> show existingOrder.serviceProvider
+              <> " but this request resolves to "
+              <> show req.serviceProvider
+        )
   case mbExistingOrder of
     Nothing -> createNewPayment Nothing
     Just existingOrder -> do
@@ -437,6 +453,9 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
         else handleExistingOrder existingOrder
   where
     isInProgress status = status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING]
+
+    isStripeService :: Payment.PaymentService -> Bool
+    isStripeService s = s `elem` [Payment.Stripe, Payment.StripeTest]
 
     roundToCents :: HighPrecMoney -> Integer
     roundToCents = round . (* 100)
@@ -591,7 +610,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 isRetried = False,
                 isRetargeted = False,
                 retargetLink = Nothing,
-                serviceProvider = Payment.Stripe,
+                serviceProvider = req.serviceProvider,
                 paymentServiceType = Just paymentServiceType,
                 paymentFulfillmentStatus = Just FulfillmentPending,
                 sdkPayloadDump = Nothing,

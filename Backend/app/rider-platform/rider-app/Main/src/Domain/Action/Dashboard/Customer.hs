@@ -309,6 +309,9 @@ postCustomerUpdatePaymentMode merchantShortId opCity customerId req = do
       QP.findById personId
         >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == customer.merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
+  whenJust customer.paymentMode $ \existingMode ->
+    unless (existingMode == req.paymentMode) $
+      throwError (InvalidRequest $ "Payment mode is already set to " <> show existingMode <> " and cannot be changed")
   QP.updatePaymentMode (Just req.paymentMode) personId
   pure Success
 

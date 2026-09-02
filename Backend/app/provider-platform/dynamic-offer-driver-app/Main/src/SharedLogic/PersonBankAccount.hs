@@ -201,12 +201,15 @@ castBusinessType = \case
 
 validatePaymentMode :: Maybe DMPM.PaymentMode -> Maybe DDBA.DriverBankAccount -> Environment.Flow DMPM.PaymentMode
 validatePaymentMode mbPaymentMode mbDriverBankAccount = do
-  let paymentMode = fromMaybe DMPM.LIVE mbPaymentMode
-  whenJust mbDriverBankAccount $ \driverBankAccount -> do
-    let paymentMode' = fromMaybe DMPM.LIVE driverBankAccount.paymentMode
-    unless (paymentMode == paymentMode') $
-      throwError (InvalidRequest "Wrong payment mode")
-  pure paymentMode
+  let mbStoredMode = (\driverBankAccount -> fromMaybe DMPM.LIVE driverBankAccount.paymentMode) <$> mbDriverBankAccount
+  case (mbPaymentMode, mbStoredMode) of
+    (Nothing, Just storedMode) -> pure storedMode
+    (Nothing, Nothing) -> pure DMPM.LIVE
+    (Just requestedMode, Just storedMode) -> do
+      unless (requestedMode == storedMode) $
+        throwError (InvalidRequest "Wrong payment mode")
+      pure requestedMode
+    (Just requestedMode, Nothing) -> pure requestedMode
 
 getPersonRegisterBankAccountStatus ::
   ( ServiceFlow m r,

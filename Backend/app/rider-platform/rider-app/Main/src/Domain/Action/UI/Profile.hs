@@ -211,7 +211,7 @@ data UpdateProfileReq = UpdateProfileReq
     marketingParams :: Maybe MarketingParams,
     mbMobileNumber :: Maybe Text,
     mbMobileCountryCode :: Maybe Text,
-    paymentMode :: Maybe DMPM.PaymentMode,
+    -- paymentMode is intentionally absent: assigned only via the customer dashboard.
     driverPreference :: Maybe [Text]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -512,7 +512,6 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.liveActivityToken
       Nothing
       Nothing
-      req.paymentMode
       cloudType
   _ <- updateDisability req.hasDisability req.disability personId
   whenJust req.driverPreference $ \prefs -> do

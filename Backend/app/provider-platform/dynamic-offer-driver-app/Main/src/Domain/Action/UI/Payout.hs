@@ -210,7 +210,13 @@ stripePayoutWebhookHandler' paymentMode merchantShortId mbOpCity mbServiceName m
         isDuplicateStripeWebhookEvent
           (stripePayoutWebhookEventDedupKey paymentMode eventId)
           stripeWebhookEventDedupTtl7Days
-  IStripe.payoutStripeServiceEventWebhook payoutServiceConfig checkDuplicatedEvent (stripePayoutWebhookAction merchantId merchantOperatingCityId) mbSigHeader rawBytes
+  let modeCheckedPayoutWebhookAction resp respDump =
+        if resp.livemode /= (paymentMode == DMPM.LIVE)
+          then do
+            logInfo $ "Stripe payout webhook livemode mismatch; ignoring. endpointMode=" <> show paymentMode <> " eventLivemode=" <> show resp.livemode
+            pure Ack
+          else stripePayoutWebhookAction merchantId merchantOperatingCityId resp respDump
+  IStripe.payoutStripeServiceEventWebhook payoutServiceConfig checkDuplicatedEvent modeCheckedPayoutWebhookAction mbSigHeader rawBytes
 
 -- | TTL for Stripe webhook event deduplication (covers Stripe retry window with margin).
 stripeWebhookEventDedupTtl7Days :: Redis.ExpirationTime
