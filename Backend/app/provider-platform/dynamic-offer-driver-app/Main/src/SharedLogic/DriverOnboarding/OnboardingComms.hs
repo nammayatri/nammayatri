@@ -87,8 +87,8 @@ setOnboardingAs transporterConfig driver onboardingAs = do
       when (onboardingAs /= DI.FLEET_DRIVER) $ do
         mbDriverInfo <- QDIExtra.findById (cast driver.id)
         when (((.onboardingAs) =<< mbDriverInfo) == Just DI.FLEET_DRIVER) $ do
-          activeAssociations <- QFDA.findAllByDriverId driver.id True
-          forM_ activeAssociations $ \association ->
+          associations <- QFDA.findAllByDriverIdWithStatus driver.id
+          forM_ associations $ \association ->
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
               QFDA.endFleetDriverAssociation association.fleetOwnerId association.driverId
               fork "Driver fleet unlink notification" $
