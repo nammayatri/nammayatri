@@ -20,6 +20,8 @@ data FRFSPassengerDetail = FRFSPassengerDetail
     dropOffPointPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail,
+    idProofLookupId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idProofNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isChild :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

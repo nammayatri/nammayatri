@@ -20,6 +20,8 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Types
     parseConcessionTypes,
     parseBlockResult,
     parseBookingResult,
+    parseLookupValues,
+    TnstcLookupValue (..),
     TnstcBookingResult (..),
     parseFareResult,
   )
@@ -231,6 +233,22 @@ parseBlockResult cur =
   TnstcBlockResult
     { tbrSeatBlockIds = mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement "seatBlockIds")
     }
+
+-- | A row from GetActivelookUpValues. For IDPROOF/ONLINE_BOOKING these are the 9 ID types a
+-- rider may present at boarding. Rows arrive wrapped in <timeList>, which is TNSTC's generic
+-- list element rather than anything time-related.
+data TnstcLookupValue = TnstcLookupValue
+  { tlvId :: Text,
+    tlvValue :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+parseLookupValues :: Cursor -> [TnstcLookupValue]
+parseLookupValues cur =
+  mapMaybe mk (cur $// laxElement "timeList")
+  where
+    txt n c = listToMaybe (mapMaybe (nonEmptyText . T.concat . ($/ content)) (c $// laxElement n))
+    mk c = TnstcLookupValue <$> txt "lookupId" c <*> txt "lookupValue" c
 
 data TnstcBookingResult = TnstcBookingResult
   { tbkPnrNumber :: Maybe Text,

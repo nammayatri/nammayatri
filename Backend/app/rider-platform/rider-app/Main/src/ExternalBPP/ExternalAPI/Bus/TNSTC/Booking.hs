@@ -19,8 +19,8 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML
@@ -183,7 +183,9 @@ data ConfirmAdvSeatBookingReq = ConfirmAdvSeatBookingReq
     rqcStartPlaceCode :: Text,
     rqcStartPlaceId :: Text,
     rqcUserName :: Text,
-    rqcWsRefNo :: Text
+    rqcWsRefNo :: Text,
+    rqcIdProofLookupId :: Text,
+    rqcIdProofNumber :: Text
   }
 
 instance ToXML ConfirmAdvSeatBookingReq where
@@ -233,21 +235,28 @@ instance ToXML ConfirmAdvSeatBookingReq where
         el "counterCode" req.rqcCounterCode
         el "createdBy" req.rqcCreatedBy
         el "franchiseeUser" "false"
-        el "idProofLookupId" "166"
-        el "idProofRefernce" ""
+        el "idProofLookupId" req.rqcIdProofLookupId
+        el "idProofRefernce" req.rqcIdProofNumber
         el "userName" req.rqcUserName
 
 confirmAdvSeatBooking :: TnstcFlow m r => TNSTCConfig -> ConfirmAdvSeatBookingReq -> m TnstcBookingResult
 confirmAdvSeatBooking config req = callTnstc config "ConfirmAdvSeatBooking" req parseBookingResult
 
--- | Boarding points for a service are fixed for the day, so they are cached for an hour and
--- the vendor call becomes the cache-miss path. /seats fetches them first, which means confirm
--- resolving the rider's chosen point is normally a cache hit rather than a fourth SOAP round
--- trip on an already slow path.
+-- | Boarding points for a service are fixed for the day, so they are cached for an hour and the
+-- vendor call becomes the cache-miss path.
 getPickupPointsCached :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> GetPickupPointsReq -> m [TnstcPickupPoint]
-getPickupPointsCached config cacheScope req =
-  IM.withInMemCache ["tnstcPickupPoints", cacheScope, req.rqppServiceId, fmtDate req.rqppJourneyDate, req.rqppPlaceId] 3600 $
-    getPickupPoints config req
+getPickupPointsCached config cacheScope req = do
+  let key = mkPickupPointsKey cacheScope req
+  Hedis.withCrossAppRedis (Hedis.safeGet key) >>= \case
+    Just cached -> return cached
+    Nothing -> do
+      points <- getPickupPoints config req
+      unless (null points) $ Hedis.withCrossAppRedis $ Hedis.setExp key points 3600
+      return points
+
+mkPickupPointsKey :: Text -> GetPickupPointsReq -> Text
+mkPickupPointsKey cacheScope req =
+  T.intercalate ":" ["tnstcPickupPoints", cacheScope, req.rqppServiceId, fmtDate req.rqppJourneyDate, req.rqppPlaceId]
 
 getPickupPoints :: TnstcFlow m r => TNSTCConfig -> GetPickupPointsReq -> m [TnstcPickupPoint]
 getPickupPoints config req = callTnstc config "GetAllServicePickupPointsByServiceID" req parsePickupPoints
