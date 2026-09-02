@@ -18,7 +18,9 @@ module Lib.LocationUpdates
     isDistanceCalculationFailed,
     initializeDistanceCalculation,
     finalDistanceCalculation,
+    finalPickupDistanceCalculation,
     addIntermediateRoutePoints,
+    addIntermediatePickupPoints,
     getInterpolatedPoints,
     clearInterpolatedPoints,
     isPassedThroughDrop,
@@ -53,6 +55,11 @@ finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) =>
 finalDistanceCalculation ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId accWaypointsWithTime allWaypointsWithTime estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold passedThroughDrop isMeterRide = withRideIdLogTag rideId $ do
   I.processWaypoints ih driverId True estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide accWaypointsWithTime allWaypointsWithTime
 
+-- | Pickup-leg variant of 'finalDistanceCalculation'
+finalPickupDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> m ()
+finalPickupDistanceCalculation ih rideId driverId accWaypointsWithTime allWaypointsWithTime = withRideIdLogTag rideId $ do
+  I.processWaypointsPickup ih driverId True accWaypointsWithTime allWaypointsWithTime
+
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
 getInterpolatedPoints ih = ih.getInterpolatedPoints
 
@@ -62,6 +69,11 @@ clearInterpolatedPoints ih = ih.clearInterpolatedPoints
 addIntermediateRoutePoints :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Maybe MapsServiceConfig -> Bool -> Bool -> Id ride -> Id person -> Bool -> Bool -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> m ()
 addIntermediateRoutePoints ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId passedThroughDrop isMeterRide accWaypointsWithTime allWaypointsWithTime = withRideIdLogTag rideId $ do
   I.processWaypoints ih driverId False 0 Nothing Nothing Nothing False rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide accWaypointsWithTime allWaypointsWithTime
+
+-- | Pickup-leg variant of 'addIntermediateRoutePoints'
+addIntermediatePickupPoints :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> m ()
+addIntermediatePickupPoints ih rideId driverId accWaypointsWithTime allWaypointsWithTime = withRideIdLogTag rideId $ do
+  I.processWaypointsPickup ih driverId False accWaypointsWithTime allWaypointsWithTime
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed

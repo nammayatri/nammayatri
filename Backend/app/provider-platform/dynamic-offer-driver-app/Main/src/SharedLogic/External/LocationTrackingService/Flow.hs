@@ -37,6 +37,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueAdd
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueRemove as ManualQueueRemoveAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearByTag as NearByTagAPI
+import qualified SharedLogic.External.LocationTrackingService.API.PickupDriverLocation as PickupDriverLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.QueueHistory as QueueHistoryAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
@@ -235,6 +236,31 @@ driverLocation rideId merchantId driverId = do
       logDebug $ "lts driverLocation fallback: " <> show fallbackRes
       return fallbackRes
     _ -> return driverLocationRes
+
+pickupDriverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
+pickupDriverLocation rideId merchantId driverId = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = ltsCfg.url
+  let req =
+        DriverLocationReq
+          { driverId,
+            merchantId
+          }
+  pickupDriverLocationRes <-
+    withShortRetry $
+      callAPI url (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") url)
+  logDebug $ "lts pickupDriverLocation: " <> show pickupDriverLocationRes
+  case (pickupDriverLocationRes.loc, ltsCfg.secondaryUrl) of
+    ([], Just secondaryUrl) -> do
+      logDebug "pickupDriverLocation: primary returned empty, trying secondary URL"
+      fallbackRes <-
+        withShortRetry $
+          callAPI secondaryUrl (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
+            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") secondaryUrl)
+      logDebug $ "lts pickupDriverLocation fallback: " <> show fallbackRes
+      return fallbackRes
+    _ -> return pickupDriverLocationRes
 
 blockDriverLocationsTill :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DM.Merchant -> Id DP.Person -> UTCTime -> m APISuccess
 blockDriverLocationsTill merchantId driverId blockTill = do

@@ -17,6 +17,8 @@ module Lib.LocationUpdates
     LocationUpdateFlow,
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
+    buildRidePickupInterpolationHandler,
+    pickupLocationUpdatesDriverId,
   )
 where
 
@@ -109,6 +111,9 @@ type LocationUpdateFlow m r c =
     HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
     Finance.HasActorInfo m r
   )
+
+pickupLocationUpdatesDriverId :: Id Person -> Id Person
+pickupLocationUpdatesDriverId driverId = Id (driverId.getId <> ":pickup")
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters
 getDeviationForPoint pt estimatedRoute =
@@ -339,6 +344,35 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
           BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
       )
+  where
+    snapToRoadWithService rideId' req = do
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId rideId' req
+      return ([Google], Right resp)
+
+-- | Pickup-leg variant of 'buildRideInterpolationHandler' used to compute
+-- @distanceToPickup@. Redis state is kept fully separate from the on-ride buffers by
+-- callers passing a 'pickupLocationUpdatesDriverId' (":pickup"-suffixed) id.
+buildRidePickupInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
+buildRidePickupInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
+  transportConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let snapToRoad' shouldRectifyDistantPointsFailure =
+        if transportConfig.useWithSnapToRoadFallback
+          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId False (fmap getId rideId)
+          else snapToRoadWithService (fmap getId rideId)
+  return $
+    mkRideInterpolationHandler
+      (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
+      98
+      isEndRide
+      (\_driverId dist _googleSnapCalls _osrmSnapCalls _numberOfSelfTuned isDistCalcFailed -> whenJust rideId $ \rid -> QRide.updateDistanceToPickup rid dist isDistCalcFailed)
+      (\_driverId _tollCharges _tollNames _tollIds -> pure ()) -- no toll accounting on the pickup leg
+      (\_driverId _accurateWaypoints _allWaypoints _mbPreviousRouteSegment -> pure (False, False, False)) -- no route-deviation / safety checks on the pickup leg
+      (\_mbDriverId _mbPreviousRouteSegment -> const (pure Nothing)) -- no toll detection on the pickup leg
+      (\_driverId estimatedDistance estimatedTollInfo -> pure (estimatedDistance, estimatedTollInfo))
+      False -- getRecomputeIfPickupDropNotOutsideOfThreshold
+      snapToRoad'
+      (\_driverId -> pure ())
+      (\_driverId -> pure ())
   where
     snapToRoadWithService rideId' req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId rideId' req

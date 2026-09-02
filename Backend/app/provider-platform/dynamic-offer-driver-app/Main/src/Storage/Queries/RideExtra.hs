@@ -398,6 +398,17 @@ updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount i
     )
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
+updateDistanceToPickup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> HighPrecMeters -> Bool -> m ()
+updateDistanceToPickup rideId distanceToPickup isPickupDistanceCalculationFailed = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamR.distanceToPickup (Just distanceToPickup) | not isPickupDistanceCalculationFailed]
+        <> [ Se.Set BeamR.pickupDistanceCalculationFailed (Just isPickupDistanceCalculationFailed),
+             Se.Set BeamR.updatedAt now
+           ]
+    )
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateTollChargesAndNamesAndIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> [Text] -> m ()
 updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds = do
   now <- getCurrentTime
