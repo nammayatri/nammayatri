@@ -46,6 +46,7 @@ module Domain.Action.Dashboard.Merchant
     getMerchantMerchantMessageCatalog,
     postMerchantMerchantMessageUpsert,
     deleteMerchantMerchantMessage,
+    getMerchantListWithCities,
   )
 where
 
@@ -2329,3 +2330,30 @@ deleteMerchantMerchantMessage merchantShortId city messageKeyText = do
   QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
   CQMM.clearCache merchantOpCity.id messageKey
   pure Success
+
+-- BAP side of the merchant list. Each merchant carries its operating cities nested.
+-- Called over HTTP by provider-dashboard's bespoke rider client.
+getMerchantListWithCities ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow [Common.MerchantWithCities]
+getMerchantListWithCities _merchantShortId _opCity = do
+  merchants <- CQM.loadAllBaps
+  forM merchants $ \merchant -> do
+    operatingCities <- CQMOC.findAllByMerchantId merchant.id
+    pure $
+      Common.MerchantWithCities
+        { Common.platform = Common.BAP,
+          Common.merchantId = cast merchant.id,
+          Common.merchantShortId = ShortId merchant.shortId.getShortId,
+          Common.merchantName = merchant.name,
+          Common.enabled = True,
+          Common.operatingCities = map mkOperatingCityItem operatingCities
+        }
+  where
+    mkOperatingCityItem opCity =
+      Common.OperatingCityItem
+        { Common.operatingCityId = cast opCity.id,
+          Common.city = opCity.city,
+          Common.state = opCity.state
+        }

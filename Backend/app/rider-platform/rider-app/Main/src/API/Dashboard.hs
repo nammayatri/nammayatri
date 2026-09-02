@@ -19,6 +19,7 @@ import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
+import qualified API.Dashboard.MerchantList as MerchantList
 import API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator ()
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -35,11 +36,14 @@ type APIV2 =
                   :<|> AppManagementDSLAPI
                   :<|> IssueManagementDSLAPI
                   :<|> RideBookingDSLAPI
+                  :<|> MerchantListDSLAPI
               )
        )
     :<|> ExotelAPI
 
 type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
+
+type MerchantListDSLAPI = DashboardTokenAuth :> MerchantList.API
 
 type AppManagementDSLAPI = DashboardTokenAuth :> AppManagementDSL.API
 
@@ -54,6 +58,7 @@ handlerV2 =
         :<|> appManagementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
+        :<|> merchantListDSLHandler merchantId city
   )
     :<|> exotelHandler
 
@@ -68,6 +73,9 @@ issueManagementDSLHandler merchantId city _auth = IssueManagementDSL.handler mer
 
 rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
 rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city
+
+merchantListDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer MerchantListDSLAPI
+merchantListDSLHandler merchantId city _auth = MerchantList.handler merchantId city
 
 type ExotelAPI =
   DashboardTokenAuth

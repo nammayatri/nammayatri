@@ -81,6 +81,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     getMerchantCityList,
+    getMerchantListWithCities,
   )
 where
 
@@ -5367,3 +5368,30 @@ getMerchantCityList merchantShortId _opCity = do
   merchant <- findMerchantByShortId merchantShortId
   operatingCities <- CQMOC.findAllByMerchantId merchant.id
   pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}
+
+-- BPP side of the merchant list. Each merchant carries its operating cities nested.
+-- provider-dashboard concatenates this with the BAP list.
+getMerchantListWithCities ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow [Common.MerchantWithCities]
+getMerchantListWithCities _merchantShortId _opCity = do
+  merchants <- QM.findAll
+  forM merchants $ \merchant -> do
+    operatingCities <- CQMOC.findAllByMerchantId merchant.id
+    pure $
+      Common.MerchantWithCities
+        { Common.platform = Common.BPP,
+          Common.merchantId = cast merchant.id,
+          Common.merchantShortId = ShortId merchant.shortId.getShortId,
+          Common.merchantName = merchant.name,
+          Common.enabled = merchant.enabled,
+          Common.operatingCities = map mkOperatingCityItem operatingCities
+        }
+  where
+    mkOperatingCityItem opCity =
+      Common.OperatingCityItem
+        { Common.operatingCityId = cast opCity.id,
+          Common.city = opCity.city,
+          Common.state = opCity.state
+        }

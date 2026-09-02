@@ -20,6 +20,7 @@ module Storage.CachedQueries.Merchant.MerchantOperatingCity
     findByMerchantIdAndCity,
     findByMerchantShortIdAndCity,
     findAllByMerchantIdAndState,
+    findAllByMerchantId,
     getMerchantOpCityId,
   )
 where
@@ -34,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantOperatingCity as Queries
+import qualified Storage.Queries.MerchantOperatingCityExtra as QueriesExtra
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantOperatingCity -> m ()
 create = Queries.create
@@ -80,6 +82,13 @@ findAllByMerchantIdAndState merchantId state =
       Just a -> return a
       Nothing -> cacheMerchantIdAndState merchantId state /=<< Queries.findAllByMerchantIdAndState merchantId state
 
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantOperatingCity]
+findAllByMerchantId merchantId =
+  IM.withInMemCache [makeMerchantIdKey merchantId] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
+      Just a -> return a
+      Nothing -> cacheMerchantId merchantId /=<< QueriesExtra.findAllByMerchantId merchantId
+
 getMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Merchant -> Maybe Context.City -> m (Id MerchantOperatingCity)
 getMerchantOpCityId merchant mbCity = (.id) <$> getMerchantOpCity merchant mbCity
 
@@ -113,6 +122,12 @@ cacheMerchantIdAndState merchantId state merchantOperatingCities = do
   let merchantIdAndStateKey = makeMerchantIdAndStateKey merchantId state
   Hedis.setExp merchantIdAndStateKey merchantOperatingCities expTime
 
+cacheMerchantId :: CacheFlow m r => Id Merchant -> [MerchantOperatingCity] -> m ()
+cacheMerchantId merchantId merchantOperatingCities = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdKey = makeMerchantIdKey merchantId
+  Hedis.setExp merchantIdKey merchantOperatingCities expTime
+
 cachedMerchantOperatingCityCity :: CacheFlow m r => MerchantOperatingCity -> m ()
 cachedMerchantOperatingCityCity merchantOperatingCity = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -133,3 +148,6 @@ makeMerchantShortIdAndCityKey merchantShortId city = "CachedQueries:MerchantOper
 
 makeMerchantIdAndStateKey :: Id Merchant -> Context.IndianState -> Text
 makeMerchantIdAndStateKey merchantId state = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId <> ":State-" <> show state
+
+makeMerchantIdKey :: Id Merchant -> Text
+makeMerchantIdKey merchantId = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId

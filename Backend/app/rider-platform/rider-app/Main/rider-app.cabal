@@ -49,6 +49,7 @@ library
       API.Conductor
       API.Dashboard
       API.Dashboard.Exotel
+      API.Dashboard.MerchantList
       API.Depot
       API.FleetEngineToken
       API.FRFS
