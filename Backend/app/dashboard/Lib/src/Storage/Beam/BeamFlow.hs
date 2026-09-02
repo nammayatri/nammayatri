@@ -28,6 +28,7 @@ import qualified Storage.Beam.MerchantAccess as BeamMA
 import qualified Storage.Beam.MerchantPair as BeamMPair
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.PersonCapability as BeamPC
+import qualified Storage.Beam.PersonResourceAccess as BeamPRA
 import qualified Storage.Beam.PersonTier as BeamPT
 import qualified Storage.Beam.RegistrationToken as BeamRT
 import qualified Storage.Beam.Role as BeamR
@@ -53,6 +54,7 @@ type BeamFlow' =
     HasSchemaName BeamMPair.MerchantPairT,
     HasSchemaName BeamP.PersonT,
     HasSchemaName BeamPC.PersonCapabilityT,
+    HasSchemaName BeamPRA.PersonResourceAccessT,
     HasSchemaName BeamPT.PersonTierT,
     HasSchemaName BeamRT.RegistrationTokenT,
     HasSchemaName BeamR.RoleT,

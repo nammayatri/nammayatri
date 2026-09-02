@@ -12,32 +12,34 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Beam.Capability where
+module Storage.Beam.PersonResourceAccess where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import qualified Domain.Types.ResourceScope as DRS
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import Kernel.Types.Beckn.City (City)
 
-data CapabilityT f = CapabilityT
+data PersonResourceAccessT f = PersonResourceAccessT
   { id :: B.C f Text,
-    domain :: B.C f Text,
-    description :: B.C f Text,
-    isSystem :: B.C f Bool,
-    resourceType :: B.C f (Maybe DRS.ResourceType),
+    personId :: B.C f Text,
+    merchantId :: B.C f Text,
+    operatingCity :: B.C f City,
+    resourceType :: B.C f DRS.ResourceType,
+    resourceId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table CapabilityT where
-  data PrimaryKey CapabilityT f
+instance B.Table PersonResourceAccessT where
+  data PrimaryKey PersonResourceAccessT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type Capability = CapabilityT Identity
+type PersonResourceAccess = PersonResourceAccessT Identity
 
-$(enableKVPG ''CapabilityT ['id] [])
+$(enableKVPG ''PersonResourceAccessT ['id] [])
 
-$(mkTableInstancesGenericSchema ''CapabilityT "capability")
+$(mkTableInstancesGenericSchema ''PersonResourceAccessT "person_resource_access")
