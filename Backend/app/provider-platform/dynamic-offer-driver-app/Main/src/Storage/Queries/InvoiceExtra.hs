@@ -193,6 +193,29 @@ updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode status driverFeeIds paymentMod
         <> paymentModeCheck
     )
 
+findAllActiveByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m [Domain.Invoice]
+findAllActiveByDriverFeeIds driverFeeIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE
+        ]
+    ]
+
+updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> [Id DF.DriverFee] -> Domain.InvoicePaymentMode -> m ()
+updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode status driverFeeIds paymentMode = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus status,
+      Se.Set BeamI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.paymentMode $ Se.Eq paymentMode,
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE
+        ]
+    ]
+
 updateStatusAndTypeByMbdriverFeeIdAndInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> Maybe Domain.InvoiceStatus -> Maybe Domain.InvoicePaymentMode -> Maybe (Id DF.DriverFee) -> m ()
 updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driverFeeId = do
   now <- getCurrentTime

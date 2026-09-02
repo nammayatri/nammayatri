@@ -67,6 +67,7 @@ data AllocatorJobType
   | MandateExecution
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
+  | RetryAutopayCollection
   | SendOverlay
   | BadDebtCalculation
   | SendManualPaymentLink
@@ -129,6 +130,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
+  restoreAnyJobInfo SRetryAutopayCollection jobData = AnyJobInfo <$> restoreJobInfo SRetryAutopayCollection jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
   restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
@@ -338,6 +340,25 @@ data MandateExecutionInfo = MandateExecutionInfo
 instance JobInfoProcessor 'MandateExecution
 
 type instance JobContent 'MandateExecution = MandateExecutionInfo
+
+data RetryAutopayCollectionJobData = RetryAutopayCollectionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    serviceName :: Maybe Plan.ServiceNames,
+    batchSize :: Maybe Int,
+    lastDriverFeeId :: Maybe Text,
+    dryRun :: Bool,
+    maxFeesToConvert :: Maybe Int,
+    convertedSoFar :: Maybe Int,
+    includeNotificationAttempting :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RetryAutopayCollection
+
+type instance JobContent 'RetryAutopayCollection = RetryAutopayCollectionJobData
 
 data CalculateDriverFeesJobData = CalculateDriverFeesJobData
   { merchantId :: Id DM.Merchant,
