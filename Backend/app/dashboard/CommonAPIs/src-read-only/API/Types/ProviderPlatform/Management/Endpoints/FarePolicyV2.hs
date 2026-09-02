@@ -395,6 +395,7 @@ data FPV2ProductListItem = FPV2ProductListItem
   { fareProductId :: Kernel.Types.Id.Id Dashboard.Common.FareProduct,
     farePolicyId :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy,
     serviceTier :: Dashboard.Common.ServiceTierType,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: Dashboard.Common.TripCategory,
     area :: Lib.Types.SpecialLocation.Area,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,

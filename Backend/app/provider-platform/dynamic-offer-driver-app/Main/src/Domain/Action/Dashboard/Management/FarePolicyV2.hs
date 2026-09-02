@@ -83,6 +83,7 @@ import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.CachedQueries.CancellationFarePolicy as CQCFP
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.ConditionalCharges as QCC
@@ -130,6 +131,9 @@ getFarePolicyV2List ::
 getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier mbEnabled = do
   (_, merchantOpCity) <- resolveCity merchantShortId opCity
   allProducts <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
+  tierConfigs <- CQVST.findAllByMerchantOpCityId merchantOpCity.id Nothing
+  -- the city's display name for a tier; the UI falls back to the enum
+  let tierName st = listToMaybe [t.name | t <- tierConfigs, t.serviceTierType == st]
   let filtered =
         filter
           ( \fp ->
@@ -139,10 +143,10 @@ getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier m
                 && maybe True (\e -> fp.enabled == e) mbEnabled
           )
           allProducts
-  items <- mapM mkItem filtered
+  items <- mapM (mkItem tierName) filtered
   pure $ Common.FPV2ProductListRes {fareProducts = catMaybes items}
   where
-    mkItem fp = do
+    mkItem tierName fp = do
       mbPolicy <- CQFP.findById Nothing fp.farePolicyId
       case mbPolicy of
         Nothing -> do
@@ -156,6 +160,7 @@ getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier m
                 { fareProductId = cast fp.id,
                   farePolicyId = cast fp.farePolicyId,
                   serviceTier = fp.vehicleServiceTier,
+                  serviceTierName = tierName fp.vehicleServiceTier,
                   tripCategory = fp.tripCategory,
                   area = fp.area,
                   timeBounds = fp.timeBounds,

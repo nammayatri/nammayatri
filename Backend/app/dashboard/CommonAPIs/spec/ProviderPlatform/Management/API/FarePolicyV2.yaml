@@ -369,6 +369,9 @@ types:
     - fareProductId: Id FareProduct
     - farePolicyId: Id FarePolicy
     - serviceTier: ServiceTierType
+    # the city's display name for the tier (vehicle_service_tier.name); the UI
+    # shows this and falls back to the enum when the city has no tier config
+    - serviceTierName: Maybe Text
     - tripCategory: TripCategory
     - area: Area
     - timeBounds: TimeBound
