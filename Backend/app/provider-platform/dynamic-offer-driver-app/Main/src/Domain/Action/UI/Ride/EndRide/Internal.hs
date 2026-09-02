@@ -106,7 +106,7 @@ import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
-import SharedLogic.DriverFee (calculatePlatformFeeAttr)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
@@ -1072,16 +1072,29 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       _ -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
   where
     createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges = do
+      let currentVehicleCategory = Just $ Variant.castVehicleVariantToVehicleCategory $ Variant.castServiceTierToVariant booking.vehicleServiceTier
+      -- PlanBased behaves like FixedAmount, except the charge is dropped when the driver's plan
+      -- waives special ride charges. The plan is resolved here rather than reusing mbDriverPlan
+      -- below, because that lookup consumes isSpecialZoneCharge, which this branch is what decides.
       (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
         DFP.SlabBased -> case newFareParams.fareParametersDetails of
           DFare.SlabDetails fpDetails -> return (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
           _ -> return (0, 0, 0, False)
         DFP.Subscription -> return (0, 0, 0, False)
         DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
+        DFP.PlanBased -> do
+          let fee = fromMaybe 0.0 newFareParams.platformFee
+              feeCgst = fromMaybe 0.0 newFareParams.cgst
+              feeSgst = fromMaybe 0.0 newFareParams.sgst
+          mbPlanForWaiver <- do
+            mbDriverPlanForWaiver <- findByDriverIdWithServiceName (cast driverId) serviceName
+            getPlan mbDriverPlanForWaiver serviceName merchantOpCityId Nothing currentVehicleCategory
+          if maybe False (.waivesSpecialRideCharges) mbPlanForWaiver
+            then return (0, 0, 0, False)
+            else return (fee, feeCgst, feeSgst, True)
         _ -> return (0, 0, 0, False)
       let totalDriverFee = govtCharges + platformFee + cgst + sgst
       now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      let currentVehicleCategory = Just $ Variant.castVehicleVariantToVehicleCategory $ Variant.castServiceTierToVariant booking.vehicleServiceTier
       subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId (Just booking.configInExperimentVersions) serviceName
       let isPlanMandatoryForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       (mbDriverPlan, isOnFreeTrial) <- getPlanAndPushToDefualtIfEligible transporterConfig subscriptionConfig freeTrialDaysLeft' isSpecialZoneCharge isPlanMandatoryForVariant currentVehicleCategory
@@ -1104,7 +1117,10 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           Just ldFee ->
             if now >= ldFee.startTime && now < ldFee.endTime
               then do
-                QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst True booking isSpecialZoneCharge
+                planForAccrual <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
+                let perRideCountSoFar = max 0 (calcNumRides ldFee transporterConfig - ldFee.dailyBaseCount)
+                    baseAccrual = basePlanAccrual planForAccrual isSpecialZoneCharge transporterConfig.considerSpecialZoneRidesForPlanCharges perRideCountSoFar (fromMaybe 0 ldFee.perRideBaseAmount) ldFee.dailyBaseCount (fromMaybe 0 ldFee.dailyBaseAmount)
+                QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst True booking isSpecialZoneCharge baseAccrual
                 return (ldFee.numRides + 1)
               else do
                 createWithMbSibling driverFee lastElderSiblingDriverFee ldFee
@@ -1260,6 +1276,12 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       numRides = if serviceName == YATRI_SUBSCRIPTION then 1 else 0
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId Nothing currentVehicleCategory
+  -- Wrapped in Just, not left bare: this is a brand-new row that basePlanAccrual has genuinely
+  -- run for (even if the result is 0, e.g. still within free rides), so it must be distinguishable
+  -- from a legacy/non-ride DriverFee's NULL -- see calcFinalOrderAmounts in DriverFeeUpdates.
+  let (perRideBaseAmountAccrued, dailyBaseCount, dailyBaseAmountAccrued) = basePlanAccrual plan isSpecialZoneCharge transporterConfig.considerSpecialZoneRidesForPlanCharges 0 0 0 0
+      perRideBaseAmount = Just perRideBaseAmountAccrued
+      dailyBaseAmount = Just dailyBaseAmountAccrued
   return $
     DF.DriverFee
       { status = DF.ONGOING,
@@ -1311,6 +1333,45 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
   where
     specialZoneMetricsIntialization totalFee' = do
       if isSpecialZoneCharge then (1, totalFee') else (0, 0)
+
+-- | Base subscription charge contributed by one ride, given the plan in effect at that moment and
+-- what the fee row has accrued so far this window. Returns (perRideAmountInc, dailyCountInc,
+-- dailyAmountInc).
+--
+-- Both sides are accrued incrementally, at ride time, using whichever plan was actually active for
+-- that ride -- not derived later from a single frequency branch. A driver can switch plans
+-- mid-window, and calcFinalOrderAmounts picks one branch for the whole row based on the plan the
+-- row currently points at (which planSwitchGeneric rewrites retroactively), so neither branch can
+-- be trusted to have the other frequency's rate in scope: the ("PER_RIDE", RIDE) branch has no
+-- daily flat rate available, and ("DAILY", RIDE) has no per-ride rate available. Capturing both
+-- amounts here, when each rate actually is in scope, is what survives the switch.
+--
+-- dailyBaseCount is stored (driver_fee.dailyBaseCount); perRideCountSoFar is not -- the caller
+-- derives it from calcNumRides(driverFee, transporterConfig) - driverFee.dailyBaseCount, reusing
+-- the existing numRides/specialZoneRideCount columns instead of a fourth new one. Only the count
+-- for the *current* ride's own frequency needs to be exact for the freeRideCount gating below, so
+-- this derivation is enough even though the tuple's amount fields feed calcFinalOrderAmounts and
+-- its count field does not.
+--
+-- freeRideCount is a ride-count rule, so it is applied against the running count rather than the
+-- final one. Special rides are billed through specialZoneAmount regardless, but whether they also
+-- accrue toward the base plan charge mirrors calcNumRides's own considerSpecialZoneRidesForPlanCharges
+-- gate: when that config is on, calcNumRides counts them into the ride total, so accrual must count
+-- them too, or the two would disagree about whether a special ride counts.
+basePlanAccrual :: Maybe Plan -> Bool -> Bool -> Int -> HighPrecMoney -> Int -> HighPrecMoney -> (HighPrecMoney, Int, HighPrecMoney)
+basePlanAccrual mbPlan isSpecialZoneCharge considerSpecialZoneRidesForPlanCharges perRideCountSoFar perRideAmountSoFar dailyCountSoFar dailyAmountSoFar =
+  case mbPlan of
+    Just plan | not isSpecialZoneCharge || considerSpecialZoneRidesForPlanCharges -> case plan.planBaseAmount of
+      PERRIDE_BASE baseAmount ->
+        let chargeable = if perRideCountSoFar + 1 <= plan.freeRideCount then 0 else baseAmount
+            newTotal = min plan.maxAmount (perRideAmountSoFar + chargeable)
+         in (newTotal - perRideAmountSoFar, 0, 0)
+      DAILY_BASE baseAmount ->
+        -- Flat for the day: charge it once, the first time a daily-plan ride clears free rides.
+        let newTotal = if dailyCountSoFar + 1 <= plan.freeRideCount then 0 else baseAmount
+         in (0, 1, max 0 (newTotal - dailyAmountSoFar))
+      _ -> (0, 0, 0)
+    _ -> (0, 0, 0)
 
 getPlan ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

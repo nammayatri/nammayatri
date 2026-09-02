@@ -344,6 +344,9 @@ createCancellationPenaltyDriverFee parentFee amount mbSplitOfDriverFeeId subscri
             siblingFeeId = Nothing,
             specialZoneAmount = 0,
             specialZoneRideCount = 0,
+            perRideBaseAmount = Nothing,
+            dailyBaseCount = 0,
+            dailyBaseAmount = Nothing,
             stageUpdatedAt = Nothing,
             startTime = parentFee.startTime,
             totalEarnings = 0,
@@ -847,11 +850,34 @@ calcFinalOrderAmounts ::
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers =
   case (planBaseFrequcency, plan.basedOnEntity) of
+    -- Both ride-based branches prefer the charge accrued per ride (basePlanAccrual in
+    -- EndRide.Internal), which is split by plan frequency and so survives a mid-window plan switch.
+    -- Deriving it here from numRidesForPlanCharges alone cannot: this picks one branch for the
+    -- whole row using the plan the row currently points at, and planSwitchGeneric rewrites that
+    -- plan retroactively for the entire ongoing window -- so a day split across Daily Per Ride and
+    -- Daily Unlimited gets billed wholly at whichever plan the driver happened to end on.
+    -- Rows written before the accrual columns existed (or non-ride DriverFees like cancellation
+    -- penalties) have both perRideBaseAmount/dailyBaseAmount at Nothing (NULL) and fall back to
+    -- the pre-existing formula. A *new* row can legitimately accrue to exactly 0 (e.g. still
+    -- within plan.freeRideCount) -- that's Just 0, written unconditionally by
+    -- Storage.Queries.DriverFeeExtra.updateFee -- and must be trusted as "nothing owed yet", not
+    -- misread as "not recorded, recompute from scratch". Checking isJust rather than > 0 is what
+    -- tells the two apart.
     ("PER_RIDE", RIDE) -> do
-      let feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRidesForPlanCharges)))
+      let isAccrualRecorded = isJust driverFee.perRideBaseAmount || isJust driverFee.dailyBaseAmount
+          accrued = fromMaybe 0 driverFee.perRideBaseAmount + fromMaybe 0 driverFee.dailyBaseAmount
+          feeWithoutDiscount =
+            if isAccrualRecorded
+              then accrued
+              else max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRidesForPlanCharges)))
       getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
     ("DAILY", RIDE) -> do
-      let feeWithoutDiscount = if numRidesForPlanCharges > 0 then baseAmount else 0
+      let isAccrualRecorded = isJust driverFee.perRideBaseAmount || isJust driverFee.dailyBaseAmount
+          accrued = fromMaybe 0 driverFee.perRideBaseAmount + fromMaybe 0 driverFee.dailyBaseAmount
+          feeWithoutDiscount =
+            if isAccrualRecorded
+              then accrued
+              else if numRidesForPlanCharges > 0 then baseAmount else 0
       getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges driverFee waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
     ("DAILY", NONE) -> do
       let feeWithoutDiscount = baseAmount
