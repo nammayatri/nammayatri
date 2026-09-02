@@ -61,3 +61,8 @@ ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN actual_refunded_amount dou
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN reference_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN arn_generated_at timestamp with time zone ;

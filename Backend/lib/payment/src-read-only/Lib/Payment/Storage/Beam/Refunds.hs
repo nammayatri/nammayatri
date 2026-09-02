@@ -14,6 +14,7 @@ import qualified Kernel.Types.Common
 data RefundsT f = RefundsT
   { actualRefundedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     arn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    arnGeneratedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     completedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     errorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
