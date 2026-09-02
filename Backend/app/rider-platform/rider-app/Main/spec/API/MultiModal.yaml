@@ -460,11 +460,18 @@ types:
     timeStamp: UTCTime
     towerInfo: [TowerInfo]
 
+  PassingVehicleInfo:
+    vehicleNumber: Text
+    serviceTierType: ServiceTierType
+    serviceTierName: Maybe Text
+    eta: BusStopETA
+
   PassingRoutes:
     routeCode: Text
-    eta: "Maybe [BusStopETA]"
+    routeShortName: Text
+    liveVehicles: [PassingVehicleInfo]
+    schedules: [PassingVehicleInfo]
     isLastStop: Bool
-    isLive: Bool
 
 apis:
   - POST:
