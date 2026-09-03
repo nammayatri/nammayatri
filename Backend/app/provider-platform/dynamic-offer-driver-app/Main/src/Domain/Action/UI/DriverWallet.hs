@@ -100,7 +100,6 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
@@ -724,7 +723,7 @@ postWalletTopup ::
     DriverWallet.TopUpRequest ->
     Environment.Flow PlanSubscribeRes
   )
-postWalletTopup (mbPersonId, merchantId, mocId) = ActorInfo.withMbPersonIdActorInfo mbPersonId . doWalletTopup mbPersonId merchantId mocId
+postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merchantId mocId
   where
     doWalletTopup mbP mId mocId0 r =
       do

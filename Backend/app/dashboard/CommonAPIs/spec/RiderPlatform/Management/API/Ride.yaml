@@ -112,17 +112,10 @@ apis:
         type: MultipleRideSyncReq
       response:
         type: MultipleRideSyncResp
-      helperApi:
-        - POST:
-            endpoint: /payoutOfferSync
-            name: PostRidePayoutOfferSync
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: MultipleRideSyncReq
-            response:
-              type: MultipleRideSyncResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST:
       endpoint: /cancel
       name: PostRideCancelMultiple

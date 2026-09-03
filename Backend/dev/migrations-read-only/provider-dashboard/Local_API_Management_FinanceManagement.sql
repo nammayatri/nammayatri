@@ -101,6 +101,7 @@ INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '3
 -- {"api":"GetFinanceManagementTdsReimbursement","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'finance.tds_reimbursement.read' ) ON CONFLICT DO NOTHING;
 
+
 ------- SQL updates -------
 
 -- {"api":"PostFinanceManagementFinanceAdjustmentSubmit","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
@@ -110,7 +111,7 @@ INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '3
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'finance.adjustment.read' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"PostFinanceManagementFinanceAdjustmentApprove","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'finance.adjustment.write' ) ON CONFLICT DO NOTHING;
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'finance.adjustment.approve' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"PostFinanceManagementFinanceAdjustmentReject","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'finance.adjustment.write' ) ON CONFLICT DO NOTHING;

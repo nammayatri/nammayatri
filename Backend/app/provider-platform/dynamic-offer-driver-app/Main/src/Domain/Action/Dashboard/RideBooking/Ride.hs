@@ -31,7 +31,6 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Action.UI.Ride.StartRide as SHandler
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -41,10 +40,9 @@ import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Tools.ActorInfo as ActorInfo
 
 postRideStart :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Text -> Common.StartRideReq -> Flow APISuccess
-postRideStart merchantShortId opCity reqRideId mbRequestorId Common.StartRideReq {point, odometerReadingValue} = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideStart merchantShortId opCity reqRideId _mbRequestorId Common.StartRideReq {point, odometerReadingValue} = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
@@ -55,7 +53,7 @@ postRideStart merchantShortId opCity reqRideId mbRequestorId Common.StartRideReq
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 postRideEnd :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Text -> Common.EndRideReq -> Flow APISuccess
-postRideEnd merchantShortId opCity reqRideId mbRequestorId Common.EndRideReq {point, odometerReadingValue} = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideEnd merchantShortId opCity reqRideId _mbRequestorId Common.EndRideReq {point, odometerReadingValue} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
@@ -69,7 +67,7 @@ getRideCurrentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> Flow 
 getRideCurrentActiveRide merchantShortId _opCity vehicleNumber = DRide.currentActiveRide merchantShortId vehicleNumber
 
 postRideCancel :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Text -> Common.CancelRideReq -> Flow APISuccess
-postRideCancel merchantShortId opCity reqRideId mbRequestorId Common.CancelRideReq {reasonCode, additionalInfo} = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideCancel merchantShortId opCity reqRideId _mbRequestorId Common.CancelRideReq {reasonCode, additionalInfo} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
@@ -82,7 +80,7 @@ postRideCancel merchantShortId opCity reqRideId mbRequestorId Common.CancelRideR
   CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq True
 
 postRideBookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
-postRideBookingWithVehicleNumberAndPhone merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideBookingWithVehicleNumberAndPhone merchantShortId opCity _mbRequestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   DRide.bookingWithVehicleNumberAndPhone merchant merchantOpCityId req

@@ -72,6 +72,7 @@ apis:
         type: BBPSPaymentReq
       response:
         type: CreateOrderResp
+      actorInfo: auth
   - GET:
       endpoint: /bbps/getOrderStatus/{orderId}
       auth: TokenAuth

@@ -140,6 +140,7 @@ apis:
         type: AddTipRequest
       response:
         type: APISuccess
+      actorInfo: auth
   - GET:
       endpoint : /payment/customer
       auth: TokenAuth
@@ -181,6 +182,7 @@ apis:
         type: ClearDuesReq
       response:
         type: ClearDuesResp
+      actorInfo: auth
   - POST:
       endpoint: /payment/ride/{rideId}/capture
       auth: TokenAuth
@@ -188,6 +190,7 @@ apis:
         rideId: Id Ride
       response:
         type: APISuccess
+      actorInfo: auth
   - POST:
       endpoint: /payment/verifyVpa
       auth: TokenAuth

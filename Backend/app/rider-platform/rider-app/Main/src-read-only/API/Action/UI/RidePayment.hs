@@ -22,30 +22,31 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "payment" :> "methods" :> Get ('[JSON]) API.Types.UI.RidePayment.PaymentMethodsResponse :<|> TokenAuth :> "payment" :> "methods"
+  ( TokenAuth :> "payment" :> "methods" :> Get '[JSON] API.Types.UI.RidePayment.PaymentMethodsResponse :<|> TokenAuth :> "payment" :> "methods"
       :> Capture
            "paymentMethodId"
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "makeDefault"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "intent"
       :> "setup"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.SetupIntentResponse
       :<|> TokenAuth
       :> "payment"
       :> "intent"
       :> "payment"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.PaymentIntentResponse
       :<|> TokenAuth
       :> "payment"
@@ -58,7 +59,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "update"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -68,7 +69,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "delete"
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -77,16 +78,16 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "addTip"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.AddTipRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "customer"
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateCustomerResp
       :<|> TokenAuth
       :> "payment"
@@ -96,10 +97,10 @@ type API =
       :> "refundRequest"
       :> "create"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.RefundRequestReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -108,7 +109,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "refundRequest"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.RefundRequestListResp
       :<|> TokenAuth
       :> "payment"
@@ -117,22 +118,22 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "fareBreakup"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.FareBreakupRes
       :<|> TokenAuth
       :> "payment"
       :> "getDueAmount"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.GetDueAmountResp
       :<|> TokenAuth
       :> "payment"
       :> "clearDues"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.ClearDuesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.ClearDuesResp
       :<|> TokenAuth
       :> "payment"
@@ -142,7 +143,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "capture"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -151,13 +152,13 @@ type API =
            "vpa"
            Kernel.Prelude.Text
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "vpaFromNumber"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.VpaFromNumberResp
   )
 
@@ -214,7 +215,7 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPaymentAddTip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentAddTip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postPaymentAddTip a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.RidePayment.postPaymentAddTip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getPaymentCustomer ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -262,7 +263,7 @@ postPaymentClearDues ::
     API.Types.UI.RidePayment.ClearDuesReq ->
     Environment.FlowHandler API.Types.UI.RidePayment.ClearDuesResp
   )
-postPaymentClearDues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentClearDues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPaymentClearDues a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.RidePayment.postPaymentClearDues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postPaymentRideCapture ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -271,7 +272,7 @@ postPaymentRideCapture ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPaymentRideCapture a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.postPaymentRideCapture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPaymentRideCapture a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.RidePayment.postPaymentRideCapture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postPaymentVerifyVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
