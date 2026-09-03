@@ -1,0 +1,31 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+EndOtpConfig:
+  tableName: end_otp_config
+
+  fields:
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    tripCategory : Text
+    tripMode : Text
+    isEndOtpRequired : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    tripCategory: PrimaryKey
+    tripMode: PrimaryKey
+
+  queries:
+    findByMerchantOpCityIdAndTripCategoryAndTripMode:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, tripCategory, tripMode]
+
+  default:
+    isEndOtpRequired: "false"
+
+  excludedFields: [merchantOperatingCityId, merchantId, tripCategory, tripMode, createdAt, updatedAt]
