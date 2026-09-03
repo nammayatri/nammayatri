@@ -122,6 +122,7 @@ apis:
         type: MembershipApplicationReq
       response:
         type: CreateOrderResp
+      actorInfo: auth
   - POST:
       endpoint: /buyAdditionalShares
       auth: TokenAuth PROVIDER_TYPE
@@ -129,6 +130,7 @@ apis:
         type: TopUpSharesReq
       response:
         type: CreateOrderResp
+      actorInfo: auth
   - PUT:
       endpoint: /updateApplication
       auth: TokenAuth PROVIDER_TYPE
@@ -136,9 +138,11 @@ apis:
         type: UpdateMembershipApplicationReq
       response:
         type: APISuccess
+      actorInfo: auth
   - GET:
       endpoint: /membership
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: MembershipDetailsResp
+      actorInfo: auth
 

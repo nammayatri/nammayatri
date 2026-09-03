@@ -26,6 +26,13 @@ importPackageOverrides:
 
 module: Subscription
 apiPrefix: plan
+# requestorId/actorInfo applied for each api by default
+# for overwrite helperApiExtra/helperApi can be specified for each api separately
+default:
+  helperApiExtra:
+    query:
+      - requestorId: Text
+    actorInfo: requestorId
 
 apis:
   - GET: # ListPlan
@@ -36,17 +43,6 @@ apis:
         driverId: Id Driver
       response:
         type: PlanListAPIRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/list
-            name: GetSubscriptionListPlan
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            response:
-              type: PlanListAPIRes
   - PUT: # SelectPlan
       endpoint: /{driverId}/{planId}/select
       name: PutSubscriptionSelectPlan
@@ -56,18 +52,6 @@ apis:
         planId: Id Plan
       response:
         type: APISuccess
-      helperApi:
-        - PUT:
-            endpoint: /{driverId}/{planId}/select
-            name: PutSubscriptionSelectPlan
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              planId: Id Plan
-            query:
-              - requestorId: Text
-            response:
-              type: APISuccess
   - PUT: # SuspendPlan
       endpoint: /{driverId}/suspend
       name: PutSubscriptionSuspendPlan
@@ -76,17 +60,6 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
-      helperApi:
-        - PUT:
-            endpoint: /{driverId}/suspend
-            name: PutSubscriptionSuspendPlan
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            response:
-              type: APISuccess
   - POST: # SubscribePlan
       endpoint: /{driverId}/{planId}/subscribe
       name: PostSubscriptionSubscribePlan
@@ -96,18 +69,6 @@ apis:
         planId: Id Plan
       response:
         type: PlanSubscribeRes
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/{planId}/subscribe
-            name: PostSubscriptionSubscribePlan
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              planId: Id Plan
-            query:
-              - requestorId: Text
-            response:
-              type: PlanSubscribeRes
   - GET: # CurrentPlan
       endpoint: /{driverId}
       name: GetSubscriptionCurrentPlan
@@ -116,17 +77,6 @@ apis:
         driverId: Id Driver
       response:
         type: CurrentPlanRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}
-            name: GetSubscriptionCurrentPlan
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            response:
-              type: CurrentPlanRes
   - GET: # ListPlanV2
       endpoint: /{driverId}/{serviceName}/v2/list
       name: GetSubscriptionListPlanV2
@@ -136,18 +86,6 @@ apis:
         serviceName: ServiceNames
       response:
         type: PlanListAPIRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/{serviceName}/v2/list
-            name: GetSubscriptionListPlanV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            response:
-              type: PlanListAPIRes
   - PUT: # SelectPlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/select
       name: PutSubscriptionSelectPlanV2
@@ -158,19 +96,6 @@ apis:
         serviceName: ServiceNames
       response:
         type: APISuccess
-      helperApi:
-        - PUT:
-            endpoint: /{driverId}/{planId}/{serviceName}/v2/select
-            name: PutSubscriptionSelectPlanV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              planId: Id Plan
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            response:
-              type: APISuccess
   - PUT: # SuspendPlanV2
       endpoint: /{driverId}/{serviceName}/v2/suspend
       name: PutSubscriptionSuspendPlanV2
@@ -180,18 +105,6 @@ apis:
         serviceName: ServiceNames
       response:
         type: APISuccess
-      helperApi:
-        - PUT:
-            endpoint: /{driverId}/{serviceName}/v2/suspend
-            name: PutSubscriptionSuspendPlanV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            response:
-              type: APISuccess
   - POST: # SubscribePlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
       name: PostSubscriptionSubscribePlanV2
@@ -204,21 +117,6 @@ apis:
         type: PlanSubscribeReq
       response:
         type: PlanSubscribeRes
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
-            name: PostSubscriptionSubscribePlanV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              planId: Id Plan
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            request:
-              type: PlanSubscribeReq
-            response:
-              type: PlanSubscribeRes
   - GET: # CurrentPlanV2
       endpoint: /{driverId}/{serviceName}
       name: GetSubscriptionCurrentPlanV2
@@ -228,18 +126,6 @@ apis:
         serviceName: ServiceNames
       response:
         type: CurrentPlanRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/{serviceName}
-            name: GetSubscriptionCurrentPlanV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            response:
-              type: CurrentPlanRes
   - GET: # OrderStatus = (PaymentStatus)
       endpoint: /{driverId}/{orderId}/status
       name: GetSubscriptionOrderStatus
@@ -249,18 +135,6 @@ apis:
         orderId: Id Invoice
       response:
         type: PaymentStatusResp
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/{orderId}/status
-            name: GetSubscriptionOrderStatus
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              orderId: Id Invoice
-            query:
-              - requestorId: Text
-            response:
-              type: PaymentStatusResp
   - GET: # DriverPaymentHistoryAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}
       name: GetSubscriptionDriverPaymentHistoryAPIV2
@@ -274,21 +148,6 @@ apis:
         - offset: Int
       response:
         type: HistoryEntityV2
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/payments/history/v2/{serviceName}
-            name: GetSubscriptionDriverPaymentHistoryAPIV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - paymentMode: InvoicePaymentMode
-              - limit: Int
-              - offset: Int
-              - requestorId: Text
-            response:
-              type: HistoryEntityV2
   - GET: # DriverPaymentHistoryEntityDetailsAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
       name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
@@ -299,19 +158,6 @@ apis:
         invoiceId: Id Invoice
       response:
         type: HistoryEntryDetailsEntityV2
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
-            name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-              invoiceId: Id Invoice
-            query:
-              - requestorId: Text
-            response:
-              type: HistoryEntryDetailsEntityV2
   - GET: # CancellationChargeHistory
       endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
       name: GetSubscriptionCancellationChargeHistory
@@ -324,20 +170,6 @@ apis:
         - offset: Int
       response:
         type: CancellationChargeHistoryRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
-            name: GetSubscriptionCancellationChargeHistory
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - limit: Int
-              - offset: Int
-              - requestorId: Text
-            response:
-              type: CancellationChargeHistoryRes
       migrate:
         capability: city-operations.subscription.read
   - POST: # CollectManualPayments
@@ -351,20 +183,6 @@ apis:
         type: CollectManualPaymentsReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/{serviceName}/collect
-            name: PostSubscriptionCollectManualPayments
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-              serviceName: ServiceNames
-            query:
-              - requestorId: Text
-            request:
-              type: CollectManualPaymentsReq
-            response:
-              type: APISuccess
   - POST:
       endpoint: /waiveOff/fee
       name: PostSubscriptionFeeWaiveOff
@@ -373,17 +191,6 @@ apis:
         type: WaiveOffReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /waiveOff/fee
-            name: PostSubscriptionFeeWaiveOff
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: WaiveOffReq
-            response:
-              type: APISuccess
   - GET: # ListSubscriptionPurchases
       endpoint: /{driverId}/subscriptionPurchases
       name: GetSubscriptionPurchaseList
@@ -396,20 +203,6 @@ apis:
         - status: SubscriptionPurchaseStatus
       response:
         type: SubscriptionPurchaseListRes
-      helperApi:
-        - GET:
-            endpoint: /{driverId}/subscriptionPurchases
-            name: GetSubscriptionPurchaseList
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - limit: Int
-              - offset: Int
-              - status: SubscriptionPurchaseStatus
-              - requestorId: Text
-            response:
-              type: SubscriptionPurchaseListRes
 
 types:
   PlanSubscribeReq:

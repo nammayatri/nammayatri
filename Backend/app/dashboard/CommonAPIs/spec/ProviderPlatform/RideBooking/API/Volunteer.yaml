@@ -22,17 +22,10 @@ apis:
         type: AssignCreateAndStartOtpRideAPIReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /assign/start
-            name: PostVolunteerAssignStartOtpRide
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: AssignCreateAndStartOtpRideAPIReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
 types:
   BookingInfoResponse:

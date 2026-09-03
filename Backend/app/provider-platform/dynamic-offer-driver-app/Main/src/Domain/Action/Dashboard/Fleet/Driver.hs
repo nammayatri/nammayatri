@@ -283,7 +283,6 @@ import qualified Storage.Queries.VehicleExtra as QVehicleExtra
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
-import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Csv as Csv
 import Tools.Encryption
 import Tools.Error
@@ -5261,7 +5260,7 @@ postDriverFleetScheduledBookingReassign ::
   Text ->
   Common.ReassignScheduledBookingReq ->
   Flow APISuccess
-postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person fleetOwnerId) $ do
+postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Common.ReassignScheduledBookingReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
 
   -- 1. Get old ride and validate old driver belongs to fleet

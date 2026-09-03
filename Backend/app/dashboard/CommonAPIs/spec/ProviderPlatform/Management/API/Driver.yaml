@@ -370,18 +370,10 @@ apis:
         type: ClearDriverFeeReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /clearFee
-            auth: ApiAuthV2
-            mandatoryQuery:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            request:
-              type: ClearDriverFeeReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET:
       endpoint: /panAadharSelfieDetails
       mandatoryQuery:
@@ -434,18 +426,10 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/refundByPayout
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            request:
-              type: RefundByPayoutReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET:
       endpoint: /{driverId}/securityDepositStatus
       params:

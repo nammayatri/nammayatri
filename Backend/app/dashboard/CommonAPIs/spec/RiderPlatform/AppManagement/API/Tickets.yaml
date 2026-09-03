@@ -245,19 +245,10 @@ apis:
         type: TicketBookingReq
       response:
         type: CreateOrderResp
-      helperApi:
-        - POST:
-            endpoint: /ticket/places/{placeId}/book
-            name: PostTicketPlacesBook
-            auth: ApiAuthV2
-            params:
-              placeId: Id TicketPlace
-            query:
-              - requestorId: Text
-            request:
-              type: TicketBookingReq
-            response:
-              type: CreateOrderResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET: # GetTicketPlacesForDashboardAPI
       endpoint: /ticket/places
@@ -322,12 +313,14 @@ apis:
       auth: ApiAuthV2
       params:
         placeId: Id TicketPlace
-      query:
-        requestorId: Text
       request:
         type: DirectTicketBookingReq
       response:
         type: DirectTicketBookingResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET: # GetTicketPlaceBookingsAPI
       endpoint: /ticket/places/{placeId}/bookings/list
