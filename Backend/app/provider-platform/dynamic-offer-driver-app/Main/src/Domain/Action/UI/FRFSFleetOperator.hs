@@ -5,6 +5,7 @@ module Domain.Action.UI.FRFSFleetOperator
     postFrfsFleetOperatorTripAction',
     postFrfsFleetOperatorCurrentOperation,
     postFrfsFleetOperatorCurrentOperation',
+    postFrfsFleetOperatorActiveManifest,
     getV2FrfsBusTripSchedule,
   )
 where
@@ -25,6 +26,7 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id, unpack)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.MultiModal.Utils (decode)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude (BaseUrl, listToMaybe)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context
@@ -40,7 +42,9 @@ import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error (GenericError (InvalidRequest))
+import Tools.Notifications (NotifReq (..), notifyDriverOnEvents)
 
 getV2FrfsRoute ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -193,6 +197,9 @@ getV2FrfsBusTripSchedule (_, _merchantId, merchantOpCityId) routeId tripNumber w
           stopName = e.stopName
         }
 
+frfsCurrentTripRedisKey :: Text -> Text -> Text
+frfsCurrentTripRedisKey configId waybillNo = configId <> ":" <> waybillNo <> ":tripnumber"
+
 -- | Get trip manifest - still proxied to rider-app (needs booking data)
 getV2FrfsTripRouteManifest ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -209,6 +216,11 @@ getV2FrfsTripRouteManifest (_, _merchantId, _merchantOpCityId) tripId routeId = 
   let riderAppUrl = bapInternal.url
       riderAppApiKey = bapInternal.apiKey
   getFrfsTripManifest riderAppApiKey riderAppUrl tripId routeId
+
+-- | Mirrors rider-app's `makeTripIdFromWaybillNoAndTripNo` -- duplicated here since
+-- provider-platform can't import across services.
+makeTripIdFromWaybillNoAndTripNo :: Text -> Int -> Text
+makeTripIdFromWaybillNoAndTripNo waybillNo tripNo = waybillNo <> "-" <> show tripNo
 
 -- | Perform trip action (start, end, reset, rollback)
 postFrfsFleetOperatorTripAction ::
@@ -233,7 +245,7 @@ postFrfsFleetOperatorTripAction' ::
     FleetOperatorTripActionReq ->
     Flow FleetOperatorTripActionResp
   )
-postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard req = do
+postFrfsFleetOperatorTripAction' (_, merchantId, merchantOpCityId) isDashboard req = do
   let FleetOperatorTripActionReq {action = act} = req
   integratedBPPConfig <-
     findFirstIbppConfigByCityAndVehicle
@@ -254,11 +266,11 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
       -- to a contiguous range on old GTFS builds that don't send trip_numbers.
       tripNums = fromMaybe [1 .. numTrips] mbTripNums
       configId = getId integratedBPPConfig.id
-      redisKey = configId <> ":" <> wbNo <> ":tripnumber"
+      redisKey = frfsCurrentTripRedisKey configId wbNo
   now <- getCurrentTime
   let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
   logInfo $ "FRFSFleetOperator: Trip action - " <> show act
-  case act of
+  result <- case act of
     -- Only start/end use the per-city geofence/lead-time knobs, so the config is fetched inside those
     -- branches; reset/rollback stay fully independent of any transporter-config read. Non-fatal
     -- (Maybe) so the start/end checks fail open when it's absent.
@@ -270,6 +282,10 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
       handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums
     TripReset -> handleTripReset baseUrl gtfsId anchor redisKey tripNums
     TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums
+  -- Ops-initiated change the driver's own app has no other way of hearing about; a driver's own
+  -- action never sets isDashboard, so this can't notify a driver about their own tap.
+  when isDashboard $ notifyDriverOfTripChange merchantId req gimsOps
+  pure result
   where
     getTransporterConfig = getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
     handleTripStart integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor tripNums redisKey epochNow wbNo = do
@@ -309,13 +325,10 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
                   }
             Hedis.setExp redisKey nextTrip 172800
             logInfo $ "FRFSFleetOperator: Trip start successful - trip " <> show nextTrip
-            -- Notify confirmed passengers (on the rider app) that their bus has started, over the
-            -- internal API. Forked so a slow/failed rider-app call never blocks the conductor's start.
-            -- tripId matches the rider-app format (`makeTripIdFromWaybillNoAndTripNo`): waybill-tripNo.
+            -- Forked so a slow/failed rider-app call never blocks the conductor's start.
             fork "NotifyRiderFrfsTripStarted" $ do
               bapInternal <- asks (.appBackendBapInternal)
-              let tripId = wbNo <> "-" <> show nextTrip
-              void $ notifyFrfsTripStarted bapInternal.apiKey bapInternal.url tripId
+              void $ notifyFrfsTripStarted bapInternal.apiKey bapInternal.url (makeTripIdFromWaybillNoAndTripNo wbNo nextTrip)
             return $
               FleetOperatorTripActionResp
                 { currentTripNumber = nextTrip,
@@ -423,6 +436,29 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
                   hasUpcomingTrips = not (null (filter (> rolledBackTrip) tripNums))
                 }
 
+-- | Best-effort notify: on a dashboard-initiated trip action, ping the driver's phone so their app
+-- can refresh immediately instead of waiting for the next poll. Resolves the driver via whichever
+-- GIMS token is available -- the request's own, or GIMS's own resolved waybill row (covers
+-- vehicle-only dashboard calls that never supplied a driver/conductor token). Fails open: a missing
+-- token, an unmatched Person, or a send failure only logs -- it must never break the trip action.
+notifyDriverOfTripChange :: Id Domain.Types.Merchant.Merchant -> FleetOperatorTripActionReq -> GimsCurrentOperationResp -> Flow ()
+notifyDriverOfTripChange merchantId req gimsOps =
+  fork "NotifyDriverFrfsTripChanged" $ do
+    let mbToken = req.gimsDriverId <|> req.gimsConductorId <|> gimsOps.gimsDriverId <|> gimsOps.gimsConductorId
+    case mbToken of
+      Nothing -> logWarning "FRFSFleetOperator: dashboard trip-action notify skipped - no driver/conductor token available"
+      Just _ -> do
+        mbDriver <- QPerson.findByOperatorBadgeTokenAndMerchantId mbToken merchantId
+        case mbDriver of
+          Nothing -> logWarning "FRFSFleetOperator: dashboard trip-action notify skipped - no matching driver for token"
+          Just driver ->
+            notifyDriverOnEvents
+              driver.merchantOperatingCityId
+              driver.id
+              driver.deviceToken
+              NotifReq {entityId = driver.id.getId, title = "Trip updated", message = "Your trip was updated. Tap to refresh."}
+              FCM.TRIP_UPDATED
+
 -- | Get current operation details
 postFrfsFleetOperatorCurrentOperation ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -461,7 +497,7 @@ postFrfsFleetOperatorCurrentOperation' (_, _merchantId, merchantOpCityId) _isDas
           }
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let configId = getId integratedBPPConfig.id
-      redisKey = configId <> ":" <> gimsOps.waybill_no <> ":tripnumber"
+      redisKey = frfsCurrentTripRedisKey configId gimsOps.waybill_no
   mbPrevTrip <- Hedis.get redisKey
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
   tripResp <-
@@ -499,6 +535,52 @@ postFrfsFleetOperatorCurrentOperation' (_, _merchantId, merchantOpCityId) _isDas
           startTime = st,
           tripNumber = tn
         }
+
+-- | Resolve the vehicle's currently active trip from an anchor and return its manifest in the same
+-- call -- no client-supplied tripId needed to know what to poll. Tries GIMS's activeTrip endpoint
+-- first (one lean call, no previousTripNumber, no history/upcoming bucketing); on failure, falls
+-- back to the client's own last-known tripId/routeId so a GIMS blip degrades to stale-but-working
+-- rather than losing the passenger list.
+postFrfsFleetOperatorActiveManifest ::
+  ( ( Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    FRFSActiveManifestReq ->
+    Flow FRFSActiveManifestResp
+  )
+postFrfsFleetOperatorActiveManifest (_, _merchantId, merchantOpCityId) req = do
+  logInfo "FRFSFleetOperator: Active manifest"
+  integratedBPPConfig <-
+    findFirstIbppConfigByCityAndVehicle
+      merchantOpCityId
+      (show BUS)
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  let gtfsId = DIBC.feedKey integratedBPPConfig
+      anchor =
+        GimsOperationAnchor
+          { gimsConductorId = req.gimsConductorId,
+            gimsDriverId = req.gimsDriverId,
+            vehicleNumber = req.vehicleNumber
+          }
+  mbActiveTrip <- NandiFlow.gimsActiveTrip baseUrl gtfsId anchor
+  let (mbTripId, mbRouteId) = case mbActiveTrip of
+        Just activeTrip ->
+          ( makeTripIdFromWaybillNoAndTripNo activeTrip.waybill_no <$> activeTrip.active_trip_number,
+            activeTrip.route_id
+          )
+        Nothing -> (req.tripId, req.routeId)
+  mbManifest <- case (mbTripId, mbRouteId) of
+    (Just tripId, Just routeId) -> do
+      bapInternal <- asks (.appBackendBapInternal)
+      Just <$> getFrfsTripManifest bapInternal.apiKey bapInternal.url tripId routeId
+    _ -> pure Nothing
+  pure
+    FRFSActiveManifestResp
+      { tripId = mbTripId,
+        routeId = mbRouteId,
+        manifest = maybe [] (.manifest) mbManifest
+      }
 
 -- | Shared scaffold for the start/end enforcement gates: when the config is present and the trip's
 -- route resolves, hand (config, routeId) to @runChecks@; otherwise fail open with a skip-log at the

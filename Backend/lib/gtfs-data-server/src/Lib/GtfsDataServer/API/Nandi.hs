@@ -31,6 +31,11 @@ type OperatorCurrentTripDetailsAPI =
     :> ReqBody '[JSON] GimsCurrentTripDetailsReq
     :> Post '[JSON] GimsCurrentTripDetailsResp
 
+type OperatorActiveTripAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "activeTrip"
+    :> ReqBody '[JSON] GimsOperationAnchor
+    :> Post '[JSON] GimsActiveTripResp
+
 type OperatorEmployeeLoginAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "employee" :> "login"
     :> ReqBody '[JSON] GimsEmployeeLoginReq
@@ -69,6 +74,9 @@ operatorTripActionAPI = Proxy
 operatorCurrentTripDetailsAPI :: Proxy OperatorCurrentTripDetailsAPI
 operatorCurrentTripDetailsAPI = Proxy
 
+operatorActiveTripAPI :: Proxy OperatorActiveTripAPI
+operatorActiveTripAPI = Proxy
+
 operatorEmployeeLoginAPI :: Proxy OperatorEmployeeLoginAPI
 operatorEmployeeLoginAPI = Proxy
 
@@ -104,6 +112,9 @@ postOperatorTripAction = ET.client operatorTripActionAPI
 
 postOperatorCurrentTripDetails :: Text -> GimsCurrentTripDetailsReq -> ET.EulerClient GimsCurrentTripDetailsResp
 postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
+
+postOperatorActiveTrip :: Text -> GimsOperationAnchor -> ET.EulerClient GimsActiveTripResp
+postOperatorActiveTrip = ET.client operatorActiveTripAPI
 
 postOperatorEmployeeLogin :: Text -> GimsEmployeeLoginReq -> ET.EulerClient GimsEmployeeLoginResp
 postOperatorEmployeeLogin = ET.client operatorEmployeeLoginAPI
