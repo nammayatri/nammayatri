@@ -127,6 +127,11 @@ export interface CollectionGroup {
   environments: CollectionEnvironment[];
   compatibleEnvs: string[];
   suites: CollectionSuite[];
+  /** ny-qa-automation groups (NY/MSIL/YS): run via the backend Newman engine
+   * (qa-collections-service), not the in-browser postman-runtime, because
+   * those collections rely on pm.execution.setNextRequest() branching that
+   * postman-runtime.ts does not implement. */
+  backendOnly?: boolean;
 }
 
 export interface ConfigSyncStatus {
