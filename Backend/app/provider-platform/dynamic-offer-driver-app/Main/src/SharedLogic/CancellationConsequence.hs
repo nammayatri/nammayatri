@@ -145,11 +145,11 @@ data CustomerChargeBreakup = CustomerChargeBreakup
 --     negative fee; tax/commission/overdue never apply to credits.
 --   * Coin variants on the customer side are meaningless (riders have no coin wallet)
 --     and yield no charge.
-computeCustomerCharge :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> CustomerChargeBreakup
-computeCustomerCharge row estimatedFare =
+computeCustomerCharge :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney -> CustomerChargeBreakup
+computeCustomerCharge row estimatedFare mbBookingDeposit =
   case row.customerDeduction of
     Just (DExtra.MoneyDeduction money) ->
-      let (base, overdueFee) = moneyDeductionAmount money estimatedFare
+      let (base, overdueFee) = moneyDeductionAmount money estimatedFare mbBookingDeposit
           tax = ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100
           commission =
             ((.commission) =<< row.customerCommissionAndTax) <&> \case
@@ -157,17 +157,20 @@ computeCustomerCharge row estimatedFare =
               DExtra.PercentageRate {percentage} -> base * percentage / 100
        in CustomerChargeBreakup {fee = Just base, tax, commission, overdueFee}
     Just (DExtra.MoneyAddition money) ->
-      let (base, _overdue) = moneyDeductionAmount money estimatedFare
+      let (base, _overdue) = moneyDeductionAmount money estimatedFare mbBookingDeposit
        in CustomerChargeBreakup {fee = Just (negate (abs base)), tax = Nothing, commission = Nothing, overdueFee = Nothing}
     _ -> CustomerChargeBreakup Nothing Nothing Nothing Nothing
 
-moneyDeductionAmount :: DExtra.MoneyDeduction -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
-moneyDeductionAmount money estimatedFare = case money of
+moneyDeductionAmount :: DExtra.MoneyDeduction -> HighPrecMoney -> Maybe HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
+moneyDeductionAmount money estimatedFare mbBookingDeposit = case money of
   DExtra.FixedMoney {amount, overdueAmount} -> (amount, overdueAmount)
   DExtra.PercentageMoney {percentage, minAmount, maxAmount} ->
     let raw = percentage * estimatedFare / 100
         floored = maybe raw (max raw) minAmount
      in (maybe floored (min floored) maxAmount, Nothing)
+  -- No deposit on the booking resolves to 0, which dropZeroCharge downstream turns into
+  -- "no charge" -- a fee-less booking is never charged by a MatchBookingDeposit row.
+  DExtra.MatchBookingDeposit -> (fromMaybe 0 mbBookingDeposit, Nothing)
 
 -- | Driver coins from the row (Nothing when the driver consequence is money or absent).
 -- The matrix stores a POSITIVE count with the direction in the constructor; the coin
@@ -197,9 +200,11 @@ cityHasDriverCancelMoneyPenalty merchantOpCityId estimatedFare = do
 -- legacy DriverFee path cannot pay out and skips with a log).
 driverMoneyDeduction :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
 driverMoneyDeduction row estimatedFare =
+  -- Deposit is a customer-side concept: MatchBookingDeposit resolves to 0 here (no deposit
+  -- passed), so a misconfigured driver-side row charges nothing rather than something.
   row.driverDeduction >>= \case
-    DExtra.MoneyDeduction money -> Just (abs (fst (moneyDeductionAmount money estimatedFare)))
-    DExtra.MoneyAddition money -> Just (negate (abs (fst (moneyDeductionAmount money estimatedFare))))
+    DExtra.MoneyDeduction money -> Just (abs (fst (moneyDeductionAmount money estimatedFare Nothing)))
+    DExtra.MoneyAddition money -> Just (negate (abs (fst (moneyDeductionAmount money estimatedFare Nothing))))
     _ -> Nothing
 
 --------------------------------------------------------------------------------------

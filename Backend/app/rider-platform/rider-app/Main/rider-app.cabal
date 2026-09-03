@@ -272,6 +272,7 @@ library
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
+      Domain.Action.UI.BookingDeposit
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -505,6 +506,7 @@ library
       SharedLogic.BetterRoutePointCache
       SharedLogic.BetterRoutePointSearch
       SharedLogic.Booking
+      SharedLogic.BookingDeposit
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
@@ -574,6 +576,7 @@ library
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
@@ -726,6 +729,7 @@ library
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
       Storage.Queries.BookingPartiesLinkExtra
+      Storage.Queries.BookingPaymentExtra
       Storage.Queries.BusinessHourExtra
       Storage.Queries.CachedRouteResponseExtra
       Storage.Queries.CallStatusExtra
@@ -932,6 +936,7 @@ library
       API.Action.UI.AssetReleaseInternal
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
+      API.Action.UI.BookingDeposit
       API.Action.UI.Cac
       API.Action.UI.CancellationChargesWaiveOff
       API.Action.UI.CancellationReasons
@@ -1050,6 +1055,7 @@ library
       API.Types.UI.AssetReleaseInternal
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
+      API.Types.UI.BookingDeposit
       API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CancellationReasons
       API.Types.UI.CRIS
@@ -1115,6 +1121,7 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BookingLocation
       Domain.Types.BookingPartiesLink
+      Domain.Types.BookingPayment
       Domain.Types.BookingUpdateRequest
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
@@ -1288,6 +1295,7 @@ library
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BookingLocation
       Storage.Beam.BookingPartiesLink
+      Storage.Beam.BookingPayment
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
@@ -1466,6 +1474,7 @@ library
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BookingLocation
       Storage.Queries.BookingPartiesLink
+      Storage.Queries.BookingPayment
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
@@ -1552,6 +1561,7 @@ library
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BookingPartiesLink
+      Storage.Queries.OrphanInstances.BookingPayment
       Storage.Queries.OrphanInstances.BusinessHour
       Storage.Queries.OrphanInstances.CachedRouteResponse
       Storage.Queries.OrphanInstances.CallStatus

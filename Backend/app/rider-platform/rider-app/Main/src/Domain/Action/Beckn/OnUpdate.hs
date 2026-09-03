@@ -82,6 +82,7 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
@@ -479,6 +480,9 @@ onUpdate = \case
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+    -- Booking fee hold intentionally untouched: same booking row, still awaiting a driver.
+    -- Releasing here would hand the rider their money back while the booking is still live,
+    -- letting one paid fee back two bookings.
     Notify.notifyOnBookingReallocated booking
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
   OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
@@ -491,6 +495,10 @@ onUpdate = \case
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
+    -- The booking row goes terminal and the rider returns to quote selection, so no booking
+    -- is left for the hold to belong to. Release rather than refund: this is a re-quote, not
+    -- a failure, and the rider re-holds at the next confirm.
+    void $ withTryCatch "quoteRepetition:releaseBookingDeposit" $ BookingDeposit.releaseBookingDeposit booking
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     -- make all the booking parties inactive during rellocation
@@ -533,6 +541,8 @@ onUpdate = \case
     QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
     void $ QBPL.createMany newBookingParties
+    whenJust booking.bookingDepositAmount $ \fee ->
+      void $ withTryCatch "reallocation:rekeyBookingDepositHold" $ BookingDeposit.rekeyBookingDepositHold booking newBooking fee
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus

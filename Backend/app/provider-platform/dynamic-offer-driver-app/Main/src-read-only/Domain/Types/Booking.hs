@@ -36,6 +36,7 @@ data Booking = Booking
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
     billingCategory :: SharedLogic.Type.BillingCategory,
+    bookingDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

@@ -41,6 +41,7 @@ Booking:
     quoteId: Text
     status: BookingStatus
     hasStops: Maybe Bool
+    bookingDeposit: Maybe HighPrecMoney
     dynamicPricingLogicVersion: Maybe Int
     estimatedCongestionCharge: Maybe HighPrecMoney
     tripCategory: TripCategory

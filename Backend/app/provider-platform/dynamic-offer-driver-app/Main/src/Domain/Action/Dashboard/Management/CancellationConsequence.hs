@@ -241,11 +241,13 @@ validateDeduction fieldName ded = case ded of
         unless (percentage > 0) $ bad "percentage must be positive"
         whenJust minAmount $ \v -> unless (v > 0) $ bad "minAmount must be positive"
         whenJust maxAmount $ \v -> unless (v > 0) $ bad "maxAmount must be positive"
+      DExtra.MatchBookingDeposit -> pure ()
 
 toDomainMoney :: Common.MoneyDeductionAPI -> DExtra.MoneyDeduction
 toDomainMoney = \case
   Common.FixedMoneyAPIEntity f -> DExtra.FixedMoney {amount = f.amount, overdueAmount = f.overdueAmount}
   Common.PercentageMoneyAPIEntity p -> DExtra.PercentageMoney {percentage = p.percentage, minAmount = p.minAmount, maxAmount = p.maxAmount}
+  Common.MatchBookingDepositAPIEntity -> DExtra.MatchBookingDeposit
 
 toDomainCommissionAndTax :: Common.CommissionAndTaxAPI -> DExtra.CommissionAndTax
 toDomainCommissionAndTax c =
@@ -298,6 +300,7 @@ toAPIMoney :: DExtra.MoneyDeduction -> Common.MoneyDeductionAPI
 toAPIMoney = \case
   DExtra.FixedMoney {amount, overdueAmount} -> Common.FixedMoneyAPIEntity (Common.FixedMoneyAPI {amount, overdueAmount})
   DExtra.PercentageMoney {percentage, minAmount, maxAmount} -> Common.PercentageMoneyAPIEntity (Common.PercentageMoneyAPI {percentage, minAmount, maxAmount})
+  DExtra.MatchBookingDeposit -> Common.MatchBookingDepositAPIEntity
 
 toAPICommissionAndTax :: DExtra.CommissionAndTax -> Common.CommissionAndTaxAPI
 toAPICommissionAndTax c =

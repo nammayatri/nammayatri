@@ -68,6 +68,7 @@ import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.LocationMapping as SLM
@@ -131,6 +132,8 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
+  when (booking.status == SRB.NEW && booking.requiresPaymentBeforeConfirm && isJust booking.bookingDepositAmount) $
+    fork "bookingDeposit:onReadRepair" $ void $ BookingDeposit.expireOrRepairBookingDeposit booking
   bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just booking.merchantId) "MOBILITY" (Just booking.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime

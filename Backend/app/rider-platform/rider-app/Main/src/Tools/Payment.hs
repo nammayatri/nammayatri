@@ -260,6 +260,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
         _ -> vsc
     getPaymentServiceByType = \case
       Normal -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
+      BookingDeposit -> decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
       Wallet -> pure $ DMSC.JuspayWalletService Payment.Juspay
       BBPS -> pure $ DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
@@ -616,6 +617,8 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -655,6 +658,8 @@ useDomainOffers merchantId merchantOperatingCityId mbPlaceId paymentServiceType 
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -694,6 +699,8 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -733,6 +740,8 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -777,6 +786,8 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
 
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -821,6 +832,8 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
   where
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
@@ -861,6 +874,8 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     mkSKUPair vsc = (Payment.offerSKUConfig vsc, Payment.childOfferSKUConfig vsc)
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
+      -- Booking fee is an ordinary Juspay collection, same rail as Normal.
+      BookingDeposit -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay

@@ -79,13 +79,14 @@ tfOrder res bapConfig = do
 
 tfOrderTags :: DOnInit.OnInitRes -> Maybe [Spec.TagGroup]
 tfOrderTags res =
-  case res.discount of
-    Just discountPrice
-      | discountPrice.amount > 0 ->
-        Tags.buildTagGroups
-          [ Tags.DISCOUNT_AMOUNT Tags.~= encodeToText discountPrice.amount
-          ]
-    _ -> Nothing
+  Tags.buildTagGroups
+    [ Tags.DISCOUNT_AMOUNT Tags.~=? (encodeToText <$> mbDiscountAmount),
+      Tags.BOOKING_DEPOSIT_SECURED Tags.~=? (show <$> res.bookingDepositAmount)
+    ]
+  where
+    mbDiscountAmount = case res.discount of
+      Just discountPrice | discountPrice.amount > 0 -> Just discountPrice.amount
+      _ -> Nothing
 
 tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =

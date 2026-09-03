@@ -227,7 +227,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               unless isReallocated $ do
                 -- Reload ride to get persisted cancellationFee/cancellationFeeTax
                 updatedRide <- QRide.findById ride.id
-                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (chargesOutcome >>= (.fee)) (chargesOutcome >>= (.tax)) updatedRide
+                let depositForfeit = depositForfeitFee booking decision.faultVerdict
+                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (depositForfeit <|> (chargesOutcome >>= (.fee))) (chargesOutcome >>= (.tax)) updatedRide
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do

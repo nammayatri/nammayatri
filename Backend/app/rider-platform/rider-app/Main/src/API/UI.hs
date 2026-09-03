@@ -8,6 +8,7 @@ where
 import qualified API.Action.UI.AssetManifest as AssetManifest
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.BookingDeposit as BookingDeposit
 import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CancellationChargesWaiveOff as CancellationChargesWaiveOff
@@ -178,6 +179,7 @@ type API =
            :<|> Metrics.API
            :<|> PickupInstructions.API
            :<|> RiderPreferences.API
+           :<|> BookingDeposit.API
            :<|> NYRegular.API
            :<|> Offers.API
            :<|> Rewards.API
@@ -314,6 +316,7 @@ handler =
     :<|> Metrics.handler
     :<|> PickupInstructions.handler
     :<|> RiderPreferences.handler
+    :<|> BookingDeposit.handler
     :<|> NYRegular.handler
     :<|> Offers.handler
     :<|> Rewards.handler

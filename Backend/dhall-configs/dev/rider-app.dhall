@@ -296,6 +296,7 @@ let RiderJobType =
       | PassExpiryReminderMaster
       | SettlementReportIngestion
       | ReconcileRewardInflight
+      | BookingDepositExpiry
       >
 
 let jobRetryOnExceptionMapx =
@@ -345,6 +346,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
+      , { mapKey = RiderJobType.BookingDepositExpiry, mapValue = True }
       ]
 
 let cacConfig =

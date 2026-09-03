@@ -1,0 +1,43 @@
+imports:
+  Booking: Domain.Types.Booking
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  PaymentServiceType: Lib.Payment.Domain.Types.PaymentOrder
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+BookingPayment:
+  tableName: booking_payment
+
+  fields:
+    id: Id BookingPayment
+    bookingId: Id Booking
+    paymentOrderId: Id PaymentOrder
+    paymentServiceType: PaymentServiceType
+    status: BookingPaymentStatus
+
+  types:
+    BookingPaymentStatus:
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+
+  constraints:
+    id: PrimaryKey
+    bookingId: "!SecondaryKey"
+    paymentOrderId: "!SecondaryKey"
+
+  # The !SecondaryKey constraints above are KV keys, not Postgres indexes; without this the
+  # table carries only its primary key. Every attempt lookup filters bookingId +
+  # paymentServiceType and takes the newest row, and retries keep failed attempts around.
+  extraIndexes:
+    - columns: [bookingId, paymentServiceType, createdAt]
+
+  queries:
+    findAllByOrderId:
+      kvFunction: findAllWithKV
+      where: paymentOrderId
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
