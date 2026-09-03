@@ -60,6 +60,7 @@ import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Depot as DDepot
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
@@ -959,7 +960,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
-    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just "Blocked due to fraud detection (blocked device token)")
+    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just "Blocked due to fraud detection (blocked device token)") DCBT.Application Nothing
   void $ RegistrationToken.setVerified True tokenId
   fork "Decrement Auth IP Counter" $ do
     mbClientIP <- extractClientIP mbXForwardedFor
