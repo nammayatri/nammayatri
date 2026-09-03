@@ -79,6 +79,77 @@ Path: `Backend/dev/integration-tests/collections/<Suite>/`
   `pm.execution.skipRequest()` for mock-only requests.
 - Conventions and the auto-skip mechanism: `Backend/dev/integration-tests/Rules.md`.
 
+### `ny-qa-automation` — a second collection source (NY/MSIL/YS)
+A **private** repo, checked out on disk rather than baked into this repo or
+any image — resolved fresh on every scan/run (`_qa_automation_dir()` in
+context-api, `_qa_dir()` in qa-collections-service), in this order:
+
+1. `$QA_AUTOMATION_DIR` env var, if set (must point at its `src/api_tests`).
+2. `<repo-root>/data/ny-qa-automation/src/api_tests` — the managed clone the
+   dashboard's **🔄 Sync ny-qa-automation** button creates/updates (same
+   gitignored-`data/`-dir convention as `data/control-center`).
+3. `<repo-root>/../ny-qa-automation/src/api_tests` — a sibling checkout, for
+   anyone who already had it cloned there.
+
+`context-api/server.py`'s `_scan_qa_collections()` walks its `NY/`, `MSIL/`,
+`YS/` folders the same way `scan_collections()` walks
+`integration-tests/collections/<Suite>/`, so they show up as three more
+entries in the dashboard's **Collection** dropdown — Env Type still offers
+**Local** / **Master**, sourced from that repo's shared
+`Local.postman_environment.json` / `Masterc2.postman_environment.json` (and
+`MSIL/Master.postman_environment.json` for MSIL specifically, since that's
+the one suite with its own).
+
+These three groups are marked `backendOnly: true` in the `/api/collections`
+response: their collections use `pm.execution.setNextRequest()` for branching,
+which the dashboard's in-browser engine (`services/postman-runtime.ts`) does
+not implement, so `CollectionRunner.tsx` routes their **Run** button through
+`qa-collections-service` (below) instead of running steps in-browser. The
+step-tree still renders as a read-only preview either way. They're excluded
+from **Run All Collections**' bulk sweep.
+
+**🔄 Sync ny-qa-automation** (always visible in the action bar, not gated on
+NY/MSIL/YS being selected — they won't even be in the Collection dropdown yet
+on a machine that's never synced) calls `POST /api/qa-collections/sync` on
+test-local-api, which
+clone-or-pulls into `data/ny-qa-automation` and — on success — the dashboard
+immediately re-fetches `/api/collections` so a teammate's update to the
+automation repo shows up without restarting anything. It uses whatever git
+credentials (SSH agent, HTTPS credential helper) are already configured on
+the host doing the sync — nothing in this dashboard handles auth for that
+private repo itself, so a container running this needs its own git access
+(e.g. a read-only deploy key mounted in) for the button to work there.
+
+Missing checkout → the dashboard just shows the 46 native suites; nothing
+breaks — click Sync (or point `QA_AUTOMATION_DIR` elsewhere) once you have
+access.
+
+### `test-tool/qa-collections-service/` — backend Newman engine (port 7083, via local-api)
+Runs one ny-qa-automation collection per Newman subprocess
+(`qa_newman_runner.js`, using newman's programmatic API so it can stream a
+JSON event per request/assertion instead of waiting for a full report) and
+exposes the same start/events/stop + SSE shape as `/api/load-test` on
+test-local-api:
+
+- `POST /api/qa-collections/run` — `{collections: [{directory, filename}],
+  envFile, concurrency}` → `{runId}`. What `CollectionRunner.tsx`'s Run button
+  calls for a `backendOnly` group.
+- `GET /api/qa-collections/events/<runId>` — SSE stream of NDJSON events.
+- `POST /api/qa-collections/stop/<runId>`.
+- `GET /api/qa-collections/runs` — recent + active runs (id, status,
+  triggeredBy, collections, pass/fail) — useful for polling a webhook-
+  triggered run's outcome from outside the dashboard (e.g. CI).
+- `POST /api/qa-collections/webhook` — triggers a run from outside the
+  dashboard entirely. Requires `QA_WEBHOOK_TOKEN` to be set (the route is
+  503 until it is); the caller sends it back as `X-QA-Webhook-Token`. Body is
+  either `{directory, filename[, envFile]}` to run just that one collection,
+  or empty/omitted to run whatever `qa-collections-service/webhook-config.json`
+  lists (`{"concurrency": N, "collections": [{directory, filename, envFile?}]}`)
+  — that file ships with an empty `collections: []`, so populate it with
+  whatever should run on a CI trigger.
+- Needs `npm install` once inside `qa-collections-service/` (installs
+  `newman` locally — not a nix devshell dependency).
+
 ### `mock-servers/` — request mocks for external services
 Path: `Backend/dev/mock-servers/`, port `8080`, process namespace `test`.
 
@@ -94,8 +165,10 @@ Process: `test-context-api`.
 Backs almost every dashboard action. Endpoints (selected):
 
 - `GET /api/collections` — scans the integration-tests directory and returns
-  the Suite × EnvType × Env × Suite grid.
-- `GET /api/collection/<dir>/<filename>` — raw Postman collection JSON.
+  the Suite × EnvType × Env × Suite grid, plus the ny-qa-automation groups
+  (NY/MSIL/YS — see below) appended the same shape, `backendOnly: true`.
+- `GET /api/collection/<dir>/<filename>` — raw Postman collection JSON (checks
+  both integration-tests/collections and ny-qa-automation).
 - `POST /api/config-sync/import` — download + apply an upstream DB bundle
   (`master`, `prod`, or `prod_international` — keys of `CONFIG_SYNC_BUNDLE_URLS`)
   into atlas_dev so the local stack reflects production-shaped data. The last

@@ -420,6 +420,19 @@
 }
 .cr-manual-toggle-active:hover { background: #388bfd; }
 
+/* ny-qa-automation groups: re-sync the checkout from GitHub */
+.cr-sync-btn {
+  background: #21262d;
+  color: #79c0ff;
+  border: 1px solid #1f6feb;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cr-sync-btn:hover { background: #1f2937; }
+.cr-sync-btn:disabled { opacity: 0.5; cursor: default; }
+
 .cr-step-run-btn {
   font-size: 9px;
   background: #0d2818;

@@ -15,6 +15,7 @@ import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../serv
 import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { LoadTestModal } from './LoadTestModal';
 import { StepResult, LogEntry } from '../types';
+import { startQaCollectionRun, stopQaCollectionRun, qaCollectionEventsUrl, syncQaCollectionsRepo } from '../services/qaCollectionsRunner';
 
 // Cities whose backing data lives in the EU prod cluster. Any environment
 // matching one of these (by city or envName, case-insensitive) defaults its
@@ -292,8 +293,12 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [manualMode, setManualMode] = useState(false);
   const [versionId, setVersionId] = useState<string>('');
   const [showLoadTest, setShowLoadTest] = useState(false);
+  const [syncingQa, setSyncingQa] = useState(false);
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
+  // Live backend (Newman) run — set only while a backendOnly group's run is in flight.
+  const backendRunIdRef = useRef<string | null>(null);
+  const backendEsRef = useRef<EventSource | null>(null);
 
   // Expanded steps for viewing details
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -396,6 +401,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     fetchCollection(selectedDir, selectedSuite).then(async raw => {
       if (!raw) return;
       const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+
+      // backendOnly groups (ny-qa-automation) only use this for the read-only
+      // step preview below — actual execution (incl. prerequest scripts) runs
+      // server-side via Newman, so there's no need to eval their scripts here.
+      if (currentGroup?.backendOnly) {
+        setSteps(parsed.steps);
+        setNodes(parsed.nodes);
+        return;
+      }
 
       // Run collection-level prerequest script for variable init
       if (raw.event) {
@@ -604,7 +618,96 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('info', '-- Collection run complete --');
   }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, ensureTollDashboardSeed, onLog]);
 
-  const stop = useCallback(() => { abortRef.current = true; }, []);
+  // Run a backendOnly group (ny-qa-automation: NY/MSIL/YS) through Newman on
+  // test-local-api instead of in-browser — these collections rely on
+  // pm.execution.setNextRequest() branching that postman-runtime.ts doesn't
+  // implement. Streams live progress into the same LOGS panel as everything else.
+  const runBackend = useCallback(async () => {
+    if (isRunning || !currentSuite || !currentEnv) return;
+    abortRef.current = false;
+    setIsRunning(true);
+    onLog('info', `-- Running ${currentSuite.name} (${currentEnv.envName}) [backend/Newman] --`);
+
+    try {
+      const runId = await startQaCollectionRun({
+        collections: [{ directory: selectedDir, filename: selectedSuite }],
+        envFile: currentEnv.filename,
+        concurrency: 1,
+      });
+      backendRunIdRef.current = runId;
+
+      await new Promise<void>((resolve) => {
+        const es = new EventSource(qaCollectionEventsUrl(runId));
+        backendEsRef.current = es;
+        const finish = () => { es.close(); resolve(); };
+        es.onmessage = (ev) => {
+          let msg: any;
+          try { msg = JSON.parse(ev.data); } catch { return; }
+          switch (msg.type) {
+            case 'item_start':
+              onLog('req', `${msg.name}`);
+              break;
+            case 'request':
+              if (msg.error) onLog('error', `FAIL ${msg.name}: ${msg.error}`);
+              else onLog('info', `${msg.method ?? ''} ${msg.name} -> ${msg.status ?? '?'} (${msg.responseTime ?? '?'}ms)`);
+              break;
+            case 'assertion':
+              onLog(msg.passed ? 'success' : 'error', `${msg.passed ? 'PASS' : 'FAIL'} ${msg.name}${msg.error ? ` — ${msg.error}` : ''}`);
+              break;
+            case 'collection_result':
+              onLog('info', `-- ${msg.collection} done: ${msg.passed}✓ ${msg.failed}✗ --`);
+              break;
+            case 'run_complete':
+              onLog(msg.failed > 0 ? 'error' : 'success',
+                `-- Collection run complete: ${msg.passed}✓ ${msg.failed}✗ in ${msg.durationMs}ms${msg.aborted ? ' (stopped)' : ''} --`);
+              finish();
+              break;
+            case 'error':
+              onLog('error', `error: ${msg.error}`);
+              finish();
+              break;
+            default:
+              break;
+          }
+        };
+        es.onerror = () => { /* server closes the stream on completion — transient errors are expected */ };
+      });
+    } catch (e: any) {
+      onLog('error', `Failed to start backend run: ${e?.message ?? e}`);
+    } finally {
+      backendEsRef.current = null;
+      backendRunIdRef.current = null;
+      setIsRunning(false);
+    }
+  }, [isRunning, currentSuite, currentEnv, selectedDir, selectedSuite, onLog]);
+
+  const stop = useCallback(() => {
+    abortRef.current = true;
+    if (backendRunIdRef.current) {
+      stopQaCollectionRun(backendRunIdRef.current);
+      backendEsRef.current?.close();
+    }
+  }, []);
+
+  // git clone-or-pull ny-qa-automation on disk (test-local-api), then
+  // re-fetch /api/collections so an updated/renamed/added collection shows
+  // up immediately without restarting anything.
+  const handleSyncQaRepo = useCallback(async () => {
+    if (syncingQa) return;
+    setSyncingQa(true);
+    onLog('info', '[qa-sync] syncing ny-qa-automation...');
+    try {
+      const result = await syncQaCollectionsRepo();
+      const summary = (result.output || result.error || '').trim().split('\n').slice(-3).join(' | ');
+      onLog(result.ok ? 'success' : 'error', `[qa-sync] ${result.ok ? 'synced' : 'failed'}${summary ? `: ${summary}` : ''}`);
+      if (result.ok) {
+        const fresh = await fetchCollections();
+        setGroups(fresh);
+      }
+    } finally {
+      setSyncingQa(false);
+    }
+  }, [syncingQa, onLog]);
 
   // Run ALL suites across ALL collections and environments
   const runAllCollections = useCallback(async () => {
@@ -616,6 +719,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     // Build the full list of (group, env, suite) combos
     const jobs: Array<{ group: CollectionGroup; env: CollectionEnvironment; suite: CollectionSuite }> = [];
     for (const group of groups) {
+      // backendOnly groups (ny-qa-automation) run via Newman one at a time from
+      // their own Run button, not folded into this in-browser bulk runner.
+      if (group.backendOnly) continue;
       for (const env of group.environments) {
         for (const suite of group.suites) {
           jobs.push({ group, env, suite });
@@ -1099,29 +1205,42 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <div className="cr-actions">
-          {!manualMode && (
-            <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
-              {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
-            </button>
-          )}
-          {!manualMode && (
+          {currentGroup?.backendOnly ? (
             <button
-              className="cr-load-test-btn"
-              onClick={() => setShowLoadTest(true)}
-              disabled={isRunning || visibleSteps.length === 0}
-              title="Run this collection with multiple parallel workers using seeded phone numbers"
+              className="cr-run-btn"
+              onClick={runBackend}
+              disabled={isRunning || !currentSuite || !currentEnv}
+              title="Runs via Newman on test-local-api (backend) — this collection uses setNextRequest branching the in-browser runner doesn't support"
             >
-              ⚡ Load Test
+              {isRunning ? 'Running (backend)...' : `Run ${currentSuite?.name ?? ''} (backend)`}
             </button>
+          ) : (
+            <>
+              {!manualMode && (
+                <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
+                  {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+                </button>
+              )}
+              {!manualMode && (
+                <button
+                  className="cr-load-test-btn"
+                  onClick={() => setShowLoadTest(true)}
+                  disabled={isRunning || visibleSteps.length === 0}
+                  title="Run this collection with multiple parallel workers using seeded phone numbers"
+                >
+                  ⚡ Load Test
+                </button>
+              )}
+              <button
+                className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
+                onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
+                disabled={isRunning || visibleSteps.length === 0}
+                title="Run each step individually with Run / Skip buttons"
+              >
+                {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
+              </button>
+            </>
           )}
-          <button
-            className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
-            onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
-            disabled={isRunning || visibleSteps.length === 0}
-            title="Run each step individually with Run / Skip buttons"
-          >
-            {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
-          </button>
           <input
             className="cr-version-input"
             type="text"
@@ -1133,6 +1252,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           />
           <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0 || manualMode}>
             {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
+          </button>
+          <button
+            className="cr-sync-btn"
+            onClick={handleSyncQaRepo}
+            disabled={syncingQa}
+            title="git pull (or clone) the private ny-qa-automation repo on disk, then re-scan for its NY/MSIL/YS collections — not gated on which group is selected, since it may not exist in the dropdown yet"
+          >
+            {syncingQa ? 'Syncing…' : '🔄 Sync ny-qa-automation'}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
         </div>

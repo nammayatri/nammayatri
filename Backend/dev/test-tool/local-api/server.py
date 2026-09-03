@@ -56,6 +56,16 @@ except Exception:
     _LT_LOCUST_AVAILABLE = False
     _lt_locust_runner = None  # type: ignore
 
+_QA_SERVICE_DIR = Path(__file__).resolve().parent.parent / "qa-collections-service"
+if str(_QA_SERVICE_DIR) not in sys.path:
+    sys.path.insert(0, str(_QA_SERVICE_DIR))
+try:
+    import qa_runner as _qa_runner
+    _QA_AVAILABLE = True
+except Exception:
+    _QA_AVAILABLE = False
+    _qa_runner = None  # type: ignore
+
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
@@ -4037,8 +4047,96 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._send_json({"ok": ok})
             return True
 
+        # ── QA Collections (ny-qa-automation: NY/MSIL/YS groups in the Collections tab) ──
+        if path == "/api/qa-collections/runs" and method == "GET":
+            if not _QA_AVAILABLE:
+                self._send_json([])
+                return True
+            self._send_json(_qa_runner.list_runs())
+            return True
+        elif path == "/api/qa-collections/run" and method == "POST":
+            if not _QA_AVAILABLE:
+                self._send_json({"error": "qa collections runner unavailable — run `npm install` in qa-collections-service"}, 503)
+                return True
+            body = self._read_json_body() or {}
+            run_id = _qa_runner.start_run({**body, "triggeredBy": "ui"})
+            self._send_json({"runId": run_id})
+            return True
+        elif path == "/api/qa-collections/webhook" and method == "POST":
+            # Runs either a single {directory, filename[, envFile]} passed in the
+            # body, or — if the body is empty — whatever webhook-config.json
+            # lists as the "configured" set. See qa_runner.build_webhook_run_config.
+            if not _QA_AVAILABLE:
+                self._send_json({"error": "qa collections runner unavailable — run `npm install` in qa-collections-service"}, 503)
+                return True
+            configured_token = os.environ.get("QA_WEBHOOK_TOKEN", "")
+            if not configured_token:
+                self._send_json({"error": "webhook disabled — set QA_WEBHOOK_TOKEN to enable"}, 503)
+                return True
+            supplied_token = self.headers.get("X-QA-Webhook-Token", "")
+            if supplied_token != configured_token:
+                self._send_json({"error": "invalid or missing X-QA-Webhook-Token"}, 401)
+                return True
+            body = self._read_json_body() or {}
+            run_config = _qa_runner.build_webhook_run_config(body)
+            if not run_config["collections"]:
+                self._send_json({"error": "nothing to run — pass {directory, filename} or populate qa-collections-service/webhook-config.json"}, 400)
+                return True
+            run_id = _qa_runner.start_run(run_config)
+            self._send_json({"runId": run_id, "collections": run_config["collections"]})
+            return True
+        elif path.startswith("/api/qa-collections/events/") and method == "GET":
+            run_id = path[len("/api/qa-collections/events/"):]
+            self._qa_stream(run_id)
+            return True
+        elif path.startswith("/api/qa-collections/stop/") and method == "POST":
+            run_id = path[len("/api/qa-collections/stop/"):]
+            ok = _QA_AVAILABLE and _qa_runner.stop_run(run_id)
+            self._send_json({"ok": bool(ok)})
+            return True
+        elif path == "/api/qa-collections/sync" and method == "POST":
+            # git clone-or-pull ny-qa-automation on disk (data/ny-qa-automation,
+            # or wherever QA_AUTOMATION_DIR/an existing sibling checkout points).
+            # Uses whatever git credentials (SSH agent, HTTPS credential helper)
+            # are already configured on this host — nothing here handles auth.
+            if not _QA_AVAILABLE:
+                self._send_json({"error": "qa collections runner unavailable — run `npm install` in qa-collections-service"}, 503)
+                return True
+            result = _qa_runner.sync_repo()
+            self._send_json(result, 200 if result.get("ok") else 500)
+            return True
+
         self._send_json({"error": "not found"}, 404)
         return True
+
+    def _qa_stream(self, run_id: str):
+        import queue as _queue
+        eq = _qa_runner.get_queue(run_id) if _QA_AVAILABLE else None
+        if eq is None:
+            self._send_json({"error": "run not found or already finished"}, 404)
+            return
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Accel-Buffering", "no")
+            self._cors_headers()
+            self.end_headers()
+        except BrokenPipeError:
+            return
+        try:
+            while True:
+                try:
+                    event = eq.get(timeout=15)
+                    self.wfile.write(f"data: {json.dumps(event)}\n\n".encode())
+                    self.wfile.flush()
+                    if event.get("type") in ("run_complete", "error"):
+                        break
+                except _queue.Empty:
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _remote_stream(self, session_id: str):
         import queue as _queue
