@@ -362,7 +362,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
-  offerSegment <- SFU.getQuoteOfferSegment search.riderId search.merchantOperatingCityId vehicleType (Just routeStationsJSON)
+  offerSegment <- SFU.getQuoteOfferSegment search.riderId search.merchantOperatingCityId vehicleType (Just routeStationsJSON) (Just (startStation, endStation))
   let mbAdultPrice = find (\category -> category.category == ADULT) categories <&> (.price)
       (discountedTickets, eventDiscountAmount) =
         case mbAdultPrice of

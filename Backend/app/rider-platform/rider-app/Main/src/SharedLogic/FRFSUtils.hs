@@ -857,17 +857,25 @@ getQuoteOfferSegment ::
   Id DMOC.MerchantOperatingCity ->
   Spec.VehicleCategory ->
   Maybe Text ->
+  -- | Origin and destination of the quote, in that order.
+  Maybe (Station.Station, Station.Station) ->
   m (Maybe Text)
-getQuoteOfferSegment riderId merchantOperatingCityId vehicleType mbRouteStationsJson = do
+getQuoteOfferSegment riderId merchantOperatingCityId vehicleType mbRouteStationsJson mbFromToStations = do
   result <- withTryCatch "getQuoteOfferSegment" $ do
     person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
     SOfferSegment.getPersonOfferSegment person merchantOperatingCityId $
-      SOfferSegment.ticketContext (Just vehicleType) (getServiceTierTypeFromRouteStationsJson mbRouteStationsJson)
+      SOfferSegment.ticketContext (Just vehicleType) (getServiceTierTypeFromRouteStationsJson mbRouteStationsJson) (mkStationPair <$> mbFromToStations)
   case result of
     Right segment -> pure segment
     Left err -> do
       logError $ "getQuoteOfferSegment failed for rider " <> riderId.getId <> ", quote left unsegmented: " <> show err
       pure Nothing
+  where
+    mkStationPair (fromStation, toStation) =
+      SOfferSegment.StationPair
+        { fromStationId = fromStation.code,
+          toStationId = toStation.code
+        }
 
 getOfferSegmentUdf2 ::
   (BeamFlow m r) =>
