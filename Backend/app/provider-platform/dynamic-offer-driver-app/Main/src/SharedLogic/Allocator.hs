@@ -663,7 +663,11 @@ type instance JobContent 'ConnectAccountChargeDeduction = ConnectAccountChargeDe
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    juspayServiceName :: Maybe ServiceName
+    juspayServiceName :: Maybe ServiceName,
+    settlementProvider :: Maybe Text,
+    startTime :: Maybe UTCTime,
+    endTime :: Maybe UTCTime,
+    scheduleNextJob :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

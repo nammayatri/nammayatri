@@ -103,9 +103,12 @@ fetchPGSettlementTotals merchantId merchantOperatingCityId fromTime toTime = do
               (acc {totalRefundAmount = acc.totalRefundAmount + row.amount, refundCount = acc.refundCount + 1}, orders, row : refunds, chargebacks)
             PgDom.CHARGEBACK ->
               (acc {totalChargebackAmount = acc.totalChargebackAmount + row.amount, chargebackCount = acc.chargebackCount + 1}, orders, refunds, row : chargebacks)
+            _ ->
+              (acc {totalOrderAmount = acc.totalOrderAmount + row.amount, orderCount = acc.orderCount + 1}, row : orders, refunds, chargebacks) -- TODO: Handle other txnTypes REFUND & CHARGEBACK REVERSAL if needed
     toTransactionRow r =
       let amt = case r.txnType of
             PgDom.ORDER -> r.txnAmount
             PgDom.REFUND -> fromMaybe 0 r.refundAmount
             PgDom.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
+            _ -> r.txnAmount
        in PGSettlementTransactionRow {amount = amt, txnType = r.txnType, txnStatus = show r.txnStatus, subscriptionPurchaseId = r.subscriptionPurchaseId}

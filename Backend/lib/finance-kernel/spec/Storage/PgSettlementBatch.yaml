@@ -1,0 +1,79 @@
+# Finance Kernel - PG Settlement Batch
+# Namma-DSL YAML specification
+#
+# Stores settlement-level summary from API-based PG providers (e.g. BillDesk
+# getSettlement). One row per settlement batch (pv_number in BillDesk terms).
+# The detailed transaction rows live in pg_payment_settlement_report.
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+PgSettlementBatch:
+  tableName: pg_settlement_batch
+  derives: "Generic"
+
+  fields:
+    id: Id PgSettlementBatch
+
+    # --- Provider identity ---
+    paymentGateway: Text
+    objectId: Maybe Text
+    pvNumber: Text
+    mercId: Text
+    payoutMercId: Maybe Text
+
+    # --- File metadata ---
+    pvFile: Maybe Text
+    pvFileDate: Maybe Text
+
+    # --- Amounts (flattened from AmountDetails) ---
+    currency: Maybe Currency
+    settlementAmount: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    chargebackAmount: Maybe HighPrecMoney
+    refundReversalAmount: Maybe HighPrecMoney
+    chargebackReversalAmount: Maybe HighPrecMoney
+    adjustmentAmount: Maybe HighPrecMoney
+
+    # --- Charges / taxes ---
+    charges: Maybe HighPrecMoney
+    taxes: Maybe HighPrecMoney
+    otherAdjustments: Maybe HighPrecMoney
+    payoutAmount: Maybe HighPrecMoney
+
+    # --- Settlement status ---
+    status: Maybe Text
+    settlementDate: Maybe UTCTime
+    utr: Maybe Text
+    utrDate: Maybe UTCTime
+
+    # --- Multi-tenancy ---
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    pvNumber: "!SecondaryKey"
+    utr: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByMerchantCityGatewayAndPvNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, paymentGateway, pvNumber]
+
+    findAllByMerchantCityAndGateway:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, paymentGateway]
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

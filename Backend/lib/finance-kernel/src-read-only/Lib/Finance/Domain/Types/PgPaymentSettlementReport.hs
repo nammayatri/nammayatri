@@ -93,6 +93,7 @@ data PaymentMethod
   | COMMERCIAL_CARD
   | PAY_LATER
   | INTERNATIONAL_CARD
+  | CARD_GATEWAY
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SettlementMode = GROSS | NET | NETTING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -101,7 +102,7 @@ data SettlementType = CREDIT | DEBIT deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TxnType = ORDER | REFUND | CHARGEBACK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TxnType = ORDER | REFUND | CHARGEBACK | REFUND_REVERSAL | CHARGEBACK_REVERSAL | ADJUSTMENT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisputeType)
 

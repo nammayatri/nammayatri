@@ -53,11 +53,16 @@ library
       Lib.Finance.SapJournalEntry.Interface
       Lib.Finance.SapJournalEntry.Service
       Lib.Finance.Settlement.Fetch
+      Lib.Finance.Settlement.Helpers
       Lib.Finance.Settlement.Ingestion
       Lib.Finance.Settlement.ParserTypeMap
+      Lib.Finance.Settlement.Pipeline
+      Lib.Finance.Settlement.Sources.BillDeskApi
       Lib.Finance.Settlement.Sources.Email
       Lib.Finance.Settlement.Sources.JuspayApi
       Lib.Finance.Settlement.Sources.SFTP
+      Lib.Finance.Settlement.Store
+      Lib.Finance.Settlement.Strategy
       Lib.Finance.Settlement.Transformer
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
@@ -93,6 +98,7 @@ library
       Lib.Finance.Domain.Types.LedgerEntry
       Lib.Finance.Domain.Types.PgPaymentSettlementReport
       Lib.Finance.Domain.Types.PgPayoutSettlementReport
+      Lib.Finance.Domain.Types.PgSettlementBatch
       Lib.Finance.Domain.Types.ReconciliationEntry
       Lib.Finance.Domain.Types.ReconciliationSummary
       Lib.Finance.Domain.Types.SapJournalEntry
@@ -113,6 +119,7 @@ library
       Lib.Finance.Storage.Beam.LedgerEntry
       Lib.Finance.Storage.Beam.PgPaymentSettlementReport
       Lib.Finance.Storage.Beam.PgPayoutSettlementReport
+      Lib.Finance.Storage.Beam.PgSettlementBatch
       Lib.Finance.Storage.Beam.ReconciliationEntry
       Lib.Finance.Storage.Beam.ReconciliationSummary
       Lib.Finance.Storage.Beam.SapJournalEntry
@@ -141,6 +148,7 @@ library
       Lib.Finance.Storage.Queries.OrphanInstances.SapJournalEntry
       Lib.Finance.Storage.Queries.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.PgPayoutSettlementReport
+      Lib.Finance.Storage.Queries.PgSettlementBatch
       Lib.Finance.Storage.Queries.ReconciliationEntry
       Lib.Finance.Storage.Queries.ReconciliationSummary
       Lib.Finance.Storage.Queries.SapJournalEntry

@@ -100,6 +100,9 @@ mapTxnType :: Ext.TxnType -> Dom.TxnType
 mapTxnType Ext.ORDER = Dom.ORDER
 mapTxnType Ext.REFUND = Dom.REFUND
 mapTxnType Ext.CHARGEBACK = Dom.CHARGEBACK
+mapTxnType Ext.REFUND_REVERSAL = Dom.REFUND_REVERSAL
+mapTxnType Ext.CHARGEBACK_REVERSAL = Dom.CHARGEBACK_REVERSAL
+mapTxnType Ext.ADJUSTMENT = Dom.ADJUSTMENT
 
 mapTxnStatus :: Ext.TxnStatus -> Dom.TxnStatus
 mapTxnStatus Ext.SUCCESS = Dom.SUCCESS
@@ -124,6 +127,7 @@ mapPaymentMethod Ext.BANK_TRANSFER = Dom.BANK_TRANSFER
 mapPaymentMethod Ext.COMMERCIAL_CARD = Dom.COMMERCIAL_CARD
 mapPaymentMethod Ext.PAY_LATER = Dom.PAY_LATER
 mapPaymentMethod Ext.INTERNATIONAL_CARD = Dom.INTERNATIONAL_CARD
+mapPaymentMethod Ext.CARD_GATEWAY = Dom.CARD_GATEWAY
 
 mapSettlementType :: Ext.SettlementType -> Dom.SettlementType
 mapSettlementType Ext.CREDIT = Dom.CREDIT

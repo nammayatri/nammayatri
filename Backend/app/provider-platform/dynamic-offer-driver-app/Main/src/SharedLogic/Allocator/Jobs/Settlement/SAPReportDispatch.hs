@@ -394,3 +394,4 @@ pgTxnTypeToSJE t = case t of
   PgDom.ORDER -> SJE.Order
   PgDom.REFUND -> SJE.Refund
   PgDom.CHARGEBACK -> SJE.Chargeback
+  _ -> SJE.Order -- TODO: Handle other types like REFUND_REVERSAL, CHARGEBACK_REVERSAL, ADJUSTMENT if needed
