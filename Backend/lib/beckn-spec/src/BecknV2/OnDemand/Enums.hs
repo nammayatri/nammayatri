@@ -90,6 +90,7 @@ data FulfillmentState
   | ADD_BAGGAGE -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
   | RETURN_TRIP_STARTED
+  | AWAITING_REALLOCATION -- Custom on-us state: BPP reallocating (driver detached, re-search in progress)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus

@@ -103,6 +103,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverShareLinkTemplate driverShareLinkTemplate,
       Se.Set Beam.metricsDistanceBucketsKm metricsDistanceBucketsKm,
       Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
+      Se.Set Beam.enableBppReallocation enableBppReallocation,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]

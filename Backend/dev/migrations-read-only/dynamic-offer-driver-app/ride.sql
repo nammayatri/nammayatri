@@ -336,3 +336,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN scheduled_acceptance_mode tex
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN return_started_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN return_otp text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancelled_by text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_reason_code text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_additional_info text ;

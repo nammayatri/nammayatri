@@ -75,7 +75,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       notificationType = jobData.notificationType
       notificationKey = jobData.notificationKey
   booking <- QB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  ride <- QR.findByRBId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
+  ride <- QR.findOneByBookingId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
   when (booking.status `notElem` [DB.CANCELLED, DB.REALLOCATED]) $

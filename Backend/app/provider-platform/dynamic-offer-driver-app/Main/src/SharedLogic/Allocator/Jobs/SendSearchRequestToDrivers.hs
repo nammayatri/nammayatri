@@ -45,7 +45,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -65,6 +65,7 @@ import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
@@ -398,7 +399,20 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
   searchReqWithPoolingVersion <- I.ensurePoolingLogicVersion driverSearchBatchInput'.searchReq
   let driverSearchBatchInput = driverSearchBatchInput' {searchReq = searchReqWithPoolingVersion}
   -- In case of static offer flow we will have booking created before driver ride request is sent
-  mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
+  mbBooking <-
+    if DTC.isDynamicOfferTrip searchTry.tripCategory
+      then do
+        -- BPP single-booking reallocation reuses the cancelled booking and stamps its id into
+        -- searchTry.messageId (SharedLogic.Cancel), so the dynamic re-broadcast does have a booking
+        -- to keep valid and to cancel when nobody accepts. Master read: the CANCELLED -> NEW flip
+        -- lands in the Main app moments earlier and the KV cluster is connectReadOnly.
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReqWithPoolingVersion.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReqWithPoolingVersion.merchantOperatingCityId.getId)
+        if transporterConfig.enableBppReallocation == Just True
+          then do
+            mbReusedBooking <- B.runInMasterRedis $ QRB.findById (Id searchTry.messageId)
+            pure $ mbReusedBooking >>= \reusedBooking -> if reusedBooking.transactionId == searchReqWithPoolingVersion.transactionId then Just reusedBooking else Nothing
+          else pure Nothing
+      else QRB.findByQuoteId searchTry.estimateId
   handler (handle mbBooking driverSearchBatchInput) goHomeCfg searchReqWithPoolingVersion.transactionId
   where
     handle mbBooking driverSearchBatchInput =
@@ -432,5 +446,13 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
               Nothing -> True,
           cancelBookingIfApplies = do
             whenJust mbBooking $ \booking -> do
-              SBooking.cancelBooking booking Nothing driverSearchBatchInput.merchant
+              -- Reused reallocation booking (dynamic OR static: both reuse booking.id, so both carry
+              -- it in searchTry.messageId): re-read before cancelling, a driver can accept onto it
+              -- between the batch-limit check and here. Ordinary bookings keep their snapshot.
+              stillCancellable <-
+                if booking.id.getId == searchTry.messageId
+                  then maybe False (\latestBooking -> latestBooking.status == NEW) <$> B.runInMasterRedis (QRB.findById booking.id)
+                  else pure True
+              when stillCancellable $
+                SBooking.cancelBooking booking Nothing driverSearchBatchInput.merchant
         }
