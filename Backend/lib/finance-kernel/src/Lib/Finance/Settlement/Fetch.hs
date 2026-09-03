@@ -73,3 +73,5 @@ fetchSettlementCsv SettlementServiceConfig {..} merchantId merchantOperatingCity
       pure $ case eCsv of
         Left err -> Left err
         Right (bs, meta) -> Right (bs, meta, Nothing)
+    BillDeskApiSourceConfig _ ->
+      pure $ Left "BillDeskApiSourceConfig is handled by Settlement-API-Strategy, not fetchSettlementCsv"
