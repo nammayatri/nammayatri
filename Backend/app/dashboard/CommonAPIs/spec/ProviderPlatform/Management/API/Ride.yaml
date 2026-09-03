@@ -136,18 +136,10 @@ apis:
       response:
         type: MultipleRideEndResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
-      helperApi:
-        - POST:
-            endpoint: /end
-            name: PostRideEndMultiple
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: MultipleRideEndReq
-            response:
-              type: MultipleRideEndResp
-            validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST: # MultipleRideCancelAPI
       endpoint: /cancel
       name: PostRideCancelMultiple
@@ -157,18 +149,10 @@ apis:
       response:
         type: MultipleRideCancelResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideCancelReq
-      helperApi:
-        - POST: # MultipleRideCancelAPI
-            endpoint: /cancel
-            name: PostRideCancelMultiple
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: MultipleRideCancelReq
-            response:
-              type: MultipleRideCancelResp
-            validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideCancelReq
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
       auth: ApiAuthV2

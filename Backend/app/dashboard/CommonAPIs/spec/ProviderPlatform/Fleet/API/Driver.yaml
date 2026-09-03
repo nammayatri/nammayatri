@@ -1525,6 +1525,7 @@ apis:
               type: ReassignScheduledBookingReq
             response:
               type: APISuccess
+            actorInfo: fleetOwnerId
 
   - GET:
       endpoint: /vehicle/info

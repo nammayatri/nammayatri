@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -135,7 +136,7 @@ postWalletTopup ::
     API.Types.UI.DriverWallet.TopUpRequest ->
     Environment.FlowHandler Domain.Action.UI.Plan.PlanSubscribeRes
   )
-postWalletTopup a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.postWalletTopup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWalletTopup a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverWallet.postWalletTopup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getWalletPayoutHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

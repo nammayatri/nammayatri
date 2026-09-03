@@ -253,3 +253,4 @@ apis:
         type: API.Types.UI.LmsModule.QuestionConfirmReq
       response:
         type: API.Types.UI.LmsModule.QuestionConfirmRes
+      actorInfo: auth

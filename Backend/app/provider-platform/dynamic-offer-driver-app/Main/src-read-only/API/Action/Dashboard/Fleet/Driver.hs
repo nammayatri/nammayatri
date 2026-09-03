@@ -28,6 +28,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Fleet.Driver.API)
@@ -238,7 +239,7 @@ postDriverFleetScheduledBookingCancel :: (Kernel.Types.Id.ShortId Domain.Types.M
 postDriverFleetScheduledBookingCancel a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetScheduledBookingCancel a4 a3 a2 a1
 
 postDriverFleetScheduledBookingReassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.ReassignScheduledBookingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverFleetScheduledBookingReassign a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetScheduledBookingReassign a4 a3 a2 a1
+postDriverFleetScheduledBookingReassign a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardPersonIdActorInfo (Kernel.Types.Id.Id a2) $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetScheduledBookingReassign a4 a3 a2 a1
 
 getDriverVehicleInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.VehicleInfo)
 getDriverVehicleInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.getDriverVehicleInfo a4 a3 a2 a1

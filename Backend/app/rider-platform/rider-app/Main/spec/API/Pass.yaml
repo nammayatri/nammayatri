@@ -202,6 +202,7 @@ apis:
         isMockPayment: Bool
       response:
         type: PassSelectionAPIEntity
+      actorInfo: auth
 
   - POST:
       endpoint: /multimodal/pass/v2/{passId}/select
