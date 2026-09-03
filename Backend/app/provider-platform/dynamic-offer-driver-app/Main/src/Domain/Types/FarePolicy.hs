@@ -18,6 +18,7 @@ module Domain.Types.FarePolicy
     module Domain.Types.FarePolicy,
     ReturnFee (..),
     BoothCharge (..),
+    SchedulingCharge (..),
     FareChargeComponent (..),
     FareChargeConfig (..),
   )
@@ -60,6 +61,13 @@ data BoothCharge
 
 $(mkBeamInstancesForJSON ''BoothCharge)
 
+data SchedulingCharge
+  = ProgressiveSchedulingCharge Double
+  | ConstantSchedulingCharge HighPrecMoney
+  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''SchedulingCharge)
+
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
@@ -69,6 +77,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     perLuggageCharge :: Maybe HighPrecMoney,
     returnFee :: Maybe ReturnFee,
     boothCharges :: Maybe BoothCharge,
+    schedulingCharge :: Maybe SchedulingCharge,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
@@ -240,6 +249,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     perLuggageCharge :: Maybe HighPrecMoney,
     returnFee :: Maybe ReturnFee,
     boothCharges :: Maybe BoothCharge,
+    schedulingCharge :: Maybe SchedulingCharge,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,

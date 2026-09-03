@@ -1741,6 +1741,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     perLuggageCharge :: Text,
     returnFee :: Text,
     boothCharges :: Text,
+    schedulingCharge :: Text,
     vatChargeConfig :: Text,
     commissionChargeConfig :: Text,
     tollTaxCharge :: Text
@@ -1853,6 +1854,7 @@ instance ToNamedRecord FarePolicyCSVRow where
           "per_luggage_charge" .= perLuggageCharge,
           "return_fee" .= returnFee,
           "booth_charges" .= boothCharges,
+          "scheduling_charge" .= schedulingCharge,
           "vat_charge_config" .= vatChargeConfig,
           "commission_charge_config" .= commissionChargeConfig,
           "toll_tax_charge_config" .= tollTaxCharge
@@ -1961,6 +1963,7 @@ farePolicyCSVHeader =
       "per_luggage_charge",
       "return_fee",
       "booth_charges",
+      "scheduling_charge",
       "vat_charge_config",
       "commission_charge_config",
       "toll_tax_charge_config"
@@ -2072,6 +2075,8 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> r .: "per_luggage_charge"
           <*> r .: "return_fee"
           <*> r .: "booth_charges"
+          -- optional column: old fare-policy CSV templates don't have it
+          <*> (r .: "scheduling_charge" <|> pure "")
           <*> r .: "vat_charge_config"
           <*> r .: "commission_charge_config"
           <*> r .: "toll_tax_charge_config"
@@ -2517,6 +2522,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
           tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
           returnFeeVal = maybe "" showT farePolicy.returnFee
           boothChargesVal = maybe "" showT farePolicy.boothCharges
+          schedulingChargeVal = maybe "" showT farePolicy.schedulingCharge
           -- Determine the number of rows to produce.
           -- For Progressive, we need one row per perExtraKmRateSection.
           -- For other types, just one row.
@@ -2741,6 +2747,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
                     returnFee = returnFeeVal,
                     boothCharges = boothChargesVal,
+                    schedulingCharge = schedulingChargeVal,
                     vatChargeConfig = vatChargeJson,
                     commissionChargeConfig = commissionChargeJson,
                     tollTaxCharge = tollTaxChargeJson
@@ -3175,6 +3182,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let perLuggageCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perLuggageCharge "Per Luggage Charge"
       let returnFee :: (Maybe FarePolicy.ReturnFee) = readMaybeCSVField idx row.returnFee "Return Fee"
       let boothCharges :: (Maybe FarePolicy.BoothCharge) = readMaybeCSVField idx row.boothCharges "Booth Charges"
+      let schedulingCharge :: (Maybe FarePolicy.SchedulingCharge) = readMaybeCSVField idx row.schedulingCharge "Scheduling Charge"
       let additionalChargesJson :: (Maybe DAT.Value) = readMaybeCSVField idx row.conditionalCharges "Additional Charges"
       let conditionalCharges' = maybe (DAT.Success []) DAT.fromJSON additionalChargesJson
       conditionalCharges <- do
@@ -3417,7 +3425,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, schedulingCharge = schedulingCharge, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"

@@ -61,7 +61,8 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("DRIVER_ALLOWANCE", "Driver Allowance"),
                   ("AIRPORT_CONVENIENCE_FEE", "Airport Convenience Fee"),
                   ("RETURN_FEE", "Return Fee"),
-                  ("BOOTH_CHARGE", "Booth Charge")
+                  ("BOOTH_CHARGE", "Booth Charge"),
+                  ("SCHEDULING_CHARGE", "Scheduling Charge")
                 ]
           mbInfoItems <- CHFBI.findFareBreakupItemsByEntityIdAndType booking.id.getId DFareBreakup.BOOKING booking.createdAt
           fareBreakups <- mapM (getFareBreakup booking mbInfoItems) breakupItems

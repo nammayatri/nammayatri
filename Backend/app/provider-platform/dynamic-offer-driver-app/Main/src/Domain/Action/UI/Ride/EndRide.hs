@@ -571,7 +571,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     rawDiscountAmount <-
-      if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
+      if isJust booking.discountAmount && finalFare /= booking.estimatedFare
         then do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           let reqBody =
@@ -986,6 +986,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftCharge = booking.fareParams.nightShiftCharge,
               petCharges = booking.fareParams.petCharges,
               estimatedCongestionCharge = endRideCongestionCharge,
+              isScheduled = booking.isScheduled,
               customerCancellationDues = booking.fareParams.customerCancellationDues,
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,

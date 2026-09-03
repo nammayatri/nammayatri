@@ -2222,6 +2222,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           estimatedRideStaticDuration = searchReq.estimatedStaticDuration,
           nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
           estimatedCongestionCharge = Nothing,
+          isScheduled = searchReq.isScheduled,
           estimatedDistance = searchReq.estimatedDistance,
           timeDiffFromUtc = Nothing,
           currency = searchReq.currency,

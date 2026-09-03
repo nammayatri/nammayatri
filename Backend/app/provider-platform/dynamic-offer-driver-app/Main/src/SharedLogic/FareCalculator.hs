@@ -257,6 +257,9 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       boothChargeCaption = show Enums.BOOTH_CHARGE
       mbBoothChargeItem = mkBreakupItem boothChargeCaption . mkPrice <$> fareParams.boothCharge
 
+      schedulingChargeCaption = show Enums.SCHEDULING_CHARGE
+      mbSchedulingChargeItem = mkBreakupItem schedulingChargeCaption . mkPrice <$> fareParams.schedulingCharge
+
       tollVatCaption = show Enums.TOLL_VAT
       mbTollVatItem = mkBreakupItem tollVatCaption . mkPrice <$> fareParams.tollFareTax
 
@@ -293,6 +296,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       mbLuggageChargeItem,
       mbReturnFeeChargeItem,
       mbBoothChargeItem,
+      mbSchedulingChargeItem,
       mbTollVatItem
     ]
     <> detailsBreakups
@@ -423,6 +427,7 @@ fareSum fareParams conditionalChargeCategories =
         + fromMaybe 0.0 fareParams.luggageCharge
         + fromMaybe 0.0 fareParams.returnFeeCharge
         + fromMaybe 0.0 fareParams.boothCharge
+        + fromMaybe 0.0 fareParams.schedulingCharge
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
         + fromMaybe 0.0 fareParams.paymentProcessingFee
@@ -464,6 +469,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedRideDuration :: Maybe Seconds,
     estimatedRideStaticDuration :: Maybe Seconds, -- traffic-free duration from the routing provider; basis for TrafficDelayDuration pricing
     estimatedCongestionCharge :: Maybe HighPrecMoney,
+    isScheduled :: Bool,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
@@ -532,10 +538,19 @@ calculateFareParametersHandler params = do
         Just (DFP.BoothChargeFixed fee) -> Just fee
         Just (DFP.BoothChargePercentage p) -> Just $ partOfNightShiftCharge * fromRational (toRational p / 100)
         _ -> Nothing
+
+      schedulingChargeResult =
+        if params.isScheduled
+          then
+            fp.schedulingCharge <&> \case
+              DFP.ProgressiveSchedulingCharge percent -> fullRideCost * fromRational (toRational percent / 100)
+              DFP.ConstantSchedulingCharge charge -> charge
+          else Nothing
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
+          + fromMaybe 0.0 schedulingChargeResult
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.driverAllowance
@@ -607,6 +622,7 @@ calculateFareParametersHandler params = do
             luggageCharge = luggageCharge,
             returnFeeCharge = returnFeeCharge,
             boothCharge = boothCharge,
+            schedulingCharge = schedulingChargeResult,
             cardCharge =
               Just
                 DFParams.CardCharge
@@ -1468,7 +1484,7 @@ applyPaymentChargeOnPayableFare mbDwc fareParams preChargeFare =
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0 ->
         let totalRate = paymentChargeTotalRate dwc
-            p = HighPrecMoney ((max 0 preChargeFare).getHighPrecMoney * (toRational totalRate / 100))
+            p = HighPrecMoney (max 0 preChargeFare.getHighPrecMoney * (toRational totalRate / 100))
             mbP = if p > 0 then Just p else Nothing
             adjusted =
               if isCustomerPaymentBearer bearer
