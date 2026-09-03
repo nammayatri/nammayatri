@@ -93,6 +93,7 @@ data PaymentMethod
   | COMMERCIAL_CARD
   | PAY_LATER
   | INTERNATIONAL_CARD
+  | CARD_GATEWAY
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SettlementMode = GROSS | NET | NETTING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
