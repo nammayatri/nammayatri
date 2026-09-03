@@ -434,6 +434,7 @@ findPossibleRoutes ::
     HasShortDurationRetryCfg r c
   ) =>
   Maybe [LegServiceTier] ->
+  [Spec.ServiceTierType] ->
   Text ->
   Text ->
   UTCTime ->
@@ -446,12 +447,14 @@ findPossibleRoutes ::
   Bool ->
   Bool ->
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode enableSuburbanRoundTrip = do
+findPossibleRoutes mbAvailableServiceTiers blacklistedServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode enableSuburbanRoundTrip = do
   -- Get route mappings that contain the origin stop
   validRoutes <- measureLatency (getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig) "getRouteCodesFromTo"
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  allRouteStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+
+  let routeStopTimings = filter (\t -> t.serviceTierType `notElem` blacklistedServiceTiers) allRouteStopTimings
 
   -- fetch rider config
   mbRiderConfig <- measureLatency (getConfig (RiderConfigDimensions {merchantOperatingCityId = mocid.getId}) Nothing) "getConfig RiderConfig"
@@ -950,7 +953,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
                         ]
                   return (listToMaybe validRoutes, availableRoutesByTier, [])
               )
-              (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode False)
+              (findPossibleRoutes Nothing [] originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode False)
               fetchTimings
           )
           "findPossibleRoutesMaybeFetchTimings"
@@ -2005,7 +2008,7 @@ getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
 
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False enableSuburbanRoundTrip
+      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) [] fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False enableSuburbanRoundTrip
       return availableRoutesByTiers
     _ -> return []
 
