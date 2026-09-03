@@ -41,6 +41,7 @@ import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
 import qualified Domain.Types.Journey as DJourney
@@ -1353,7 +1354,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         logDebug "No ride found for the booking."
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id) (Just "Blocked by fraud detection")
+    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id) (Just "Blocked by fraud detection") DCBT.Application Nothing
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
   QPFS.updateStatus booking.riderId DPFS.IDLE
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
@@ -1490,7 +1491,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
           let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
           when (totalRides > minRides && rate > threshold) $ do
-            SMC.blockCustomer booking.riderId Nothing (Just "Blocked due to high cancellation rate")
+            SMC.blockCustomer booking.riderId Nothing (Just "Blocked due to high cancellation rate") DCBT.Application Nothing
         _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)

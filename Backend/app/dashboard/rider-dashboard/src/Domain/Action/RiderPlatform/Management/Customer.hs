@@ -28,9 +28,12 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -60,16 +63,20 @@ postCustomerBlock ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCustomerBlock merchantShortId opCity apiTokenInfo customerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+  let dashboardUserName = person.firstName <> " " <> person.lastName
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
-    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerBlock) customerId req
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerBlock) customerId dashboardUserName req
 
 postCustomerUnblock :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCustomerUnblock merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+  let dashboardUserName = person.firstName <> " " <> person.lastName
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ do
-    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerUnblock) customerId
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerUnblock) customerId dashboardUserName
 
 getCustomerInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CustomerInfoRes
 getCustomerInfo merchantShortId opCity apiTokenInfo customerId = do

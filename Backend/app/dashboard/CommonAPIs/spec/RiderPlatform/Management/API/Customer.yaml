@@ -46,6 +46,17 @@ apis:
         type: BlockCustomerReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{customerId}/block/{dashboardUserName}
+            auth: ApiAuthV2
+            params:
+              customerId: Id Customer
+              dashboardUserName: Text
+            request:
+              type: BlockCustomerReq
+            response:
+              type: APISuccess
       migrate:
         endpoint: CustomerAPI BlockCustomerEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
@@ -56,6 +67,15 @@ apis:
         customerId: Id Customer
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{customerId}/unblock/{dashboardUserName}
+            auth: ApiAuthV2
+            params:
+              customerId: Id Customer
+              dashboardUserName: Text
+            response:
+              type: APISuccess
       migrate:
         endpoint: CustomerAPI UnblockCustomerEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_UNBLOCK
@@ -171,6 +191,19 @@ types:
     - totalSosCount: Int
     - paymentMode: Maybe PaymentMode
     - blockedReason: Maybe Text
+    - blockedInfo: [CustomerBlockTransactions]
+    - blockCount: Maybe Int
+  ActionType:
+          enum: "BLOCK, UNBLOCK"
+  CustomerBlockTransactions:
+    - reasonCode: Maybe Text
+    - blockReason: Maybe Text
+    - blockTimeInHours: Maybe Int
+    - reportedAt: UTCTime
+    - blockLiftTime: Maybe UTCTime
+    - blockedBy: Text
+    - requestorId: Maybe Text
+    - actionType: Maybe ActionType
   CancellationDuesDetailsRes:
     - cancellationDues: PriceAPIEntity
     - cancellationDuesPaid: HighPrecMoney

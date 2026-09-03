@@ -42,6 +42,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BookingStatus as DRB
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -71,6 +72,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.CustomerBlockTransactions as QCBT
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import Tools.Error (DeletedPersonError (..))
@@ -97,8 +99,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.BlockCustomerReq -> Flow APISuccess
-postCustomerBlock merchantShortId opCity customerId req = do
+postCustomerBlock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Text -> Common.BlockCustomerReq -> Flow APISuccess
+postCustomerBlock merchantShortId opCity customerId dashboardUserName req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -111,13 +113,13 @@ postCustomerBlock merchantShortId opCity customerId req = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
-  SMC.blockCustomer personId Nothing req.blockedReason
+  SMC.blockCustomer personId Nothing req.blockedReason DCBT.Dashboard (Just dashboardUserName)
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------
-postCustomerUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
-postCustomerUnblock merchantShortId opCity customerId = do
+postCustomerUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Text -> Flow APISuccess
+postCustomerUnblock merchantShortId opCity customerId dashboardUserName = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -136,7 +138,7 @@ postCustomerUnblock merchantShortId opCity customerId = do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
     )
     merchantConfigs
-  void $ QP.updatingEnabledAndBlockedState personId Nothing False Nothing
+  void $ QP.updatingEnabledAndBlockedState personId Nothing False Nothing DCBT.Dashboard (Just dashboardUserName)
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 
@@ -158,6 +160,10 @@ getCustomerInfo merchantShortId opCity customerId = do
   numberOfRides <- fromMaybe 0 <$> runInReplica (QRB.fetchRidesCount personId)
   sos <- CHSos.findAllByPersonId personId
   let totalSosCount = length sos
+  blockHistory <- runInReplica $ QCBT.findByCustomerId personId
+  let blockedInfo = map buildCustomerBlockedListEntity blockHistory
+  blockRows <- runInReplica $ QCBT.blockCountByCustomerId personId (Just DCBT.BLOCK)
+  let blockCount = Just $ length blockRows
   pure $
     Common.CustomerInfoRes
       { numberOfRides,
@@ -165,8 +171,22 @@ getCustomerInfo merchantShortId opCity customerId = do
         safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
         paymentMode = customer.paymentMode,
         blockedReason = customer.blockedReason,
+        blockedInfo,
+        blockCount,
         ..
       }
+
+buildCustomerBlockedListEntity :: DCBT.CustomerBlockTransactions -> Common.CustomerBlockTransactions
+buildCustomerBlockedListEntity DCBT.CustomerBlockTransactions {..} =
+  Common.CustomerBlockTransactions
+    { blockedBy = show blockedBy,
+      actionType = toCommonActionType <$> actionType,
+      ..
+    }
+
+toCommonActionType :: DCBT.ActionType -> Common.ActionType
+toCommonActionType DCBT.BLOCK = Common.BLOCK
+toCommonActionType DCBT.UNBLOCK = Common.UNBLOCK
 
 ---------------------------------------------------------------------
 getCustomerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes

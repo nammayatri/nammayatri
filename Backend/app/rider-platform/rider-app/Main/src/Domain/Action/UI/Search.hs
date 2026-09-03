@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Serviceability as DSrv
 import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.CachedRouteResponse as DCachedRouteResponse
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -724,7 +725,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
       SMC.updateSearchFraudCounters person.id merchantConfigs
       mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
-      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id) (Just "Blocked by fraud detection")
+      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id) (Just "Blocked by fraud detection") DCBT.Application Nothing
 
 buildSearchRequest ::
   SearchRequestFlow m r =>

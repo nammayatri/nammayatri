@@ -1126,6 +1126,7 @@ library
       Domain.Types.ClientPersonInfo
       Domain.Types.CrisRdsBalanceHistory
       Domain.Types.CrisRecon
+      Domain.Types.CustomerBlockTransactions
       Domain.Types.DeletedPerson
       Domain.Types.Depot
       Domain.Types.DepotManager
@@ -1299,6 +1300,7 @@ library
       Storage.Beam.ClientPersonInfo
       Storage.Beam.CrisRdsBalanceHistory
       Storage.Beam.CrisRecon
+      Storage.Beam.CustomerBlockTransactions
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
       Storage.Beam.DepotManager
@@ -1477,6 +1479,7 @@ library
       Storage.Queries.ClientPersonInfo
       Storage.Queries.CrisRdsBalanceHistory
       Storage.Queries.CrisRecon
+      Storage.Queries.CustomerBlockTransactions
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
       Storage.Queries.DepotManager
