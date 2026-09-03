@@ -16,6 +16,7 @@ module SharedLogic.BehaviourManagement.CustomerCancellationRate where
 
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -399,7 +400,7 @@ blockCustomerTemporarily ::
 blockCustomerTemporarily merchantId merchantOperatingCityId customerId suspensionTimeHours = do
   now <- getCurrentTime
   let blockedUntil = addUTCTime (fromIntegral suspensionTimeHours * 60 * 60) now
-  void $ QPExtra.updatingBlockedStateWithUntil customerId Nothing True (Just blockedUntil)
+  void $ QPExtra.updatingBlockedStateWithUntil customerId Nothing True (Just blockedUntil) DCBT.Application Nothing
   let unblockCustomerJobTs = secondsToNominalDiffTime (fromIntegral suspensionTimeHours) * 60 * 60
   JC.createJobIn @_ @'RJS.UnblockCustomer (Just merchantId) (Just merchantOperatingCityId) unblockCustomerJobTs $
     RJS.UnblockCustomerJobData
