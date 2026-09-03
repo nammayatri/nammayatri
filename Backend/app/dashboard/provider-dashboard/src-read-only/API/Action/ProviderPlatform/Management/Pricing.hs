@@ -23,68 +23,76 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("pricing" :> (GetPricingSurgeList :<|> PostPricingSurgeCreate :<|> PostPricingSurgeUpdate :<|> PostPricingSurgeStatus :<|> PostPricingSurgePreview :<|> GetPricingObservabilityEstimate :<|> GetPricingObservabilityHealth))
+type API = ("pricing" :> (GetPricingSurgeList :<|> PostPricingSurgeCreate :<|> PostPricingSurgeUpdate :<|> PostPricingSurgeStatus :<|> PostPricingSurgePreview :<|> GetPricingObservabilityEstimate :<|> GetPricingObservabilityCustomer :<|> GetPricingObservabilityHealth))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPricingSurgeList merchantId city :<|> postPricingSurgeCreate merchantId city :<|> postPricingSurgeUpdate merchantId city :<|> postPricingSurgeStatus merchantId city :<|> postPricingSurgePreview merchantId city :<|> getPricingObservabilityEstimate merchantId city :<|> getPricingObservabilityHealth merchantId city
+handler merchantId city = getPricingSurgeList merchantId city :<|> postPricingSurgeCreate merchantId city :<|> postPricingSurgeUpdate merchantId city :<|> postPricingSurgeStatus merchantId city :<|> postPricingSurgePreview merchantId city :<|> getPricingObservabilityEstimate merchantId city :<|> getPricingObservabilityCustomer merchantId city :<|> getPricingObservabilityHealth merchantId city
 
 type GetPricingSurgeList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_SURGE_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_SURGE_LIST)
       :> API.Types.ProviderPlatform.Management.Pricing.GetPricingSurgeList
   )
 
 type PostPricingSurgeCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_CREATE)
       :> API.Types.ProviderPlatform.Management.Pricing.PostPricingSurgeCreate
   )
 
 type PostPricingSurgeUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_UPDATE)
       :> API.Types.ProviderPlatform.Management.Pricing.PostPricingSurgeUpdate
   )
 
 type PostPricingSurgeStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_STATUS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_STATUS)
       :> API.Types.ProviderPlatform.Management.Pricing.PostPricingSurgeStatus
   )
 
 type PostPricingSurgePreview =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_PREVIEW))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.POST_PRICING_SURGE_PREVIEW)
       :> API.Types.ProviderPlatform.Management.Pricing.PostPricingSurgePreview
   )
 
 type GetPricingObservabilityEstimate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_OBSERVABILITY_ESTIMATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_OBSERVABILITY_ESTIMATE)
       :> API.Types.ProviderPlatform.Management.Pricing.GetPricingObservabilityEstimate
+  )
+
+type GetPricingObservabilityCustomer =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_OBSERVABILITY_CUSTOMER)
+      :> API.Types.ProviderPlatform.Management.Pricing.GetPricingObservabilityCustomer
   )
 
 type GetPricingObservabilityHealth =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.PRICING) / ('API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_OBSERVABILITY_HEALTH))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PRICING / 'API.Types.ProviderPlatform.Management.Pricing.GET_PRICING_OBSERVABILITY_HEALTH)
       :> API.Types.ProviderPlatform.Management.Pricing.GetPricingObservabilityHealth
   )
 
-getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
+getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
 getPricingSurgeList merchantShortId opCity apiTokenInfo serviceTier = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingSurgeList merchantShortId opCity apiTokenInfo serviceTier
 
 postPricingSurgeCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigRes)
@@ -102,5 +110,8 @@ postPricingSurgePreview merchantShortId opCity apiTokenInfo req = withFlowHandle
 getPricingObservabilityEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingEstimateExplainRes)
 getPricingObservabilityEstimate merchantShortId opCity apiTokenInfo estimateId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityEstimate merchantShortId opCity apiTokenInfo estimateId
 
-getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
+getPricingObservabilityCustomer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingCustomerSearchRes)
+getPricingObservabilityCustomer merchantShortId opCity apiTokenInfo phone = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityCustomer merchantShortId opCity apiTokenInfo phone
+
+getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
 getPricingObservabilityHealth merchantShortId opCity apiTokenInfo hours = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityHealth merchantShortId opCity apiTokenInfo hours

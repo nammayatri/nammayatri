@@ -19,6 +19,10 @@ import qualified Lib.Types.SpecialLocation
 import Servant
 import Servant.Client
 
+data PricingCustomerSearchRes = PricingCustomerSearchRes {searchRequestId :: Kernel.Prelude.Text, searchCreatedAt :: Kernel.Prelude.UTCTime, estimates :: [PricingEstimateExplainRes]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PricingEngineShare = PricingEngineShare {engine :: Kernel.Prelude.Text, estimates :: Kernel.Prelude.Int, avgMultiplier :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -176,7 +180,7 @@ data PricingTierHealth = PricingTierHealth
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("pricing" :> (GetPricingSurgeList :<|> PostPricingSurgeCreate :<|> PostPricingSurgeUpdate :<|> PostPricingSurgeStatus :<|> PostPricingSurgePreview :<|> GetPricingObservabilityEstimate :<|> GetPricingObservabilityHealth))
+type API = ("pricing" :> (GetPricingSurgeList :<|> PostPricingSurgeCreate :<|> PostPricingSurgeUpdate :<|> PostPricingSurgeStatus :<|> PostPricingSurgePreview :<|> GetPricingObservabilityEstimate :<|> GetPricingObservabilityCustomer :<|> GetPricingObservabilityHealth))
 
 type GetPricingSurgeList = ("surge" :> "list" :> QueryParam "serviceTier" Dashboard.Common.ServiceTierType :> Get '[JSON] PricingSurgeConfigListRes)
 
@@ -200,6 +204,8 @@ type PostPricingSurgePreview = ("surge" :> "preview" :> ReqBody '[JSON] PricingS
 
 type GetPricingObservabilityEstimate = ("observability" :> "estimate" :> Capture "estimateId" Kernel.Prelude.Text :> Get '[JSON] PricingEstimateExplainRes)
 
+type GetPricingObservabilityCustomer = ("observability" :> "customer" :> MandatoryQueryParam "phone" Kernel.Prelude.Text :> Get '[JSON] PricingCustomerSearchRes)
+
 type GetPricingObservabilityHealth = ("observability" :> "health" :> QueryParam "hours" Kernel.Prelude.Int :> Get '[JSON] PricingHealthRes)
 
 data PricingAPIs = PricingAPIs
@@ -209,13 +215,14 @@ data PricingAPIs = PricingAPIs
     postPricingSurgeStatus :: Kernel.Types.Id.Id Dashboard.Common.SurgeConfig -> PricingSurgeStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPricingSurgePreview :: PricingSurgePreviewReq -> EulerHS.Types.EulerClient PricingSurgePreviewRes,
     getPricingObservabilityEstimate :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient PricingEstimateExplainRes,
+    getPricingObservabilityCustomer :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient PricingCustomerSearchRes,
     getPricingObservabilityHealth :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PricingHealthRes
   }
 
 mkPricingAPIs :: (Client EulerHS.Types.EulerClient API -> PricingAPIs)
 mkPricingAPIs pricingClient = (PricingAPIs {..})
   where
-    getPricingSurgeList :<|> postPricingSurgeCreate :<|> postPricingSurgeUpdate :<|> postPricingSurgeStatus :<|> postPricingSurgePreview :<|> getPricingObservabilityEstimate :<|> getPricingObservabilityHealth = pricingClient
+    getPricingSurgeList :<|> postPricingSurgeCreate :<|> postPricingSurgeUpdate :<|> postPricingSurgeStatus :<|> postPricingSurgePreview :<|> getPricingObservabilityEstimate :<|> getPricingObservabilityCustomer :<|> getPricingObservabilityHealth = pricingClient
 
 data PricingUserActionType
   = GET_PRICING_SURGE_LIST
@@ -224,6 +231,7 @@ data PricingUserActionType
   | POST_PRICING_SURGE_STATUS
   | POST_PRICING_SURGE_PREVIEW
   | GET_PRICING_OBSERVABILITY_ESTIMATE
+  | GET_PRICING_OBSERVABILITY_CUSTOMER
   | GET_PRICING_OBSERVABILITY_HEALTH
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

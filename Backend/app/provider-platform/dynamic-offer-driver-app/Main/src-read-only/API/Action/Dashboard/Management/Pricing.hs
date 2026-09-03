@@ -22,9 +22,9 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.Pricing.API)
-handler merchantId city = getPricingSurgeList merchantId city :<|> postPricingSurgeCreate merchantId city :<|> postPricingSurgeUpdate merchantId city :<|> postPricingSurgeStatus merchantId city :<|> postPricingSurgePreview merchantId city :<|> getPricingObservabilityEstimate merchantId city :<|> getPricingObservabilityHealth merchantId city
+handler merchantId city = getPricingSurgeList merchantId city :<|> postPricingSurgeCreate merchantId city :<|> postPricingSurgeUpdate merchantId city :<|> postPricingSurgeStatus merchantId city :<|> postPricingSurgePreview merchantId city :<|> getPricingObservabilityEstimate merchantId city :<|> getPricingObservabilityCustomer merchantId city :<|> getPricingObservabilityHealth merchantId city
 
-getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
+getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
 getPricingSurgeList a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Pricing.getPricingSurgeList a3 a2 a1
 
 postPricingSurgeCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigRes)
@@ -42,5 +42,8 @@ postPricingSurgePreview a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.D
 getPricingObservabilityEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingEstimateExplainRes)
 getPricingObservabilityEstimate a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Pricing.getPricingObservabilityEstimate a3 a2 a1
 
-getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
+getPricingObservabilityCustomer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingCustomerSearchRes)
+getPricingObservabilityCustomer a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Pricing.getPricingObservabilityCustomer a3 a2 a1
+
+getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
 getPricingObservabilityHealth a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Pricing.getPricingObservabilityHealth a3 a2 a1

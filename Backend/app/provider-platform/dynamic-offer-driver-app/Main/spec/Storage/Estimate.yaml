@@ -154,3 +154,7 @@ Estimate:
         kvFunction: findAllWithKVAndConditionalDB
         where:
           and: [requestId, eligibleForUpgrade]
+      findAllByRequestId:
+        kvFunction: findAllWithKVAndConditionalDB
+        where:
+          and: [requestId]

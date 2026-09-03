@@ -19,6 +19,18 @@ import Storage.Queries.OrphanInstances.FareProduct ()
 
 -- Extra code goes here --
 
+-- | Every fare product of the city, enabled AND disabled, straight from the
+-- store — no Redis cache and no enabled filter. The dashboard needs this: the
+-- runtime's cached findAllFareProductByMerchantOpCityId only ever fetches
+-- enabled rows, so a disabled combo would vanish from the studio and could
+-- never be re-enabled (and duplicate-combo checks would miss it).
+findAllFareProductByMerchantOpCityIdAllStates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  m [Domain.FareProduct]
+findAllFareProductByMerchantOpCityIdAllStates (Id merchantOperatingCityId) =
+  findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
 delete :: (MonadFlow m, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ()
 delete (Id id) = deleteWithKV [Se.And [Se.Is Beam.id (Se.Eq id)]]
 
