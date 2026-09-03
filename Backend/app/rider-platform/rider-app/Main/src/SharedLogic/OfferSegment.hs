@@ -17,6 +17,7 @@ module SharedLogic.OfferSegment
     CurrentPurchase (..),
     OfferSegmentContext (..),
     DimensionSummary (..),
+    StationPair (..),
     OfferSegmentResp (..),
     ticketContext,
     passContext,
@@ -53,21 +54,29 @@ data DimensionSummary = DimensionSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data StationPair = StationPair
+  { fromStationId :: Text,
+    toStationId :: Text
+  }
+  deriving (Show, Generic)
+
 data OfferSegmentContext = OfferSegmentContext
   { productType :: Maybe DPUS.FRFSProductType,
     vehicleType :: Maybe Spec.VehicleCategory,
     vehicleServiceTierType :: Maybe Spec.ServiceTierType,
-    passTypeId :: Maybe (Id PassType.PassType)
+    passTypeId :: Maybe (Id PassType.PassType),
+    stations :: Maybe StationPair
   }
   deriving (Show, Generic)
 
-ticketContext :: Maybe Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> OfferSegmentContext
-ticketContext vehicleType vehicleServiceTierType =
+ticketContext :: Maybe Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe StationPair -> OfferSegmentContext
+ticketContext vehicleType vehicleServiceTierType stations =
   OfferSegmentContext
     { productType = Just DPUS.TICKET,
       vehicleType = vehicleType,
       vehicleServiceTierType = vehicleServiceTierType,
-      passTypeId = Nothing
+      passTypeId = Nothing,
+      stations = stations
     }
 
 passContext :: Id PassType.PassType -> OfferSegmentContext
@@ -76,7 +85,8 @@ passContext passTypeId =
     { productType = Just DPUS.PASS,
       vehicleType = Nothing,
       vehicleServiceTierType = Nothing,
-      passTypeId = Just passTypeId
+      passTypeId = Just passTypeId,
+      stations = Nothing
     }
 
 data CurrentPurchase = CurrentPurchase
@@ -84,6 +94,8 @@ data CurrentPurchase = CurrentPurchase
     vehicleType :: Maybe Text,
     vehicleServiceTierType :: Maybe Text,
     passTypeId :: Maybe Text,
+    fromStationId :: Maybe Text,
+    toStationId :: Maybe Text,
     ticketCount :: Int,
     purchaseCount :: Int,
     daysSinceLastPurchase :: Maybe Int
@@ -185,6 +197,8 @@ mkInput now person rows ctx =
           vehicleType = show <$> ctx.vehicleType,
           vehicleServiceTierType = show <$> ctx.vehicleServiceTierType,
           passTypeId = (.getId) <$> ctx.passTypeId,
+          fromStationId = (.fromStationId) <$> ctx.stations,
+          toStationId = (.toStationId) <$> ctx.stations,
           ticketCount = maybe 0 (fromMaybe 0 . (.ticketCount)) mbCurrentRow,
           purchaseCount = maybe 0 (.purchaseCount) mbCurrentRow,
           daysSinceLastPurchase = case mbCurrentRow of
