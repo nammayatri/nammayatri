@@ -267,8 +267,8 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                     [ Se.And
                         ( [Se.Is BeamR.driverMobileNumber $ Se.Eq driverPhone, Se.Is BeamR.merchantId $ Se.Eq $ Just $ getId merchantID]
                             <> [Se.Is BeamR.status $ Se.Eq (castBookingStatusToRideStatus $ fromJust mbBookingStatus) | isJust mbBookingStatus]
-                            <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
-                            <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
+                            <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+                            <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
                         )
                     ]
                     Nothing
@@ -297,8 +297,8 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
                         -- B.&&?. ( if null currentRides
                         --            then B.sqlBool_ $ B.val_ True
