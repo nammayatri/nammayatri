@@ -2911,6 +2911,8 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
+  Redis.runInMasterCloudRedisCell $
+    forM_ dueDriverFees $ \fee -> Redis.setExp (DDF.manualPaymentInProgressKey fee.id.getId) True DDF.manualPaymentInProgressTtl
   invoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
