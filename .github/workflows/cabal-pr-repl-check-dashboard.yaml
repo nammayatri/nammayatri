@@ -140,6 +140,17 @@ jobs:
               $NIX_OVERLAY true
               cd $CI_PROJECT_ROOT/Backend
               ln -sfn $ORIGINAL_DIST_DASHBOARD dist-newrepl-dashboard-check
+              # TEMPORARY (revert after merge): the merge-base's cached dist-newrepl-dashboard-check
+              # carries a stale in-place package registration for dynamic-offer-driver-app, causing a
+              # GHC 9.2 lookupModuleWithSuggestions panic on Domain.Types.Person/Domain.Types.Ride.
+              # Forces a clean rebuild of the local project until the MinIO cache-push pipeline is
+              # fixed to always build from a clean tree. See PR #16585.
+              # `cabal clean --builddir=dist-newrepl-dashboard-check` doesn't work here: that path
+              # is a symlink (see above), and cabal's clean calls removeDirectoryRecursive, which
+              # refuses to touch a symlink at all ('inappropriate type (not a directory)'). Empty
+              # the real bind-mounted directory the symlink points at instead; leave the directory
+              # node itself in place since it's an active mountpoint (rmdir on it would fail EBUSY).
+              find $ORIGINAL_DIST_DASHBOARD -mindepth 1 -delete
               grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
                 [ -d \"\$pkg\" ] || continue
                 mkdir -p \"$PR_CACHE_ROOT/hie/\$pkg\"
