@@ -119,6 +119,7 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import qualified SharedLogic.TaxRemittance as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -606,8 +607,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         (Just driverInfo)
         (taxAmount + absorbedVat)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
-    let tollWithVat = tollAmount + tollVatAmount
-    let parkingWithVat = parkingAmount + parkingVatAmount
     let mbPaymentBearer = transporterConfig.driverWalletConfig.paymentChargeBearer
         paymentChargeGross = fromMaybe 0 ride.paymentCharge
         (paymentChargeAmt, paymentChargeVatAmt) =
@@ -757,29 +756,48 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 transfer_ BuyerAsset BuyerExternal amt ref
                 void $ transfer BuyerExternal OwnerLiability amt ref Nothing
               else void $ transfer BuyerControl OwnerControl amt ref Nothing
-      if isVat
-        then do
-          let rideEarningComponents =
-                [ (baseFare, walletReferenceBaseRide),
-                  (taxAmount, if isOnline then taxRefOnline else taxRefCash),
-                  (tollWithVat, walletReferenceTollCharges),
-                  (parkingWithVat, walletReferenceParkingCharges)
-                ]
-          forM_ rideEarningComponents postEarning
-        else do
-          let rideEarningComponents =
-                [ (baseFare, walletReferenceBaseRide),
-                  (tollWithVat, walletReferenceTollCharges),
-                  (parkingWithVat, walletReferenceParkingCharges)
-                ]
-          forM_ rideEarningComponents postEarning
-          -- GST tax: online → BAP routes customer's GST to govt via BPP (2-leg);
-          --          cash   → driver remits cash-collected GST from wallet.
+      let rideMode = SLT.resolveMode transporterConfig.taxConfig.rideTaxRemittanceMode Nothing (SLT.legacyRideMode fareParams.isVatTaxType)
+          tollMode = SLT.resolveMode transporterConfig.taxConfig.tollTaxRemittanceMode transporterConfig.taxConfig.rideTaxRemittanceMode DRIVER_DIRECT
+          parkingMode = SLT.resolveMode transporterConfig.taxConfig.parkingTaxRemittanceMode transporterConfig.taxConfig.rideTaxRemittanceMode DRIVER_DIRECT
+          taxRef = if isOnline then taxRefOnline else taxRefCash
+          postComponentByMode fareAmt vatAmt ref mode = case mode of
+            DRIVER_DIRECT ->
+              postEarning (fareAmt + vatAmt, ref)
+            COMPANY_DIRECT -> do
+              postEarning (fareAmt, ref)
+              when (vatAmt > 0) $
+                if isOnline
+                  then do
+                    transfer_ BuyerAsset BuyerExternal vatAmt ref
+                    void $ transfer BuyerExternal GovtIndirect vatAmt ref Nothing
+                  else void $ transfer OwnerLiability GovtIndirect vatAmt ref Nothing
+            COMPANY_INDIRECT -> do
+              postEarning (fareAmt + vatAmt, ref)
+              when (vatAmt > 0) $
+                void $ transfer OwnerLiability GovtIndirect vatAmt ref Nothing
+      case rideMode of
+        DRIVER_DIRECT -> do
+          postEarning (baseFare, walletReferenceBaseRide)
+          postEarning (taxAmount, taxRef)
+          postComponentByMode tollAmount tollVatAmount walletReferenceTollCharges tollMode
+          postComponentByMode parkingAmount parkingVatAmount walletReferenceParkingCharges parkingMode
+        COMPANY_DIRECT -> do
+          postEarning (baseFare, walletReferenceBaseRide)
+          postComponentByMode tollAmount tollVatAmount walletReferenceTollCharges tollMode
+          postComponentByMode parkingAmount parkingVatAmount walletReferenceParkingCharges parkingMode
           if isOnline
             then do
               transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
             else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
+        COMPANY_INDIRECT -> do
+          -- Tax credited to driver first (visible in earnings breakup), then platform remits owner→govt on their behalf.
+          postEarning (baseFare, walletReferenceBaseRide)
+          postEarning (taxAmount, taxRef)
+          postComponentByMode tollAmount tollVatAmount walletReferenceTollCharges tollMode
+          postComponentByMode parkingAmount parkingVatAmount walletReferenceParkingCharges parkingMode
+          when (taxAmount > 0) $
+            void $ transfer OwnerLiability GovtIndirect taxAmount taxRef Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef Nothing

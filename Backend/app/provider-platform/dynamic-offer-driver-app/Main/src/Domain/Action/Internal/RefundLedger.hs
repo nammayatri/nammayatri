@@ -37,6 +37,7 @@ import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.TaxRemittance as SLT
 import qualified Storage.CachedQueries.Merchant as QM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -96,8 +97,7 @@ refundLedger rideId req apiKey = do
     cancellationCommissionGross <- cancellationCommissionFromLedger ride
     overdueBenefit <- cancellationOverdueBenefitFromLedger ride
     let deductFromDriver = fromMaybe (fromMaybe False transporterConfig.defaultRefundDeductFromDriver) req.deductFromDriver
-        isVatMarket = fromMaybe False booking.fareParams.isVatTaxType
-        legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionGross overdueBenefit isVatMarket req ride
+        legs = refundLegs deductFromDriver transporterConfig.taxConfig.commissionVatPercentage cancellationCommissionGross overdueBenefit transporterConfig.taxConfig booking.fareParams.isVatTaxType req ride
     existing <- getRefundRequestLegs req.refundRequestId
     case req.refundRequestStatus of
       APPROVED ->
@@ -168,16 +168,18 @@ cancellationOverdueBenefitFromLedger ride = do
 --   from SellerExpense. Driver-deducted: each party gives back a prorated share of what it actually
 --   received — the driver his net share, the platform its commission slice and (if the fee went
 --   overdue) its kept benefit; toll/parking are fully driver-borne.
-refundLegs :: Bool -> Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney) -> Bool -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
-refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (overdueBenefit, overdueBenefitTax) isVatMarket req ride =
+refundLegs :: Bool -> Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney) -> DTC.TaxConfig -> Maybe Bool -> RefundLedgerReq -> Ride -> [(AccountRole, AccountRole, HighPrecMoney, Text)]
+refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (overdueBenefit, overdueBenefitTax) taxConfig mbIsVat req ride =
   concatMap componentLegs (fromMaybe [] req.refundComponents)
   where
     commission = fromMaybe 0 ride.commission
     rideFareTotal = fromMaybe 0 req.rideFareComponentTotal
     cancellationTotal = fromMaybe 0 req.cancellationComponentTotal
-    -- Taxes return to where they sat forward: driver in VAT markets, government in GST.
-    cancelTaxDest = if isVatMarket then OwnerLiability else GovtIndirect
-    benefitTaxSource = if isVatMarket then SellerExpense else GovtIndirect
+    legacyRide = SLT.legacyRideMode mbIsVat
+    rideAccounts = SLT.taxAccountsFor (SLT.resolveMode taxConfig.rideTaxRemittanceMode Nothing legacyRide)
+    cancellationAccounts = SLT.taxAccountsFor (SLT.resolveMode taxConfig.cancellationTaxRemittanceMode taxConfig.rideTaxRemittanceMode legacyRide)
+    tollAccounts = SLT.taxAccountsFor (SLT.resolveMode taxConfig.tollTaxRemittanceMode taxConfig.rideTaxRemittanceMode DTC.DRIVER_DIRECT)
+    parkingAccounts = SLT.taxAccountsFor (SLT.resolveMode taxConfig.parkingTaxRemittanceMode taxConfig.rideTaxRemittanceMode DTC.DRIVER_DIRECT)
     -- Full precision, no rounding: legs must sum to the component exactly and a full refund must
     -- claw back exactly the charged commission (the commission aggregate nets to zero).
     rideFareLegs comp baseRef vatRef =
@@ -185,7 +187,7 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
       let slice = if rideFareTotal > 0 then commission * comp.fareAmount / rideFareTotal else 0
           (sliceBase, sliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct slice
        in [ (OwnerLiability, BuyerExternal, comp.fareAmount - slice, baseRef),
-            (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef),
+            (rideAccounts.refundSource, BuyerExternal, comp.vatAmount, vatRef),
             (SellerExpense, BuyerExternal, sliceBase, Wallet.walletReferenceRideFareRefundCommission)
           ]
             <> [(SellerExpense, BuyerExternal, sliceVat, Wallet.walletReferenceRideFareRefundCommissionVAT) | sliceVat > 0]
@@ -198,15 +200,15 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
           benefitTaxSlice = prorate overdueBenefitTax
           (sliceBase, sliceVat) = Wallet.splitGrossByVatPct mbCommissionVatPct commissionSlice
        in [ (OwnerLiability, BuyerExternal, comp.fareAmount - benefitSlice - commissionSlice, baseRef),
-            (cancelTaxDest, BuyerExternal, comp.vatAmount - benefitTaxSlice, vatRef)
+            (cancellationAccounts.refundSource, BuyerExternal, comp.vatAmount - benefitTaxSlice, vatRef)
           ]
             <> [(SellerExpense, BuyerExternal, sliceBase, Wallet.walletReferenceCancellationRefundCommission) | sliceBase > 0]
             <> [(SellerExpense, BuyerExternal, sliceVat, Wallet.walletReferenceCancellationRefundCommissionVAT) | sliceVat > 0]
             <> [(SellerExpense, BuyerExternal, benefitSlice, Wallet.walletReferenceCancellationOverdueBenefitRefund) | benefitSlice > 0]
-            <> [(benefitTaxSource, BuyerExternal, benefitTaxSlice, Wallet.walletReferenceCancellationOverdueBenefitRefundTax) | benefitTaxSlice > 0]
-    driverOnlyLegs comp baseRef vatRef =
+            <> [(cancellationAccounts.benefitRefundSource, BuyerExternal, benefitTaxSlice, Wallet.walletReferenceCancellationOverdueBenefitRefundTax) | benefitTaxSlice > 0]
+    driverOnlyLegs accts comp baseRef vatRef =
       [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
-        (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef)
+        (accts.refundSource, BuyerExternal, comp.vatAmount, vatRef)
       ]
     componentLegs comp =
       let (baseRef, vatRef) = refundRefTypesForComponent comp.component
@@ -219,8 +221,8 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
             else case comp.component of
               RIDE_FARE -> rideFareLegs comp baseRef vatRef
               CANCELLATION_FEE -> cancellationFeeLegs comp baseRef vatRef
-              TOLL -> driverOnlyLegs comp baseRef vatRef
-              PARKING -> driverOnlyLegs comp baseRef vatRef
+              TOLL -> driverOnlyLegs tollAccounts comp baseRef vatRef
+              PARKING -> driverOnlyLegs parkingAccounts comp baseRef vatRef
 
 -- | (base refType, VAT refType) for a refunded component — exhaustive over the enum.
 refundRefTypesForComponent :: RefundFareComponent -> (Text, Text)

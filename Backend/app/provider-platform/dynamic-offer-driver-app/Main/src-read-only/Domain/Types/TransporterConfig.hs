@@ -584,18 +584,25 @@ data SubscriptionConfig = SubscriptionConfig
 data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     businessTds :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    cancellationTaxRemittanceMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TaxRemittanceMode,
+    commissionTaxRemittanceMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TaxRemittanceMode,
     commissionVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     defaultTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     individualNotLinked :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
     invalidPanTdsRate :: Domain.Types.Extra.TransporterConfig.TdsConfig,
+    parkingTaxRemittanceMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TaxRemittanceMode,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
+    rideTaxRemittanceMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TaxRemittanceMode,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
-    subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig
+    subscriptionTdsRate :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.TdsConfig,
+    tollTaxRemittanceMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.TaxRemittanceMode
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data TaxRemittanceMode = DRIVER_DIRECT | COMPANY_DIRECT | COMPANY_INDIRECT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
 
@@ -610,3 +617,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentChargeBearer)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutChargeBearer)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TaxRemittanceMode)
