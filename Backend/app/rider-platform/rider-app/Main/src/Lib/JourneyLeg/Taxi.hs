@@ -170,7 +170,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
       Just booking -> do
         maybe
           ( do
-              mbRide <- QRide.findByRBId booking.id
+              mbRide <- QRide.findActiveByRBId booking.id
               let cancelReq =
                     DCancel.CancelReq
                       { reasonCode = legData.reasonCode,
@@ -207,7 +207,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
 
   getState (TaxiLegRequestGetState req) = do
     mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
-    mbRide <- maybe (pure Nothing) (QRide.findByRBId . (.id)) mbBooking
+    mbRide <- maybe (pure Nothing) (QRide.findOneByBookingId . (.id)) mbBooking
     mbEstimate <-
       case mbBooking of
         Just _ -> return Nothing
@@ -238,7 +238,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
     mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
     case mbBooking of
       Just booking -> do
-        mRide <- QRide.findByRBId booking.id
+        mRide <- QRide.findOneByBookingId booking.id
         Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg
       Nothing -> do
         QSearchRequest.findById req.searchId

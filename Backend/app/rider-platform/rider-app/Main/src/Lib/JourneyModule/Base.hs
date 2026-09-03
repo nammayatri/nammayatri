@@ -1324,7 +1324,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
   case currentLeg.mode of
     DTrip.Taxi -> do
       mbBooking <- maybe (pure Nothing) QBooking.findByTransactionId currentLeg.legSearchId
-      mbRide <- maybe (pure Nothing) (QRide.findByRBId . (.id)) mbBooking
+      mbRide <- maybe (pure Nothing) (QRide.findActiveByRBId . (.id)) mbBooking
       case mbRide of
         Just ride -> do
           let editLocReq =

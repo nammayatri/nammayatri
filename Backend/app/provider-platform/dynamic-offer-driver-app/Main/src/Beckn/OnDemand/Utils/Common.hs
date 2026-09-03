@@ -502,8 +502,8 @@ showVariant :: Variant.VehicleVariant -> Maybe Text
 showVariant = A.decode . A.encode
 
 -- common for on_update & on_status
-mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe Text -> Maybe [Spec.Stop]
-mkStopsOUS booking ride rideOtp mEndOtp =
+mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Maybe Text -> Maybe Text -> Maybe [Spec.Stop]
+mkStopsOUS booking ride mbRideOtp mEndOtp =
   let origin = booking.fromLocation
       mbDestination = booking.toLocation
       intermediateStops = booking.stops
@@ -530,7 +530,7 @@ mkStopsOUS booking ride rideOtp mEndOtp =
                   Spec.stopType = Just $ show Enums.START,
                   Spec.stopId = Just "0",
                   Spec.stopAuthorization =
-                    Just $
+                    mbRideOtp <&> \rideOtp ->
                       Spec.Authorization
                         { authorizationToken = Just rideOtp,
                           authorizationStatus = Just "UNCLAIMED",
@@ -568,6 +568,10 @@ mkStopsOUS booking ride rideOtp mEndOtp =
           <> (map (\(location, order) -> mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
 type IsValueAddNP = Bool
+
+-- | No driver attached to this fulfillment (BPP reallocation only): omit the agent
+-- block and the cancelled ride's OTPs rather than emitting stale or empty values.
+type IsDriverDetached = Bool
 
 -- | ONDC v2.1.0 fulfillments.agent.person.creds. MEMBERSHIP_TIER is only sent for
 -- cities piloting the scheduled-category signal (see TransporterConfig.enableOndcScheduledRideSupport).
@@ -618,36 +622,86 @@ mkFulfillmentV2 ::
   Bool ->
   Int ->
   m Spec.Fulfillment
-mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
+mkFulfillmentV2 = mkFulfillmentV2' False
+
+-- | BPP reallocation only: the previous driver has been detached from the booking, so the
+-- fulfillment carries no agent block and none of the cancelled ride's OTPs.
+mkFulfillmentV2Detached ::
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe SP.Person ->
+  Maybe DDriverStats.DriverStats ->
+  DRide.Ride ->
+  DBooking.Booking ->
+  Maybe DVeh.Vehicle ->
+  Maybe Text ->
+  Maybe [Spec.TagGroup] ->
+  Maybe [Spec.TagGroup] ->
+  Bool ->
+  Bool ->
+  Maybe Payment.AccountId ->
+  Maybe Text ->
+  IsValueAddNP ->
+  Maybe Text ->
+  Bool ->
+  Int ->
+  m Spec.Fulfillment
+mkFulfillmentV2Detached = mkFulfillmentV2' True
+
+mkFulfillmentV2' ::
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  IsDriverDetached ->
+  Maybe SP.Person ->
+  Maybe DDriverStats.DriverStats ->
+  DRide.Ride ->
+  DBooking.Booking ->
+  Maybe DVeh.Vehicle ->
+  Maybe Text ->
+  Maybe [Spec.TagGroup] ->
+  Maybe [Spec.TagGroup] ->
+  Bool ->
+  Bool ->
+  Maybe Payment.AccountId ->
+  Maybe Text ->
+  IsValueAddNP ->
+  Maybe Text ->
+  Bool ->
+  Int ->
+  m Spec.Fulfillment
+mkFulfillmentV2' driverDetached mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   now <- getCurrentTime
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      rideOtp = fromMaybe ride.otp ride.endOtp
+      -- Detached: the previous driver is gone, so the cancelled ride's OTPs must not be re-sent.
+      mbRideOtp = if driverDetached then Nothing else Just (fromMaybe ride.otp ride.endOtp)
+      mbEndOtp = if driverDetached then Nothing else ride.endOtp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStopsOUS booking ride rideOtp ride.endOtp,
+        fulfillmentStops = mkStopsOUS booking ride mbRideOtp mbEndOtp,
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
-          Just $
-            Spec.Agent
-              { agentContact =
-                  mbDInfo >>= \dInfo ->
-                    Just $ Spec.Contact {contactPhone = Just dInfo.mobileNumber},
-                agentPerson =
-                  Just $
-                    emptyPerson
-                      { Spec.personImage =
-                          mbImage <&> \mbImage' ->
-                            emptyImage {Spec.imageUrl = Just mbImage'},
-                        Spec.personGender = mbDriver <&> \driver -> show driver.gender,
-                        Spec.personName = mbDInfo >>= Just . (.name),
-                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
-                        Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
-                      },
-                agentRating = show <$> (mbDriverStats >>= (.rating))
-              },
+          if not driverDetached
+            then
+              Just $
+                Spec.Agent
+                  { agentContact =
+                      mbDInfo >>= \dInfo ->
+                        Just $ Spec.Contact {contactPhone = Just dInfo.mobileNumber},
+                    agentPerson =
+                      Just $
+                        emptyPerson
+                          { Spec.personImage =
+                              mbImage <&> \mbImage' ->
+                                emptyImage {Spec.imageUrl = Just mbImage'},
+                            Spec.personGender = mbDriver <&> \driver -> show driver.gender,
+                            Spec.personName = mbDInfo >>= Just . (.name),
+                            Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
+                            Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
+                          },
+                    agentRating = show <$> (mbDriverStats >>= (.rating))
+                  }
+            else Nothing,
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
             let (category, variant) = castVariant vehicle.variant
