@@ -19,7 +19,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.SearchTry.API)
-handler merchantId city = postSearchTryRecent merchantId city
+handler merchantId city = postSearchTryRecentSearchTries merchantId city
 
-postSearchTryRecent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesRes)
-postSearchTryRecent a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SearchTry.postSearchTryRecent a3 a2 a1
+postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesRes)
+postSearchTryRecentSearchTries a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SearchTry.postSearchTryRecentSearchTries a3 a2 a1
