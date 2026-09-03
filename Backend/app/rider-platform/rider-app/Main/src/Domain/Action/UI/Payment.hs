@@ -625,25 +625,27 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
   let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCity.id
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig (DPayment.juspayWebhookService commonMerchantOperatingCityId) authData value
-  osr <- case orderWebhookResponse of
-    Nothing -> throwError $ InternalError "Order Contents not found."
-    Just osr' -> pure osr'
-  (orderShortId, status) <- getOrderData osr
-  logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
-  whenJust mbServiceType $ \paymentServiceType -> do
-    Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
-      paymentOrder <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-      mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
-      person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (InvalidRequest "Person not found")
-      ticketPlaceId <-
-        case paymentServiceType of
-          Payment.Normal -> do
-            ticketBooking <- QTB.findById (cast paymentOrder.id)
-            return $ ticketBooking <&> (.ticketPlaceId)
-          _ -> return Nothing
-      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
-  pure Ack
+  case orderWebhookResponse of
+    Nothing -> do
+      logError "Juspay webhook payload could not be parsed (Order Contents not found); acknowledging to prevent retries."
+      pure Ack
+    Just osr -> do
+      (orderShortId, status) <- getOrderData osr
+      logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
+      whenJust mbServiceType $ \paymentServiceType -> do
+        Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
+          paymentOrder <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+          mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+          person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (InvalidRequest "Person not found")
+          ticketPlaceId <-
+            case paymentServiceType of
+              Payment.Normal -> do
+                ticketBooking <- QTB.findById (cast paymentOrder.id)
+                return $ ticketBooking <&> (.ticketPlaceId)
+              _ -> return Nothing
+          let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+          void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
+      pure Ack
   where
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
