@@ -34,7 +34,19 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh "cd Backend/dev && docker build --no-cache -t ${env.IMAGE_NAME}:staging-gcp ."
+        // TARGETARCH is a buildx-only auto-arg — plain `docker build` (this
+        // agent isn't using buildx) leaves it empty, which the Dockerfile's
+        // passetto-server case statement then rejects. Derive it from the
+        // agent's own arch and pass it explicitly instead.
+        sh '''
+          set -e
+          case "$(uname -m)" in
+            x86_64) TARGETARCH=amd64 ;;
+            aarch64|arm64) TARGETARCH=arm64 ;;
+            *) echo "unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
+          cd Backend/dev && docker build --no-cache --build-arg TARGETARCH=$TARGETARCH -t $IMAGE_NAME:staging-gcp .
+        '''
       }
     }
 
