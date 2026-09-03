@@ -243,7 +243,7 @@ fetchPlatformCodesFromRedis tripIds stopCode = do
       cloudType <- asks (.cloudType)
       platformCodes <- case cloudType of
         Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet platformHashKey redisKeys
-        _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey redisKeys
+        _ -> Hedis.withLTSReplicaRedis $ Hedis.hmGet platformHashKey redisKeys
       let result = HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
       logDebug $ "fetchPlatformCodesFromRedis: Retrieved " <> show (HashMap.size result) <> " platform codes"
       return result
@@ -253,7 +253,7 @@ fetchCancelledTrainsFromRedis = do
   cloudType <- asks (.cloudType)
   cancelledTrains <- case cloudType of
     Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.get "trains:cancelled"
-    _ -> CQMMB.withCrossAppRedisNew $ Hedis.get "trains:cancelled"
+    _ -> Hedis.withLTSReplicaRedis $ Hedis.get "trains:cancelled"
   case cancelledTrains of
     Nothing -> do
       logDebug "fetchCancelledTrainsFromRedis: No cancelled trains data found in Redis"

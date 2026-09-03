@@ -173,7 +173,7 @@ syncDriverPoolDataToLTS driverId update = do
   deploymentCloudType <- asks (.cloudType)
   now <- getClockTimeInMs
   Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
-    mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+    mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId) -- Primary LTS to avoid replica lag issues.
     case mbExisting of
       Just existing -> do
         let merged = applyUpdate now update existing

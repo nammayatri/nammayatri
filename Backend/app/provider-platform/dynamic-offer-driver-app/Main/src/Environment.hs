@@ -95,6 +95,7 @@ data AppCfg = AppCfg
     hedisSecondaryClusterCfg :: HedisCfg,
     ltsRedisCfg :: HedisCfg,
     secondaryLTSRedisCfg :: Maybe HedisCfg,
+    ltsReplicaRedisCfg :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
@@ -226,6 +227,7 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
+    ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -380,6 +382,14 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
           putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
           pure Nothing
         Right env -> pure (Just env)
+  ltsReplicaHedisEnv <- case ltsReplicaRedisCfg of
+    Nothing -> pure Nothing
+    Just replicaCfg ->
+      try (connectHedis replicaCfg ("dynamic-offer-driver-app-lts:" <>)) >>= \case
+        Left (e :: SomeException) -> do
+          putStrLn $ "ERROR: Failed to connect to LTS replica hedis: " ++ show e
+          pure Nothing
+        Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
@@ -429,6 +439,7 @@ releaseAppEnv AppEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
   maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 

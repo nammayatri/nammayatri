@@ -86,6 +86,7 @@ data HandlerEnv = HandlerEnv
     secondaryHedisClusterEnv :: Maybe HedisEnv,
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
+    ltsReplicaHedisEnv :: Maybe HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
@@ -199,6 +200,14 @@ buildHandlerEnv HandlerCfg {..} = do
         putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
         pure Nothing
       Right env -> pure (Just env)
+  ltsReplicaHedisEnv <- case ltsReplicaRedis of
+    Nothing -> pure Nothing
+    Just replicaCfg ->
+      Kernel.Prelude.try (connectHedis replicaCfg identity) >>= \case
+        Left (e :: SomeException) -> do
+          putStrLn $ "ERROR: Failed to connect to LTS replica Redis: " ++ show e
+          pure Nothing
+        Right env -> pure (Just env)
   let url = Nothing
   cloudType <- Just <$> lookupCloudType
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
@@ -212,6 +221,7 @@ releaseHandlerEnv HandlerEnv {..} = do
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
   disconnectHedis ltsHedisEnv
   maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
 
 type Flow = FlowR HandlerEnv
 

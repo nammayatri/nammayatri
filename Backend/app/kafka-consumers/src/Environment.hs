@@ -101,6 +101,7 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     ltsRedisCfg :: HedisCfg,
     secondaryLTSRedisCfg :: Maybe HedisCfg,
+    ltsReplicaRedisCfg :: Maybe HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -150,6 +151,7 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
+    ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -237,6 +239,15 @@ buildAppEnv AppCfg {..} consumerType = do
             putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ Kernel.Prelude.show e
             pure Nothing
           Right env -> pure (Just env)
+  ltsReplicaHedisEnv <-
+    case ltsReplicaRedisCfg of
+      Nothing -> pure Nothing
+      Just replicaCfg ->
+        Kernel.try (connectHedis replicaCfg id) >>= \case
+          Left (e :: SomeException) -> do
+            putStrLn $ "ERROR: Failed to connect to LTS replica hedis: " ++ Kernel.Prelude.show e
+            pure Nothing
+          Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -279,4 +290,5 @@ releaseAppEnv AppEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv

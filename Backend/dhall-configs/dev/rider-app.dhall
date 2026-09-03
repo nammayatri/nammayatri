@@ -88,6 +88,17 @@ let ltsSecondaryRedis =
       , connectReadOnly = True
       }
 
+let ltsReplicaRedisCfg =
+      { connectHost = "localhost"
+      , connectPort = env:REDIS_PORT ? 6379
+      , connectAuth = None Text
+      , connectDatabase = +1
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -427,6 +438,7 @@ in  { esqDBCfg
     , hedisMigrationStage = False
     , ltsRedis
     , ltsSecondaryRedis
+    , ltsReplicaRedis = Some ltsReplicaRedisCfg
     , cutOffHedisCluster = False
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig

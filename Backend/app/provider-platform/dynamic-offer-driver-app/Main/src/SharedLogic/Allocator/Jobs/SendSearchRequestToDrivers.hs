@@ -44,7 +44,6 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -202,10 +201,8 @@ type SendSearchRequestJobFlow m r c =
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool,
-    HasField "cloudType" r (Maybe CloudType),
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     BeamFlow m r,

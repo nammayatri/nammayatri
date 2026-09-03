@@ -161,7 +161,7 @@ getDriverPoolDataBatch ::
   m [DriverPoolData]
 getDriverPoolDataBatch driverIds = do
   let keys = map driverPoolDataKey driverIds
-  primaryResults <- Redis.withLTSRedis $ Redis.mGetStandalone keys
+  primaryResults <- Redis.withLTSReplicaRedis $ Redis.mGetStandalone keys
   secondaryResults <- Redis.withSecondaryLTSRedis $ Redis.mGetStandalone keys
   pure $ pickLatestPerDriver (primaryResults <> secondaryResults)
 

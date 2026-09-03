@@ -74,7 +74,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- getState and other functions from the original file...
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
 getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg mbFleetNo = do
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
@@ -306,7 +306,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 --         when isBooking $ logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> searchId'.getId <> "for state: " <> show detailedStateData
 --         pure detailedStateData
 
-getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HedisLTSFlowEnv r, HasField "cloudType" r (Maybe CloudType), HasKafkaProducer r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> Maybe Text -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Spec.ServiceTierType -> m (Bool, Maybe JT.GetFareResponse)
+getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HedisLTSFlowEnv r, HasKafkaProducer r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> Maybe Text -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Spec.ServiceTierType -> m (Bool, Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory serviecType routeDetails mbFromArrivalTime agencyGtfsId mbSearchReqId mbProviderRouteId blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbPreferredServiceTier = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency agencyGtfsId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   case routeDetails of
@@ -356,7 +356,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           mbProviderRouteId = mbPrId
         }
 
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType), HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m ((Maybe [Spec.ServiceTierType], [FRFSFare]), Maybe [RD.AvailableRoutesByTier])
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, Hedis.HedisLTSFlowEnv r, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m ((Maybe [Spec.ServiceTierType], [FRFSFare]), Maybe [RD.AvailableRoutesByTier])
     filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares = do
       case vehicleCategory of
         Spec.BUS -> do

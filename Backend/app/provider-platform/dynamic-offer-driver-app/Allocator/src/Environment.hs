@@ -86,6 +86,7 @@ data HandlerEnv = HandlerEnv
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
+    ltsReplicaHedisEnv :: Maybe HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -188,6 +189,14 @@ buildHandlerEnv HandlerCfg {..} = do
           putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
           pure Nothing
         Right env -> pure (Just env)
+  ltsReplicaHedisEnv <- case appCfg.ltsReplicaRedisCfg of
+    Nothing -> pure Nothing
+    Just replicaCfg ->
+      Kernel.Prelude.try (connectHedis replicaCfg ("dynamic-offer-driver-app-lts:" <>)) >>= \case
+        Left (e :: SomeException) -> do
+          putStrLn $ "ERROR: Failed to connect to LTS replica hedis: " ++ show e
+          pure Nothing
+        Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
@@ -235,6 +244,7 @@ releaseHandlerEnv HandlerEnv {..} = do
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
   maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 
