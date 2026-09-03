@@ -23,6 +23,7 @@ apis:
             auth: ApiAuthV2
             params:
               requestorId: Text
+            actorInfo: requestorId
             request:
               type: PayoutAccountReq
             response:

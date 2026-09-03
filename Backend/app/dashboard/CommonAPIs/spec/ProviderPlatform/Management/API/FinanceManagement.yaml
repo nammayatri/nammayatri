@@ -211,17 +211,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.write
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/submit
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            request:
-              type: SubmitLedgerAdjustmentReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   - GET: # LedgerAdjustmentListAPI
       endpoint: /finance/adjustment/list
@@ -245,29 +239,10 @@ apis:
         type: LedgerAdjustmentListRes
       migrate:
         capability: finance.adjustment.read
-      helperApi:
-        - GET:
-            endpoint: /finance/adjustment/list
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - adjustmentRequestId: Id LedgerAdjustmentRequest
-              - status: AdjustmentRequestStatus
-              - personId: Id Person
-              - excludeCurrentAdminMaker: Bool
-              - category: AdjustmentCategory
-              - direction: AdjustmentDirection
-              - referenceType: Text
-              - referenceId: Text
-              - adminMakerId: Id Person
-              - adminCheckerId: Id Person
-              - from: UTCTime
-              - to: UTCTime
-            response:
-              type: LedgerAdjustmentListRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST: # LedgerAdjustmentApproveAPI
       endpoint: /finance/adjustment/{adjustmentRequestId}/approve
@@ -278,17 +253,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.approve
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/{adjustmentRequestId}/approve
-            auth: ApiAuthV2
-            params:
-              adjustmentRequestId: Id LedgerAdjustmentRequest
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   - POST: # LedgerAdjustmentRejectAPI
       endpoint: /finance/adjustment/{adjustmentRequestId}/reject
@@ -299,17 +268,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.write
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/{adjustmentRequestId}/reject
-            auth: ApiAuthV2
-            params:
-              adjustmentRequestId: Id LedgerAdjustmentRequest
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   # ----- SAP Journal Entries -----
   - GET: # SapJournalListAPI

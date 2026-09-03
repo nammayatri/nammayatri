@@ -36,7 +36,6 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationVerifyBankAccount,
     getDriverRegistrationInfoBankAccount,
     getDriverRegistrationPayoutRegistration,
-    getDriverRegistrationPayoutRegistrationWithActor,
     getDriverRegistrationPayoutOrderStatus,
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
@@ -178,7 +177,6 @@ import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
@@ -3018,16 +3016,11 @@ getDriverRegistrationInfoBankAccount merchantShortId opCity driverId requestId =
   BankAccountVerification.getInfoBankAccount (personId, merchant.id, merchantOpCityId) requestId
 
 getDriverRegistrationPayoutRegistration :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.PayoutRegistrationRes
-getDriverRegistrationPayoutRegistration merchantShortId opCity driverId mbRequestorId =
-  ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
-    getDriverRegistrationPayoutRegistrationWithActor merchantShortId opCity driverId
-
-getDriverRegistrationPayoutRegistrationWithActor :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.PayoutRegistrationRes
-getDriverRegistrationPayoutRegistrationWithActor merchantShortId opCity driverId = do
+getDriverRegistrationPayoutRegistration merchantShortId opCity driverId _mbRequestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  res <- ReferralPayout.getPayoutRegistrationWithActor (Just personId, merchant.id, merchantOpCityId)
+  res <- ReferralPayout.getPayoutRegistration (Just personId, merchant.id, merchantOpCityId)
   pure $
     Common.PayoutRegistrationRes
       { orderId = res.orderId.getId,

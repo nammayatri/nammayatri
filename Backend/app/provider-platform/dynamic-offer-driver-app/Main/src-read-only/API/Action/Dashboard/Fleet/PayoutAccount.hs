@@ -17,13 +17,14 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Fleet.PayoutAccount.API)
 handler merchantId city = postPayoutAccount merchantId city :<|> postPayoutAccountStatus merchantId city
 
 postPayoutAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountReq -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountResp)
-postPayoutAccount a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccount a4 a3 a2 a1
+postPayoutAccount a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardPersonIdActorInfo (Kernel.Types.Id.Id a2) $ Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccount a4 a3 a2 a1
 
 postPayoutAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountStatusReq -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountStatusResp)
 postPayoutAccountStatus a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccountStatus a4 a3 a2 a1
