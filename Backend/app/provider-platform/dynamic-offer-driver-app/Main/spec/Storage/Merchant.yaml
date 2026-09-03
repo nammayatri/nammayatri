@@ -969,6 +969,8 @@ TransporterConfig:
       noOfGeohashesToReturn: Int
       nearbyRadiusMeters: Maybe Int
       nearbySearchStalenessMinutes: Maybe Int
+      congestionMultiplierCacheTTLInMin: Maybe Int
+      fallbackAvgSpeedKmph: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     AadhaarImageResizeConfig:
       height: Int
