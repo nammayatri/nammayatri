@@ -152,13 +152,16 @@ test-local-api:
   webhook-triggered run's outcome from outside the dashboard (e.g. CI).
 - `POST /api/qa-collections/webhook` — triggers a run from outside the
   dashboard entirely. Requires `QA_WEBHOOK_TOKEN` to be set (the route is
-  503 until it is); the caller sends it back as `X-QA-Webhook-Token`. Body is
-  either `{directory, filename[, envFile]}` to run just that one collection,
-  or empty/omitted to run whatever `qa-collections-service/webhook-config.json`
-  lists (`{"concurrency": N, "collections": [{directory, filename?, envFile?}]}`
-  — omit `filename` for "all of this directory", per the expansion above)
-  — that file ships with an empty `collections: []`, so populate it with
-  whatever should run on a CI trigger.
+  503 until it is); the caller sends it back as `X-QA-Webhook-Token`. Body,
+  in priority order: (1) its own `{collections: [{directory, filename?,
+  envFile?}], envFile?, concurrency?}` — run exactly that, for a caller that
+  keeps its own idea of "which flows" (e.g. System Control Centre's
+  per-app-group config); (2) `{directory, filename[, envFile]}` to run just
+  one collection; (3) empty/omitted — run whatever
+  `qa-collections-service/webhook-config.json` lists (this dashboard's own
+  local "configured" set, ships with an empty `collections: []`). Any
+  `filename`-less entry expands to "every collection in that directory" per
+  the shorthand above, in all three forms.
 - Needs `npm install` once inside `qa-collections-service/` (installs
   `newman` locally — not a nix devshell dependency).
 - **Deep link**: `http://<dashboard-host>:7070/?qaRunId=<runId>` opens a

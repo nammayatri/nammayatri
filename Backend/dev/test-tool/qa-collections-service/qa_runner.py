@@ -123,12 +123,26 @@ def _load_webhook_config() -> dict:
 
 
 def build_webhook_run_config(body: dict) -> dict:
-    """Build a start_run() config from a webhook request.
+    """Build a start_run() config from a webhook request, in priority order:
 
-    An empty body runs whatever webhook-config.json lists (the "configured"
-    set). Passing {"directory": ..., "filename": ...} in the body instead runs
-    just that one collection, ignoring the configured set entirely.
+    1. Body carries its own `collections` (a full [{directory, filename?,
+       envFile?}] list) — run exactly that, ignoring webhook-config.json
+       entirely. What an external caller with its own idea of "which flows"
+       (e.g. System Control Centre, driven by its own DB config) should send —
+       a `filename`-less entry still expands to "every collection in that
+       directory" via _expand_collections.
+    2. Body is just {"directory": ..., "filename": ...} — run that one
+       collection alone (kept for simple single-collection callers).
+    3. Empty/other body — run whatever webhook-config.json lists (this
+       dashboard's own local "configured" set).
     """
+    if body.get("collections"):
+        return {
+            "collections": body["collections"],
+            "envFile": body.get("envFile") or DEFAULT_WEBHOOK_ENV_FILE,
+            "concurrency": body.get("concurrency") or 1,
+            "triggeredBy": "webhook",
+        }
     if body.get("directory") and body.get("filename"):
         return {
             "collections": [{
