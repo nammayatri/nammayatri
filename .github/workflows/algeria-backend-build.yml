@@ -1,0 +1,579 @@
+# Build the Namma Yatri Haskell backend for the Algeria deployment.
+#
+# Produces four Linux x86-64 ELF binaries:
+#
+#   rider-app-exe                 patched: accepts +213 instead of +91
+#   dynamic-offer-driver-app-exe  patched: accepts +213 instead of +91
+#   beckn-gateway-exe             not in the published Docker image
+#   mock-registry-exe             not in the published Docker image
+#
+# The two patched apps unblock Algerian phone numbers. The gateway and registry
+# are the connector between the rider side (BAP) and the driver side (BPP) —
+# without them a ride search returns a route but no price and the driver never
+# sees the request. Both gaps are the same gap: one successful build.
+#
+# HOW TO START A BUILD
+#
+#   Push anything to the branch `algeria/build-backend`. That is the trigger,
+#   and it exists for no other reason:
+#
+#     git push origin algeria/osrm-routing:algeria/build-backend --force
+#
+#   Why not the "Run workflow" button? GitHub only registers a
+#   workflow_dispatch trigger when the file is on the repo's DEFAULT branch.
+#   Ours is not, and putting it on `main` would fire upstream's
+#   cabal-main-push.yaml, which is unguarded and would start a full failing
+#   cabal build on every push. If you ever set this fork's default branch to a
+#   branch that carries this file, the button appears and the inputs below
+#   become editable; until then every run uses the defaults.
+#
+# EVERYTHING IN HERE THAT LOOKS ARBITRARY IS NOT. Read
+# .github/scripts/algeria/README.md before changing the base image, the stack
+# root, the DNS pinning, or how beckn-gateway is declared.
+
+name: "algeria: build backend"
+
+# One build at a time. Pushing again supersedes the run in flight rather
+# than racing it — two five-hour builds competing helps nobody.
+concurrency:
+  group: algeria-backend-build
+  cancel-in-progress: true
+
+on:
+  # The trigger that actually gets used. See above.
+  push:
+    branches: ["algeria/build-backend"]
+  # Available only once this file is on the default branch. Harmless meanwhile.
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "Source repo to build"
+        default: "https://github.com/nammayatri/nammayatri.git"
+        required: true
+      source_ref:
+        description: "Commit to build (the 2023 baseline our deployment runs)"
+        default: "03a753113af1fdcddf3378d9dc2fc31170e385e4"
+        required: true
+      apply_patches:
+        description: "Apply the Algeria +213 patches"
+        type: boolean
+        default: true
+      build_gateway:
+        description: "Also build beckn-gateway and mock-registry"
+        type: boolean
+        default: true
+      build_allocator:
+        description: "Also build driver-offer-allocator (not needed for +213)"
+        type: boolean
+        default: false
+      jobs:
+        description: "Parallel GHC jobs (runner has 4 vCPU / 16 GB)"
+        default: "4"
+        required: true
+      use_cache:
+        description: "Cache ~/.stack between runs so progress accumulates"
+        type: boolean
+        default: true
+
+env:
+  # GHC 8.8.4, Ubuntu 18.04, glibc 2.27 — the same glibc as the runtime image.
+  # DO NOT "upgrade" this. A binary linked against a newer glibc does not start
+  # on the target; we have already been bitten by exactly that
+  # (`libpthread.so.0: symbol __libc_vfork ... not defined`).
+  BUILD_IMAGE: "fpco/stack-build:lts-16.31"
+  CONTAINER: "ny-build-dz"
+  # This image ships a prepopulated stack root at /home/stackage/.stack —
+  # 3.7 GB, including a 599 MB package index and precompiled snapshot packages.
+  # Nothing may be mounted over it. Mounting an empty volume there throws all of
+  # that away and forces stack to re-bootstrap from FP Complete services that
+  # have rotted since 2020 (their Hackage mirror now returns 403). That was the
+  # single biggest time sink in this whole exercise. The cache below is merged
+  # *into* it, never over it.
+  STACK_ROOT_IN_IMAGE: "/home/stackage/.stack"
+  SRC: "src"
+
+jobs:
+  build:
+    name: "stack build"
+    runs-on: ubuntu-latest
+    # GitHub-hosted runners cap a job at 6 h. Stop a little short so the cache
+    # save and artifact upload still get to run — a run that times out with the
+    # cache saved is real progress, one that times out without it is not.
+    timeout-minutes: 350
+
+    # On a push event there is no `inputs` context, so every one of these falls
+    # back to the same value the workflow_dispatch form would have defaulted to.
+    #
+    # DO NOT write `inputs.x != false` for a default-true flag. On a push,
+    # inputs.x is null, and GitHub casts null and false both to 0 when the
+    # types differ — so the guard is FALSE and the step silently skips. That
+    # shipped once and produced a run with no patches and no gateway. Use
+    # `github.event_name != 'workflow_dispatch' || inputs.x`, or `||` with an
+    # explicit default for strings (null is falsy, so the default wins).
+    env:
+      SOURCE_REPO: ${{ inputs.source_repo || 'https://github.com/nammayatri/nammayatri.git' }}
+      SOURCE_REF: ${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}
+      GHC_JOBS: ${{ inputs.jobs || '4' }}
+      APPLY_PATCHES: ${{ github.event_name != 'workflow_dispatch' || inputs.apply_patches }}
+      BUILD_ALLOCATOR: ${{ inputs.build_allocator || false }}
+
+    steps:
+      # ------------------------------------------------------------------ setup
+      - name: Check out this repo (workflow + scripts only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+          sparse-checkout-cone-mode: false
+
+      - name: Free disk space
+        # A full dependency build needs roughly 30 GB: ~10 GB for the build
+        # image, ~4 GB stack root, and the rest in compiled artifacts. A stock
+        # runner does not have that spare until the preinstalled toolchains go.
+        run: |
+          set -euo pipefail
+          echo "before:"; df -h /
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/.ghcup \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          echo "after:"; df -h /
+
+      # ------------------------------------------------------------------ source
+      - name: Fetch the backend source at the pinned commit
+        run: |
+          set -euo pipefail
+          echo "repo $SOURCE_REPO"
+          echo "ref  $SOURCE_REF"
+          rm -rf "$SRC"; mkdir -p "$SRC"
+          cd "$SRC"
+          git init -q .
+          git remote add origin "$SOURCE_REPO"
+          git fetch --depth 1 -q origin "$SOURCE_REF"
+          git checkout -q FETCH_HEAD
+          test -f Backend/stack.yaml \
+            || { echo "FAILED: no Backend/stack.yaml at this ref — it is not the 2023 baseline"; exit 1; }
+          echo "checked out $(git rev-parse HEAD)"
+
+      - name: Apply the Algeria +213 patches
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.apply_patches }}
+        run: python3 .github/scripts/algeria/apply-patches.py "$SRC"
+
+      - name: Make beckn-gateway and mock-registry project packages
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_gateway }}
+        # stack builds dependency packages library-only; only project packages
+        # get their executables built. As a plain extra-dep we would get the
+        # gateway library and no beckn-gateway-exe.
+        run: |
+          set -euo pipefail
+          # The script prints `commit=<sha>` on stdout — the commit stack.yaml
+          # pinned — so we clone exactly the revision that was being depended on.
+          commit="$(python3 .github/scripts/algeria/prepare-stack-yaml.py "$SRC" | sed -n 's/^commit=//p')"
+          test -n "$commit"
+          if [ ! -d "$SRC/beckn-gateway/.git" ]; then
+            git init -q "$SRC/beckn-gateway"
+            git -C "$SRC/beckn-gateway" remote add origin https://github.com/nammayatri/beckn-gateway.git
+            git -C "$SRC/beckn-gateway" fetch --depth 1 -q origin "$commit"
+            git -C "$SRC/beckn-gateway" checkout -q FETCH_HEAD
+          fi
+          test -f "$SRC/beckn-gateway/app/gateway/package.yaml"
+          test -f "$SRC/beckn-gateway/app/mock-registry/package.yaml"
+          echo "beckn-gateway at $commit"
+
+      - name: Record what is being built
+        run: |
+          set -euo pipefail
+          cd "$SRC"
+          {
+            echo "### source"
+            echo '```'
+            echo "repo    $SOURCE_REPO"
+            echo "ref     $(git rev-parse HEAD)"
+            echo "image   $BUILD_IMAGE"
+            echo "patched $APPLY_PATCHES"
+            echo '```'
+            echo "### patches"
+            echo '```diff'
+            git --no-pager diff --unified=0 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ------------------------------------------------------------------- cache
+      # Restored AFTER the source fetch, because the source fetch wipes $SRC and
+      # part of what we cache lives inside it (.stack-work).
+      - name: Restore stack cache
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+        uses: actions/cache/restore@v4
+        with:
+          # Literal "src" — must stay in step with $SRC above.
+          path: |
+            .stackcache
+            src/**/.stack-work
+          key: stack-lts16.31-${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}-${{ github.run_id }}
+          restore-keys: |
+            stack-lts16.31-${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}-
+            stack-lts16.31-
+
+      # ------------------------------------------------------------------ docker
+      - name: Pull the build image
+        run: |
+          set -euo pipefail
+          for i in 1 2 3; do
+            docker pull --platform linux/amd64 "$BUILD_IMAGE" && exit 0
+            echo "pull failed (attempt $i), retrying in 30s"; sleep 30
+          done
+          echo "FAILED: could not pull $BUILD_IMAGE"; exit 1
+
+      - name: Start the build container
+        run: |
+          set -euo pipefail
+          mkdir -p .stackcache/snapshots
+          docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+          # --entrypoint sleep: the image sets ENTRYPOINT ["/usr/local/sbin/pid1"],
+          #   FP Complete's init wrapper. We only need something to exec into.
+          # --dns 1.1.1.1: see the casa step below. GitHub runners have no IPv6
+          #   route, and the default resolver can hand back only an AAAA record.
+          docker run -d --name "$CONTAINER" --platform linux/amd64 \
+            --entrypoint sleep \
+            --dns 1.1.1.1 --dns 8.8.8.8 \
+            -e STACK_ROOT="$STACK_ROOT_IN_IMAGE" \
+            -v "$GITHUB_WORKSPACE/$SRC:/opt/build" \
+            -v "$GITHUB_WORKSPACE/.stackcache:/stackcache" \
+            "$BUILD_IMAGE" infinity
+          sleep 5
+          docker ps --format '{{.Names}}' | grep -qx "$CONTAINER" || {
+            echo "container exited immediately:"
+            docker inspect -f 'exit={{.State.ExitCode}} error={{.State.Error}}' "$CONTAINER" || true
+            docker logs "$CONTAINER" 2>&1 | tail -20
+            exit 1
+          }
+          docker exec "$CONTAINER" bash -c 'ghc --version; stack --version'
+
+      - name: Check the C libraries the Haskell packages link against
+        # This image exists to build Stackage, so it almost certainly already
+        # has these. Check before reaching for apt at all — the first run died
+        # here, and every apt failure in this image is avoidable noise:
+        #
+        #   * `apt-get update` exits non-zero because the image carries
+        #     third-party repos (Confluent, NVIDIA CUDA) whose signing keys have
+        #     since expired. The Ubuntu archive itself is fine.
+        #   * Do NOT repoint bionic at old-releases.ubuntu.com. Bionic is not
+        #     there — it is still on archive.ubuntu.com under ESM — and the
+        #     rewrite turns a working archive into "does not have a Release
+        #     file". A previous version of this step did exactly that.
+        run: |
+          set -euo pipefail
+          docker exec "$CONTAINER" bash -c '
+            set -u
+            need=""
+            for l in rdkafka pq ssl mysqlclient z; do
+              ls /usr/lib/x86_64-linux-gnu/lib$l.so >/dev/null 2>&1 || need="$need $l"
+            done
+            if [ -z "$need" ]; then
+              echo "all C libraries already present in the image"; exit 0
+            fi
+            echo "missing:$need — installing"
+            ls /etc/apt/sources.list.d/ 2>/dev/null || true
+            # Keep Confluent: it is what supplies a librdkafka new enough for
+            # hw-kafka-client. Just stop apt refusing it over the rotated key.
+            for f in /etc/apt/sources.list.d/*confluent*.list; do
+              [ -e "$f" ] && sed -i "s|^deb |deb [trusted=yes] |" "$f"
+            done
+            rm -f /etc/apt/sources.list.d/*cuda*.list /etc/apt/sources.list.d/*nvidia*.list
+            # Tolerate a non-zero exit: what matters is whether the install
+            # works and the libraries end up present, which we verify below.
+            apt-get update -qq || true
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+              libtinfo5 librdkafka-dev libmysqlclient-dev libpq-dev libssl-dev zlib1g-dev || true
+            fail=0
+            for l in rdkafka pq ssl mysqlclient z; do
+              ls /usr/lib/x86_64-linux-gnu/lib$l.so >/dev/null 2>&1 \
+                || { echo "STILL MISSING lib$l"; fail=1; }
+            done
+            [ "$fail" = 0 ] || exit 1
+            echo "C libraries ok"
+          '
+
+      - name: Pin casa.fpcomplete.com to IPv4 and check it is reachable
+        # stack 2.3.3 reads the snapshot definition from casa and treats a
+        # failure as fatal — verified by blocking it, which killed the build
+        # even with everything else cached. It is Cloudflare-fronted with both A
+        # and AAAA records, and a host with no IPv6 route hangs on the AAAA
+        # address until timeout rather than failing fast. Check it now instead
+        # of discovering it an hour in.
+        run: |
+          set -euo pipefail
+          docker exec "$CONTAINER" bash -c '
+            grep -q casa.fpcomplete.com /etc/hosts && exit 0
+            ip=$(getent ahostsv4 casa.fpcomplete.com | head -1 | cut -d" " -f1)
+            [ -n "$ip" ] && echo "$ip casa.fpcomplete.com" >> /etc/hosts
+            echo "casa.fpcomplete.com -> ${ip:-unresolved}"'
+          docker exec "$CONTAINER" bash -c \
+            'timeout 25 curl -s -o /dev/null -X POST https://casa.fpcomplete.com/v1/pull' \
+            || { echo "FAILED: cannot reach casa.fpcomplete.com — stack 2.3.3 cannot build without it"; exit 1; }
+          echo "casa.fpcomplete.com reachable"
+
+      - name: Merge the cache into the image's stack root
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+        # Merged in, not mounted over. Package directories under snapshots/ are
+        # content-addressed, so adding ours alongside the image's is safe and
+        # nothing prepopulated is lost.
+        run: |
+          set -euo pipefail
+          docker exec "$CONTAINER" bash -eo pipefail -c '
+            mkdir -p /stackcache/snapshots "$STACK_ROOT/snapshots"
+            cp -a /stackcache/snapshots/. "$STACK_ROOT/snapshots/" 2>/dev/null || true
+            du -sh "$STACK_ROOT" /stackcache 2>/dev/null || true
+          '
+
+      - name: Normalise source ownership
+        # stack refuses to build a tree it does not own ("You are not the owner
+        # of ... Aborting to protect file permissions"). The bind mount carries
+        # the runner's uid, and stack runs as root in here.
+        run: docker exec "$CONTAINER" chown -R root:root /opt/build
+
+      # ------------------------------------------------------------------- build
+      - name: Build rider-app and dynamic-offer-driver-app
+        id: build_apps
+        timeout-minutes: 270
+        # Both apps in one invocation: they share their entire dependency tree,
+        # so the second one costs almost nothing on top of the first.
+        # --fast is -O0 for the project packages. This backend answers API calls
+        # in a demo; runtime speed is irrelevant and -O0 roughly halves both
+        # build time and peak memory. Note it does NOT apply to the ~600
+        # dependency packages, which are the bulk of the wall clock.
+        run: |
+          set -euo pipefail
+          targets="rider-app dynamic-offer-driver-app"
+          if [ "$BUILD_ALLOCATOR" = "true" ]; then
+            targets="$targets driver-offer-allocator"
+          fi
+          echo "targets: $targets   jobs: $GHC_JOBS"
+          docker exec -e TARGETS="$targets" -e GHC_JOBS="$GHC_JOBS" "$CONTAINER" bash -c '
+            cd /opt/build/Backend
+            for attempt in 1 2 3 4 5; do
+              echo "--- attempt $attempt $(date -u) ---"
+              if stack build $TARGETS --system-ghc --fast --allow-different-user -j"$GHC_JOBS"; then
+                echo "--- APPS OK ---"; exit 0
+              fi
+              echo "--- failed; retrying in 60s (stack resumes, nothing is lost) ---"
+              sleep 60
+            done
+            exit 1
+          ' 2>&1 | tee apps-build.log
+
+      - name: Build beckn-gateway and mock-registry
+        id: build_gateway
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_gateway }}
+        timeout-minutes: 45
+        # Separate invocation, after the apps are already built and about to be
+        # uploaded, so a gateway failure does not cost us the app binaries.
+        run: |
+          set -euo pipefail
+          docker exec -e GHC_JOBS="$GHC_JOBS" "$CONTAINER" bash -c '
+            cd /opt/build/Backend
+            for attempt in 1 2 3; do
+              echo "--- attempt $attempt $(date -u) ---"
+              if stack build beckn-gateway mock-registry --system-ghc --fast --allow-different-user -j"$GHC_JOBS"; then
+                echo "--- GATEWAY OK ---"; exit 0
+              fi
+              echo "--- failed; retrying in 60s ---"
+              sleep 60
+            done
+            exit 1
+          ' 2>&1 | tee gateway-build.log
+
+      # ----------------------------------------------------------------- collect
+      - name: Collect and verify the binaries
+        if: ${{ always() && steps.build_apps.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          # The container writes into the bind mount, so "out" lives under $SRC —
+          # and $SRC is root-owned by now, so the container has to create it and
+          # we take ownership back afterwards.
+          out="$SRC/out"
+          docker exec "$CONTAINER" bash -eo pipefail -c '
+            cd /opt/build/Backend
+            # Global flags before the subcommand — `stack path` does not take
+            # build flags like --fast (which does not affect this path anyway:
+            # -O0 on project packages does not change the install root).
+            bin="$(stack --system-ghc --allow-different-user path --local-install-root)/bin"
+            echo "local-install-root/bin = $bin"
+            mkdir -p /opt/build/out
+            for exe in "$@"; do
+              if [ -f "$bin/$exe" ]; then cp "$bin/$exe" /opt/build/out/; else echo "MISSING $exe"; fi
+            done
+            ls -l /opt/build/out
+          ' _ rider-app-exe dynamic-offer-driver-app-exe driver-offer-allocator-exe beckn-gateway-exe mock-registry-exe
+          sudo chown -R "$(id -u):$(id -g)" "$out"
+
+          # The one constraint that actually matters: Linux x86-64 ELF. A binary
+          # of any other shape will not start on the target.
+          : > "$out/MANIFEST.txt"
+          {
+            echo "source repo   $SOURCE_REPO"
+            echo "source ref    $SOURCE_REF"
+            echo "algeria patch $APPLY_PATCHES"
+            echo "build image   $BUILD_IMAGE"
+            echo "built         $(date -u +%FT%TZ)"
+            echo "run           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+          } >> "$out/MANIFEST.txt"
+
+          fail=0
+          for f in "$out"/*-exe; do
+            [ -e "$f" ] || continue
+            info="$(file -b "$f")"
+            printf '%s\n  %s\n  sha256 %s\n  size   %s\n\n' \
+              "$(basename "$f")" "$info" \
+              "$(sha256sum "$f" | cut -d' ' -f1)" \
+              "$(du -h "$f" | cut -f1)" >> "$out/MANIFEST.txt"
+            case "$info" in
+              *"ELF 64-bit"*x86-64*) echo "ok   $(basename "$f")  $info" ;;
+              *) echo "WRONG FORMAT  $(basename "$f")  $info"; fail=1 ;;
+            esac
+          done
+          cat "$out/MANIFEST.txt"
+          [ "$fail" = 0 ] || { echo "FAILED: at least one binary is not Linux x86-64 ELF"; exit 1; }
+          ls "$out"/rider-app-exe "$out"/dynamic-offer-driver-app-exe >/dev/null \
+            || { echo "FAILED: a patched app binary is missing"; exit 1; }
+
+          {
+            echo "### binaries"
+            echo '```'
+            cat "$out/MANIFEST.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload binaries
+        if: ${{ always() && steps.build_apps.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ny-backend-binaries-${{ github.run_id }}
+          path: src/out/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.run_id }}
+          path: |
+            apps-build.log
+            gateway-build.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # ------------------------------------------------------------------- cache
+      # Always — a run that ran out of time still leaves the next one less to do.
+      - name: Copy the built dependency tree back out
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.use_cache) }}
+        run: |
+          set -euo pipefail
+          docker exec "$CONTAINER" bash -eo pipefail -c '
+            mkdir -p /stackcache/snapshots
+            cp -a "$STACK_ROOT/snapshots/." /stackcache/snapshots/
+          ' || echo "could not copy the stack root out — continuing"
+          # actions/cache runs as the runner user; the build made these root-owned.
+          sudo chown -R "$(id -u):$(id -g)" .stackcache "$SRC" || true
+          du -sh .stackcache || true
+
+      - name: Save stack cache
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.use_cache) }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .stackcache
+            src/**/.stack-work
+          key: stack-lts16.31-${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}-${{ github.run_id }}
+
+      - name: Stop the build container
+        if: ${{ always() }}
+        run: docker rm -f "$CONTAINER" || true
+
+  # ---------------------------------------------------------------- publish
+  publish:
+    name: "publish image"
+    needs: build
+    runs-on: ubuntu-latest
+    # Only the four executables are needed from the build, and they are already
+    # verified as Linux x86-64 ELF by the time this runs.
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the workflow and the runtime Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            Backend/dev/local-stack
+          sparse-checkout-cone-mode: false
+
+      - name: Fetch the binaries this run just built
+        uses: actions/download-artifact@v4
+        with:
+          name: ny-backend-binaries-${{ github.run_id }}
+          path: Backend/dev/local-stack/bin
+
+      - name: Check what we are about to ship
+        run: |
+          set -euo pipefail
+          cd Backend/dev/local-stack/bin
+          # download-artifact does not preserve the executable bit.
+          chmod +x ./*-exe
+          ls -lh
+          for f in *-exe; do
+            file -b "$f" | grep -q 'ELF 64-bit.*x86-64' \
+              || { echo "FAILED: $f is not a Linux x86-64 ELF"; exit 1; }
+          done
+          echo "four Linux x86-64 executables, ready to package"
+
+      - name: Log in to the container registry
+        # GITHUB_TOKEN is enough for GHCR in the repo's own namespace; no secret
+        # to configure, and it works unchanged if this repo moves to the org.
+        run: echo "${{ secrets.GITHUB_TOKEN }}" \
+          | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push
+        # Namespaced by whoever owns the repo, so moving this to the company org
+        # publishes to the company org with no edit.
+        run: |
+          set -euo pipefail
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          image="ghcr.io/$owner/ny-backend"
+          ref="${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}"
+          tag="${ref:0:7}-${{ github.run_number }}"
+
+          cd Backend/dev/local-stack
+          # Same Dockerfile the local stack uses: it puts a modern librdkafka on
+          # the published base image (which ships 0.11, too old for these
+          # binaries) and copies the four executables into /opt/app.
+          docker build -f Dockerfile.rider -t "$image:$tag" -t "$image:latest" .
+
+          docker push "$image:$tag"
+          docker push "$image:latest"
+
+          {
+            echo "### image"
+            echo '```'
+            echo "$image:$tag"
+            echo "$image:latest"
+            echo '```'
+            echo "Deploy with:"
+            echo '```bash'
+            echo "docker pull $image:latest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show what is in it
+        run: |
+          set -euo pipefail
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          docker run --rm --entrypoint ls "ghcr.io/$owner/ny-backend:latest" -lh /opt/app
