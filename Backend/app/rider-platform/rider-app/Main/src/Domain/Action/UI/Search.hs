@@ -698,10 +698,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     processEasyBookingSearch _person _easyBookingReq _originCity =
       return
         ( RouteDetails
-            { longestRouteDistance = Nothing,
-              shortestRouteDistance = Nothing,
-              shortestRouteDuration = Nothing,
-              shortestRouteStaticDuration = Nothing,
+            { longestRouteDistance = Just 0,
+              shortestRouteDistance = Just 0,
+              shortestRouteDuration = Just 0,
+              shortestRouteStaticDuration = Just 0,
               shortestRouteInfo = Nothing,
               multipleRoutes = Nothing,
               routeCacheUsed = False
