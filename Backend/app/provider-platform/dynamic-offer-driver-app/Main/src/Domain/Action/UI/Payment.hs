@@ -611,6 +611,8 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
       nowUtc <- getCurrentTime
       QDF.updateStatusByIds CLEARED driverFeeIds nowUtc
+      Redis.runInMasterCloudRedisCell $
+        forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
