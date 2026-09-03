@@ -36,32 +36,34 @@ data RecentSearchTryItem = RecentSearchTryItem
     searchRepeatType :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    validTill :: Kernel.Prelude.UTCTime
+    validTill :: Kernel.Prelude.UTCTime,
+    fromLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    fromLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("searchTry" :> PostSearchTryRecent)
+type API = ("searchTry" :> PostSearchTryRecentSearchTries)
 
-type PostSearchTryRecent = ("recentSearchTries" :> ReqBody ('[JSON]) RecentSearchTriesReq :> Post ('[JSON]) RecentSearchTriesRes)
+type PostSearchTryRecentSearchTries = ("recentSearchTries" :> ReqBody '[JSON] RecentSearchTriesReq :> Post '[JSON] RecentSearchTriesRes)
 
-newtype SearchTryAPIs = SearchTryAPIs {postSearchTryRecent :: (RecentSearchTriesReq -> EulerHS.Types.EulerClient RecentSearchTriesRes)}
+newtype SearchTryAPIs = SearchTryAPIs {postSearchTryRecentSearchTries :: RecentSearchTriesReq -> EulerHS.Types.EulerClient RecentSearchTriesRes}
 
 mkSearchTryAPIs :: (Client EulerHS.Types.EulerClient API -> SearchTryAPIs)
 mkSearchTryAPIs searchTryClient = (SearchTryAPIs {..})
   where
-    postSearchTryRecent = searchTryClient
+    postSearchTryRecentSearchTries = searchTryClient
 
 data SearchTryUserActionType
-  = POST_SEARCH_TRY_RECENT
+  = POST_SEARCH_TRY_RECENT_SEARCH_TRIES
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToSchema)
 
 instance ToJSON SearchTryUserActionType where
-  toJSON (POST_SEARCH_TRY_RECENT) = Data.Aeson.String "POST_SEARCH_TRY_RECENT"
+  toJSON POST_SEARCH_TRY_RECENT_SEARCH_TRIES = Data.Aeson.String "POST_SEARCH_TRY_RECENT_SEARCH_TRIES"
 
 instance FromJSON SearchTryUserActionType where
-  parseJSON (Data.Aeson.String "POST_SEARCH_TRY_RECENT") = pure POST_SEARCH_TRY_RECENT
-  parseJSON _ = fail "POST_SEARCH_TRY_RECENT expected"
+  parseJSON (Data.Aeson.String "POST_SEARCH_TRY_RECENT_SEARCH_TRIES") = pure POST_SEARCH_TRY_RECENT_SEARCH_TRIES
+  parseJSON _ = fail "POST_SEARCH_TRY_RECENT_SEARCH_TRIES expected"
 
-$(Data.Singletons.TH.genSingletons [(''SearchTryUserActionType)])
+$(Data.Singletons.TH.genSingletons [''SearchTryUserActionType])

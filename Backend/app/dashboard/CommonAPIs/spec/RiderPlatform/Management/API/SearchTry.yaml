@@ -33,3 +33,5 @@ types:
     - tripCategory: Text
     - createdAt: UTCTime
     - validTill: UTCTime
+    - fromLat: Maybe Double
+    - fromLon: Maybe Double

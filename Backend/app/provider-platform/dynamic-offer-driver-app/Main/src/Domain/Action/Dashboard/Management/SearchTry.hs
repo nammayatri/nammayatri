@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
 module Domain.Action.Dashboard.Management.SearchTry
-  ( postSearchTryRecent,
+  ( postSearchTryRecentSearchTries,
   )
 where
 
@@ -23,12 +23,12 @@ import qualified Storage.Queries.SearchRequestExtra as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error (GenericError (InvalidRequest))
 
-postSearchTryRecent ::
+postSearchTryRecentSearchTries ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.RecentSearchTriesReq ->
   Environment.Flow Common.RecentSearchTriesRes
-postSearchTryRecent merchantShortId _opCity req = do
+postSearchTryRecentSearchTries merchantShortId _opCity req = do
   when (null req.phoneNumbers) $ throwError (InvalidRequest "phoneNumbers cannot be empty")
   let limit = fromMaybe 30 req.limit
   when (limit <= 0) $ throwError (InvalidRequest "limit must be positive")
@@ -89,7 +89,9 @@ postSearchTryRecent merchantShortId _opCity req = do
                         searchRepeatType = show st.searchRepeatType,
                         tripCategory = show st.tripCategory,
                         createdAt = st.createdAt,
-                        validTill = st.validTill
+                        validTill = st.validTill,
+                        fromLat = Just sr.fromLocation.lat,
+                        fromLon = Just sr.fromLocation.lon
                       }
               )
               (Map.toList latestByRequestId)
