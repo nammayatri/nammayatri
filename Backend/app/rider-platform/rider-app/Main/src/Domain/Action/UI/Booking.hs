@@ -140,8 +140,15 @@ handleConfirmTtlExpiry booking = do
       ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
-    dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
-    void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
+    case booking.bppBookingId of
+      Nothing ->
+        logError $
+          "handleConfirmTtlExpiry: booking "
+            <> booking.id.getId
+            <> " has expired TTL but bppBookingId is missing; skipping BPP cancel"
+      Just _ -> do
+        dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
+        void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"
   where
     cancelReq =
