@@ -117,7 +117,7 @@ cancel req merchant booking mbActiveSearchTry = do
         -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
         CS.withDriverScheduledHoldLock ride.driverId $ do
           mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig ride.driverId booking.id
-          QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) ride.driverId
+          QDI.updateDriverInfo ride.driverId [QDI.SetLatestScheduledBooking (fst <$> mbNextHold), QDI.SetLatestScheduledPickup (snd <$> mbNextHold)]
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation

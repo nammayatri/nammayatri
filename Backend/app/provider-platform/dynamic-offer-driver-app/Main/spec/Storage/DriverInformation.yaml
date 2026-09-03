@@ -304,7 +304,14 @@ DriverInformation:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+
   queries:
+    updateApprovedAndVerified:
+      kvFunction: updateOneWithKV
+      params: [approved, verified]
+      where: driverId
     updateIsNew:
       kvFunction: updateOneWithKV
       params: [isNew]
