@@ -157,6 +157,7 @@ import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.Estimate
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -274,6 +275,7 @@ import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
@@ -1959,8 +1961,11 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
               mbActiveBooking <- runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
-              whenJust mbActiveBooking $ \_ ->
-                throwError RideRequestAlreadyAccepted
+              -- Under BPP single-booking reallocation the reused booking (id == searchTry.messageId) is
+              -- intentionally kept NEW to re-assign onto; that's not a double-accept. Any OTHER booking is.
+              whenJust mbActiveBooking $ \activeBooking ->
+                when (activeBooking.id.getId /= searchTry.messageId) $
+                  throwError RideRequestAlreadyAccepted
             merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
@@ -1969,7 +1974,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
+              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest (Just (assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig)) clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
@@ -2125,6 +2130,82 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
 
+-- Dynamic-reallocation assign (enableBppReallocation): D2 accepts the re-dispatched offer for a booking D1 left
+-- reset to NEW, so we skip the offer/on_select and directly re-price + assign the reused booking BPP-side, then
+-- send on_update. Concrete Flow (initializeRide/deactivateExistingQuotes); injected into the polymorphic accept path.
+assignReusedBookingForDynamicReallocation ::
+  DM.Merchant ->
+  DST.SearchTry ->
+  SearchRequestForDriver ->
+  SP.Person ->
+  TransporterConfig ->
+  DDrQuote.DriverQuote ->
+  DRB.Booking ->
+  Flow [SearchRequestForDriver]
+assignReusedBookingForDynamicReallocation merchant searchTry sReqFD driver transporterConfig driverQuote' reusedBooking = do
+  isBookingCancelled' <- CS.isBookingCancelled reusedBooking.id
+  when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
+  assignmentClaimed <- CS.tryMarkBookingAssignmentInprogress reusedBooking.id
+  unless assignmentClaimed $ throwError RideRequestAlreadyAccepted
+  unless (reusedBooking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
+  mbFarePolicyForCommission <- getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote'.id.getId
+  commission <- FC.calculateCommission driverQuote'.fareParams mbFarePolicyForCommission
+  cancellationCommission <- FC.calculateCancellationCommission driverQuote'.fareParams mbFarePolicyForCommission
+  let chargeRes = FC.finalisePaymentCharge (Just transporterConfig.driverWalletConfig) driverQuote'.estimatedFare (fromMaybe 0 driverQuote'.fareParams.paymentProcessingFee) driverQuote'.fareParams
+      mbPaymentCharge = chargeRes.paymentCharge
+      mbPaymentChargeBearer = chargeRes.paymentChargeBearer
+  now <- getCurrentTime
+  -- Re-derive tier-dependent fields from the new driver's quote: a multi-tier search try can reassign the reused booking to a different service tier. Mirrors buildBooking's source of truth (Init.hs).
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote'.vehicleServiceTier reusedBooking.merchantOperatingCityId (reusedBooking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote'.vehicleServiceTier))
+  let tollApplicable = DTC.isTollApplicableForTrip driverQuote'.vehicleServiceTier reusedBooking.tripCategory
+  mFleetAssociation <- QFDA.findByDriverId driver.id True
+  -- in-mem re-priced booking, not a re-read: the KV cluster is connectReadOnly=True, so findById can be served by a lagging replica and feed initializeRide a stale (pre-reallocation) fare. This record is the single source of truth persisted by updateReallocationResetDynamic below.
+  let uBookingPre =
+        reusedBooking
+          { DRB.quoteId = driverQuote'.id.getId,
+            DRB.estimatedFare = driverQuote'.estimatedFare,
+            DRB.fareParams = driverQuote'.fareParams,
+            DRB.estimatedCongestionCharge = driverQuote'.fareParams.congestionCharge,
+            DRB.commission = commission,
+            DRB.cancellationCommission = cancellationCommission,
+            DRB.paymentCharge = mbPaymentCharge,
+            DRB.paymentChargeBearer = mbPaymentChargeBearer,
+            DRB.isPetRide = isJust driverQuote'.fareParams.petCharges,
+            DRB.vehicleServiceTier = driverQuote'.vehicleServiceTier,
+            DRB.vehicleServiceTierName = vehicleServiceTierItem.name,
+            DRB.vehicleServiceTierSeatingCapacity = vehicleServiceTierItem.seatingCapacity,
+            DRB.vehicleServiceTierAirConditioned = vehicleServiceTierItem.airConditionedThreshold,
+            DRB.isAirConditioned = vehicleServiceTierItem.isAirConditioned,
+            DRB.isSafetyPlus = DCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote'.fareParams.conditionalCharges,
+            DRB.distanceToPickup = Just driverQuote'.distanceToPickup,
+            DRB.tollCharges = if tollApplicable then reusedBooking.tollCharges else Nothing,
+            DRB.tollIds = if tollApplicable then reusedBooking.tollIds else Nothing,
+            DRB.tollNames = if tollApplicable then reusedBooking.tollNames else Nothing,
+            DRB.coinsRewardedOnGoldTierRide = driverQuote'.coinsRewardedOnGoldTierRide,
+            DRB.preferenceMatchScore = driverQuote'.preferenceMatchScore,
+            DRB.isAutoAccepted = driverQuote'.isAutoAccepted,
+            DRB.dqDurationToPickup = Just sReqFD.durationToPickup,
+            DRB.status = DRB.NEW,
+            DRB.startTime = now,
+            DRB.updatedAt = now
+          }
+  QBE.updateReallocationResetDynamic uBookingPre now
+  QST.updateStatus DST.COMPLETED searchTry.id
+  (ride, _, vehicle) <- initializeRide merchant driver uBookingPre Nothing Nothing driverQuote'.clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True
+  void $ deactivateExistingQuotes reusedBooking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just driverQuote'.currency) driverQuote'.estimatedFare) (Just transporterConfig)
+  uBooking <- QBooking.findById reusedBooking.id >>= fromMaybeM (BookingNotFound reusedBooking.id.getId)
+  handle (reallocErrHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
+  CS.markBookingCancellationCompleted uBooking.id
+  CS.markBookingAssignmentCompleted uBooking.id
+  return []
+  where
+    -- release both markers, else they block a cancel of the now-assigned booking for the rest of their TTL
+    releaseBookingMarkers uBooking = CS.markBookingCancellationCompleted uBooking.id >> CS.markBookingAssignmentCompleted uBooking.id
+    reallocErrHandler uBooking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | otherwise = throwM exc
+
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Flow [SearchRequestForDriver]
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
@@ -2167,6 +2248,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
       Nothing -> pure []
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
+  CS.markBookingCancellationCompleted uBooking.id
   when uBooking.isScheduled $ do
     now <- getCurrentTime
     let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
@@ -2202,9 +2284,10 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
         case feasibleRes of
           Right True -> pure ()
           _ -> throwError ScheduledRideOverlapConflict
+    releaseBookingMarkers uBooking = CS.markBookingCancellationCompleted uBooking.id >> CS.markBookingAssignmentCompleted uBooking.id
     errHandler uBooking exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = releaseBookingMarkers uBooking >> cancelBooking uBooking (Just driver) merchant >> throwM exc
       | otherwise = throwM exc
 
 getStats ::

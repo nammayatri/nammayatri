@@ -20,6 +20,7 @@ import Database.Beam.Postgres
 import Domain.Types as DTC
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -123,6 +124,11 @@ findAllRidesByDriverId ::
   Id Person ->
   m [Ride]
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
+
+-- Bookings this driver cancelled, from the per-ride columns; DB read to match the BCR half's staleness.
+findCancelledBookingIdsByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
+findCancelledBookingIdsByDriver (Id driverId) =
+  findAllWithDb [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.cancelledBy $ Se.Eq (Just (show DBCR.ByDriver))]] <&> (DRide.bookingId <$>)
 
 findCompletedRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
 findCompletedRideByGHRId (Id ghrId) = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe

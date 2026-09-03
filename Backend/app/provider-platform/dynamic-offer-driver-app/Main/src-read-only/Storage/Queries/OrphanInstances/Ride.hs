@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.Ride where
 
 import qualified Data.Text
+import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -39,6 +40,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingId = Kernel.Types.Id.Id bookingId,
+            cancellationAdditionalInfo = cancellationAdditionalInfo,
             cancellationChargesOnCancel = cancellationChargesOnCancel,
             cancellationCommission = cancellationCommission,
             cancellationConsequenceRowIdIfCancelled = cancellationConsequenceRowIdIfCancelled,
@@ -46,6 +48,8 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             cancellationFaultVerdict = cancellationFaultVerdict,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
             cancellationFeeTaxIfCancelled = cancellationFeeTaxIfCancelled,
+            cancellationReasonCode = Domain.Types.CancellationReason.CancellationReasonCode <$> cancellationReasonCode,
+            cancelledBy = cancelledBy,
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
@@ -152,6 +156,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.cancellationAdditionalInfo = cancellationAdditionalInfo,
         Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,
         Beam.cancellationCommission = cancellationCommission,
         Beam.cancellationConsequenceRowIdIfCancelled = cancellationConsequenceRowIdIfCancelled,
@@ -159,6 +164,8 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.cancellationFaultVerdict = cancellationFaultVerdict,
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
         Beam.cancellationFeeTaxIfCancelled = cancellationFeeTaxIfCancelled,
+        Beam.cancellationReasonCode = (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode,
+        Beam.cancelledBy = cancelledBy,
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,

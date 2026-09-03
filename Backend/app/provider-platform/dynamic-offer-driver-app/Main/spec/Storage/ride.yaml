@@ -29,6 +29,7 @@ imports:
   FarePolicy: Domain.Types.FarePolicy
   Sos: Safety.Domain.Types.Sos
   PayoutFlagReason: Domain.Types.RiderDetails
+  CancellationReasonCode: Domain.Types.CancellationReason
 
 Ride:
   tableName: ride
@@ -157,6 +158,9 @@ Ride:
     pickupBehaviour: Maybe PickupBehaviour
     pickupFaultSeconds: Maybe Int
     pickupDarkSeconds: Maybe Int
+    cancelledBy: Maybe Text
+    cancellationReasonCode: Maybe CancellationReasonCode
+    cancellationAdditionalInfo: Maybe Text
 
   sqlType:
     id: character(36)
@@ -251,6 +255,7 @@ Ride:
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    cancellationReasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> cancellationReasonCode|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -288,6 +293,7 @@ Ride:
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     isInsured: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
+    cancellationReasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode|E
 
   beamType:
     trackingUrl: Text
@@ -309,6 +315,7 @@ Ride:
     subscriptionPurchaseIds: "Maybe [Text]"
     isInsured: Maybe Bool
     billingCategory: Maybe BillingCategory
+    cancellationReasonCode: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -404,6 +411,10 @@ Ride:
     updatePickupJourney:
       kvFunction: updateOneWithKV
       params: [pickupBehaviour, pickupFaultSeconds, pickupDarkSeconds]
+      where: id
+    updateCancellationDetails:
+      kvFunction: updateOneWithKV
+      params: [cancelledBy, cancellationReasonCode, cancellationAdditionalInfo]
       where: id
 
   excludedDefaultQueries:

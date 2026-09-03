@@ -21,6 +21,8 @@ module SharedLogic.SearchTryLocker
     tryMarkBookingAssignmentInprogress,
     isBookingAssignmentInprogress,
     markBookingAssignmentCompleted,
+    markBookingCancellationCompleted,
+    markBookingReallocationStarted,
     driverScheduledHoldLockKey,
     withDriverScheduledHoldLock,
   )
@@ -103,15 +105,23 @@ isBookingAssignmentInprogress ::
 isBookingAssignmentInprogress bookingId = do
   fromMaybe False <$> (Hedis.withMasterRedis $ Hedis.get (mkBookingAssignedKey bookingId))
 
+-- Booking:Cancelled is tri-state: absent (no cancel), True (fresh cancel), False (cancel consumed by
+-- singleBooking reallocation). A repeat of an already-consumed reassign is a duplicate; a terminate
+-- cancel is let through and re-arms the marker to True so an in-flight accept is rejected.
 whenBookingCancellable ::
   CacheFlow m r =>
   Id Booking ->
+  Bool ->
   m a ->
   m a
-whenBookingCancellable bookingId actions = do
-  isBookingCancelled' <- isBookingCancelled bookingId
+whenBookingCancellable bookingId reallocateRequested actions = do
+  mbCancelMarker <- Hedis.withMasterRedis $ Hedis.get @Bool (mkBookingCancelledKey bookingId)
   isBookingAssignmentInprogress' <- isBookingAssignmentInprogress bookingId
-  if (isBookingCancelled' || isBookingAssignmentInprogress')
+  let isDuplicateCancel = case mbCancelMarker of
+        Just True -> True
+        Just False -> reallocateRequested
+        Nothing -> False
+  if (isDuplicateCancel || isBookingAssignmentInprogress')
     then throwError (InternalError "BOOKING_CANCELLED")
     else do
       Hedis.setExp (mkBookingCancelledKey bookingId) True 120
@@ -130,6 +140,24 @@ markBookingAssignmentCompleted ::
   m ()
 markBookingAssignmentCompleted bookingId = do
   Hedis.del (mkBookingAssignedKey bookingId)
+
+-- Cleared once the reused booking is assigned (or the assignment fails), so a genuine cancel of the new
+-- ride is not blocked for the rest of the TTL.
+markBookingCancellationCompleted ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingCancellationCompleted bookingId = do
+  Hedis.del (mkBookingCancelledKey bookingId)
+
+-- Consume the triggering cancel instead of clearing it: the marker stays present so a repeat reassign is
+-- still rejected, but flips to False, which the accept-side isBookingCancelled reads as "not cancelled".
+markBookingReallocationStarted ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingReallocationStarted bookingId = do
+  Hedis.setExp (mkBookingCancelledKey bookingId) False 120
 
 mkBookingCancelledKey :: Id Booking -> Text
 mkBookingCancelledKey bookingId = "Booking:Cancelled:BookingId-" <> bookingId.getId

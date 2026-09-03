@@ -690,7 +690,9 @@ data RideListItemV2 = RideListItemV2
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideStatus :: RideStatus,
-    rideCreatedAt :: Kernel.Prelude.UTCTime
+    rideCreatedAt :: Kernel.Prelude.UTCTime,
+    cancelledBy :: Kernel.Prelude.Maybe CancellationSource,
+    cancellationReasonCode :: Kernel.Prelude.Maybe Dashboard.Common.Booking.CancellationReasonCode
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

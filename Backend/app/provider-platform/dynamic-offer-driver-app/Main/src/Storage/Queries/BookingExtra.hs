@@ -134,6 +134,58 @@ updateStatus rbId rbStatus = do
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updateReallocationReset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> UTCTime -> Bool -> Id Booking -> m ()
+updateReallocationReset newQuoteId newStartTime newIsScheduled bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.quoteId newQuoteId,
+      Se.Set BeamB.status Domain.Types.Booking.NEW,
+      Se.Set BeamB.isScheduled (Just newIsScheduled),
+      Se.Set BeamB.startTime newStartTime,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+-- Dynamic-offer reallocation reuses one booking but the assignment is per-driver: persist every
+-- driver/tier-dependent field from the re-priced in-mem booking so a cross-tier takeover (a multi-tier
+-- search try can reassign to a different tier) can't leave stale tier/toll/safety/distance. The caller
+-- builds the record (needs fare policy, config, and the tier lookup); this is the single write.
+updateReallocationResetDynamic ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Booking ->
+  UTCTime ->
+  m ()
+updateReallocationResetDynamic booking now =
+  updateOneWithKV
+    [ Se.Set BeamB.quoteId booking.quoteId,
+      Se.Set BeamB.estimatedFare booking.estimatedFare,
+      Se.Set BeamB.fareParametersId (getId booking.fareParams.id),
+      Se.Set BeamB.estimatedCongestionCharge booking.estimatedCongestionCharge,
+      Se.Set BeamB.commission booking.commission,
+      Se.Set BeamB.cancellationCommission booking.cancellationCommission,
+      Se.Set BeamB.paymentCharge booking.paymentCharge,
+      Se.Set BeamB.paymentChargeBearer booking.paymentChargeBearer,
+      Se.Set BeamB.isPetRide (Just booking.isPetRide),
+      Se.Set BeamB.vehicleVariant booking.vehicleServiceTier,
+      Se.Set BeamB.vehicleServiceTierName (Just booking.vehicleServiceTierName),
+      Se.Set BeamB.vehicleServiceTierSeatingCapacity booking.vehicleServiceTierSeatingCapacity,
+      Se.Set BeamB.vehicleServiceTierAirConditioned booking.vehicleServiceTierAirConditioned,
+      Se.Set BeamB.isAirConditioned booking.isAirConditioned,
+      Se.Set BeamB.isSafetyPlus (Just booking.isSafetyPlus),
+      Se.Set BeamB.distanceToPickup (realToFrac <$> booking.distanceToPickup),
+      Se.Set BeamB.tollCharges booking.tollCharges,
+      Se.Set BeamB.tollIds booking.tollIds,
+      Se.Set BeamB.tollNames booking.tollNames,
+      Se.Set BeamB.coinsRewardedOnGoldTierRide booking.coinsRewardedOnGoldTierRide,
+      Se.Set BeamB.preferenceMatchScore booking.preferenceMatchScore,
+      Se.Set BeamB.isAutoAccepted booking.isAutoAccepted,
+      Se.Set BeamB.dqDurationToPickup booking.dqDurationToPickup,
+      Se.Set BeamB.status booking.status,
+      Se.Set BeamB.startTime booking.startTime,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
+
 updateStop :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Text -> m ()
 updateStop bookingId stopLocationId = do
   now <- getCurrentTime

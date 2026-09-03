@@ -197,6 +197,7 @@ data RideAssignedReq = RideAssignedReq
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     fareBreakups :: Maybe [DFareBreakup],
+    mbUpdatedFare :: Maybe Price,
     driverTrackingUrl :: Maybe BaseUrl,
     isSafetyPlus :: Bool
   }
@@ -1557,7 +1558,15 @@ validateRideAssignedReq ::
   RideAssignedReq ->
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
-  booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+  bookingRaw <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+  -- Dynamic BPP reallocation re-prices per driver; the reassignment on_update carries the new fare. Apply it
+  -- to the rider booking (persist + local) so the payment intent / ledger below bill the new driver's fare.
+  booking <- case mbUpdatedFare of
+    Just updatedFare
+      | bookingRaw.status == DRB.AWAITING_REASSIGNMENT && updatedFare.amount /= bookingRaw.estimatedFare.amount -> do
+        QRB.updateEstimatedFare bookingRaw.id updatedFare.amount
+        pure bookingRaw {DRB.estimatedFare = updatedFare, DRB.estimatedTotalFare = updatedFare}
+    _ -> pure bookingRaw
   mbMerchant <- CQM.findById booking.merchantId
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let isSynchronousOnUpdateProcessing =
@@ -2021,5 +2030,6 @@ getRideAndBooking bppBookingId transactionId = do
       logInfo $ "Booking not found for bppBookingId: " <> bppBookingId.getId
       QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "TransactionId: " <> transactionId)
     Just booking -> return booking
-  ride <- QRide.findByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId: " <> bppBookingId.getId)
+  -- findOneByBookingId (createdAt DESC, limit 1) not findByRBId (unordered): a BPP single-booking reallocation reuses one booking across multiple rides, and the unordered pick was nondeterministic between the cancelled old ride and the live new one.
+  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId: " <> bppBookingId.getId)
   return (ride, booking)

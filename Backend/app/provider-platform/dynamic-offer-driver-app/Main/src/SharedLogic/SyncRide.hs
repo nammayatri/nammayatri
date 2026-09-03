@@ -27,6 +27,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.Text as T
 import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -127,22 +128,26 @@ fetchBookingCancelledInfo mbRide = do
   pure BookingCancelledInfo {..}
 
 findCancellationInfo :: Maybe DRide.Ride -> Flow (DBCR.CancellationSource, Maybe Text)
-findCancellationInfo (Just ride) = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId (Just ride.id)
-  case mbBookingCReason of
-    Just bookingCReason -> pure (bookingCReason.source, extractReasonCode <$> bookingCReason.reasonCode)
+findCancellationInfo (Just ride) =
+  -- Prefer the per-ride cancellation columns (correct under reallocation); fall back to BCR for old rides.
+  case ride.cancelledBy >>= (readMaybe . T.unpack) of
+    Just source -> pure (source, extractReasonCode <$> ride.cancellationReasonCode)
     Nothing -> do
-      mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId ride.bookingId
-      case mbBookingCReason' of
-        Just bookingCReason' -> pure (bookingCReason'.source, extractReasonCode <$> bookingCReason'.reasonCode)
+      mbBookingCReason <- runInReplica $ QBCReason.findByRideId (Just ride.id)
+      case mbBookingCReason of
+        Just bookingCReason -> pure (bookingCReason.source, extractReasonCode <$> bookingCReason.reasonCode)
         Nothing -> do
-          logWarning $
-            "No cancellation reason found for ride "
-              <> show ride.id
-              <> " and booking "
-              <> show ride.bookingId
-              <> "; Using ByMerchant as cancellation source"
-          pure (DBCReason.ByMerchant, Nothing)
+          mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId ride.bookingId
+          case mbBookingCReason' of
+            Just bookingCReason' -> pure (bookingCReason'.source, extractReasonCode <$> bookingCReason'.reasonCode)
+            Nothing -> do
+              logWarning $
+                "No cancellation reason found for ride "
+                  <> show ride.id
+                  <> " and booking "
+                  <> show ride.bookingId
+                  <> "; Using ByMerchant as cancellation source"
+              pure (DBCReason.ByMerchant, Nothing)
   where
     extractReasonCode (DTCR.CancellationReasonCode code) = code
 findCancellationInfo Nothing = pure (DBCReason.ByMerchant, Nothing)
