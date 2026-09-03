@@ -40,6 +40,7 @@ data OnUpdateBuildReq
   | DriverArrivedBuildReq DDriverArrivedReq
   | EstimateRepetitionBuildReq DEstimateRepetitionReq
   | QuoteRepetitionBuildReq DQuoteRepetitionReq
+  | RideBookingReallocationBuildReq DBookingReallocationReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
   | PhoneCallRequestBuildReq DPhoneCallRequestReq
@@ -75,6 +76,11 @@ data DEstimateRepetitionReq = DEstimateRepetitionReq
 data DQuoteRepetitionReq = DQuoteRepetitionReq
   { bookingDetails :: BookingDetails,
     newBookingId :: Id DRB.Booking,
+    cancellationSource :: SBCR.CancellationSource
+  }
+
+data DBookingReallocationReq = DBookingReallocationReq
+  { bookingDetails :: BookingDetails,
     cancellationSource :: SBCR.CancellationSource
   }
 

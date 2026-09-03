@@ -134,6 +134,49 @@ updateStatus rbId rbStatus = do
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updateReallocationReset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> UTCTime -> Bool -> Id Booking -> m ()
+updateReallocationReset newQuoteId newStartTime newIsScheduled bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.quoteId newQuoteId,
+      Se.Set BeamB.status Domain.Types.Booking.NEW,
+      Se.Set BeamB.isScheduled (Just newIsScheduled),
+      Se.Set BeamB.startTime newStartTime,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+-- Dynamic-offer reallocation reuses one booking but the fare is per-driver, so rewrite the fare fields
+-- from the new DriverQuote (tier/distance are search-level, so unchanged across drivers). Commission/
+-- paymentCharge are computed by the caller (needs fare policy + config). quoteId re-points the KV secondary key.
+updateReallocationResetDynamic ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DDQ.DriverQuote ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
+  UTCTime ->
+  Id Booking ->
+  m ()
+updateReallocationResetDynamic driverQuote commission cancellationCommission paymentCharge paymentChargeBearer newStartTime bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.quoteId driverQuote.id.getId,
+      Se.Set BeamB.estimatedFare driverQuote.estimatedFare,
+      Se.Set BeamB.fareParametersId (getId driverQuote.fareParams.id),
+      Se.Set BeamB.estimatedCongestionCharge driverQuote.fareParams.congestionCharge,
+      Se.Set BeamB.commission commission,
+      Se.Set BeamB.cancellationCommission cancellationCommission,
+      Se.Set BeamB.paymentCharge paymentCharge,
+      Se.Set BeamB.paymentChargeBearer paymentChargeBearer,
+      Se.Set BeamB.isPetRide (Just (isJust driverQuote.fareParams.petCharges)),
+      Se.Set BeamB.status Domain.Types.Booking.NEW,
+      Se.Set BeamB.startTime newStartTime,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 updateStop :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Text -> m ()
 updateStop bookingId stopLocationId = do
   now <- getCurrentTime

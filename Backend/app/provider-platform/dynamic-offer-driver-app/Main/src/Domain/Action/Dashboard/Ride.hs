@@ -532,9 +532,10 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId (Just rideId) -- it can be Nothing if cancelled by user
       else pure Nothing
+  -- per-ride columns preferred (correct under reallocation), BCR as fallback for old rides
   let cancellationReason =
-        (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
-  let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+        (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) $ maybe (join $ mbBCReason <&> (.reasonCode)) Just ride.cancellationReasonCode
+  let cancelledBy = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just (ride.cancelledBy >>= (readMaybe . T.unpack))
   let cancelledTime = case ride.status of
         DRide.CANCELLED -> Just ride.updatedAt
         _ -> Nothing

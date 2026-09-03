@@ -618,7 +618,10 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         cancellationFaultVerdict = Nothing,
         pickupBehaviour = Nothing,
         pickupDarkSeconds = Nothing,
-        pickupFaultSeconds = Nothing
+        pickupFaultSeconds = Nothing,
+        cancelledBy = Nothing,
+        cancellationReasonCode = Nothing,
+        cancellationAdditionalInfo = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
