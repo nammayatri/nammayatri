@@ -26,6 +26,7 @@ module Domain.Action.Beckn.OnUpdate
     BreakupPriceInfo (..),
     EstimateRepetitionReq (..),
     QuoteRepetitionReq (..),
+    BookingReallocationReq (..),
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
@@ -123,7 +124,7 @@ data OnUpdateReq
   | OURideStartedReq Common.RideStartedReq
   | OURideCompletedReq Common.RideCompletedReq
   | OUBookingCancelledReq Common.BookingCancelledReq
-  | OUBookingReallocationReq BookingReallocationReq -- not used
+  | OUBookingReallocationReq BookingReallocationReq
   | OUDriverArrivedReq Common.DriverArrivedReq
   | OUEstimateRepetitionReq EstimateRepetitionReq
   | OUQuoteRepetitionReq QuoteRepetitionReq
@@ -491,11 +492,16 @@ onUpdate = \case
   OUValidatedFarePaidReq req -> Common.farePaidReqHandler req
   OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
+    now <- getCurrentTime
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
     void $ QRB.updateStatus booking.riderId booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
+    -- the booking is reused, so the rider is waiting for a driver on it again; otherwise the flow status keeps pointing at the departed driver's assignment
+    let flowStatus = if booking.isScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = addUTCTime 180 now, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
+    void $ QPFS.updateStatus booking.riderId flowStatus
+    SharedCancel.releaseCancellationLock booking.transactionId
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     Notify.notifyOnBookingReallocated booking
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
@@ -790,13 +796,13 @@ validateRequest = \case
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     booking <- QRB.findById bookingUpdateRequest.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateRequest.bookingId.getId)
     when (booking.status == DRB.COMPLETED || booking.status == DRB.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed or cancelled booking."
-    ride <- QRide.findByRBId booking.id
+    ride <- QRide.findActiveByRBId booking.id
     return $ OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..}
   OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq {..} -> do
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     booking <- QRB.findById bookingUpdateRequest.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateRequest.bookingId.getId)
     when (booking.status == DRB.COMPLETED || booking.status == DRB.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed or cancelled booking."
-    ride <- QRide.findByRBId booking.id
+    ride <- QRide.findActiveByRBId booking.id
     return $ OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..}
   OUTollCrossedEventReq TollCrossedEventReq {..} -> do
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
@@ -812,7 +818,7 @@ validateRequest = \case
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
-    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId
+    ride <- runInReplica $ QRide.findOneByBookingId bookingUpdateReqDetails.bookingId
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
   OUDestinationReachedReq DestinationReachedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)

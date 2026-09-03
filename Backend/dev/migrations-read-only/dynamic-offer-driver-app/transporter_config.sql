@@ -1248,3 +1248,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN actual_ride_dur
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN approx_ride_distance_diff_threshold DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_distance_diff_threshold_if_within_pickup_drop DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bpp_reallocation boolean ;
