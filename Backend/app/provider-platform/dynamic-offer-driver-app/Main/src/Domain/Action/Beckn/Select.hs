@@ -32,7 +32,6 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RiderDetails as DRD
@@ -44,7 +43,6 @@ import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -61,7 +59,6 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -235,18 +232,22 @@ validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare = do
     throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
   quote' <- case mbNegotiatedFare of
     Nothing -> return quote
-    Just negotiatedFare -> applyNegotiatedFare searchReq.merchantOperatingCityId quoteId quote negotiatedFare
+    Just negotiatedFare -> applyNegotiatedFare quoteId quote negotiatedFare
   return (merchant, searchReq, quote')
 
 -- Validate the negotiated fare and update fare policy and quotes according to that
-applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DQuote.Quote -> HighPrecMoney -> Flow DQuote.Quote
-applyNegotiatedFare merchantOpCityId quoteId quote negotiatedFare = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  let negotiationFareMinTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMinTolerancePct
-      negotiationFareMaxTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMaxTolerancePct
+applyNegotiatedFare :: Id DQuote.Quote -> DQuote.Quote -> HighPrecMoney -> Flow DQuote.Quote
+applyNegotiatedFare quoteId quote negotiatedFare = do
+  -- Tolerance now lives on the quote's own FarePolicy (per-vehicle-tier), not
+  -- TransporterConfig (city-level) -- a Sedan and an Auto on the same city can
+  -- negotiate different bands. Defaults to +-10% when unset on the policy.
+  let negotiationFareMinTolerancePct = fromMaybe 10 (quote.farePolicy >>= (.negotiationFareMinTolerancePct))
+      negotiationFareMaxTolerancePct = fromMaybe 10 (quote.farePolicy >>= (.negotiationFareMaxTolerancePct))
+      negotiationFareMinToleranceFraction = fromIntegral negotiationFareMinTolerancePct / 100
+      negotiationFareMaxToleranceFraction = fromIntegral negotiationFareMaxTolerancePct / 100
       currentFare = quote.estimatedFare
-      minAcceptable = currentFare * (1 - realToFrac negotiationFareMinTolerancePct)
-      maxAcceptable = currentFare * (1 + realToFrac negotiationFareMaxTolerancePct)
+      minAcceptable = currentFare * (1 - negotiationFareMinToleranceFraction)
+      maxAcceptable = currentFare * (1 + negotiationFareMaxToleranceFraction)
   unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $ -- We can discuss on this comparisation logic
     throwError $ NegotiatedFareNotAcceptable quoteId.getId
   let negotiationDelta = negotiatedFare - currentFare

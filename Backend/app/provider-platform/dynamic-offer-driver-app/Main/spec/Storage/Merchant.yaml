@@ -1475,8 +1475,6 @@ TransporterConfig:
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
     metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
     enableOndcScheduledRideSupport: Maybe Bool # City-level gate for the MSIL-style Quote-based (static/scheduled) /select capability
-    negotiationFareMinTolerancePct: Maybe Double # Lower bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
-    negotiationFareMaxTolerancePct: Maybe Double # Upper bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
 
   beamType:
     currency: Maybe Currency
@@ -1890,8 +1888,6 @@ TransporterConfig:
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
     enableOndcScheduledRideSupport: boolean
-    negotiationFareMinTolerancePct: double precision
-    negotiationFareMaxTolerancePct: double precision
 
   default:
     mediaFileUrlPattern: |-
@@ -2082,8 +2078,6 @@ TransporterConfig:
     useCategoryBasedVerificationPriorityList: "true"
     forceDirectCalling: "false"
     enableOndcScheduledRideSupport: "false"
-    negotiationFareMinTolerancePct: "0.1"
-    negotiationFareMaxTolerancePct: "0.1"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:

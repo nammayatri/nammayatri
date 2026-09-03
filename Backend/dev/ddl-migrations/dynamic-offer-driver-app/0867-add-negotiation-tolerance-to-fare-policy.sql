@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN negotiation_fare_min_tolerance_pct integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN negotiation_fare_max_tolerance_pct integer;
