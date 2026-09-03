@@ -674,6 +674,7 @@ data TriggerSpecialZoneNotifyJobData = TriggerSpecialZoneNotifyJobData
   { triggerRequestId :: Text,
     gateId :: Text,
     vehicleType :: Text,
+    vehicleName :: Maybe Text,
     driversToNotify :: Int, -- required-accepts target the retry loop tops up toward
     forceNotifyDriverIds :: Maybe [Text],
     isDemandHigh :: Maybe Bool,

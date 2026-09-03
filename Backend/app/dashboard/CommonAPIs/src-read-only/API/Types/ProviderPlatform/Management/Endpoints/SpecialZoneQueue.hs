@@ -77,7 +77,8 @@ data TriggerSpecialZoneQueueNotifyReq = TriggerSpecialZoneQueueNotifyReq
     vehicleType :: Kernel.Prelude.Text,
     driversToNotify :: Kernel.Prelude.Int,
     forceNotifyDriverIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    isDemandHigh :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isDemandHigh :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
