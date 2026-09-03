@@ -551,7 +551,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 webhookUrl = req.webhookUrl,
                 paymentFilter = Nothing,
                 udf1 = req.udf1,
-                udf2 = req.udf2
+                PInterface.udf2 = req.udf2
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime

@@ -15,13 +15,12 @@
 module API.Beckn.Search (API, handler) where
 
 import qualified Beckn.ACL.Search as ACL
-import qualified Beckn.OnDemand.Transformer.MSIL.OnSearch as MSILOnSearch
-import qualified Beckn.OnDemand.Transformer.MSIL.Search as MSILSearch
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSearch as OSROnSearch
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Search as OSRSearch
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
-import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Aeson.Text as A
@@ -50,8 +49,6 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.GatewayDispatch as GatewayDispatch
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
-import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -119,19 +116,12 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
 
-        -- Pilot: cities with enableOndcScheduledRideSupport (e.g. MSIL) get
-        -- isSchedule decided from the incoming category descriptor code,
-        -- and the BAP's declared BAP_TERMS.STATIC_TERMS (if any) verified+stored
-        -- against its BapMetadata row (so it can be echoed back later, e.g. at
-        -- on_confirm) -- both done in one pass by
-        -- Beckn.OnDemand.Transformer.MSIL.Search.msilParser; everyone else's
-        -- dSearchReq is passed on exactly as Layer 1 (ACL.buildSearchReqV2) built
-        -- it, unchanged.
+        -- Pilot merchants get isSchedule derived from the category code and the BAP's STATIC_TERMS verified/stored, in one pass.
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
         let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
         dSearchReq <-
           if isOndcScheduledRideSupportEnabled
-            then MSILSearch.msilParser reqV2.searchReqMessage dSearchReq'
+            then OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq'
             else pure dSearchReq'
         DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
 
@@ -141,21 +131,10 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
             fork "search request processing" $
               Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
                 (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
-                -- Same pilot check, applied to the already-built on_search reply
-                -- (Beckn.OnDemand.Transformer.MSIL.OnSearch.msilOnSearchConverter) instead
-                -- of touching anything inside SRP.processSearchRequest's own builder chain.
-                -- Building: BPP_TERMS goes on message.catalog.tags -- on_search has no
-                -- Order (Catalog -> Provider only), so it can't use order.tags like
-                -- on_select/on_init/on_confirm do.
+                -- Same pilot check, patches the already-built on_search reply's catalog.tags with BPP_TERMS.
                 onSearchReq <-
                   if isOndcScheduledRideSupportEnabled
-                    then do
-                      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
-                      mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id dSearchReq.bapId) Domain.MOBILITY
-                      pure $
-                        MSILOnSearch.msilPatchCatalogCompliance $
-                          MSILOnSearch.msilPatchScheduledLocations dSearchRes $
-                            MSILOnSearch.msilPatchProviderFulfillmentTypes (MSILOnSearch.msilAddBppTerms mbBapMetadata bppConfig (MSILOnSearch.msilOnSearchConverter dSearchRes onSearchReq'))
+                    then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id dSearchReq.bapId dSearchRes onSearchReq'
                     else pure onSearchReq'
                 internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext

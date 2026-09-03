@@ -179,7 +179,7 @@ data DSearchReq = DSearchReq
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
-    -- | Nothing from the base parser -- only the MSIL layer (Beckn.OnDemand.Transformer.MSIL.Search.msilParser)
+    -- | Nothing from the base parser -- only the ONDC-scheduled-ride layer (Beckn.OnDemand.Transformer.OndcScheduledRide.Search.ondcScheduledRideParser)
     -- ever sets this, from the incoming category descriptor code. Everyone else's search
     -- carries Nothing all the way through, unread.
     isSchedule :: Maybe Bool,
@@ -547,8 +547,8 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             domain = Just $ show Domain.MOBILITY,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
-            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
-            offlineContract = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
+            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.OndcScheduledRide.Common (ONDC scheduled-ride pilot only)
+            offlineContract = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.OndcScheduledRide.Common (ONDC scheduled-ride pilot only)
             supportEmail = Nothing,
             supportPhone = Nothing,
             supportUrl = Nothing,

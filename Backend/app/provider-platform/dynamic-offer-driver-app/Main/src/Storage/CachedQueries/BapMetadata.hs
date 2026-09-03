@@ -43,7 +43,7 @@ findBySubscriberIdAndDomain' subscriberId domain =
     Just a -> return $ Just a
     Nothing -> flip whenJust (cacheBapMetadata subscriberId domain) /=<< Queries.findBySubscriberIdAndDomain subscriberId (Just domain)
 
--- | MSIL: store the BAP's own declared BAP_TERMS.STATIC_TERMS URL (parsed at
+-- | ONDC scheduled-ride pilot: store the BAP's own declared BAP_TERMS.STATIC_TERMS URL (parsed at
 -- /search, /init, /confirm) against its BapMetadata row. Update-only, no
 -- insert -- if no row exists yet for this subscriber+domain (e.g. this is the
 -- very first request ever seen from a brand-new BAP, before Layer 1's own
