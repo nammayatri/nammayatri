@@ -61,7 +61,6 @@ import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.LedgerAdjustmentRequest as QLedgerAdjustmentRequest
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 mkAdminName :: Text -> Maybe DP.Person -> Text
@@ -83,7 +82,7 @@ ledgerAdjustmentSubmit ::
   Text ->
   API.SubmitLedgerAdjustmentReq ->
   Flow APISuccess
-ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person requestorId) $ do
+ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = do
   adjustmentRequestId <- generateGUID
   let personId = cast @Dashboard.Common.Person @DP.Person req.personId
       category = castAdjustmentCategory req.category
@@ -683,7 +682,7 @@ ledgerAdjustmentList ::
   Maybe UTCTime ->
   Text ->
   Flow API.LedgerAdjustmentListRes
-ledgerAdjustmentList merchantShortId opCity mbLimit mbOffset mbAdjustmentRequestId mbStatus mbPersonId mbExcludeCurrentAdminMaker mbCategory mbDirection mbReferenceType mbReferenceId mbAdminMakerId mbAdminCheckerId mbFrom mbTo requestorId = ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person requestorId) $ do
+ledgerAdjustmentList merchantShortId opCity mbLimit mbOffset mbAdjustmentRequestId mbStatus mbPersonId mbExcludeCurrentAdminMaker mbCategory mbDirection mbReferenceType mbReferenceId mbAdminMakerId mbAdminCheckerId mbFrom mbTo requestorId = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   merchant <- SMerchant.findMerchantByShortId merchantShortId
@@ -756,7 +755,7 @@ ledgerAdjustmentApproveAndPost ::
   Text ->
   Flow APISuccess
 ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId requestorId requestorName =
-  withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) . ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person requestorId) $ do
+  withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) $ do
     merchant <- SMerchant.findMerchantByShortId merchantShortId
     merchantOpCity <-
       CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1116,7 +1115,7 @@ ledgerAdjustmentReject ::
   Text ->
   Flow APISuccess
 ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName =
-  withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) . ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person requestorId) $ do
+  withLogTag ("adjustmentRequestId_" <> adjustmentRequestId.getId) $ do
     merchant <- SMerchant.findMerchantByShortId merchantShortId
     merchantOpCity <-
       CQMOC.findByMerchantIdAndCity merchant.id opCity

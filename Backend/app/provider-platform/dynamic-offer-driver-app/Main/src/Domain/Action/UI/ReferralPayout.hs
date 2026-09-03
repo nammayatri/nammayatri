@@ -205,17 +205,7 @@ getPayoutRegistration ::
     ) ->
     Environment.Flow DD.ClearDuesRes
   )
-getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
-  getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId)
-
-getPayoutRegistrationWithActor ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    Environment.Flow DD.ClearDuesRes
-  )
-getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) = do
+getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let isFleetOwner = DCommon.checkFleetOwnerRole person.role

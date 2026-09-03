@@ -22,7 +22,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 postPayoutAccount ::
@@ -31,7 +30,7 @@ postPayoutAccount ::
   Text ->
   Common.PayoutAccountReq ->
   Flow Common.PayoutAccountResp
-postPayoutAccount merchantShortId opCity requestorId req = ActorInfo.withDashboardPersonIdActorInfo (Id @DP.Person requestorId) $ do
+postPayoutAccount merchantShortId opCity requestorId req = do
   let fleetOwnerId = fromMaybe requestorId req.fleetOwnerId
   FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
@@ -58,7 +57,7 @@ postPayoutAccount merchantShortId opCity requestorId req = ActorInfo.withDashboa
     Common.UPI -> do
       unless transporterConfig.fleetUpiPayoutEnabled $
         throwError $ InvalidRequest "UPI payout registration is not enabled for this city"
-      upiReg <- MDR.getDriverRegistrationPayoutRegistrationWithActor merchantShortId opCity driverId
+      upiReg <- MDR.getDriverRegistrationPayoutRegistration merchantShortId opCity driverId (Just requestorId)
       pure $
         Common.PayoutAccountResp
           { accountType = Common.UPI,
