@@ -57,13 +57,9 @@ pipeline {
             // Login
             sh 'cat $GCP_KEY_FILE | docker login -u _json_key --password-stdin https://asia-south1-docker.pkg.dev'
 
-            // Tag and push (commit-hash tag)
+            // Tag and push — commit-hash tag only, no :latest
             sh "docker tag ${env.IMAGE_NAME}:staging-gcp ${env.GCP_AR}/${env.IMAGE_NAME}/${env.IMAGE_NAME}:${env.LAST_COMMIT_HASH}"
             sh "docker push ${env.GCP_AR}/${env.IMAGE_NAME}/${env.IMAGE_NAME}:${env.LAST_COMMIT_HASH}"
-
-            // Latest tag
-            sh "docker tag ${env.IMAGE_NAME}:staging-gcp ${env.GCP_AR}/${env.IMAGE_NAME}/${env.IMAGE_NAME}:latest"
-            sh "docker push ${env.GCP_AR}/${env.IMAGE_NAME}/${env.IMAGE_NAME}:latest"
           }
         }
       }
