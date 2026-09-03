@@ -42,6 +42,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import Kernel.External.Settlement.Types (SettlementService)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -663,7 +664,11 @@ type instance JobContent 'ConnectAccountChargeDeduction = ConnectAccountChargeDe
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    juspayServiceName :: Maybe ServiceName
+    juspayServiceName :: Maybe ServiceName,
+    settlementProvider :: Maybe SettlementService,
+    startTime :: Maybe UTCTime,
+    endTime :: Maybe UTCTime,
+    scheduleNextJob :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
