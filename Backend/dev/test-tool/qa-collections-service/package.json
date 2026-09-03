@@ -1,0 +1,9 @@
+{
+  "name": "qa-collections-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend-side Newman execution engine for the QA Collections dashboard tab",
+  "dependencies": {
+    "newman": "^6.2.2"
+  }
+}
