@@ -516,6 +516,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.Settlement.Lua
       SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
       SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
       SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch
