@@ -54,6 +54,7 @@ import Data.Time (timeOfDayToTime)
 import Data.Time.Calendar (addDays, toGregorian)
 import Data.Time.Clock (UTCTime (..), secondsToDiffTime)
 import Data.Time.LocalTime (TimeOfDay (..), timeToTimeOfDay)
+import qualified Database.Redis as RawRedis
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig as DMSC
@@ -79,6 +80,7 @@ import qualified Lib.Finance.Storage.Queries.JournalEntryTransaction as QJETExtr
 import qualified Lib.Finance.Storage.Queries.SapJournalEntry as QSJE
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
+import qualified SharedLogic.Allocator.Jobs.Settlement.Lua as Lua
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Tools.Error
 
@@ -457,36 +459,25 @@ padTwo n
 sapBatchIdCounterKey :: Text
 sapBatchIdCounterKey = "SAPReportDispatch:BatchIdCounter"
 
-sapBatchIdLockKey :: Text
-sapBatchIdLockKey = "SAPReportDispatch:BatchIdCounter:Lock"
-
 getNextBatchId :: (BeamFlow m r, CacheFlow m r) => m Text
-getNextBatchId = go (10 :: Int)
-  where
-    go retriesLeft = do
-      mbExisting <- Hedis.get @Integer sapBatchIdCounterKey
-      case mbExisting of
-        Just _ -> show <$> Hedis.incr sapBatchIdCounterKey
-        Nothing -> do
-          mbResult <- Hedis.whenWithLockRedisAndReturnValue sapBatchIdLockKey 10 $ do
-            mbExisting' <- Hedis.get @Integer sapBatchIdCounterKey
-            case mbExisting' of
-              Just _ -> Hedis.incr sapBatchIdCounterKey
-              Nothing -> do
-                mbLatestBatchId <- QSJE.findLatestBatchId
-                case mbLatestBatchId >>= (readMaybe . T.unpack) of
-                  Just (dbMax :: Integer) -> do
-                    void $ Hedis.set sapBatchIdCounterKey dbMax
-                    Hedis.incr sapBatchIdCounterKey
-                  Nothing -> Hedis.incr sapBatchIdCounterKey
-          case mbResult of
-            Right val -> pure $ show val
-            Left ()
-              | retriesLeft > 0 -> do
-                threadDelay 1000000
-                go (retriesLeft - 1)
-              | otherwise ->
-                throwError $ InternalError "Failed to acquire SAP batch ID counter lock after retries"
+getNextBatchId = do
+  prefKey <- Hedis.buildKey sapBatchIdCounterKey
+  mbVal <-
+    Hedis.runHedis
+      ( RawRedis.eval Lua.incrIfExistsScript [prefKey] [] ::
+          RawRedis.Redis (Either RawRedis.Reply (Maybe Integer))
+      )
+  case mbVal of
+    Just n -> pure $ show n
+    Nothing -> do
+      seedVal <- getSeedFromDb
+      void $ Hedis.setNx sapBatchIdCounterKey seedVal
+      show <$> Hedis.incr sapBatchIdCounterKey
+
+getSeedFromDb :: (BeamFlow m r) => m Integer
+getSeedFromDb = do
+  mbLatestBatchId <- QSJE.findLatestBatchId
+  pure $ fromMaybe 0 (mbLatestBatchId >>= (readMaybe . T.unpack))
 
 -- ---------------------------------------------------------------------------
 -- Persist + SAP API
