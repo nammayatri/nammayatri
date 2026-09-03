@@ -856,6 +856,23 @@ buildJourneyAndLeg booking fareParameters = do
               merchantOperatingCityId = Just booking.merchantOperatingCityId
             }
 
+    let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+        mbRouteStation = listToMaybe =<< mbRouteStations
+    mbTrip <-
+      case mbRouteStation of
+        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+        Nothing -> return Nothing
+    let mbFromTripStop = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode
+        mbToTripStop = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode
+        legStart = fromMaybe booking.createdAt booking.startTime
+        mbLegEnd =
+          ( do
+              fromStop <- mbFromTripStop
+              toStop <- mbToTripStop
+              pure $ addUTCTime (fromIntegral (toStop.scheduledArrival - fromStop.scheduledArrival)) legStart
+          )
+            <|> (duration <&> \d -> addUTCTime (fromIntegral (getSeconds d)) booking.createdAt)
+
     let journey =
           DJ.Journey
             { id = journeyGuid,
@@ -871,8 +888,8 @@ buildJourneyAndLeg booking fareParameters = do
               merchantId = booking.merchantId,
               status = DJ.CONFIRMED,
               riderId = booking.riderId,
-              startTime = Just booking.createdAt,
-              endTime = Nothing,
+              startTime = Just legStart,
+              endTime = mbLegEnd,
               merchantOperatingCityId = booking.merchantOperatingCityId,
               createdAt = now,
               updatedAt = now,
@@ -893,22 +910,15 @@ buildJourneyAndLeg booking fareParameters = do
     journeyRouteDetailsId <- generateGUID
     let estimatedPrice = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
 
-    let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
-        mbRouteStation = listToMaybe =<< mbRouteStations
-
     routeLiveInfo <-
       case (mbRouteStation, booking.vehicleNumber) of
         (Just routeStation, Just vehicleNumber) -> JourneyUtils.getLiveRouteInfo integratedBppConfig vehicleNumber routeStation.code
         _ -> return Nothing
 
-    -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups don't have them),
-    -- so fetch the route's example trip and read the per-stop platform code from it.
-    mbTrip <-
-      case mbRouteStation of
-        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
-        Nothing -> return Nothing
-    let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
-        toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+    -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups
+    -- don't have them); read them from the example trip fetched above.
+    let fromStopPlatformCode = mbFromTripStop >>= (.platformCode)
+        toStopPlatformCode = mbToTripStop >>= (.platformCode)
         fromStopDetail =
           MultiModalStopDetails
             { stopCode = Just booking.fromStationCode,
@@ -935,10 +945,8 @@ buildJourneyAndLeg booking fareParameters = do
               duration = duration,
               agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just integratedBppConfig.feedKey},
               fromArrivalTime = Nothing,
-              fromDepartureTime = Just booking.createdAt,
-              toArrivalTime =
-                duration >>= \duration' ->
-                  Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+              fromDepartureTime = Just legStart,
+              toArrivalTime = mbLegEnd,
               toDepartureTime = Nothing,
               fromStopDetails = Just fromStopDetail,
               toStopDetails = Just toStopDetail,
@@ -952,17 +960,15 @@ buildJourneyAndLeg booking fareParameters = do
                       endLocationLon = toLocation.lon,
                       frequency = Nothing,
                       fromArrivalTime = Nothing,
-                      fromDepartureTime = Just booking.createdAt,
+                      fromDepartureTime = Just legStart,
                       fromStopCode = Just booking.fromStationCode,
                       fromStopGtfsId = Just booking.fromStationCode,
                       fromStopName = booking.fromStationName,
                       fromStopPlatformCode = fromStopPlatformCode,
                       id = journeyRouteDetailsId,
                       journeyLegId = journeyLegGuid.getId,
-                      legStartTime = Just booking.createdAt,
-                      legEndTime =
-                        duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                      legStartTime = Just legStart,
+                      legEndTime = mbLegEnd,
                       routeCode = mbRouteStation <&> (.code),
                       routeColorCode = mbRouteStation >>= (.color),
                       routeColorName = mbRouteStation >>= (.color),
@@ -973,9 +979,7 @@ buildJourneyAndLeg booking fareParameters = do
                       startLocationLat = fromLocation.lat,
                       startLocationLon = fromLocation.lon,
                       subLegOrder = Just 1,
-                      toArrivalTime =
-                        duration >>= \duration' ->
-                          Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                      toArrivalTime = mbLegEnd,
                       toDepartureTime = Nothing,
                       toStopCode = Just booking.toStationCode,
                       toStopGtfsId = Just booking.toStationCode,

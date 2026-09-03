@@ -1016,6 +1016,12 @@ data RouteStopMappingByStopCodesReq = RouteStopMappingByStopCodesReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data RouteStopMappingByRouteCodesReq = RouteStopMappingByRouteCodesReq
+  { routeCodes :: [Text],
+    gtfsId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data ExtraInfo = ExtraInfo
   { fareStageNumber :: Maybe Text,
     providerStopCode :: Maybe Text,

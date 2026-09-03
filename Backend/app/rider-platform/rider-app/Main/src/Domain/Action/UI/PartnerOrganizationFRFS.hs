@@ -431,7 +431,7 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
 
 getRoutesByCity :: PartnerOrganization -> Context.City -> Spec.VehicleCategory -> Flow [FRFSTypes.FRFSRouteAPI]
 getRoutesByCity partnerOrg city vehicleType =
-  DFRFSTicketService.getFrfsRoutes (Nothing, partnerOrg.merchantId) Nothing (Just DIBC.PARTNERORG) Nothing city vehicleType
+  DFRFSTicketService.getFrfsRoutes (Nothing, partnerOrg.merchantId) Nothing Nothing (Just DIBC.PARTNERORG) Nothing Nothing city vehicleType
 
 getStationsByRouteCode :: PartnerOrganization -> Context.City -> Spec.VehicleCategory -> Maybe Text -> Flow [FRFSTypes.FRFSStationAPI]
 getStationsByRouteCode partnerOrg city vehicleType mbRouteCode =
