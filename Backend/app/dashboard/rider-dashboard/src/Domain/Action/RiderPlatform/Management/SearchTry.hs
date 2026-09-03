@@ -64,5 +64,7 @@ postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req = do
           searchRepeatType = item.searchRepeatType,
           tripCategory = item.tripCategory,
           createdAt = item.createdAt,
-          validTill = item.validTill
+          validTill = item.validTill,
+          fromLat = item.fromLat,
+          fromLon = item.fromLon
         }
