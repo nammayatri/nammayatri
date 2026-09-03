@@ -3,6 +3,7 @@ module Domain.Action.RiderPlatform.AppManagement.Payment
     getPaymentRefundRequestInfo,
     postPaymentRefundRequestRespond,
     postPaymentRefundRequestInitiate,
+    postPaymentRefundRequestBookingInitiate,
     getPaymentFareBreakup,
   )
 where
@@ -10,6 +11,7 @@ where
 import qualified API.Client.RiderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified "rider-app" API.Types.UI.RidePayment
+import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.RefundRequest
@@ -59,3 +61,9 @@ getPaymentFareBreakup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant
 getPaymentFareBreakup merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.paymentDSL.getPaymentFareBreakup) rideId
+
+postPaymentRefundRequestBookingInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Booking -> Environment.Flow API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
+postPaymentRefundRequestBookingInitiate merchantShortId opCity apiTokenInfo bookingId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.paymentDSL.postPaymentRefundRequestBookingInitiate) bookingId)

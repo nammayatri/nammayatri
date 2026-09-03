@@ -167,7 +167,7 @@ mkBackendHandle merchantId mocId _ctx =
            in preferAuto (\qe -> show qe.vehicleVariant) qs & map toBotQuote,
       confirmQuote = \auth quoteId ->
         runBot "confirmQuote" $ do
-          res <- UIConfirm.confirm' (Id auth.personId, merchantId) (Id quoteId) Nothing Nothing Nothing Nothing Nothing
+          res <- UIConfirm.confirm' (Id auth.personId, merchantId) (Id quoteId) Nothing Nothing Nothing Nothing Nothing Nothing
           pure res.bookingId.getId,
       selectEstimate = \auth estimateId ->
         runBot "selectEstimate" $ do

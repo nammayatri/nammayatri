@@ -191,6 +191,7 @@ processAssignment req = do
               paymentInstrument = searchRequest.selectedPaymentInstrument,
               merchant = merchant,
               requiresPaymentBeforeConfirm = False,
+              supportsBookingDeposit = Nothing,
               mbOneShotDetails =
                 Just
                   SConfirm.OneShotConfirmDetails

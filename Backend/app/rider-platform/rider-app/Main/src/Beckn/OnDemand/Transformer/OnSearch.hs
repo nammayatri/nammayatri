@@ -94,6 +94,8 @@ tfQuotesInfo provider fulfillments validTill item = do
       isCustomerPrefferedSearchRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsCustomerPrefferedSearchRoute item
       isBlockedRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsBlockedRoute item
       tollChargesInfo_ = Beckn.OnDemand.Utils.OnSearch.buildTollChargesInfo item currency
+      -- Deposit, not fare: kept out of estimatedTotalFare on purpose.
+      bookingDeposit_ = (.amount) <$> Beckn.OnDemand.Utils.OnSearch.getBookingDeposit item.itemTags currency
       estimatedPickupDuration = Beckn.OnDemand.Utils.OnSearch.getestimatedPickupDuration item
       vehicleIconUrl = Beckn.OnDemand.Utils.OnSearch.getVehicleIconUrl item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
@@ -213,6 +215,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_,
               isBlockedRoute = isBlockedRoute_,
               tollChargesInfo = tollChargesInfo_,
+              bookingDeposit = bookingDeposit_,
               estimatedPickupDuration = estimatedPickupDuration,
               isAirConditioned = isAirConditioned_,
               driverCancellationNotAllowed = driverCancellationNotAllowed_,

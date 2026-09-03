@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.AppManagement.Payment
     getPaymentRefundRequestInfo,
     postPaymentRefundRequestRespond,
     postPaymentRefundRequestInitiate,
+    postPaymentRefundRequestBookingInitiate,
     getPaymentFareBreakup,
   )
 where
@@ -12,6 +13,7 @@ import qualified API.Types.UI.RidePayment
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common as Common
 import qualified Domain.Action.UI.RidePayment as DRidePayment
+import qualified "this" Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified "this" Domain.Types.Person as DP
@@ -31,11 +33,14 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.BookingPayment as QBookingPayment
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -83,20 +88,20 @@ getPaymentRefundRequestInfo ::
   Flow Common.RefundRequestInfoResp
 getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds = do
   refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
-  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
+  mbRideId <- SPayment.getRideIdForOrder refundRequest.orderId
   let refundRequestInfoHandler =
         DRidePayment.RefundRequestInfoHandler
           { validateRefundRequestOwner = \rr -> do
               merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
               merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
               unless (rr.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId),
-            mkRefundRequestInfoResp = mkRefundRequestInfoResp rideId,
+            mkRefundRequestInfoResp = mkRefundRequestInfoResp mbRideId,
             fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.") -- required only for admin
           }
   DRidePayment.fetchPaymentRefundRequestInfo @Common.RefundRequestInfoResp refundRequestInfoHandler refreshRefunds refundRequest
 
 mkRefundRequestInfoResp ::
-  Id DRide.Ride ->
+  Maybe (Id DRide.Ride) ->
   DRefundRequest.RefundRequest ->
   Maybe Text ->
   Maybe Kernel.External.Payment.Interface.RefundStatus ->
@@ -150,50 +155,84 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
         throwError (InvalidRequest "Refund was failed. Set retryRefund flag for new attempt")
       initiateRefunds refundRequest
 
-    initiateRefunds refundRequest = do
-      logInfo $ "Refund request approved by admin: orderId: " <> refundRequest.orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
-      -- Approved breakdown: admin's override if supplied, else the prior approval (retry) or the customer's requested set.
-      let approvedComps = req.refundComponents <&> map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component})
-          -- like the components, fall back to the prior approval on retry so an omitted flag can't flip absorb->clawback
-          deductFromDriver = req.deductFromDriver <|> refundRequest.deductFromDriver
-      comps <- (approvedComps <|> refundRequest.approvedRefundedComponents <|> refundRequest.requestedRefundComponents) & fromMaybeM (InvalidRequest "No refund components to approve")
-      when (null comps) $ throwError (InvalidRequest "No refund components to approve")
-      rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
-      ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      -- Per-city kill-switch: approving/retrying is rejected too, so rows predating a
-      -- city being switched off can't be pushed through.
-      riderConfig <-
-        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-          >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      unless (fromMaybe False riderConfig.enablePaymentRefunds) $
-        throwError (InvalidRequest "Payment refunds are not enabled for this city")
-      -- Component-wise ledger cap — same basis as customer create / admin initiate.
-      DRidePayment.validateRefundComponents rideId booking (map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = PriceAPIEntity c.amount refundRequest.currency}) comps)
+    initiateRefunds refundRequest
+      | refundRequest.refundPurpose == DRefundRequest.BOOKING_DEPOSIT = initiateDepositRefunds refundRequest
+      | otherwise = do
+        logInfo $ "Refund request approved by admin: orderId: " <> refundRequest.orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
+        -- Approved breakdown: admin's override if supplied, else the prior approval (retry) or the customer's requested set.
+        let approvedComps = req.refundComponents <&> map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component})
+            -- like the components, fall back to the prior approval on retry so an omitted flag can't flip absorb->clawback
+            deductFromDriver = req.deductFromDriver <|> refundRequest.deductFromDriver
+        comps <- (approvedComps <|> refundRequest.approvedRefundedComponents <|> refundRequest.requestedRefundComponents) & fromMaybeM (InvalidRequest "No refund components to approve")
+        when (null comps) $ throwError (InvalidRequest "No refund components to approve")
+        rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
+        ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+        booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+        -- Per-city kill-switch: approving/retrying is rejected too, so rows predating a
+        -- city being switched off can't be pushed through.
+        riderConfig <-
+          getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+            >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        unless (fromMaybe False riderConfig.enablePaymentRefunds) $
+          throwError (InvalidRequest "Payment refunds are not enabled for this city")
+        -- Component-wise ledger cap — same basis as customer create / admin initiate.
+        DRidePayment.validateRefundComponents rideId booking (map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = PriceAPIEntity c.amount refundRequest.currency}) comps)
+        existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
+        when (any (\r -> r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id) existingRequests) $
+          throwError (InvalidRequest $ "Another refund request is in flight for order: " <> refundRequest.orderId.getId)
+        let updRefundsAmount = Just (sum (map (.amount) comps))
+        QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) deductFromDriver (Just comps) refundRequest.id
+        let updRefundRequest =
+              refundRequest{status = DRefundRequest.APPROVED,
+                            responseDescription = req.responseDescription,
+                            refundsAmount = updRefundsAmount,
+                            refundsTries = refundRequest.refundsTries + 1,
+                            deductFromDriver = deductFromDriver,
+                            approvedRefundedComponents = Just comps
+                           }
+        QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
+        Notify.notifyRefunds updRefundRequest
+        DRidePayment.processRefundRaised updRefundRequest
+        submitRefundToPaymentService updRefundRequest (fromMaybe False req.retryRefunds)
+
+    -- Deposit refunds skip the ride-shaped machinery entirely: no fare components (the whole
+    -- order is refunded), no ride row (often cancelled before assignment), no driver account.
+    -- The ledger half is idempotent, so approving a FAILED retry re-enters cleanly.
+    initiateDepositRefunds refundRequest = do
+      logInfo $ "Deposit refund approved by admin: orderId: " <> refundRequest.orderId.getId <> "; try " <> show (refundRequest.refundsTries + 1)
+      bpRow <-
+        (find (\r -> r.paymentServiceType == DPaymentOrder.BookingDeposit) <$> QBookingPayment.findAllByOrderId refundRequest.orderId)
+          >>= fromMaybeM (InvalidRequest $ "No booking_payment row for deposit order: " <> refundRequest.orderId.getId)
+      booking <- QBooking.findById bpRow.bookingId >>= fromMaybeM (BookingDoesNotExist bpRow.bookingId.getId)
+      order <- QPaymentOrder.findById refundRequest.orderId >>= fromMaybeM (PaymentOrderNotFound refundRequest.orderId.getId)
       existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
-      when (any (\r -> r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id) existingRequests) $
+      let inFlight r = r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id
+      blockers <- filterM (\r -> if not (inFlight r) then pure False else isJust <$> maybe (pure Nothing) (fmap Just . HQRefunds.findById) r.refundsId) existingRequests
+      -- An APPROVED sibling with no refundsId and no Refunds row is a stuck row (gateway call
+      -- never happened, nothing drives it); adopting past it unblocks the retry instead of
+      -- wedging the order forever. A sibling with a real Refunds attempt still blocks.
+      unless (null blockers) $
         throwError (InvalidRequest $ "Another refund request is in flight for order: " <> refundRequest.orderId.getId)
-      let updRefundsAmount = Just (sum (map (.amount) comps))
-      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) deductFromDriver (Just comps) refundRequest.id
-      let updRefundRequest =
+      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription (Just order.amount) (refundRequest.refundsTries + 1) Nothing Nothing refundRequest.id
+      let updReq =
             refundRequest{status = DRefundRequest.APPROVED,
                           responseDescription = req.responseDescription,
-                          refundsAmount = updRefundsAmount,
-                          refundsTries = refundRequest.refundsTries + 1,
-                          deductFromDriver = deductFromDriver,
-                          approvedRefundedComponents = Just comps
+                          refundsAmount = Just order.amount,
+                          refundsTries = refundRequest.refundsTries + 1
                          }
-      QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-      Notify.notifyRefunds updRefundRequest
-      DRidePayment.processRefundRaised updRefundRequest
-      submitRefundToPaymentService updRefundRequest (fromMaybe False req.retryRefunds)
+      pairs <- BookingDeposit.prepareDepositRefundLedger booking
+      case find (\(_, o) -> o.id == order.id) pairs of
+        Nothing -> throwError (InvalidRequest $ "Deposit for order " <> order.id.getId <> " is not refundable (captured, or no paid attempt)")
+        Just pair -> BookingDeposit.executeDepositRefundGateway booking updReq (fromMaybe False req.retryRefunds) pair
+      finalReq <- QRefundRequest.findById refundRequest.id >>= fromMaybeM (RefundRequestDoesNotExist refundRequest.id.getId)
+      pure Common.RefundRequestRespondResp {status = finalReq.status, refundStatus = Nothing, errorCode = Nothing}
 
     rejectRefunds refundRequest = do
       logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
       QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing Nothing refundRequest.id
       let updRefundRequest = refundRequest{status = DRefundRequest.REJECTED, responseDescription = req.responseDescription}
-      rideId <- SPayment.getRideIdForOrder updRefundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> updRefundRequest.orderId.getId)
-      QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
+      mbRideId <- SPayment.getRideIdForOrder updRefundRequest.orderId
+      whenJust mbRideId $ \rid -> QRide.updateRefundRequestStatus (Just updRefundRequest.status) rid
       Notify.notifyRefunds updRefundRequest
       pure Common.RefundRequestRespondResp {status = updRefundRequest.status, refundStatus = Nothing, errorCode = Nothing}
 
@@ -293,3 +332,32 @@ getPaymentFareBreakup merchantShortId opCity rideId = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideDoesNotExist rideId.getId)
   DRidePayment.getFareBreakupForRide rideId booking
+
+postPaymentRefundRequestBookingInitiate ::
+  Kernel.Types.Id.ShortId DM.Merchant ->
+  Context.City ->
+  Kernel.Types.Id.Id Common.Booking ->
+  Environment.Flow Common.RefundRequestRespondResp
+postPaymentRefundRequestBookingInitiate merchantShortId opCity phantomBookingId = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let bookingId = cast @Common.Booking @DBooking.Booking phantomBookingId
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  -- Same not-found error as a truly missing booking, so a foreign tenant can't probe ids.
+  unless (booking.merchantOperatingCityId == merchantOpCity.id) $
+    throwError (BookingDoesNotExist bookingId.getId)
+  unless (booking.status `elem` DBooking.terminalBookingStatus) $
+    throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " is still in status " <> show booking.status <> "; deposit can be refunded only after the booking is terminal")
+  when (isNothing booking.bookingDepositAmount) $
+    throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " has no booking deposit")
+  depositWasCaptured <- BookingDeposit.depositCaptured booking.id
+  when depositWasCaptured $
+    throwError (InvalidRequest $ "Booking deposit for " <> bookingId.getId <> " was forfeited (captured to revenue); nothing to refund")
+  BookingDeposit.refundBookingDeposit booking
+  rows <- QBookingPayment.findAllByBookingIdAndServiceType booking.id DPaymentOrder.BookingDeposit
+  reqs <- concat <$> mapM (QRefundRequest.findAllByOrderId . (.paymentOrderId)) rows
+  let deposits = filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) reqs
+  -- Prefer a live/actionable row over historical ones; any representative is fine beyond that.
+  case find (\r -> r.status `elem` [DRefundRequest.APPROVED, DRefundRequest.FAILED, DRefundRequest.OPEN]) deposits <|> listToMaybe deposits of
+    Nothing -> pure Common.RefundRequestRespondResp {status = DRefundRequest.REFUNDED, refundStatus = Nothing, errorCode = Nothing}
+    Just r -> pure Common.RefundRequestRespondResp {status = r.status, refundStatus = Nothing, errorCode = Nothing}
