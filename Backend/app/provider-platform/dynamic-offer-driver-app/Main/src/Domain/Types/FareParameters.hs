@@ -55,6 +55,7 @@ data FareParameters = FareParameters
     luggageCharge :: Maybe HighPrecMoney,
     returnFeeCharge :: Maybe HighPrecMoney,
     boothCharge :: Maybe HighPrecMoney,
+    schedulingCharge :: Maybe HighPrecMoney,
     platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,

@@ -190,6 +190,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,
+          isScheduled = searchTry.isScheduled,
           ..
         }
   driverQuote <- buildDriverQuote clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'

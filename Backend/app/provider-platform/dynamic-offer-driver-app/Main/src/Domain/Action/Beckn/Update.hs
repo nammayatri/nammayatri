@@ -260,6 +260,7 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             nightShiftCharge = origFareParams.nightShiftCharge,
             customerCancellationDues = origFareParams.customerCancellationDues,
             estimatedCongestionCharge = booking.estimatedCongestionCharge,
+            isScheduled = booking.isScheduled,
             nightShiftOverlapChecking = nightShiftOverlapChecking,
             estimatedDistance = booking.estimatedDistance,
             estimatedRideDuration = booking.estimatedDuration,
@@ -350,7 +351,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
                 logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
                 alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
+                let startPoint = if length alreadySnappedPoints > 0 then fst $ last alreadySnappedPoints else Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon
                 let (currentLocPoint :: Maps.LatLong) =
                       fromMaybe startPoint $
                         (if not $ null currentLocationPointsBatch.loc then let w = last currentLocationPointsBatch.loc in Just (Maps.LatLong w.lat w.lon) else Nothing)
@@ -472,6 +473,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,
+                    isScheduled = booking.isScheduled,
                     merchantOperatingCityId = Just booking.merchantOperatingCityId,
                     mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
                     numberOfLuggages = booking.numberOfLuggages,
@@ -590,7 +592,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     splitAtStopMarkers pts = go pts []
       where
         go [] acc = [reverse acc]
-        go ((ll, True, t) : rest) acc = (reverse ((ll, True, t) : acc)) : go rest []
+        go ((ll, True, t) : rest) acc = reverse ((ll, True, t) : acc) : go rest []
         go (pt : rest) acc = go rest (pt : acc)
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions

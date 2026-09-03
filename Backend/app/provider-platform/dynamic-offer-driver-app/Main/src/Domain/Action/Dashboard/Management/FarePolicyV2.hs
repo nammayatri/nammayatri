@@ -409,6 +409,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               estimatedRideDuration = Just trip.duration,
               estimatedRideStaticDuration = Nothing,
               estimatedCongestionCharge = Nothing,
+              isScheduled = isJust trip.rideTime,
               timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
               tollCharges = Nothing,
               noOfStops = 0,
@@ -801,11 +802,15 @@ validatePolicy transporterConfig p =
       nonNegativeMaybe "perLuggageCharge" p.perLuggageCharge,
       nonNegativeMaybe "tollCharges" p.tollCharges,
       nonNegativeMaybe "petCharges" p.petCharges,
-      nonNegativeMaybe "platformFee" p.platformFee
+      nonNegativeMaybe "platformFee" p.platformFee,
+      percentageIssue "schedulingCharge" (schedulingChargePercent =<< p.schedulingCharge),
+      nonNegativeMaybe "schedulingCharge" (schedulingChargeAmount =<< p.schedulingCharge)
     ]
   where
     issue field message = [Common.FPV2ValidationIssue {field, message}]
     percentageIssue field = maybe [] (\v -> if v < 0 || v > 100 then issue field "must be between 0 and 100" else [])
+    schedulingChargePercent = \case Common.ProgressiveSchedulingCharge percent -> Just percent; _ -> Nothing
+    schedulingChargeAmount = \case Common.ConstantSchedulingCharge amount -> Just amount; _ -> Nothing
     nonNegativeMaybe field = maybe [] (\v -> if v < 0 then issue field "must not be negative" else [])
     minBaseFareIssue baseFare =
       case transporterConfig.minBaseFare of
@@ -931,6 +936,7 @@ toApiPolicy policy mbCancellation =
       perLuggageCharge = policy.perLuggageCharge,
       returnFee = toApiReturnFee <$> policy.returnFee,
       boothCharges = toApiBoothCharge <$> policy.boothCharges,
+      schedulingCharge = toApiSchedulingCharge <$> policy.schedulingCharge,
       nightShiftBounds = (\b -> Common.FPV2NightShiftBounds {nightShiftStart = b.nightShiftStart, nightShiftEnd = b.nightShiftEnd}) <$> policy.nightShiftBounds,
       allowedTripDistanceBounds = (\b -> Common.FPV2AllowedTripDistanceBounds {minAllowedTripDistance = b.minAllowedTripDistance, maxAllowedTripDistance = b.maxAllowedTripDistance}) <$> policy.allowedTripDistanceBounds,
       tollCharges = policy.tollCharges,
@@ -1098,6 +1104,7 @@ fromApiPolicy ctx mbCancellationId now p = do
         perLuggageCharge = p.perLuggageCharge,
         returnFee = fromApiReturnFee <$> p.returnFee,
         boothCharges = fromApiBoothCharge <$> p.boothCharges,
+        schedulingCharge = fromApiSchedulingCharge <$> p.schedulingCharge,
         currency,
         nightShiftBounds = (\b -> DPM.NightShiftBounds {nightShiftStart = b.nightShiftStart, nightShiftEnd = b.nightShiftEnd}) <$> p.nightShiftBounds,
         allowedTripDistanceBounds = (\b -> FarePolicyD.AllowedTripDistanceBounds {minAllowedTripDistance = b.minAllowedTripDistance, maxAllowedTripDistance = b.maxAllowedTripDistance, distanceUnit}) <$> p.allowedTripDistanceBounds,
@@ -1317,6 +1324,16 @@ fromApiBoothCharge :: Common.FPV2BoothCharge -> FarePolicyD.BoothCharge
 fromApiBoothCharge = \case
   Common.BoothChargeFixed m -> FarePolicyD.BoothChargeFixed m
   Common.BoothChargePercentage d -> FarePolicyD.BoothChargePercentage d
+
+toApiSchedulingCharge :: FarePolicyD.SchedulingCharge -> Common.FPV2SchedulingCharge
+toApiSchedulingCharge = \case
+  FarePolicyD.ProgressiveSchedulingCharge m -> Common.ProgressiveSchedulingCharge m
+  FarePolicyD.ConstantSchedulingCharge d -> Common.ConstantSchedulingCharge d
+
+fromApiSchedulingCharge :: Common.FPV2SchedulingCharge -> FarePolicyD.SchedulingCharge
+fromApiSchedulingCharge = \case
+  Common.ProgressiveSchedulingCharge m -> FarePolicyD.ProgressiveSchedulingCharge m
+  Common.ConstantSchedulingCharge d -> FarePolicyD.ConstantSchedulingCharge d
 
 toApiPlatformFeeMethod :: FarePolicyD.PlatformFeeMethods -> Common.FPV2PlatformFeeMethod
 toApiPlatformFeeMethod = \case
