@@ -36,6 +36,7 @@ data Booking = Booking
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDetails :: Domain.Types.Booking.BookingDetails,
+    bookingDepositAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bppBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking),
     bppEstimateId :: Kernel.Prelude.Text,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,

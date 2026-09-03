@@ -331,6 +331,7 @@ handler merchantId req validatedReq = do
             fromLocGeohash = searchRequest.fromLocGeohash,
             toLocGeohash = searchRequest.toLocGeohash,
             hasStops = searchRequest.hasStops,
+            bookingDeposit = (.charge) <$> (find (\cc -> cc.chargeCategory == DTCC.BOOKING_DEPOSIT) . (.conditionalCharges) =<< mbFarePolicy),
             isReferredRide = searchRequest.driverIdForSearch $> True,
             dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
             parcelType = searchRequest.parcelType,

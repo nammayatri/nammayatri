@@ -9,6 +9,7 @@ imports:
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
   Ride: Domain.Types.Ride
+  Booking: Dashboard.Common
   FareComponent: Domain.Types.FareBreakup
   FareBreakupRes: API.Types.UI.RidePayment
   FileType: AWS.S3
@@ -69,6 +70,15 @@ apis:
         type: RefundRequestInitiateReq
       response:
         type: RefundRequestRespondResp
+  - POST:
+      endpoint: refundRequest/booking/{bookingId}/initiate
+      auth: ApiAuthV2
+      migrate:
+        capability: finance.adjustment.write
+      params:
+        bookingId: Id Booking
+      response:
+        type: RefundRequestRespondResp
   - GET:
       endpoint: /{rideId}/fareBreakup
       auth: ApiAuthV2
@@ -98,7 +108,7 @@ types:
     - updatedAt: UTCTime
   RefundRequestInfoResp:
     - orderId: Id PaymentOrder
-    - rideId: Id Ride
+    - rideId: Maybe (Id Ride)
     - requestedAmount: Maybe PriceAPIEntity
     - requestedRefundComponents: "Maybe [RefundComponentItem]"
     - approvedRefundComponents: "Maybe [RefundComponentItem]"

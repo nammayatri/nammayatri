@@ -166,6 +166,7 @@ data BookingAPIEntity = BookingAPIEntity
     driverPreference :: Maybe [Text],
     specialLocationSupportNumber :: Maybe Text,
     commissionCharge :: Maybe HighPrecMoney,
+    bookingDepositAmount :: Maybe HighPrecMoney,
     refunds :: [RideRefundInfo],
     fareSettlementType :: Maybe SL.FareSettlementType,
     cardInfo :: Maybe RideCardInfo
@@ -200,6 +201,9 @@ data RideRefundInfo = RideRefundInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+getBookingApiDeposit :: BookingAPIEntity -> Maybe HighPrecMoney
+getBookingApiDeposit BookingAPIEntity {bookingDepositAmount} = bookingDepositAmount
+
 data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
   { additionalInfo :: Maybe Text,
     reasonCode :: Maybe CancellationReasonCode,
@@ -227,7 +231,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     -- The tip is editable while the ride is running, and mid-ride it is NOT in fareBreakup (that
     -- list is rebuilt wholesale at ride completion). This is the only way the app can read back
     -- the tip it currently has set, e.g. after a restart. Mirrors RideAPIEntity.tipAmount.
-    tipAmount :: Maybe PriceAPIEntity
+    tipAmount :: Maybe PriceAPIEntity,
+    bookingDepositAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -435,6 +440,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         driverPreference = booking.driverPreference,
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
         commissionCharge = booking.commission,
+        bookingDepositAmount = booking.bookingDepositAmount,
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
         cardInfo = cardInfo
@@ -654,7 +660,7 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

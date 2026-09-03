@@ -82,6 +82,7 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
@@ -491,6 +492,7 @@ onUpdate = \case
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
+    void $ withTryCatch "quoteRepetition:releaseBookingDeposit" $ BookingDeposit.releaseBookingDeposit booking
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     -- make all the booking parties inactive during rellocation
@@ -533,6 +535,7 @@ onUpdate = \case
     QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
     void $ QBPL.createMany newBookingParties
+    void $ withTryCatch "reallocation:rekeyBookingDepositHold" $ BookingDeposit.rekeyBookingDepositHold booking newBooking
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus

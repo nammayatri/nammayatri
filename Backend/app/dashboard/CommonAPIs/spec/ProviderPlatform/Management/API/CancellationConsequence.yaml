@@ -64,7 +64,7 @@ types:
     - coins: Int
     - expirySeconds: Maybe Int
   MoneyDeductionAPI:
-    - enum: FixedMoneyAPIEntity FixedMoneyAPI, PercentageMoneyAPIEntity PercentageMoneyAPI
+    - enum: FixedMoneyAPIEntity FixedMoneyAPI, PercentageMoneyAPIEntity PercentageMoneyAPI, MatchBookingDepositAPIEntity
   FixedMoneyAPI:
     - amount: HighPrecMoney
     - overdueAmount: Maybe HighPrecMoney

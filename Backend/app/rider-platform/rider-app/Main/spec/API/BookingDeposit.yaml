@@ -1,0 +1,50 @@
+imports:
+  Booking: Domain.Types.Booking
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  HighPrecMoney: Kernel.Types.Common
+
+module: BookingDeposit
+
+types:
+  # feeStatus tells the client what to do next: COVERED = fee secured, move on to the
+  # finding-driver screen; PAYABLE = the fee is still owed, call payment/retry for a sheet;
+  # PROCESSING = payment charged, fulfilment in flight, keep polling; RETRY = transient
+  # server-side failure, poll again.
+  BookingDepositStatusResp:
+    requiredAmount: HighPrecMoney
+    availableBalance: HighPrecMoney
+    feeStatus: BookingDepositStatus
+
+  BookingDepositPaymentResp:
+    requiredAmount: HighPrecMoney
+    availableBalance: HighPrecMoney
+    feeStatus: BookingDepositStatus
+    sdkPayload: Maybe CreateOrderResp
+
+  BookingDepositStatus:
+    enum: "COVERED, PAYABLE, PROCESSING, RETRY, FAILED, REFUND_IN_PROGRESS, REFUND_FAILED, REFUNDED, FORFEITED"
+
+apis:
+  - GET:
+      endpoint: /bookingDeposit/{bookingId}/status
+      params:
+        bookingId: Id Booking
+      auth: TokenAuth
+      response:
+        type: BookingDepositStatusResp
+
+  - POST:
+      endpoint: /bookingDeposit/{bookingId}/paymentIntent/
+      params:
+        bookingId: Id Booking
+      auth: TokenAuth
+      response:
+        type: BookingDepositPaymentResp
+
+  - POST:
+      endpoint: /bookingDeposit/{bookingId}/refund
+      params:
+        bookingId: Id Booking
+      auth: TokenAuth
+      response:
+        type: BookingDepositStatusResp

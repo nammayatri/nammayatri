@@ -571,6 +571,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
       DAC.NO_CHARGES -> Tags.NO_CHARGES
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Tags.NYREGULAR_SUBSCRIPTION_CHARGE
+      DAC.BOOKING_DEPOSIT -> Tags.BOOKING_DEPOSIT
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs

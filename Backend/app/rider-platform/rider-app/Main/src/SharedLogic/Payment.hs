@@ -11,6 +11,7 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSRecon as Recon
@@ -25,6 +26,7 @@ import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.RefundRequest as DRefundRequest
 import qualified Domain.Types.Ride as Ride
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
@@ -41,6 +43,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -72,6 +75,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.BookingPayment as QBookingPayment
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -409,6 +413,31 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                   }
           void $ QRecon.create reconEntry
 
+refundRequestProccessingKey :: Kernel.Types.Id.Id DOrder.PaymentOrder -> Text
+refundRequestProccessingKey orderId = "RefundRequest:Processing:OrderId" <> orderId.getId
+
+refundStatusToRequestStatus :: Payment.RefundStatus -> DRefundRequest.RefundRequestStatus
+refundStatusToRequestStatus = \case
+  Payment.REFUND_SUCCESS -> DRefundRequest.REFUNDED
+  Payment.REFUND_FAILURE -> DRefundRequest.FAILED
+  Payment.REFUND_CANCELED -> DRefundRequest.FAILED
+  Payment.REFUND_PENDING -> DRefundRequest.APPROVED
+  Payment.MANUAL_REVIEW -> DRefundRequest.APPROVED
+  Payment.REFUND_REQUIRES_ACTION -> DRefundRequest.APPROVED
+
+-- | The gateway's verdict for one refund, as a booking-payment status. @status@ is what the
+--   gateway actually decided and outranks @isApiCallSuccess@, which only says the request was
+--   accepted. Shared with SharedLogic.BookingDeposit so the at-call-time write and the later
+--   reconciliation can never disagree about what a Refunds row means.
+refundStatusToBookingPaymentStatus :: DRefunds.Refunds -> DBP.BookingPaymentStatus
+refundStatusToBookingPaymentStatus refund = case refund.status of
+  Payment.REFUND_SUCCESS -> DBP.REFUNDED
+  Payment.REFUND_FAILURE -> DBP.REFUND_FAILED
+  _ -> case refund.isApiCallSuccess of
+    Nothing -> DBP.REFUND_PENDING
+    Just True -> DBP.REFUND_INITIATED
+    Just False -> DBP.REFUND_FAILED
+
 refundStatusHandler ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -430,6 +459,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
           DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
           DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
           DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refundEntry
+          DOrder.BookingDeposit -> bookingDepositRefundStatusHandler refundEntry
           _ -> pure ()
     )
     refundsEntry
@@ -552,6 +582,24 @@ refundStatusHandler paymentOrder paymentServiceType = do
             Nothing -> QPT.updateStatusById DPT.RefundPending parkingTransaction.id
             Just True -> QPT.updateStatusById DPT.RefundInitiated parkingTransaction.id
             Just False -> QPT.updateStatusById DPT.RefundFailed parkingTransaction.id
+
+    bookingDepositRefundStatusHandler ::
+      ( EsqDBFlow m r,
+        CacheFlow m r,
+        MonadFlow m,
+        EsqDBReplicaFlow m r,
+        ServiceFlow m r,
+        EncFlow m r
+      ) =>
+      DRefunds.Refunds ->
+      m ()
+    bookingDepositRefundStatusHandler refund = do
+      let newStatus = refundStatusToBookingPaymentStatus refund
+      -- Every link row for the order: after a reallocation rekey the same order is referenced
+      -- from both the old and the new booking's row, and they must agree.
+      rows <- QBookingPayment.findAllByOrderId paymentOrder.id
+      forM_ rows $ \row ->
+        when (row.status /= newStatus) $ QBookingPayment.updateStatusById newStatus row.id
 
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,
@@ -1144,6 +1192,24 @@ makeRefundPayment ::
   m (Maybe Payment.RefundPaymentResp)
 makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
   let refundCall = TPayment.refundPayment merchantId merchantOpCityId paymentMode Nothing
+  DPayment.refundPaymentService refundReq refundCall
+
+makeRefundPaymentByServiceType ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DOrder.PaymentServiceType ->
+  Maybe Version ->
+  DPayment.RefundPaymentServiceReq ->
+  m (Maybe Payment.RefundPaymentResp)
+makeRefundPaymentByServiceType merchantId merchantOpCityId paymentServiceType clientSdkVersion refundReq = do
+  let refundCall = TPayment.refundPaymentByServiceType merchantId merchantOpCityId Nothing paymentServiceType Nothing clientSdkVersion
   DPayment.refundPaymentService refundReq refundCall
 
 -- | Refresh status for the given Refunds row. Nothing in mbRefundsId = no attempt yet → no refresh.

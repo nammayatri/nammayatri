@@ -111,6 +111,15 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
+depositForfeitFee :: SRB.Booking -> Maybe CancellationFault.FaultVerdict -> Maybe HighPrecMoney
+depositForfeitFee booking mbVerdict = do
+  deposit <- booking.bookingDeposit
+  guard (CancellationFault.isCustomerAtFault mbVerdict && deposit > 0)
+  pure deposit
+
+hasPositiveDeposit :: SRB.Booking -> Bool
+hasPositiveDeposit booking = maybe False (> 0) booking.bookingDeposit
+
 -- | Everything a consequence executor may read, resolved exactly once per cancellation.
 data CancellationDecision = CancellationDecision
   { signals :: CancellationSignals.CancellationSignals,
@@ -315,6 +324,18 @@ applyTerminalConsequences ctx createLedgerEntries = do
       ride = ctx.ride
       transporterConfig = ctx.transporterConfig
       decision = ctx.decision
+      depositOutcome =
+        depositForfeitFee booking decision.faultVerdict <&> \d ->
+          CancellationChargesOutcome
+            { fee = Just d,
+              tax = Nothing,
+              overdueFee = Nothing,
+              overdueTax = Nothing,
+              commission = Nothing,
+              overdueCommission = Nothing,
+              consequenceRowId = Nothing,
+              collectionMode = Nothing
+            }
   case booking.riderId of
     Nothing -> pure Nothing
     Just riderId -> do
@@ -326,16 +347,18 @@ applyTerminalConsequences ctx createLedgerEntries = do
         when (maybe False (.countsTowardCustomerCancellationStats) decision.consequenceRow) $
           QRiderDetails.updateValidCancellationsCount riderId.getId
         -- columns: customerDeduction + customerCommissionAndTax + collectionMode
-        mbOutcome <- case (ctx.source == SBCR.ByUser, ride.cancellationFeeIfCancelled, ride.cancellationConsequenceRowIdIfCancelled) of
-          (True, Just softCancelTotal, Just quotedRowId) ->
-            -- customer cancel after a soft-cancel preview: reuse the fee shown to the rider then
-            softCancelOutcome softCancelTotal (fromMaybe 0 ride.cancellationFeeTaxIfCancelled) quotedRowId
-          _ ->
-            if transporterConfig.canAddCancellationFee
-              then do
-                mbO <- chargesOutcomeFromRow booking decision.consequenceRow
-                pure (dropZeroCharge <$> mbO)
-              else pure Nothing
+        mbOutcome <-
+          if hasPositiveDeposit booking
+            then pure Nothing
+            else case (ctx.source == SBCR.ByUser, ride.cancellationFeeIfCancelled, ride.cancellationConsequenceRowIdIfCancelled) of
+              (True, Just softCancelTotal, Just quotedRowId) ->
+                softCancelOutcome softCancelTotal (fromMaybe 0 ride.cancellationFeeTaxIfCancelled) quotedRowId
+              _ ->
+                if transporterConfig.canAddCancellationFee
+                  then do
+                    mbO <- chargesOutcomeFromRow booking decision.consequenceRow
+                    pure (dropZeroCharge <$> mbO)
+                  else pure Nothing
         whenJust mbOutcome $ \outcome ->
           whenJust outcome.fee $ \baseFee -> do
             let gst = fromMaybe 0 outcome.tax
@@ -370,14 +393,14 @@ applyTerminalConsequences ctx createLedgerEntries = do
       case chargesE of
         Left err -> do
           logError $ "applyTerminalConsequences failed for rideId " <> ctx.ride.id.getId <> ": " <> show err
-          pure Nothing
-        Right res -> pure res
+          pure depositOutcome
+        Right res -> pure (depositOutcome <|> res)
   where
     softCancelOutcome softCancelTotal quotedTax rowId = do
       rows <- CQCCM.findAllByMerchantOpCityId ctx.booking.merchantOperatingCityId
       let mbRow = listToMaybe (filter (\r -> r.id.getId == rowId) rows)
           base = softCancelTotal - quotedTax
-          breakup = mbRow <&> \row -> CancellationConsequence.computeCustomerCharge row ctx.booking.estimatedFare
+          breakup = mbRow <&> \row -> CancellationConsequence.computeCustomerCharge row ctx.booking.estimatedFare ctx.booking.bookingDeposit
       pure $
         Just
           CancellationChargesOutcome
@@ -497,7 +520,7 @@ chargesOutcomeFromRow ::
 chargesOutcomeFromRow booking = \case
   Nothing -> pure Nothing
   Just row -> do
-    let breakup = CancellationConsequence.computeCustomerCharge row booking.estimatedFare
+    let breakup = CancellationConsequence.computeCustomerCharge row booking.estimatedFare booking.bookingDeposit
     logTagInfo ("bookingId-" <> getId booking.id) ("consequence matrix row " <> row.id.getId <> ": fee=" <> show breakup.fee <> " tax=" <> show breakup.tax <> " commission=" <> show breakup.commission <> " overdue=" <> show breakup.overdueFee)
     pure $
       Just
@@ -550,14 +573,31 @@ getCancellationCharges booking ride source reasonCode = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
     Nothing -> return Nothing
-    Just _rid ->
-      if transporterConfig.canAddCancellationFee
-        then do
-          (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
-          decision <- previewCancellationConsequences booking ride transporterConfig source reasonCode cancellationDisToPickup
-          mbOutcome <- chargesOutcomeFromRow booking decision.consequenceRow
-          return (dropZeroCharge <$> mbOutcome)
-        else return Nothing
+    Just _rid
+      -- Deposit bookings quote the deposit itself, so the soft-cancel preview shows the
+      -- rider exactly what a cancellation would cost — independent of canAddCancellationFee,
+      -- which governs the matrix charges the deposit replaces.
+      | hasPositiveDeposit booking -> do
+        (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
+        decision <- previewCancellationConsequences booking ride transporterConfig source reasonCode cancellationDisToPickup
+        return $
+          depositForfeitFee booking decision.faultVerdict <&> \deposit ->
+            CancellationChargesOutcome
+              { fee = Just deposit,
+                tax = Nothing,
+                overdueFee = Nothing,
+                overdueTax = Nothing,
+                commission = Nothing,
+                overdueCommission = Nothing,
+                consequenceRowId = Nothing,
+                collectionMode = Nothing
+              }
+      | transporterConfig.canAddCancellationFee -> do
+        (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
+        decision <- previewCancellationConsequences booking ride transporterConfig source reasonCode cancellationDisToPickup
+        mbOutcome <- chargesOutcomeFromRow booking decision.consequenceRow
+        return (dropZeroCharge <$> mbOutcome)
+      | otherwise -> return Nothing
 
 driverDistanceToPickup ::
   ( EncFlow m r,

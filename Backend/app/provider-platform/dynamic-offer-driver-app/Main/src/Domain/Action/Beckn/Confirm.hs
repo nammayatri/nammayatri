@@ -86,7 +86,8 @@ data DConfirmReq = DConfirmReq
     enableOtpLessRide :: Bool,
     driverPreference :: Maybe [Text],
     customerDiscountAmount :: Maybe HighPrecMoney,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    bookingDepositSecured :: Maybe HighPrecMoney
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -234,6 +235,8 @@ handler merchant req validatedQuote = do
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
       whenJust req.customerDiscountAmount $ QRB.updateDiscountAmount booking.id
       whenJust req.customerLanguage $ QRB.updateCustomerLanguage booking.id
+      when (req.bookingDepositSecured /= booking.bookingDeposit) $
+        QRB.updateBookingDeposit req.bookingDepositSecured booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do

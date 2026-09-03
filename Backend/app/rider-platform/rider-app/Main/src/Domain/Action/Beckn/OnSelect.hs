@@ -127,7 +127,7 @@ onSelect OnSelectValidatedReq {..} = do
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
             merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, dashboardAgentId = Nothing, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant, requiresPaymentBeforeConfirm = False}
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, dashboardAgentId = Nothing, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant, requiresPaymentBeforeConfirm = False, supportsBookingDeposit = Nothing}
             dConfirmRes <- SConfirm.confirm dConfirmReq
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
             handle (errHandler dConfirmRes.booking) $ do
@@ -181,6 +181,7 @@ buildSelectedQuote estimate providerInfo now req@QSRLite.SearchRequestLite {..} 
   let quote =
         DQuote.Quote
           { id = uid,
+            bookingDeposit = Nothing,
             providerId = providerInfo.providerId,
             providerUrl = providerInfo.url,
             createdAt = now,

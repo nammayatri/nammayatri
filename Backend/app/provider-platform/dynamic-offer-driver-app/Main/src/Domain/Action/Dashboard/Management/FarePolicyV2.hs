@@ -1369,12 +1369,14 @@ toApiChargeCategory = \case
   SAFETY_PLUS_CHARGES -> Common.SAFETY_PLUS_CHARGES
   NYREGULAR_SUBSCRIPTION_CHARGE -> Common.NYREGULAR_SUBSCRIPTION_CHARGE
   NO_CHARGES -> Common.NO_CHARGES
+  BOOKING_DEPOSIT -> Common.BOOKING_DEPOSIT
 
 fromApiChargeCategory :: Common.FPV2ConditionalChargeCategory -> ConditionalChargesCategories
 fromApiChargeCategory = \case
   Common.SAFETY_PLUS_CHARGES -> SAFETY_PLUS_CHARGES
   Common.NYREGULAR_SUBSCRIPTION_CHARGE -> NYREGULAR_SUBSCRIPTION_CHARGE
   Common.NO_CHARGES -> NO_CHARGES
+  Common.BOOKING_DEPOSIT -> BOOKING_DEPOSIT
 
 toApiSearchSource :: DFareProduct.SearchSource -> Common.FPV2SearchSource
 toApiSearchSource = \case

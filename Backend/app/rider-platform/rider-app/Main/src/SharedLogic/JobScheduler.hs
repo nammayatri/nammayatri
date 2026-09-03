@@ -75,6 +75,7 @@ data RiderJobType
   | PassExpiryReminderMaster
   | SettlementReportIngestion
   | ReconcileRewardInflight
+  | BookingDepositExpiry
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -94,6 +95,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
   restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
   restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
+  restoreAnyJobInfo SBookingDepositExpiry jobData = AnyJobInfo <$> restoreJobInfo SBookingDepositExpiry jobData
   restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
   restoreAnyJobInfo SExecuteCashRideCashbackPayout jobData = AnyJobInfo <$> restoreJobInfo SExecuteCashRideCashbackPayout jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
@@ -307,6 +309,15 @@ newtype ScheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData
 instance JobInfoProcessor 'ScheduledRidePopupToRider
 
 type instance JobContent 'ScheduledRidePopupToRider = ScheduledRidePopupToRiderJobData
+
+newtype BookingDepositExpiryJobData = BookingDepositExpiryJobData
+  { bookingId :: Id Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BookingDepositExpiry
+
+type instance JobContent 'BookingDepositExpiry = BookingDepositExpiryJobData
 
 data ExecutePaymentIntentJobData = ExecutePaymentIntentJobData
   { rideId :: Id DRide.Ride,
