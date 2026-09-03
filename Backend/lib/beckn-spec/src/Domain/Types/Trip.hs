@@ -148,7 +148,11 @@ instance ToJSON TripCategory where
       ]
 
 instance FromJSON TripCategory where
-  parseJSON = withObject "TripCategory" $ \v -> do
+  -- dashboards and older fixtures may still send the Show-format string
+  -- ("OneWay_OneWayOnDemandDynamicOffer"); accept it alongside the ADT object
+  parseJSON (String s) =
+    maybe (fail $ "Unknown TripCategory: " ++ T.unpack s) pure (readMaybe (T.unpack s))
+  parseJSON val = flip (withObject "TripCategory") val $ \v -> do
     tag <- v .: "tag"
     case tag of
       "OneWay" -> OneWay <$> v .: "contents"

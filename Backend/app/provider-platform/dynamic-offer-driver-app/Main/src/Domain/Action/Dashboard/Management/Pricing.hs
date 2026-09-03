@@ -32,6 +32,7 @@ module Domain.Action.Dashboard.Management.Pricing
     postPricingSurgeStatus,
     postPricingSurgePreview,
     getPricingObservabilityEstimate,
+    getPricingObservabilityCustomer,
     getPricingObservabilityHealth,
   )
 where
@@ -43,11 +44,14 @@ import Data.List (sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Common (ServiceTierType)
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Extra.SurgeConfig as DSCE
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SurgeConfig as DSC
 import Environment
+import Kernel.Beam.Functions (runInReplica)
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -61,6 +65,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SurgeConfig as CQSC
 import qualified Storage.Clickhouse.Estimate as CHEst
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.RiderDetailsExtra as QRD
+import qualified Storage.Queries.SearchRequestExtra as QSR
 import qualified Storage.Queries.SurgeConfig as QSC
 
 resolveCity :: ShortId DM.Merchant -> Context.City -> Flow (DM.Merchant, DMOC.MerchantOperatingCity)
@@ -289,25 +295,54 @@ getPricingObservabilityEstimate merchantShortId opCity estimateId = do
   estimate <- QEstimate.findById (Id estimateId) >>= fromMaybeM (InvalidRequest $ "Estimate not found: " <> estimateId)
   whenJust estimate.merchantOperatingCityId $ \cityId ->
     unless (cityId == merchantOpCity.id) $ throwError (InvalidRequest "Estimate belongs to a different operating city")
+  pure $ mkEstimateExplain estimate
+
+-- | "Why this price" without hunting an estimate id: resolve the phone to the
+-- BPP's rider record(s), take the customer's latest search in THIS city, and
+-- explain every estimate that search produced.
+getPricingObservabilityCustomer :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.PricingCustomerSearchRes
+getPricingObservabilityCustomer merchantShortId opCity phone = do
+  (merchant, merchantOpCity) <- resolveCity merchantShortId opCity
+  phoneHash <- getDbHash phone
+  -- one rider row per BAP app can exist for the same number — search across all
+  riders <- runInReplica $ QRD.findAllByMobileNumberHashesAndMerchant [phoneHash] merchant.id
+  when (null riders) $ throwError (InvalidRequest "No customer found for this phone number")
+  searchReqs <- runInReplica $ QSR.findRecentByRiderIds (map (.id) riders) recentSearchWindow
+  latest <-
+    fromMaybeM (InvalidRequest "No recent search found for this customer in this city") $
+      listToMaybe $ filter (\sr -> sr.merchantOperatingCityId == merchantOpCity.id) searchReqs
+  estimates <- runInReplica $ QEstimate.findAllByRequestId latest.id
   pure
-    Common.PricingEstimateExplainRes
-      { estimateId = estimateId,
-        createdAt = estimate.createdAt,
-        vehicleServiceTier = estimate.vehicleServiceTier,
-        tripCategory = estimate.tripCategory,
-        minFare = estimate.minFare,
-        maxFare = estimate.maxFare,
-        engine = deriveEngine estimate.dpVersion,
-        dpVersion = estimate.dpVersion,
-        congestionMultiplier = estimate.congestionMultiplier,
-        supplyDemandRatioFromLoc = estimate.supplyDemandRatioFromLoc,
-        supplyDemandRatioToLoc = estimate.supplyDemandRatioToLoc,
-        fromLocGeohash = estimate.fromLocGeohash,
-        smartTipSuggestion = estimate.smartTipSuggestion,
-        smartTipReason = estimate.smartTipReason,
-        shadowSurgeMultiplier = estimate.shadowSurgeMultiplier,
-        shadowSurgeVersion = estimate.shadowSurgeVersion
+    Common.PricingCustomerSearchRes
+      { searchRequestId = latest.id.getId,
+        searchCreatedAt = latest.createdAt,
+        estimates = map mkEstimateExplain (sortOn (.createdAt) estimates)
       }
+  where
+    -- findRecentByRiderIds is newest-first; scanning this many covers a rider
+    -- active in several cities without an unbounded read
+    recentSearchWindow = 50
+
+mkEstimateExplain :: DEstimate.Estimate -> Common.PricingEstimateExplainRes
+mkEstimateExplain estimate =
+  Common.PricingEstimateExplainRes
+    { estimateId = estimate.id.getId,
+      createdAt = estimate.createdAt,
+      vehicleServiceTier = estimate.vehicleServiceTier,
+      tripCategory = estimate.tripCategory,
+      minFare = estimate.minFare,
+      maxFare = estimate.maxFare,
+      engine = deriveEngine estimate.dpVersion,
+      dpVersion = estimate.dpVersion,
+      congestionMultiplier = estimate.congestionMultiplier,
+      supplyDemandRatioFromLoc = estimate.supplyDemandRatioFromLoc,
+      supplyDemandRatioToLoc = estimate.supplyDemandRatioToLoc,
+      fromLocGeohash = estimate.fromLocGeohash,
+      smartTipSuggestion = estimate.smartTipSuggestion,
+      smartTipReason = estimate.smartTipReason,
+      shadowSurgeMultiplier = estimate.shadowSurgeMultiplier,
+      shadowSurgeVersion = estimate.shadowSurgeVersion
+    }
 
 deriveEngine :: Maybe Text -> Text
 deriveEngine = \case

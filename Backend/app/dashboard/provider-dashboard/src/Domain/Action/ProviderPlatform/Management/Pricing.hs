@@ -7,6 +7,7 @@ module Domain.Action.ProviderPlatform.Management.Pricing
     postPricingSurgeStatus,
     postPricingSurgePreview,
     getPricingObservabilityEstimate,
+    getPricingObservabilityCustomer,
     getPricingObservabilityHealth,
   )
 where
@@ -62,6 +63,11 @@ getPricingObservabilityEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 getPricingObservabilityEstimate merchantShortId opCity apiTokenInfo estimateId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.pricingDSL.getPricingObservabilityEstimate) estimateId
+
+getPricingObservabilityCustomer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.Pricing.PricingCustomerSearchRes)
+getPricingObservabilityCustomer merchantShortId opCity apiTokenInfo phone = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.pricingDSL.getPricingObservabilityCustomer) phone
 
 getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
 getPricingObservabilityHealth merchantShortId opCity apiTokenInfo hours = do

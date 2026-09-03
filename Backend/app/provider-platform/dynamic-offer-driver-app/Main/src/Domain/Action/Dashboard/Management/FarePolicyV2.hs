@@ -130,7 +130,10 @@ getFarePolicyV2List ::
   Flow Common.FPV2ProductListRes
 getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier mbEnabled = do
   (_, merchantOpCity) <- resolveCity merchantShortId opCity
-  allProducts <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
+  -- deliberately NOT the runtime's cached query: that one fetches enabled rows
+  -- only (and can serve a stale cross-app cache), so disabled combos would be
+  -- invisible here with no way to re-enable them
+  allProducts <- QFareProductExtra.findAllFareProductByMerchantOpCityIdAllStates merchantOpCity.id
   tierConfigs <- CQVST.findAllByMerchantOpCityId merchantOpCity.id Nothing
   -- the city's display name for a tier; the UI falls back to the enum
   let tierName st = listToMaybe [t.name | t <- tierConfigs, t.serviceTierType == st]
@@ -450,8 +453,9 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
   (merchant, merchantOpCity) <- resolveCity merchantShortId opCity
   transporterConfig <- getTransporterConfig' merchantOpCity.id
   now <- getCurrentTime
-  -- reject a duplicate combo up front
-  existing <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
+  -- reject a duplicate combo up front — disabled combos count too, else a
+  -- create lands on a disabled twin's slot and re-enabling resolves arbitrarily
+  existing <- QFareProductExtra.findAllFareProductByMerchantOpCityIdAllStates merchantOpCity.id
   let clash fp =
         fp.tripCategory == req.tripCategory
           && fp.area == req.area
@@ -539,7 +543,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
   -- duplicate rule as create; two products for one combo resolve arbitrarily)
   whenJust req.timeBounds $ \newBounds ->
     when (newBounds /= fareProduct.timeBounds) $ do
-      existing <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
+      existing <- QFareProductExtra.findAllFareProductByMerchantOpCityIdAllStates merchantOpCity.id
       let clash fp =
             fp.id /= fareProduct.id
               && fp.tripCategory == fareProduct.tripCategory
@@ -685,7 +689,9 @@ executeProductRemoval merchantOpCity fareProductId actor = do
 -- independent of Ord instances on domain enums
 activeCoverage :: Id DMOC.MerchantOperatingCity -> Flow (Set.Set (Text, Text))
 activeCoverage mocId = do
-  products <- CQFProduct.findAllFareProductByMerchantOpCityId mocId
+  -- uncached read: the before/after diff around a write must see the write,
+  -- not whatever the runtime cache held when the request started
+  products <- QFareProductExtra.findAllFareProductByMerchantOpCityIdAllStates mocId
   pure $ Set.fromList [(T.pack (show p.area), T.pack (show p.vehicleServiceTier)) | p <- products, p.enabled]
 
 sendCoverageAlerts :: DMOC.MerchantOperatingCity -> Set.Set (Text, Text) -> Set.Set (Text, Text) -> Text -> Flow ()

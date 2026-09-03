@@ -73,6 +73,15 @@ apis:
         type: PricingEstimateExplainRes
       migrate:
         capability: system-config.dynamic_logic.read
+  - GET: # "why this price" by customer phone: the customer's latest search in this city, with an explain per estimate — no estimate-id hunting
+      endpoint: /observability/customer
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - phone: Text
+      response:
+        type: PricingCustomerSearchRes
+      migrate:
+        capability: system-config.dynamic_logic.read
   - GET: # city health aggregates over the last N hours (default 24, max 72)
       endpoint: /observability/health
       auth: ApiAuthV2
@@ -168,6 +177,10 @@ types:
     - smartTipReason: Maybe Text
     - shadowSurgeMultiplier: Maybe Centesimal
     - shadowSurgeVersion: Maybe Int
+  PricingCustomerSearchRes:
+    - searchRequestId: Text
+    - searchCreatedAt: UTCTime
+    - estimates: "[PricingEstimateExplainRes]"
   PricingTierHealth:
     - serviceTier: ServiceTierType
     - totalEstimates: Int

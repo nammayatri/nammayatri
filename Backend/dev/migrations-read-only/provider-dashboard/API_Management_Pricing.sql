@@ -18,3 +18,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"GetPricingObservabilityHealth","migration":"capability","param":"system-config.dynamic_logic.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PRICING/GET_PRICING_OBSERVABILITY_HEALTH' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetPricingObservabilityCustomer","migration":"capability","param":"system-config.dynamic_logic.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PRICING/GET_PRICING_OBSERVABILITY_CUSTOMER' ) ON CONFLICT DO NOTHING;
