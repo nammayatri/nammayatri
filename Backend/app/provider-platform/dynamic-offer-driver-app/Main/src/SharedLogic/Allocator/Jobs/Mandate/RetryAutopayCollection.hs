@@ -133,13 +133,19 @@ filterEligibleForRetry serviceName driverFees = do
   activeInvoices <- QINV.findAllActiveByDriverFeeIds (driverFees <&> (.id))
   let mandateByDriverId = Map.fromList $ mapMaybe (\driverPlan -> (\mandateId -> (driverPlan.driverId, mandateId)) <$> driverPlan.mandateId) driverPlans
       driverFeeIdsWithLiveManualInvoice = filter ((/= INV.AUTOPAY_INVOICE) . (.paymentMode)) activeInvoices <&> (.driverFeeId)
-  return $
-    filter
-      ( \driverFee ->
-          Map.member (cast @P.Driver @P.Person driverFee.driverId) mandateByDriverId
-            && driverFee.id `notElem` driverFeeIdsWithLiveManualInvoice
-      )
-      driverFees
+      driverFeesWithActiveMandate =
+        filter
+          ( \driverFee ->
+              Map.member (cast @P.Driver @P.Person driverFee.driverId) mandateByDriverId
+                && driverFee.id `notElem` driverFeeIdsWithLiveManualInvoice
+          )
+          driverFees
+  filterM (fmap not . isManualPaymentInProgress) driverFeesWithActiveMandate
+
+isManualPaymentInProgress :: (CacheFlow m r, MonadFlow m) => DriverFee -> m Bool
+isManualPaymentInProgress driverFee = do
+  mbInProgress <- Redis.runInMasterCloudRedisCell $ Redis.get (manualPaymentInProgressKey driverFee.id.getId)
+  return $ mbInProgress == Just True
 
 convertToAutoPay ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
@@ -154,7 +160,6 @@ convertToAutoPay eligibleStages driverFees = do
   where
     convertDriverFee driverFee = do
       now <- getCurrentTime
-      QDF.updateManualToAutoPayForRetry eligibleStages driverFee.id
       let reconvertedDriverFee =
             driverFee
               { DF.feeType = DF.RECURRING_EXECUTION_INVOICE,
@@ -167,4 +172,5 @@ convertToAutoPay eligibleStages driverFees = do
       invoiceId <- generateGUID
       invoiceShortId <- generateShortId
       QINV.create $ mkInvoiceAgainstDriverFee (invoiceId :: Text) invoiceShortId.getShortId now Nothing INV.AUTOPAY_INVOICE reconvertedDriverFee
+      QDF.updateManualToAutoPayForRetry eligibleStages driverFee.id
       return reconvertedDriverFee
