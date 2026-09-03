@@ -63,6 +63,7 @@ data FareParametersT f = FareParametersT
     luggageCharge :: B.C f (Maybe HighPrecMoney),
     returnFeeCharge :: B.C f (Maybe HighPrecMoney),
     boothCharge :: B.C f (Maybe HighPrecMoney),
+    schedulingCharge :: B.C f (Maybe HighPrecMoney),
     platformFee :: B.C f (Maybe HighPrecMoney),
     sgst :: B.C f (Maybe HighPrecMoney),
     cgst :: B.C f (Maybe HighPrecMoney),

@@ -175,6 +175,8 @@ types:
     - enum: "ReturnFeeFixed HighPrecMoney, ReturnFeePercentage Double"
   FPV2BoothCharge:
     - enum: "BoothChargeFixed HighPrecMoney, BoothChargePercentage Double"
+  FPV2SchedulingCharge:
+    - enum: "ProgressiveSchedulingCharge Double, ConstantSchedulingCharge HighPrecMoney"
   FPV2PlatformFeeMethod:
     - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge"
   FPV2NightShiftBounds:
@@ -315,6 +317,7 @@ types:
     - perLuggageCharge: Maybe HighPrecMoney
     - returnFee: Maybe FPV2ReturnFee
     - boothCharges: Maybe FPV2BoothCharge
+    - schedulingCharge: Maybe FPV2SchedulingCharge
     - nightShiftBounds: Maybe FPV2NightShiftBounds
     - allowedTripDistanceBounds: Maybe FPV2AllowedTripDistanceBounds
     - tollCharges: Maybe HighPrecMoney
