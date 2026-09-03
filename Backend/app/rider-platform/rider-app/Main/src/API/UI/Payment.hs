@@ -46,21 +46,26 @@ type API =
   TokenAuth
     :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp PaymentAPI.WalletRechargeReq
 
+-- The shared prefix must parenthesize over BOTH alternatives: (:>) binds tighter than
+-- (:<|>), so without the outer parens the status alternative is a bare
+-- /{orderId}/{customerId}/status that shadows every later two-segment .../status route
+-- (it swallowed /bookingDeposit/{id}/status) and escapes the s2s namespace.
 type S2SAPI =
   "s2s"
     :> "payment"
-    :> ( "paytm"
-           :> "edc"
-           :> "callback"
-           :> ReqBody '[JSON] DPayment.PaytmEdcCallbackReq
-           :> Post '[JSON] AckResponse
+    :> ( ( "paytm"
+             :> "edc"
+             :> "callback"
+             :> ReqBody '[JSON] DPayment.PaytmEdcCallbackReq
+             :> Post '[JSON] AckResponse
+         )
+           :<|> ( Capture "orderId" (Id DOrder.PaymentOrder)
+                    :> Capture "customerId" (Id DP.Person)
+                    :> "status"
+                    :> Header "api-key" Data.Text.Text
+                    :> Get '[JSON] DPayment.PaymentStatusResp
+                )
        )
-      :<|> ( Capture "orderId" (Id DOrder.PaymentOrder)
-               :> Capture "customerId" (Id DP.Person)
-               :> "status"
-               :> Header "api-key" Data.Text.Text
-               :> Get '[JSON] DPayment.PaymentStatusResp
-           )
 
 handler :: FlowServer API
 handler authInfo =

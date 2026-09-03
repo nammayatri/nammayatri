@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
+import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
@@ -66,7 +67,8 @@ paymentOrderStatusCheckJob ::
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    MonadMask m
   ) =>
   Job 'PaymentOrderStatusCheck ->
   m ExecutionResult
@@ -126,7 +128,8 @@ processPaymentOrder ::
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    MonadMask m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -154,4 +157,5 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
+      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler orderId mId paymentStatusResp
       _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp

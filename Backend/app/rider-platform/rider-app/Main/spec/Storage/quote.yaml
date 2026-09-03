@@ -80,6 +80,7 @@ Quote:
     estimatedFare : Price
     discount : Maybe Price
     estimatedTotalFare : Price
+    bookingDeposit : Maybe HighPrecMoney
     estimatedPickupDuration : Maybe Seconds
     distanceUnit : DistanceUnit
     providerId : Text

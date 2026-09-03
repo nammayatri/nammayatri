@@ -206,7 +206,7 @@ cancel req merchant booking mbActiveSearchTry = do
         let cancellationTaxAmount = fromMaybe 0 (chargesOutcome >>= (.tax))
             -- base + tax kept separate; total built only here for the on_cancel
             -- CancellationTerm. A non-positive total (zero, or a matrix CREDIT) is
-            -- never surfaced as a cancellation fee on the Beckn side.
+            -- never surfaced as a cancellation fee on the Beckn side
             cancelCharges = do
               base <- chargesOutcome >>= (.fee)
               let total = base + cancellationTaxAmount
