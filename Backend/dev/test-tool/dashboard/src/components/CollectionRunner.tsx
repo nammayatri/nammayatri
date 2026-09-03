@@ -548,7 +548,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       // they capture async fan-out (beckn callbacks, BPP juspay session,
       // rider-app forks) that lands after the HTTP response.
       const capture = await startStepCapture(selectedEnvType);
-      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
+      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id], selectedDir);
       capture.done();
       // Latency excludes pre/post-request script time — only the upstream HTTP call.
       const durationMs = result.upstreamMs;
@@ -702,7 +702,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         const step = parsed.steps[stepIdx];
 
         const capture = await startStepCapture(env.envType);
-        const result = await callPostmanStep(step, stores, stepFilesRef.current[step.id]);
+        const result = await callPostmanStep(step, stores, stepFilesRef.current[step.id], selectedDir);
         capture.done();
         const durationMs = result.upstreamMs;
         const { serviceLogs } = await capture.result;
@@ -847,7 +847,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('req', `[Step ${visibleSteps.findIndex(s => s.id === stepId) + 1}] ${step.method} ${step.name}`);
 
     const start = performance.now();
-    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
+    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id], selectedDir);
     const durationMs = Math.round(performance.now() - start);
 
     if (result.skipped) {
@@ -910,7 +910,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
     const start = performance.now();
     const capture = await startStepCapture(selectedEnvType);
-    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
+    const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id], selectedDir);
     capture.done();
     // Latency excludes pre/post-request script time — only the upstream HTTP call.
     const durationMs = result.upstreamMs;
@@ -985,7 +985,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       onLog('req', `${step.method} ${step.name}`);
 
       const capture = await startStepCapture(selectedEnvType);
-      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id]);
+      const result = await callPostmanStep(step, storesRef.current, stepFilesRef.current[step.id], selectedDir);
       capture.done();
       const durationMs = result.upstreamMs;
       const { mockHits, serviceLogs } = await capture.result;
