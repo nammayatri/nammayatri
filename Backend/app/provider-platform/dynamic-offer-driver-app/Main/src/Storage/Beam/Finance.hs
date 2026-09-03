@@ -30,6 +30,7 @@ import qualified Lib.Finance.Storage.Beam.JournalEntryTransaction as BeamJournal
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
+import qualified Lib.Finance.Storage.Beam.PgSettlementBatch as BeamPgSettlementBatch
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
@@ -92,4 +93,7 @@ instance HasSchemaName BeamTdsReq.FinanceTdsReimbursementRequestT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamTdsMap.FinanceTdsReimbursementInvoiceMappingT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPgSettlementBatch.PgSettlementBatchT where
   schemaName _ = T.pack currentSchemaName

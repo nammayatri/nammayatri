@@ -1141,6 +1141,7 @@ getFinanceManagementFinancePaymentSettlementList merchantShortId opCity mbFrom m
                     PgPaymentSettlementReport.ORDER -> API.Order
                     PgPaymentSettlementReport.REFUND -> API.Refund
                     PgPaymentSettlementReport.CHARGEBACK -> API.Chargeback
+                    _ -> API.Order --TODO: handle other types for REFUND and CHARGEBACK  Reversal if needed
                 ),
             chargedAmount = Just report.txnAmount,
             paymentStatus = Just $ show report.txnStatus,

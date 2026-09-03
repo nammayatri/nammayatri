@@ -28,7 +28,7 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig)
+import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -37,7 +37,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
-import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
+import Lib.Finance.Settlement.Pipeline (PipelineResult (..), runSettlementPipeline)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPO
 import Lib.Scheduler
@@ -48,7 +48,6 @@ import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
--- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
 lockTTLSeconds = 600
 
@@ -80,59 +79,76 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       merchantId = jobData.merchantId
       merchantOperatingCityId = jobData.merchantOperatingCityId
 
-  let lockKey = "SettlementIngestion:" <> merchantId.getId <> ":" <> merchantOperatingCityId.getId
+  let shouldScheduleNext = fromMaybe True jobData.scheduleNextJob
 
-  -- Acquire lock only for the ingestion phase, not for scheduling
-  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey lockTTLSeconds $ do
-    logInfo "Starting settlement report ingestion, fetching configs from MerchantServiceConfig"
-
-    settlementConfigs <- getSettlementConfigs merchantId merchantOperatingCityId
-    if null settlementConfigs
-      then do
-        logWarning "No SettlementService configs found in MerchantServiceConfig"
-        pure True -- success, nothing to do
-      else do
-        mbJuspayCfg <- case jobData.juspayServiceName of
-          Just svcName -> getJuspayOrderStatusConfig merchantOperatingCityId svcName
-          Nothing -> pure Nothing
-        -- Process each service independently, catch errors per-service to avoid one failure blocking others
-        results <- forM settlementConfigs $ \settlementSvcCfg -> do
-          logInfo $ "Processing settlement service: " <> show settlementSvcCfg.settlementService
-          let mbJuspayCfgForService =
-                if fromMaybe False settlementSvcCfg.useJuspayOrderStatus
-                  then mbJuspayCfg
-                  else Nothing
-          serviceResult <-
-            try @_ @SomeException $
-              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId resolveOrderType
-          case serviceResult of
-            Left err -> do
-              logError $ "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " threw exception: " <> show err
-              pure False
-            Right result -> do
-              logInfo $ "Ingestion result for " <> show settlementSvcCfg.settlementService <> ": " <> show result
-              when (result.totalFailed > 0) $
+  configs <- resolveSettlementConfigs merchantId merchantOperatingCityId jobData.settlementProvider
+  case configs of
+    [] -> do
+      logWarning "No settlement configs found; nothing to ingest"
+      when shouldScheduleNext $ scheduleNextIngestionJob merchantId merchantOperatingCityId jobData
+      pure Complete
+    _ -> do
+      logInfo $ "Running settlement pipeline for " <> show (length configs) <> " provider(s)"
+      results <- forM configs $ \cfg -> do
+        let providerName = show cfg.settlementService
+            lockKey = "settlement:ingestion:" <> providerName <> ":" <> merchantId.getId <> ":" <> merchantOperatingCityId.getId
+        mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey lockTTLSeconds $ do
+          mbJuspayCfg <- case jobData.juspayServiceName of
+            Just svcName
+              | fromMaybe False cfg.useJuspayOrderStatus ->
+                getJuspayOrderStatusConfig merchantOperatingCityId svcName
+            _ -> pure Nothing
+          result <- runSettlementPipeline cfg mbJuspayCfg merchantId.getId merchantOperatingCityId.getId jobData.startTime jobData.endTime resolveOrderType
+          case result of
+            PipelineSuccess ingResult -> do
+              logInfo $ "Pipeline success for " <> providerName <> ": " <> show ingResult
+              when (ingResult.totalFailed > 0) $
                 logError $
-                  "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " had " <> show result.totalFailed
+                  "Settlement ingestion for " <> providerName <> " had " <> show ingResult.totalFailed
                     <> " failures out of "
-                    <> show result.totalParsed
+                    <> show ingResult.totalParsed
                     <> " rows"
-              pure (result.totalFailed == 0)
-
-        pure $ and results -- True if all services succeeded
-  case mbResult of
-    Left () -> do
-      logWarning $ "Settlement ingestion lock contention, will retry: " <> lockKey
-      pure Retry
-    Right allSucceeded -> do
-      -- Schedule next run regardless of partial failures (to avoid missing runs)
-      scheduleNextIngestionJob merchantId merchantOperatingCityId jobData
-      if allSucceeded
-        then pure Complete
+              pure (ingResult.totalFailed == 0)
+            PipelineSkipped reason -> do
+              logInfo $ "Pipeline skipped for " <> providerName <> ": " <> reason
+              pure True
+            PipelineFailed err -> do
+              logError $ "Pipeline failed for " <> providerName <> ": " <> err
+              pure False
+        case mbResult of
+          Left () -> do
+            logWarning $ "Settlement ingestion lock contention, will retry: " <> lockKey
+            pure Nothing
+          Right succeeded -> pure (Just succeeded)
+      let lockContention = any isNothing results
+      if lockContention
+        then do
+          logWarning "Lock contention on one or more providers, retrying"
+          pure Retry
         else do
-          logWarning "Some settlement services had failures, but scheduling next run anyway"
+          when shouldScheduleNext $ scheduleNextIngestionJob merchantId merchantOperatingCityId jobData
+          let allSucceeded = all (== Just True) results
+          unless allSucceeded $
+            logWarning "Some settlement services had failures, but scheduling next run anyway"
           pure Complete
   where
+    resolveSettlementConfigs ::
+      (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+      Id DM.Merchant ->
+      Id DMOC.MerchantOperatingCity ->
+      Maybe Text ->
+      m [SettlementServiceConfig]
+    resolveSettlementConfigs mId mOpCityId = \case
+      Just providerName -> do
+        mbCfg <- getSettlementConfigForService mId mOpCityId providerName
+        case mbCfg of
+          Just cfg -> pure [cfg]
+          Nothing -> do
+            logWarning $ "No config found for settlement provider: " <> providerName
+            pure []
+      Nothing ->
+        getSettlementConfigs mId mOpCityId
+
     resolveOrderType ::
       (BeamFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
       Text ->
@@ -150,6 +166,27 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
               pure (Just PgDom.SUBSCRIPTION, Just $ sp.status /= DSP.PENDING && sp.status /= DSP.FAILED, Just sp.id.getId)
             Nothing ->
               pure (Just PgDom.PAYOUT_REGISTRATION, Just False, Nothing)
+
+    getSettlementConfigForService ::
+      (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+      Id DM.Merchant ->
+      Id DMOC.MerchantOperatingCity ->
+      Text ->
+      m (Maybe SettlementServiceConfig)
+    getSettlementConfigForService _mId mOpCityId serviceName = do
+      let allServices = [minBound .. maxBound] :: [SettlementService]
+          mbService = find (\s -> show s == serviceName) allServices
+      case mbService of
+        Nothing -> do
+          logWarning $ "Unknown settlement service name: " <> serviceName
+          pure Nothing
+        Just service -> do
+          mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SettlementService service)}) Nothing
+          pure $ case mbConfig of
+            Just cfg -> case cfg.serviceConfig of
+              DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
+              _ -> Nothing
+            Nothing -> Nothing
 
     getSettlementConfigs ::
       (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
@@ -208,9 +245,19 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       m ()
     scheduleNextIngestionJob mId mOpCityId jd = do
       now <- getCurrentTime
-      let todayDay = utctDay now
-          tomorrowDay = addDays 1 todayDay
-          tomorrowRunTime = UTCTime tomorrowDay (secondsToDiffTime 10800)
+      let ist = 19800
+          nowIst = addUTCTime ist now
+          todayIst = utctDay nowIst
+          tomorrowIst = addDays 1 todayIst
+          tomorrowRunTime = addUTCTime (negate ist) $ UTCTime tomorrowIst (secondsToDiffTime 7200)
           scheduleAfter = diffUTCTime tomorrowRunTime now
-      logInfo $ "Scheduling next settlement ingestion in " <> show scheduleAfter
-      JC.createJobIn @_ @'SettlementReportIngestion (Just mId) (Just mOpCityId) scheduleAfter jd
+          nextStartTime = addUTCTime (negate ist) $ UTCTime todayIst 0
+          nextEndTime = addUTCTime (negate ist) $ UTCTime todayIst (secondsToDiffTime 86399)
+          nextJobData = jd {startTime = Just nextStartTime, endTime = Just nextEndTime, scheduleNextJob = Just True}
+      logInfo $
+        "Scheduling next settlement ingestion in " <> show scheduleAfter
+          <> " with startTime="
+          <> show nextStartTime
+          <> " endTime="
+          <> show nextEndTime
+      JC.createJobIn @_ @'SettlementReportIngestion (Just mId) (Just mOpCityId) scheduleAfter nextJobData
