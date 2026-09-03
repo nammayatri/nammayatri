@@ -20,7 +20,7 @@ pipeline {
   environment {
     GCP_PROJECT = 'ny-sandbox'
     GCP_AR = "asia-south1-docker.pkg.dev/${GCP_PROJECT}"
-    IMAGE_NAME = 'ny-automation'
+    IMAGE_NAME = 'ny-integration-test'
   }
 
   stages {
