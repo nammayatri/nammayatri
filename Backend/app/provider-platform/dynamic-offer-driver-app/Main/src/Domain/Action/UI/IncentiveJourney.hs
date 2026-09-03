@@ -31,7 +31,6 @@ import qualified Storage.CachedQueries.IncentiveJourney as CQJourney
 import qualified Storage.CachedQueries.IncentiveJourneyStats as CQStats
 import Storage.ConfigPilot.Config.IncentiveJourney (IncentiveJourneyDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.IncentiveJourneyStats as QStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Vehicle as QVeh
@@ -56,18 +55,8 @@ toSpecialLocationNames specialLocationNames =
   where
     resolveName locationId = maybe locationId snd (find ((== locationId) . fst) specialLocationNames)
 
--- | For Coins: display amount from CoinsConfig. For Cash/Coupons: stored rewardValue.
 resolveDisplayRewardValue :: DIJM.IncentiveJourneyMilestone -> Flow (Maybe Int)
-resolveDisplayRewardValue milestone =
-  case milestone.rewardType of
-    DIJM.Coins ->
-      case milestone.rewardConfigId of
-        Nothing -> pure milestone.rewardValue
-        Just configId -> do
-          mbConfig <- SQCC.findById configId
-          pure $ maybe milestone.rewardValue (Just . (.coins)) mbConfig
-    DIJM.Cash -> pure milestone.rewardValue
-    DIJM.Coupons -> pure milestone.rewardValue
+resolveDisplayRewardValue = pure . (.rewardValue)
 
 getIncentiveJourneyList ::
   ( Maybe (Id SP.Person),
@@ -79,7 +68,7 @@ getIncentiveJourneyList ::
   Maybe Int ->
   Maybe Int ->
   Flow API.IncentiveJourneyListRes
-getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDate _mbLimit _mbOffset = do
+getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDate mbLimit mbOffset = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   transporterConfig <-
     getOneConfig
@@ -89,7 +78,7 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicle <- QVeh.findById driverId >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
   let vehCategory = VecVariant.castVehicleVariantToVehicleCategory vehicle.variant
-      mbVehicleVariant = Just vehicle.variant
+      selectedServiceTiers = vehicle.selectedServiceTiers
   localTime <- case mbDate >>= parseDateText of
     Just day -> pure $ UTCTime day 0
     Nothing -> getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -107,7 +96,7 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
                     journeyId = Nothing,
                     enabled = Just True,
                     vehicleCategory = Nothing,
-                    vehicleVariant = Nothing
+                    serviceTierType = Nothing
                   }
               )
               (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -118,7 +107,7 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
                     journeyId = Nothing,
                     enabled = Nothing,
                     vehicleCategory = Nothing,
-                    vehicleVariant = Nothing
+                    serviceTierType = Nothing
                   }
               )
               (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -127,36 +116,39 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
               ( \j ->
                   j.merchantId == merchantId
                     && j.driverTag `elem` journeyTags
-                    && SLJourney.matchesJourneyVehicle j vehCategory mbVehicleVariant
+                    && SLJourney.matchesJourneyVehicleForDriver j vehCategory selectedServiceTiers
               )
               enabledJourneys
-      -- Prefer currently-active journey; else first match for "come back later". Return at most 1.
-      case SLJourney.selectPreferredJourney localTime matching of
-        Nothing -> pure API.IncentiveJourneyListRes {journeys = []}
-        Just journey -> do
-          milestones <- SLJourney.loadJourneyMilestones merchantOpCityId journey.id
-          let periodKey = SLJourney.mkJourneyPeriodKey localTime journey
-          statsRows <- CQStats.findByDriverIdAndJourneyIdAndPeriodKey driverId journey.id periodKey
-          specialLocationNames <- buildSpecialLocationNames milestones
-          items <- mapM (toMilestoneItem specialLocationNames statsRows) milestones
-          pure $
-            API.IncentiveJourneyListRes
-              { journeys =
-                  [ API.IncentiveJourneyListItem
-                      { journeyId = journey.id,
-                        name = journey.name,
-                        description = journey.description,
-                        journeyType = journey.journeyType <|> Just DIJ.Daily,
-                        timeBounds = journey.timeBounds,
-                        startDate = journey.startDate,
-                        endDate = journey.endDate,
-                        vehicleCategory = journey.vehicleCategory,
-                        vehicleVariant = journey.vehicleVariant,
-                        enabled = journey.enabled,
-                        milestones = items
-                      }
-                  ]
-              }
+          orderedMatching = SLJourney.orderJourneysForDisplay localTime matching
+          pagedMatching =
+            take (fromMaybe (length orderedMatching) mbLimit)
+              . drop (fromMaybe 0 mbOffset)
+              $ orderedMatching
+      if null pagedMatching
+        then pure API.IncentiveJourneyListRes {journeys = []}
+        else do
+          journeys <-
+            forM pagedMatching $ \journey -> do
+              milestones <- SLJourney.loadJourneyMilestones merchantOpCityId journey.id
+              let periodKey = SLJourney.mkJourneyPeriodKey localTime journey
+              statsRows <- CQStats.findByDriverIdAndJourneyIdAndPeriodKey driverId journey.id periodKey
+              specialLocationNames <- buildSpecialLocationNames milestones
+              items <- mapM (toMilestoneItem specialLocationNames statsRows) milestones
+              pure $
+                API.IncentiveJourneyListItem
+                  { journeyId = journey.id,
+                    name = journey.name,
+                    description = journey.description,
+                    journeyType = journey.journeyType <|> Just DIJ.Daily,
+                    timeBounds = journey.timeBounds,
+                    startDate = journey.startDate,
+                    endDate = journey.endDate,
+                    vehicleCategory = journey.vehicleCategory,
+                    serviceTierType = journey.serviceTierType,
+                    enabled = journey.enabled,
+                    milestones = items
+                  }
+          pure API.IncentiveJourneyListRes {journeys = journeys}
 
 toMilestoneItem :: [(Text, Text)] -> [DIJS.IncentiveJourneyStats] -> DIJM.IncentiveJourneyMilestone -> Flow API.IncentiveJourneyMilestoneItem
 toMilestoneItem specialLocationNames statsRows milestone = do
@@ -217,7 +209,7 @@ getIncentiveJourneyHistory (mbPersonId, _merchantId, merchantOpCityId) mbDate mb
                       journeyId = Just journeyId,
                       enabled = Nothing,
                       vehicleCategory = Nothing,
-                      vehicleVariant = Nothing
+                      serviceTierType = Nothing
                     }
                 )
                 (Just $ CQJourney.findById journeyId >>= maybe (pure []) (pure . (: [])))

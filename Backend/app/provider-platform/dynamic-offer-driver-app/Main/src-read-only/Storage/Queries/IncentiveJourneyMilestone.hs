@@ -28,7 +28,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByJourneyId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.IncentiveJourney.IncentiveJourney -> m ([Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.IncentiveJourney.IncentiveJourney -> m [Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMilestone])
 findByJourneyId limit offset journeyId = do findAllWithOptionsKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)] (Se.Desc Beam.order) limit offset
 
 findByPrimaryKey ::
@@ -48,7 +48,7 @@ updateByPrimaryKey (Domain.Types.IncentiveJourneyMilestone.IncentiveJourneyMiles
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.order order,
       Se.Set Beam.pickupSpecialLocationIds pickupSpecialLocationIds,
-      Se.Set Beam.rewardConfigId (Kernel.Types.Id.getId <$> rewardConfigId),
+      Se.Set Beam.rewardExpirationAt rewardExpirationAt,
       Se.Set Beam.rewardType rewardType,
       Se.Set Beam.rewardValue rewardValue,
       Se.Set Beam.updatedAt _now,
@@ -72,7 +72,7 @@ instance FromTType' Beam.IncentiveJourneyMilestone Domain.Types.IncentiveJourney
             journeyId = Kernel.Types.Id.Id journeyId,
             order = order,
             pickupSpecialLocationIds = pickupSpecialLocationIds,
-            rewardConfigId = Kernel.Types.Id.Id <$> rewardConfigId,
+            rewardExpirationAt = rewardExpirationAt,
             rewardType = rewardType,
             rewardValue = rewardValue,
             updatedAt = updatedAt,
@@ -93,7 +93,7 @@ instance ToTType' Beam.IncentiveJourneyMilestone Domain.Types.IncentiveJourneyMi
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.order = order,
         Beam.pickupSpecialLocationIds = pickupSpecialLocationIds,
-        Beam.rewardConfigId = Kernel.Types.Id.getId <$> rewardConfigId,
+        Beam.rewardExpirationAt = rewardExpirationAt,
         Beam.rewardType = rewardType,
         Beam.rewardValue = rewardValue,
         Beam.updatedAt = updatedAt,

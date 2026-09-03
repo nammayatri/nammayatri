@@ -11,7 +11,6 @@ where
 import qualified API.Types.ProviderPlatform.Management.IncentiveJourney as Common
 import qualified Dashboard.Common
 import Data.List (sortOn)
-import qualified Domain.Types.Coins.CoinsConfig as DCoinsConfig
 import qualified Domain.Types.IncentiveJourney as DIJ
 import qualified Domain.Types.IncentiveJourneyMilestone as DIJM
 import qualified Domain.Types.Merchant
@@ -56,7 +55,7 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
                 journeyId = Nothing,
                 enabled = Just True,
                 vehicleCategory = Nothing,
-                vehicleVariant = Nothing
+                serviceTierType = Nothing
               }
           )
           (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -68,7 +67,7 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
                   journeyId = Nothing,
                   enabled = Nothing,
                   vehicleCategory = Nothing,
-                  vehicleVariant = Nothing
+                  serviceTierType = Nothing
                 }
             )
             (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -79,7 +78,7 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
                 journeyId = Nothing,
                 enabled = Nothing,
                 vehicleCategory = Nothing,
-                vehicleVariant = Nothing
+                serviceTierType = Nothing
               }
           )
           (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -117,7 +116,7 @@ postIncentiveJourneyCreate merchantShortId opCity req = do
             startDate = req.startDate,
             endDate = req.endDate,
             vehicleCategory = req.vehicleCategory,
-            vehicleVariant = req.vehicleVariant,
+            serviceTierType = req.serviceTierType,
             enabled = req.enabled,
             createdAt = now,
             updatedAt = now
@@ -153,7 +152,7 @@ putIncentiveJourneyUpdate merchantShortId opCity req = do
             DIJ.startDate = startDate,
             DIJ.endDate = endDate,
             DIJ.vehicleCategory = maybe journey.vehicleCategory Just req.vehicleCategory,
-            DIJ.vehicleVariant = maybe journey.vehicleVariant Just req.vehicleVariant,
+            DIJ.serviceTierType = maybe journey.serviceTierType Just req.serviceTierType,
             DIJ.enabled = fromMaybe journey.enabled req.enabled
           }
   QJourney.updateByPrimaryKey updated
@@ -217,14 +216,15 @@ postIncentiveJourneyMilestoneCreate merchantShortId opCity req = do
             pickupSpecialLocationIds = req.pickupSpecialLocationIds,
             dropSpecialLocationIds = req.dropSpecialLocationIds,
             rewardType = toDomainRewardType req.rewardType,
-            rewardConfigId = ID.cast @Dashboard.Common.CoinsConfig @DCoinsConfig.CoinsConfig <$> req.rewardConfigId,
             rewardValue = req.rewardValue,
+            rewardExpirationAt = req.rewardExpirationAt,
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId
           }
   validateMilestoneCondition milestone
+  validateMilestoneReward milestone
   QMilestone.create milestone
   CQMilestone.clearCacheByJourneyId journeyId
   invalidateConfigInMem IncentiveJourneyMilestoneConfig
@@ -255,14 +255,11 @@ putIncentiveJourneyMilestoneUpdate merchantShortId opCity req = do
             DIJM.pickupSpecialLocationIds = maybe milestone.pickupSpecialLocationIds Just req.pickupSpecialLocationIds,
             DIJM.dropSpecialLocationIds = maybe milestone.dropSpecialLocationIds Just req.dropSpecialLocationIds,
             DIJM.rewardType = maybe milestone.rewardType toDomainRewardType req.rewardType,
-            DIJM.rewardConfigId =
-              maybe
-                milestone.rewardConfigId
-                (Just . ID.cast @Dashboard.Common.CoinsConfig @DCoinsConfig.CoinsConfig)
-                req.rewardConfigId,
-            DIJM.rewardValue = maybe milestone.rewardValue Just req.rewardValue
+            DIJM.rewardValue = maybe milestone.rewardValue Just req.rewardValue,
+            DIJM.rewardExpirationAt = maybe milestone.rewardExpirationAt Just req.rewardExpirationAt
           }
   validateMilestoneCondition updated
+  validateMilestoneReward updated
   QMilestone.updateByPrimaryKey updated
   CQMilestone.clearCacheByJourneyId milestone.journeyId
   invalidateConfigInMem IncentiveJourneyMilestoneConfig
@@ -284,7 +281,7 @@ toJourneyListItem journey =
       startDate = journey.startDate,
       endDate = journey.endDate,
       vehicleCategory = journey.vehicleCategory,
-      vehicleVariant = journey.vehicleVariant,
+      serviceTierType = journey.serviceTierType,
       enabled = journey.enabled,
       createdAt = journey.createdAt,
       updatedAt = journey.updatedAt
@@ -303,8 +300,8 @@ toMilestoneListItem milestone =
       pickupSpecialLocationIds = milestone.pickupSpecialLocationIds,
       dropSpecialLocationIds = milestone.dropSpecialLocationIds,
       rewardType = toApiRewardType milestone.rewardType,
-      rewardConfigId = ID.cast @DCoinsConfig.CoinsConfig @Dashboard.Common.CoinsConfig <$> milestone.rewardConfigId,
       rewardValue = milestone.rewardValue,
+      rewardExpirationAt = milestone.rewardExpirationAt,
       createdAt = milestone.createdAt,
       updatedAt = milestone.updatedAt
     }
@@ -339,6 +336,18 @@ validateMilestoneCondition milestone = do
     _ ->
       when (conditionOperator == DIJM.CT) $
         throwError (InvalidRequest "CT operator is only valid for special-location conditions")
+
+validateMilestoneReward :: DIJM.IncentiveJourneyMilestone -> Environment.Flow ()
+validateMilestoneReward milestone =
+  case milestone.rewardType of
+    DIJM.Coins ->
+      case milestone.rewardValue of
+        Just coins | coins > 0 -> pure ()
+        _ -> throwError (InvalidRequest "Coins milestone requires rewardValue > 0")
+    DIJM.Cash ->
+      throwError (InvalidRequest "Cash reward type is not supported")
+    DIJM.Coupons ->
+      throwError (InvalidRequest "Coupons reward type is not supported")
 
 toDomainJourneyType :: Common.IncentiveJourneyType -> DIJ.IncentiveJourneyType
 toDomainJourneyType = \case

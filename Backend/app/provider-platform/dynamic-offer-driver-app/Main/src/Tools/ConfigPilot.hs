@@ -124,7 +124,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       coinsCfg <- getConfigList (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Nothing, merchantId = Nothing, active = Nothing, vehicleCategory = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
     LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig -> do
-      journeyCfg <- getConfigList (IncentiveJourneyDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, enabled = Nothing, vehicleCategory = Nothing, vehicleVariant = Nothing})
+      journeyCfg <- getConfigList (IncentiveJourneyDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, enabled = Nothing, vehicleCategory = Nothing, serviceTierType = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON journeyCfg}
     LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig -> do
       milestoneCfg <- getConfigList (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, milestoneId = Nothing})

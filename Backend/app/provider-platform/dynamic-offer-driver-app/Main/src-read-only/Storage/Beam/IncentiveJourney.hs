@@ -5,9 +5,9 @@ module Storage.Beam.IncentiveJourney where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.IncentiveJourney
 import qualified Domain.Types.VehicleCategory
-import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -25,11 +25,11 @@ data IncentiveJourneyT f = IncentiveJourneyT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    serviceTierType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     startDate :: B.C f Kernel.Prelude.UTCTime,
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
-    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 

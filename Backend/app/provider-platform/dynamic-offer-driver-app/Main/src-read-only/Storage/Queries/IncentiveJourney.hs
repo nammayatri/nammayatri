@@ -59,11 +59,11 @@ updateByPrimaryKey (Domain.Types.IncentiveJourney.IncentiveJourney {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.vehicleVariant vehicleVariant
+      Se.Set Beam.vehicleCategory vehicleCategory
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -82,11 +82,11 @@ instance FromTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.Incentiv
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            serviceTierType = serviceTierType,
             startDate = startDate,
             timeBounds = timeBounds,
             updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory,
-            vehicleVariant = vehicleVariant
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.IncentiveJourney where
@@ -102,9 +102,9 @@ instance ToTType' Beam.IncentiveJourney Domain.Types.IncentiveJourney.IncentiveJ
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.serviceTierType = serviceTierType,
         Beam.startDate = startDate,
         Beam.timeBounds = timeBounds,
         Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = vehicleCategory,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleCategory = vehicleCategory
       }

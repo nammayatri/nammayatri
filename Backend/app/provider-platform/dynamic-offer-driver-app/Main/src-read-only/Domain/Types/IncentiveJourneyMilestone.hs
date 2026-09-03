@@ -4,7 +4,6 @@
 module Domain.Types.IncentiveJourneyMilestone where
 
 import Data.Aeson
-import qualified Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.IncentiveJourney
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -25,7 +24,7 @@ data IncentiveJourneyMilestone = IncentiveJourneyMilestone
     journeyId :: Kernel.Types.Id.Id Domain.Types.IncentiveJourney.IncentiveJourney,
     order :: Kernel.Prelude.Int,
     pickupSpecialLocationIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    rewardConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Coins.CoinsConfig.CoinsConfig),
+    rewardExpirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rewardType :: Domain.Types.IncentiveJourneyMilestone.MilestoneRewardType,
     rewardValue :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,

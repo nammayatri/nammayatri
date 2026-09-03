@@ -1,6 +1,5 @@
 imports:
   IncentiveJourney: Domain.Types.IncentiveJourney
-  CoinsConfig: Domain.Types.Coins.CoinsConfig
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
@@ -37,8 +36,8 @@ IncentiveJourneyMilestone:
     pickupSpecialLocationIds: "Maybe [Text]"
     dropSpecialLocationIds: "Maybe [Text]"
     rewardType: MilestoneRewardType
-    rewardConfigId: Maybe (Id CoinsConfig)
     rewardValue: Maybe Int
+    rewardExpirationAt: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
 

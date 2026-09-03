@@ -24,4 +24,7 @@ ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD COLUMN journey_type tex
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD COLUMN vehicle_variant text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD COLUMN service_tier_type text ;

@@ -4,9 +4,9 @@
 
 module Storage.ConfigPilot.Config.IncentiveJourney (IncentiveJourneyDimensions (..)) where
 
+import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.IncentiveJourney as DT
 import Domain.Types.VehicleCategory as DTV
-import qualified Domain.Types.VehicleVariant as DTVV
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
@@ -21,7 +21,7 @@ data IncentiveJourneyDimensions = IncentiveJourneyDimensions
     journeyId :: Maybe (Id DT.IncentiveJourney),
     enabled :: Maybe Bool,
     vehicleCategory :: Maybe DTV.VehicleCategory,
-    vehicleVariant :: Maybe DTVV.VehicleVariant
+    serviceTierType :: Maybe DCommon.ServiceTierType
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -43,7 +43,7 @@ instance ConfigDimensions IncentiveJourneyDimensions where
       [ LCP.DimMatcher (.journeyId) (Just . (.id)) (==),
         LCP.DimMatcher (.enabled) (Just . (.enabled)) (==),
         LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),
-        LCP.DimMatcher (.vehicleVariant) (.vehicleVariant) (==)
+        LCP.DimMatcher (.serviceTierType) (.serviceTierType) (==)
       ]
       Nothing
   configFallback a =

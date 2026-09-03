@@ -4,10 +4,10 @@
 module Domain.Types.IncentiveJourney where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
-import qualified Domain.Types.VehicleVariant
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -26,11 +26,11 @@ data IncentiveJourney = IncentiveJourney
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,
     startDate :: Kernel.Prelude.UTCTime,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
