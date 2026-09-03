@@ -681,5 +681,6 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
       isAutoAssignEnabledForTier dp.driverPoolResult.serviceTier
         && UI.hasPriorityTag (show dp.driverPoolResult.serviceTier) dp
         && dp.driverPoolResult.serviceTier `elem` dp.driverPoolResult.selectedAutoAcceptTiers
+        && dp.preferenceMatchScore == 1.0
     priorityCandidates = DL.filter isPriorityCandidate batch
     sortedPriority = DL.sortOn (.actualDistanceToPickup) priorityCandidates

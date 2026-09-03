@@ -82,6 +82,7 @@ types:
     - faultRule: Maybe Text
     - cancelledBy: Maybe Text
     - tripCategory: Maybe Text
+    - isAutoAccepted: Maybe Bool
     - vehicleServiceTier: Maybe Text
     - area: Maybe Text
     - paymentInstrument: Maybe Text

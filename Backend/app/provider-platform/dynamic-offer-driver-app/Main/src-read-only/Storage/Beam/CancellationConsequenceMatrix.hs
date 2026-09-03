@@ -34,6 +34,7 @@ data CancellationConsequenceMatrixT f = CancellationConsequenceMatrixT
     faultRule :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     faultVerdict :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
+    isAutoAccepted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     maxWaiveOffsPerPeriod :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),

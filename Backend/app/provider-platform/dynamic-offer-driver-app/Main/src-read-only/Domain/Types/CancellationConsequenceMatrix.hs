@@ -33,6 +33,7 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
     faultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     faultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix,
+    isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxWaiveOffsPerPeriod :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
