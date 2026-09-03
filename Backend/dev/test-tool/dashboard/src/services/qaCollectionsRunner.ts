@@ -45,6 +45,26 @@ export function qaCollectionEventsUrl(runId: string): string {
   return `${LOCAL_API_BASE}/api/qa-collections/events/${runId}`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type QaRunEvent = { type: string; [key: string]: any };
+
+export interface QaRunDetail {
+  runId: string;
+  status: 'running' | 'passed' | 'failed' | 'stopped';
+  triggeredBy: string;
+  collections: string[];
+  startedAt: number;
+  finishedAt: number | null;
+  passed: number;
+  failed: number;
+  events: QaRunEvent[];
+}
+
+export async function fetchQaRunDetail(runId: string): Promise<QaRunDetail> {
+  const resp = await fetch(`${LOCAL_API_BASE}/api/qa-collections/runs/${runId}`);
+  return asJson<QaRunDetail>(resp);
+}
+
 export interface QaSyncResult {
   ok: boolean;
   dir?: string;

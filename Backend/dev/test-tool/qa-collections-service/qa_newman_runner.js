@@ -63,6 +63,13 @@ run.on('beforeItem', (err, args) => {
   emit('item_start', { name: args.item && args.item.name });
 });
 
+const MAX_BODY_CHARS = 4000;
+
+function truncate(s) {
+  if (typeof s !== 'string') return s;
+  return s.length > MAX_BODY_CHARS ? s.slice(0, MAX_BODY_CHARS) + '…(truncated)' : s;
+}
+
 run.on('request', (err, args) => {
   try {
     if (err) {
@@ -72,13 +79,25 @@ run.on('request', (err, args) => {
     const response = args.response;
     let url;
     try { url = args.request && args.request.url && args.request.url.toString(); } catch (_) { /* best-effort */ }
-    emit('request', {
+    const status = response && response.code;
+    const failed = !status || status >= 400;
+
+    const event = {
       name: args.item && args.item.name,
       method: args.request && args.request.method,
       url,
-      status: response && response.code,
+      status,
       responseTime: response && response.responseTime,
-    });
+    };
+
+    if (failed) {
+      try { event.responseBody = truncate(response && response.text()); } catch (_) { /* binary or unreadable body */ }
+      try { event.responseHeaders = response && response.headers && response.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
+      try { event.requestBody = truncate(args.request && args.request.body && args.request.body.toString()); } catch (_) { /* best-effort */ }
+      try { event.requestHeaders = args.request && args.request.headers && args.request.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
+    }
+
+    emit('request', event);
   } catch (_) { /* never let a malformed event crash the run */ }
 });
 

@@ -133,22 +133,40 @@ test-local-api:
 
 - `POST /api/qa-collections/run` — `{collections: [{directory, filename}],
   envFile, concurrency}` → `{runId}`. What `CollectionRunner.tsx`'s Run button
-  calls for a `backendOnly` group.
+  calls for a `backendOnly` group. A `collections` entry with `directory` but
+  no `filename` expands to every collection currently in that directory
+  (`_expand_collections` in `qa_runner.py`) — e.g. `{directory: "NY"}` runs
+  the whole NY suite without naming every file, which is what an external
+  caller's "run all of NY/MSIL/YS" config uses.
 - `GET /api/qa-collections/events/<runId>` — SSE stream of NDJSON events.
+- `GET /api/qa-collections/runs/<runId>` — full persisted detail for one run
+  (status, pass/fail, and every event recorded, capped at 2000) — survives
+  after the SSE stream closes, for a caller that only checks in after the run
+  finished. Failed requests carry their response body/headers and the
+  request body/headers that produced them (`qa_newman_runner.js` only
+  captures these on failure, to keep passing runs' event stream light).
+  404 if the run id is unknown (includes runs evicted past the last 20).
 - `POST /api/qa-collections/stop/<runId>`.
-- `GET /api/qa-collections/runs` — recent + active runs (id, status,
-  triggeredBy, collections, pass/fail) — useful for polling a webhook-
-  triggered run's outcome from outside the dashboard (e.g. CI).
+- `GET /api/qa-collections/runs` — recent + active runs, summary only (id,
+  status, triggeredBy, collections, pass/fail) — useful for polling a
+  webhook-triggered run's outcome from outside the dashboard (e.g. CI).
 - `POST /api/qa-collections/webhook` — triggers a run from outside the
   dashboard entirely. Requires `QA_WEBHOOK_TOKEN` to be set (the route is
   503 until it is); the caller sends it back as `X-QA-Webhook-Token`. Body is
   either `{directory, filename[, envFile]}` to run just that one collection,
   or empty/omitted to run whatever `qa-collections-service/webhook-config.json`
-  lists (`{"concurrency": N, "collections": [{directory, filename, envFile?}]}`)
+  lists (`{"concurrency": N, "collections": [{directory, filename?, envFile?}]}`
+  — omit `filename` for "all of this directory", per the expansion above)
   — that file ships with an empty `collections: []`, so populate it with
   whatever should run on a CI trigger.
 - Needs `npm install` once inside `qa-collections-service/` (installs
   `newman` locally — not a nix devshell dependency).
+- **Deep link**: `http://<dashboard-host>:7070/?qaRunId=<runId>` opens a
+  standalone overlay (`QaRunViewer.tsx`, mounted in `App.tsx` regardless of
+  which tab is selected) showing that run's live progress (SSE, while
+  running) or its persisted detail (once finished) — this is the link an
+  external trigger (e.g. System Control Centre) hands back to whoever needs
+  to watch a run it kicked off.
 
 ### `mock-servers/` — request mocks for external services
 Path: `Backend/dev/mock-servers/`, port `8080`, process namespace `test`.

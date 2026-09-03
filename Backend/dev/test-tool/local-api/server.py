@@ -4054,6 +4054,17 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 return True
             self._send_json(_qa_runner.list_runs())
             return True
+        elif path.startswith("/api/qa-collections/runs/") and method == "GET":
+            run_id = path[len("/api/qa-collections/runs/"):]
+            if not _QA_AVAILABLE:
+                self._send_json({"error": "qa collections runner unavailable"}, 503)
+                return True
+            detail = _qa_runner.get_run_detail(run_id)
+            if detail is None:
+                self._send_json({"error": "run not found"}, 404)
+                return True
+            self._send_json(detail)
+            return True
         elif path == "/api/qa-collections/run" and method == "POST":
             if not _QA_AVAILABLE:
                 self._send_json({"error": "qa collections runner unavailable — run `npm install` in qa-collections-service"}, 503)

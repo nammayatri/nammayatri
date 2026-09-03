@@ -149,25 +149,59 @@ def build_webhook_run_config(body: dict) -> dict:
     }
 
 
+MAX_EVENTS_PER_RUN = 2000
+
+
+def _emit(run: dict, eq: Queue, event: dict):
+    """Push an event onto the live SSE queue AND the run's persisted event log,
+    so full detail (incl. request/response bodies for failures) survives after
+    the SSE stream closes — see get_run_detail()."""
+    eq.put(event)
+    with run["lock"]:
+        events = run["events"]
+        events.append(event)
+        if len(events) > MAX_EVENTS_PER_RUN:
+            del events[: len(events) - MAX_EVENTS_PER_RUN]
+
+
+def _expand_collections(collections: list) -> list:
+    """A {directory} entry with no filename expands to every collection
+    currently in that directory — lets webhook-config.json (or SCC's own
+    config) say "run all of NY" without naming every file."""
+    expanded = []
+    for c in collections:
+        if c.get("filename"):
+            expanded.append(c)
+            continue
+        directory = c.get("directory", "")
+        dir_path = _qa_dir() / directory
+        if not dir_path.is_dir():
+            continue
+        for f in sorted(dir_path.iterdir()):
+            if f.is_file() and f.suffix == ".json" and not f.name.endswith(".postman_environment.json"):
+                expanded.append({**c, "filename": f.name})
+    return expanded
+
+
 def _run_one_collection(run_id: str, directory: str, filename: str, env_path: Path, eq: Queue, run: dict):
     collection_path = _qa_dir() / directory / filename
     label = Path(filename).stem
 
     if not collection_path.is_file():
-        eq.put({"type": "collection_result", "collection": label, "passed": 0, "failed": 1,
-                "error": f"collection not found: {collection_path}"})
+        _emit(run, eq, {"type": "collection_result", "collection": label, "directory": directory, "passed": 0, "failed": 1,
+                         "error": f"collection not found: {collection_path}"})
         return 0, 1
 
     cmd = [NODE_PATH, str(RUNNER_JS), str(collection_path)]
     if env_path is not None:
         cmd.append(str(env_path))
 
-    eq.put({"type": "collection_started", "collection": label, "directory": directory})
+    _emit(run, eq, {"type": "collection_started", "collection": label, "directory": directory})
 
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     except OSError as exc:
-        eq.put({"type": "collection_result", "collection": label, "passed": 0, "failed": 1, "error": str(exc)})
+        _emit(run, eq, {"type": "collection_result", "collection": label, "directory": directory, "passed": 0, "failed": 1, "error": str(exc)})
         return 0, 1
 
     with run["lock"]:
@@ -185,7 +219,7 @@ def _run_one_collection(run_id: str, directory: str, filename: str, env_path: Pa
                 continue
             event["collection"] = label
             event["directory"] = directory
-            eq.put(event)
+            _emit(run, eq, event)
             if event.get("type") == "done":
                 passed = event.get("passed", 0)
                 failed = event.get("failed", 0)
@@ -195,7 +229,7 @@ def _run_one_collection(run_id: str, directory: str, filename: str, env_path: Pa
     if proc.returncode != 0 and passed == 0 and failed == 0:
         failed = 1
 
-    eq.put({"type": "collection_result", "collection": label, "directory": directory, "passed": passed, "failed": failed})
+    _emit(run, eq, {"type": "collection_result", "collection": label, "directory": directory, "passed": passed, "failed": failed})
     return passed, failed
 
 
@@ -207,7 +241,7 @@ def _coordinate(run_id: str, config: dict, eq: Queue, run: dict):
     started_at = run["started_at"]
     total_passed = total_failed = 0
 
-    eq.put({"type": "run_started", "runId": run_id, "collections": len(collections), "concurrency": concurrency})
+    _emit(run, eq, {"type": "run_started", "runId": run_id, "collections": len(collections), "concurrency": concurrency})
 
     try:
         with ThreadPoolExecutor(max_workers=concurrency) as ex:
@@ -225,13 +259,13 @@ def _coordinate(run_id: str, config: dict, eq: Queue, run: dict):
                 total_passed += p
                 total_failed += f
     except Exception as exc:
-        eq.put({"type": "error", "error": str(exc)})
+        _emit(run, eq, {"type": "error", "error": str(exc)})
     finally:
         run["status"] = "stopped" if run["abort"].is_set() else ("failed" if total_failed else "passed")
         run["finished_at"] = int(time.time() * 1000)
         run["passed"] = total_passed
         run["failed"] = total_failed
-        eq.put({
+        _emit(run, eq, {
             "type": "run_complete",
             "passed": total_passed,
             "failed": total_failed,
@@ -245,15 +279,18 @@ def start_run(config: dict) -> str:
     run_id = str(uuid.uuid4())[:8]
     eq: Queue = Queue()
     now = int(time.time() * 1000)
+    expanded_collections = _expand_collections(config.get("collections") or [])
+    config = {**config, "collections": expanded_collections}
     run = {
         "eq": eq,
         "abort": threading.Event(),
         "lock": threading.Lock(),
         "procs": [],
+        "events": [],
         "started_at": now,
         "finished_at": None,
         "triggered_by": config.get("triggeredBy", "ui"),
-        "collections": [f"{c.get('directory', '')}/{c.get('filename', '')}" for c in (config.get("collections") or [])],
+        "collections": [f"{c.get('directory', '')}/{c.get('filename', '')}" for c in expanded_collections],
         "status": "running",
         "passed": 0,
         "failed": 0,
@@ -286,6 +323,29 @@ def get_queue(run_id: str):
     with _runs_lock:
         run = _runs.get(run_id)
     return run["eq"] if run else None
+
+
+def get_run_detail(run_id: str) -> dict | None:
+    """Full detail for one run — summary fields plus every event recorded
+    (capped at MAX_EVENTS_PER_RUN), including request/response bodies for
+    failures. Survives after the live SSE stream closes, for a caller (e.g.
+    System Control Centre) that only checks in after the run has finished."""
+    with _runs_lock:
+        run = _runs.get(run_id)
+        if not run:
+            return None
+        events = list(run["events"])
+    return {
+        "runId": run_id,
+        "status": run["status"],
+        "triggeredBy": run["triggered_by"],
+        "collections": run["collections"],
+        "startedAt": run["started_at"],
+        "finishedAt": run["finished_at"],
+        "passed": run["passed"],
+        "failed": run["failed"],
+        "events": events,
+    }
 
 
 def list_runs() -> list:
