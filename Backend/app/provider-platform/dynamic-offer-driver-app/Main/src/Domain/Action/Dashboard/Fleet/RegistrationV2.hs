@@ -569,7 +569,7 @@ postRegistrationV2RegisterBankAccountLink ::
   Text ->
   Flow Common.FleetBankAccountLinkResp
 -- NOTE: `fleetOwnerId` in this API can also be used as a driverId when the requestor is an Admin.
-postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode mbInitiatedBy requestorId = do
+postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId _paymentMode mbInitiatedBy requestorId = do
   let personId = fromMaybe requestorId mbFleetOwnerId
   person <-
     FleetAccess.checkRequestorAccessToBankAccountPerson (Just requestorId) personId
@@ -601,7 +601,7 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
                 businessRegistrationNumber = fleetOwnerInfo.businessLicenseNumber
               }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.FleetDashboard mbInitiatedBy) person
+  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle (Just $ fromMaybe DIB.FleetDashboard mbInitiatedBy) person
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}

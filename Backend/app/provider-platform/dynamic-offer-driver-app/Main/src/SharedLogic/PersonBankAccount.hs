@@ -30,6 +30,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters (convertPeriodTypeToSeconds)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -66,16 +68,34 @@ toRateLimitOptions cfg =
 refreshRateLimitKey :: Id Domain.Types.Person.Person -> Text
 refreshRateLimitKey driverId = "BPP:Stripe:StatusRefresh:" <> driverId.getId <> ":hitsCount"
 
+-- | Namma Tag that puts a person's Stripe Connect account in the TEST environment.
+--   Read only when the account is created; after that driver_bank_account.payment_mode
+--   is authoritative, so the tag expiring later cannot move an onboarded person.
+paymentTestTagName :: LYT.TagName
+paymentTestTagName = LYT.TagName "PaymentTest"
+
+resolvePaymentModeFromTags :: Maybe [LYT.TagNameValueExpiry] -> Environment.Flow DMPM.PaymentMode
+resolvePaymentModeFromTags mbTags = do
+  now <- getCurrentTime
+  let validTags = LYTU.filterExpiredTags' now (fromMaybe [] mbTags)
+  pure $ if any ((== Just paymentTestTagName) . LYTU.parseTagName) validTags then DMPM.TEST else DMPM.LIVE
+
 getPersonRegisterBankAccountLink ::
   PersonRegisterBankAccountLinkHandle ->
-  Maybe DMPM.PaymentMode ->
   Maybe DIB.InitiatedBy ->
   Domain.Types.Person.Person ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-getPersonRegisterBankAccountLink h mbPaymentMode mbInitiatedBy person = withDynamicLogLevel "payment-mode" $ do
+getPersonRegisterBankAccountLink h mbInitiatedBy person = withDynamicLogLevel "payment-mode" $ do
   mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
-  paymentMode <- validatePaymentMode mbPaymentMode mPersonBankAccount
-  logDebug $ "paymentMode|bankAccount|personId=" <> person.id.getId <> " requested=" <> show mbPaymentMode <> " stored=" <> show (mPersonBankAccount >>= (.paymentMode)) <> " resolved=" <> show paymentMode
+  taggedMode <- resolvePaymentModeFromTags person.driverTag
+  paymentMode <- case mPersonBankAccount of
+    Just bankAccount -> do
+      let storedMode = fromMaybe DMPM.LIVE bankAccount.paymentMode
+      when (storedMode /= taggedMode) $
+        logWarning $ "paymentMode|bankAccount|tag resolves to " <> show taggedMode <> " but account exists as " <> show storedMode <> "; keeping stored. personId=" <> person.id.getId
+      pure storedMode
+    Nothing -> pure taggedMode
+  logDebug $ "paymentMode|bankAccount|personId=" <> person.id.getId <> " tagged=" <> show taggedMode <> " stored=" <> show (mPersonBankAccount >>= (.paymentMode)) <> " resolved=" <> show paymentMode
   now <- getCurrentTime
   case mPersonBankAccount of
     Just bankAccount -> do
@@ -200,18 +220,6 @@ castBusinessType = \case
   DFOI.NORMAL_FLEET -> Payment.Individual
   DFOI.RENTAL_FLEET -> Payment.Individual
   DFOI.BUSINESS_FLEET -> Payment.Company
-
-validatePaymentMode :: Maybe DMPM.PaymentMode -> Maybe DDBA.DriverBankAccount -> Environment.Flow DMPM.PaymentMode
-validatePaymentMode mbPaymentMode mbDriverBankAccount = do
-  let mbStoredMode = (\driverBankAccount -> fromMaybe DMPM.LIVE driverBankAccount.paymentMode) <$> mbDriverBankAccount
-  case (mbPaymentMode, mbStoredMode) of
-    (Nothing, Just storedMode) -> pure storedMode
-    (Nothing, Nothing) -> pure DMPM.LIVE
-    (Just requestedMode, Just storedMode) -> do
-      unless (requestedMode == storedMode) $
-        throwError (InvalidRequest "Wrong payment mode")
-      pure requestedMode
-    (Just requestedMode, Nothing) -> pure requestedMode
 
 getPersonRegisterBankAccountStatus ::
   ( ServiceFlow m r,
