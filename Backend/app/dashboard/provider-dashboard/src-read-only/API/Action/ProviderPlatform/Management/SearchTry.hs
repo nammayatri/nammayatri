@@ -20,18 +20,18 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("searchTry" :> PostSearchTryRecent)
+type API = ("searchTry" :> PostSearchTryRecentSearchTries)
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postSearchTryRecent merchantId city
+handler merchantId city = postSearchTryRecentSearchTries merchantId city
 
-type PostSearchTryRecent =
+type PostSearchTryRecentSearchTries =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.SEARCH_TRY) / ('API.Types.ProviderPlatform.Management.SearchTry.POST_SEARCH_TRY_RECENT))
-      :> API.Types.ProviderPlatform.Management.SearchTry.PostSearchTryRecent
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SEARCH_TRY / 'API.Types.ProviderPlatform.Management.SearchTry.POST_SEARCH_TRY_RECENT_SEARCH_TRIES)
+      :> API.Types.ProviderPlatform.Management.SearchTry.PostSearchTryRecentSearchTries
   )
 
-postSearchTryRecent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesRes)
-postSearchTryRecent merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SearchTry.postSearchTryRecent merchantShortId opCity apiTokenInfo req
+postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SearchTry.RecentSearchTriesRes)
+postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SearchTry.postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req

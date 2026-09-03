@@ -11,6 +11,8 @@ apis:
         type: RecentSearchTriesReq
       response:
         type: RecentSearchTriesRes
+      migrate:
+        capability: city-operations.scheduled-bookings.read
 
 types:
   RecentSearchTriesReq:
@@ -33,3 +35,5 @@ types:
     - tripCategory: Text
     - createdAt: UTCTime
     - validTill: UTCTime
+    - fromLat: Maybe Double
+    - fromLon: Maybe Double
