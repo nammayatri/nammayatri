@@ -1,0 +1,34 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+CustomerBlockTransactions:
+  tableName: customer_block_transactions
+
+  types:
+    BlockedBy:
+      enum: "Dashboard, Application"
+    ActionType:
+      enum: "BLOCK, UNBLOCK"
+
+  fields:
+    id: Id CustomerBlockTransactions
+    customerId: Id Person
+    reasonCode: Maybe Text
+    blockReason: Maybe Text
+    blockTimeInHours: Maybe Int
+    reportedAt: UTCTime
+    blockLiftTime: Maybe UTCTime
+    blockedBy: BlockedBy
+    actionType: Maybe ActionType
+    requestorId: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    customerId: "!SecondaryKey"
+
+  queries:
+    findByCustomerId:
+      kvFunction: findAllWithKV
+      where: customerId

@@ -36,6 +36,7 @@ where
 
 import Data.Foldable.Extra
 import qualified Domain.Types.BookingStatus as BT
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -202,14 +203,14 @@ checkAuthFraudByIP mc clientIP = Redis.withNonCriticalCrossAppRedis $ do
 
   pure (authFraudDetected, fraudMerchantConfigId)
 
-blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Text -> m ()
-blockCustomer riderId mcId blockedReason = do
+blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Text -> DCBT.BlockedBy -> Maybe Text -> m ()
+blockCustomer riderId mcId blockedReason blockedBy requestorId = do
   regTokens <- RT.findAllByPersonId riderId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
   _ <- RT.deleteByPersonId riderId
-  void $ QP.updatingEnabledAndBlockedState riderId mcId True blockedReason
+  void $ QP.updatingEnabledAndBlockedState riderId mcId True blockedReason blockedBy requestorId
 
 customerAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
 customerAuthBlock riderId mcId blockDurationMinutes = do
