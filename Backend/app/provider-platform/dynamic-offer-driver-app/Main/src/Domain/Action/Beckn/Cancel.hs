@@ -124,7 +124,8 @@ cancel req merchant booking mbActiveSearchTry = do
     bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
+    let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
     QRB.updateStatus booking.id SRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     -- ONE decision (signals → fault verdict → consequence-matrix row), resolved up front

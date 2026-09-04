@@ -243,7 +243,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               <> "; estimated base fare:"
               <> show estimatedFare
           cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
-          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) searchReq.estimatedDistance)
+          let (pickupZone, dropZone) = SML.specialZoneLabels searchReq.area
+          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) searchReq.estimatedDistance) pickupZone dropZone
           return searchTry
 
 buildSearchTry ::

@@ -39,11 +39,11 @@ incrementSearchRequestCount merchantId merchantOpCityId distanceBucket = do
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.searchRequestCounter (merchantId, merchantOpCityId, distanceBucket, version.getDeploymentVersion) P.incCounter
 
-incrementSearchTryCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> m ()
-incrementSearchTryCount merchantId merchantOpCityId vehicleServiceTier searchRepeatType distanceBucket = do
+incrementSearchTryCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementSearchTryCount merchantId merchantOpCityId vehicleServiceTier searchRepeatType distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.searchTryCounter (merchantId, merchantOpCityId, vehicleServiceTier, searchRepeatType, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.searchTryCounter (merchantId, merchantOpCityId, vehicleServiceTier, searchRepeatType, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
 addSearchRequestSentToDriverCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> (Text, Text, Text) -> Int -> m ()
 addSearchRequestSentToDriverCount merchantId merchantOpCityId vehicleServiceTier (distanceBucket, poolingLogicV, poolingConfigV) count = do
@@ -57,41 +57,41 @@ addSearchRequestExpiredCount merchantId merchantOpCityId vehicleServiceTier (dis
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.searchRequestExpiredCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, poolingLogicV, poolingConfigV, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
 
-incrementRiderAcceptanceCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
-incrementRiderAcceptanceCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+incrementRiderAcceptanceCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementRiderAcceptanceCount merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.riderAcceptanceCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.riderAcceptanceCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-incrementBookingCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
-incrementBookingCreatedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+incrementBookingCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementBookingCreatedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.bookingCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.bookingCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-incrementRideCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
-incrementRideCreatedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+incrementRideCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementRideCreatedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.rideCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.rideCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-incrementRideStartedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
-incrementRideStartedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+incrementRideStartedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementRideStartedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.rideStartedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.rideStartedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-incrementRideCompletedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
-incrementRideCompletedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket = do
+incrementRideCompletedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementRideCompletedCount merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.rideCompletedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.rideCompletedCounter (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-incrementRideCancelledCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> m ()
-incrementRideCancelledCount merchantId merchantOpCityId vehicleServiceTier cancellationSource distanceBucket = do
+incrementRideCancelledCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> m ()
+incrementRideCancelledCount merchantId merchantOpCityId vehicleServiceTier cancellationSource distanceBucket pickupZone dropZone = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.rideCancelledCounter (merchantId, merchantOpCityId, vehicleServiceTier, cancellationSource, distanceBucket, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel bmContainer.rideCancelledCounter (merchantId, merchantOpCityId, vehicleServiceTier, cancellationSource, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
 type SearchMetricsMVar = MVar Milliseconds
 
