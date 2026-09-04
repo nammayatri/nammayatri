@@ -626,6 +626,13 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     if (isRunning || !currentSuite || !currentEnv) return;
     abortRef.current = false;
     setIsRunning(true);
+    setStepStates({});
+    // Newman's event stream identifies a request only by its item name (no
+    // stable index survives pm.execution.setNextRequest() branching), so that's
+    // also the only key we have to project results back onto the parsed step
+    // list below. Duplicate names within one suite will collide on this map —
+    // a rare, cosmetic mis-attribution, not a correctness issue for the run.
+    const nameToId = new Map(steps.map(s => [s.name, s.id]));
     onLog('info', `-- Running ${currentSuite.name} (${currentEnv.envName}) [backend/Newman] --`);
 
     try {
@@ -644,16 +651,75 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           let msg: any;
           try { msg = JSON.parse(ev.data); } catch { return; }
           switch (msg.type) {
-            case 'item_start':
+            case 'item_start': {
               onLog('req', `${msg.name}`);
+              const stepId = nameToId.get(msg.name);
+              if (stepId) setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
               break;
-            case 'request':
+            }
+            case 'request': {
               if (msg.error) onLog('error', `FAIL ${msg.name}: ${msg.error}`);
               else onLog('info', `${msg.method ?? ''} ${msg.name} -> ${msg.status ?? '?'} (${msg.responseTime ?? '?'}ms)`);
+              const stepId = nameToId.get(msg.name);
+              if (stepId) {
+                const httpFailed = !!msg.error || (typeof msg.status === 'number' && msg.status >= 400);
+                let data: any = msg.responseBody;
+                if (typeof data === 'string') {
+                  try { data = JSON.parse(data); } catch { /* leave as raw text (e.g. an HTML error page) */ }
+                }
+                const responseHeaders = Array.isArray(msg.responseHeaders)
+                  ? Object.fromEntries(msg.responseHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+                setStepStates(prev => ({
+                  ...prev,
+                  [stepId]: {
+                    status: httpFailed ? 'fail' : 'pass',
+                    durationMs: msg.responseTime,
+                    result: {
+                      ok: !httpFailed,
+                      status: msg.status ?? 0,
+                      data,
+                      elapsed: msg.responseTime ?? 0,
+                      assertions: prev[stepId]?.result?.assertions ?? [],
+                      consoleLogs: [],
+                      serviceLogs: {},
+                      resolvedUrl: msg.url ?? '',
+                      responseHeaders,
+                      upstreamMs: msg.responseTime ?? 0,
+                    },
+                  },
+                }));
+              }
               break;
-            case 'assertion':
+            }
+            case 'assertion': {
               onLog(msg.passed ? 'success' : 'error', `${msg.passed ? 'PASS' : 'FAIL'} ${msg.name}${msg.error ? ` — ${msg.error}` : ''}`);
+              const stepId = nameToId.get(msg.item);
+              if (stepId) {
+                setStepStates(prev => {
+                  const existing = prev[stepId] ?? { status: 'running' as const };
+                  const assertions = [
+                    ...(existing.result?.assertions ?? []),
+                    { name: msg.name, passed: msg.passed, error: msg.error ?? undefined },
+                  ];
+                  const anyFail = assertions.some(a => !a.passed);
+                  return {
+                    ...prev,
+                    [stepId]: {
+                      ...existing,
+                      status: anyFail ? 'fail' : existing.status,
+                      result: existing.result
+                        ? { ...existing.result, assertions }
+                        : {
+                            ok: !anyFail, status: 0, data: undefined, elapsed: 0, assertions,
+                            consoleLogs: [], serviceLogs: {}, resolvedUrl: '', upstreamMs: 0,
+                          },
+                    },
+                  };
+                });
+              }
               break;
+            }
             case 'collection_result':
               onLog('info', `-- ${msg.collection} done: ${msg.passed}✓ ${msg.failed}✗ --`);
               break;
@@ -679,7 +745,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       backendRunIdRef.current = null;
       setIsRunning(false);
     }
-  }, [isRunning, currentSuite, currentEnv, selectedDir, selectedSuite, onLog]);
+  }, [isRunning, currentSuite, currentEnv, selectedDir, selectedSuite, steps, onLog]);
 
   const stop = useCallback(() => {
     abortRef.current = true;
