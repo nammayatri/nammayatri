@@ -79,3 +79,45 @@ jobLifecycleStatusLabel = \case
 incrementJobLifecycleCounter :: CoreMetrics m => Text -> JobLifecycleStatus -> m ()
 incrementJobLifecycleCounter jobType status =
   incrementSchedulerJobLifecycleCounter jobType (jobLifecycleStatusLabel status)
+
+{-# NOINLINE reviverStageCounter #-}
+reviverStageCounter :: P.Vector P.Label1 P.Counter
+reviverStageCounter =
+  P.unsafeRegister . P.vector "stage" . P.counter $
+    P.Info "scheduler_reviver_stage_counter" "Reviver pass lifecycle, by stage (tick/lock_acquired/lock_missed/pass_failed)"
+
+{-# NOINLINE reviverJobCounter #-}
+reviverJobCounter :: P.Vector P.Label2 P.Counter
+reviverJobCounter =
+  P.unsafeRegister . P.vector ("job_type", "status") . P.counter $
+    P.Info "scheduler_reviver_job_counter" "Jobs seen by the reviver, by job type and status (stuck_pending/revived)"
+
+data ReviverStage
+  = ReviverTick
+  | ReviverLockAcquired
+  | ReviverLockMissed
+  | ReviverPassFailed
+
+reviverStageLabel :: ReviverStage -> Text
+reviverStageLabel = \case
+  ReviverTick -> "tick"
+  ReviverLockAcquired -> "lock_acquired"
+  ReviverLockMissed -> "lock_missed"
+  ReviverPassFailed -> "pass_failed"
+
+addReviverStageCount :: MonadIO m => ReviverStage -> Int -> m ()
+addReviverStageCount stage count =
+  liftIO $ P.withLabel reviverStageCounter (reviverStageLabel stage) (\c -> void $ P.addCounter c (fromIntegral count))
+
+data ReviverJobStatus
+  = ReviverStuckPending
+  | ReviverRevived
+
+reviverJobStatusLabel :: ReviverJobStatus -> Text
+reviverJobStatusLabel = \case
+  ReviverStuckPending -> "stuck_pending"
+  ReviverRevived -> "revived"
+
+incrementReviverJobCounter :: MonadIO m => Text -> ReviverJobStatus -> m ()
+incrementReviverJobCounter jobType status =
+  liftIO $ P.withLabel reviverJobCounter (jobType, reviverJobStatusLabel status) P.incCounter
