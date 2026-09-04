@@ -3,6 +3,7 @@ module SharedLogic.Finance.LedgerAdjustment
     ledgerAdjustmentList,
     ledgerAdjustmentApproveAndPost,
     ledgerAdjustmentReject,
+    ledgerAdjustmentLockKey,
   )
 where
 
