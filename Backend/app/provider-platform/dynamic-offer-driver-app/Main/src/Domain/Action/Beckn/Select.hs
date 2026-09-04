@@ -85,11 +85,14 @@ handler merchant sReq searchReq estimates = do
   whenJust (listToMaybe estimates) $ \primaryEstimate -> do
     cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
     distanceEdges <- SML.getDistanceBucketEdges searchReq.merchantOperatingCityId
+    let (pickupZone, dropZone) = SML.specialZoneLabels searchReq.area
     BPPMetrics.incrementRiderAcceptanceCount
       merchant.shortId.getShortId
       cityLabel
       (show primaryEstimate.vehicleServiceTier)
       (SML.distanceBucketLabel distanceEdges primaryEstimate.estimatedDistance)
+      pickupZone
+      dropZone
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do

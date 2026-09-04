@@ -189,7 +189,8 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
-  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance)
+  let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance) pickupZone dropZone
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active

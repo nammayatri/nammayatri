@@ -187,7 +187,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
+  let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
   QRideD.create rideDetails
   fork "updateRiderDetails" $ do
     whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)

@@ -39,21 +39,24 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 -- Labels: (merchant, city, distance_bucket, backend_version)
 type SearchRequestCounterMetric = P.Vector P.Label4 P.Counter
 
--- Labels: (merchant, city, vehicle_service_tier, search_repeat_type, distance_bucket, backend_version)
+-- Labels: (merchant, city, vehicle_service_tier, search_repeat_type, distance_bucket, backend_version, pickup_zone, drop_zone)
 -- No pooling labels here: INITIAL tries are created BEFORE the first pool computation
 -- assigns pooling versions (ensurePoolingLogicVersion), so the label would encode try
 -- order ("unknown" for INITIAL, populated for retries), not pooling.
-type SearchTryCounterMetric = P.Vector P.Label6 P.Counter
+-- pickup_zone/drop_zone are the special-location ids of the ride's ends, "none" when
+-- regular — lets Grafana converge the funnel to a special zone (map id->name in Grafana).
+type SearchTryCounterMetric = P.Vector P.Label8 P.Counter
 
 -- Labels: (merchant, city, vehicle_service_tier, distance_bucket, pooling_logic_version, pooling_config_version, backend_version)
 -- For counters emitted inside the allocation flow, where pooling versions are assigned.
 type AllocationFunnelCounterMetric = P.Vector P.Label7 P.Counter
 
--- Labels: (merchant, city, vehicle_service_tier, distance_bucket, backend_version)
-type RideFunnelCounterMetric = P.Vector P.Label5 P.Counter
+-- Labels: (merchant, city, vehicle_service_tier, distance_bucket, backend_version, pickup_zone, drop_zone)
+-- pickup_zone/drop_zone: special-location id of each ride end, "none" when regular.
+type RideFunnelCounterMetric = P.Vector P.Label7 P.Counter
 
--- Labels: (merchant, city, vehicle_service_tier, cancellation_source, distance_bucket, backend_version)
-type RideCancelledCounterMetric = P.Vector P.Label6 P.Counter
+-- Labels: (merchant, city, vehicle_service_tier, cancellation_source, distance_bucket, backend_version, pickup_zone, drop_zone)
+type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
@@ -99,7 +102,7 @@ registerSearchRequestCounter =
 
 registerSearchTryCounter :: IO SearchTryCounterMetric
 registerSearchTryCounter =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "search_repeat_type", "distance_bucket", "backend_version") . P.counter $
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "search_repeat_type", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info "BPP_search_try_count" "Count of search tries (driver allocation attempts) created"
 
 registerAllocationFunnelCounter :: Text -> Text -> IO AllocationFunnelCounterMetric
@@ -109,12 +112,12 @@ registerAllocationFunnelCounter name description =
 
 registerRideFunnelCounter :: Text -> Text -> IO RideFunnelCounterMetric
 registerRideFunnelCounter name description =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version") . P.counter $
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info name description
 
 registerRideCancelledCounter :: IO RideCancelledCounterMetric
 registerRideCancelledCounter =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "cancellation_source", "distance_bucket", "backend_version") . P.counter $
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "cancellation_source", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info "BPP_ride_cancelled_count" "Count of bookings cancelled, labelled by cancellation source"
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
