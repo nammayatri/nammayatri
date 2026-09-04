@@ -1067,6 +1067,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payo
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
 
 
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
@@ -1137,3 +1138,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_coun
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_lead_time integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_geofence_radius integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_end_geofence_radius integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bpp_reallocation boolean ;

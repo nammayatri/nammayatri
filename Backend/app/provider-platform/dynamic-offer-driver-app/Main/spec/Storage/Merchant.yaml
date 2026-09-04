@@ -1442,6 +1442,7 @@ TransporterConfig:
     allowDisableFleetOnRejectionDoc: Maybe Bool # When Just True, clear fleet owner enabled in FleetOwnerInformation if mandatory fleet docs are not all valid
     reconciliationJobsEnabled: Maybe Bool
     enableScheduleReallocation: Maybe Bool
+    enableBppReallocation: Maybe Bool # when True, the BPP owns reallocation for ALL rides (ad-hoc + scheduled) regardless of the BAP's isReallocationEnabled flag; Nothing/False = today's BAP-gated behaviour
     enableCoinsToDirectPayout: Maybe Bool
     airportEntryFeeEnabled: Maybe Bool
     airportEntryFeeCheckAtStartRide: Maybe Bool
@@ -2140,6 +2141,7 @@ TransporterConfig:
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
+        - enableBppReallocation
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

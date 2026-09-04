@@ -587,29 +587,34 @@ mkFulfillmentV2 ::
   m Spec.Fulfillment
 mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
-  let rideOtp = fromMaybe ride.otp ride.endOtp
+  -- No driver: don't leak the stale ride start OTP or emit an empty agent shell.
+  let hasDriver = isJust mbDriver
+      rideOtp = if hasDriver then fromMaybe ride.otp ride.endOtp else ""
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
         fulfillmentStops = mkStopsOUS booking ride rideOtp ride.endOtp,
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
-          Just $
-            Spec.Agent
-              { agentContact =
-                  mbDInfo >>= \dInfo ->
-                    Just $ Spec.Contact {contactPhone = Just dInfo.mobileNumber},
-                agentPerson =
-                  Just $
-                    emptyPerson
-                      { Spec.personImage =
-                          mbImage <&> \mbImage' ->
-                            emptyImage {Spec.imageUrl = Just mbImage'},
-                        Spec.personGender = mbDriver <&> \driver -> show driver.gender,
-                        Spec.personName = mbDInfo >>= Just . (.name),
-                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
-                      }
-              },
+          if hasDriver
+            then
+              Just $
+                Spec.Agent
+                  { agentContact =
+                      mbDInfo >>= \dInfo ->
+                        Just $ Spec.Contact {contactPhone = Just dInfo.mobileNumber},
+                    agentPerson =
+                      Just $
+                        emptyPerson
+                          { Spec.personImage =
+                              mbImage <&> \mbImage' ->
+                                emptyImage {Spec.imageUrl = Just mbImage'},
+                            Spec.personGender = mbDriver <&> \driver -> show driver.gender,
+                            Spec.personName = mbDInfo >>= Just . (.name),
+                            Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                          }
+                  }
+            else Nothing,
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
             let (category, variant) = castVariant vehicle.variant
