@@ -26,6 +26,9 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest -> m (Maybe Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByReferenceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest))
+findByReferenceId referenceId = do findOneWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
+
 findByReferenceIdAndStatuses ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.LedgerAdjustmentRequest.AdjustmentRequestStatus] -> m (Maybe Domain.Types.LedgerAdjustmentRequest.LedgerAdjustmentRequest))

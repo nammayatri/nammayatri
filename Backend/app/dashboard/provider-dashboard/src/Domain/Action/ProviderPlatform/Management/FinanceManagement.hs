@@ -20,6 +20,7 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinanceAdjustmentList,
     postFinanceManagementFinanceAdjustmentApprove,
     postFinanceManagementFinanceAdjustmentReject,
+    postFinanceManagementTdsReimbursementReject,
   )
 where
 
@@ -211,3 +212,9 @@ postFinanceManagementFinanceAdjustmentReject merchantShortId opCity apiTokenInfo
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ do
     API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementFinanceAdjustmentReject) adjustmentRequestId requestorId requestorName
+
+postFinanceManagementTdsReimbursementReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRejectReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementTdsReimbursementReject merchantShortId opCity apiTokenInfo requestId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementTdsReimbursementReject) requestId req)
