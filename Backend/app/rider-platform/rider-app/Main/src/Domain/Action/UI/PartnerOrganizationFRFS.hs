@@ -558,6 +558,8 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,
             isOnSearchReceived = Nothing,
+            journeyDate = Nothing,
+            isSingleLady = Nothing,
             onSearchFailed = Nothing,
             integratedBppConfigId = integratedBPPConfig.id,
             recentLocationId = Nothing,
@@ -599,7 +601,16 @@ mkQuoteRes (quote, quoteCategories) = do
   singleAdultTicketPrice <- find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice) & fromMaybeM (InternalError "Single Adult Ticket Price not found.")
   return $
     FRFSTypes.FRFSQuoteAPIRes
-      { applicablePasses = [],
+      { tripCategory = Just DFRFSQuote.INTRACITY,
+        providerServiceId = Nothing,
+        providerLayoutId = Nothing,
+        providerClassId = Nothing,
+        providerTripCode = Nothing,
+        departureTime = Nothing,
+        arrivalTime = Nothing,
+        arrivalDate = Nothing,
+        availableSeats = Nothing,
+        applicablePasses = [],
         quoteId = quote.id,
         _type = quote._type,
         price = singleAdultTicketPrice.amount,
@@ -668,7 +679,19 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
       now <- getCurrentTime
       let quote =
             DFRFSQuote.FRFSQuote
-              { DFRFSQuote._type = quoteType,
+              { DFRFSQuote.tripCategory = Just DFRFSQuote.INTRACITY,
+                DFRFSQuote.providerServiceId = Nothing,
+                DFRFSQuote.providerLayoutId = Nothing,
+                DFRFSQuote.providerClassId = Nothing,
+                DFRFSQuote.providerRefNo = Nothing,
+                DFRFSQuote.extraFees = Nothing,
+                DFRFSQuote.concessionTypeId = Nothing,
+                DFRFSQuote.providerTripCode = Nothing,
+                DFRFSQuote.departureTime = Nothing,
+                DFRFSQuote.arrivalTime = Nothing,
+                DFRFSQuote.arrivalDate = Nothing,
+                DFRFSQuote.availableSeats = Nothing,
+                DFRFSQuote._type = quoteType,
                 DFRFSQuote.bppItemId = Utils.partnerOrgBppItemId,
                 DFRFSQuote.bppSubscriberId = Utils.partnerOrgBppSubscriberId,
                 DFRFSQuote.bppSubscriberUrl = Utils.partnerOrgBppSubscriberUrl,
@@ -726,7 +749,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   updatedAt = now,
                   seatIds = Nothing,
                   seatLabels = Nothing,
-                  holdId = Nothing
+                  holdId = Nothing,
+                  providerBlockIds = Nothing
                 }
             ]
       return $ Just (quote, quoteCategories)

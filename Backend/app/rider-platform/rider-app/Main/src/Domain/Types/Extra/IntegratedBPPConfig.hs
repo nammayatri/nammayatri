@@ -124,6 +124,23 @@ data CRISConfig = CRISConfig
 instance Show CRISConfig where
   show _ = "CRISConfig"
 
+data TNSTCConfig = TNSTCConfig
+  { networkHostUrl :: BaseUrl,
+    username :: Text,
+    password :: EncryptedField 'AsEncrypted Text,
+    counterCode :: Maybe Text,
+    soapActionPrefix :: Maybe Text,
+    maxPassengersPerBooking :: Maybe Int,
+    maxAdvanceBookingDays :: Maybe Int,
+    createdBy :: Maybe Text,
+    userId :: Maybe Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Show TNSTCConfig where
+  show _ = "TNSTCConfig"
+
 data ProviderLevelInfo = ProviderLevelInfo
   { providerId :: Text,
     providerName :: Maybe Text,

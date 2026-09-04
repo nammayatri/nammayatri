@@ -16,6 +16,7 @@ data Seat = Seat
     directionDegrees :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.Seat.Seat,
     isBookable :: Kernel.Prelude.Bool,
+    isDifferentlyAbled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isLadiesOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

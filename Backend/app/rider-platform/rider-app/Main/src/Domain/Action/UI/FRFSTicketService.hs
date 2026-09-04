@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Domain.Action.UI.FRFSTicketService where
 
 import qualified API.Types.UI.FRFSInternal as FRFSInternal
@@ -9,17 +11,24 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra hiding (fromMaybeM)
+import qualified Data.Aeson
+import qualified Data.Bifunctor
+import qualified Data.ByteString.Lazy
+import qualified Data.Char
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy, partition)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text
+import qualified Data.Text.Encoding
+import Data.Time (addDays, utctDay)
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
+import qualified Domain.Types.FRFSPassengerDetail
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
@@ -42,17 +51,24 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import qualified Domain.Types.Seat
+import qualified Domain.Types.SeatLayout
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Domain.Utils (mapConcurrently)
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, sum, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, notElem, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Verify as CallExternalBPP
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Booking as TNSTCBooking
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Error as TNSTCError
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Layout as TNSTCLayout
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Place (tnstcPlaceCode)
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Types as TNSTCTypes
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -66,6 +82,7 @@ import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -119,6 +136,7 @@ import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicl
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSPassengerDetail as QFRFSPassengerDetail
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -127,8 +145,10 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
+import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Seat as QSeat
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -138,6 +158,7 @@ import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner
+import Web.HttpApiData (FromHttpApiData (..), ToHttpApiData (..))
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -670,6 +691,22 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             withTryCatch "postFrfsSearchHandler:checkHasPass" (FRFSPassOverride.localTripDay person (fromMaybe now tripTime) >>= FRFSPassOverride.checkHasPass person) >>= \case
               Right hasPass -> pure (Just hasPass)
               Left _ -> pure Nothing
+
+  let mbIntercityConfig = case integratedBPPConfig.providerConfig of
+        DIBC.TNSTC cfg -> Just cfg
+        _ -> Nothing
+  -- Date rules apply only when this really is an intercity search. A search with no
+  -- journeyDate that happens to reach a TNSTC config is a public-transport search; it must
+  -- fall through and yield no TNSTC quotes (see the gate in ExternalBPP.Flow.Common),
+  -- not fail the whole search.
+  whenJust ((,) <$> mbIntercityConfig <*> journeyDate) $ \(tnstcConfig, jDate) -> do
+    let istToday = utctDay (addUTCTime 19800 now)
+    when (jDate < istToday) $
+      throwError (InvalidRequest "journeyDate cannot be in the past")
+    let maxDate = addDays (fromIntegral $ fromMaybe 60 tnstcConfig.maxAdvanceBookingDays) istToday
+    when (jDate > maxDate) $
+      throwError (InvalidRequest $ "journeyDate is beyond the advance booking window; latest bookable date is " <> show maxDate)
+
   let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       searchReq =
         DFRFSSearch.FRFSSearch
@@ -826,7 +863,16 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
           adultQuantity <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)) & fromMaybeM (InternalError "Adult Ticket Quantity not found.")
           return $
             FRFSTicketService.FRFSQuoteAPIRes
-              { quoteId = quote.id,
+              { tripCategory = quote.tripCategory,
+              providerServiceId = quote.providerServiceId,
+              providerLayoutId = quote.providerLayoutId,
+              providerClassId = quote.providerClassId,
+              providerTripCode = quote.providerTripCode,
+              departureTime = quote.departureTime,
+              arrivalTime = quote.arrivalTime,
+              arrivalDate = quote.arrivalDate,
+              availableSeats = quote.availableSeats,
+              quoteId = quote.id,
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $
@@ -918,7 +964,7 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
     whenJust req.tripId $ \tripId ->
       checkRateLimitSeatBooking (rateLimitKey personId.getId tripId)
 
-  case integratedBppConfig.providerConfig of
+  res <- case integratedBppConfig.providerConfig of
     DIBC.ONDC _ | quote.vehicleType == Spec.BUS -> do
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
@@ -928,6 +974,10 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
       postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
+  -- Passenger identity is captured here rather than at select: a select can be repeated or
+  -- abandoned, so the details only become meaningful once a booking row exists to hang them on.
+  QFRFSPassengerDetail.updateBookingIdByQuoteId (Just res.bookingId) quoteId
+  return res
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -1691,7 +1741,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   let seatListWithStatus = map (applyQuotaLogic fromIdx toIdx) rawSeatListWithStatus
   let availCount = length $ filter (\s -> s.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats tripId=" <> tripId <> " totalSeats=" <> show (length seatListWithStatus) <> " available=" <> show availCount
-  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus}
+  return $ SeatLayoutResp {seatLayout = seatLayout, seats = seatListWithStatus, concessions = Nothing, pickupPoints = Nothing, dropOffPoints = Nothing, idProofTypes = Nothing}
   where
     applyQuotaLogic :: Int -> Int -> SeatWithStatus -> SeatWithStatus
     applyQuotaLogic fromIdx toIdx seatWithStatus =
@@ -2150,3 +2200,494 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
         current = fmap toTripInfo resp.current,
         upcoming = map toTripInfo resp.upcoming
       }
+
+getFrfsQuoteSeats ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
+  Kernel.Prelude.Maybe [Kernel.Prelude.Text] ->
+  Environment.Flow SeatLayoutResp
+getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> quoteId.getId)
+  unless (quote.riderId == personId) $ throwError AccessDenied
+  integratedBPPConfig <-
+    QIBC.findById quote.integratedBppConfigId
+      >>= fromMaybeM (InvalidRequest $ "IntegratedBPPConfig not found: " <> quote.integratedBppConfigId.getId)
+  tnstcConfig <- case integratedBPPConfig.providerConfig of
+    DIBC.TNSTC cfg -> pure cfg
+    _ -> throwError (InvalidRequest "quoteId is only valid for reserved-seat intercity providers")
+  counterCode <- tnstcConfig.counterCode & fromMaybeM (InternalError "TNSTC counterCode not configured")
+  search <- QFRFSSearch.findById quote.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
+  journeyDate <- search.journeyDate & fromMaybeM (InvalidRequest "journeyDate missing on search")
+  layoutId <- quote.providerLayoutId & fromMaybeM (InvalidRequest "providerLayoutId missing on quote")
+  serviceId <- quote.providerServiceId & fromMaybeM (InvalidRequest "providerServiceId missing on quote")
+  classId <- quote.providerClassId & fromMaybeM (InvalidRequest "providerClassId missing on quote")
+
+  let seatLayoutId = tnstcSeatLayoutId integratedBPPConfig.merchantOperatingCityId.getId layoutId
+  seatLayout <-
+    QSeatLayout.findById seatLayoutId
+      >>= fromMaybeM (InvalidRequest $ "Seat layout not provisioned for TNSTC layoutID " <> layoutId <> "; seed it from the dashboard")
+  seats <- QSeat.findAllByLayoutId seatLayoutId
+  when (null seats) $ throwError (InvalidRequest $ "Seat layout " <> seatLayoutId.getId <> " has no seats; re-seed it from the dashboard")
+
+  let mkConcessionReq seatNos totalSeats =
+        TNSTCLayout.GetConcessionTypesReq
+          { rqctClassId = classId,
+            rqctCounterCode = counterCode,
+            rqctEndPlaceId = search.toStationCode,
+            rqctJourneyDate = journeyDate,
+            rqctSeatNumbers = seatNos,
+            rqctServiceId = serviceId,
+            rqctStartPlaceId = search.fromStationCode,
+            rqctTotalSeats = totalSeats,
+            rqctUserName = tnstcConfig.username
+          }
+      mkConcessionAPI c =
+        FRFSConcession
+          { concessionId = c.tctConcessionId,
+            concessionDesc = c.tctConcessionDesc,
+            categoryLookupId = c.tctCategoryLookupId
+          }
+
+  -- With a seat selection the caller only wants the concessions valid for exactly those
+  -- seats: TNSTC prices concessions per party, so both the seats and their count decide the
+  -- offered set. No live seat-map call, and seats is left empty.
+  case mbSeatNumbers of
+    Just seatNos | not (null seatNos) -> do
+      let knownLabels = map (.seatLabel) seats
+          unknown = filter (`notElem` knownLabels) seatNos
+      unless (null unknown) $
+        throwError (InvalidRequest $ "Unknown seat number(s): " <> Data.Text.intercalate ", " unknown)
+      -- seatNumber is a repeated element and totalNumberOfSeats drives the offered set
+      -- (escort variants appear only for parties of two or more), so TNSTC computes the
+      -- valid list for the whole selection itself -- no client-side combination needed.
+      offeredRaw <- TNSTCLayout.getConcessionTypes tnstcConfig (mkConcessionReq seatNos (length seatNos))
+      intraState <- tnstcIsIntraState integratedBPPConfig tnstcConfig search.fromStationCode search.toStationCode
+      let offered = restrictInterState intraState offeredRaw
+      logInfo $ "FRFSTicketService:tnstcConcessions quoteId=" <> quoteId.getId <> " seats=" <> show seatNos <> " offered=" <> show (map (.tctConcessionId) offered)
+      return $
+        SeatLayoutResp
+          { seatLayout = seatLayout,
+            seats = [],
+            concessions = Just (map mkConcessionAPI offered),
+            pickupPoints = Nothing,
+            dropOffPoints = Nothing,
+            idProofTypes = Nothing
+          }
+    _ -> do
+      seatSetsResult <-
+        try @_ @TNSTCError.TNSTCFault $
+          TNSTCLayout.getServiceSeatDetails tnstcConfig $
+            TNSTCLayout.GetServiceSeatDetailsReq
+              { rqssCounterCode = counterCode,
+                rqssEndPlaceId = search.toStationCode,
+                rqssJourneyDate = journeyDate,
+                rqssServiceClass = classId,
+                rqssServiceId = serviceId,
+                rqssStartPlaceId = search.fromStationCode,
+                rqssSingleLady = fromMaybe False search.isSingleLady,
+                rqssUserName = tnstcConfig.username
+              }
+      seatSets <- case seatSetsResult of
+        Right sets -> return sets
+        Left fault -> do
+          logError $ "TNSTC seat map unavailable serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " fault=" <> show fault
+          throwError (InvalidRequest "Seat map unavailable for this service")
+      let seatListWithStatus =
+            map
+              ( \st ->
+                  SeatWithStatus
+                    { seat =
+                        st
+                          { Domain.Types.Seat.isLadiesOnly = Just (fromMaybe False search.isSingleLady && st.seatLabel `elem` seatSets.tssSet2),
+                            Domain.Types.Seat.isDifferentlyAbled = Just (st.seatLabel `elem` seatSets.tssSet5)
+                          },
+                      status = fromMaybe BOOKED (tnstcSeatStatus seatSets st.seatLabel)
+                    }
+              )
+              seats
+          availCount = length $ filter (\x -> x.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
+      logInfo $ "FRFSTicketService:tnstcSeatLayout quoteId=" <> quoteId.getId <> " serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " seats=" <> show (length seats) <> " available=" <> show availCount
+      -- Boarding points are per-service and the rider picks them before select, so they are
+      -- served with the seat map. startPlaceID takes the 3-char place *code*; the numeric id
+      -- returns an empty list rather than erroring.
+      let tripCode = fromMaybe "" quote.providerTripCode
+          mkPointsReq placeId =
+            TNSTCBooking.GetPickupPointsReq
+              { rqppCounterCode = counterCode,
+                rqppJourneyDate = journeyDate,
+                rqppServiceId = serviceId,
+                rqppPlaceId = placeId,
+                rqppUserName = tnstcConfig.username
+              }
+      startPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 4 tripCode)) search.fromStationCode
+      endPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 7 tripCode)) search.toStationCode
+      idProofTypes <- TNSTCLayout.getIdProofTypes tnstcConfig integratedBPPConfig.id.getId
+      pickupPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq startPlaceCode)
+      dropOffPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq endPlaceCode)
+      return $
+        SeatLayoutResp
+          { seatLayout = seatLayout,
+            seats = seatListWithStatus,
+            pickupPoints = Just (map mkPoint pickupPoints),
+            dropOffPoints = Just (map mkPoint dropOffPoints),
+            idProofTypes = Just (map mkIdProofType idProofTypes),
+            concessions = Nothing
+          }
+
+-- | TNSTC's own portal offers every concession type on interstate routes, but the
+-- DIFFERENTLY ABLED / CANCER / AIDS categories are valid only within Tamil Nadu -- and
+-- GetTotalFareDetailsOfTicket applies whatever id it is given (an unentitled 160 prices a
+-- Rs 500 ticket at Rs 160). Staging's concession list happens to omit them interstate, but we
+-- cannot rely on that, so the rule is enforced here.
+tnstcIsIntraState :: DIBC.IntegratedBPPConfig -> DIBC.TNSTCConfig -> Text -> Text -> Environment.Flow Bool
+tnstcIsIntraState integratedBPPConfig tnstcConfig fromPlaceId toPlaceId = do
+  fromState <- stateOf fromPlaceId
+  toState <- stateOf toPlaceId
+  return $ case (fromState, toState) of
+    (Just a, Just b) -> Data.Text.toUpper a == "TN" && Data.Text.toUpper b == "TN"
+    -- unknown place: fail closed, restricting to the universally valid concession
+    _ -> False
+  where
+    -- Prefer the GTFS feed (stop_state -> the stop payload's stateCode). Feeds that predate
+    -- that column return Nothing, so fall back to TNSTC's own place master, cached for a day.
+    stateOf placeId = do
+      mbFromFeed <-
+        IM.withInMemCache ["tnstcStopState", integratedBPPConfig.id.getId, placeId] 3600 $ do
+          baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+          res <- try @_ @SomeException $ NandiFlow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey placeId
+          return $ case res of
+            Right stop -> stop.stateCode >>= nonEmpty'
+            _ -> Nothing
+      case mbFromFeed of
+        Just st -> return (Just st)
+        Nothing -> do
+          places <-
+            IM.withInMemCache ["tnstcPlaceStates", showBaseUrl tnstcConfig.networkHostUrl] 86400 $
+              TNSTCLayout.getAddressPlaceList tnstcConfig
+          return $ listToMaybe [p.tpStateCode | p <- places, p.tpPlaceId == placeId]
+    nonEmpty' t = if Data.Text.null (Data.Text.strip t) then Nothing else Just (Data.Text.strip t)
+
+restrictInterState :: Bool -> [TNSTCTypes.TnstcConcessionType] -> [TNSTCTypes.TnstcConcessionType]
+restrictInterState isIntraState offered
+  | isIntraState = offered
+  | otherwise = filter (\c -> Data.Text.toUpper c.tctConcessionDesc == "GENERAL PUBLIC") offered
+
+-- | Persist who is travelling, keyed on the booking. Rewritten wholesale so a retried
+-- confirm cannot leave a half-written set behind.
+-- | Passenger identity and the chosen boarding points are captured at select, where they are
+-- first known and where the fare is priced on them. The rows are keyed by quoteId because no
+-- booking exists yet; confirm stamps the bookingId onto them once it does.
+storeSelectPassengers ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  DIBC.IntegratedBPPConfig ->
+  Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  [(FRFSTicketService.FRFSPassengerDetail, Domain.Types.Seat.Seat)] ->
+  m ()
+storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId mbIdProofLookupId mbIdProofNumber passengerRows = do
+  now <- getCurrentTime
+  encIdProofNumber <- mapM encrypt mbIdProofNumber
+  -- select can be repeated on the same quote; the previous attempt's rows are stale.
+  QFRFSPassengerDetail.deleteAllByQuoteId quoteId
+  rows <- forM passengerRows $ \(pax, st) -> do
+    passengerId <- generateGUID
+    return
+      Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail
+        { id = Kernel.Types.Id.Id passengerId,
+          quoteId = quoteId,
+          bookingId = Nothing,
+          seatId = pax.seatId,
+          seatLabel = st.seatLabel,
+          name = pax.name,
+          age = pax.age,
+          gender = pax.gender,
+          isChild = pax.isChild,
+          pickupPointPlaceId = Just pickupPlaceId,
+          dropOffPointPlaceId = Just dropOffPlaceId,
+          idProofLookupId = mbIdProofLookupId,
+          idProofNumber = encIdProofNumber,
+          merchantId = integratedBPPConfig.merchantId,
+          merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
+          createdAt = now,
+          updatedAt = now
+        }
+  QFRFSPassengerDetail.createMany rows
+  logInfo $ "FRFSTicketService:storeSelectPassengers quoteId=" <> quoteId.getId <> " count=" <> show (length rows)
+
+mkIdProofType :: TNSTCTypes.TnstcLookupValue -> FRFSTicketService.FRFSIdProofType
+mkIdProofType v = FRFSTicketService.FRFSIdProofType {lookupId = v.tlvId, name = v.tlvValue}
+
+mkPoint :: TNSTCTypes.TnstcPickupPoint -> FRFSTicketService.FRFSPickupPoint
+mkPoint pp =
+  FRFSTicketService.FRFSPickupPoint
+    { placeId = pp.tppPlaceId,
+      name = pp.tppName,
+      time = pp.tppTime,
+      platformNo = pp.tppPlatformNo
+    }
+
+tnstcSeatLayoutId :: Text -> Text -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout
+tnstcSeatLayoutId mocId layoutId = Kernel.Types.Id.Id ("tnstc-" <> Data.Text.take 8 mocId <> "-" <> layoutId)
+
+tnstcSeatStatus :: TNSTCTypes.TnstcSeatSets -> Text -> Maybe FRFSTicketService.SeatStatus
+tnstcSeatStatus sets seatNo
+  | seatNo `elem` sets.tssSet0 = Just FRFSTicketService.AVAILABLE
+  | seatNo `elem` sets.tssSet1 = Just FRFSTicketService.BOOKED
+  | seatNo `elem` sets.tssSet3 = Just FRFSTicketService.BLOCKED
+  | seatNo `elem` sets.tssSet4 = Just FRFSTicketService.BOOKED
+  | otherwise = Nothing
+
+tnstcHoldSeconds :: Int
+tnstcHoldSeconds = 420
+
+postFrfsQuoteSelect ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
+  FRFSTicketService.FRFSSelectReq ->
+  Environment.Flow FRFSTicketService.FRFSSelectRes
+postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> quoteId.getId)
+  unless (quote.riderId == personId) $ throwError AccessDenied
+  integratedBPPConfig <-
+    QIBC.findById quote.integratedBppConfigId
+      >>= fromMaybeM (InvalidRequest $ "IntegratedBPPConfig not found: " <> quote.integratedBppConfigId.getId)
+  tnstcConfig <- case integratedBPPConfig.providerConfig of
+    DIBC.TNSTC cfg -> pure cfg
+    _ -> throwError (InvalidRequest "select is only supported for reserved-seat intercity providers")
+  nowForExpiry <- getCurrentTime
+  unless (quote.validTill > nowForExpiry) $ throwError $ FRFSQuoteExpired quote.id.getId
+  counterCode <- tnstcConfig.counterCode & fromMaybeM (InternalError "TNSTC counterCode not configured")
+  search <- QFRFSSearch.findById quote.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
+  journeyDate <- search.journeyDate & fromMaybeM (InvalidRequest "journeyDate missing on search")
+  layoutId <- quote.providerLayoutId & fromMaybeM (InvalidRequest "providerLayoutId missing on quote")
+  serviceId <- quote.providerServiceId & fromMaybeM (InvalidRequest "providerServiceId missing on quote")
+  classId <- quote.providerClassId & fromMaybeM (InvalidRequest "providerClassId missing on quote")
+
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+  let passengers = req.passengers
+      totalQty = length passengers
+      selectedSeatIds = map (.seatId) passengers
+  when (null passengers) $ throwError (InvalidRequest "No passengers provided")
+  when (length (nub selectedSeatIds) /= totalQty) $
+    throwError (InvalidRequest "Each passenger must be assigned a distinct seat")
+  whenJust tnstcConfig.maxPassengersPerBooking $ \maxPax ->
+    when (totalQty > maxPax) $
+      throwError (InvalidRequest $ "At most " <> show maxPax <> " passengers per booking")
+
+  seats <- QSeat.findAllByIds selectedSeatIds
+  when (length seats /= totalQty) $ throwError (InvalidRequest "One or more selected seats do not exist")
+  let expectedSeatLayoutId = tnstcSeatLayoutId integratedBPPConfig.merchantOperatingCityId.getId layoutId
+  unless (all (\st -> st.seatLayoutId == expectedSeatLayoutId) seats) $
+    throwError (InvalidRequest "One or more selected seats do not belong to this service's seat layout")
+  let seatById sid = find (\st -> st.id == sid) seats
+      seatLabels = map (.seatLabel) seats
+
+  concessions <-
+    TNSTCLayout.getConcessionTypes tnstcConfig $
+      TNSTCLayout.GetConcessionTypesReq
+        { rqctClassId = classId,
+          rqctCounterCode = counterCode,
+          rqctEndPlaceId = search.toStationCode,
+          rqctJourneyDate = journeyDate,
+          rqctSeatNumbers = seatLabels,
+          rqctServiceId = serviceId,
+          rqctStartPlaceId = search.fromStationCode,
+          rqctTotalSeats = totalQty,
+          rqctUserName = tnstcConfig.username
+        }
+  intraState <- tnstcIsIntraState integratedBPPConfig tnstcConfig search.fromStationCode search.toStationCode
+  let allowedConcessions = restrictInterState intraState concessions
+      bookingConcessionId = req.concessionTypeId
+  unless (bookingConcessionId `elem` map (.tctConcessionId) allowedConcessions) $
+    throwError (InvalidRequest $ "concessionTypeId " <> bookingConcessionId <> " is not offered for this service")
+
+  passengerRows <- forM passengers $ \pax -> do
+    st <- seatById pax.seatId & fromMaybeM (InvalidRequest "Selected seat not found")
+    return (pax, st)
+
+  let isSleeperSeat st = st.seatType `elem` [Just Domain.Types.Seat.SLEEPER_UPPER, Just Domain.Types.Seat.SLEEPER_LOWER]
+      catFor (pax, st)
+        | pax.isChild = if isSleeperSeat st then CHILD_SLEEPER else CHILD
+        | otherwise = if isSleeperSeat st then ADULT_SLEEPER else ADULT
+      offeredCats = map (.category) quoteCategories
+      missingCats = nub [catFor row | row <- passengerRows, catFor row `notElem` offeredCats]
+      adultMale = length [() | (pax, _) <- passengerRows, not pax.isChild, pax.gender == Domain.Types.Person.MALE]
+      adultFemale = length [() | (pax, _) <- passengerRows, not pax.isChild, pax.gender /= Domain.Types.Person.MALE]
+      childMale = length [() | (pax, _) <- passengerRows, pax.isChild, pax.gender == Domain.Types.Person.MALE]
+      childFemale = length [() | (pax, _) <- passengerRows, pax.isChild, pax.gender /= Domain.Types.Person.MALE]
+      pickupPlaceId = req.pickupPointPlaceId
+      dropOffPlaceId = req.dropOffPointPlaceId
+      -- TNSTC prices on the 3-char place *code* (PUU / CHE); sending the numeric
+      -- place id here makes it return basicFare = 0. The trip code encodes both as
+      -- HHMM<start:3><end:3><suffix>, e.g. 1720PUUCHEVV01U.
+      -- NOTE: these are the *service's* endpoints, so this is only correct while the
+      -- rider boards at the origin and alights at the destination.
+      tripCode = fromMaybe "" quote.providerTripCode
+
+  startPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 4 tripCode)) search.fromStationCode
+  endPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 7 tripCode)) search.toStationCode
+  -- A passenger whose derived category has no quote category would otherwise be dropped
+  -- from every category update, silently under-counting the booking.
+  unless (null missingCats) $
+    throwError (InvalidRequest $ "This service has no fare category for: " <> Data.Text.intercalate ", " (map show missingCats))
+
+  let boardingPointsAt placeCode =
+        TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId $
+          TNSTCBooking.GetPickupPointsReq
+            { rqppCounterCode = counterCode,
+              rqppJourneyDate = journeyDate,
+              rqppServiceId = serviceId,
+              rqppPlaceId = placeCode,
+              rqppUserName = tnstcConfig.username
+            }
+  offeredPickups <- boardingPointsAt startPlaceCode
+  offeredDropOffs <- boardingPointsAt endPlaceCode
+  unless (any (\p -> p.tppPlaceId == pickupPlaceId) offeredPickups) $
+    throwError (InvalidRequest $ "pickupPointPlaceId " <> pickupPlaceId <> " is not a boarding point for this service")
+  unless (any (\p -> p.tppPlaceId == dropOffPlaceId) offeredDropOffs) $
+    throwError (InvalidRequest $ "dropOffPointPlaceId " <> dropOffPlaceId <> " is not a drop-off point for this service")
+
+  tnstcCreatedBy <- tnstcConfig.createdBy & fromMaybeM (InternalError "TNSTC createdBy not configured")
+  wsRefNo <- generateGUID <&> (\g -> "SE" <> Data.Text.take 7 (Data.Text.filter Data.Char.isDigit g <> "0000000"))
+  blockResult <-
+    TNSTCBooking.addBlockSeats tnstcConfig $
+      TNSTCBooking.AddBlockSeatsReq
+        { rqbsClassId = classId,
+          rqbsCounterCode = counterCode,
+          rqbsCreatedBy = tnstcCreatedBy,
+          rqbsEndPlaceId = search.toStationCode,
+          rqbsJourneyDate = journeyDate,
+          rqbsLayoutId = layoutId,
+          rqbsSeatNumbers = seatLabels,
+          rqbsServiceId = serviceId,
+          rqbsStartPlaceId = search.fromStationCode,
+          rqbsTotalAdults = totalQty,
+          rqbsUserName = tnstcConfig.username,
+          rqbsWsRefNo = wsRefNo
+        }
+  let seatBlockIds = blockResult.tbrSeatBlockIds
+  when (length seatBlockIds /= length seatLabels) $
+    throwError (InvalidRequest "Could not hold the selected seats")
+  logInfo $ "TNSTC AddBlockSeats quoteId=" <> quoteId.getId <> " seats=" <> show seatLabels <> " seatBlockIds=" <> show seatBlockIds
+
+  fare <-
+    TNSTCBooking.getTotalFare tnstcConfig $
+      TNSTCBooking.GetTotalFareReq
+        { rqtfAdultMale = adultMale,
+          rqtfAdultFemale = adultFemale,
+          rqtfChildMale = childMale,
+          rqtfChildFemale = childFemale,
+          rqtfClassId = classId,
+          rqtfConcessionTypeId = bookingConcessionId,
+          rqtfCounterCode = counterCode,
+          rqtfCreatedBy = tnstcCreatedBy,
+          rqtfEndPlaceCode = endPlaceCode,
+          rqtfEndPlaceId = search.toStationCode,
+          rqtfJourneyDate = journeyDate,
+          rqtfPickupPointDropOffId = dropOffPlaceId,
+          rqtfPickupPointPlaceId = pickupPlaceId,
+          rqtfSeatBlockIds = seatBlockIds,
+          rqtfSeatNumbers = seatLabels,
+          rqtfServiceId = serviceId,
+          rqtfStartPlaceCode = startPlaceCode,
+          rqtfStartPlaceId = search.fromStationCode,
+          rqtfUserName = tnstcConfig.username,
+          rqtfWsRefNo = wsRefNo
+        }
+  totalFareAmount <- fare.tfrTotalFare & fromMaybeM (InvalidRequest $ "Could not price this booking" <> maybe "" (": " <>) fare.tfrErrorMessage)
+  let totalAmt = HighPrecMoney (toRational totalFareAmount)
+      totalPrice = Price {amountInt = round totalAmt, amount = totalAmt, currency = INR}
+
+  let basicAmt = maybe 0 (HighPrecMoney . toRational) fare.tfrBasicFare
+      feesAmt = totalAmt - basicAmt
+
+  let tnstcUserId = fromMaybe "714" tnstcConfig.userId
+      providerRefNo = fromMaybe wsRefNo fare.tfrWsRefNo <> "-" <> tnstcUserId
+  logInfo $ "TNSTC WSRefNo sent=" <> wsRefNo <> " echoed=" <> show fare.tfrWsRefNo <> " persisted=" <> providerRefNo
+  QFRFSQuote.updateProviderSelectionById
+    (Just providerRefNo)
+    (Just bookingConcessionId)
+    (Just feesAmt)
+    quoteId
+  storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId req.idProofLookupId req.idProofNumber passengerRows
+
+  now <- getCurrentTime
+  forM_ quoteCategories $ \cat -> do
+    let mine = filter (\row -> catFor row == cat.category) passengerRows
+        qty = length mine
+        -- seatBlockIds come back positionally aligned with the labels we sent, so build the
+        -- label->id map once and look each seat up. Deriving catBlockIds by filtering the
+        -- global list instead would order it by `seats` (findAllByIds order) while seatLabels
+        -- below is ordered by `mine` (request order) -- the two differ, so a category holding
+        -- more than one seat would store the pair misaligned.
+        blockIdOf lbl = listToMaybe [bid | (l, bid) <- zip seatLabels seatBlockIds, l == lbl]
+        catSeats = [st | (_, st) <- mine]
+        catBlockIds = mapMaybe (blockIdOf . (.seatLabel)) catSeats
+        -- TNSTC returns the per-passenger fare it actually charged (adultFare /
+        -- childFare); prefer it over our search-time price so the category lines
+        -- sum to the basicFare TNSTC billed.
+        isChildCat = cat.category `elem` [CHILD, CHILD_SLEEPER]
+        providerUnitFare = HighPrecMoney . toRational <$> (if isChildCat then fare.tfrChildFare else fare.tfrAdultFare)
+        unitAmt = fromMaybe cat.price.amount providerUnitFare
+        unitPrice = Price {amountInt = round unitAmt, amount = unitAmt, currency = INR}
+    QFRFSQuoteCategory.updateByPrimaryKey
+      cat{selectedQuantity = qty,
+          seatIds = if null catSeats then Nothing else Just (map (.id) catSeats),
+          seatLabels = if null catSeats then Nothing else Just (map (.seatLabel) catSeats),
+          -- holdId belongs to the premium-bus Redis seat-hold mechanism (OnConfirm feeds it
+          -- to SeatBooking.confirmBooking), so TNSTC must not write it.
+          holdId = Nothing,
+          providerBlockIds = if null catBlockIds then Nothing else Just catBlockIds,
+          finalPrice = if qty > 0 then Just unitPrice else Nothing,
+          updatedAt = now
+         }
+  updatedCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+  -- Guard the exact invariant OnInit enforces before taking payment:
+  -- sum (finalPrice * selectedQuantity) + quote.extraFees must equal the total TNSTC billed.
+  let ourChargeTotal =
+        sum
+          ( map
+              (\c -> maybe 0 (.amount) c.finalPrice * HighPrecMoney (toRational c.selectedQuantity))
+              updatedCategories
+          )
+          + feesAmt
+  when (ourChargeTotal /= totalAmt) $ do
+    logError $
+      "TNSTC total-fare reconciliation mismatch quoteId=" <> quoteId.getId
+        <> " ourCategoryChargeTotal="
+        <> show ourChargeTotal
+        <> " tnstcTotalFare="
+        <> show totalAmt
+    throwError (InternalError "Could not reconcile the fare for this booking")
+
+  return
+    FRFSTicketService.FRFSSelectRes
+      { quoteId = quoteId,
+        categories = map FRFSUtils.mkCategoryInfoResponse updatedCategories,
+        fareBreakup =
+          map
+            (\(k, v) -> FRFSTicketService.FRFSFareBreakupItem {title = k, amount = HighPrecMoney (toRational v)})
+            fare.tfrComponents,
+        totalFare = mkPriceAPIEntity totalPrice,
+        seatBlockIds = if null seatBlockIds then Nothing else Just seatBlockIds,
+        blockExpiresAt = addUTCTime (fromIntegral tnstcHoldSeconds) now
+      }
+
+instance FromHttpApiData [Data.Text.Text] where
+  parseUrlPiece = parseHeader . Data.Text.Encoding.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = Data.Bifunctor.first Data.Text.pack . Data.Aeson.eitherDecode . Data.ByteString.Lazy.fromStrict
+
+instance ToHttpApiData [Data.Text.Text] where
+  toUrlPiece = Data.Text.Encoding.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = Data.ByteString.Lazy.toStrict . Data.Aeson.encode

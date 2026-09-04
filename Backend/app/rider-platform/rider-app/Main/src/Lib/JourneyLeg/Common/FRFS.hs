@@ -315,7 +315,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
       return (True, Nothing)
     _ ->
       let fareRoute = mkFareRouteFromFRFSDetails routeDetails mbProviderRouteId
-       in JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleCategory serviecType mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
+       in JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleCategory serviecType mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode Nothing) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
             >>= \case
               Right (isFareMandatory, []) -> do
                 logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
@@ -437,7 +437,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
           busLocationData = Just journeyLeg.busLocationData
-      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, ..}
+      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, platformType = Just DIBC.MULTIMODAL, tripTime = journeyLeg.fromDepartureTime, journeyDate = Nothing, tripCategory = Nothing, isSingleLady = Nothing, ..}
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do

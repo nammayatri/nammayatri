@@ -42,6 +42,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -108,9 +109,14 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
       )
       quoteCategories
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
+  -- Booking-level charges live on the quote, not on any category, so the category lines
+  -- alone will not add up to the amount charged.
+  mbQuote <- QFRFSQuote.findById oldBooking.quoteId
+  let extraFees = fromMaybe 0 (mbQuote >>= (.extraFees))
+      expectedTotalPrice = modifyPrice fareParameters.totalPrice (+ extraFees)
 
-  when (totalPrice /= fareParameters.totalPrice) $ do
-    throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
+  when (totalPrice /= expectedTotalPrice) $ do
+    throwError $ CategoriesAndTotalPriceMismatch (show expectedTotalPrice) (show totalPrice)
 
   -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
   void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id

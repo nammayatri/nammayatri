@@ -9,6 +9,8 @@ import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -28,6 +30,19 @@ findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kern
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateProviderSelectionById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateProviderSelectionById providerRefNo concessionTypeId extraFees id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.providerRefNo providerRefNo,
+      Se.Set Beam.concessionTypeId concessionTypeId,
+      Se.Set Beam.extraFees extraFees,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -36,13 +51,19 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.arrivalDate arrivalDate,
+      Se.Set Beam.arrivalTime arrivalTime,
+      Se.Set Beam.availableSeats availableSeats,
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
+      Se.Set Beam.concessionTypeId concessionTypeId,
+      Se.Set Beam.departureTime departureTime,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
+      Se.Set Beam.extraFees extraFees,
       Se.Set Beam.appSession (fareDetails <&> (.appSession)),
       Se.Set Beam.distance (fareDetails <&> (.distance)),
       Se.Set Beam.providerRouteId (fareDetails <&> (.providerRouteId)),
@@ -62,9 +83,14 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
+      Se.Set Beam.providerClassId providerClassId,
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
+      Se.Set Beam.providerLayoutId providerLayoutId,
       Se.Set Beam.providerName providerName,
+      Se.Set Beam.providerRefNo providerRefNo,
+      Se.Set Beam.providerServiceId providerServiceId,
+      Se.Set Beam.providerTripCode providerTripCode,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
@@ -74,6 +100,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.toStationName toStationName,
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
+      Se.Set Beam.tripCategory tripCategory,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,

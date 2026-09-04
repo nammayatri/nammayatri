@@ -1,9 +1,12 @@
 imports:
+  Gender: Domain.Types.Person
   Text: Data.Text
+  Day: Data.Time.Calendar
   Maybe: Data.Maybe
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.FRFSQuote
   FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
@@ -54,6 +57,9 @@ types:
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
+    journeyDate: Maybe Day
+    isSingleLady: Maybe Bool
+    tripCategory: Maybe FRFSTripCategory
     routeCode: Maybe Text
     serviceTier: Maybe ServiceTierType
     quantity: Int
@@ -89,6 +95,15 @@ types:
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
     applicablePasses: "[FRFSPassOptionAPIEntity]"
+    tripCategory: Maybe FRFSTripCategory
+    providerServiceId: Maybe Text
+    providerLayoutId: Maybe Text
+    providerClassId: Maybe Text
+    providerTripCode: Maybe Text
+    departureTime: Maybe Text
+    arrivalTime: Maybe Text
+    arrivalDate: Maybe Text
+    availableSeats: Maybe Int
 
     derive: "Show"
 
@@ -141,6 +156,7 @@ types:
     quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
     seatIds: Maybe [(Id Seat)]
+    derive: "Show"
 
   CrisSdkResponse:
     osType: Text
@@ -434,9 +450,62 @@ types:
     seat: Seat
     status: SeatStatus
 
+  FRFSPassengerDetail:
+    seatId: Id Seat
+    name: Maybe Text
+    age: Maybe Int
+    gender: Gender
+    isChild: Bool
+    derive: "Show"
+
+  FRFSSelectReq:
+    passengers: "[FRFSPassengerDetail]"
+    concessionTypeId: Text
+    idProofLookupId: Maybe Text
+    idProofNumber: Maybe Text
+    pickupPointPlaceId: Text
+    dropOffPointPlaceId: Text
+    derive: "Show"
+
+  FRFSIdProofType:
+    lookupId: Text
+    name: Text
+    derive: "Show"
+
+  FRFSPickupPoint:
+    placeId: Text
+    name: Text
+    time: Maybe Text
+    platformNo: Maybe Text
+    derive: "Show"
+
+  FRFSFareBreakupItem:
+    title: Text
+    amount: HighPrecMoney
+    derive: "Show"
+
+  FRFSSelectRes:
+    quoteId: Id FRFSQuote
+    categories: "[CategoryInfoResponse]"
+    fareBreakup: "[FRFSFareBreakupItem]"
+    totalFare: PriceAPIEntity
+    seatBlockIds: Maybe [Text]
+    blockExpiresAt: UTCTime
+    derive: "Show"
+
+  FRFSConcession:
+    concessionId: Text
+    concessionDesc: Text
+    categoryLookupId: Maybe Text
+    derive: "Show"
+
   SeatLayoutResp:
     seatLayout: SeatLayout
     seats: [SeatWithStatus]
+    concessions: Maybe [FRFSConcession]
+    idProofTypes: Maybe [FRFSIdProofType]
+    pickupPoints: Maybe [FRFSPickupPoint]
+    dropOffPoints: Maybe [FRFSPickupPoint]
 
   SeatLayoutDetailsResp:
     seatLayout: SeatLayout
@@ -776,6 +845,27 @@ apis:
         toStopCode: Text
       response:
         type: SeatLayoutResp
+
+
+  - GET:
+      endpoint: /frfs/quote/{quoteId}/seats
+      auth: TokenAuth
+      params:
+        quoteId: Id FRFSQuote
+      query:
+        seatNumbers: "[Text]"
+      response:
+        type: SeatLayoutResp
+
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/select
+      auth: TokenAuth
+      params:
+        quoteId: Id FRFSQuote
+      request:
+        type: FRFSSelectReq
+      response:
+        type: FRFSSelectRes
 
   - GET:
       endpoint: /frfs/route/{routeId}/seatLayout

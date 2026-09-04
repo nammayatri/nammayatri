@@ -1,5 +1,7 @@
 imports:
   UTCTime: Kernel.Prelude
+  EncryptedHashedField: Kernel.External.Encryption
+  Gender: Domain.Types.Person
   TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -20,6 +22,7 @@ imports:
   FRFSTicketBookingPaymentCategory: Domain.Types.FRFSTicketBookingPaymentCategory
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.FRFSQuote
   FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   OverrideType: Domain.Types.FRFSTicketBooking
@@ -39,6 +42,7 @@ imports:
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
+  Day: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
   RouteStopTimeTable: Domain.Types.RouteStopTimeTable
   FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
@@ -68,6 +72,8 @@ FRFSSearch:
     routeCode: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
+    journeyDate: Maybe Day
+    isSingleLady: Maybe Bool
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -195,6 +201,18 @@ FRFSQuote:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     offerSegment: Maybe Text
+    tripCategory: Maybe FRFSTripCategory
+    providerServiceId: Maybe Text
+    providerLayoutId: Maybe Text
+    providerClassId: Maybe Text
+    providerTripCode: Maybe Text
+    departureTime: Maybe Text
+    arrivalTime: Maybe Text
+    arrivalDate: Maybe Text
+    availableSeats: Maybe Int
+    providerRefNo: Maybe Text
+    extraFees: Maybe HighPrecMoney
+    concessionTypeId: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -221,6 +239,9 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+    FRFSTripCategory:
+      enum: "INTRACITY, INTERCITY"
+      derive: "HttpInstance"
     FRFSFareDetails:
       providerRouteId: Text
       distance: Meters
@@ -270,9 +291,61 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
+    updateProviderSelectionById:
+      kvFunction: updateWithKV
+      params: [providerRefNo, concessionTypeId, extraFees]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+# Passenger identity for a confirmed booking. TNSTC does not require names or ages
+# (only addnlAge must be a number), so this exists for the ticket, the manifest and
+# ID checks at boarding -- not as an integration requirement.
+FRFSPassengerDetail:
+  tableName: frfs_passenger_detail
+  derives: "Generic"
+  fields:
+    id: Id FRFSPassengerDetail
+    quoteId: Id FRFSQuote
+    bookingId: Maybe (Id FRFSTicketBooking)
+    seatId: Id Seat
+    seatLabel: Text
+    name: Maybe Text
+    age: Maybe Int
+    gender: Gender|NoRelation
+    isChild: Bool
+    pickupPointPlaceId: Maybe Text
+    dropOffPointPlaceId: Maybe Text
+    idProofLookupId: Maybe Text
+    idProofNumber: Maybe (EncryptedHashedField e Text)
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  fromTType:
+    idProofNumber: EncryptedHashed <$> (Encrypted <$> idProofNumberEncrypted) <*> idProofNumberHash|E
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    bookingId: SecondaryKey
+  queries:
+    findAllByQuoteId:
+      kvFunction: findAllWithKV
+      where: quoteId
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: bookingId
+    updateBookingIdByQuoteId:
+      kvFunction: updateWithKV
+      params: [bookingId]
+      where: quoteId
+    deleteAllByQuoteId:
+      kvFunction: deleteWithKV
+      where: quoteId
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
 # Default FRFSQuoteCategory is for ADULT category
 FRFSQuoteCategory:
@@ -291,6 +364,7 @@ FRFSQuoteCategory:
     merchantOperatingCityId: Id MerchantOperatingCity
     seatIds: Maybe [Id Seat]
     seatLabels: Maybe [Text]
+    providerBlockIds: Maybe [Text]
     holdId: Maybe Text
   constraints:
     id: PrimaryKey
@@ -341,6 +415,7 @@ FRFSQuoteCategory:
   sqlType:
     seatIds: "text[]"
     seatLabels: "text[]"
+    providerBlockIds: "text[]"
 
   types:
     QuoteCategoryMetadata:
@@ -527,7 +602,6 @@ FRFSTicketBooking:
     toStationLon: (.lon) <$> toStationPoint|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
-
 
   sqlType:
     busLocationData: "json"
@@ -1204,7 +1278,6 @@ StopFare:
 
   extraOperations:
     - GENERATE_INDEXES
-
 
 FRFSStageFare:
   tableName: frfs_stage_fare
