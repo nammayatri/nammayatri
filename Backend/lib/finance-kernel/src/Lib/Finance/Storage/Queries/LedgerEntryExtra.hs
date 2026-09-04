@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Lib.Finance.Storage.Queries.LedgerEntryExtra where
 
 import Kernel.Beam.Functions
@@ -68,6 +66,30 @@ findByReferenceTypesAndDateRange referenceTypes merchantOperatingCityId startTim
           Se.Is Beam.timestamp $ Se.LessThanOrEq endTime
         ]
     ]
+
+findSettledByReferenceTypeAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  m [Domain.LedgerEntry]
+findSettledByReferenceTypeAndDateRange referenceType merchantOperatingCityId startTime endTime limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.Eq Domain.SETTLED,
+          Se.Is Beam.timestamp $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.timestamp $ Se.LessThanOrEq endTime,
+          Se.Is Beam.reversalOf $ Se.Eq Nothing
+        ]
+    ]
+    (Se.Desc Beam.timestamp)
+    limit
+    offset
 
 -- | Find ALL ledger entries by referenceId (no referenceType filter)
 findAllByReferenceId ::

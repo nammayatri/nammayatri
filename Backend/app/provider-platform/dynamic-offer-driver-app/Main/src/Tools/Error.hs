@@ -1341,6 +1341,7 @@ data DriverOnboardingError
   | ActiveRCNotFound
   | RCVehicleOnRide
   | RCActiveOnOtherAccount
+  | RCDataMismatch Text
   | VehicleIsNotRegistered
   | InvalidOperatingCity Text
   | GenerateAadhaarOtpExceedLimit Text
@@ -1438,6 +1439,7 @@ instance IsBaseError DriverOnboardingError where
     VehicleIsNotRegistered -> Just " Vehicle is not Registered "
     RCVehicleOnRide -> Just "Vehicle on ride. Please try again later."
     RCActiveOnOtherAccount -> Just "RC active on another driver account."
+    RCDataMismatch fields -> Just $ "Submitted RC data does not match the approved Vehicle Registration Certificate. Mismatched fields: " <> fields <> "."
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
@@ -1533,6 +1535,7 @@ instance IsHTTPError DriverOnboardingError where
     VehicleIsNotRegistered -> "VEHICLE_IS_NOT_REGISTERED"
     RCVehicleOnRide -> "RC_Vehicle_ON_RIDE"
     RCActiveOnOtherAccount -> "RC_ACTIVE_ON_OTHER_ACCOUNT"
+    RCDataMismatch _ -> "RC_DATA_MISMATCH"
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
     DLInvalid -> "DL_INVALID"
@@ -1621,6 +1624,7 @@ instance IsHTTPError DriverOnboardingError where
     VehicleIsNotRegistered -> E400
     RCVehicleOnRide -> E400
     RCActiveOnOtherAccount -> E400
+    RCDataMismatch _ -> E400
     RCActivationFailedPaymentDue _ -> E400
     RCDependentDocExpired _ -> E400
     DLInvalid -> E400

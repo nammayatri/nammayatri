@@ -675,7 +675,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
           QDRC.endAllRCAssociationsForDriver person.id
@@ -711,7 +711,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       otp <- Redis.get key >>= fromMaybeM OtpNotFound
       when (otp /= req.otp) $ throwError InvalidOtp
 
-      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
           QDRC.endAllRCAssociationsForDriver person.id

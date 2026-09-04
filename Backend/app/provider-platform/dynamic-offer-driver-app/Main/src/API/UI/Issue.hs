@@ -21,6 +21,7 @@ import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
+import qualified Kernel.External.Ticket.Types as TicketTypes
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -34,6 +35,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Merchant as QM
@@ -129,10 +131,7 @@ driverIssueHandle =
       mbFindFRFSTicketBookingById = Nothing,
       mbFindStationByIdWithContext = Nothing,
       mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
-      -- Nothing = never forward driver-side chat messages to the ticket
-      -- service. Driver-app doesn't use XyneSpaces today; enable this by
-      -- returning a check against MerchantServiceUsageConfig if that changes.
-      mbShouldForwardChatToTicketService = Nothing,
+      mbShouldForwardChatToTicketService = Just isXyneTicketService,
       mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
       findIssueConfig = \mocId issueIdentifier ->
         getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) Nothing,
@@ -140,6 +139,11 @@ driverIssueHandle =
       mbUpdateTicketStatus = Just castUpdateTicketStatus,
       mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
+
+isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
+isXyneTicketService _merchantId mocId = do
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
+  pure $ maybe False (\c -> c.issueTicketService == TicketTypes.XyneSpaces) mbUsage
 
 -- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
 -- 'AWS.S3.get' produces). Same mechanism the shared IssueManagement handler

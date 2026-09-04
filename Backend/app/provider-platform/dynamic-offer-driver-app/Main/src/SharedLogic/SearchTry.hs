@@ -47,7 +47,6 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
@@ -314,7 +313,6 @@ buildTripQuoteDetail ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r

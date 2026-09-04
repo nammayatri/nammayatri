@@ -22,6 +22,7 @@ imports:
   UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CrisSdkResponse: API.Types.UI.FRFSTicketService
+  CreateOrderReq: Kernel.External.Payment.Juspay.Types
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
@@ -232,6 +233,10 @@ types:
     result: Text
     orderSdkPayload: Maybe CreateOrderResp
     gatewayReferenceId: Maybe Text
+    # Only set when the confirm carried skipCreateOrderCall. The gateway's own request payload,
+    # built through the same mkCreateOrderReq a real session call goes through, so whoever opens
+    # the order under our stored order short id sends exactly what we would have sent.
+    orderCreationReq: Maybe CreateOrderReq
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
@@ -455,17 +460,24 @@ types:
     timeStamp: UTCTime
     towerInfo: [TowerInfo]
 
-  RouteETAResp:
-    eta: "Maybe [BusStopETA]"
-    isLastStop: Bool
-    isLive: Bool
+  PassingVehicleInfo:
+    vehicleNumber: Text
+    serviceTierType: ServiceTierType
+    serviceTierName: Maybe Text
+    eta: BusStopETA
 
   PassingRoutes:
     routeCode: Text
+    routeShortName: Text
+    liveVehicles: [PassingVehicleInfo]
+    schedules: [PassingVehicleInfo]
+    isLastStop: Bool
 
 apis:
   - POST:
       endpoint: /multimodal/routeServiceability
+      query:
+        allPassingRoutes: Bool
       request:
         type: RouteServiceabilityReq
       response:
@@ -489,6 +501,7 @@ apis:
       query:
         forceBookLegOrder: Int
         isMockPayment: Bool
+        skipCreateOrderCall: Bool
       response:
         type: JourneyConfirmResp
   - GET:
@@ -841,19 +854,11 @@ apis:
         type: Kernel.Types.APISuccess.APISuccess
 
   - GET:
-      endpoint: /multimodal/route/{routeCode}/eta
-      auth: TokenAuth
-      params:
-        routeCode: Text
-      mandatoryQuery:
-        stopCode: Text
-      response:
-        type: RouteETAResp
-
-  - GET:
-      endpoint: /multimodal/stop/{stopCode}/routes
+      endpoint: /multimodal/track/stop/{stopCode}/routes
       auth: TokenAuth
       params:
         stopCode: Text
+      query:
+        routeCodes: Text
       response:
         type: "[PassingRoutes]"

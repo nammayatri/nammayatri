@@ -5,6 +5,7 @@ module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
@@ -20,6 +21,7 @@ import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
@@ -126,10 +128,10 @@ transitOperatorGetTripDetailsUtil merchantShortId city vehicleCategory scheduleN
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorTripDetails baseUrl gtfsId scheduleNumber
 
-transitOperatorGetFleetsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [Fleet]
-transitOperatorGetFleetsUtil merchantShortId city vehicleCategory = do
+transitOperatorGetFleetsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Int -> Maybe Int -> Flow [Fleet]
+transitOperatorGetFleetsUtil merchantShortId city vehicleCategory limit offset = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorFleets baseUrl gtfsId
+  NandiFlow.operatorFleets baseUrl gtfsId limit offset
 
 transitOperatorGetConductorUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow Employee
 transitOperatorGetConductorUtil merchantShortId city vehicleCategory token = do
@@ -173,9 +175,48 @@ transitOperatorUpdateWaybillFleetUtil merchantShortId city vehicleCategory req =
 transitOperatorUpdateWaybillDetailsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillDetailsReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillDetailsUtil merchantShortId city vehicleCategory req = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId req
+  gimsReq <- validateVehicleChange baseUrl gtfsId req
+  res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId gimsReq
   fanOutWaybillRefresh baseUrl gtfsId req.waybill_no
   pure res
+
+-- | The bus being replaced is read off the waybill rather than taken from the request, and both buses must
+-- share one seat layout: tickets already issued on this waybill carry seats from the old layout, which would
+-- not exist on a differently laid-out bus. A waybill with no vehicle yet is a first assignment, not a swap.
+validateVehicleChange :: BaseUrl -> Text -> UpdateWaybillDetailsReq -> Flow UpdateWaybillDetailsReq
+validateVehicleChange baseUrl gtfsId req = case req.vehicle_no of
+  Nothing -> pure req
+  Just rawVehicleNo -> do
+    newVehicleNo <- validateNonBlank rawVehicleNo
+    meta <- NandiFlow.getWaybillMetadata baseUrl gtfsId req.waybill_no
+    let currentVehicleNo = T.strip meta.vehicle_no
+    unless (T.null currentVehicleNo) $ do
+      mbCurrentLayoutId <- findSeatLayoutId currentVehicleNo
+      mbNewLayoutId <- findSeatLayoutId newVehicleNo
+      unless (mbCurrentLayoutId == mbNewLayoutId) $
+        throwError $
+          InvalidRequest $
+            mconcat
+              [ "updateWaybillDetails: seat layout mismatch on waybill ",
+                req.waybill_no,
+                " - current vehicle ",
+                currentVehicleNo,
+                " (seatLayoutId: ",
+                showLayoutId mbCurrentLayoutId,
+                ") and requested vehicle ",
+                newVehicleNo,
+                " (seatLayoutId: ",
+                showLayoutId mbNewLayoutId,
+                ") do not share the same seat layout, vehicle change is not allowed"
+              ]
+    pure (req :: UpdateWaybillDetailsReq) {vehicle_no = Just newVehicleNo}
+  where
+    validateNonBlank rawVehicleNo = do
+      let vehicleNo = T.strip rawVehicleNo
+      when (T.null vehicleNo) $ throwError $ InvalidRequest "updateWaybillDetails: vehicle_no must not be blank"
+      pure vehicleNo
+    findSeatLayoutId vehicleNo = fmap (.seatLayoutId) <$> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo gtfsId
+    showLayoutId = maybe "<none>" (.getId)
 
 -- | Reflect a waybill fleet/driver change on the customer tickets riding that waybill: for every confirmed
 -- booking on the waybill, refresh its driver + (assigned) bus from freshly-fetched waybill metadata. The
@@ -268,3 +309,50 @@ transitOperatorExportRouteStopMappingUtil :: ShortId Merchant -> Context.City ->
 transitOperatorExportRouteStopMappingUtil merchantShortId city vehicleCategory = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorExportRouteStopMapping baseUrl gtfsId
+
+-- ===== Vehicle management (GIMS) =====
+
+-- Strip surrounding whitespace and treat blank/whitespace-only as absent — mirrors GIMS server-side normalization.
+nonBlankText :: Maybe Text -> Maybe Text
+nonBlankText = (>>= \t -> let t' = T.strip t in if T.null t' then Nothing else Just t')
+
+transitOperatorUpsertVehiclesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> [VehicleUpsertRequest] -> Flow [Fleet]
+transitOperatorUpsertVehiclesUtil merchantShortId city vehicleCategory items = do
+  when (null items) $ throwError $ InvalidRequest "upsertVehicles: body must contain at least one vehicle"
+  normalized <- traverse normalizeItem items
+  -- Reject intra-batch duplicates on the natural conflict key: GIMS behavior on same-vehicle_no twice in one POST is implementation-defined (last-wins vs first-wins vs whole-batch-fail).
+  let counts = Map.fromListWith (+) $ zip (map (.vehicle_no) normalized) (repeat (1 :: Int))
+      dupes = Map.keys $ Map.filter (> 1) counts
+  unless (null dupes) $
+    throwError $ InvalidRequest $ "upsertVehicles: duplicate vehicle_no in batch: " <> T.intercalate ", " dupes
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorUpsertVehicles baseUrl gtfsId normalized
+  where
+    -- Strip once at the boundary so a padded write and a clean-string query land on the same natural key.
+    normalizeItem req = do
+      let vNo = T.strip req.vehicle_no
+      when (T.null vNo) $ throwError $ InvalidRequest "upsertVehicles: vehicle_no must not be blank"
+      pure
+        req{vehicle_no = vNo,
+            fleet_no = nonBlankText req.fleet_no,
+            tag_number = nonBlankText req.tag_number,
+            status = nonBlankText req.status
+           }
+
+transitOperatorDeleteVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp
+transitOperatorDeleteVehicleUtil merchantShortId city vehicleCategory vehicleId = do
+  -- guard blank/whitespace: an empty Capture segment would silently target the wrong URL (or 404) instead of failing loud
+  let vehicleId' = T.strip vehicleId
+  when (T.null vehicleId') $ throwError $ InvalidRequest "deleteVehicle: vehicleId must not be blank"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorDeleteVehicle baseUrl gtfsId vehicleId'
+
+transitOperatorQueryVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Flow [Fleet]
+transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo tagNumber fleetNo = do
+  let vehicleNo' = nonBlankText vehicleNo
+      tagNumber' = nonBlankText tagNumber
+      fleetNo' = nonBlankText fleetNo
+  when (isNothing vehicleNo' && isNothing tagNumber' && isNothing fleetNo') $
+    throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'

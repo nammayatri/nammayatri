@@ -377,10 +377,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [payoutRegistrationOrderId]
       where: driverId
-    updateLatestScheduledBookingAndPickup:
-      kvFunction: updateOneWithKV
-      params: [latestScheduledBooking, latestScheduledPickup]
-      where: driverId
     updatePayoutVpaStatus:
       kvFunction: updateOneWithKV
       params: [payoutVpaStatus]

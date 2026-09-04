@@ -23,7 +23,6 @@ module Domain.Action.Dashboard.Management.FinanceManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
-import qualified AWS.S3 as S3
 import qualified Dashboard.Common
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
@@ -37,7 +36,6 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
-import qualified Domain.Types.Image as DImage
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.LedgerAdjustmentRequest as DLAR
 import qualified Domain.Types.Merchant as DM
@@ -335,6 +333,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
       -- GST details from IndirectTaxTransaction
       let gstRate = mbSubscriptionTxn <&> (.gstRate)
       let gstAmount = mbSubscriptionTxn <&> (.totalGstAmount)
+      let cgstAmount = mbSubscriptionTxn <&> (.cgstAmount)
+      let sgstAmount = mbSubscriptionTxn <&> (.sgstAmount)
+      let igstAmount = mbSubscriptionTxn <&> (.igstAmount)
 
       -- Gross and total subscription amounts
       let grossSubscriptionAmount = baseAmount
@@ -387,6 +388,9 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             grossSubscriptionAmount = grossSubscriptionAmount,
             gstRate = gstRate,
             gstAmount = gstAmount,
+            cgstAmount = cgstAmount,
+            sgstAmount = sgstAmount,
+            igstAmount = igstAmount,
             totalSubscriptionAmount = totalSubscriptionAmount,
             invoiceId = subscription.financeInvoiceId <&> (.getId),
             totalEntitledValue = Just entitledValue,
@@ -552,20 +556,21 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
 
-      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
+      let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, igstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
             (txn : _) ->
               ( Just txn.taxableValue,
                 Just txn.gstRate,
                 Just txn.totalGstAmount,
                 Just txn.cgstAmount,
                 Just txn.sgstAmount,
+                Just txn.igstAmount,
                 txn.gstinOfParty,
                 txn.sacCode,
                 txn.taxRate,
                 txn.issuedToTaxNo,
                 txn.issuedByTaxNo
               )
-            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+            _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
       -- Get TDS details from direct tax transaction by invoiceNumber
       directTaxTxns <- QDirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
@@ -616,6 +621,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             gstAmount = gstAmount,
             cgstAmount = cgstAmount,
             sgstAmount = sgstAmount,
+            igstAmount = igstAmount,
             totalInvoiceValue = invoice.totalAmount,
             tdsReference = tdsRef,
             irn = invoice.irn,
@@ -1876,16 +1882,17 @@ getFinanceManagementFinanceSapJournals ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe SJE.JournalEntryStatus ->
   Maybe SJE.TransactionType ->
   Flow API.SapJournalListRes
-getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbGlNumber mbLimit mbOffset mbStatus mbTransactionType = do
+getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbDescription mbGlNumber mbLimit mbOffset mbStatus mbTransactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let limitVal = mkPageLimit mbLimit
-  entries <- QSapJournalEntryBPP.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber (Just limitVal) mbOffset
+  entries <- QSapJournalEntryBPP.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber mbDescription (Just limitVal) mbOffset
   let totalItems = length entries
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
       journals = map toSapJournalItem entries
@@ -1894,13 +1901,14 @@ getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr 
 getFinanceManagementFinanceSapJournalsTransactions ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   Text ->
   SJE.TransactionType ->
   Flow API.SapJournalTransactionsRes
-getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimit mbOffset mbSubscriptionId batchId transactionType = do
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbDescription mbLimit mbOffset mbSubscriptionId batchId transactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   journalEntry <- listToMaybe <$> QSJE.findByBatchId batchId >>= fromMaybeM (InvalidRequest $ "No SAP journal entry found for batchId: " <> batchId)
@@ -1913,6 +1921,7 @@ getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimi
       transactionType
       mbSubscriptionId
       batchId
+      mbDescription
       mbLimit
       mbOffset
   let items = map toTransactionItem entries
@@ -1924,7 +1933,8 @@ getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimi
           creditAmount = entry.creditAmount,
           currency = show entry.currency,
           description = entry.description,
-          subscriptionId = entry.subscriptionId,
+          referenceId = entry.referenceId,
+          referenceType = entry.referenceType,
           creationDate = entry.createdAt,
           createdBy = show entry.createdBy
         }
@@ -2314,8 +2324,6 @@ getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
   let fleetOwnerName = mbFleetOwner <&> \p -> T.intercalate " " $ catMaybes [Just p.firstName, p.middleName, p.lastName]
       DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
 
-  documentUrl <- resolveTdsDocumentUrl (cast request.documentId)
-
   mappings <- QTdsMap.findAllByRequestId request.id
   invoiceLines <- buildStatusInvoiceLines mappings
   let totalTdsAmount = sum $ map (.tdsAmount) mappings
@@ -2332,18 +2340,13 @@ getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
         certAmount = request.certAmount,
         tdsRate = request.tdsRate,
         tdsSection = request.tdsSection,
-        documentUrl = documentUrl,
+        documentId = cast request.documentId,
         status = castTdsReimbursementRequestStatus request.status,
         rejectionReason = request.rejectionReason,
         submittedAt = request.createdAt,
         invoiceLines = invoiceLines,
         totalTdsAmount = totalTdsAmount
       }
-
-resolveTdsDocumentUrl :: Id DImage.Image -> Flow Text
-resolveTdsDocumentUrl imageId = do
-  image <- QImage.findById imageId >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> imageId.getId)
-  S3.generateDownloadUrl (T.unpack image.s3Path) 3600
 
 postFinanceManagementFinanceAdjustmentSubmit ::
   ShortId DM.Merchant ->

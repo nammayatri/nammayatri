@@ -22,3 +22,28 @@ findLatestBatchId = do
   pure $ case mbEntry of
     [entry] -> Just (entry :: Domain.SapJournalEntry).batchId
     _ -> Nothing
+
+findSuccessForPeriod ::
+  (BeamFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Domain.TransactionType ->
+  m (Maybe Domain.SapJournalEntry)
+findSuccessForPeriod merchantOperatingCityId periodStart periodEnd description txnType = do
+  entries <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+            Se.Is Beam.periodStartTime $ Se.Eq periodStart,
+            Se.Is Beam.periodEndTime $ Se.Eq periodEnd,
+            Se.Is Beam.description $ Se.Eq description,
+            Se.Is Beam.transactionType $ Se.Eq txnType,
+            Se.Is Beam.status $ Se.Eq Domain.SUCCESS
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 1)
+      Nothing
+  pure $ listToMaybe entries

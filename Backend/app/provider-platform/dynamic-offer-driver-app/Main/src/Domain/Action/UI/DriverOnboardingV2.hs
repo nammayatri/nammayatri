@@ -85,6 +85,7 @@ import SharedLogic.DriverOnboarding.Digilocker
     verifyDigiLockerEnabled,
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
@@ -111,7 +112,6 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -1300,7 +1300,8 @@ getDriverRegisterBankAccountLink ::
     Maybe DMPM.PaymentMode ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
-getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = do
+-- paymentMode query param is intentionally ignored: the mode comes from the PaymentTest Namma Tag.
+getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy _paymentMode = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let fetchPersonStripeInfo = do
@@ -1316,7 +1317,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = 
               businessRegistrationNumber = Nothing
             }
   let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.DriverApp mbInitiatedBy) person
+  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle (Just $ fromMaybe DIB.DriverApp mbInitiatedBy) person
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1541,9 +1542,10 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
-          SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $ do
+          driver <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          SOnboardingComms.setOnboardingAs transporterConfig driver DI.FLEET_DRIVER
+          SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $
             FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
-            QDIExtra.updateOnboardingAs (Just DI.FLEET_DRIVER) (cast driverId)
   return Success
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on

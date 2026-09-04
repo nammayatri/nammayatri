@@ -48,6 +48,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
+      API.Internal.BulkLocPickupUpdate
       API.Internal.BulkLocUpdate
       API.Internal.Cac
       API.Internal.CallCustomerFCM
@@ -207,8 +208,10 @@ library
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.DriverVehicleQuality
       Domain.Action.Dashboard.Management.EntityInfo
+      Domain.Action.Dashboard.Management.FarePolicyV2
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
+      Domain.Action.Dashboard.Management.GeohashArea
       Domain.Action.Dashboard.Management.IncentiveJourney
       Domain.Action.Dashboard.Management.KnowledgeCenter
       Domain.Action.Dashboard.Management.Media
@@ -218,6 +221,7 @@ library
       Domain.Action.Dashboard.Management.NammaTag
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.PlanManagement
+      Domain.Action.Dashboard.Management.Pricing
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.ScheduledBooking
@@ -244,6 +248,7 @@ library
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BulkLocPickupUpdate
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
       Domain.Action.Internal.CallCustomerFCM
@@ -434,6 +439,7 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
+      Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
       Domain.Types.Extra.WalletTransaction
       Domain.Types.FareParameters
@@ -488,6 +494,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Execution
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
+      SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
@@ -509,7 +516,10 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
+      SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
       SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch
+      SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
@@ -537,7 +547,6 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
-      SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
@@ -581,6 +590,7 @@ library
       SharedLogic.External.LocationTrackingService.API.ManualQueueRemove
       SharedLogic.External.LocationTrackingService.API.NearBy
       SharedLogic.External.LocationTrackingService.API.NearByTag
+      SharedLogic.External.LocationTrackingService.API.PickupDriverLocation
       SharedLogic.External.LocationTrackingService.API.QueueHistory
       SharedLogic.External.LocationTrackingService.API.RideDetails
       SharedLogic.External.LocationTrackingService.API.StartRide
@@ -590,6 +600,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
+      SharedLogic.Finance.GstBreakdown
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.LedgerAdjustmentCast
@@ -613,6 +624,7 @@ library
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch
+      SharedLogic.GeohashAreaUpsert
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
@@ -650,6 +662,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
+      SharedLogic.SurgeConfig
       SharedLogic.SyncRide
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
@@ -768,6 +781,7 @@ library
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.Route
       Storage.CachedQueries.SubscriptionConfig
+      Storage.CachedQueries.SurgeConfig
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
@@ -1080,8 +1094,10 @@ library
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.DriverVehicleQuality
       API.Action.Dashboard.Management.EntityInfo
+      API.Action.Dashboard.Management.FarePolicyV2
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
+      API.Action.Dashboard.Management.GeohashArea
       API.Action.Dashboard.Management.IncentiveJourney
       API.Action.Dashboard.Management.KnowledgeCenter
       API.Action.Dashboard.Management.Media
@@ -1091,6 +1107,7 @@ library
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.PlanManagement
+      API.Action.Dashboard.Management.Pricing
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.ScheduledBooking
@@ -1318,6 +1335,8 @@ library
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.Faq
+      Domain.Types.FareAlertSubscription
+      Domain.Types.FarePolicyChangeRequest
       Domain.Types.FareProduct
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
@@ -1423,6 +1442,7 @@ library
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
       Domain.Types.SubscriptionPurchase
+      Domain.Types.SurgeConfig
       Domain.Types.SurgePricing
       Domain.Types.TDSDistributionPdfFile
       Domain.Types.TDSDistributionRecord
@@ -1511,6 +1531,8 @@ library
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.Faq
+      Storage.Beam.FareAlertSubscription
+      Storage.Beam.FarePolicyChangeRequest
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
@@ -1616,6 +1638,7 @@ library
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SubscriptionPurchase
+      Storage.Beam.SurgeConfig
       Storage.Beam.SurgePricing
       Storage.Beam.TDSDistributionPdfFile
       Storage.Beam.TDSDistributionRecord
@@ -1709,6 +1732,8 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.Faq
+      Storage.Queries.FareAlertSubscription
+      Storage.Queries.FarePolicyChangeRequest
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
@@ -1918,6 +1943,7 @@ library
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SubscriptionPurchase
+      Storage.Queries.SurgeConfig
       Storage.Queries.SurgePricing
       Storage.Queries.TDSDistributionPdfFile
       Storage.Queries.TDSDistributionRecord

@@ -239,7 +239,6 @@ import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOAExtra
@@ -3734,7 +3733,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       checkAndUpdateAddDriverLimit moc.id transporterConfig person.id
       (if isNew then pure False else DDriver.checkFleetDriverAssociation fleetOwner.id person.id)
-        >>= \isAssociated -> unless isAssociated $
+        >>= \isAssociated -> unless isAssociated $ do
+          SOnboardingComms.setOnboardingAs transporterConfig person DI.FLEET_DRIVER
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
             unless isNew $ do
               SA.endDriverAssociations moc.id transporterConfig person
@@ -3743,7 +3743,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
-            QDIExtra.updateOnboardingAs (Just DI.FLEET_DRIVER) (cast person.id)
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             fork "Sending Fleet Consent SMS to Driver" $
               sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
@@ -3756,10 +3755,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       checkAndUpdateAddDriverLimit moc.id transporterConfigForOperator person.id
       (if isNew then pure False else DDriver.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated ->
-          unless isAssociated $
-            SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+          unless isAssociated $ do
+            SOnboardingComms.setOnboardingAs transporterConfigForOperator person DI.INDIVIDUAL
+            SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $
               SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
-              QDIExtra.updateOnboardingAs (Just DI.INDIVIDUAL) (cast person.id)
       pure person.id
 
     sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
@@ -5319,18 +5318,18 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
           pure (Just fullName, fMob)
 
   mbFleetAssoc <- B.runInReplica $ listToMaybe <$> QFRCAE.findAllActiveByRcIds [vrc.id]
-  mbLinkedDriverAssoc <- B.runInReplica $ listToMaybe <$> DRCAE.findAllActiveByRcIds [vrc.id]
+  linkedDriverAssocs <- B.runInReplica $ DRCAE.findAllActiveByRcIds [vrc.id]
   recentFleetInfo <- case mbFleetAssoc of
     Nothing -> pure Nothing
     Just fra -> do
       mbPerson <- B.runInReplica $ QPerson.findById fra.fleetOwnerId
       mbFoi <- B.runInReplica $ FOI.findByPrimaryKey fra.fleetOwnerId
       DVehicle.mkAssociationInfo mbPerson mbFoi fra.associatedTill True
-  linkedDriverInfo <- case mbLinkedDriverAssoc of
-    Nothing -> pure Nothing
-    Just dra -> do
+  linkedDrivers <- fmap catMaybes $
+    forM linkedDriverAssocs $ \dra -> do
       mbPerson <- B.runInReplica $ QPerson.findById dra.driverId
       DVehicle.mkAssociationInfo mbPerson Nothing dra.associatedTill dra.isRcActive
+  let linkedDriverInfo = listToMaybe $ filter (.isActive) linkedDrivers <> linkedDrivers
 
   pure $
     Common.VehicleInfo
@@ -5372,6 +5371,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
         Common.updatedAt = vrc.updatedAt,
         Common.recentFleetInfo = recentFleetInfo,
         Common.linkedDriverInfo = linkedDriverInfo,
+        Common.linkedDrivers = Just linkedDrivers,
         Common.association =
           if isNothing mbDriverId && isNothing vrc.fleetOwnerId
             then Nothing

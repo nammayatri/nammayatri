@@ -366,7 +366,6 @@ mkBackendHandle merchantId mocId _ctx =
           marketingParams = Nothing,
           mbMobileNumber = Nothing,
           mbMobileCountryCode = Nothing,
-          paymentMode = Nothing,
           driverPreference = Nothing
         }
 

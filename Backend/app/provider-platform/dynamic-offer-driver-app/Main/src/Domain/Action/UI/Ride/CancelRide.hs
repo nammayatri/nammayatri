@@ -64,7 +64,6 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -119,7 +118,6 @@ cancelRideHandle ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,

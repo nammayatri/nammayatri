@@ -33,6 +33,7 @@ library
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
       Dashboard.Common.FinanceManagement
+      Dashboard.Common.GeohashArea
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Rewards.CampaignStatus
@@ -101,8 +102,10 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.DriverVehicleQuality
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
+      API.Types.ProviderPlatform.Management.Endpoints.FarePolicyV2
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
+      API.Types.ProviderPlatform.Management.Endpoints.GeohashArea
       API.Types.ProviderPlatform.Management.Endpoints.IncentiveJourney
       API.Types.ProviderPlatform.Management.Endpoints.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Endpoints.Media
@@ -112,6 +115,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
       API.Types.ProviderPlatform.Management.Endpoints.Payout
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
+      API.Types.ProviderPlatform.Management.Endpoints.Pricing
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
@@ -124,8 +128,10 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.EntityInfo
+      API.Types.ProviderPlatform.Management.FarePolicyV2
       API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.FinanceManagement
+      API.Types.ProviderPlatform.Management.GeohashArea
       API.Types.ProviderPlatform.Management.IncentiveJourney
       API.Types.ProviderPlatform.Management.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Media
@@ -135,6 +141,7 @@ library
       API.Types.ProviderPlatform.Management.NammaTag
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.PlanManagement
+      API.Types.ProviderPlatform.Management.Pricing
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.ScheduledBooking

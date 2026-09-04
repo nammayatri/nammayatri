@@ -14,13 +14,19 @@ JournalEntryTransaction:
   tableName: journal_entry_transaction
   derives: "Generic"
 
+  types:
+    ReferenceType:
+      enum: "SubscriptionPurchase, Booking, Payout, TdsReimbursementRequest"
+      derive: "HttpInstance"
+
   fields:
     id: Id JournalEntryTransaction
     debitAmount: HighPrecMoney
     creditAmount: HighPrecMoney
     currency: Currency
     description: Text
-    subscriptionId: Maybe Text
+    referenceId: Maybe Text
+    referenceType: Maybe ReferenceType
     sapJournalEntryId: Id SapJournalEntry
     sapBatchId: Text
     transactionType: TransactionType

@@ -26,6 +26,7 @@ import qualified Kernel.External.Payment.Interface as PaymentInterface
 import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.APISuccess
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
@@ -121,7 +122,7 @@ buildCreateCustomer personId createCustomerResp paymentMode = do
       }
 
 getOrCreatePaymentCustomer :: Domain.Types.Person.Person -> Environment.Flow DPaymentCustomer.PaymentCustomer
-getOrCreatePaymentCustomer person = do
+getOrCreatePaymentCustomer person = withDynamicLogLevel "payment-mode" $ do
   logInfo $ "getOrCreatePaymentCustomer: " <> person.id.getId <> " " <> show person.paymentMode
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
       lockKey = "PaymentCustomer:Create:" <> person.id.getId <> ":" <> show paymentMode
@@ -142,7 +143,7 @@ getOrCreatePaymentCustomer person = do
                 }
           else return customer
       Nothing -> do
-        -- Create a customer in payment service if not there
+        logDebug $ "paymentMode|customer|no row for personId=" <> person.id.getId <> " mode=" <> show paymentMode <> ", creating in payment service"
         mbEmailDecrypted <- mapM decrypt person.email
         encryptedMobile <- person.mobileNumber & fromMaybeM (InvalidRequest "Person mobile number required to create payment customer")
         phoneDecrypted <- decrypt encryptedMobile

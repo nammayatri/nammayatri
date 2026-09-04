@@ -40,10 +40,10 @@ import qualified Kernel.External.Meta as Meta
 import Kernel.External.Meta.Webhook (RawByteString)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.MetaWebhookConfig as CQMWC
 import qualified Storage.Queries.MetaWebhookConfig as QMWC
+import Tools.Error (MetaWebhookError (MetaAppSecretNotConfigured, MetaWebhookSignatureInvalid, MetaWebhookVerifyFailed))
 import qualified WhatsappBot.Adapter.Env as Env
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Types (InboundEvent)
@@ -85,8 +85,8 @@ getWebhookChallenge mMode mToken mChallenge = withLogTag "MetaWebhook" $
       matched <- anyM (tokenMatches token) configs
       if matched
         then pure challenge
-        else throwError (InvalidRequest "META_WEBHOOK_VERIFY_FAILED")
-    _ -> throwError (InvalidRequest "META_WEBHOOK_VERIFY_FAILED")
+        else throwError MetaWebhookVerifyFailed
+    _ -> throwError MetaWebhookVerifyFailed
   where
     -- anyM comes from EulerHS.Prelude (Universum) — don't shadow it with a
     -- hand-rolled version.
@@ -118,8 +118,13 @@ handleVerifiedWebhook cfg mbSig rawBody = do
   appSecret <- decrypt cfg.appSecret
   -- Fail-closed: an empty appSecret makes the HMAC forgeable (empty key), so
   -- never verify against it — reject as misconfigured instead.
-  when (T.null appSecret) $ throwError (InvalidRequest "META_APP_SECRET_NOT_CONFIGURED")
-  Meta.verifyMetaSignature appSecret mbSig rawBody -- throws INVALID_META_SIGNATURE on mismatch; verified against the SAME rawBody the peek read
+  when (T.null appSecret) $ throwError MetaAppSecretNotConfigured
+  -- Pure check (not Meta.verifyMetaSignature, which throws the same generic
+  -- InvalidRequest "INVALID_META_SIGNATURE" this whole file moved away from)
+  -- so a mismatch surfaces as our own typed MetaWebhookSignatureInvalid
+  -- instead. Verified against the SAME rawBody the peek read.
+  unless (Meta.verifyMetaSignaturePure appSecret mbSig (Meta.getRawByteString rawBody)) $
+    throwError MetaWebhookSignatureInvalid
   case Meta.decodeWebhookEnvelope rawBody of
     Left err -> do
       logError $ "Meta webhook decode failed (acking to stop 7d retries): " <> T.pack err

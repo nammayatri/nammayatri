@@ -2134,6 +2134,32 @@ def cmd_import(args):
             if skipped:
                 print(f"    Skipped (data has dupes): {', '.join(skipped)}")
 
+            # Resync serial sequences on touched tables. The generated inserts
+            # carry explicit ids, which leaves any owned sequence behind — the
+            # next DEFAULT-valued insert would draw an already-used id (e.g.
+            # fare_policy_progressive_details_per_extra_km_rate_section drew
+            # id=1 under seeded ids 1..1394+ and 23505'd every policy write).
+            cursor.execute(
+                """
+                SELECT ns.nspname, tbl.relname, att.attname,
+                       pg_get_serial_sequence(quote_ident(ns.nspname) || '.' || quote_ident(tbl.relname), att.attname)
+                FROM pg_class tbl
+                JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+                JOIN pg_attribute att ON att.attrelid = tbl.oid AND att.attnum > 0 AND NOT att.attisdropped
+                WHERE ns.nspname = %s AND tbl.relname = ANY(%s)
+                  AND pg_get_serial_sequence(quote_ident(ns.nspname) || '.' || quote_ident(tbl.relname), att.attname) IS NOT NULL
+                """,
+                (db_schema, tables_touched),
+            )
+            seq_rows = cursor.fetchall()
+            for nsp, tname, col, seqname in seq_rows:
+                cursor.execute(
+                    f'SELECT setval(%s, COALESCE((SELECT MAX("{col}")::bigint FROM "{nsp}"."{tname}"), 0) + 1, false);',
+                    (seqname,),
+                )
+            if seq_rows:
+                print(f"    Resynced {len(seq_rows)} sequence(s) to MAX+1")
+
             cursor.execute("SET session_replication_role = 'origin';")  # re-enable FK checks
             cursor.execute("COMMIT;")
             total_executed += len(files)

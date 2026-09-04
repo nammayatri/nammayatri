@@ -1233,6 +1233,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
       Nothing
       False
       Nothing
+      False -- skipCreateOrderCall
   createOrderResp <- mbCreateOrderResp & fromMaybeM (InternalError "Failed to create payment order")
   let createOrderResp' = SPayment.applyPseudoClientId pseudoClientId createOrderResp
   now <- getCurrentTime
@@ -1590,7 +1591,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               | invoiceType == Just INV.AUTOPAY_INVOICE = DF.RECURRING_EXECUTION_INVOICE
               | otherwise = DF.RECURRING_INVOICE
         -- FIXME should we round to half?
-        let driverFeeAmount = roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
+        let driverFeeAmount = roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount)
         return
           DriverDuesEntity
             { autoPayStage = driverFee.autopayPaymentStage,
@@ -1601,7 +1602,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0.0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
               offerAndPlanDetails = driverFee.planOfferTitle,
-              rideTakenOn = driverFee.createdAt,
+              rideTakenOn = driverFee.startTime,
               driverFeeAmount,
               driverFeeAmountWithCurrency = PriceAPIEntity driverFeeAmount driverFee.currency,
               createdAt,

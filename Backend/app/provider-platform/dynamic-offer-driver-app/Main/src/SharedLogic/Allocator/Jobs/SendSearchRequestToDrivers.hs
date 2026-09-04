@@ -58,7 +58,6 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -201,7 +200,6 @@ type SendSearchRequestJobFlow m r c =
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
@@ -306,7 +304,6 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
       ( CacheFlow m r,
         EsqDBFlow m r,
         EsqDBReplicaFlow m r,
-        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
         HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -361,7 +358,6 @@ sendSearchRequestToDrivers' ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,

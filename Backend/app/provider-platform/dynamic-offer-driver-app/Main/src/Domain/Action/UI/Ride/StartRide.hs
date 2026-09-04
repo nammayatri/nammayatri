@@ -25,6 +25,7 @@ where
 
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
+import qualified Domain.Action.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
 import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
@@ -118,6 +119,7 @@ data ServiceHandle m = ServiceHandle
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    finalizePickupDistance :: Id DRide.Ride -> Id DP.Person -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
@@ -132,6 +134,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
+        finalizePickupDistance = BulkLocPickupUpdate.finalizePickupDistanceOnRideStart merchantId merchantOpCityId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
@@ -260,6 +263,8 @@ startRideHandler ServiceHandle {..} rideId req = do
           CS.withDriverScheduledHoldLock (cast driverId) $ do
             mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig (cast driverId) booking.id
             void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True (fst <$> mbNextHold) (snd <$> mbNextHold) (cast driverId)
+
+      fork "finalize distance to pickup" $ finalizePickupDistance ride.id driverId
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking

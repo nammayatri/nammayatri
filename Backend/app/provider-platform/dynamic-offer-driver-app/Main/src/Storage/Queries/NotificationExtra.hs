@@ -73,6 +73,19 @@ updatePendingToFailed merchantOperatingCityId = do
         ]
     ]
 
+updateSuccessToFailedByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m ()
+updateSuccessToFailedByDriverFeeIds driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.status NOTIFICATION_FAILURE,
+      Se.Set BeamI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.status $ Se.Eq Payment.SUCCESS
+        ]
+    ]
+
 updateLastCheckedOn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Domain.Notification] -> m ()
 updateLastCheckedOn notificationIds = do
   now <- getCurrentTime

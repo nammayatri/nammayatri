@@ -58,6 +58,8 @@ data EstimateT f = EstimateT
     navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personalDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
+    shadowSurgeMultiplier :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    shadowSurgeVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

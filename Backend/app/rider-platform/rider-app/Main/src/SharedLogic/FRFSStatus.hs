@@ -384,50 +384,55 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
     mkPaymentSuccessLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 
-    buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking = do
-      personEmail <- mapM decrypt person.email
-      personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-      isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
-      isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
-      let isSingleMode = fromMaybe False booking.isSingleMode
-      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
-      staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-      nwAddress <- asks (.nwAddress)
-      udf1 <- SLUtils.getPersonUdf1 person
-      udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode (Just booking.quoteId)
-      offerBasket <- Payment.mkOfferBasket merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) paymentOrder.amount 1
-      let createOrderReq =
-            Payment.CreateOrderReq
-              { orderId = paymentOrder.id.getId,
-                orderShortId = paymentOrder.shortId.getShortId,
-                amount = paymentOrder.amount,
-                customerId = staticCustomerId,
-                customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
-                customerPhone = personPhone,
-                customerFirstName = person.firstName,
-                customerLastName = person.lastName,
-                createMandate = Nothing,
-                mandateMaxAmount = Nothing,
-                mandateFrequency = Nothing,
-                mandateEndDate = Nothing,
-                mandateStartDate = Nothing,
-                optionsGetUpiDeepLinks = Nothing,
-                metadataExpiryInMins = Nothing,
-                metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                webhookUrl = Just nwAddress,
-                splitSettlementDetails = splitSettlementDetails,
-                basket = offerBasket,
-                paymentRules = Nothing,
-                autoRefundPostSuccess = Nothing,
-                paymentFilter = Nothing,
-                udf1 = udf1,
-                udf2 = udf2
-              }
-      mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
-      isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-          isMockPayment = fromMaybe False booking.isMockPayment
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment (Just booking.id.getId)
+    buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking
+      -- An external order has no session of ours behind it, so there is no payload to return and
+      -- nothing to ask the gateway for. This runs on the webhook fulfillment path, where the offer
+      -- and session calls below would be made against an order another system owns.
+      | paymentOrder.isExternalOrder == Just True = return Nothing
+      | otherwise = do
+        personEmail <- mapM decrypt person.email
+        personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+        isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
+        isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
+        let isSingleMode = fromMaybe False booking.isSingleMode
+        splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
+        staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+        nwAddress <- asks (.nwAddress)
+        udf1 <- SLUtils.getPersonUdf1 person
+        udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode (Just booking.quoteId)
+        offerBasket <- Payment.mkOfferBasket merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) paymentOrder.amount 1
+        let createOrderReq =
+              Payment.CreateOrderReq
+                { orderId = paymentOrder.id.getId,
+                  orderShortId = paymentOrder.shortId.getShortId,
+                  amount = paymentOrder.amount,
+                  customerId = staticCustomerId,
+                  customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+                  customerPhone = personPhone,
+                  customerFirstName = person.firstName,
+                  customerLastName = person.lastName,
+                  createMandate = Nothing,
+                  mandateMaxAmount = Nothing,
+                  mandateFrequency = Nothing,
+                  mandateEndDate = Nothing,
+                  mandateStartDate = Nothing,
+                  optionsGetUpiDeepLinks = Nothing,
+                  metadataExpiryInMins = Nothing,
+                  metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+                  webhookUrl = Just nwAddress,
+                  splitSettlementDetails = splitSettlementDetails,
+                  basket = offerBasket,
+                  paymentRules = Nothing,
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing,
+                  udf1 = udf1,
+                  udf2 = udf2
+                }
+        mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
+        isMetroTestTransaction <- asks (.isMetroTestTransaction)
+        let createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+            isMockPayment = fromMaybe False booking.isMockPayment
+        DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing (getPaymentType isMultiModalBooking booking.vehicleType) isMetroTestTransaction createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion isMockPayment) (Just createWalletCall) isMockPayment (Just booking.id.getId) False
 
     createOrderCall merchantOperatingCityId booking mRoutingId sdkVersion isMockPayment = Payment.createOrder merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) mRoutingId sdkVersion (Just isMockPayment)
 

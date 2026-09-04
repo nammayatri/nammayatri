@@ -10,12 +10,18 @@ ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN descript
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN merchant_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN reference_id text ;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN sap_batch_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN sap_journal_entry_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN status text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN subscription_id text ;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN transaction_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN updated_by text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN updated_by_id text ;
 ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.journal_entry_transaction ADD COLUMN reference_type text ;

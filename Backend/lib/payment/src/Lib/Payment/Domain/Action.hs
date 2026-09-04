@@ -371,7 +371,8 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     discountAmount :: Maybe HighPrecMoney,
     payoutAmount :: Maybe HighPrecMoney,
     -- Domain linkage
-    domainEntityId :: Maybe Text -- rideId or bookingId for later lookups
+    domainEntityId :: Maybe Text, -- rideId or bookingId for later lookups
+    serviceProvider :: Payment.PaymentService
   }
   deriving (Show, Eq, Generic)
 
@@ -426,6 +427,21 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
   mbExistingOrder <- case mbExistingOrderId of
     Just existingId -> QOrder.findById existingId
     Nothing -> pure Nothing
+  -- Legacy rows read back as Juspay; only compare when both sides name a Stripe variant.
+  whenJust mbExistingOrder $ \existingOrder ->
+    when
+      ( isStripeService existingOrder.serviceProvider
+          && isStripeService req.serviceProvider
+          && existingOrder.serviceProvider /= req.serviceProvider
+      )
+      $ throwError
+        ( InvalidRequest $
+            "Payment mode mismatch on retry: order " <> existingOrder.id.getId
+              <> " was created with "
+              <> show existingOrder.serviceProvider
+              <> " but this request resolves to "
+              <> show req.serviceProvider
+        )
   case mbExistingOrder of
     Nothing -> createNewPayment Nothing
     Just existingOrder -> do
@@ -437,6 +453,9 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
         else handleExistingOrder existingOrder
   where
     isInProgress status = status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING]
+
+    isStripeService :: Payment.PaymentService -> Bool
+    isStripeService s = s `elem` [Payment.Stripe, Payment.StripeTest]
 
     roundToCents :: HighPrecMoney -> Integer
     roundToCents = round . (* 100)
@@ -591,13 +610,14 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 isRetried = False,
                 isRetargeted = False,
                 retargetLink = Nothing,
-                serviceProvider = Payment.Stripe,
+                serviceProvider = req.serviceProvider,
                 paymentServiceType = Just paymentServiceType,
                 paymentFulfillmentStatus = Just FulfillmentPending,
                 sdkPayloadDump = Nothing,
                 domainEntityId = req.domainEntityId,
                 domainTransactionId = Nothing,
                 isMockPayment = Just False,
+                isExternalOrder = Nothing,
                 effectAmount = Nothing,
                 pgBaseFee = Nothing,
                 pgGst = Nothing,
@@ -725,7 +745,8 @@ refundPaymentService req refundCall = do
         Right response -> do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
-          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status response.reference response.referenceType (Just True) newCompletedAt response.amount refundsEntry mbAction
+              newArnGeneratedAt = calculateArnGeneratedAt refundsEntry.arnGeneratedAt response.status response.reference now
+          HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status response.reference response.referenceType (Just True) newCompletedAt newArnGeneratedAt response.amount refundsEntry mbAction
           -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
           -- the same id the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
@@ -737,7 +758,7 @@ refundPaymentService req refundCall = do
           logError $ "Refund API Call Failure with Error: " <> show exec
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
           -- Flip status to REFUND_FAILURE so retry works (else the row is stuck at REFUND_PENDING forever).
-          HQRefunds.updateRefundsEntryByResponse req.merchantOpCityId Nothing Nothing gwErrorMessage gwErrorCode PInterface.REFUND_FAILURE Nothing Nothing Nothing refundsEntry mbAction
+          HQRefunds.updateRefundsEntryByResponse req.merchantOpCityId Nothing Nothing gwErrorMessage gwErrorCode PInterface.REFUND_FAILURE Nothing Nothing refundsEntry.arnGeneratedAt Nothing refundsEntry mbAction
           -- Surface the failed attempt so the caller links refund_request.refunds_id — the
           -- dashboard reads status/errorCode off that link, and a retry targets this row via it.
           pure $
@@ -780,8 +801,13 @@ getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall 
             case resp of
               Right result -> do
                 now <- getCurrentTime
-                let newCompletedAt = calculateCompletedAt result.status now
-                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status (result.reference <|> refund.arn) (result.referenceType <|> refund.referenceType) refund.isApiCallSuccess newCompletedAt result.amount refund (Just "get refund status service")
+                let newCompletedAt = refund.completedAt <|> calculateCompletedAt result.status now
+                    newArn = result.reference <|> refund.arn
+                    newArnGeneratedAt =
+                      if isNothing refund.arn && isJust result.reference
+                        then calculateArnGeneratedAt refund.arnGeneratedAt result.status newArn now
+                        else refund.arnGeneratedAt
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status newArn (result.referenceType <|> refund.referenceType) refund.isApiCallSuccess newCompletedAt newArnGeneratedAt result.amount refund (Just "get refund status service")
                 -- Return the internal refunds.id (matches refundPaymentService).
                 pure $ Just result {PInterface.refundId = refund.id.getId}
               Left err -> do
@@ -824,18 +850,26 @@ createOrderService ::
   Maybe (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) ->
   Bool ->
   Maybe Text ->
+  Bool ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId = do
-  logInfo $ "CreateOrderService: "
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId skipCreateOrderCall = do
+  logInfo $ "CreateOrderService: skipCreateOrderCall-" <> show skipCreateOrderCall
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
+    Nothing | skipCreateOrderCall -> do
+      paymentOrder <- buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq _isMockPayment mbGroupId
+      QOrder.create paymentOrder
+      return Nothing
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
       paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp _isMockPayment mbGroupId Nothing
       QOrder.create paymentOrder
       return $ Just createOrderResp
+    Just existingOrder
+      | existingOrder.isExternalOrder == Just True ->
+        return Nothing
     Just existingOrder -> do
       isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
       if isOrderExpired
@@ -862,6 +896,93 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
+
+-- | The payment_order row for an order this service will not open on the gateway.
+--
+-- Everything a session response would have filled in is left empty: no client auth token, no SDK
+-- payload, no gateway order id. paymentServiceOrderId is not nullable so it carries the shortId,
+-- which is the id the gateway order is opened under anyway.
+--
+-- validTill is set from the configured validity exactly as for a normal order: findAllNonTerminalOrders
+-- only picks up rows with a non-null validTill, and dropping it would leave the webhook as these
+-- orders' only route to fulfillment, with no hourly sweep behind it.
+buildExternalPaymentOrder ::
+  ( EncFlow m r,
+    BeamFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  Id Merchant ->
+  Maybe (Id MerchantOperatingCity) ->
+  Id Person ->
+  Maybe Seconds ->
+  Maybe EntityName ->
+  DOrder.PaymentServiceType ->
+  Payment.CreateOrderReq ->
+  Bool ->
+  Maybe Text ->
+  m DOrder.PaymentOrder
+buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req isMockPayment mbGroupId = do
+  now <- getCurrentTime
+  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
+      paymentOrder =
+        DOrder.PaymentOrder
+          { id = Id req.orderId,
+            shortId = ShortId req.orderShortId,
+            -- Placeholder: the column is NOT NULL and there is no session response to take the
+            -- gateway's own id from. orderStatusService overwrites this with the real id the first
+            -- time order status reports it.
+            paymentServiceOrderId = req.orderShortId,
+            requestId = Nothing,
+            service = Nothing,
+            clientId = Nothing,
+            description = Nothing,
+            returnUrl = Nothing,
+            action = Nothing,
+            personId,
+            merchantId,
+            entityName = mbEntityName,
+            paymentServiceType = Just paymentServiceType,
+            paymentMerchantId = Nothing,
+            amount = req.amount,
+            currency = INR,
+            status = Payment.NEW,
+            paymentLinks = Payment.PaymentLinks Nothing Nothing Nothing Nothing,
+            clientAuthToken = Nothing,
+            clientAuthTokenExpiry = Nothing,
+            getUpiDeepLinksOption = req.optionsGetUpiDeepLinks,
+            environment = Nothing,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateStartDate = Nothing,
+            mandateEndDate = Nothing,
+            serviceProvider = Payment.Juspay,
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            isRetried = False,
+            isRetargeted = False,
+            retargetLink = Nothing,
+            sdkPayloadDump = Nothing,
+            validTill = paymentOrderValidTill,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = mbMerchantOpCityId,
+            paymentFulfillmentStatus = Just FulfillmentPending,
+            domainEntityId = Nothing,
+            domainTransactionId = Nothing,
+            effectAmount = Nothing,
+            isMockPayment = Just isMockPayment,
+            isExternalOrder = Just True,
+            paytmTid = Nothing,
+            groupId = mbGroupId,
+            vpa = Nothing,
+            pgBaseFee = Nothing,
+            pgGst = Nothing,
+            chargeRouting = Nothing
+          }
+  -- The vendor splits stay ours to record: they come from our own vendor configuration, and the
+  -- system opening the gateway order is expected to send the same ones.
+  buildPaymentSplit req.orderId paymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
+  pure paymentOrder
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -985,6 +1106,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
+            isExternalOrder = Nothing,
             paytmTid = Nothing,
             groupId = mbGroupId,
             vpa = Nothing,
@@ -1705,6 +1827,10 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
           txnObj.txnUuid
       mapM_ (upsertRefundStatus merchantOpCityId order) refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
+
+      whenJust paymentServiceOrderId $ \gatewayOrderId ->
+        when (order.isExternalOrder == Just True && order.paymentServiceOrderId /= gatewayOrderId) $
+          QOrder.updatePaymentServiceOrderId orderId gatewayOrderId
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
         Left e -> logError $ "buildOrderOffer failed for orderId=" <> orderId.getId <> " err=" <> show e
@@ -2046,7 +2172,7 @@ stripeWebhookService merchantOpCityId resp respDump stripeWebhookData = do
     RefundWebhookData refundsInfo -> do
       case refundsInfo.orderShortId of
         Just orderShortId -> do
-          Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook merchantOpCityId refundsInfo -- respDump currently does not stored in refunds table
+          Redis.whenWithLockRedis (refundProccessingKey orderShortId) 60 $ updateRefundsByWebhook merchantOpCityId resp.createdAt refundsInfo -- respDump currently does not stored in refunds table
         Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
     SkipWebhookData -> logInfo $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
 
@@ -2221,9 +2347,10 @@ updateRefundsByWebhook ::
     Finance.HasActorInfo m r
   ) =>
   Id MerchantOperatingCity ->
+  UTCTime ->
   PEInterface.Refund ->
   m ()
-updateRefundsByWebhook merchantOpCityId refundInfo = do
+updateRefundsByWebhook merchantOpCityId eventCreatedAt refundInfo = do
   refundsId <- (Id @Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
   refunds <- HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.")
   -- The reference lands on a refund.updated whose status and errorCode are unchanged, so it has to be
@@ -2232,7 +2359,9 @@ updateRefundsByWebhook merchantOpCityId refundInfo = do
     now <- getCurrentTime
     -- Keep the first terminal timestamp; a late reference-only update would otherwise restamp it.
     let newCompletedAt = refunds.completedAt <|> calculateCompletedAt refundInfo.status now
-    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status (refundInfo.reference <|> refunds.arn) (refundInfo.referenceType <|> refunds.referenceType) refunds.isApiCallSuccess newCompletedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
+        newArn = refundInfo.reference <|> refunds.arn
+        newArnGeneratedAt = calculateArnGeneratedAt refunds.arnGeneratedAt refundInfo.status newArn eventCreatedAt
+    HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId refunds.idAssignedByServiceProvider refundInfo.errorCode refundInfo.status newArn (refundInfo.referenceType <|> refunds.referenceType) refunds.isApiCallSuccess newCompletedAt newArnGeneratedAt (Just refundInfo.amount) refunds (Just "update refunds by webhook")
 
 --- notification api ----------
 
@@ -2313,6 +2442,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             domainTransactionId = Nothing,
             effectAmount = Nothing,
             isMockPayment = Just False,
+            isExternalOrder = Nothing,
             paytmTid = Nothing,
             groupId = Nothing,
             vpa = Nothing,
@@ -2428,6 +2558,7 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         arn = Nothing,
         referenceType = Nothing,
         completedAt = Nothing,
+        arnGeneratedAt = Nothing,
         actualRefundedAmount = Nothing
       }
 
@@ -2442,8 +2573,9 @@ upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
           HQRefunds.findById (Id requestId)
             >>= \case
               Just refundEntry -> do
-                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt (Just amount) refundEntry mbAction
-                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, actualRefundedAmount = Just amount}
+                let newArnGeneratedAt = calculateArnGeneratedAt refundEntry.arnGeneratedAt status arn now
+                HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt newArnGeneratedAt (Just amount) refundEntry mbAction
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, arnGeneratedAt = newArnGeneratedAt, actualRefundedAmount = Just amount}
               Nothing -> do
                 refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
                 HQRefunds.create merchantOpCityId refundEntry mbAction
@@ -2462,6 +2594,12 @@ calculateCompletedAt status now =
     Payment.REFUND_SUCCESS -> Just now
     Payment.REFUND_FAILURE -> Just now
     _ -> Nothing
+
+calculateArnGeneratedAt :: Maybe UTCTime -> Payment.RefundStatus -> Maybe Text -> UTCTime -> Maybe UTCTime
+calculateArnGeneratedAt existingArnGeneratedAt status mbArn stampedAt
+  | isJust existingArnGeneratedAt = existingArnGeneratedAt
+  | status == Payment.REFUND_SUCCESS, isJust mbArn = Just stampedAt
+  | otherwise = Nothing
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

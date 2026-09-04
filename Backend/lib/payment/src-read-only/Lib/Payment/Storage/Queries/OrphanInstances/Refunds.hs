@@ -19,6 +19,7 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Lib.Payment.Domain.Types.Refunds.Refunds
           { actualRefundedAmount = actualRefundedAmount,
             arn = arn,
+            arnGeneratedAt = arnGeneratedAt,
             completedAt = completedAt,
             createdAt = createdAt,
             errorCode = errorCode,
@@ -41,6 +42,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
     Beam.RefundsT
       { Beam.actualRefundedAmount = actualRefundedAmount,
         Beam.arn = arn,
+        Beam.arnGeneratedAt = arnGeneratedAt,
         Beam.completedAt = completedAt,
         Beam.createdAt = createdAt,
         Beam.errorCode = errorCode,

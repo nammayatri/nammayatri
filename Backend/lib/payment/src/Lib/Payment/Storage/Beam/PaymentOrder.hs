@@ -70,6 +70,7 @@ data PaymentOrderT f = PaymentOrderT
     domainEntityId :: B.C f (Maybe Text),
     domainTransactionId :: B.C f (Maybe Text),
     isMockPayment :: B.C f (Maybe Bool),
+    isExternalOrder :: B.C f (Maybe Bool),
     paytmTidEncrypted :: B.C f (Maybe Text),
     groupId :: B.C f (Maybe Text),
     vpa :: B.C f (Maybe Text),

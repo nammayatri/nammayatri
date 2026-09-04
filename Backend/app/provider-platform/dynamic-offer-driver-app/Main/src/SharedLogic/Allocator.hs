@@ -67,6 +67,7 @@ data AllocatorJobType
   | MandateExecution
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
+  | RetryAutopayCollection
   | SendOverlay
   | BadDebtCalculation
   | SendManualPaymentLink
@@ -106,6 +107,7 @@ data AllocatorJobType
   | AggregatedCommissionInvoiceCreation
   | SAPSubscriptionPurchaseDispatch
   | SAPPGSettlementDispatch
+  | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -128,6 +130,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
+  restoreAnyJobInfo SRetryAutopayCollection jobData = AnyJobInfo <$> restoreJobInfo SRetryAutopayCollection jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
   restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
@@ -167,6 +170,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
   restoreAnyJobInfo SSAPSubscriptionPurchaseDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPSubscriptionPurchaseDispatch jobData
   restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
+  restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
 
 instance JobInfoProcessor 'Daily
@@ -294,7 +298,11 @@ type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
 data CongestionChargeCalculationRequestJobData = CongestionChargeCalculationRequestJobData
   { scheduleTimeIntervalInMin :: Int,
     congestionChargeCalculationTTLInSec :: Int,
-    calculationDataIntervalInMin :: Int
+    calculationDataIntervalInMin :: Int,
+    -- damping for the multiplier feedback loop: written = 1 + (avg - 1) * factor.
+    -- Nothing/1.0 keeps today's undamped behavior; < 1.0 stops a spike from
+    -- self-reinforcing cycle over cycle (last cycle's output is this cycle's input)
+    congestionAvgDampingFactor :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -332,6 +340,25 @@ data MandateExecutionInfo = MandateExecutionInfo
 instance JobInfoProcessor 'MandateExecution
 
 type instance JobContent 'MandateExecution = MandateExecutionInfo
+
+data RetryAutopayCollectionJobData = RetryAutopayCollectionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    serviceName :: Maybe Plan.ServiceNames,
+    batchSize :: Maybe Int,
+    lastDriverFeeId :: Maybe Text,
+    dryRun :: Bool,
+    maxFeesToConvert :: Maybe Int,
+    convertedSoFar :: Maybe Int,
+    includeNotificationAttempting :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RetryAutopayCollection
+
+type instance JobContent 'RetryAutopayCollection = RetryAutopayCollectionJobData
 
 data CalculateDriverFeesJobData = CalculateDriverFeesJobData
   { merchantId :: Id DM.Merchant,
@@ -750,3 +777,19 @@ data SAPPGSettlementDispatchJobData = SAPPGSettlementDispatchJobData
 instance JobInfoProcessor 'SAPPGSettlementDispatch
 
 type instance JobContent 'SAPPGSettlementDispatch = SAPPGSettlementDispatchJobData
+
+data SAPRideRevenueDispatchJobData = SAPRideRevenueDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPRideRevenueDispatch
+
+type instance JobContent 'SAPRideRevenueDispatch = SAPRideRevenueDispatchJobData

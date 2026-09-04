@@ -68,12 +68,12 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
-import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -85,7 +85,6 @@ import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -143,7 +142,6 @@ cancelRideImpl ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
@@ -301,7 +299,6 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
   case riderId of
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
-      merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
       let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
       mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -309,11 +306,12 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       -- Read the materialized tds_rate for the tax subject (fleet owner if it's
       -- a fleet ride, else the driver). Set by the PAN / linkage webhooks when
       -- PAN-Aadhaar-link TDS is enabled (see PanVerification.materializeTdsRateFor).
-      mbStoredTdsRate <- case ride.fleetOwnerId of
+      (mbFleetInfo, mbStoredTdsRate) <- case ride.fleetOwnerId of
         Just fleetOwnerId -> do
-          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-          pure (mbFleetInfo >>= (.tdsRate))
-        Nothing -> pure (mbDriverInfo >>= (.tdsRate))
+          mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure (mbFleetInfo', mbFleetInfo' >>= (.tdsRate))
+        Nothing -> pure (Nothing, mbDriverInfo >>= (.tdsRate))
+
       mbCumulativeEarnings <- case ride.fleetOwnerId of
         Just _ -> pure Nothing
         Nothing -> do
@@ -352,6 +350,14 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                 DMPM.Cash -> pure False
                 _ -> pure True
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+      rideGstBreakdown <-
+        computeGstBreakdownForRideOwner
+          rideGst
+          booking.fromLocation
+          ride
+          mbFleetInfo
+          mbDriverInfo
+          gstOnCancellation
       result <- runFinance ctx $ do
         mapM_
           ( \(amt, ref, dest) -> do
@@ -369,14 +375,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
               issuedToId = rid.getId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              gstBreakdown =
-                computeGstBreakdownByPlace
-                  rideGst
-                  (Just $ show merchantOperatingCity.state)
-                  booking.fromLocation.address.state
-                  (Just $ show merchantOperatingCity.city)
-                  booking.fromLocation.address.city
-                  gstOnCancellation,
+              gstBreakdown = rideGstBreakdown,
               lineItems =
                 let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
                     inclusiveCancellation = baseCancellation + gstOnCancellation

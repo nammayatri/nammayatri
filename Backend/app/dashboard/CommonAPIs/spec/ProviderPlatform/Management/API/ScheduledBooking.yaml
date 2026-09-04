@@ -160,6 +160,8 @@ types:
 
   NearbyDriverItem:
     - driverId: Text
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
     - serviceTiers: [ServiceTierType]
     - straightLineDistanceMeters: Meters
 

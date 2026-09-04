@@ -88,6 +88,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSFareCalculator as Reexport
@@ -898,8 +899,9 @@ createPaymentOrder ::
   [Payment.VendorSplitDetails] ->
   [Payment.Basket] ->
   Bool ->
+  Bool ->
   m (Maybe DOrder.PaymentOrder)
-createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment
+createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment skipCreateOrderCall
   -- A fully pass-covered set of bookings has nothing to charge, so there is no order to create.
   -- Returning Nothing here is what lets the confirm flow skip payment entirely rather than
   -- creating a zero-amount order the gateway would reject.
@@ -962,8 +964,20 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
     isMetroTestTransaction <- asks (.isMetroTestTransaction)
     let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
         groupId = listToMaybe $ sort (bookings <&> (.id.getId))
-    orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
-    mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
+    -- The rows above are created either way. All that skipCreateOrderCall changes is who opens the
+    -- order on the gateway: with it set, another system opens it under this same order short id.
+    orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId skipCreateOrderCall
+    if skipCreateOrderCall
+      then do
+        -- No session, so no response to rebuild from: the row createOrderService wrote is the result.
+        -- Its short id carries the prefix updateShortId applied; hand back the caller's own, which is
+        -- what the buildPaymentOrder branch below also returns and what OnInit.markBookingApproved
+        -- re-derives the stored one from.
+        let withCallerShortId :: DOrder.PaymentOrder -> DOrder.PaymentOrder
+            withCallerShortId order = order {DOrder.shortId = ShortId orderShortId}
+        mbOrder <- QPaymentOrder.findById orderId
+        pure $ withCallerShortId <$> mbOrder
+      else mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId

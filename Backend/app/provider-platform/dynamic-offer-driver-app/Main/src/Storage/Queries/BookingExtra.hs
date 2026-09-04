@@ -3,7 +3,8 @@ module Storage.Queries.BookingExtra where
 -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 
 import qualified Data.Aeson as A
-import Data.List.Extra (notNull)
+import Data.List.Extra (notNull, sortOn)
+import Data.Ord (Down (..))
 import qualified Data.Time as DT
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -84,12 +85,11 @@ findAllByTransactionId txnId =
 
 findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatuses transactionId statusList =
-  findAllWithKVAndConditionalDB
+  findAllWithKV
     [ Se.Is BeamB.transactionId $ Se.Eq transactionId,
       Se.Is BeamB.status $ Se.In statusList
     ]
-    (Just (Se.Desc BeamB.createdAt))
-    <&> listToMaybe
+    <&> (listToMaybe . sortOn (Down . (.createdAt)))
 
 findAllByStatusAndDateRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [BookingStatus] -> UTCTime -> UTCTime -> m [Booking]
 findAllByStatusAndDateRange merchantOpCityId statuses startTime endTime =
@@ -176,8 +176,8 @@ updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance farePara
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> m ()
-updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimatedFare mbTierName newQuoteId mbAirConditioned mbSeatingCapacity mbIsAC = do
+updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> Maybe HighPrecMoney -> m ()
+updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimatedFare mbTierName newQuoteId mbAirConditioned mbSeatingCapacity mbIsAC mbNewCongestionCharge = do
   now <- getCurrentTime
   let baseSets =
         [ Se.Set BeamB.vehicleVariant newServiceTier,
@@ -185,6 +185,7 @@ updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimat
           Se.Set BeamB.estimatedFare newEstimatedFare,
           Se.Set BeamB.vehicleServiceTierName mbTierName,
           Se.Set BeamB.quoteId newQuoteId,
+          Se.Set BeamB.estimatedCongestionCharge mbNewCongestionCharge,
           Se.Set BeamB.updatedAt now
         ]
       acSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned

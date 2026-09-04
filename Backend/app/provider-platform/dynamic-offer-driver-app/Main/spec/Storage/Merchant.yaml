@@ -364,6 +364,7 @@ MerchantOperatingCity:
     stdCode: Maybe Text
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
+    gstin: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -1152,6 +1153,9 @@ TransporterConfig:
     authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
+    tripStartGeofenceRadius: Maybe Meters
+    tripEndGeofenceRadius: Maybe Meters
+    tripStartLeadTime: Maybe Minutes
     editLocTimeThreshold: Seconds
     editLocDriverPermissionNeeded: Bool
     rideTimeEstimatedThreshold: Seconds
@@ -1810,6 +1814,7 @@ TransporterConfig:
     scheduledRideOpenToAllThresholdMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
+    tripStartLeadTime: integer
     rideTimeEstimatedThreshold: bigint
     rideTravelledDistanceThreshold: bigint
     cancellationRatioWeightage: int
@@ -2105,6 +2110,12 @@ TransporterConfig:
         - checkImageExtractionForDashboard
         - searchRepeatLimit
         - scheduledRideSearchRepeatLimit
+        - graceTimeForScheduledRidePickup
+        - scheduleRideBufferTime
+        - scheduledRideJobRescheduleTime
+        - enableScheduleReallocation
+        - disableListScheduledBookingAPI
+        - scheduledRideConfig
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
         - defaultOnboardingAs

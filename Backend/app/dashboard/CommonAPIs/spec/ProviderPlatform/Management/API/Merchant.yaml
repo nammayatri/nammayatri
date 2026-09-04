@@ -783,6 +783,16 @@ types:
     - upwardsRecomputeBufferWithUnit: Distance
     - approxRideDistanceDiffThresholdWithUnit: Distance
     - minLocationAccuracy: Double
+    - graceTimeForScheduledRidePickup: NominalDiffTime
+    - scheduleRideBufferTime: NominalDiffTime
+    - scheduledRideJobRescheduleTime: NominalDiffTime
+    - scheduledRideSearchRepeatLimit: Int
+    - enableScheduleReallocation: Maybe Bool
+    - disableListScheduledBookingAPI: Bool
+    - maxScheduledHoldsPerDriver: Int
+    - scheduledRideAvgSpeedKmph: Maybe Double
+    - scheduledRideMinLeadTime: Maybe Seconds
+    - scheduledRideMaxLeadTime: Maybe Seconds
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -819,6 +829,16 @@ types:
     - orderAndNotificationStatusCheckTimeLimit: Maybe (OptionalValue NominalDiffTime)
     - snapToRoadConfidenceThreshold: Maybe (MandatoryValue Double)
     - useWithSnapToRoadFallback: Maybe (MandatoryValue Bool)
+    - graceTimeForScheduledRidePickup: Maybe (MandatoryValue NominalDiffTime)
+    - scheduleRideBufferTime: Maybe (MandatoryValue NominalDiffTime)
+    - scheduledRideJobRescheduleTime: Maybe (MandatoryValue NominalDiffTime)
+    - scheduledRideSearchRepeatLimit: Maybe (MandatoryValue Int)
+    - enableScheduleReallocation: Maybe (OptionalValue Bool)
+    - disableListScheduledBookingAPI: Maybe (MandatoryValue Bool)
+    - maxScheduledHoldsPerDriver: Maybe (MandatoryValue Int)
+    - scheduledRideAvgSpeedKmph: Maybe (OptionalValue Double)
+    - scheduledRideMinLeadTime: Maybe (OptionalValue Seconds)
+    - scheduledRideMaxLeadTime: Maybe (OptionalValue Seconds)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
@@ -1162,7 +1182,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger"
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
     - vehicleCategory: Text

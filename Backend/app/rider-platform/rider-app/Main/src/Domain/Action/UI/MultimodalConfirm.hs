@@ -45,8 +45,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
-    getMultimodalStopRoutes,
-    getMultimodalRouteEta,
+    getMultimodalTrackStopRoutes,
   )
 where
 
@@ -249,14 +248,18 @@ postMultimodalConfirm ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
       isMockPayment = fromMaybe False mbIsMockPayment
+      skipCreateOrderCall = fromMaybe False mbSkipCreateOrderCall
+  when (journey.skipCreateOrderCall /= Just skipCreateOrderCall) $
+    QJourney.updateSkipCreateOrderCall (Just skipCreateOrderCall) journeyId
 
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
@@ -269,7 +272,7 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   updatedJourney <- JM.getJourney journeyId
   paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  sdkPayload <-
+  (sdkPayload, orderCreationReq) <-
     case updatedJourney.paymentOrderShortId of
       Just paymentOrderShortId -> do
         QOrder.findByShortId paymentOrderShortId
@@ -280,10 +283,17 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
               let mbQuoteId = case legs of
                     [leg] -> Id <$> leg.legPricingId
                     _ -> Nothing
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
-            Nothing -> return Nothing
-      Nothing -> return Nothing
-  pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
+              if paymentOrder.isExternalOrder == Just True
+                then do
+                  bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+                  orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder bookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
+                  return (Nothing, Just orderCreationReq')
+                else do
+                  mbSdkPayload <- buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
+                  return (mbSdkPayload, Nothing)
+            Nothing -> return (Nothing, Nothing)
+      Nothing -> return (Nothing, Nothing)
+  pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, ApiTypes.orderCreationReq = orderCreationReq, result = "Success"}
   where
     isAllFRFSLegSkipped legs journeyConfirmReqElements =
       all
@@ -333,23 +343,27 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
                       void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode (Just booking.quoteId)
-                      return (createOrderResp, Just paymentBooking.status)
-                    Nothing -> return (Nothing, Nothing)
-              Nothing -> return (Nothing, Nothing)
+                      return (createOrderResp, Just paymentBooking.status, paymentOrder.isExternalOrder == Just True)
+                    Nothing -> return (Nothing, Nothing, False)
+              Nothing -> return (Nothing, Nothing, False)
       )
       allJourneyFrfsBookings
   paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   let anyFirstBookingPaymentOrder = listToMaybe bookingsPaymentOrders
+      -- An external order never produces an SDK payload, so a missing payload cannot be what
+      -- withholds the response: the rider still has to be told whether the payment succeeded, and
+      -- the status above was just refreshed from the gateway. Every other order is gated as before.
       paymentOrder =
         case anyFirstBookingPaymentOrder of
-          Just (Just paymentOrder', Just paymentBookingStatus) ->
-            Just $
-              ApiTypes.PaymentOrder
-                { sdkPayload = Just paymentOrder',
-                  status = mkDomainPaymentStatusToAPIStatus paymentBookingStatus
-                }
+          Just (mbSdkPayload, Just paymentBookingStatus, isExternalOrder)
+            | isJust mbSdkPayload || isExternalOrder ->
+              Just $
+                ApiTypes.PaymentOrder
+                  { sdkPayload = mbSdkPayload,
+                    status = mkDomainPaymentStatusToAPIStatus paymentBookingStatus
+                  }
           _ -> Nothing
-      allPaymentOrders = all (isJust . fst) bookingsPaymentOrders
+      allPaymentOrders = all (\(mbSdkPayload, _, isExternalOrder) -> isJust mbSdkPayload || isExternalOrder) bookingsPaymentOrders
   if allPaymentOrders
     then do
       return $
@@ -392,49 +406,54 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
 buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Maybe (Id DFRFSQuote.FRFSQuote) -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId = do
-  personEmail <- mapM decrypt person.email
-  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
-  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-  nwAddress <- asks (.nwAddress)
-  udf1 <- SLUtils.getPersonUdf1 person
-  udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
-  offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderId = paymentOrder.id.getId,
-            orderShortId = paymentOrder.shortId.getShortId,
-            amount = paymentOrder.amount,
-            customerId = staticCustomerId,
-            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
-            customerPhone = personPhone,
-            customerFirstName = person.firstName,
-            customerLastName = person.lastName,
-            createMandate = Nothing,
-            mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing,
-            mandateEndDate = Nothing,
-            mandateStartDate = Nothing,
-            optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            webhookUrl = Just nwAddress,
-            splitSettlementDetails = splitSettlementDetails,
-            basket = offerBasket,
-            paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing,
-            udf1 = udf1,
-            udf2 = udf2
-          }
-  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
-  isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
-      createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
-  DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId
+  -- Nothing to build for an order we never opened a session for: there is no SDK payload to hand
+  -- the client, and going on would call the gateway's offer APIs -- and, through createOrderService,
+  -- expire the order -- for an order another system owns.
+  | paymentOrder.isExternalOrder == Just True = return Nothing
+  | otherwise = do
+    personEmail <- mapM decrypt person.email
+    personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+    isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
+    staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+    nwAddress <- asks (.nwAddress)
+    udf1 <- SLUtils.getPersonUdf1 person
+    udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
+    offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
+    let createOrderReq =
+          Payment.CreateOrderReq
+            { orderId = paymentOrder.id.getId,
+              orderShortId = paymentOrder.shortId.getShortId,
+              amount = paymentOrder.amount,
+              customerId = staticCustomerId,
+              customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+              customerPhone = personPhone,
+              customerFirstName = person.firstName,
+              customerLastName = person.lastName,
+              createMandate = Nothing,
+              mandateMaxAmount = Nothing,
+              mandateFrequency = Nothing,
+              mandateEndDate = Nothing,
+              mandateStartDate = Nothing,
+              optionsGetUpiDeepLinks = Nothing,
+              metadataExpiryInMins = Nothing,
+              metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+              webhookUrl = Just nwAddress,
+              splitSettlementDetails = splitSettlementDetails,
+              basket = offerBasket,
+              paymentRules = Nothing,
+              autoRefundPostSuccess = Nothing,
+              paymentFilter = Nothing,
+              udf1 = udf1,
+              udf2 = udf2
+            }
+    mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
+    isMetroTestTransaction <- asks (.isMetroTestTransaction)
+    let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+        createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
+    DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) (cast personId) mbPaymentOrderValidTill Nothing paymentServiceType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) (fromMaybe False paymentOrder.isMockPayment) Nothing False
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::
@@ -1136,13 +1155,14 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       Just vehicleNumber -> do
         mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
         case mbVehicleOverrideInfo of
-          Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-            updatedVehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs updatedVehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle override: " <> updatedVehicleNumber <> " for vehicle: " <> vehicleNumber <> ", not found on any route")
-            if Just newDeviceWaybillNo /= (snd updatedVehicleRouteInfo).waybillId
-              then do
+          Just (sourceVehicleNumber, overrideWaybillNo) -> do
+            mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+            case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+              JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
+              JLU.FleetOverrideFinished -> do
                 Dispatcher.delFleetOverrideInfo vehicleNumber
                 getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-              else pure $ Just updatedVehicleRouteInfo
+              JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
       Nothing -> return Nothing
 
@@ -2021,10 +2041,11 @@ postMultimodalRouteServiceability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
+postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes req =
   JMU.measureLatency
     ( do
         person <- authenticate mbPersonId
@@ -2052,19 +2073,22 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             routeId <- extractRouteCode req.routeCodes
             JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
           Nothing -> do
-            (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-            mbClusterRoutes <-
-              if fromMaybe False req.allowClusteredStops
-                then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                else pure Nothing
-            case mbClusterRoutes of
-              Just clusterRoutes@(_ : _) ->
-                JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
-              _ -> do
-                directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                if not (null directRouteCodes)
-                  then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
-                  else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+            (srcCode, mbDestCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
+            case mbDestCode of
+              Nothing -> JMU.measureLatency (handleAllPassingRoutes routeServiceabilityContext userRequestedCodes srcCode) ("handleAllPassingRoutes src=" <> srcCode)
+              Just destCode -> do
+                mbClusterRoutes <-
+                  if fromMaybe False req.allowClusteredStops
+                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                    else pure Nothing
+                case mbClusterRoutes of
+                  Just clusterRoutes@(_ : _) ->
+                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
+                  _ -> do
+                    directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                    if not (null directRouteCodes)
+                      then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+                      else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -2078,13 +2102,15 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       Maybe Text ->
       Maybe [ApiTypes.RouteCodesWithLeg] ->
       RouteServiceabilityContext ->
-      Environment.Flow (Text, Text)
+      Environment.Flow (Text, Maybe Text)
     resolveSrcAndDestCode mSrc mDest routeCodes ctx
       | isJust mSrc && isJust mDest =
-        pure (fromJust mSrc, fromJust mDest)
+        pure (fromJust mSrc, mDest)
+      | isJust mSrc && isNothing mDest && null (maybe [] (concatMap (.routeCodes)) routeCodes) && fromMaybe False mbAllPassingRoutes =
+        pure (fromJust mSrc, Nothing)
       | otherwise = do
         (firstStop, lastStop) <- JMU.measureLatency (fetchRouteBoundaryStops routeCodes ctx) ("fetchRouteBoundaryStops routeCodes=" <> show routeCodes)
-        pure (fromMaybe firstStop mSrc, fromMaybe lastStop mDest)
+        pure (fromMaybe firstStop mSrc, Just (fromMaybe lastStop mDest))
 
     fetchRouteBoundaryStops ::
       Maybe [ApiTypes.RouteCodesWithLeg] ->
@@ -2360,6 +2386,28 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       let resolvedLegs =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
       JMU.measureLatency (getRouteServiceability Nothing (Just directRouteCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+
+    handleAllPassingRoutes ::
+      RouteServiceabilityContext ->
+      [Text] ->
+      Text ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleAllPassingRoutes ctx userRequestedCodes srcCode = do
+      mappings <-
+        JMU.measureLatency
+          (OTPRest.getRouteStopMappingByStopCode srcCode ctx.integratedBPPConfig)
+          ("handleAllPassingRoutes: getRouteStopMappingByStopCode stop=" <> srcCode)
+      let routeCodes = nub (map (.routeCode) mappings)
+          resolvedLegs =
+            [ ResolvedLeg
+                { rlOrder = 0,
+                  rlRouteCodes = routeCodes,
+                  rlFromStopCode = srcCode,
+                  rlToStopCode = "",
+                  rlStopsByRoute = []
+                }
+            ]
+      JMU.measureLatency (getRouteServiceability Nothing (Just routeCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
     handleClusterRoute ::
       RouteServiceabilityContext ->
@@ -2662,7 +2710,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             map
               ( \r ->
                   let (keptLive, keptScheduled) = fromMaybe ([], []) $ Map.lookup r.routeCode topByRoute
-                   in r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled}
+                   in -- PassingRoutes shares liveVehicles/schedules, so the update needs the type spelled out.
+                      (r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled} :: API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
               )
               routes
 
@@ -2859,13 +2908,15 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
   (integratedBPPConfig, vehicleLiveRouteInfo) <- case mbVehicleOverrideInfo of
-    Just (overridenVehicleNumber, waybillNo) -> do
-      vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs overridenVehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-      if Just waybillNo /= ((.waybillId) . snd $ vehicleLiveRouteInfo)
-        then do
+    Just (sourceVehicleNumber, overrideWaybillNo) -> do
+      mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+      let scannedVehicleRouteInfo = JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+      case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+        JLU.FleetOverrideUsable -> mbSourceRouteInfo & fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+        JLU.FleetOverrideFinished -> do
           Dispatcher.delFleetOverrideInfo vehicleNumber
-          JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-        else pure vehicleLiveRouteInfo
+          scannedVehicleRouteInfo
+        JLU.FleetOverrideNotYetUsable -> scannedVehicleRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   whenJust booking.vehicleNumber $ \bookingVeh ->
@@ -3179,81 +3230,95 @@ postStoreTowerInfo (mbPersonId, _) req = do
       when (areaCode < 0) $
         logWarning $ "Invalid area code: " <> show areaCode
 
-getMultimodalStopRoutes ::
+getMultimodalTrackStopRoutes ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalStopRoutes (mbPersonId, _merchantId) stopCode = do
+getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
-  let routeCodes = nub (map (.routeCode) mappings)
-  pure $ map (\routeCode -> ApiTypes.PassingRoutes {routeCode = routeCode}) routeCodes
+  let filterRouteCodes = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbRouteCodes
+      passingRouteCodes = nub (map (.routeCode) mappings)
+      routeCodes =
+        if null filterRouteCodes
+          then passingRouteCodes
+          else filter (`elem` filterRouteCodes) passingRouteCodes
 
-getMultimodalRouteEta ::
-  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Text ->
-  Environment.Flow ApiTypes.RouteETAResp
-getMultimodalRouteEta (mbPersonId, _merchantId) routeCode stopCode = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <-
-    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
-      =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  liveEtasFork <-
-    awaitableFork "getMultimodalRouteEta->liveEtas" $ do
-      busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
-      pure
-        [ etaEntry
-          | routeWithBuses <- busesForRoutes,
-            bus <- routeWithBuses.buses,
-            etaEntry <- fromMaybe [] bus.busData.eta_data,
-            etaEntry.stopCode == stopCode
-        ]
-  scheduleEtasFork <-
-    awaitableFork "getMultimodalRouteEta->scheduleEtas" $ do
-      schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
-      pure
-        [ etaEntry
-          | scheduleDetail <- schedules,
-            etaEntry <- scheduleDetail.eta,
-            etaEntry.stopCode == stopCode
-        ]
-  liveEtas <-
-    L.await Nothing liveEtasFork >>= \case
-      Left err -> do
-        logError $ "getMultimodalRouteEta live ETA fetch failed: " <> show err
-        pure []
-      Right result -> pure result
-  scheduleEtas <-
-    L.await Nothing scheduleEtasFork >>= \case
-      Left err -> do
-        logError $ "getMultimodalRouteEta schedule ETA fetch failed: " <> show err
-        pure []
-      Right result -> pure result
-  let (etas, isLive) =
-        if not (null liveEtas)
-          then (liveEtas, True)
-          else (scheduleEtas, False)
-  if null etas
-    then pure $ ApiTypes.RouteETAResp {eta = Nothing, isLastStop = False, isLive = False}
-    else do
-      enrichedEtas <- mapM (JMRouteServiceability.enrichBusStopETA integratedBPPConfig) etas
-      routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-      let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
-            (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
-            [] -> False
+  frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId person.merchantOperatingCityId integratedBPPConfig.id
+  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap) routeCodes
+  where
+    etaAtStop etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode == stopCode) etaEntries))
+
+    getRouteEtaAtStop integratedBPPConfig frfsTierMap routeCode = do
+      mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+      case mbRoute of
+        Nothing -> do
+          logError $ "getMultimodalTrackStopRoutes route not found: " <> routeCode
+          pure Nothing
+        Just route -> do
+          liveVehiclesFork <-
+            awaitableFork "getMultimodalTrackStopRoutes->liveVehicles" $ do
+              busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
+              catMaybes
+                <$> mapConcurrently
+                  ( \(vehicleNo, busEta) -> do
+                      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNo
+                      pure $ (\(_, metadata) -> (vehicleNo, metadata.serviceType, busEta)) <$> mbVehicleMetadata
+                  )
+                  [ (bus.vehicleNumber, busEta)
+                    | routeWithBuses <- busesForRoutes,
+                      bus <- routeWithBuses.buses,
+                      Just busEta <- [etaAtStop (fromMaybe [] bus.busData.eta_data)]
+                  ]
+          scheduleVehiclesFork <-
+            awaitableFork "getMultimodalTrackStopRoutes->schedules" $ do
+              schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
+              pure
+                [ (scheduleDetail.vehicle_no, scheduleDetail.service_tier, detailEta)
+                  | scheduleDetail <- schedules,
+                    Just detailEta <- [etaAtStop scheduleDetail.eta]
+                ]
+          liveVehicles <-
+            L.await Nothing liveVehiclesFork >>= \case
+              Left err -> do
+                logError $ "getMultimodalTrackStopRoutes live vehicle fetch failed for route " <> routeCode <> ": " <> show err
+                pure []
+              Right result -> pure result
+          scheduleVehicles <-
+            L.await Nothing scheduleVehiclesFork >>= \case
+              Left err -> do
+                logError $ "getMultimodalTrackStopRoutes schedule fetch failed for route " <> routeCode <> ": " <> show err
+                pure []
+              Right result -> pure result
+          liveVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) liveVehicles
+          scheduleVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) scheduleVehicles
+          routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+          let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
+                (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
+                [] -> False
+          pure $
+            Just
+              ApiTypes.PassingRoutes
+                { routeCode = routeCode,
+                  routeShortName = route.shortName,
+                  liveVehicles = liveVehicleInfos,
+                  schedules = scheduleVehicleInfos,
+                  isLastStop = isLastStop
+                }
+
+    mkPassingVehicle integratedBPPConfig frfsTierMap (vehicleNo, serviceTier, etaEntry) = do
+      enrichedEta <- JMRouteServiceability.enrichBusStopETA integratedBPPConfig etaEntry
       pure $
-        ApiTypes.RouteETAResp
-          { eta = Just enrichedEtas,
-            isLastStop = isLastStop,
-            isLive = isLive
+        ApiTypes.PassingVehicleInfo
+          { vehicleNumber = vehicleNo,
+            serviceTierType = serviceTier,
+            serviceTierName = (.shortName) <$> lookup serviceTier frfsTierMap,
+            eta = enrichedEta
           }

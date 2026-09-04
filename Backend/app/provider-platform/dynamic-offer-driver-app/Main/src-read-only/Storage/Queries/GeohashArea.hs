@@ -30,6 +30,9 @@ findAllByMerchantOperatingCity merchantOperatingCityId = do findAllWithKV [Se.Is
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.GeohashArea.GeohashArea -> m (Maybe Domain.Types.GeohashArea.GeohashArea))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
+findByMerchantOperatingCityAndGeohash :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Text -> m (Maybe Domain.Types.GeohashArea.GeohashArea))
+findByMerchantOperatingCityAndGeohash merchantOperatingCityId geohash = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId), Se.Is Beam.geohash $ Se.Eq geohash]]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.GeohashArea.GeohashArea -> m ())
 updateByPrimaryKey (Domain.Types.GeohashArea.GeohashArea {..}) = do
   _now <- getCurrentTime

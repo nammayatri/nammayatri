@@ -9,6 +9,12 @@ import Kernel.Prelude
 paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
+manualPaymentInProgressKey :: Text -> Text
+manualPaymentInProgressKey driverFeeId = "Payment:Manual:InProgress:DriverFeeId:" <> driverFeeId
+
+manualPaymentInProgressTtl :: Int
+manualPaymentInProgressTtl = 1800
+
 mandateProcessingLockKey :: Text -> Text
 mandateProcessingLockKey driverId = "Mandate:Processing:DriverId" <> driverId
 

@@ -96,7 +96,7 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
       when (resp.accountExists) $ do
         mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId
         case mbExistingAccount of
-          Just _ -> QDBA.updateByPrimaryKey driverBankAccount
+          Just _ -> QDBA.updateBankVerificationDetails driverBankAccount.ifscCode driverBankAccount.nameAtBank personId
           Nothing -> QDBA.create driverBankAccount
       let driverBankAccountDetails =
             DDI.DriverBankAccountDetails

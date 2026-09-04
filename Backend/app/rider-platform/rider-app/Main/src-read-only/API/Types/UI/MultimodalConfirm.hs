@@ -146,6 +146,7 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
 
 data JourneyConfirmResp = JourneyConfirmResp
   { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    orderCreationReq :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderReq,
     orderSdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderResp,
     result :: Kernel.Prelude.Text
   }
@@ -299,7 +300,16 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassingRoutes = PassingRoutes {routeCode :: Kernel.Prelude.Text}
+data PassingRoutes = PassingRoutes {isLastStop :: Kernel.Prelude.Bool, liveVehicles :: [PassingVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, schedules :: [PassingVehicleInfo]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassingVehicleInfo = PassingVehicleInfo
+  { eta :: Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    vehicleNumber :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -358,10 +368,6 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
 
 data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, routeCodes :: [Kernel.Prelude.Text]}
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data RouteETAResp = RouteETAResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], isLastStop :: Kernel.Prelude.Bool, isLive :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityReq = RouteServiceabilityReq

@@ -84,6 +84,9 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.vehicleColor vehicleColor,
           Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
           Se.Set BeamVRC.verificationStatus verificationStatus,
+          Se.Set BeamVRC.approved approved,
+          Se.Set BeamVRC.verified verified,
+          Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
           Se.Set BeamVRC.reviewedAt reviewedAt,
           Se.Set BeamVRC.failedRules failedRules,
           Se.Set BeamVRC.fleetOwnerId fleetOwnerId,
@@ -106,6 +109,38 @@ upsert a@VehicleRegistrationCertificate {..} = do
         ]
         [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]
     else createWithKV a
+
+upsertedDataColumnDiff :: VehicleRegistrationCertificate -> VehicleRegistrationCertificate -> [Text]
+upsertedDataColumnDiff existing incoming =
+  catMaybes
+    [ cmp "permitExpiry" (.permitExpiry),
+      cmp "merchantId" (.merchantId),
+      cmp "merchantOperatingCityId" (.merchantOperatingCityId),
+      cmp "pucExpiry" (.pucExpiry),
+      cmp "insuranceValidity" (.insuranceValidity),
+      cmp "vehicleClass" (.vehicleClass),
+      cmp "vehicleVariant" (.vehicleVariant),
+      cmp "vehicleManufacturer" (.vehicleManufacturer),
+      cmp "manufacturerModel" (.manufacturerModel),
+      cmp "vehicleCapacity" (.vehicleCapacity),
+      cmp "vehicleModel" (.vehicleModel),
+      cmp "vehicleColor" (.vehicleColor),
+      cmp "vehicleEnergyType" (.vehicleEnergyType),
+      cmp "fleetOwnerId" (.fleetOwnerId),
+      cmp "fitnessExpiry" (.fitnessExpiry),
+      cmp "airConditioned" (.airConditioned),
+      cmp "userPassedVehicleCategory" (.userPassedVehicleCategory),
+      cmp "mYManufacturing" (.mYManufacturing),
+      cmp "vehicleModelYear" (.vehicleModelYear),
+      cmp "dateOfRegistration" (.dateOfRegistration),
+      cmp "vehicleDoors" (.vehicleDoors),
+      cmp "vehicleSeatBelts" (.vehicleSeatBelts),
+      cmp "oxygen" (.oxygen),
+      cmp "ventilator" (.ventilator)
+    ]
+  where
+    cmp :: Eq a => Text -> (VehicleRegistrationCertificate -> a) -> Maybe Text
+    cmp name field = if field existing == field incoming then Nothing else Just name
 
 findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do

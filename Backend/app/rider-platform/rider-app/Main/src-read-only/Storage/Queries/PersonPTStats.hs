@@ -73,6 +73,11 @@ updateCounts ticketCount purchaseCount lastPurchasedAt personId id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePersonCreatedAtById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.PersonPTStats.PersonPTStats -> m ())
+updatePersonCreatedAtById personCreatedAt id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.personCreatedAt personCreatedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePersonIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PersonPTStats.PersonPTStats -> m ())
 updatePersonIdById personId id = do
   _now <- getCurrentTime
@@ -94,6 +99,7 @@ updateByPrimaryKey (Domain.Types.PersonPTStats.PersonPTStats {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId <$> passTypeId),
+      Se.Set Beam.personCreatedAt personCreatedAt,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.productType productType,
       Se.Set Beam.purchaseCount purchaseCount,

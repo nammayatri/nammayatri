@@ -58,6 +58,7 @@ import SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance (triggerIffcoTok
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
+import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
@@ -74,6 +75,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDri
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
+import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettlementReportIngestionJob)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify (triggerSpecialZoneNotify)
@@ -148,6 +150,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendPDNNotificationToDriver
           & putJobHandlerInListWrapper flowRt env startMandateExecutionForDriver
           & putJobHandlerInListWrapper flowRt env notificationAndOrderStatusUpdate
+          & putJobHandlerInListWrapper flowRt env retryAutopayCollection
           & putJobHandlerInListWrapper flowRt env sendOverlayToDriver
           & putJobHandlerInListWrapper flowRt env badDebtCalculation
           & putJobHandlerInListWrapper flowRt env sendManualPaymentLink
@@ -182,6 +185,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env runSAPSubscriptionPurchaseDispatchJob
           & putJobHandlerInListWrapper flowRt env runSAPPGSettlementDispatchJob
+          & putJobHandlerInListWrapper flowRt env runSAPRideRevenueDispatchJob
           & putJobHandlerInListWrapper flowRt env checkPickupZoneArrival
           & putJobHandlerInListWrapper flowRt env triggerSpecialZoneNotify
           & putJobHandlerInListWrapper flowRt env scheduledTDSDistribution

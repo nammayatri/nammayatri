@@ -10,7 +10,7 @@ import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (groupBy, nub, nubBy)
+import Data.List (groupBy, nub, nubBy, partition)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
@@ -797,54 +797,75 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
               Left _ -> pure Nothing
               Right mbResp -> pure mbResp
   applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search mbHasPasses mbTripTime
-  mapM
-    ( \(quote, quoteCategories) -> do
-        let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-            mbFirstRouteStation = decodedRouteStations >>= listToMaybe
-            mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
-            serviceTierType = mbVehicleServiceTier <&> (._type)
-            serviceTierName = mbVehicleServiceTier <&> (.shortName)
-            routeCode = mbFirstRouteStation <&> (.code)
-        let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
-              if integratedBppConfig.platformType == DIBC.MULTIMODAL
-                then (Nothing, Nothing)
-                else (decodedRouteStations, decodeFromText quote.stationsJson)
-        -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
-        -- alongside the Journey/JourneyLeg during the discovery flow (buildInterchangeJourney), so
-        -- here we simply read them back off the leg tied to this quote's search. Only the MULTIMODAL
-        -- platform builds interchange journeys, so we skip the lookup otherwise.
-        routeDetails <-
-          if integratedBppConfig.platformType == DIBC.MULTIMODAL
-            then do
-              mbLeg <- QJourneyLeg.findByLegSearchId (Just quote.searchId.getId)
-              pure $ (map mkRouteDetail . (.routeDetails)) <$> mbLeg
-            else pure Nothing
-        let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
-            categories = map mkCategoryInfoResponse quoteCategories
-        singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
-        adultQuantity <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)) & fromMaybeM (InternalError "Adult Ticket Quantity not found.")
-        return $
-          FRFSTicketService.FRFSQuoteAPIRes
-            { quoteId = quote.id,
-              _type = quote._type,
-              applicablePasses =
-                map FRFSPassOverride.mkPassOptionAPIEntity $
-                  FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
-              price = singleAdultTicketPrice.amount,
-              priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
-              quantity = adultQuantity,
-              validTill = quote.validTill,
-              vehicleType = quote.vehicleType,
-              discountedTickets = quote.discountedTickets,
-              eventDiscountAmount = quote.eventDiscountAmount,
-              integratedBppConfigId = quote.integratedBppConfigId,
-              stations = fromMaybe [] stations,
-              observingFailures = Just observingFailures,
-              offer = mbOffer,
-              ..
-            }
-    )
-    sortedQuotesWithCategories
+  quotesRes <-
+    mapM
+      ( \(quote, quoteCategories) -> do
+          let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+              mbFirstRouteStation = decodedRouteStations >>= listToMaybe
+              mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
+              serviceTierType = mbVehicleServiceTier <&> (._type)
+              serviceTierName = mbVehicleServiceTier <&> (.shortName)
+              routeCode = mbFirstRouteStation <&> (.code)
+          let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
+                if integratedBppConfig.platformType == DIBC.MULTIMODAL
+                  then (Nothing, Nothing)
+                  else (decodedRouteStations, decodeFromText quote.stationsJson)
+          -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
+          -- alongside the Journey/JourneyLeg during the discovery flow (buildInterchangeJourney), so
+          -- here we simply read them back off the leg tied to this quote's search. Only the MULTIMODAL
+          -- platform builds interchange journeys, so we skip the lookup otherwise.
+          routeDetails <-
+            if integratedBppConfig.platformType == DIBC.MULTIMODAL
+              then do
+                mbLeg <- QJourneyLeg.findByLegSearchId (Just quote.searchId.getId)
+                pure $ (map mkRouteDetail . (.routeDetails)) <$> mbLeg
+              else pure Nothing
+          let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+              categories = map mkCategoryInfoResponse quoteCategories
+          singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
+          adultQuantity <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)) & fromMaybeM (InternalError "Adult Ticket Quantity not found.")
+          return $
+            FRFSTicketService.FRFSQuoteAPIRes
+              { quoteId = quote.id,
+                _type = quote._type,
+                applicablePasses =
+                  map FRFSPassOverride.mkPassOptionAPIEntity $
+                    FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
+                price = singleAdultTicketPrice.amount,
+                priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
+                quantity = adultQuantity,
+                validTill = quote.validTill,
+                vehicleType = quote.vehicleType,
+                discountedTickets = quote.discountedTickets,
+                eventDiscountAmount = quote.eventDiscountAmount,
+                integratedBppConfigId = quote.integratedBppConfigId,
+                stations = fromMaybe [] stations,
+                observingFailures = Just observingFailures,
+                offer = mbOffer,
+                ..
+              }
+      )
+      sortedQuotesWithCategories
+
+  routeTierByRouteCode <-
+    if integratedBppConfig.sortQuotesByRouteServiceTiers /= Just True || length quotesRes < 2
+      then pure Map.empty
+      else do
+        let quoteRouteCodes = nub $ mapMaybe (.routeCode) quotesRes
+        routeTiers <- forM quoteRouteCodes $ \quoteRouteCode -> do
+          mbTier <-
+            withTryCatch "getFrfsSearchQuote:routeTier" (OTPRest.getRouteByRouteId integratedBppConfig quoteRouteCode) <&> \case
+              Right (Just route) -> route.serviceTierType
+              _ -> Nothing
+          pure $ (quoteRouteCode,) <$> mbTier
+        pure $ Map.fromList (catMaybes routeTiers)
+  if Map.null routeTierByRouteCode
+    then return quotesRes
+    else do
+      let isRouteTierQuote quoteRes = isJust quoteRes.serviceTierType && (quoteRes.routeCode >>= (`Map.lookup` routeTierByRouteCode)) == quoteRes.serviceTierType
+          (matchingRouteTier, otherTiers) = partition isRouteTierQuote quotesRes
+      logInfo $ "getFrfsSearchQuote routeTiers=" <> show (Map.toList routeTierByRouteCode) <> " quotesAtRouteTier=" <> show (length matchingRouteTier)
+      return $ matchingRouteTier <> otherTiers
 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =

@@ -19,6 +19,7 @@ import qualified Kernel.External.Payment.Stripe.Types.Common as PaymentStripe
 import qualified Kernel.External.Payment.Types as TPayment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -81,27 +82,37 @@ stripeAccountWebhookAction ::
   StripeAccountTy.AccountStripeWebhookReq ->
   Text ->
   Flow AckResponse
-stripeAccountWebhookAction paymentMode _mocId req _respDump = do
+stripeAccountWebhookAction paymentMode _mocId req _respDump = withDynamicLogLevel "payment-mode" $ do
+  logDebug $ "paymentMode|accountWebhook|endpointMode=" <> show paymentMode <> " eventLivemode=" <> show req.livemode
   let livemodeMatches = req.livemode == (paymentMode == DMPM.LIVE)
   if not livemodeMatches
     then do
       logInfo $ "livemode mismatch for Stripe account webhook: paymentMode=" <> show paymentMode <> " req.livemode=" <> show req.livemode
       pure Ack
     else case req._data._object of
-      StripeAccountTy.ObjectAccount acct -> applyAccountUpdate req acct
+      StripeAccountTy.ObjectAccount acct -> applyAccountUpdate paymentMode req acct
       StripeAccountTy.AccountStripeWebhookCustomObject objType _val -> do
         logInfo $ "Unhandled Stripe account webhook object type: " <> objType
         pure Ack
 
 applyAccountUpdate ::
+  DMPM.PaymentMode ->
   StripeAccountTy.AccountStripeWebhookReq ->
   StripeAccountTy.AccountObject ->
   Flow AckResponse
-applyAccountUpdate req acct = do
+applyAccountUpdate paymentMode req acct = do
   mbRow <- QDBA.findByAccountId acct.id
   case mbRow of
     Nothing -> do
       logInfo $ "Stripe account webhook for unknown accountId=" <> show acct.id
+      pure Ack
+    Just row | fromMaybe DMPM.LIVE row.paymentMode /= paymentMode -> do
+      logInfo $
+        "Stripe account webhook mode mismatch; ignoring. accountId=" <> show acct.id
+          <> " endpointMode="
+          <> show paymentMode
+          <> " rowMode="
+          <> show row.paymentMode
       pure Ack
     Just row -> do
       let eventTime = posixSecondsToUTCTime req.created

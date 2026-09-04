@@ -29,6 +29,21 @@ findActiveConnectAccountsByCity cityId limit offset =
     (Just limit)
     (Just offset)
 
+updateBankVerificationDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe Text ->
+  Id DP.Person ->
+  m ()
+updateBankVerificationDetails ifscCode nameAtBank driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.ifscCode ifscCode,
+      Se.Set Beam.nameAtBank nameAtBank,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
+
 -- Wrapper for src-read-only function with LTS sync
 
 updateAccountStatus ::

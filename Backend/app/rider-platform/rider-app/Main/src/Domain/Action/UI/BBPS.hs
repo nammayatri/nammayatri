@@ -125,7 +125,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActor
       createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion Nothing
       createWalletCall = TWallet.createWallet person.merchantId person.merchantOperatingCityId
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing False
   case mCreateOrderRes of
     Just createOrderRes -> do
       let bbpsInfo =

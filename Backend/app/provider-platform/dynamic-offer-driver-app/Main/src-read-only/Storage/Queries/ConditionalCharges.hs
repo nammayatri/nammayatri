@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ConditionalCharges.ConditionalCharges] -> m ())
 createMany = traverse_ create
 
+deleteByFpAndCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Domain.Types.Extra.ConditionalCharges.ConditionalChargesCategories -> m ())
+deleteByFpAndCategory farePolicyId chargeCategory = do deleteWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq farePolicyId, Se.Is Beam.chargeCategory $ Se.Eq chargeCategory]]
+
 findAllByFp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m [Domain.Types.ConditionalCharges.ConditionalCharges])
 findAllByFp farePolicyId = do findAllWithKV [Se.Is Beam.farePolicyId $ Se.Eq farePolicyId]
 

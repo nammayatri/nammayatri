@@ -29,7 +29,10 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "multimodal" :> "routeServiceability" :> ReqBody '[JSON] API.Types.UI.MultimodalConfirm.RouteServiceabilityReq
+  ( TokenAuth :> "multimodal" :> "routeServiceability" :> QueryParam "allPassingRoutes" Kernel.Prelude.Bool
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.RouteServiceabilityReq
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
@@ -62,6 +65,9 @@ type API =
            Kernel.Prelude.Int
       :> QueryParam
            "isMockPayment"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "skipCreateOrderCall"
            Kernel.Prelude.Bool
       :> ReqBody
            '[JSON]
@@ -602,40 +608,32 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
-      :> "route"
-      :> Capture
-           "routeCode"
-           Kernel.Prelude.Text
-      :> "eta"
-      :> MandatoryQueryParam
-           "stopCode"
-           Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           API.Types.UI.MultimodalConfirm.RouteETAResp
-      :<|> TokenAuth
-      :> "multimodal"
+      :> "track"
       :> "stop"
       :> Capture
            "stopCode"
            Kernel.Prelude.Text
       :> "routes"
+      :> QueryParam
+           "routeCodes"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            [API.Types.UI.MultimodalConfirm.PassingRoutes]
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> postPublicTransportVehicleDataBlock :<|> getPublicTransportBlockedVehicles :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalOrderReschedule :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName :<|> postMultimodalUpdateBusLocation :<|> postStoreTowerInfo :<|> getMultimodalRouteEta :<|> getMultimodalStopRoutes
+handler = postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> postPublicTransportVehicleDataBlock :<|> getPublicTransportBlockedVehicles :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalOrderReschedule :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName :<|> postMultimodalUpdateBusLocation :<|> postStoreTowerInfo :<|> getMultimodalTrackStopRoutes
 
 postMultimodalRouteServiceability ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteServiceability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalRouteServiceability a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteServiceability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -656,10 +654,11 @@ postMultimodalConfirm ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalConfirm a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1066,21 +1065,12 @@ postStoreTowerInfo ::
   )
 postStoreTowerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postStoreTowerInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getMultimodalRouteEta ::
+getMultimodalTrackStopRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Kernel.Prelude.Text ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteETAResp
-  )
-getMultimodalRouteEta a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalRouteEta (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
-
-getMultimodalStopRoutes ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.MultimodalConfirm.PassingRoutes]
   )
-getMultimodalStopRoutes a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalTrackStopRoutes a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

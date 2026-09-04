@@ -80,6 +80,8 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('city-operations.ticket_place.write', 'city-operations', '', false),
     ('city-operations.ticket_place.approve', 'city-operations', '', false),
     ('city-operations.ticket_booking.read', 'city-operations', '', false),
+    ('city-operations.scheduled-bookings.read', 'city-operations', '', false),
+    ('city-operations.scheduled-bookings.write', 'city-operations', '', false),
     ('communication.message.read', 'communication', '', false),
     ('communication.message.write', 'communication', '', false),
     ('communication.shortener.execute', 'communication', '', false),
@@ -141,6 +143,8 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('city-config.merchant_onboarding.read', 'city-config', '', false),
     ('city-config.merchant_onboarding.write', 'city-config', '', false),
     ('city-config.merchant_onboarding.approve', 'city-config', '', false),
+    ('city-config.cancel.read', 'city-config', '', false),
+    ('city-config.cancel.write', 'city-config', '', false),
     ('fleet.driver.read', 'fleet', '', false),
     ('fleet.driver.write', 'fleet', '', false),
     ('fleet.vehicle.read', 'fleet', '', false),
@@ -476,6 +480,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
     ('finance.ledger.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_WALLET_LEDGER'),
     ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_SUBSCRIPTION_PURCHASE_LIST'),
     ('finance.reconciliation.execute', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_RECONCILIATION_TRIGGER'),
+    ('city-config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/GEOHASH_AREA/GEOHASH_AREA_BULK_UPSERT'),
+    ('city-config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/GEOHASH_AREA/GEOHASH_AREA_CSV_UPSERT'),
+    ('city-config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/GEOHASH_AREA/GET_GEOHASH_AREA_LIST'),
     ('system-config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_DOCUMENT'),
     ('system-config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_TYPE'),
     ('system-config.knowledge.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/GET_KNOWLEDGE_CENTER_GET_DOCUMENT'),
@@ -1051,7 +1058,7 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/GET_SELECT_RESULT'),
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_CANCEL_SEARCH'),
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_ESTIMATE')
-ON CONFLICT (server_name, endpoint_id) DO NOTHING;
+ON CONFLICT (capability_id, server_name, endpoint_id) DO NOTHING;
 
 -- Create curated roles that exist on NEITHER dashboard (idempotent, by name).
 -- dashboard_access_type DASHBOARD_USER: none of these are admin tiers;

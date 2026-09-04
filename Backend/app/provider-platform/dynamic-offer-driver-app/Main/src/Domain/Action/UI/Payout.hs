@@ -54,6 +54,7 @@ import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -201,7 +202,8 @@ stripePayoutWebhookHandler' ::
   Maybe Text ->
   RawByteString ->
   Flow AckResponse
-stripePayoutWebhookHandler' paymentMode merchantShortId mbOpCity mbServiceName mbSigHeader rawBytes = do
+stripePayoutWebhookHandler' paymentMode merchantShortId mbOpCity mbServiceName mbSigHeader rawBytes = withDynamicLogLevel "payment-mode" $ do
+  logDebug $ "paymentMode|payoutWebhook|endpointMode=" <> show paymentMode
   let serviceName = case paymentMode of
         DMPM.LIVE -> TPayout.Stripe
         DMPM.TEST -> TPayout.StripeTest
@@ -210,7 +212,13 @@ stripePayoutWebhookHandler' paymentMode merchantShortId mbOpCity mbServiceName m
         isDuplicateStripeWebhookEvent
           (stripePayoutWebhookEventDedupKey paymentMode eventId)
           stripeWebhookEventDedupTtl7Days
-  IStripe.payoutStripeServiceEventWebhook payoutServiceConfig checkDuplicatedEvent (stripePayoutWebhookAction merchantId merchantOperatingCityId) mbSigHeader rawBytes
+  let modeCheckedPayoutWebhookAction resp respDump =
+        if resp.livemode /= (paymentMode == DMPM.LIVE)
+          then do
+            logInfo $ "Stripe payout webhook livemode mismatch; ignoring. endpointMode=" <> show paymentMode <> " eventLivemode=" <> show resp.livemode
+            pure Ack
+          else stripePayoutWebhookAction merchantId merchantOperatingCityId resp respDump
+  IStripe.payoutStripeServiceEventWebhook payoutServiceConfig checkDuplicatedEvent modeCheckedPayoutWebhookAction mbSigHeader rawBytes
 
 -- | TTL for Stripe webhook event deduplication (covers Stripe retry window with margin).
 stripeWebhookEventDedupTtl7Days :: Redis.ExpirationTime

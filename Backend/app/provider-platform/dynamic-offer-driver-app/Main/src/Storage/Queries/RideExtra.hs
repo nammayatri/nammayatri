@@ -237,7 +237,7 @@ getInProgressByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Per
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
 getInProgressByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Ride]
-getInProgressByDriverIds driverIds = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]] Nothing
+getInProgressByDriverIds driverIds = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
 getActiveAdvancedRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getActiveAdvancedRideByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.NEW], Se.Is BeamR.isAdvanceBooking $ Se.Eq (Just True)]]
@@ -397,6 +397,17 @@ updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount i
            ]
     )
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+
+updateDistanceToPickup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> HighPrecMeters -> Bool -> m ()
+updateDistanceToPickup rideId distanceToPickup isPickupDistanceCalculationFailed = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamR.distanceToPickup (Just distanceToPickup) | not isPickupDistanceCalculationFailed]
+        <> [ Se.Set BeamR.pickupDistanceCalculationFailed (Just isPickupDistanceCalculationFailed),
+             Se.Set BeamR.updatedAt now
+           ]
+    )
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 updateTollChargesAndNamesAndIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> [Text] -> m ()
 updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds = do
@@ -921,8 +932,9 @@ findAllRideItemsV2 ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe Text ->
   m [RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount mbFleetOwnerId = do
   mbDriver <- case mbDriverPhoneDBHash of
     Just _driverPhoneDBHash ->
       findOneWithKV
@@ -956,6 +968,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                         <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
                         <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
                         <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
+                        <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
                     )
                 ]
                 (Se.Desc BeamR.createdAt)
@@ -980,6 +993,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                     [ Se.And
                         ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
                             <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                            <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
                         )
                     ]
                     Nothing
@@ -1009,6 +1023,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\foid -> ride.fleetOwnerId B.==?. B.val_ (Just foid)) mbFleetOwnerId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
@@ -1182,13 +1197,12 @@ getRideId rideItem = rideItem.rideDetails.id
 -- NOTE : This query shouldn't be modified with status as parameter as it has partial index
 notOnRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Bool
 notOnRide (Id driverId) = do
-  findAllWithKVAndConditionalDB
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamR.driverId $ Se.Eq driverId,
           Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]
         ]
     ]
-    Nothing
     <&> null
 
 findRidesFromDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> m [Ride]

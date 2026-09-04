@@ -208,7 +208,7 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
 
   -- Persist new fare params and update booking
   QFP.create newFareParams
-  QRB.updateVehicleServiceTierAndFare booking.id newVehicleServiceTier newFareParams.id newEstimatedFare quote.vehicleServiceTierName (getId quote.id) (mbVehicleServiceTierItem >>= (.airConditionedThreshold)) ((.seatingCapacity) =<< mbVehicleServiceTierItem) (mbVehicleServiceTierItem >>= (.isAirConditioned))
+  QRB.updateVehicleServiceTierAndFare booking.id newVehicleServiceTier newFareParams.id newEstimatedFare quote.vehicleServiceTierName (getId quote.id) (mbVehicleServiceTierItem >>= (.airConditionedThreshold)) ((.seatingCapacity) =<< mbVehicleServiceTierItem) (mbVehicleServiceTierItem >>= (.isAirConditioned)) newFareParams.congestionCharge
 
   -- NOTE: We skip BookingUpdateRequest for now. The confirm is a single atomic
   -- operation with no driver in the loop (RideOTP: status=NEW, no driver assigned).

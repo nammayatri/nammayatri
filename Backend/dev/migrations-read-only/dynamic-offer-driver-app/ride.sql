@@ -316,3 +316,11 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_behaviour text ;
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fee_tax_if_cancelled double precision ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_consequence_row_id_if_cancelled text ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_to_pickup double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_distance_calculation_failed boolean ;

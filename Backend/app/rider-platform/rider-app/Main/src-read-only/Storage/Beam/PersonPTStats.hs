@@ -19,6 +19,7 @@ data PersonPTStatsT f = PersonPTStatsT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     passTypeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    personCreatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     personId :: B.C f Kernel.Prelude.Text,
     productType :: B.C f Domain.Types.PersonPTStats.FRFSProductType,
     purchaseCount :: B.C f Kernel.Prelude.Int,

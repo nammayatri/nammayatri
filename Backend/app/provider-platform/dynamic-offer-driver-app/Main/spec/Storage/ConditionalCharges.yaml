@@ -33,6 +33,10 @@ ConditionalCharges:
     findAllByFp:
       kvFunction: findAllWithKV
       where: farePolicyId
+    deleteByFpAndCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [farePolicyId, chargeCategory]
 
   excludedFields: [ merchantId, merchantOperatingCityId ]
   extraOperations:

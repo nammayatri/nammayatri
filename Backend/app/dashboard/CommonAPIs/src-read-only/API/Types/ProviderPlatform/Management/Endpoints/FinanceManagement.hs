@@ -23,6 +23,7 @@ import Kernel.Utils.TH
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.AuditEntry
 import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Domain.Types.JournalEntryTransaction
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.Domain.Types.SapJournalEntry
 import qualified Lib.Finance.Reconciliation.Types
@@ -137,6 +138,7 @@ data InvoiceListItem = InvoiceListItem
     subscriptionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    igstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -448,7 +450,8 @@ data SapJournalTransactionItem = SapJournalTransactionItem
     creditAmount :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
-    subscriptionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.JournalEntryTransaction.ReferenceType,
     creationDate :: Kernel.Prelude.UTCTime,
     createdBy :: Kernel.Prelude.Text
   }
@@ -503,6 +506,9 @@ data SubscriptionPurchaseListItem = SubscriptionPurchaseListItem
     grossSubscriptionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     gstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     gstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    igstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     totalSubscriptionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     invoiceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalEntitledValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -541,7 +547,7 @@ data TdsReimbursementDetailRes = TdsReimbursementDetailRes
     certAmount :: Kernel.Types.Common.HighPrecMoney,
     tdsRate :: Kernel.Prelude.Double,
     tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    documentUrl :: Kernel.Prelude.Text,
+    documentId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     status :: TdsReimbursementStatus,
     rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     submittedAt :: Kernel.Prelude.UTCTime,
@@ -1105,6 +1111,9 @@ type GetFinanceManagementFinanceSapJournals =
            Kernel.Prelude.UTCTime
       :> QueryParam "dateTo" Kernel.Prelude.UTCTime
       :> QueryParam
+           "description"
+           Kernel.Prelude.Text
+      :> QueryParam
            "glNumber"
            Kernel.Prelude.Text
       :> QueryParam
@@ -1125,11 +1134,14 @@ type GetFinanceManagementFinanceSapJournals =
   )
 
 type GetFinanceManagementFinanceSapJournalsTransactions =
-  ( "finance" :> "sapJournals" :> "transactions" :> QueryParam "limit" Kernel.Prelude.Int
+  ( "finance" :> "sapJournals" :> "transactions" :> QueryParam "description" Kernel.Prelude.Text
       :> QueryParam
-           "offset"
+           "limit"
            Kernel.Prelude.Int
-      :> QueryParam "subscriptionId" Kernel.Prelude.Text
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "referenceId"
+           Kernel.Prelude.Text
       :> MandatoryQueryParam
            "sapBatchId"
            Kernel.Prelude.Text
@@ -1215,8 +1227,8 @@ data FinanceManagementAPIs = FinanceManagementAPIs
     getFinanceManagementFinanceAdjustmentList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest) -> Kernel.Prelude.Maybe AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe AdjustmentCategory -> Kernel.Prelude.Maybe AdjustmentDirection -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient LedgerAdjustmentListRes,
     postFinanceManagementFinanceAdjustmentApprove :: Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postFinanceManagementFinanceAdjustmentReject :: Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getFinanceManagementFinanceSapJournals :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalListRes,
-    getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes,
+    getFinanceManagementFinanceSapJournals :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalListRes,
+    getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes,
     postFinanceManagementTdsReimbursementRequestSubmit :: Kernel.Prelude.Text -> TdsReimbursementRequestSubmitReq -> EulerHS.Types.EulerClient TdsReimbursementRequestSubmitRes,
     getFinanceManagementTdsReimbursementStatus :: TdsReimbursementQuarter -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsReimbursementStatusRes,
     getFinanceManagementTdsReimbursementList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe TdsReimbursementQuarter -> Kernel.Prelude.Maybe TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient TdsReimbursementListRes,

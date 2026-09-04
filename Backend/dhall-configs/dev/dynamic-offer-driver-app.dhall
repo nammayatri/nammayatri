@@ -259,13 +259,6 @@ let appBackendBapInternal =
       , internalKey = sec.internalKey
       }
 
-let mlPricingInternal =
-      { name = "PRICING"
-      , url = "http://localhost:${mockServerPort}/mlpricing"
-      , apiKey = sec.mlPricingApiKey
-      , internalKey = sec.internalKey
-      }
-
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
         , mapValue = "http://localhost:${mockRegistryPort}/"
@@ -290,6 +283,7 @@ let AllocatorJobType =
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
+      | RetryAutopayCollection
       | SendOverlay
       | SupplyDemand
       | CongestionCharge
@@ -328,6 +322,7 @@ let AllocatorJobType =
       | TriggerSpecialZoneNotify
       | SAPPGSettlementDispatch
       | SAPSubscriptionPurchaseDispatch
+      | SAPRideRevenueDispatch
       | ReconciliationScheduler
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
@@ -358,6 +353,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.OrderAndNotificationStatusUpdate
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.RetryAutopayCollection, mapValue = True }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
       , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
       , { mapKey = AllocatorJobType.RetryDocumentVerification
@@ -415,6 +411,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SAPPGSettlementDispatch, mapValue = True }
+      , { mapKey = AllocatorJobType.SAPRideRevenueDispatch, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationScheduler, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationSweep, mapValue = True }
       ]
@@ -539,7 +536,6 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , appBackendBapInternal
-    , mlPricingInternal
     , graceTerminationPeriod = +90
     , encTools
     , authTokenCacheExpiry = +600

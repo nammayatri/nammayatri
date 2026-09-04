@@ -47,6 +47,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import Tools.Error
 
 data PayoutServiceNameOption = MerchantServiceUsageConfigOption | SubscriptionConfigOption DPlan.ServiceNames
@@ -185,12 +186,19 @@ getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion
     _ -> throwError $ InternalError "Unknown Service Name"
   let mbPaymentMode = mbPersonBankAccount >>= (.paymentMode)
   payoutServiceName <- modifyServiceName payoutServiceNameRaw (fromMaybe DMPM.LIVE mbPaymentMode) clientSdkVersion merchantOperatingCityId
+  logDebug $ "paymentMode|payout|personId=" <> personId.getId <> " mode=" <> show mbPaymentMode <> " service=" <> show payoutServiceName <> " connectedAccount=" <> show (mbPersonBankAccount <&> (.accountId))
   pure (payoutServiceFlow, payoutServiceName, mbPersonBankAccount)
   where
+    -- Fleet-override: a fleet driver transacts on the fleet's account.
     fetchPersonBankAccount payoutService = do
       let payoutServiceFlow = Payout.castPayoutServiceFlow payoutService
       mbPersonBankAccount <- case payoutServiceFlow of
-        Payout.StripeFlow -> Just <$> (QDBA.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "Driver bank aсcount not found"))
+        Payout.StripeFlow -> do
+          effectiveOwnerId <-
+            QFDA.findByDriverId personId True >>= \case
+              Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
+              Nothing -> pure personId
+          Just <$> (QDBA.findByPrimaryKey effectiveOwnerId >>= fromMaybeM (InvalidRequest "Driver bank account not found"))
         Payout.JuspayFlow -> pure Nothing
       pure (payoutServiceFlow, mbPersonBankAccount)
 

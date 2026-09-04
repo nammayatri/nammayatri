@@ -1,0 +1,209 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  Area: Lib.Types.SpecialLocation
+  ServiceTierType: Dashboard.Common
+  TripCategory: Dashboard.Common
+  SurgeConfig: Dashboard.Common
+
+module: Pricing
+
+# Phase 3+4 of the fare-policy revamp (dev/docs/fare-policy-revamp-plan.md):
+# CRUD for the typed surge table (SurgeConfig — replaces DYNAMIC_PRICING_UNIFIED
+# json-logic; one ACTIVE version per city x tier x time window, SHADOW evaluates
+# and only logs) and pricing observability (estimate-level "why this price" +
+# city health aggregates from the estimate stream).
+apis:
+  - GET: # all surge configs of the city (every status, newest version first)
+      endpoint: /surge/list
+      auth: ApiAuthV2
+      query:
+        - serviceTier: ServiceTierType
+      response:
+        type: PricingSurgeConfigListRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - POST: # create a new DRAFT version for (tier, timeBounds)
+      endpoint: /surge/create
+      auth: ApiAuthV2
+      request:
+        type: PricingSurgeConfigReq
+      response:
+        type: PricingSurgeConfigRes
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # edit rows/guardrails in place; DRAFT and SHADOW only
+      endpoint: /surge/{surgeConfigId}/update
+      auth: ApiAuthV2
+      params:
+        surgeConfigId: Id SurgeConfig
+      request:
+        type: PricingSurgeConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # status transition; ACTIVE archives the previous ACTIVE of the same key and takes effect on the next search (no sticky versions)
+      endpoint: /surge/{surgeConfigId}/status
+      auth: ApiAuthV2
+      params:
+        surgeConfigId: Id SurgeConfig
+      request:
+        type: PricingSurgeStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # which row fires for given signals (stored config or inline rows)
+      endpoint: /surge/preview
+      auth: ApiAuthV2
+      request:
+        type: PricingSurgePreviewReq
+      response:
+        type: PricingSurgePreviewRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - GET: # "why this price" for one estimate
+      endpoint: /observability/estimate/{estimateId}
+      auth: ApiAuthV2
+      params:
+        estimateId: Text
+      response:
+        type: PricingEstimateExplainRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - GET: # "why this price" by customer phone: the customer's latest search in this city, with an explain per estimate — no estimate-id hunting
+      endpoint: /observability/customer
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - phone: Text
+      response:
+        type: PricingCustomerSearchRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - GET: # city health aggregates over the last N hours (default 24, max 72)
+      endpoint: /observability/health
+      auth: ApiAuthV2
+      query:
+        - hours: Int
+      response:
+        type: PricingHealthRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+
+types:
+  PricingSurgeStatus:
+    - enum: "DRAFT, SHADOW, ACTIVE, ARCHIVED"
+  PricingSurgeRow:
+    - qarMin: Maybe Double
+    - qarMax: Maybe Double
+    - supplyDemandRatioMin: Maybe Double
+    - supplyDemandRatioMax: Maybe Double
+    - distanceKmMin: Maybe Int
+    - distanceKmMax: Maybe Int
+    - congestionMultiplier: Maybe Centesimal
+    - congestionPerMinCharge: Maybe Double
+  PricingSurgeConfig:
+    - surgeConfigId: Id SurgeConfig
+    - vehicleServiceTier: ServiceTierType
+    - timeBounds: TimeBound
+    - version: Int
+    - status: PricingSurgeStatus
+    - rows: "[PricingSurgeRow]"
+    - minMultiplier: Centesimal
+    - maxMultiplier: Centesimal
+    - maxDeltaPerUpdate: Maybe Centesimal
+    - applyOnExtraDistanceOnly: Bool
+    # Areas this table must NOT surge; an excluded area's fare falls back to
+    # the policy's static pricing. FromJSON also accepts the underscore string
+    # form (Default / Pickup_<id> / ...), which is what the UI sends.
+    - excludedAreas: Maybe [Area]
+    - description: Maybe Text
+    - createdBy: Text
+    - createdAt: UTCTime
+  PricingSurgeConfigListRes:
+    - configs: "[PricingSurgeConfig]"
+  PricingSurgeConfigReq:
+    - vehicleServiceTier: ServiceTierType
+    - timeBounds: TimeBound
+    - rows: "[PricingSurgeRow]"
+    - minMultiplier: Centesimal
+    - maxMultiplier: Centesimal
+    - maxDeltaPerUpdate: Maybe Centesimal
+    - applyOnExtraDistanceOnly: Bool
+    - excludedAreas: Maybe [Area]
+    - description: Maybe Text
+    - createdBy: Maybe Text
+    - derive: "'HideSecrets"
+  PricingSurgeConfigRes:
+    - surgeConfigId: Id SurgeConfig
+    - version: Int
+    - status: PricingSurgeStatus
+  PricingSurgeStatusReq:
+    - status: PricingSurgeStatus
+    - derive: "'HideSecrets"
+  PricingSurgeSignals:
+    - qar: Maybe Double
+    - supplyDemandRatio: Maybe Double
+    - distanceKm: Maybe Int
+  PricingSurgePreviewReq:
+    - surgeConfigId: Maybe (Id SurgeConfig)
+    - rows: Maybe [PricingSurgeRow]
+    - minMultiplier: Maybe Centesimal
+    - maxMultiplier: Maybe Centesimal
+    - signals: PricingSurgeSignals
+    - derive: "'HideSecrets"
+  PricingSurgePreviewRes:
+    - matchedRowIndex: Maybe Int
+    - congestionMultiplier: Maybe Centesimal
+    - congestionPerMinCharge: Maybe Double
+
+  # ── observability ──
+  PricingEstimateExplainRes:
+    - estimateId: Text
+    - createdAt: UTCTime
+    - vehicleServiceTier: ServiceTierType
+    - tripCategory: TripCategory
+    - minFare: HighPrecMoney
+    - maxFare: HighPrecMoney
+    - engine: Text
+    - dpVersion: Maybe Text
+    - congestionMultiplier: Maybe Centesimal
+    - supplyDemandRatioFromLoc: Maybe Double
+    - supplyDemandRatioToLoc: Maybe Double
+    - fromLocGeohash: Maybe Text
+    - smartTipSuggestion: Maybe HighPrecMoney
+    - smartTipReason: Maybe Text
+    - shadowSurgeMultiplier: Maybe Centesimal
+    - shadowSurgeVersion: Maybe Int
+  PricingCustomerSearchRes:
+    - searchRequestId: Text
+    - searchCreatedAt: UTCTime
+    - estimates: "[PricingEstimateExplainRes]"
+  PricingTierHealth:
+    - serviceTier: ServiceTierType
+    - totalEstimates: Int
+    - decidedEstimates: Int
+    - surgedEstimates: Int
+    - avgMultiplier: Maybe Double
+  PricingEngineShare:
+    - engine: Text
+    - estimates: Int
+    - avgMultiplier: Maybe Double
+  PricingGeohashStat:
+    - geohash: Text
+    - estimates: Int
+    - avgMultiplier: Maybe Double
+  PricingShadowComparison:
+    - serviceTier: ServiceTierType
+    - shadowVersion: Maybe Int
+    - estimatesWithShadow: Int
+    - avgShadowMultiplier: Maybe Double
+    - avgAppliedMultiplier: Maybe Double
+  PricingHealthRes:
+    - windowHours: Int
+    - tiers: "[PricingTierHealth]"
+    - engines: "[PricingEngineShare]"
+    - topGeohashes: "[PricingGeohashStat]"
+    - shadowComparison: "[PricingShadowComparison]"

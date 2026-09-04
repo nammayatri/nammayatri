@@ -68,6 +68,7 @@ data PaymentOrderE e = PaymentOrder
     domainTransactionId :: Maybe Text,
     effectAmount :: Maybe HighPrecMoney,
     isMockPayment :: Maybe Bool,
+    isExternalOrder :: Maybe Bool,
     paytmTid :: Maybe Text,
     groupId :: Maybe Text,
     vpa :: Maybe Text,

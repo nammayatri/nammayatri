@@ -80,7 +80,13 @@ data LocationAPIEntity = LocationAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyDriverItem = NearbyDriverItem {driverId :: Kernel.Prelude.Text, serviceTiers :: [Dashboard.Common.ServiceTierType], straightLineDistanceMeters :: Kernel.Types.Common.Meters}
+data NearbyDriverItem = NearbyDriverItem
+  { driverId :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Text,
+    driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTiers :: [Dashboard.Common.ServiceTierType],
+    straightLineDistanceMeters :: Kernel.Types.Common.Meters
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

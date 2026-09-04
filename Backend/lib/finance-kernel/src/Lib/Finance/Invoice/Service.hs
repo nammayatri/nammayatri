@@ -64,6 +64,7 @@ import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirect
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import qualified Lib.Finance.Utils.GstBreakdown as GstBreakdown
 import qualified Lib.Finance.Utils.SensitiveData as SD
 
 --------------------------------------------------------------------------------
@@ -389,8 +390,11 @@ createIndirectTaxEntry input = do
                 fromMaybe 0 breakdown.igstAmount
               )
             Nothing ->
-              let cg = taxAmount / 2.0
-               in (cg, taxAmount - cg, 0)
+              let defaultBreakdown = GstBreakdown.defaultIntraStateGstBreakdown taxAmount
+               in ( fromMaybe 0 defaultBreakdown.cgstAmount,
+                    fromMaybe 0 defaultBreakdown.sgstAmount,
+                    fromMaybe 0 defaultBreakdown.igstAmount
+                  )
       computedTaxRate = if input.taxableValue > 0 then realToFrac (taxAmount / input.taxableValue) * 100.0 else 0.0
       saleType = if input.isVat then Nothing else Just (if isJust input.gstinOfParty then B2B else B2C)
       taxTxn =

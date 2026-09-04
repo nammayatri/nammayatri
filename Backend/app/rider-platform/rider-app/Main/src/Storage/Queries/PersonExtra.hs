@@ -3,7 +3,6 @@ module Storage.Queries.PersonExtra where
 import Control.Applicative ((<|>))
 import qualified Data.Time as T
 import Domain.Action.UI.Person
-import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -150,10 +149,9 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe (Encrypted Text) ->
   Maybe Text ->
-  Maybe DMPM.PaymentMode ->
   Maybe CloudType ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbEncBusinessEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken mbMobileNumberEncrypted mbMobileCountryCode mbPaymentMode mbCloudType = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbEncBusinessEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken mbMobileNumberEncrypted mbMobileCountryCode mbCloudType = do
   now <- getCurrentTime
   mobileNumberHash <- case mbMobileNumberEncrypted of
     Just encMobile -> do
@@ -208,7 +206,6 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted encMobile) | Just encMobile <- [mbMobileNumberEncrypted]]
         <> [Se.Set BeamP.mobileNumberHash mobileNumberHash | isJust mobileNumberHash]
         <> [Se.Set BeamP.mobileCountryCode mbMobileCountryCode | isJust mbMobileCountryCode]
-        <> [Se.Set BeamP.paymentMode mbPaymentMode | isJust mbPaymentMode]
         <> [Se.Set BeamP.cloudType mbCloudType | isJust mbCloudType]
     )
     [Se.Is BeamP.id (Se.Eq personId)]

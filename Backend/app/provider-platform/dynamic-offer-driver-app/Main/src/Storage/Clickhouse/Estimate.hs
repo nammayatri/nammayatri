@@ -35,6 +35,9 @@ data EstimateT f = EstimateT
     estimatedDuration :: C f (Maybe Common.Seconds),
     merchantOperatingCityId :: C f (Id DMOC.MerchantOperatingCity),
     congestionMultiplier :: C f (Maybe Double),
+    dpVersion :: C f (Maybe Text),
+    shadowSurgeMultiplier :: C f (Maybe Double),
+    shadowSurgeVersion :: C f (Maybe Int),
     vehicleServiceTier :: C f DServiceTierType.ServiceTierType,
     tripCategory :: C f DTrip.TripCategory,
     minFare :: C f Common.HighPrecMoney,
@@ -59,6 +62,9 @@ estimateTTable =
       estimatedDistance = "estimated_distance",
       estimatedDuration = "estimated_duration",
       congestionMultiplier = "congestion_multiplier",
+      dpVersion = "dp_version",
+      shadowSurgeMultiplier = "shadow_surge_multiplier",
+      shadowSurgeVersion = "shadow_surge_version",
       vehicleServiceTier = "vehicle_service_tier",
       tripCategory = "trip_category",
       minFare = "min_fare",
@@ -166,5 +172,146 @@ calulateCongestionByCity from to = do
             estimate.createdAt >=. CH.DateTime from
               CH.&&. estimate.createdAt <=. CH.DateTime to
               CH.&&. estimate.vehicleServiceTier `in_` [DServiceTierType.TAXI]
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+-- ── pricing observability (fare-policy revamp Phase 3) ──────────────────────
+-- City-scoped aggregates over the estimate stream for the dashboard health
+-- endpoint. Windows are short (hours), so plain aggregates are cheap.
+
+pricingStatsByTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(DServiceTierType.ServiceTierType, Int, Maybe Double)]
+pricingStatsByTier cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let total = CH.count_ estimate.id
+              avgMultiplier = CH.avg_ estimate.congestionMultiplier
+          CH.groupBy estimate.vehicleServiceTier $ \tier -> (tier, total, avgMultiplier)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+pricingDecidedCountByTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(DServiceTierType.ServiceTierType, Int)]
+pricingDecidedCountByTier cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let decided = CH.count_ estimate.id
+          CH.groupBy estimate.vehicleServiceTier $ \tier -> (tier, decided)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+              CH.&&. CH.isNotNull estimate.congestionMultiplier
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+pricingSurgedCountByTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(DServiceTierType.ServiceTierType, Int)]
+pricingSurgedCountByTier cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let surged = CH.count_ estimate.id
+          CH.groupBy estimate.vehicleServiceTier $ \tier -> (tier, surged)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+              CH.&&. estimate.congestionMultiplier CH.>. Just 1.001
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+pricingStatsByEngine ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(Maybe Text, Int, Maybe Double)]
+pricingStatsByEngine cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let total = CH.count_ estimate.id
+              avgMultiplier = CH.avg_ estimate.congestionMultiplier
+          CH.groupBy estimate.dpVersion $ \engine -> (engine, total, avgMultiplier)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+pricingStatsByGeohash ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(Maybe Text, Int, Maybe Double)]
+pricingStatsByGeohash cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let total = CH.count_ estimate.id
+              avgMultiplier = CH.avg_ estimate.congestionMultiplier
+          CH.groupBy estimate.fromLocGeohash $ \geohash -> (geohash, total, avgMultiplier)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+              CH.&&. CH.isNotNull estimate.fromLocGeohash
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+-- applied-vs-candidate comparison for cities running a SHADOW SurgeConfig:
+-- estimates that carry a shadow outcome, grouped by tier and shadow version
+pricingShadowComparisonByTier ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [(DServiceTierType.ServiceTierType, Maybe Int, Int, Maybe Double, Maybe Double)]
+pricingShadowComparisonByTier cityId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let total = CH.count_ estimate.id
+              avgShadow = CH.avg_ estimate.shadowSurgeMultiplier
+              avgApplied = CH.avg_ estimate.congestionMultiplier
+          CH.groupBy (estimate.vehicleServiceTier, estimate.shadowSurgeVersion) $ \(tier, version) -> (tier, version, total, avgShadow, avgApplied)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+              CH.&&. CH.isNotNull estimate.shadowSurgeVersion
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)

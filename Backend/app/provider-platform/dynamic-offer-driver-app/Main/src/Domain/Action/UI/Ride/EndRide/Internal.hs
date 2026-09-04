@@ -14,8 +14,6 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
-    createDriverWalletTransaction,
-    processEndRideFinance,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -114,6 +112,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
@@ -122,7 +121,6 @@ import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
@@ -550,22 +548,22 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
     let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
         configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
-    mbTdsRate <- case ride.fleetOwnerId of
+    (mbFleetInfo, mbTdsRate) <- case ride.fleetOwnerId of
       Just fleetOwnerId -> do
-        mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-        let currentRate = mbFleetInfo >>= (.tdsRate)
+        mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+        let currentRate = mbFleetInfo' >>= (.tdsRate)
         unless panLinkTdsEnabled $
-          whenJust mbFleetInfo $ \_ ->
+          whenJust mbFleetInfo' $ \_ ->
             when (isNothing currentRate) $
               whenJust configTdsRate $ \rate ->
                 QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
-        pure $ if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        pure $ (mbFleetInfo',) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
       Nothing -> do
         let currentRate = driverInfo.tdsRate
         when (not panLinkTdsEnabled && isNothing currentRate) $
           whenJust configTdsRate $ \rate ->
             QDI.updateTdsRate (Just rate) ride.driverId
-        pure $ if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        pure $ (Nothing,) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
     -- For threshold-benefit gating (section 194O), look up the counterparty's
@@ -599,7 +597,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                  in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
             _ -> HighPrecMoney 0.0
 
-    merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+    rideGstBreakdown <-
+      computeGstBreakdownForRideOwner
+        transporterConfig.taxConfig.rideGst
+        booking.fromLocation
+        ride
+        mbFleetInfo
+        (Just driverInfo)
+        (taxAmount + absorbedVat)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
@@ -689,14 +694,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
-        rideGstBreakdown =
-          computeGstBreakdownByPlace
-            transporterConfig.taxConfig.rideGst
-            (Just $ show merchantOperatingCity.state)
-            booking.fromLocation.address.state
-            (Just $ show merchantOperatingCity.city)
-            booking.fromLocation.address.city
-            (taxAmount + absorbedVat)
         -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —
         -- riders get the itemised view regardless of transporter config.
         customerInvoiceConfig =

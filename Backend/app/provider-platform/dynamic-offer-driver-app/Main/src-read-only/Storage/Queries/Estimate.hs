@@ -27,6 +27,9 @@ create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParam
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Estimate.Estimate] -> m ())
 createMany = traverse_ create
 
+findAllByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
+findAllByRequestId requestId = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]] Nothing
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -106,6 +109,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.navigationInstruction navigationInstruction,
       Se.Set Beam.personalDiscount personalDiscount,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.shadowSurgeMultiplier shadowSurgeMultiplier,
+      Se.Set Beam.shadowSurgeVersion shadowSurgeVersion,
       Se.Set Beam.smartTipReason smartTipReason,
       Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationName specialLocationName,
@@ -167,6 +172,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             navigationInstruction = navigationInstruction,
             personalDiscount = personalDiscount,
             requestId = Kernel.Types.Id.Id requestId,
+            shadowSurgeMultiplier = shadowSurgeMultiplier,
+            shadowSurgeVersion = shadowSurgeVersion,
             smartTipReason = smartTipReason,
             smartTipSuggestion = smartTipSuggestion,
             specialLocationName = specialLocationName,
@@ -230,6 +237,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.navigationInstruction = navigationInstruction,
         Beam.personalDiscount = personalDiscount,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.shadowSurgeMultiplier = shadowSurgeMultiplier,
+        Beam.shadowSurgeVersion = shadowSurgeVersion,
         Beam.smartTipReason = smartTipReason,
         Beam.smartTipSuggestion = smartTipSuggestion,
         Beam.specialLocationName = specialLocationName,

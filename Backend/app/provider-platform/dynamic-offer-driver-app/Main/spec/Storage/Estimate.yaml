@@ -49,6 +49,8 @@ Estimate:
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
       congestionMultiplier : Maybe Centesimal
+      shadowSurgeMultiplier : Maybe Centesimal
+      shadowSurgeVersion : Maybe Int
       distanceUnit: DistanceUnit
       businessDiscount: Maybe HighPrecMoney
       personalDiscount: Maybe HighPrecMoney
@@ -152,3 +154,7 @@ Estimate:
         kvFunction: findAllWithKVAndConditionalDB
         where:
           and: [requestId, eligibleForUpgrade]
+      findAllByRequestId:
+        kvFunction: findAllWithKVAndConditionalDB
+        where:
+          and: [requestId]
