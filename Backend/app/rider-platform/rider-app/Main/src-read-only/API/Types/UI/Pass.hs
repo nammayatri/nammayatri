@@ -137,6 +137,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     isPreferredSourceAndDestinationSet :: Kernel.Prelude.Bool,
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     maxPhotoChangeConfigCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    overlappingPasses :: [PurchasedPassTransactionAPIEntity],
     passEntity :: PassDetailsAPIEntity,
     passNumber :: Data.Text.Text,
     passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
