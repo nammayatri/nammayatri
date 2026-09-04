@@ -166,11 +166,14 @@ handler merchantId req validatedReq = do
         QRB.createBooking booking
         cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
         distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
+        let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
         BPPMetrics.incrementRiderAcceptanceCount
           transporter.shortId.getShortId
           cityLabel
           (show booking.vehicleServiceTier)
           (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
+          pickupZone
+          dropZone
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
   -- Special zone driver demand pipeline: fires for BOTH estimate-based (normal Select → Init)
