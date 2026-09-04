@@ -59,6 +59,27 @@ updateCancellationCharges cancellationFeeTaxExclusive cancellationTax (Id farePa
 findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
+-- | Record the TDS applied to this ride's fare.
+--
+-- Targeted rather than reusing 'updateFareParameters', which rewrites every
+-- column: TDS is decided at ride end / cancellation, long after the rest of the
+-- fare was computed, so rewriting the whole row risks clobbering values that
+-- were recalculated in between.
+updateTdsDeduction ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe HighPrecMoney ->
+  Maybe Double ->
+  UTCTime ->
+  Id FareParameters ->
+  m ()
+updateTdsDeduction tdsAmount tdsRate processedAt fareParametersId =
+  updateOneWithKV
+    [ Se.Set BeamFP.tdsAmount tdsAmount,
+      Se.Set BeamFP.tdsRate tdsRate,
+      Se.Set BeamFP.tdsProcessedAt (Just processedAt)
+    ]
+    [Se.Is BeamFP.id $ Se.Eq (getId fareParametersId)]
+
 updateFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParameters -> Id FareParameters -> m ()
 updateFareParameters FareParameters {..} id_ = do
   now <- getCurrentTime
@@ -183,6 +204,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 platformFee = platformFee,
                 sgst = sgst,
                 cgst = cgst,
+                tdsAmount = tdsAmount,
+                tdsRate = tdsRate,
+                tdsProcessedAt = tdsProcessedAt,
                 driverCancellationNotAllowed = driverCancellationNotAllowed,
                 discountApplicableRideFareTaxExclusive = discountApplicableRideFareTaxExclusive,
                 discountApplicableRideFareTax = discountApplicableRideFareTax,
@@ -263,6 +287,9 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.platformFee = platformFee,
         BeamFP.sgst = sgst,
         BeamFP.cgst = cgst,
+        BeamFP.tdsAmount = tdsAmount,
+        BeamFP.tdsRate = tdsRate,
+        BeamFP.tdsProcessedAt = tdsProcessedAt,
         BeamFP.driverCancellationNotAllowed = driverCancellationNotAllowed,
         BeamFP.fareSettlementType = fareSettlementType
       }

@@ -12,8 +12,10 @@ import qualified Dashboard.Common
 import Data.List (sortOn)
 import qualified Data.Ord
 import qualified Data.Text as T
+import Data.Time.Clock (utctDay)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
+import Domain.Types.FinancialYear (financialYearOf)
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.LedgerAdjustmentRequest as DLA
 import qualified Domain.Types.Merchant as DM
@@ -43,6 +45,7 @@ import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as Q
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
+import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.Finance.LedgerAdjustmentCast
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
@@ -54,7 +57,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Image as QImage
@@ -542,38 +544,55 @@ validateTdsDeductionAdjustment transporterConfig personId req = do
   unless (maybe False (> 0) mbEffectiveTdsRate) $
     throwError (InvalidRequest "TDS rate is not configured for this person")
 
-  -- Fleet: no cumulative earnings accumulator yet (same as EndRide / CancelRide).
-  -- Threshold "crossed?" check and rate×(cumulative−threshold) cap below are skipped —
-  -- fleet can debit any amount up to wallet balance as long as a TDS rate is set.
-  mbCumulativeEarnings <- case person.role of
-    DP.FLEET_OWNER -> pure Nothing
-    DP.FLEET_BUSINESS -> pure Nothing
-    _ -> do
-      mbStats <- B.runInReplica $ QDriverStats.findByPrimaryKey (cast personId)
-      pure $ (.totalEarnings) <$> mbStats
+  validateWalletDebitAmountForPerson person req.amount.amount
+  assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate req.amount.amount
+
+assertTdsDeductionWithinThresholdCap ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  Maybe DPanCard.DriverPanCard ->
+  Maybe Double ->
+  HighPrecMoney ->
+  Flow ()
+assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate amount = do
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+  cumulativeEarnings <-
+    Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey personId.getId) 10 1000 $
+      SDFE.getFyToDateNetEarnings personId (financialYearOf fyStartMonth (utctDay localNow))
 
   let mbThresholdAmount = Wallet.selectTds mbPanCard transporterConfig.taxConfig >>= (.thresholdAmount)
-  case (mbThresholdAmount, mbCumulativeEarnings) of
-    (Just thresh, Just cumulative) ->
-      when (cumulative <= thresh) $
-        throwError $
-          InvalidRequest $
-            "TDS threshold not crossed yet: cumulative earnings "
-              <> show cumulative
-              <> " <= "
-              <> show thresh
-    _ -> pure ()
+  whenJust mbThresholdAmount $ \thresh ->
+    when (cumulativeEarnings <= thresh) $
+      throwError $
+        InvalidRequest $
+          "TDS threshold not crossed yet: FY-to-date earnings "
+            <> show cumulativeEarnings
+            <> " <= "
+            <> show thresh
 
-  validateWalletDebitAmountForPerson person req.amount.amount
+  let maxTdsAmount = maxThresholdTdsDeductionAmount mbEffectiveTdsRate cumulativeEarnings mbThresholdAmount
+  when (maxTdsAmount <= 0) $
+    throwError (InvalidRequest "No TDS deduction is due for this person")
+  when (amount > maxTdsAmount) $
+    throwError (InvalidRequest $ "Could not debit more than TDS deduction amount: " <> show maxTdsAmount)
 
-  case mbCumulativeEarnings of
-    Nothing -> pure ()
-    Just cumulative -> do
-      let maxTdsAmount = maxThresholdTdsDeductionAmount mbEffectiveTdsRate cumulative mbThresholdAmount
-      when (maxTdsAmount <= 0) $
-        throwError (InvalidRequest "No TDS deduction is due for this person")
-      when (req.amount.amount > maxTdsAmount) $
-        throwError (InvalidRequest $ "Could not debit more than TDS deduction amount: " <> show maxTdsAmount)
+resolveEffectiveTdsRate ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  DP.Person ->
+  Flow (Maybe DPanCard.DriverPanCard, Maybe Double)
+resolveEffectiveTdsRate transporterConfig personId person = do
+  let panLinkTdsEnabled = Wallet.panAadhaarLinkTdsEnabled transporterConfig.taxConfig
+      configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
+  mbMaterializedTdsRate <- case person.role of
+    DP.FLEET_OWNER -> lookupFleetOwnerTdsRate personId panLinkTdsEnabled configTdsRate
+    DP.FLEET_BUSINESS -> lookupFleetOwnerTdsRate personId panLinkTdsEnabled configTdsRate
+    _ -> do
+      driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+      pure $ if panLinkTdsEnabled then driverInfo.tdsRate else driverInfo.tdsRate <|> configTdsRate
+  mbPanCard <- QPanCard.findByDriverId personId
+  pure (mbPanCard, Wallet.computeEffectiveTdsRate mbPanCard mbMaterializedTdsRate transporterConfig.taxConfig)
 
 -- | Upper bound for manual threshold TDS debit (rate × earnings above threshold).
 maxThresholdTdsDeductionAmount ::
@@ -1049,6 +1068,8 @@ postTdsDeductionAdjustment transporterConfig adjustmentRequest =
         unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
           throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
         validateWalletDebitAmountForPerson person adjustmentRequest.amount
+        (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig adjustmentRequest.personId person
+        assertTdsDeductionWithinThresholdCap transporterConfig adjustmentRequest.personId mbPanCard mbEffectiveTdsRate adjustmentRequest.amount
     )
     transporterConfig
     adjustmentRequest

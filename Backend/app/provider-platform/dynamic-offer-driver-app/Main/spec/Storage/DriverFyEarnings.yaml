@@ -1,0 +1,100 @@
+imports:
+  Person: Domain.Types.Person
+  HighPrecMoney: Kernel.Types.Common
+
+# FY earnings accumulator, bucketed by quarter.
+#
+# Serves the FY/quarter earnings API directly (netEarningsTotal is the number the
+# dashboard shows) and feeds the TDS threshold gate. One row per
+# (personId, financialYear, quarter) — four rows per person per financial year.
+#
+# WHY NET EARNINGS IS ENOUGH FOR THE THRESHOLD
+# The threshold gate needs no separate "taxable base" column, because below the
+# threshold no TDS is deducted -- so net and base are the same number. They only
+# diverge after the threshold is crossed, and by then both are above it, so the
+# gate's answer is identical either way. (They cannot diverge back across it:
+# after crossing, cumulative TDS grows at ~1% of post-crossing earnings while
+# base - threshold grows at 100% of it.)
+#
+# WRITE ORDER — written AFTER the gate
+# netEarnings is not known until the deduction is decided, so the ride-end
+# sequence is read -> decide -> write, not write -> read:
+#   1. Read this person's FY rows; FY-to-date = sum(netEarningsTotal).
+#   2. Gate compares (that + this ride's base) against the threshold.
+#   3. Increment netEarningsTotal and tdsAmountTotal for the ride's quarter.
+#
+# Both columns are written in the same update, so storing TDS costs no extra
+# write. It is kept because the earnings API returns it alongside net, and a
+# quarterly TDS filing needs both figures; deriving it instead would mean joining
+# ride + fare_parameters over a UTC createdAt, which misfiles rides at the FY
+# boundary.
+#
+# CONCURRENCY
+# Because the read precedes the write, steps 1-3 must be serialised per person or
+# two concurrent rides can both read the same pre-state and both skip the
+# deduction. Use a tight Redis lock keyed on personId around those steps only —
+# NOT the existing wallet lock, which is keyed on driverId (so it does not
+# serialise a fleet owner's drivers) and wraps ~350 lines of ledger and invoice work.
+#
+# Buckets come from the ride's own local date (see Domain.Types.FinancialYear),
+# never from "now", so a late or replayed ride lands in the period it belongs to.
+#
+# KV IS SAFE HERE
+# A financial year is at most four rows, so FY-to-date is a findAll plus a sum in
+# Haskell rather than a SQL aggregate. That matters: KV reads consult Redis first,
+# so the gate sees its own writes. (A SQL SUM would not -- it only sees rows that
+# have already drained to Postgres.) Never replace the Haskell sum with a SQL
+# aggregate without moving these writes off KV first.
+DriverFyEarnings:
+  tableName: driver_fy_earnings
+
+  fields:
+    id: Id DriverFyEarnings
+    personId: Id Person # driver, or fleet owner when ride.fleetOwnerId is set
+    financialYear: Int # starting calendar year; 2025 = 2025-04-01 .. 2026-03-31
+    quarter: Int # 1..4, relative to the financial year
+    netEarningsTotal: HighPrecMoney # running sum of (ride fare - GST - TDS)
+    tdsAmountTotal: HighPrecMoney # running sum of TDS deducted
+
+  # NammaDSL injects merchantId / merchantOperatingCityId unless excluded.
+  # Deliberately not stored: personId is a globally unique UUID, so both are
+  # derivable by joining person — and a stored merchantId would mean "current
+  # merchant", since updateMerchantInAllTables rewrites it on driver migration.
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+
+  sqlType:
+    netEarningsTotal: numeric(30,2)
+    tdsAmountTotal: numeric(30,2)
+
+  default:
+    netEarningsTotal: "0"
+    tdsAmountTotal: "0"
+
+  queries:
+    findAllByPersonIdAndFinancialYear:
+      kvFunction: findAllWithKV
+      where:
+        and: [personId, financialYear]
+
+    findByPersonIdAndFinancialYearAndQuarter:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, financialYear, quarter]
+
+    updateEarningsTotals:
+      kvFunction: updateOneWithKV
+      params: [netEarningsTotal, tdsAmountTotal]
+      where:
+        and: [personId, financialYear, quarter]
+
+  extraIndexes:
+    - columns: [personId, financialYear, quarter]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

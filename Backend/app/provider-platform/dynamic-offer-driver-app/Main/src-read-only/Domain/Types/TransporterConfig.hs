@@ -371,6 +371,7 @@ data AnalyticsConfig = AnalyticsConfig
   { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
     earningsWindowSize :: Kernel.Prelude.Int,
     enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
+    financialYearStartMonth :: Kernel.Prelude.Int,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     useDbForEarningAndMetrics :: Kernel.Prelude.Bool,
