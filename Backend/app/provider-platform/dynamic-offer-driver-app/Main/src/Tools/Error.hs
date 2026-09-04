@@ -1800,6 +1800,43 @@ instance IsHTTPError FRFSTripErrors where
 
 instance IsAPIError FRFSTripErrors
 
+-------- FRFS Fleet Operator Trip Action Errors ------------
+data FRFSFleetOperatorTripActionError
+  = TripActionLockNotAcquired Text Text (Maybe Text) -- action label, waybillNo, vehicleNumber
+  | NoMoreTripsAvailable Text (Maybe Text) -- waybillNo, vehicleNumber
+  | NoActiveTripToEnd Text (Maybe Text) -- waybillNo, vehicleNumber
+  | TripGeofenceViolation Text Text (Maybe Text) -- reason, waybillNo, vehicleNumber
+  | TripStartTooEarly Text Text (Maybe Text) -- reason, waybillNo, vehicleNumber
+  | NoTripToRollback Text (Maybe Text) -- waybillNo, vehicleNumber
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSFleetOperatorTripActionError
+
+instance IsBaseError FRFSFleetOperatorTripActionError where
+  toMessage = \case
+    TripActionLockNotAcquired label waybillNo vehicleNumber -> Just $ "Could not acquire lock for trip " <> label <> " action." <> tripActionMetadata waybillNo vehicleNumber
+    NoMoreTripsAvailable waybillNo vehicleNumber -> Just $ "No more trips available for this waybill." <> tripActionMetadata waybillNo vehicleNumber
+    NoActiveTripToEnd waybillNo vehicleNumber -> Just $ "No active trip to end." <> tripActionMetadata waybillNo vehicleNumber
+    TripGeofenceViolation reason waybillNo vehicleNumber -> Just $ reason <> tripActionMetadata waybillNo vehicleNumber
+    TripStartTooEarly reason waybillNo vehicleNumber -> Just $ reason <> tripActionMetadata waybillNo vehicleNumber
+    NoTripToRollback waybillNo vehicleNumber -> Just $ "No trip to rollback." <> tripActionMetadata waybillNo vehicleNumber
+    where
+      tripActionMetadata waybillNo vehicleNumber = " [waybillNo: " <> waybillNo <> ", vehicleNumber: " <> fromMaybe "unknown" vehicleNumber <> "]"
+
+instance IsHTTPError FRFSFleetOperatorTripActionError where
+  toErrorCode = \case
+    TripActionLockNotAcquired {} -> "TRIP_ACTION_LOCK_NOT_ACQUIRED"
+    NoMoreTripsAvailable {} -> "NO_MORE_TRIPS_AVAILABLE"
+    NoActiveTripToEnd {} -> "NO_ACTIVE_TRIP_TO_END"
+    TripGeofenceViolation {} -> "TRIP_GEOFENCE_VIOLATION"
+    TripStartTooEarly {} -> "TRIP_START_TOO_EARLY"
+    NoTripToRollback {} -> "NO_TRIP_TO_ROLLBACK"
+  toHttpCode = \case
+    TripActionLockNotAcquired {} -> E409
+    _ -> E400
+
+instance IsAPIError FRFSFleetOperatorTripActionError
+
 ---------- WMB ERRORS --------------------
 
 data RouteNotFoundError
