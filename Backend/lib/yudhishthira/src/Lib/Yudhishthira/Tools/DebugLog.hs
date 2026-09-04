@@ -189,6 +189,7 @@ runLogicsWithDebugLog callerApp mocId domain mbEntityTransactionId logics data_ 
       let inputVal = A.toJSON data_
       let logicVal = A.toJSON logics
       let outputVal = resp.result
+      logDebug $ "json logic result - " <> (CS.cs . A.encode $ resp)
       handle (\(e :: SomeException) -> logWarning $ "Debug log to ClickHouse failed: " <> show e) $
         insertJsonLogicTransaction callerApp domainStr mbEntityTransactionId inputVal logicVal outputVal
   return resp
