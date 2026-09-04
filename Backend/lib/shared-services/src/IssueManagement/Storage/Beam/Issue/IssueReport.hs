@@ -27,6 +27,7 @@ data IssueReportT f = IssueReportT
     personId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
     ticketBookingId :: B.C f (Maybe Text),
+    scheduledBookingTransactionId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     description :: B.C f Text,
     assignee :: B.C f (Maybe Text),
@@ -57,6 +58,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['becknIssueId], ['additionalTicketIds]])
+$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['becknIssueId], ['additionalTicketIds], ['merchantOperatingCityId, 'scheduledBookingTransactionId]])
 
 $(mkTableInstancesGenericSchema ''IssueReportT "issue_report")

@@ -859,6 +859,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
             driverId = if identifier == CUSTOMER then Nothing else Just personId,
             rideId = rideId,
             ticketBookingId = ticketBookingId,
+            scheduledBookingTransactionId = Nothing,
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
             categoryId = Just categoryId,
@@ -1175,6 +1176,8 @@ issueInfo ::
 issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)

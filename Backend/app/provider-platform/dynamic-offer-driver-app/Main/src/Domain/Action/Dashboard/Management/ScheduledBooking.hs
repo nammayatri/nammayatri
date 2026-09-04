@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Management.ScheduledBooking
     getScheduledBookingNearbyDrivers,
     postScheduledBookingAssign,
     postScheduledBookingUnassign,
+    postScheduledBookingOpsNote,
   )
 where
 
@@ -26,6 +27,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Sc
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nubBy, sortOn)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
@@ -33,15 +35,23 @@ import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRideStatus
 import qualified Domain.Types.RiderDetails as DRD
 import Environment
+import qualified IssueManagement.Common as Issue
+import qualified IssueManagement.Domain.Types.Issue.Comment as DComment
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIssueCategory
+import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIssueReport
+import qualified IssueManagement.Storage.Queries.Issue.Comment as QComment
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (getCoordinates)
 import qualified Kernel.External.Maps.Types as KEMT
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -54,6 +64,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -75,6 +86,15 @@ import qualified Tools.Maps as Maps
 -- list at the exact moment of pickup (agreed 30-minute grace window).
 graceWindowSeconds :: Int
 graceWindowSeconds = 30 * 60
+
+scheduledBookingIssuePersonId :: Id DP.Person
+scheduledBookingIssuePersonId = Id "00000000-0000-0000-0000-000000000000"
+
+scheduledBookingIssueDriverId :: Id Issue.Person
+scheduledBookingIssueDriverId = Id "driver-0000000-0000-1"
+
+scheduledBookingIssueCategoryId :: Id DIssueCategory.IssueCategory
+scheduledBookingIssueCategoryId = Id "Schedule_Booking_Issue"
 
 -- | Upper bound used when the caller does not pass a `to` filter.
 defaultLookaheadSeconds :: Int
@@ -174,6 +194,7 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
   (mbDriverName, mbDriverPhoneNo) <- fetchDriverNameAndPhone (mbRide <&> (.driverId))
   (mbDistanceToPickup, mbEtaDuration, mbDriverLocation) <- maybe (pure (Nothing, Nothing, Nothing)) (getDriverProximityToPickup booking) mbRide
   reallocationHistory <- buildReallocationHistory booking.transactionId
+  opsNotes <- getScheduledBookingOpsNotes booking.merchantOperatingCityId booking.transactionId
   pure
     Common.ScheduledBookingInfoRes
       { transactionId = booking.transactionId,
@@ -199,7 +220,8 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
         currency = booking.currency,
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,
-        reallocationHistory
+        reallocationHistory,
+        opsNotes
       }
 
 -- | Reconstruct the reallocation timeline: every booking that has ever shared this
@@ -388,6 +410,100 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
           }
   cancelRideImpl ride.id DRide.Dashboard bookingCReason True Nothing False
   pure APISuccess.Success
+
+postScheduledBookingOpsNote ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.OpsNoteReq ->
+  Flow APISuccess.APISuccess
+postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId req = do
+  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
+  note <- validateOpsNote req.content
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
+  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
+    throwError (BookingNotFound transactionId)
+  Redis.withWaitOnLockRedisWithExpiry (opsNoteLockKey merchantOpCity.id transactionId) 10 10 $ do
+    issueReport <- getOrCreateScheduledBookingIssueReport booking
+    commentId <- generateGUID
+    now <- getCurrentTime
+    QComment.create
+      DComment.Comment
+        { id = commentId,
+          issueReportId = issueReport.id,
+          authorId = Id requestorId,
+          comment = note,
+          createdAt = now,
+          merchantId = Just $ cast booking.providerId
+        }
+  pure APISuccess.Success
+
+getScheduledBookingOpsNotes :: Id DMOC.MerchantOperatingCity -> Text -> Flow [Common.OpsNote]
+getScheduledBookingOpsNotes merchantOperatingCityId transactionId = do
+  mbIssueReport <- QIssueReport.findByScheduledBookingTransactionId (cast merchantOperatingCityId) transactionId
+  maybe (pure []) (fmap (map toOpsNote) . QComment.findAllByIssueReportId . (.id)) mbIssueReport
+  where
+    toOpsNote comment =
+      Common.OpsNote
+        { id = comment.id.getId,
+          authorId = comment.authorId.getId,
+          authorName = Nothing,
+          content = comment.comment,
+          createdAt = comment.createdAt
+        }
+
+getOrCreateScheduledBookingIssueReport :: SRB.Booking -> Flow DIssueReport.IssueReport
+getOrCreateScheduledBookingIssueReport booking =
+  QIssueReport.findByScheduledBookingTransactionId (cast booking.merchantOperatingCityId) booking.transactionId >>= \case
+    Just issueReport -> pure issueReport
+    Nothing -> do
+      issueReportId <- generateGUID
+      now <- getCurrentTime
+      let issueReport =
+            DIssueReport.IssueReport
+              { id = issueReportId,
+                shortId = Nothing,
+                personId = cast scheduledBookingIssuePersonId,
+                driverId = Just scheduledBookingIssueDriverId,
+                rideId = Nothing,
+                ticketBookingId = Nothing,
+                scheduledBookingTransactionId = Just booking.transactionId,
+                merchantOperatingCityId = Just $ cast booking.merchantOperatingCityId,
+                description = "Scheduled booking operations notes",
+                assignee = Nothing,
+                status = Issue.NOT_APPLICABLE,
+                categoryId = Just scheduledBookingIssueCategoryId,
+                optionId = Nothing,
+                deleted = False,
+                mediaFiles = [],
+                createdAt = now,
+                updatedAt = now,
+                ticketId = Nothing,
+                additionalTicketIds = Nothing,
+                chats = [],
+                merchantId = Just $ cast booking.providerId,
+                becknIssueId = Nothing,
+                reopenedCount = 0,
+                customerResponse = Nothing
+              }
+      QIssueReport.create issueReport
+      pure issueReport
+
+validateOpsNote :: Text -> Flow Text
+validateOpsNote rawNote = do
+  let note = T.strip rawNote
+  when (T.null note) $ throwError (InvalidRequest "note cannot be empty")
+  when (T.length note > 255) $ throwError (InvalidRequest "note cannot exceed 255 characters")
+  pure note
+
+opsNoteLockKey :: Id DMOC.MerchantOperatingCity -> Text -> Text
+opsNoteLockKey merchantOperatingCityId transactionId =
+  "ScheduledBookingOpsNote:" <> merchantOperatingCityId.getId <> ":" <> transactionId
 
 -- Live driver proximity to pickup via OSRM (Maps.getDistance -> .getDistances config): one LTS
 -- location fetch + one distance call that returns both distance and duration.
