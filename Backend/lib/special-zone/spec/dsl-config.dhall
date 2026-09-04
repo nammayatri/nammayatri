@@ -188,4 +188,5 @@ in  { _output = outputPath
     , _migrationParams =
         [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text
+    , _importsMapping = [] : List { _1 : Text, _2 : Optional Text }
     }

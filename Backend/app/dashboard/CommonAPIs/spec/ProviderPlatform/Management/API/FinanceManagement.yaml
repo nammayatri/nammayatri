@@ -36,7 +36,7 @@ imports:
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
 
-module: FinanceManagement
+module: FinanceManagement #
 
 apis:
   # ----- Subscription Purchase -----
