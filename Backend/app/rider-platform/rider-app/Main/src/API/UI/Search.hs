@@ -656,8 +656,11 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         | mode `elem` (fromMaybe [] riderConfig.domainRouteCalculationEnabledModes) = do
           case vehicleCategory of
             -- preliminaryLeg for bus is to be Nothing only when firstMileRemoved is True
-            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (if isFirstMileRemoved then (\_ _ -> pure Nothing) else getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
+            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (if isFirstMileRemoved then (\_ _ -> pure Nothing) else getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
+            -- An interchange metro journey is planned by the hopper index in the in-memory GTFS
+            -- server, which returns one seated ride per line. Anything that stops it answering
+            -- falls back to direct route discovery, and from there to the OTP response.
+            BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode (riderConfig.enableMetroFrfsSearch == Just True) >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             -- Once a city is migrated, subway route discovery happens in the FRFS search flow that the
             -- client calls directly, so the multimodal path stops building via routes for it.
             BecknV2.OnDemand.Enums.SUBWAY
