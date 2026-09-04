@@ -534,20 +534,17 @@ completeReschedule oldBookingId stagingBookingId = do
       (Just tripId, Just fromIdx, Just toIdx)
         | not (null oldSeatIds) -> SeatBooking.releaseConfirmedSeats tripId oldSeatIds fromIdx toIdx
       _ -> pure ()
-    -- The old trip is not happening, so its claimed window is freed. It goes here rather than in the
-    -- cancel path because completeReschedule marks the old booking RESCHEDULED, not CANCELLED, so
-    -- handleCancelledStatus -- and the release wired into it -- never runs for a reschedule.
-    whenJust oldBooking.overrideAppliedEntityId $ \entityId -> do
-      mbRider <- QPerson.findById oldBooking.riderId
-      whenJust mbRider $ \rider ->
-        FRFSPassOverride.releaseBookedTrip rider (Id entityId) oldBookingId.getId
-          (fromMaybe oldBooking.createdAt oldBooking.startTime)
     -- Commit marker (MUST stay last): finalize the old booking + its tickets only after the payment/recon
     -- migration and seat release above have all succeeded. The guard at the top keys on this RESCHEDULED
     -- status, so a retry after any partial failure re-runs every idempotent step above and lands here once.
     void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.RESCHEDULED oldBookingId
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.RESCHEDULED oldBookingId
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
+  whenJust oldBooking.overrideAppliedEntityId $ \entityId -> do
+    mbRider <- QPerson.findById oldBooking.riderId
+    whenJust mbRider $ \rider ->
+      FRFSPassOverride.releaseBookedTrip rider (Id entityId) oldBookingId.getId
+        (fromMaybe oldBooking.createdAt oldBooking.startTime)
 
 rollbackFailedReschedule ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
@@ -575,12 +572,10 @@ rollbackFailedReschedule stagingBookingId = do
       whenJust mbOldPayment $ \oldPayment -> do
         oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
         syncPaymentCategories oldPayment.id oldQuoteCategories
-  -- The staging trip is abandoned, so release what it claimed. The PARENT's window needs no restore:
-  -- the claim never touched it, which is the whole reason the claim keys on the booking's own id.
+  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.FAILED stagingBookingId
   whenJust stagingBooking.overrideAppliedEntityId $ \entityId -> do
     mbRider <- QPerson.findById stagingBooking.riderId
     whenJust mbRider $ \rider ->
       FRFSPassOverride.releaseBookedTrip rider (Id entityId) stagingBookingId.getId
         (fromMaybe stagingBooking.createdAt stagingBooking.startTime)
-  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.FAILED stagingBookingId
   logInfo $ "FRFSReschedule:rollbackFailedReschedule stagingBookingId=" <> stagingBookingId.getId
