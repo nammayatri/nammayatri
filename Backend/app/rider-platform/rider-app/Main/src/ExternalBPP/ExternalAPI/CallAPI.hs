@@ -5,7 +5,7 @@ import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types hiding (ONDC)
 import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
@@ -202,15 +202,10 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-parseTnstcTimestamp :: Text -> Maybe UTCTime
-parseTnstcTimestamp raw =
-  addUTCTime (negate 19800)
-    <$> parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" (T.unpack (T.strip raw))
-
 mkTnstcFare :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Maybe FRFSUtils.FRFSFare
 mkTnstcFare now svc = do
   adult <- svc.svcAdultFare
-  let mbStopBooking = svc.svcStopBookingTime >>= parseTnstcTimestamp
+  let mbStopBooking = svc.svcStopBookingTime >>= TNSTCTypes.parseTnstcTimestamp
   case mbStopBooking of
     Just cutoff | cutoff <= now -> Nothing
     _ -> mkTnstcFare' now svc adult mbStopBooking

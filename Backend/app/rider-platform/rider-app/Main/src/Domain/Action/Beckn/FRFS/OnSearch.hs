@@ -369,7 +369,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
           Just adultPrice -> SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback adultPrice search.quantity ticketsBookedInEvent
           Nothing -> (Nothing, Nothing)
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
-      cappedValidTill mbStopBooking = maybe validTill (min validTill) mbStopBooking
+      cappedValidTill = maybe validTill (min validTill)
       frfsQuote =
         Quote.FRFSQuote
           { Quote._type = _type,

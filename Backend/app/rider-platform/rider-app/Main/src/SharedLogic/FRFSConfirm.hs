@@ -570,7 +570,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                    tnstcConfig.counterCode
                  ) of
               (Just placeId, Just serviceId, Just journeyDate, Just counterCode) -> do
-                placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig search.fromStationCode search.fromStationCode
+                let tripCode = fromMaybe "" quote'.providerTripCode
+                placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
                 points <-
                   TNSTCBooking.getPickupPointsCached tnstcConfig ibppConfig.id.getId $
                     TNSTCBooking.GetPickupPointsReq
@@ -585,7 +586,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           case res of
             Right t -> return t
             Left err -> do
-              logWarning $ "getTnstcBoardingTime failed, falling back to booking time: " <> show err
+              logError $ "getTnstcBoardingTime failed, falling back to booking time: " <> show err
               return Nothing
         _ -> return Nothing
 
