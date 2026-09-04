@@ -225,6 +225,12 @@ getTollCharges tagGroup currency = do
   tollCharges <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency tollCharges
 
+getBookingDeposit :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getBookingDeposit tagGroup currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.BOOKING_DEPOSIT tagGroup
+  bookingDeposit <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency bookingDeposit
+
 getTollNames :: Spec.Item -> Maybe [Text]
 getTollNames item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TOLL_NAMES item.itemTags

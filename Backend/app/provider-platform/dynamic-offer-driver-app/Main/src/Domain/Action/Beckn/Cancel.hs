@@ -194,11 +194,15 @@ cancel req merchant booking mbActiveSearchTry = do
         return (isReallocated, Nothing, Nothing)
       else do
         let cancellationTaxAmount = fromMaybe 0 (chargesOutcome >>= (.tax))
+            -- A booking with a secured deposit charges that deposit and nothing else:
+            -- applyTerminalConsequences produces no matrix money for it, so there is no
+            -- second charge to combine with and no dues to settle later.
+            depositForfeit = Orchestrator.depositForfeitFee booking (mbConsequenceCtx >>= \ctx -> ctx.decision.faultVerdict)
             -- base + tax kept separate; total built only here for the on_cancel
             -- CancellationTerm. A non-positive total (zero, or a matrix CREDIT) is
             -- never surfaced as a cancellation fee on the Beckn side.
             cancelCharges = do
-              base <- chargesOutcome >>= (.fee)
+              base <- depositForfeit <|> (chargesOutcome >>= (.fee))
               let total = base + cancellationTaxAmount
               if total > 0 then Just (PriceAPIEntity {amount = total, currency = booking.currency}) else Nothing
 

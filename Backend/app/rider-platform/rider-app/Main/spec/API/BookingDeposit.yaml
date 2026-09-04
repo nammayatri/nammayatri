@@ -1,0 +1,48 @@
+# Triggers NammaDSL code generation for:
+#   src-read-only/API/Types/UI/BookingDeposit.hs   -- wire request/response types
+#   src-read-only/API/Action/UI/BookingDeposit.hs  -- Servant route type + handler glue
+# Business logic lives in:
+#   src/Domain/Action/UI/BookingDeposit.hs
+
+imports:
+  Booking: Domain.Types.Booking
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  HighPrecMoney: Kernel.Types.Common
+
+module: BookingDeposit
+
+types:
+  BookingDepositPaymentIntentReq:
+    bookingId: Id Booking
+
+  # feeStatus tells the client what to do next: COVERED = fee secured, move on to the
+  # finding-driver screen; PAYABLE = open the payment sheet with sdkPayload; PROCESSING =
+  # payment charged, fulfilment in flight, keep polling with no second sheet; RETRY = the
+  # order could not be built this call (transient), poll again.
+  # requiredAmount is the fee itself, not the shortfall, so the client can show what the
+  # deposit is; the order is minted for the difference against availableBalance.
+  BookingDepositPaymentIntentResp:
+    requiredAmount: HighPrecMoney
+    availableBalance: HighPrecMoney
+    feeStatus: BookingDepositStatus
+    sdkPayload: Maybe CreateOrderResp
+
+  BookingDepositStatus:
+    enum: "COVERED, PAYABLE, PROCESSING, RETRY"
+
+apis:
+  # Payment sheet AND status poll in one: each call first verifies any pending payment with
+  # the gateway (driving credit -> hold -> confirm on success), then re-decides, then returns
+  # the SDK payload if the fee is still payable. Idempotent: it reuses the live order (or
+  # mints a fresh one only after the old one expired at the gateway), so polling this
+  # endpoint cannot create duplicate charges.
+  # `name` is required because the path is hyphenated: without it the generator derives
+  # `postBooking - fee - payment - intent`, which is not a valid Haskell identifier.
+  - POST:
+      endpoint: /bookingDepositPaymentIntent
+      name: postBookingDepositPaymentIntent
+      auth: TokenAuth
+      request:
+        type: BookingDepositPaymentIntentReq
+      response:
+        type: BookingDepositPaymentIntentResp

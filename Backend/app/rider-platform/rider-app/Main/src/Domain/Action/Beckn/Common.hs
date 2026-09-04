@@ -106,6 +106,7 @@ import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
@@ -866,6 +867,7 @@ rideCompletedReqHandler ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
+    MonadMask m,
     SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -1116,6 +1118,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  void $ withTryCatch "rideCompleted:captureBookingDeposit" $ BookingDeposit.captureBookingDeposit booking
   fork "Increment completed count + evaluate rewards" $ do
     void $ CCR.incrementCompletedCount booking.riderId 1
     RewardsConsumer.evaluateRewardsIfEnabled
@@ -1324,6 +1327,7 @@ cancellationTransaction ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
+    MonadMask m,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
@@ -1362,10 +1366,21 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
       QRB.updateStatus booking.riderId booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
+  depositApplied <-
+    if isJust booking.bookingDepositAmount
+      then case cancellationFee of
+        Just _ -> BookingDeposit.captureBookingDeposit booking
+        Nothing -> do
+          case cancellationSource of
+            DBCR.ByUser -> BookingDeposit.releaseBookingDeposit booking
+            _ -> void $ BookingDeposit.refundBookingDeposit booking
+          pure (0 :: HighPrecMoney)
+      else pure 0
   whenJust mbRide $ \ride -> void $ do
     whenJust cancellationFee $ \fee -> do
-      QRide.updateCancellationChargesOnCancel (Just (fee.amount + maybe 0 (.amount) cancellationFeeTax)) ride.id
-      QRide.updateCancellationFeeStatus (Just DRide.PENDING) ride.id
+      let netCharges = max 0 (fee.amount + maybe 0 (.amount) cancellationFeeTax - depositApplied)
+      QRide.updateCancellationChargesOnCancel (Just netCharges) ride.id
+      QRide.updateCancellationFeeStatus (Just (if netCharges <= 0 then DRide.CLEARED else DRide.PENDING)) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
       SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
@@ -1397,35 +1412,50 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                       merchantOpCity.city
                       action
                       ride.bppRideId.getId
-          let cancellationTax = maybe 0 (.amount) cancellationFeeTax
-              cancellationBase = fee.amount
-          if immediateCharge
-            then case currentPaymentInstrument of
-              DMPM.Card _ ->
-                CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger
-              _ -> do
-                -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
-                void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
-                -- Create pending cancellation entries then mark as DUE for later collection
-                cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
-                case cashLedgerResp of
-                  Right (_mbInvoiceId, pendingEntryIds) ->
-                    RidePaymentFinance.markEntriesAsDue pendingEntryIds
-                  _ -> return ()
-                syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
-            else do
-              -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
-              -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
-              logDebug $ "[CancellationSettlement] immediateCharge=false, creating manual cancellation due for rideId=" <> ride.id.getId
+          -- Only the slice the deposit did not cover is collected externally. The deposit is
+          -- applied to the base first, then to the tax.
+          let cancellationTaxFull = maybe 0 (.amount) cancellationFeeTax
+              cancellationBaseFull = fee.amount
+              cancellationBase = max 0 (cancellationBaseFull - depositApplied)
+              cancellationTax = max 0 (cancellationTaxFull - max 0 (depositApplied - cancellationBaseFull))
+          if cancellationBase + cancellationTax <= 0
+            then do
+              logInfo $ "[CancellationSettlement] cancellation charge fully covered by booking deposit for rideId=" <> ride.id.getId
+              -- Nothing left to collect: clear any pending ride-payment entries, mark the fee
+              -- settled, and sync the settlement so the BPP does not track it as dues.
               if ride.onlinePayment
                 then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
                 else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
-              dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
-              case dueLedgerResp of
-                Right (_mbInvoiceId, pendingEntryIds) ->
-                  RidePaymentFinance.markEntriesAsDue pendingEntryIds
-                _ -> return ()
-              syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
+              QRide.updateCancellationFeeStatus (Just DRide.CLEARED) ride.id
+              syncCancellationLedger CallBPPInternal.SettleCancellationLedger
+            else
+              if immediateCharge
+                then case currentPaymentInstrument of
+                  DMPM.Card _ ->
+                    CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger
+                  _ -> do
+                    -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
+                    void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+                    -- Create pending cancellation entries then mark as DUE for later collection
+                    cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
+                    case cashLedgerResp of
+                      Right (_mbInvoiceId, pendingEntryIds) ->
+                        RidePaymentFinance.markEntriesAsDue pendingEntryIds
+                      _ -> return ()
+                    syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
+                else do
+                  -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
+                  -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
+                  logDebug $ "[CancellationSettlement] immediateCharge=false, creating manual cancellation due for rideId=" <> ride.id.getId
+                  if ride.onlinePayment
+                    then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+                    else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+                  dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
+                  case dueLedgerResp of
+                    Right (_mbInvoiceId, pendingEntryIds) ->
+                      RidePaymentFinance.markEntriesAsDue pendingEntryIds
+                    _ -> return ()
+                  syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId

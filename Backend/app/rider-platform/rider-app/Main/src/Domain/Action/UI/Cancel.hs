@@ -28,6 +28,7 @@ module Domain.Action.UI.Cancel
     getCancellationDuesDetails,
     makeCustomerBlockingKey,
     isBookingCancellable,
+    buildLocalCancelRes,
   )
 where
 
@@ -160,6 +161,29 @@ softCancel booking _ = do
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         cancellationReason = Nothing,
         ..
+      }
+
+-- | CancelRes for a booking this BAP has already cancelled locally, used only to tell the BPP
+--   after the fact. Distinct from `cancel`, which throws once the booking is CANCELLED and so
+--   cannot serve a notify-after-repair path.
+buildLocalCancelRes :: (EsqDBFlow m r, CacheFlow m r) => SRB.Booking -> Id SRB.BPPBooking -> m CancelRes
+buildLocalCancelRes booking bppBookingId = do
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  pure
+    CancelRes
+      { bppBookingId = bppBookingId,
+        bppId = booking.providerId,
+        bppUrl = booking.providerUrl,
+        cancellationSource = SBCR.ByApplication,
+        transactionId = booking.transactionId,
+        merchant = merchant,
+        cancelStatus = show Enums.CONFIRM_CANCEL,
+        city = city,
+        vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
+        cancellationReason = Nothing
       }
 
 cancel ::

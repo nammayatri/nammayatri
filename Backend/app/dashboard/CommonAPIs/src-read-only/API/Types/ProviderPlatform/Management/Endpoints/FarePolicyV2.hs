@@ -123,6 +123,7 @@ data FPV2ConditionalChargeCategory
   = SAFETY_PLUS_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
   | NO_CHARGES
+  | BOOKING_DEPOSIT
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -565,69 +566,69 @@ type GetFarePolicyV2List =
            "serviceTier"
            Dashboard.Common.ServiceTierType
       :> QueryParam "enabled" Kernel.Prelude.Bool
-      :> Get '[JSON] FPV2ProductListRes
+      :> Get ('[JSON]) FPV2ProductListRes
   )
 
-type GetFarePolicyV2Policy = ("policy" :> Capture "farePolicyId" (Kernel.Types.Id.Id Dashboard.Common.FarePolicy) :> Get '[JSON] FPV2PolicyRes)
+type GetFarePolicyV2Policy = ("policy" :> Capture "farePolicyId" (Kernel.Types.Id.Id Dashboard.Common.FarePolicy) :> Get ('[JSON]) FPV2PolicyRes)
 
 type PostFarePolicyV2PolicyReplace =
   ( "policy" :> Capture "farePolicyId" (Kernel.Types.Id.Id Dashboard.Common.FarePolicy) :> "replace" :> QueryParam "dryRun" Kernel.Prelude.Bool
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            FPV2ReplaceReq
-      :> Post '[JSON] FPV2ReplaceRes
+      :> Post ('[JSON]) FPV2ReplaceRes
   )
 
-type PostFarePolicyV2BulkReplace = ("bulkReplace" :> QueryParam "dryRun" Kernel.Prelude.Bool :> ReqBody '[JSON] FPV2BulkReplaceReq :> Post '[JSON] FPV2BulkReplaceRes)
+type PostFarePolicyV2BulkReplace = ("bulkReplace" :> QueryParam "dryRun" Kernel.Prelude.Bool :> ReqBody ('[JSON]) FPV2BulkReplaceReq :> Post ('[JSON]) FPV2BulkReplaceRes)
 
-type PostFarePolicyV2Preview = ("preview" :> ReqBody '[JSON] FPV2PreviewReq :> Post '[JSON] FPV2PreviewRes)
+type PostFarePolicyV2Preview = ("preview" :> ReqBody ('[JSON]) FPV2PreviewReq :> Post ('[JSON]) FPV2PreviewRes)
 
-type PostFarePolicyV2ProductCreate = ("product" :> "create" :> ReqBody '[JSON] FPV2CreateProductReq :> Post '[JSON] FPV2CreateProductRes)
+type PostFarePolicyV2ProductCreate = ("product" :> "create" :> ReqBody ('[JSON]) FPV2CreateProductReq :> Post ('[JSON]) FPV2CreateProductRes)
 
 type PostFarePolicyV2ProductUpdate =
-  ( "product" :> Capture "fareProductId" (Kernel.Types.Id.Id Dashboard.Common.FareProduct) :> "update" :> ReqBody '[JSON] FPV2UpdateProductReq
+  ( "product" :> Capture "fareProductId" (Kernel.Types.Id.Id Dashboard.Common.FareProduct) :> "update" :> ReqBody ('[JSON]) FPV2UpdateProductReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 type PostFarePolicyV2ProductRemove =
-  ( "product" :> Capture "fareProductId" (Kernel.Types.Id.Id Dashboard.Common.FareProduct) :> "remove" :> ReqBody '[JSON] FPV2RemoveProductReq
+  ( "product" :> Capture "fareProductId" (Kernel.Types.Id.Id Dashboard.Common.FareProduct) :> "remove" :> ReqBody ('[JSON]) FPV2RemoveProductReq
       :> Post
-           '[JSON]
+           ('[JSON])
            FPV2ChangeRequestRes
   )
 
-type GetFarePolicyV2ChangeRequestList = ("changeRequest" :> "list" :> QueryParam "status" FPV2ChangeRequestStatus :> Get '[JSON] FPV2ChangeRequestListRes)
+type GetFarePolicyV2ChangeRequestList = ("changeRequest" :> "list" :> QueryParam "status" FPV2ChangeRequestStatus :> Get ('[JSON]) FPV2ChangeRequestListRes)
 
 type PostFarePolicyV2ChangeRequestDecide =
   ( "changeRequest" :> Capture "requestId" (Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest) :> "decide"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            FPV2DecideChangeRequestReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
-type GetFarePolicyV2AlertsSubscriptions = ("alerts" :> "subscriptions" :> Get '[JSON] FPV2SubscriptionListRes)
+type GetFarePolicyV2AlertsSubscriptions = ("alerts" :> "subscriptions" :> Get ('[JSON]) FPV2SubscriptionListRes)
 
-type PostFarePolicyV2AlertsSubscribe = ("alerts" :> "subscribe" :> ReqBody '[JSON] FPV2SubscriptionReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostFarePolicyV2AlertsSubscribe = ("alerts" :> "subscribe" :> ReqBody ('[JSON]) FPV2SubscriptionReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostFarePolicyV2AlertsUnsubscribe = ("alerts" :> "unsubscribe" :> ReqBody '[JSON] FPV2SubscriptionReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostFarePolicyV2AlertsUnsubscribe = ("alerts" :> "unsubscribe" :> ReqBody ('[JSON]) FPV2SubscriptionReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 data FarePolicyV2APIs = FarePolicyV2APIs
-  { getFarePolicyV2List :: Kernel.Prelude.Maybe Dashboard.Common.TripCategory -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient FPV2ProductListRes,
-    getFarePolicyV2Policy :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> EulerHS.Types.EulerClient FPV2PolicyRes,
-    postFarePolicyV2PolicyReplace :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> FPV2ReplaceReq -> EulerHS.Types.EulerClient FPV2ReplaceRes,
-    postFarePolicyV2BulkReplace :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> FPV2BulkReplaceReq -> EulerHS.Types.EulerClient FPV2BulkReplaceRes,
-    postFarePolicyV2Preview :: FPV2PreviewReq -> EulerHS.Types.EulerClient FPV2PreviewRes,
-    postFarePolicyV2ProductCreate :: FPV2CreateProductReq -> EulerHS.Types.EulerClient FPV2CreateProductRes,
-    postFarePolicyV2ProductUpdate :: Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2UpdateProductReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postFarePolicyV2ProductRemove :: Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2RemoveProductReq -> EulerHS.Types.EulerClient FPV2ChangeRequestRes,
-    getFarePolicyV2ChangeRequestList :: Kernel.Prelude.Maybe FPV2ChangeRequestStatus -> EulerHS.Types.EulerClient FPV2ChangeRequestListRes,
-    postFarePolicyV2ChangeRequestDecide :: Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> FPV2DecideChangeRequestReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getFarePolicyV2AlertsSubscriptions :: EulerHS.Types.EulerClient FPV2SubscriptionListRes,
-    postFarePolicyV2AlertsSubscribe :: FPV2SubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postFarePolicyV2AlertsUnsubscribe :: FPV2SubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getFarePolicyV2List :: (Kernel.Prelude.Maybe (Dashboard.Common.TripCategory) -> Kernel.Prelude.Maybe (Lib.Types.SpecialLocation.Area) -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient FPV2ProductListRes),
+    getFarePolicyV2Policy :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> EulerHS.Types.EulerClient FPV2PolicyRes),
+    postFarePolicyV2PolicyReplace :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> FPV2ReplaceReq -> EulerHS.Types.EulerClient FPV2ReplaceRes),
+    postFarePolicyV2BulkReplace :: (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> FPV2BulkReplaceReq -> EulerHS.Types.EulerClient FPV2BulkReplaceRes),
+    postFarePolicyV2Preview :: (FPV2PreviewReq -> EulerHS.Types.EulerClient FPV2PreviewRes),
+    postFarePolicyV2ProductCreate :: (FPV2CreateProductReq -> EulerHS.Types.EulerClient FPV2CreateProductRes),
+    postFarePolicyV2ProductUpdate :: (Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2UpdateProductReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postFarePolicyV2ProductRemove :: (Kernel.Types.Id.Id Dashboard.Common.FareProduct -> FPV2RemoveProductReq -> EulerHS.Types.EulerClient FPV2ChangeRequestRes),
+    getFarePolicyV2ChangeRequestList :: (Kernel.Prelude.Maybe (FPV2ChangeRequestStatus) -> EulerHS.Types.EulerClient FPV2ChangeRequestListRes),
+    postFarePolicyV2ChangeRequestDecide :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> FPV2DecideChangeRequestReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getFarePolicyV2AlertsSubscriptions :: (EulerHS.Types.EulerClient FPV2SubscriptionListRes),
+    postFarePolicyV2AlertsSubscribe :: (FPV2SubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postFarePolicyV2AlertsUnsubscribe :: (FPV2SubscriptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkFarePolicyV2APIs :: (Client EulerHS.Types.EulerClient API -> FarePolicyV2APIs)
@@ -652,6 +653,6 @@ data FarePolicyV2UserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''FPV2ChangeRequestStatus)
+$(mkHttpInstancesForEnum (''FPV2ChangeRequestStatus))
 
-$(Data.Singletons.TH.genSingletons [''FarePolicyV2UserActionType])
+$(Data.Singletons.TH.genSingletons [(''FarePolicyV2UserActionType)])

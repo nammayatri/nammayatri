@@ -96,6 +96,7 @@ data FixedMoneyAPI = FixedMoneyAPI {amount :: Kernel.Types.Common.HighPrecMoney,
 data MoneyDeductionAPI
   = FixedMoneyAPIEntity FixedMoneyAPI
   | PercentageMoneyAPIEntity PercentageMoneyAPI
+  | MatchBookingDepositAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

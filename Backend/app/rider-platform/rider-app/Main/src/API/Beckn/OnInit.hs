@@ -71,12 +71,40 @@ onInit _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
             let isPaytmEdcPaymentBeforeConfirm =
                   booking.requiresPaymentBeforeConfirm
                     && booking.paymentInstrument == Just DMPM.BoothOnline
+                isBookingDepositPaymentBeforeConfirm =
+                  booking.requiresPaymentBeforeConfirm
+                    && isJust booking.bookingDepositAmount
+                    && not isPaytmEdcPaymentBeforeConfirm
+                sendConfirm =
+                  handle (errHandler booking) . void . withShortRetry $ do
+                    confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+                    Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
+                    CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
             if isPaytmEdcPaymentBeforeConfirm
               then void $ DPayment.createRideBookingPaymentOrder booking
-              else handle (errHandler booking) . void . withShortRetry $ do
-                confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
-                Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
-                CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+              else
+                if isBookingDepositPaymentBeforeConfirm
+                  then do
+                    (orderResult, _availableAtDecision) <- DPayment.createBookingDepositPaymentOrder booking
+                    case orderResult of
+                      -- The hold was placed under the decide lock inside
+                      -- createBookingDepositPaymentOrder, so the fee is secured. Resume through
+                      -- the shared resumer: its Fulfil lock + FulfilTriggered marker
+                      -- serialise this against the payment-intent poll and the webhook, so
+                      -- at most one confirm fires. errHandler keeps the cancel-on-Beckn-
+                      -- failure behavior of the plain sendConfirm path.
+                      DPayment.BookingDepositCoveredByBalance ->
+                        handle (errHandler booking) $ DPayment.resumeBookingDepositConfirm booking.id
+                      -- Order is live; the payment webhook resumes confirm.
+                      DPayment.BookingDepositOrderReady _ -> pure ()
+                      -- Already paid, fulfilment mid-flight; the webhook/poll resumes confirm.
+                      DPayment.BookingDepositOrderProcessing -> pure ()
+                      -- Expired or unbuildable. Withhold confirm: nothing was paid and nothing
+                      -- was held, so confirming here would send a booking to the BPP against a
+                      -- fee that was never secured.
+                      DPayment.BookingDepositOrderUnavailable ->
+                        logError $ "Booking fee order unavailable at on_init for " <> booking.id.getId <> "; withholding confirm"
+                  else sendConfirm
       else do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit

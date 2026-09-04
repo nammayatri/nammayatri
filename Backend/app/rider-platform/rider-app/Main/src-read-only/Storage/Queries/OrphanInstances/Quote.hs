@@ -20,15 +20,15 @@ import qualified Storage.Queries.Transformers.Quote
 
 instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
   fromTType' (Beam.QuoteT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
-    merchantOperatingCityId' <- Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    merchantOperatingCityId' <- (Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId)
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     quoteBreakupList' <- Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id
-    quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
-    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
+    quoteDetails' <- (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)
+    vehicleIconUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) vehicleIconUrl
     pure $
       Just
         Domain.Types.Quote.Quote
@@ -36,17 +36,18 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
+            bookingDeposit = bookingDeposit,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
-            discount = Kernel.Types.Common.mkPrice currency <$> discount,
+            discount = (Kernel.Types.Common.mkPrice currency <$> discount),
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverCancellationNotAllowed = driverCancellationNotAllowed,
-            estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
+            estimatedFare = (Kernel.Types.Common.mkPrice currency estimatedFare),
             estimatedPickupDuration = estimatedPickupDuration,
-            estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            estimatedTotalFare = (Kernel.Types.Common.mkPrice currency estimatedTotalFare),
             fareSettlementType = fareSettlementType,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
@@ -86,29 +87,30 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
+        Beam.bookingDeposit = bookingDeposit,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
-        Beam.currency = Just ((.currency) estimatedFare),
-        Beam.discount = discount <&> (.amount),
-        Beam.distanceToNearestDriver = Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.distanceToNearestDriverValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.driverOfferId = Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.fareProductType = Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.meterRideBppQuoteId = Storage.Queries.Transformers.Quote.getMeterRideBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.rentalDetailsId = Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.specialZoneQuoteId = Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
-        Beam.staticBppQuoteId = Storage.Queries.Transformers.Quote.getStaticBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails),
+        Beam.currency = (Just ((.currency) estimatedFare)),
+        Beam.discount = (discount <&> (.amount)),
+        Beam.distanceToNearestDriver = (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))),
+        Beam.distanceToNearestDriverValue = (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.driverOfferId = (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.fareProductType = (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.meterRideBppQuoteId = (Storage.Queries.Transformers.Quote.getMeterRideBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.rentalDetailsId = (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.specialZoneQuoteId = (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.staticBppQuoteId = (Storage.Queries.Transformers.Quote.getStaticBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationNotAllowed = driverCancellationNotAllowed,
-        Beam.estimatedFare = (.amount) estimatedFare,
+        Beam.estimatedFare = ((.amount) estimatedFare),
         Beam.estimatedPickupDuration = estimatedPickupDuration,
-        Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.estimatedTotalFare = ((.amount) estimatedTotalFare),
         Beam.fareSettlementType = fareSettlementType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
@@ -117,7 +119,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.isSafetyPlus = Kernel.Prelude.Just isSafetyPlus,
         Beam.itemId = itemId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.merchantOperatingCityId = (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
         Beam.navigationInstruction = navigationInstruction,
         Beam.providerId = providerId,
         Beam.providerUrl = Kernel.Prelude.showBaseUrl providerUrl,
@@ -129,12 +131,12 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationSupportNumber = specialLocationSupportNumber,
         Beam.specialLocationTag = specialLocationTag,
-        Beam.tollCharges = tollChargesInfo <&> ((.amount) . (.tollCharges)),
-        Beam.tollNames = tollChargesInfo <&> (.tollNames),
+        Beam.tollCharges = ((tollChargesInfo <&> ((.amount) . (.tollCharges)))),
+        Beam.tollNames = (tollChargesInfo <&> (.tollNames)),
         Beam.tripCategory = tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.validTill = validTill,
-        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
+        Beam.vehicleIconUrl = (Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,

@@ -192,7 +192,7 @@ types:
     - value: Text
     - appliesOn: "[FPV2FareChargeComponent]"
   FPV2ConditionalChargeCategory:
-    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES"
+    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES, BOOKING_DEPOSIT"
   FPV2ConditionalCharge:
     - chargeCategory: FPV2ConditionalChargeCategory
     - charge: HighPrecMoney

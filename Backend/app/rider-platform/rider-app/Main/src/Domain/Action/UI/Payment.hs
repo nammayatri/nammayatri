@@ -16,6 +16,10 @@ module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
     createRideBookingPaymentOrder,
+    createBookingDepositPaymentOrder,
+    resumeBookingDepositConfirm,
+    syncBookingDepositOrderStatus,
+    BookingDepositOrderResult (..),
     abortPaytmEdcIfActive,
     getRideBookingPaymentStatusByBookingId,
     getStatus,
@@ -25,6 +29,7 @@ module Domain.Action.UI.Payment
     paytmEdcCallbackHandler,
     PaytmEdcCallbackReq (..),
     rideBookingOrderStatusHandler,
+    bookingDepositOrderStatusHandler,
     stripeWebhookHandler,
     postWalletRecharge,
     getWalletBalance,
@@ -51,6 +56,7 @@ import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
 -- TODO: Uncomment when PaytmEDC module is available in shared-kernel
@@ -76,6 +82,7 @@ import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Stripe.Types.Common as Stripe
 import qualified Kernel.External.Payment.Types as Payment
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude hiding (head)
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
@@ -98,7 +105,9 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Payment as SPayment
@@ -110,6 +119,7 @@ import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
+import qualified Storage.Queries.BookingPayment as QBookingPayment
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
@@ -287,10 +297,306 @@ createRideBookingPaymentOrder booking = do
       pollPaytmEdcPaymentStatus booking.merchantId booking.merchantOperatingCityId booking.riderId (Id paymentOrderId)
   pure mbOrderResp
 
+data BookingDepositOrderResult
+  = BookingDepositCoveredByBalance
+  | BookingDepositOrderReady Payment.CreateOrderResp
+  | BookingDepositOrderProcessing
+  | BookingDepositOrderUnavailable
+
+bookingDepositFulfilLockKey, bookingDepositFulfilTriggeredKey :: Text -> Text
+bookingDepositFulfilLockKey bookingIdText = "BookingDeposit:Fulfil:" <> bookingIdText
+bookingDepositFulfilTriggeredKey bookingIdText = "BookingDeposit:FulfilTriggered:" <> bookingIdText
+
+fireWithheldConfirm ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r
+  ) =>
+  Id DRB.Booking ->
+  m ()
+fireWithheldConfirm bookingId = do
+  onInitRes <- DOnInit.buildOnInitResFromBooking bookingId
+  confirmReq <- ACL.buildConfirmReqV2 onInitRes
+  void . withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl confirmReq onInitRes.merchant.id
+  Redis.setExp (bookingDepositFulfilTriggeredKey bookingId.getId) ("1" :: Text) 86400
+
+--   Charges the SHORTFALL, not the whole fee, so balance released by an earlier completed ride
+--   is actually reused. The shortfall is recomputed here rather than carried from /confirm:
+--   no hold was placed there (that is why we are on this path), so the balance is unreserved
+--   and may have been spent in between. Recomputing charges what is genuinely owed now.
+createBookingDepositPaymentOrder :: DRB.Booking -> Flow (BookingDepositOrderResult, Maybe HighPrecMoney)
+createBookingDepositPaymentOrder booking = do
+  fee <- booking.bookingDepositAmount & fromMaybeM (InvalidRequest "Booking has no booking fee to fund")
+  mbDecision <- BookingDeposit.decideAndSecureBookingDeposit booking fee
+  case mbDecision of
+    Nothing -> do
+      logError $ "Booking fee order: could not acquire rider lock for " <> booking.id.getId <> "; not minting"
+      pure (BookingDepositOrderUnavailable, Nothing)
+    Just (BookingDeposit.FeeSecured, available) -> do
+      logInfo $ "Booking fee secured from balance, no order needed: " <> booking.id.getId
+      pure (BookingDepositCoveredByBalance, Just available)
+    Just (BookingDeposit.FeeShortfall shortfall, available) -> do
+      attempts <- QBookingPayment.findAllByBookingIdAndServiceType booking.id DOrder.BookingDeposit
+      paidInFlight <- case listToMaybe attempts of
+        Just row
+          | row.status == DBP.SUCCESS -> pure True
+          | row.status == DBP.PENDING -> maybe False (\o -> o.status == Payment.CHARGED) <$> QOrder.findById row.paymentOrderId
+        _ -> pure False
+      if paidInFlight
+        then do
+          logInfo $ "Booking fee order already CHARGED for " <> booking.id.getId <> "; fulfilment in flight"
+          pure (BookingDepositOrderProcessing, Just available)
+        else do
+          res <- mintOrder shortfall attempts
+          pure (res, Just available)
+  where
+    -- Order ids are deterministic per attempt so a crash between the gateway call and the
+    -- link-row insert heals on the next call: the same id is recomputed and
+    -- createOrderService reuses the existing gateway order by primary key. Re-mint ids
+    versionedOrderId n = if n == (0 :: Int) then booking.id.getId else Data.Text.take 33 booking.id.getId <> "-" <> show (n + 1)
+    mintOrder shortfall attempts = do
+      let mintClaimKey = "BookingDeposit:OrderMint:" <> booking.id.getId
+      claimed <- Redis.setNxExpire mintClaimKey 120 True
+      if not claimed
+        then do
+          logInfo $ "Booking fee order mint already in flight for " <> booking.id.getId <> "; not issuing a second gateway call"
+          pure BookingDepositOrderUnavailable
+        else do
+          result <- withTryCatch "bookingDeposit:mintOrder" (mint shortfall attempts)
+          void $ Redis.del mintClaimKey
+          case result of
+            Left err -> do
+              logError $ "Booking fee order mint failed for " <> booking.id.getId <> ": " <> show err
+              pure BookingDepositOrderUnavailable
+            Right res -> pure res
+    mint shortfall attempts = do
+      let nextFreshId = versionedOrderId (length attempts)
+      case listToMaybe attempts of
+        Just row | row.status == DBP.PENDING -> do
+          mbResp <- callCreateOrder row.paymentOrderId.getId shortfall
+          case mbResp of
+            Just orderResp -> pure (BookingDepositOrderReady orderResp)
+            Nothing -> do
+              -- The reused gateway order expired: retire this attempt and mint a fresh order
+              -- under the next versioned id, so an abandoned payment sheet is never a dead end.
+              QBookingPayment.updateStatusById DBP.FAILED row.id
+              logInfo $ "Booking fee order " <> row.paymentOrderId.getId <> " expired at gateway; minting fresh order for " <> booking.id.getId
+              freshMint nextFreshId shortfall
+        _ -> freshMint nextFreshId shortfall
+    freshMint orderIdText shortfall = do
+      mbResp <- callCreateOrder orderIdText shortfall
+      case mbResp of
+        -- createOrderService returns Nothing for an expired order and for an unbuildable SDK
+        -- payload. Neither means the fee is covered, so this must not collapse into the
+        -- covered case -- doing so confirms a booking whose fee was never paid.
+        Nothing -> do
+          logError $ "Booking fee order unavailable for booking " <> booking.id.getId <> " (expired or no SDK payload)"
+          pure BookingDepositOrderUnavailable
+        Just orderResp -> do
+          rowId <- generateGUID
+          now <- getCurrentTime
+          QBookingPayment.create $
+            DBP.BookingPayment
+              { id = rowId,
+                bookingId = booking.id,
+                paymentOrderId = Id orderIdText,
+                paymentServiceType = DOrder.BookingDeposit,
+                status = DBP.PENDING,
+                merchantId = Just booking.merchantId,
+                merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+          void $ QOrder.updatePaymentFulfillmentStatus (Id orderIdText) (Just DPayment.FulfillmentPending) (Just booking.id.getId) Nothing
+          pure (BookingDepositOrderReady orderResp)
+    callCreateOrder orderIdText amount = do
+      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+      let merchantOperatingCityId = booking.merchantOperatingCityId
+      customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
+      customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+      staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+      orderShortId <- generateShortId
+      nwAddress <- asks (.nwAddress)
+      udf1 <- SLUtils.getPersonUdf1 person
+      let createOrderReq =
+            Payment.CreateOrderReq
+              { orderId = orderIdText,
+                orderShortId = orderShortId.getShortId,
+                amount = amount,
+                customerId = staticCustomerId,
+                customerEmail,
+                customerPhone,
+                customerFirstName = person.firstName,
+                customerLastName = person.lastName,
+                createMandate = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateFrequency = Nothing,
+                mandateStartDate = Nothing,
+                mandateEndDate = Nothing,
+                optionsGetUpiDeepLinks = Nothing,
+                metadataExpiryInMins = Nothing,
+                metadataGatewayReferenceId = Nothing,
+                webhookUrl = Just nwAddress,
+                splitSettlementDetails = Nothing,
+                basket = [],
+                paymentRules = Nothing,
+                autoRefundPostSuccess = Nothing,
+                paymentFilter = Nothing,
+                udf1 = udf1,
+                udf2 = Nothing
+              }
+          commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
+          commonPersonId = cast @DP.Person @DPayment.Person person.id
+          createOrderCall = Payment.createOrder booking.merchantId merchantOperatingCityId Nothing DOrder.BookingDeposit (Just person.id.getId) person.clientSdkVersion Nothing
+      isMetroTestTransaction <- asks (.isMetroTestTransaction)
+      let createWalletCall = TWallet.createWallet booking.merchantId merchantOperatingCityId
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing Nothing DOrder.BookingDeposit isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False Nothing False
+
+-- | Payment succeeded for a booking fee: credit, hold, then resume the withheld Beckn confirm.
+bookingDepositOrderStatusHandler ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r,
+    MonadMask m,
+    HasActorInfo m r,
+    SchedulerFlow r,
+    HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  Id DOrder.PaymentOrder ->
+  Id DM.Merchant ->
+  DPayment.PaymentStatusResp ->
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+bookingDepositOrderStatusHandler orderId _merchantId paymentStatusResp = do
+  status <- DPayment.getTransactionStatus paymentStatusResp
+  case status of
+    Payment.CHARGED -> do
+      order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+      bookingIdText <- order.domainEntityId & fromMaybeM (InvalidRequest "BookingDeposit order has no domainEntityId")
+      let bookingId = Id bookingIdText :: Id DRB.Booking
+      ranToCompletion <- Redis.whenWithLockRedisAndReturnValue (bookingDepositFulfilLockKey bookingIdText) 60 $ do
+        booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingIdText)
+        if booking.status `elem` DRB.terminalBookingStatus
+          then do
+            alreadyCredited <- BookingDeposit.hasCreditForOrder order.id.getId
+            if alreadyCredited
+              then do
+                logInfo $ "Booking fee paid for terminal booking " <> bookingIdText <> "; wallet credit already landed, keeping it"
+                pure False
+              else do
+                logInfo $ "Booking fee paid for terminal booking " <> bookingIdText <> "; auto-refunding " <> show order.amount <> " to source"
+                void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId order.id
+                setAttemptStatus order.id DBP.REFUND_INITIATED
+                pure True
+          else do
+            BookingDeposit.creditRiderBalance booking.riderId booking.merchantId booking.merchantOperatingCityId order.amount order.id.getId
+            setAttemptStatus order.id DBP.SUCCESS
+            alreadyTriggered <- Redis.get @Text (bookingDepositFulfilTriggeredKey bookingIdText)
+            unless (alreadyTriggered == Just "1") $ do
+              whenJust booking.bookingDepositAmount $ \fee -> do
+                available <- BookingDeposit.getAvailableBalance booking.riderId
+                when (available < fee) $
+                  logError $
+                    "Booking fee hold exceeds available balance: rider " <> booking.riderId.getId
+                      <> " booking "
+                      <> bookingIdText
+                      <> " available "
+                      <> show available
+                      <> " fee "
+                      <> show fee
+                bookingNow <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingIdText)
+                when (bookingNow.status `elem` DRB.terminalBookingStatus) $
+                  throwError $ InvalidRequest $ "Booking " <> bookingIdText <> " went terminal mid-fulfilment; deferring to refund path"
+                BookingDeposit.holdBookingDeposit booking fee
+              void $ booking.bppBookingId & fromMaybeM (InvalidRequest $ "Booking fee paid but on_init not yet processed for " <> bookingIdText <> "; deferring confirm")
+              fireWithheldConfirm bookingId
+            pure False
+      case ranToCompletion of
+        Left () -> do
+          logInfo $ "Booking fee fulfilment for " <> bookingIdText <> " skipped: lock held elsewhere; leaving order pending for retry"
+          pure (DPayment.FulfillmentPending, Just bookingIdText, Nothing)
+        Right True -> pure (DPayment.FulfillmentRefundInitiated, Just bookingIdText, Nothing)
+        Right False -> pure (DPayment.FulfillmentSucceeded, Just bookingIdText, Nothing)
+    _ -> do
+      -- A terminally failed order can never be paid; retiring the attempt row lets the next
+      -- intent call mint a fresh order under the next versioned id.
+      when (isTerminalStatus status) $
+        setAttemptStatus orderId DBP.FAILED
+      pure (DPayment.FulfillmentPending, Nothing, Nothing)
+  where
+    -- Updates every link row for the order: after a reallocation rekey the same order is
+    -- referenced from both the old and the new booking's row, and they must agree.
+    setAttemptStatus oid st = do
+      rows <- QBookingPayment.findAllByOrderId oid
+      forM_ rows $ \row ->
+        when (row.status /= st) $ QBookingPayment.updateStatusById st row.id
+
+-- | Resume the withheld Beckn confirm for a booking whose fee is already secured. Idempotent
+--   and safe from any trigger -- on_init's covered branch, the payment-intent poll -- because
+--   the Fulfil lock serialises resumers (the payment webhook uses the same key around its
+--   credit-hold-confirm block) and the FulfilTriggered marker bounds repeat confirms
+resumeBookingDepositConfirm ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    MonadMask m,
+    HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r
+  ) =>
+  Id DRB.Booking ->
+  m ()
+resumeBookingDepositConfirm bookingId = do
+  let bookingIdText = bookingId.getId
+  result <- Redis.whenWithLockRedisAndReturnValue (bookingDepositFulfilLockKey bookingIdText) 60 $ do
+    alreadyTriggered <- Redis.get @Text (bookingDepositFulfilTriggeredKey bookingIdText)
+    unless (alreadyTriggered == Just "1") $ do
+      booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingIdText)
+      if booking.status `elem` DRB.terminalBookingStatus
+        then logInfo $ "Booking " <> bookingIdText <> " already " <> show booking.status <> "; not resuming confirm"
+        else case booking.bppBookingId of
+          Nothing -> logError $ "Booking fee confirm resume for " <> bookingIdText <> " deferred: on_init not yet processed"
+          Just _ -> fireWithheldConfirm bookingId
+  case result of
+    Left () -> logInfo $ "Booking fee confirm resume for " <> bookingIdText <> " skipped: another resumer holds the lock"
+    Right () -> pure ()
+
 -- | Sum fare breakup line items matching an exact description (fallback path when the breakup
 --   isn't in the canonical V2 tax-slot shape parseProjectFareParamsBreakup expects).
 sumByDescription :: Text -> [DFareBreakup.FareBreakup] -> HighPrecMoney
 sumByDescription description_ = sum . map (.amount.amount) . filter ((== description_) . (.description))
+
+isTerminalStatus :: Payment.TransactionStatus -> Bool
+isTerminalStatus = \case
+  Payment.CHARGED -> True
+  Payment.AUTHENTICATION_FAILED -> True
+  Payment.AUTHORIZATION_FAILED -> True
+  Payment.JUSPAY_DECLINED -> True
+  Payment.CANCELLED -> True
+  Payment.CLIENT_AUTH_TOKEN_EXPIRED -> True
+  _ -> False
+
+syncBookingDepositOrderStatus :: Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Flow ()
+syncBookingDepositOrderStatus merchantId personId orderId = do
+  mbOrder <- QOrder.findById orderId
+  case mbOrder of
+    Nothing -> logError $ "BookingDeposit status sync: order not found " <> orderId.getId
+    Just order ->
+      unless (isTerminalStatus order.status) $ do
+        let fulfillmentHandler = mkFulfillmentHandler DOrder.BookingDeposit (cast order.merchantId) order.id
+        eitherResult <- withTryCatch "BookingDeposit:StatusSync" $ SPayment.syncOrderStatus fulfillmentHandler merchantId personId order
+        case eitherResult of
+          Left err -> logError $ "BookingDeposit status sync for order " <> orderId.getId <> " errored: " <> show err
+          Right statusResp -> do
+            resolvedStatus <- DPayment.getTransactionStatus statusResp
+            logInfo $ "BookingDeposit status sync: order " <> orderId.getId <> " at " <> show resolvedStatus
 
 -- | Background polling for Paytm EDC payment status.
 -- Reuses orderStatusHandler (via syncOrderStatus): one status fetch + fulfillment handling per attempt.
@@ -381,6 +687,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
                     Right dCancelRes -> do
+                      BookingDeposit.refundBookingDeposit booking
                       void $ QRideB.updateStatus booking.riderId booking.id SRB.CANCELLED
                       void $ QBPL.makeAllInactiveByBookingId booking.id
                       void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
@@ -390,23 +697,13 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
             Nothing -> logError $ "PaytmEDC poll: Booking not found for domainEntityId: " <> bookingIdText
         Nothing -> logError $ "PaytmEDC poll: PaymentOrder " <> paymentOrder.id.getId <> " has no domainEntityId, cannot cancel booking"
 
-    isTerminalStatus :: Payment.TransactionStatus -> Bool
-    isTerminalStatus = \case
-      Payment.CHARGED -> True
-      Payment.AUTHENTICATION_FAILED -> True
-      Payment.AUTHORIZATION_FAILED -> True
-      Payment.JUSPAY_DECLINED -> True
-      Payment.CANCELLED -> True
-      Payment.CLIENT_AUTH_TOKEN_EXPIRED -> True
-      _ -> False
-
 -- | Abort an in-flight Paytm EDC transaction for a booking, if one exists.
 -- Should be called when a dashboard cancel is initiated for a BoothOnline booking
 -- that had payment-before-confirm enabled (i.e. an EDC popup was already sent to the machine).
 -- This is fire-and-forget; failures are logged but do not block the cancel flow.
 abortPaytmEdcIfActive :: Id DRB.Booking -> Flow ()
 abortPaytmEdcIfActive bookingId = do
-  mbPaymentOrder <- QOrder.findByDomainEntityId bookingId.getId
+  mbPaymentOrder <- QOrder.findByDomainEntityIdAndServiceType bookingId.getId DOrder.RideBooking
   case mbPaymentOrder of
     Nothing -> logInfo $ "abortPaytmEdc: No payment order found for booking " <> bookingId.getId
     Just paymentOrder -> do
@@ -445,7 +742,7 @@ getRideBookingPaymentStatusByBookingId ::
 getRideBookingPaymentStatusByBookingId (personId, merchantId) bookingId = do
   booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError NotAnExecutor
-  paymentOrder <- QOrder.findByDomainEntityId bookingId.getId >>= fromMaybeM (PaymentOrderNotFound bookingId.getId)
+  paymentOrder <- QOrder.findByDomainEntityIdAndServiceType bookingId.getId DOrder.RideBooking >>= fromMaybeM (PaymentOrderNotFound bookingId.getId)
   getStatus (personId, merchantId) paymentOrder.id
 
 -- order status -----------------------------------------------------
@@ -763,6 +1060,7 @@ mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = c
     paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
     pure (paymentFulfillStatus, Nothing, Nothing)
   DOrder.RideBooking -> rideBookingOrderStatusHandler orderId merchantId paymentStatusResp
+  DOrder.BookingDeposit -> bookingDepositOrderStatusHandler orderId merchantId paymentStatusResp
   _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text

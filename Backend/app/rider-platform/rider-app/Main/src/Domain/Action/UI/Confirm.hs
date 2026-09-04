@@ -37,7 +37,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Confirm as SConfirm
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -66,7 +68,8 @@ confirm ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->
@@ -75,9 +78,10 @@ confirm ::
   Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   Bool ->
+  Maybe Bool ->
   Maybe Text ->
   m SConfirm.DConfirmRes
-confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSelectedOfferId = do
+confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm supportsBookingDeposit mbSelectedOfferId = do
   quote' <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
@@ -92,7 +96,20 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
   SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasKafkaProducer r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => DRB.Booking -> m ()
+cancelBooking ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    SchedulerFlow r,
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r,
+    HasField "blackListedJobs" r [Text],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  DRB.Booking ->
+  m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
@@ -102,6 +119,7 @@ cancelBooking booking = do
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the function.
   SharedCancel.tryCancellationLock booking.transactionId $ do
+    void $ withTryCatch "confirmFailed:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
     _ <- QRideB.updateStatus booking.riderId booking.id DRB.CANCELLED
     _ <- QBPL.makeAllInactiveByBookingId booking.id
     _ <- QBCR.upsert bookingCancellationReason

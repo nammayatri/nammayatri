@@ -65,6 +65,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -76,9 +77,11 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
@@ -496,7 +499,15 @@ castCancellationSource = \case
   DBCReason.ByApplication -> Common.ByApplication
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r,
+    SchedulerFlow r,
+    Finance.HasActorInfo m r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
   Common.BookingCancelledReq ->
   m ()
 bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
@@ -507,6 +518,7 @@ bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
   bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
+  void $ withTryCatch "dashboardCancelRide:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.riderId booking.id DTB.CANCELLED
   _ <- QBPL.makeAllInactiveByBookingId booking.id

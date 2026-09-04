@@ -37,6 +37,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -74,6 +75,9 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
   _ <- QBooking.cancelBookings allStuckBookingIds now
   _ <- mapM QBPL.makeAllInactiveByBookingId allStuckBookingIds
+  rideItemBookings <- catMaybes <$> mapM QBooking.findById (stuckRideItems <&> (.bookingId))
+  for_ (filter (isJust . (.bookingDepositAmount)) (stuckBookings <> rideItemBookings)) $ \bkng ->
+    void . withTryCatch "postBookingCancelAllStuck:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit bkng
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   _ <- QPFS.updateToIdleMultiple stuckPersonIds now
   void $ QPFS.clearCache `mapM` stuckPersonIds
@@ -161,6 +165,12 @@ bookingSync merchant merchantOpCityId reqBookingId = do
         cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) booking.distanceUnit bookingId booking.riderId
         QBooking.updateStatus booking.riderId bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
+      when (isJust booking.bookingDepositAmount) $
+        void . withTryCatch "bookingSync:settleBookingDeposit" $
+          case bookingNewStatus of
+            DBooking.COMPLETED -> BookingDeposit.releaseBookingDeposit booking
+            DBooking.CANCELLED -> BookingDeposit.refundBookingDeposit booking
+            _ -> pure ()
       let updBooking = booking{status = bookingNewStatus}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
@@ -169,6 +179,9 @@ bookingSync merchant merchantOpCityId reqBookingId = do
     Nothing -> do
       cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing booking.distanceUnit bookingId booking.riderId
       QBooking.updateStatus booking.riderId bookingId DBooking.CANCELLED
+      -- Ops unstick with no ride ever created: platform fault, and this write never reaches
+      -- cancellationTransaction.
+      void $ withTryCatch "bookingSyncNoRide:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
       QBCR.upsert cancellationReason
       let updBooking = booking{status = DBooking.CANCELLED}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}

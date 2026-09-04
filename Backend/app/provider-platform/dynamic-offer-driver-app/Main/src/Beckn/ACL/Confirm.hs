@@ -68,6 +68,8 @@ buildConfirmReqV2 req isValueAddNP = do
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
       orderTags = req.confirmReqMessage.confirmReqMessageOrder.orderTags
       customerDiscountAmount = (Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
+      bookingDepositSecured :: Maybe HighPrecMoney
+      bookingDepositSecured = readMaybe . T.unpack =<< Utils.getTagV2 Tag.FARE_POLICY Tag.BOOKING_DEPOSIT_SECURED orderTags
   return $
     DConfirm.DConfirmReq
       { ..

@@ -240,6 +240,8 @@ data QuoteInfo = QuoteInfo
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     tollChargesInfo :: Maybe TollChargesInfo,
+    -- Refundable deposit, held not charged. Kept out of estimatedTotalFare.
+    bookingDeposit :: Maybe HighPrecMoney,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
@@ -371,7 +373,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True && not isShadowSearch) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing
+        void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing Nothing
 
       unless isShadowSearch $
         whenJust mbRequiredEstimate $ \requiredEstimate -> do

@@ -340,6 +340,8 @@ data BecknTag
   | PER_STOP_CHARGES
   | PET_CHARGES
   | PRIORITY_CHARGES
+  | BOOKING_DEPOSIT -- FARE_POLICY: refundable rider deposit held on the BAP; sourced from the fare policy's BOOKING_DEPOSIT conditional charge, never part of the fare
+  | BOOKING_DEPOSIT_SECURED -- FARE_POLICY (confirm): deposit the BAP actually holds for this booking. Absence means the rider staked nothing, whatever the BPP's fare policy configures.
   | BUSINESS_DISCOUNT
   | PERSONAL_DISCOUNT
   | PERSONAL_DISCOUNT_PERCENTAGE
@@ -843,6 +845,8 @@ instance CompleteTag BecknTag where
     PER_STOP_CHARGES -> FARE_POLICY
     PET_CHARGES -> FARE_POLICY
     PRIORITY_CHARGES -> FARE_POLICY
+    BOOKING_DEPOSIT -> FARE_POLICY
+    BOOKING_DEPOSIT_SECURED -> FARE_POLICY
     BUSINESS_DISCOUNT -> INFO
     PERSONAL_DISCOUNT -> INFO
     PERSONAL_DISCOUNT_PERCENTAGE -> FARE_POLICY
