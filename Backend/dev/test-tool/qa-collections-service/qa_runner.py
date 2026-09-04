@@ -247,6 +247,29 @@ def _run_one_collection(run_id: str, directory: str, filename: str, env_path: Pa
     return passed, failed
 
 
+def _run_directory_group(run_id: str, directory: str, entries: list, default_env_file: str | None, eq: Queue, run: dict) -> tuple:
+    """Run every suite in one directory one after another. Suites within a
+    collection commonly share mutable state — driver/rider phone numbers,
+    auth tokens set up by an earlier suite — so running them concurrently
+    causes spurious failures (stale/reused tokens, "Invalid token" 401s) that
+    have nothing to do with the actual API under test. Different directories
+    (NY vs YS) don't share that state, so those still run in parallel — see
+    the ThreadPoolExecutor in _coordinate, one worker per directory now
+    instead of one per individual suite file."""
+    passed = failed = 0
+    for c in entries:
+        if run["abort"].is_set():
+            break
+        env_path = (
+            _resolve_path(c["envFile"]) if c.get("envFile")
+            else (_resolve_path(default_env_file) if default_env_file else None)
+        )
+        p, f = _run_one_collection(run_id, directory, c.get("filename", ""), env_path, eq, run)
+        passed += p
+        failed += f
+    return passed, failed
+
+
 def _coordinate(run_id: str, config: dict, eq: Queue, run: dict):
     collections = config.get("collections") or []
     default_env_file = config.get("envFile") or None
@@ -255,17 +278,17 @@ def _coordinate(run_id: str, config: dict, eq: Queue, run: dict):
     started_at = run["started_at"]
     total_passed = total_failed = 0
 
+    by_directory: dict = {}
+    for c in collections:
+        by_directory.setdefault(c.get("directory", ""), []).append(c)
+
     _emit(run, eq, {"type": "run_started", "runId": run_id, "collections": len(collections), "concurrency": concurrency})
 
     try:
         with ThreadPoolExecutor(max_workers=concurrency) as ex:
             futures = [
-                ex.submit(
-                    _run_one_collection, run_id, c.get("directory", ""), c.get("filename", ""),
-                    _resolve_path(c["envFile"]) if c.get("envFile") else (_resolve_path(default_env_file) if default_env_file else None),
-                    eq, run,
-                )
-                for c in collections
+                ex.submit(_run_directory_group, run_id, directory, entries, default_env_file, eq, run)
+                for directory, entries in by_directory.items()
                 if not run["abort"].is_set()
             ]
             for fut in futures:
