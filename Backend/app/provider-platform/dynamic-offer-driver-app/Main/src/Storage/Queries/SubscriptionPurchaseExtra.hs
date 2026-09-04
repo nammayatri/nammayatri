@@ -52,6 +52,23 @@ findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
           [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
       pure $ Set.size $ Set.fromList $ map (.ownerId) subs
 
+findAllActiveByOwnersAndServiceName ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Text] ->
+  ServiceNames ->
+  m [SubscriptionPurchase]
+findAllActiveByOwnersAndServiceName ownerIds serviceName =
+  if null ownerIds
+    then pure []
+    else
+      findAllWithKV
+        [ Se.And
+            [ Se.Is Beam.ownerId $ Se.In ownerIds,
+              Se.Is Beam.status $ Se.Eq ACTIVE,
+              Se.Is Beam.serviceName $ Se.Eq serviceName
+            ]
+        ]
+
 -- | Find all ACTIVE subscriptions for an owner, sorted by purchaseTimestamp ASC (FIFO order).
 -- When mbVehicleCategory is Just, restricts results to that category only (wallet isolation).
 findAllActiveByOwnerAndServiceName ::

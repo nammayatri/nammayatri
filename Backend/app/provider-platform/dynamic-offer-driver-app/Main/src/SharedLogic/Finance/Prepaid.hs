@@ -16,6 +16,9 @@ module SharedLogic.Finance.Prepaid
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
     getPrepaidAvailableBalanceByOwner,
+    hasPrepaidCreditsValidAt,
+    fetchActivePrepaidPurchasesByOwners,
+    prepaidCreditsValidAtIn,
     getSubscriptionRemainingAvailableBalance,
     createPrepaidHold,
     voidPrepaidHold,
@@ -31,6 +34,7 @@ module SharedLogic.Finance.Prepaid
 where
 
 import qualified Data.List as DL
+import qualified Data.Map as Map
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
@@ -179,6 +183,43 @@ getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory = d
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
   pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId mbVehicleCategory
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
+
+-- | Whether the owner still has prepaid credits backing a ride that runs at @atTime@.
+-- A queued purchase (expiryDate = Nothing) has not started its timer yet and takes over when the
+-- FIFO head expires, so it keeps the owner funded past the head's expiry.
+hasPrepaidCreditsValidAt ::
+  (BeamFlow m r) =>
+  Text -> -- Owner ID
+  DSP.SubscriptionOwnerType ->
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  UTCTime ->
+  m Bool
+hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory atTime = do
+  actives <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  pure $ any (\purchase -> maybe True (>= atTime) purchase.expiryDate) actives
+
+fetchActivePrepaidPurchasesByOwners ::
+  (BeamFlow m r) =>
+  [Text] ->
+  m (Map.Map Text [DSP.SubscriptionPurchase])
+fetchActivePrepaidPurchasesByOwners ownerIds = do
+  purchases <- QSPE.findAllActiveByOwnersAndServiceName (DL.nub ownerIds) PREPAID_SUBSCRIPTION
+  pure $ Map.fromListWith (<>) [(purchase.ownerId, [purchase]) | purchase <- purchases]
+
+prepaidCreditsValidAtIn ::
+  Map.Map Text [DSP.SubscriptionPurchase] ->
+  Text ->
+  DSP.SubscriptionOwnerType ->
+  Maybe DVC.VehicleCategory ->
+  UTCTime ->
+  Bool
+prepaidCreditsValidAtIn purchasesByOwner ownerId ownerType mbVehicleCategory atTime =
+  any (\purchase -> maybe True (>= atTime) purchase.expiryDate) relevant
+  where
+    relevant = filter matchesScope $ Map.findWithDefault [] ownerId purchasesByOwner
+    matchesScope purchase =
+      purchase.ownerType == ownerType
+        && maybe True (\vc -> purchase.vehicleCategory == Just vc) mbVehicleCategory
 
 counterpartyTypeForSubscription :: DSP.SubscriptionPurchase -> CounterpartyType
 counterpartyTypeForSubscription subscription = case subscription.ownerType of

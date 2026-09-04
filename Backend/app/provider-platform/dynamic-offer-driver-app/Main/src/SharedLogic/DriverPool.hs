@@ -1046,6 +1046,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             isInterCity,
             isScheduled,
             scheduledOpenToAll,
+            scheduledPickupTime,
             currentRideTripCategoryValidForForwardBatching,
             govtCharges,
             tollCharges,
