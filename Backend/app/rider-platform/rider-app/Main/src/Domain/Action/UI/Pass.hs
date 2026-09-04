@@ -969,14 +969,20 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  mbLivePayment <-
-    listToMaybe
+  -- All live terms, not just one. Two terms can legitimately be live at once now that a renewal is
+  -- allowed to overlap a spent one, and the query orders only by startDate -- so with equal start
+  -- dates LIMIT 1 picked an arbitrary row and the same pass rendered differently between reads.
+  -- availableTripCount breaks the tie so the fuller term leads; the rest are returned alongside it
+  -- rather than being dropped, which is what made a paid renewal invisible in the list.
+  liveTerms <-
+    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
       <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-        (Just 1)
+        Nothing
         Nothing
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
+  let mbLivePayment = listToMaybe liveTerms
   mbPayment <-
     case mbLivePayment of
       Just live -> pure (Just live)
@@ -1013,6 +1019,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
   futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
+  -- Everything live except the term the top-level fields already describe.
+  overlappingPassEntities <- buildPurchasedPassPaymentAPIEntities (drop 1 liveTerms)
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -1035,6 +1043,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
         futureRenewals = futureRenewalEntities,
+        overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
         maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
@@ -1207,13 +1216,17 @@ updatePurchasedPass ::
 updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
   mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
 
+  -- Ordered exactly as buildPurchasedPassAPIEntity orders its live terms. These are two independent
+  -- LIMIT 1 reads over the same rows, so a different tie-break here would project startDate/endDate/
+  -- status onto the pass from one term while the entity displays another.
   latestPayments <-
-    QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-      (Just 1)
-      (Just 0)
-      purchasedPass.id
-      [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
-      today
+    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
+      <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+        Nothing
+        Nothing
+        purchasedPass.id
+        [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
+        today
 
   photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
 
