@@ -276,13 +276,11 @@ findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId
 
 findByTransactionIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatus transactionId statusList =
-  findAllWithOptionsKV
+  findAllWithKVAndConditionalDB
     [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId,
       Se.Is BeamB.status $ Se.In statusList
     ]
-    (Se.Desc BeamB.createdAt)
-    Nothing
-    Nothing
+    (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
 
 updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> m ()
