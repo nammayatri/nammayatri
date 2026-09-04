@@ -95,6 +95,7 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.OnixBppWebhook
+      API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -174,6 +175,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
       Domain.Action.Common.VehicleDetails
+      Domain.Action.Dashboard.AppManagement.DepotManager
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -855,6 +857,7 @@ library
       Storage.Queries.CommunicationDeliveryExtra
       Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
+      Storage.Queries.DepotManagerExtra
       Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
@@ -1066,6 +1069,7 @@ library
       Tools.Verification
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.DepotManager
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.DriverWallet
@@ -1192,9 +1196,11 @@ library
       API.Action.UnifiedDashboard.RideBooking
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.DepotManager
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
       API.Types.Dashboard.AppManagement.DriverWallet
+      API.Types.Dashboard.AppManagement.Endpoints.DepotManager
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.DriverWallet
@@ -1829,6 +1835,7 @@ library
       Storage.Queries.OrphanInstances.Communication
       Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
+      Storage.Queries.OrphanInstances.DepotManager
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount

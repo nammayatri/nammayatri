@@ -3,6 +3,7 @@
 
 module API.Types.Dashboard.AppManagement where
 
+import qualified API.Types.Dashboard.AppManagement.DepotManager
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified API.Types.Dashboard.AppManagement.DriverWallet
@@ -19,7 +20,8 @@ import qualified Text.Read
 import qualified Text.Show
 
 data AppManagementUserActionType
-  = DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
+  = DEPOT_MANAGER API.Types.Dashboard.AppManagement.DepotManager.DepotManagerUserActionType
+  | DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
   | DRIVER_SUBSCRIPTION API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionUserActionType
   | DRIVER_WALLET API.Types.Dashboard.AppManagement.DriverWallet.DriverWalletUserActionType
   | FRFS_FLEET_OPERATOR API.Types.Dashboard.AppManagement.FrfsFleetOperator.FrfsFleetOperatorUserActionType
@@ -32,6 +34,7 @@ data AppManagementUserActionType
 
 instance Text.Show.Show AppManagementUserActionType where
   show = \case
+    DEPOT_MANAGER e -> "DEPOT_MANAGER/" <> show e
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_SUBSCRIPTION e -> "DRIVER_SUBSCRIPTION/" <> show e
     DRIVER_WALLET e -> "DRIVER_WALLET/" <> show e
@@ -46,12 +49,21 @@ instance Text.Read.Read AppManagementUserActionType where
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(DRIVER v1, r2) | r1 <- stripPrefix "DRIVER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(DEPOT_MANAGER v1, r2) | r1 <- stripPrefix "DEPOT_MANAGER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( DRIVER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DRIVER/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( DRIVER_SUBSCRIPTION v1,
                    r2
                  )
                  | r1 <- stripPrefix "DRIVER_SUBSCRIPTION/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( DRIVER_WALLET v1,
                    r2
@@ -112,4 +124,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])

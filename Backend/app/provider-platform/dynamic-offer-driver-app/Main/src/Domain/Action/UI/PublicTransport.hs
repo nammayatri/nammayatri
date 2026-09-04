@@ -7,7 +7,6 @@ where
 
 import qualified API.Types.UI.PublicTransport as APIT
 import qualified BecknV2.FRFS.Enums as BecknSpec
-import qualified Domain.Types.DepotManager as DDM
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -42,18 +41,18 @@ mkBusBlockKey cfgId vehicleNumber = cfgId.getId <> ":blocked:" <> vehicleNumber
 mkCheckerBlockedListKey :: Kernel.Types.Id.Id DP.Person -> Text
 mkCheckerBlockedListKey personId = "blocked:checker:" <> personId.getId
 
--- | Resolve caller → (Person, DepotManager) and enforce the BUS_DISPATCHER
--- role gate + isBlockAllowed flag before any block/unblock mutation.
+-- Allow if ANY enabled depot_manager row grants isBlockAllowed (multi-depot).
 requireBlockPermittedDispatcher ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person) ->
-  Flow (DP.Person, DDM.DepotManager)
+  Flow DP.Person
 requireBlockPermittedDispatcher mbPersonId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == DP.BUS_DISPATCHER) $ throwError AccessDenied
-  depotManager <- B.runInReplica $ QDM.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
-  unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
-  pure (person, depotManager)
+  depotRows <- B.runInReplica $ QDM.findAllByPersonId personId
+  let allowed = any (\dm -> dm.enabled && dm.isBlockAllowed == Just True) depotRows
+  unless allowed $ throwError (BusBlockNotAllowed personId.getId)
+  pure person
 
 blockVehicle ::
   (CacheFlow m r, MonadFlow m) =>
@@ -145,7 +144,7 @@ postPublicTransportVehicleDataBlock ::
     Flow APIT.BlockedVehiclesResp
   )
 postPublicTransportVehicleDataBlock (mbPersonId, _merchantId, _merchantOpCityId) vehicleNumber isBlock = do
-  (person, _depotManager) <- requireBlockPermittedDispatcher mbPersonId
+  person <- requireBlockPermittedDispatcher mbPersonId
   let personId = person.id
   configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId (show BecknSpec.BUS) DIBC.MULTIMODAL
   blockedVehicleNumbers <-
@@ -193,7 +192,7 @@ getPublicTransportBlockedVehicles ::
     Flow APIT.BlockedVehiclesResp
   )
 getPublicTransportBlockedVehicles (mbPersonId, _merchantId, _merchantOpCityId) = do
-  (person, _depotManager) <- requireBlockPermittedDispatcher mbPersonId
+  person <- requireBlockPermittedDispatcher mbPersonId
   configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId (show BecknSpec.BUS) DIBC.MULTIMODAL
   blockedVehicleNumbers <- reconcileCheckerBlockedList person.id configs
   pure $ APIT.BlockedVehiclesResp blockedVehicleNumbers

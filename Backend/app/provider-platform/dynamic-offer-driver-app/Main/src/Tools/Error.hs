@@ -2308,11 +2308,7 @@ instance IsHTTPError PublicTransportBlockError where
 
 instance IsAPIError PublicTransportBlockError
 
--- | Carries an upstream (rider-app) HTTP status and error envelope verbatim
--- through the ticket-verify proxy: a rider-app 400 INVALID_REQUEST stays a
--- 400 INVALID_REQUEST for the anna-checker client, instead of being flattened
--- into 500 BAP_INTERNAL_API_ERROR. Fields mirror APIError so a parsed
--- upstream envelope round-trips unchanged.
+-- Passes upstream rider-app status + APIError envelope through unchanged.
 data BapProxyError = BapProxyResponseError HttpCode Text (Maybe Text) Value
   deriving (Show, IsBecknAPIError)
 

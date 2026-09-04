@@ -4,6 +4,7 @@
 module API.Client.ProviderPlatform.AppManagement where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DepotManager
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Driver
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DriverWallet
@@ -21,7 +22,8 @@ import qualified "lib-dashboard" Tools.Auth.Merchant
 import qualified "lib-dashboard" Tools.Client
 
 data AppManagementAPIs = AppManagementAPIs
-  { driverDSL :: API.Types.Dashboard.AppManagement.Driver.DriverAPIs,
+  { depotManagerDSL :: API.Types.Dashboard.AppManagement.DepotManager.DepotManagerAPIs,
+    driverDSL :: API.Types.Dashboard.AppManagement.Driver.DriverAPIs,
     driverSubscriptionDSL :: API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionAPIs,
     driverWalletDSL :: API.Types.Dashboard.AppManagement.DriverWallet.DriverWalletAPIs,
     frfsFleetOperatorDSL :: API.Types.Dashboard.AppManagement.FrfsFleetOperator.FrfsFleetOperatorAPIs,
@@ -33,6 +35,7 @@ data AppManagementAPIs = AppManagementAPIs
 
 mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
 mkAppManagementAPIs merchantId city token = do
+  let depotManagerDSL = API.Types.Dashboard.AppManagement.DepotManager.mkDepotManagerAPIs depotManagerClientDSL
   let driverDSL = API.Types.Dashboard.AppManagement.Driver.mkDriverAPIs driverClientDSL
   let driverSubscriptionDSL = API.Types.Dashboard.AppManagement.DriverSubscription.mkDriverSubscriptionAPIs driverSubscriptionClientDSL
   let driverWalletDSL = API.Types.Dashboard.AppManagement.DriverWallet.mkDriverWalletAPIs driverWalletClientDSL
@@ -43,7 +46,7 @@ mkAppManagementAPIs merchantId city token = do
   let subscriptionTransactionDSL = API.Types.Dashboard.AppManagement.SubscriptionTransaction.mkSubscriptionTransactionAPIs subscriptionTransactionClientDSL
   (AppManagementAPIs {..})
   where
-    driverClientDSL :<|> driverSubscriptionClientDSL :<|> driverWalletClientDSL :<|> frfsFleetOperatorClientDSL :<|> overlayClientDSL :<|> penaltyClientDSL :<|> subscriptionClientDSL :<|> subscriptionTransactionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    depotManagerClientDSL :<|> driverClientDSL :<|> driverSubscriptionClientDSL :<|> driverWalletClientDSL :<|> frfsFleetOperatorClientDSL :<|> overlayClientDSL :<|> penaltyClientDSL :<|> subscriptionClientDSL :<|> subscriptionTransactionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.
