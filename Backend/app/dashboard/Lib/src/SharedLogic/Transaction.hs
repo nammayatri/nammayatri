@@ -20,6 +20,7 @@ module SharedLogic.Transaction
     withTransactionStoring,
     withResponseTransactionStoring,
     buildTransactionForSafetyDashboard,
+    validateRequestorId,
   )
 where
 
@@ -50,6 +51,12 @@ validateId Nothing _ = pure ()
 validateId (Just someId) domainName =
   unless (Text.length someId.getId == 36) $
     throwError . InvalidRequest $ domainName <> "Id should have length 36"
+
+validateRequestorId :: (Log m, MonadThrow m) => Maybe Text -> m ()
+validateRequestorId Nothing = pure ()
+validateRequestorId (Just requestor) =
+  unless (Text.length requestor <= 36) $
+    throwError . InvalidRequest $ "requestorId must be at most 36 characters"
 
 buildTransaction ::
   ( MonadFlow m,

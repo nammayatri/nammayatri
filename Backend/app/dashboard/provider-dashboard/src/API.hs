@@ -23,6 +23,7 @@ import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
 import qualified API.ProviderPlatform as BPP
 import qualified API.RiderPlatform as BAP
+import qualified API.RiderPlatform.InternalAdmin as BAPInternalAdmin
 import qualified API.SpecialZone as SpecialZone
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -45,11 +46,22 @@ type MainAPI =
     -- Dashboard unification Phase 2: the BAP ("bap"-prefixed) tree previously
     -- served by rider-dashboard. BharatTaxiUser is intentionally not mounted
     -- (removed with rider-dashboard; PLAN.md decision 2026-08-05).
+    -- BAPInternalAPI precedes the merchant-capturing BAP trees so that
+    -- "/bap/internal/admin/..." is not swallowed into the merchantId capture.
+    -- (Mounted here, not in API.RiderPlatform: that module mirrors
+    -- rider-dashboard and must stay byte-identical with it.)
+    :<|> BAPInternalAPI
     :<|> BAP.API
     :<|> BAP.APIV2
     :<|> Exotel.API
     :<|> FReg.API
     :<|> SpecialZone.API
+
+-- | Cluster-internal admin endpoints for the BAP tree (api-key service token,
+-- no RBAC). See 'API.RiderPlatform.InternalAdmin'.
+type BAPInternalAPI =
+  "bap"
+    :> BAPInternalAdmin.API
 
 handler :: FlowServer API
 handler =
@@ -62,6 +74,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   Dashboard.handler
     :<|> BPP.handler
+    :<|> BAPInternalAdmin.handler
     :<|> BAP.handler
     :<|> BAP.handlerV2
     :<|> Exotel.handler

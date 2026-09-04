@@ -120,6 +120,16 @@ updateStatus personId rbId rbStatus = do
         -- TODO :: Handle other status race conditions if observed
         _ -> Nothing
 
+updateIsStucked :: (MonadFlow m, EsqDBFlow m r) => [Id Booking] -> Bool -> m ()
+updateIsStucked rbIds isStucked = do
+  now <- getCurrentTime
+  unless (null rbIds) $
+    updateWithKV
+      [ Se.Set BeamB.isStucked (Just isStucked),
+        Se.Set BeamB.updatedAt now
+      ]
+      [Se.Is BeamB.id (Se.In $ getId <$> rbIds)]
+
 updateBPPBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
