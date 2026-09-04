@@ -182,7 +182,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     (rider, dConfirmRes) <- case confirmResult of
       Right res -> pure res
       Left err -> do
-        when (isJust mbPurchasedPassPaymentId) $ do
+        when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx) $ do
           void $
             withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
               FRFSUtils.updateQuoteCategoriesWithSelections
@@ -447,13 +447,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
       mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId'
 
-      -- Trip window for the pass overlap cap. Only resolvable for a GIMS-shaped tripId with a live
-      -- schedule; without an end time there is no window to compare, so the cap is skipped rather
-      -- than guessed at -- a flaky external call must not reject a legitimate booking.
       mbTripWindow <-
         case (firstTripId, mbRouteCode) of
           (Just tripId, Just routeCode) -> do
-            mbEnd <- getScheduledTripEndTime tripId routeCode quote'.toStationCode integratedBppConfig
+            mbEnd <- FRFSUtils.getScheduledTripEndTime tripId routeCode quote'.toStationCode integratedBppConfig
             case mbEnd of
               Nothing -> do
                 logWarning $ "FRFSConfirm: no scheduled arrival resolved for tripId=" <> tripId <> ", skipping pass overlapping-booking check"
@@ -545,9 +542,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 clientBundleVersion = rider.clientBundleVersion,
                 ..
               }
-      -- Resolved once for both the cap check and the claim, and keyed off the id actually stamped on
-      -- this booking. On a reschedule that is the PARENT's pass, which the handler does not re-supply,
-      -- so keying off the request's pass id would check nothing yet still claim a window.
       mbPassWindowCtx <-
         case (,) <$> bookingOverrideAppliedEntityId <*> mbTripWindow of
           Nothing -> pure Nothing
@@ -556,22 +550,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               Nothing -> do
                 logWarning $ "FRFSConfirm: could not resolve pass for overrideAppliedEntityId=" <> entityId <> ", skipping overlapping-booking cap"
                 pure Nothing
-              -- The parent's id is what the CHECK skips, so a reschedule is not refused by the very
-              -- booking it is moving. The CLAIM below uses this booking's own id instead, leaving the
-              -- parent's window in place for completeReschedule to release at the commit point.
               Just (_, appliedPass) -> pure $ Just (appliedPass, Id entityId, maybe uuid.getId (.id.getId) mbOldBooking, tripWindow)
 
-      -- Throws before the row exists, so a rejected booking leaves nothing behind.
       whenJust mbPassWindowCtx $ \(appliedPass, paymentId, parentOwnerId, tripWindow) ->
         FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass paymentId parentOwnerId tripWindow
 
       QFRFSTicketBooking.create booking
-
-      -- Claimed against the booking that now exists, so the id in the set always resolves. Recorded
-      -- here rather than at OnConfirm because an unlimited pass never reaches spendTripForBooking,
-      -- and that is precisely the case this cap exists to bound.
-      whenJust mbPassWindowCtx $ \(appliedPass, paymentId, _parentOwnerId, tripWindow) ->
-        FRFSPassOverride.recordBookedTrip rider appliedPass paymentId booking.id.getId tripWindow
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
@@ -617,40 +601,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 bufferTime + max 0 timeUntilTripSec
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
-
-    -- Scheduled arrival at the rider's destination stop -- the trip's end as far as this booking is
-    -- concerned, not the end of the bus's run. Mirrors getScheduledTripStartTime but takes the
-    -- alighting stop, falling back to the trip's LAST stop rather than its first. Nothing when the
-    -- schedule is unavailable, so callers can degrade instead of guessing a window.
-    getScheduledTripEndTime ::
-      ( MonadFlow m,
-        ServiceFlow m r,
-        HasShortDurationRetryCfg r c,
-        HasBAPMetrics m r
-      ) =>
-      Text -> -- tripId (format: waybillNo-tripNumber)
-      Text -> -- routeCode
-      Text -> -- alighting stop code
-      DIBC.IntegratedBPPConfig ->
-      m (Maybe UTCTime)
-    getScheduledTripEndTime tripId routeCode alightingStopCode integratedBPPConfig = do
-      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-      mbSchedule <- withTryCatch "getScheduledTripEndTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
-      case mbSchedule of
-        Left err -> do
-          logWarning $ "getScheduledTripEndTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
-          pure Nothing
-        Right schedule ->
-          case concatMap (.eta) schedule of
-            [] -> do
-              logWarning $ "getScheduledTripEndTime: empty schedule for tripId=" <> tripId
-              pure Nothing
-            allEtas -> do
-              let mbAlightingEta = listToMaybe (filter (\e -> e.stopCode == alightingStopCode) allEtas)
-                  -- minimumBy under a reversed comparator, not maximumBy: maximumBy is not in this
-                  -- module's prelude import set, minimumBy already is.
-                  chosenEta = fromMaybe (minimumBy (flip (comparing (.arrivalTimeUnix))) allEtas) mbAlightingEta
-              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
     -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
     -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
