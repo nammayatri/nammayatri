@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 data LocationT f = LocationT
   { id :: C f (Id DLocation.Location),
     fullAddress :: C f (Maybe Text),
+    ward :: C f (Maybe Text),
     createdAt :: C f UTCTime
   }
   deriving (Generic)
@@ -36,6 +37,7 @@ locationTTable =
   LocationT
     { id = "id",
       fullAddress = "full_address",
+      ward = "ward",
       createdAt = "created_at"
     }
 
