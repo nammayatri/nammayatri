@@ -75,13 +75,13 @@ getInvoice (mbPersonId, merchantId) from to = do
             Just $
               DTInvoice.InvoiceRes
                 { date = booking.createdAt,
-                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.fullAddress) mbDestination,
+                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.ward) mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
                   faresList = catMaybes fareBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
-                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.fullAddress) mbSource,
+                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.ward) mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
