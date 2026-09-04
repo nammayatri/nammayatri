@@ -15,6 +15,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementTdsReimbursementStatus,
     getFinanceManagementTdsReimbursementList,
     getFinanceManagementTdsReimbursement,
+    postFinanceManagementTdsReimbursementReject,
     postFinanceManagementFinanceAdjustmentSubmit,
     getFinanceManagementFinanceAdjustmentList,
     postFinanceManagementFinanceAdjustmentApprove,
@@ -51,7 +52,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -120,6 +121,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Image as QImage
+import qualified Storage.Queries.LedgerAdjustmentRequest as QLedgerAdjustmentRequest
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
@@ -2347,6 +2349,45 @@ getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
         invoiceLines = invoiceLines,
         totalTdsAmount = totalTdsAmount
       }
+
+-- | Reject a PENDING TDS reimbursement request. Restricted to admins holding the
+-- finance.tds_reimbursement.write capability (see FinanceManagement.yaml migrate block);
+-- the caller must always supply a rejectionReason.
+postFinanceManagementTdsReimbursementReject ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.FinanceTdsReimbursementRequest ->
+  API.TdsReimbursementRejectReq ->
+  Flow APISuccess
+postFinanceManagementTdsReimbursementReject merchantShortId opCity requestId req = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  when (T.null (T.strip req.rejectionReason)) $
+    throwError (InvalidRequest "rejectionReason must not be empty")
+
+  let lockKey = "tdsReimbursementRejectLock:" <> requestId.getId
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (rejectLocked merchantOpCityId)
+    >>= either (\() -> throwError (InvalidRequest "Another update to this TDS reimbursement request is already in progress")) pure
+  where
+    rejectLocked merchantOpCityId = do
+      request <-
+        QTdsReq.findByPrimaryKey (cast requestId)
+          >>= fromMaybeM (InvalidRequest $ "TDS reimbursement request not found: " <> requestId.getId)
+      unless (request.merchantOperatingCityId == merchantOpCityId.getId) $
+        throwError (InvalidRequest $ "TDS reimbursement request not found: " <> requestId.getId)
+
+      unless (request.status == DTdsReq.PENDING) $
+        throwError (InvalidRequest $ "TDS reimbursement request " <> requestId.getId <> " is " <> show request.status <> ", only PENDING requests can be rejected")
+
+      mbExistingAdjustment <-
+        QLedgerAdjustmentRequest.findByReferenceId (Just requestId.getId)
+      whenJust mbExistingAdjustment $ \_ ->
+        throwError (InvalidRequest "A ledger adjustment request is already exists for this TDS reimbursement request.")
+
+      QTdsReq.updateStatusAndRejectionReason DTdsReq.REJECTED (Just req.rejectionReason) (cast requestId)
+
+      pure Success
 
 postFinanceManagementFinanceAdjustmentSubmit ::
   ShortId DM.Merchant ->

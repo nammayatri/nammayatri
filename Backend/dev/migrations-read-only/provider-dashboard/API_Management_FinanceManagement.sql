@@ -29,3 +29,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostFinanceManagementFinanceAdjustmentReject","migration":"capability","param":"finance.adjustment.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.adjustment.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostFinanceManagementTdsReimbursementReject","migration":"capability","param":"finance.tds_reimbursement.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.tds_reimbursement.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REJECT' ) ON CONFLICT DO NOTHING;
