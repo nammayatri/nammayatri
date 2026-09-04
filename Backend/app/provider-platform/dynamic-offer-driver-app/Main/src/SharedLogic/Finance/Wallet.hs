@@ -188,7 +188,6 @@ module SharedLogic.Finance.Wallet
     getPrepaidOfferHoldTotalExcluding,
     estimateOfferDeductions,
     reserveWalletForCashRide,
-    applyFareRecomputeBuffer,
     cashWalletCheckEnabled,
     shouldCheckCashWallet,
     settlementTotalFareWithCap,
@@ -202,6 +201,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -221,8 +222,9 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
+import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
-import SharedLogic.Finance.WalletAccount (applyFareRecomputeBuffer, cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
+import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -999,12 +1001,18 @@ removePrepaidOfferHold = removeOfferHoldAtKey . makePrepaidOfferHoldsKey
 --   settle, capped at estimate + buffer when the booking opted in. ride.fare is
 --   already capped at recompute time; this is the safety net for flows that end
 --   without a recompute. Returns (walletFinanceEnabled, totalFare, mbFareCap).
-settlementTotalFareWithCap :: DM.Merchant -> DTC.TransporterConfig -> SRB.Booking -> Maybe HighPrecMoney -> (Bool, HighPrecMoney, Maybe HighPrecMoney)
-settlementTotalFareWithCap merchant transporterConfig booking mbRideFare =
+-- | Fallback settlement path for rides that skip the recompute-and-cap flow
+--   (see 'Domain.Action.UI.Ride.EndRide.capRecomputedFare' for the primary path).
+--   'newFareParams' is the final (possibly recomputed) params; the cap, when it
+--   applies, is computed per component against 'booking.fareParams' (the estimate).
+settlementTotalFareWithCap :: DM.Merchant -> DTC.TransporterConfig -> SRB.Booking -> Maybe DFP.FareRecomputeCapConfig -> Maybe DFP.FareChargeConfig -> Maybe DFP.FareChargeConfig -> DFare.FareParameters -> Maybe HighPrecMoney -> (Bool, HighPrecMoney, Maybe HighPrecMoney)
+settlementTotalFareWithCap merchant transporterConfig booking mbCapConfig mbVatChargeConfig mbTollTaxChargeConfig newFareParams mbRideFare =
   let walletFinanceEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
       capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
       rawTotalFare = fromMaybe 0 mbRideFare
-      cappedTotalFare = applyFareRecomputeBuffer transporterConfig.driverWalletConfig booking.estimatedFare
+      cappedTotalFare = case mbCapConfig of
+        Just capConfig -> Fare.fareSum (Fare.applyPerComponentCaps (Fare.CapContext capConfig mbVatChargeConfig mbTollTaxChargeConfig) booking.fareParams newFareParams) Nothing
+        Nothing -> rawTotalFare
       mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
    in (walletFinanceEnabled, fromMaybe rawTotalFare mbFareCap, mbFareCap)
 
@@ -1028,14 +1036,15 @@ addOfferHoldsForSearchTry ::
   Maybe HighPrecMoney -> -- govt charges
   Maybe HighPrecMoney -> -- toll charges
   Maybe HighPrecMoney -> -- parking charge
+  Maybe HighPrecMoney -> -- bufferedFare for this tier, from FareParameters
   UTCTime -> -- offer validTill
   m ()
-addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTryId paymentInstrument baseFare govtCharges tollCharges parkingCharge validTill = do
+addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTryId paymentInstrument baseFare govtCharges tollCharges parkingCharge mbBufferedFare validTill = do
   when (cashWalletCheckEnabled transporterConfig.driverWalletConfig && shouldCheckCashWallet paymentInstrument) $ do
-    let offerDeduction = estimateOfferDeductions transporterConfig.driverWalletConfig transporterConfig.taxConfig (Just baseFare) govtCharges tollCharges parkingCharge
+    let offerDeduction = estimateOfferDeductions transporterConfig.taxConfig (Just baseFare) mbBufferedFare govtCharges tollCharges parkingCharge
     when (offerDeduction > 0) $ addWalletOfferHold holdOwnerId searchTryId offerDeduction validTill
   when isPrepaidEnabled $ do
-    let prepaidOfferHold = applyFareRecomputeBuffer transporterConfig.driverWalletConfig baseFare
+    let prepaidOfferHold = fromMaybe baseFare mbBufferedFare
     when (prepaidOfferHold > 0) $ addPrepaidOfferHold holdOwnerId searchTryId prepaidOfferHold validTill
 
 -- | Release both the wallet and prepaid offer holds for a search try.
@@ -1057,25 +1066,46 @@ reserveWalletForCashRide ::
   m ()
 reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearchTryId = do
   isOnline <- resolveIsOnlineFromBooking booking
+  let dwc = transporterConfig.driverWalletConfig
+      -- Independent gates, same split as the driver-pool filter: the
+      -- zero-balance rule only needs the wallet feature on; the insufficiency
+
+      -- 'minWalletAmountForCashRides' being configured as before. Hold
+      -- creation itself is NOT scoped to 'cashRequirementCheckApplies' alone
+      -- (below) -- a wallet-only merchant with no threshold configured still
+      -- needs its balance reserved for this ride's GST/TDS liability, or the
+      -- zero-balance check above is just a point-in-time snapshot with
+      -- nothing stopping concurrent rides from overdrawing the same wallet.
+      zeroBalanceCheckApplies = dwc.enableDriverWallet
+      cashRequirementCheckApplies = cashWalletCheckEnabled dwc
   unless isOnline $
-    when (cashWalletCheckEnabled transporterConfig.driverWalletConfig) $ do
+    when (zeroBalanceCheckApplies || cashRequirementCheckApplies) $ do
       let (walletCounterpartyType, walletOwnerId) = case mbFleetOwnerId of
             Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId)
             Nothing -> (DRIVER, driver.id.getId)
           holdAmount =
+            -- The denominator must be the fare 'bufferedFare' was actually scaled
+            -- from ('fareSum fareParams' -- see 'bufferedFareTotal'), not
+            -- 'booking.estimatedFare': the two only coincide when nothing
+            -- (rounding, discounts, EDC parking exclusion) makes them diverge,
+            -- and a wrong denominator can drive fareScale below 1.
             estimateBufferedStatutoryDeductions
-              transporterConfig.driverWalletConfig
               transporterConfig.taxConfig
-              (Just booking.estimatedFare)
+              (Just (Fare.fareSum booking.fareParams Nothing))
+              booking.fareParams.bufferedFare
               booking.fareParams.govtCharges
               booking.fareParams.tollCharges
               booking.fareParams.parkingCharge
-      when (holdAmount > 0) $
-        Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 $ do
-          availableBalance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner walletCounterpartyType walletOwnerId
-          otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
-          existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
-          when (availableBalance + existingBookingHold - otherOfferHolds < holdAmount) $ throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
+      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 $ do
+        availableBalance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner walletCounterpartyType walletOwnerId
+        otherOfferHolds <- getWalletOfferHoldTotalExcluding walletOwnerId mbSearchTryId
+        existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
+        let netBalance = availableBalance + existingBookingHold - otherOfferHolds
+        when (zeroBalanceCheckApplies && netBalance <= 0) $
+          throwError (InvalidRequest "Zero earnings balance; not eligible for cash rides.")
+        when (cashRequirementCheckApplies && netBalance < holdAmount) $
+          throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
+        when (holdAmount > 0) $ do
           _ <-
             createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId.getId booking.merchantOperatingCityId.getId booking.id.getId (Just driver.id.getId) Nothing
               >>= fromEitherM (\err -> InternalError ("Failed to create wallet hold: " <> show err))

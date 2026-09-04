@@ -882,6 +882,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     transporterConfig :: DTC.TransporterConfig,
     rideFare :: Maybe HighPrecMoney,
+    -- | 'bufferedFare' per service tier -- see 'NearestDriversReq'.
+    bufferedFareByTier :: Map.Map DVST.ServiceTierType HighPrecMoney,
     govtCharges :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
@@ -951,7 +953,6 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = poolStage == DriverSelection,
             maxParallelSearchRequests = driverPoolCfg.maxParallelSearchRequests,
-            searchTryId = Nothing,
             ..
           }
         fetchPoolData
@@ -1059,8 +1060,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             onlinePayment,
             now,
             paymentMode,
-            searchTryId = Just currentSearchInfo.searchTry.id.getId,
-            mbSearchTryId
+            mbSearchTryId,
+            bufferedFareByTier
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates

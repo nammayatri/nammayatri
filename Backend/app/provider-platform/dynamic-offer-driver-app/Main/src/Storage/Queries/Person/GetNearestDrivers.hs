@@ -16,6 +16,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
@@ -102,6 +103,10 @@ data NearestDriversReq = NearestDriversReq
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
+    -- | 'bufferedFare' per service tier -- the cap config lives on FarePolicy,
+    -- which resolves per tier, so one tier's ceiling must never be applied to
+    -- another tier's drivers.
+    bufferedFareByTier :: Map.Map ServiceTierType HighPrecMoney,
     govtCharges :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
@@ -121,8 +126,7 @@ data NearestDriversReq = NearestDriversReq
     applyParallelRequestFilter :: Bool,
     maxParallelSearchRequests :: Int,
     airportEntryFee :: Maybe HighPrecMoney,
-    isAirportRequest :: Bool,
-    searchTryId :: Maybe Text
+    isAirportRequest :: Bool
   }
 
 -- | A driver location candidate sorted by straight-line distance, with the
@@ -147,7 +151,7 @@ fetchSortedLTSCandidates ::
 fetchSortedLTSCandidates NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
-  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant)) searchTryId
+  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant)) mbSearchTryId
   let afterExclude = if null excludeDriverIds then driverLocsRaw else filter (\dl -> dl.driverId `notElem` excludeDriverIds) driverLocsRaw
       prevSet = prevAttemptedDriverIds
       mkCandidate dl =
@@ -379,37 +383,57 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
                     (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
                 mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
                 otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
-                pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= applyFareRecomputeBuffer driverWalletConfig fare + threshold) mbBalance
+                let bufferedFare = fromMaybe fare (Map.lookup r.serviceTier bufferedFareByTier)
+                pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= bufferedFare + threshold) mbBalance
             )
             results
         _ -> pure results
       else pure results
-  let cashRequirement =
-        case minWalletAmountForCashRides of
-          Just minAmt
-            | cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument ->
-              Just (minAmt + estimateOfferDeductions driverWalletConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
-          _ -> Nothing
+
+  -- Deliberately two independent flags -- 'zeroBalanceCheckApplies' (bars a
+  -- zero/negative-balance driver from cash rides outright) only needs the
+  -- wallet feature on; 'cashCheckApplies' (the minimum-balance *threshold*
+  -- requirement) additionally needs 'minWalletAmountForCashRides' configured
+  -- (via 'cashWalletCheckEnabled'). A merchant with the wallet on but no
+  -- threshold set must still get the zero-balance rule enforced.
+  let zeroBalanceCheckApplies = driverWalletConfig.enableDriverWallet && shouldCheckCashWallet paymentInstrument
+      cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
+      mkCashRequirement r =
+        minWalletAmountForCashRides <&> \minAmt ->
+          minAmt + estimateOfferDeductions taxConfig rideFare (Map.lookup r.serviceTier bufferedFareByTier) govtCharges tollCharges parkingCharge
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
         _ -> Nothing
       -- Scheduled-ride minimum wallet balance, folded into this pass so the candidate list is
       -- filtered once (combined with the cash/airport gates) rather than in a second traversal.
       applyScheduledGate = isScheduled && not scheduledOpenToAll
-  if isNothing cashRequirement && isNothing airportRequirement && not applyScheduledGate
+      anyGateApplies = zeroBalanceCheckApplies || cashCheckApplies || isJust airportRequirement || applyScheduledGate
+  if not anyGateApplies
     then pure afterPrepaid
-    else filterM (passesLiabilityGates cashRequirement airportRequirement applyScheduledGate) afterPrepaid
+    else filterM (\r -> passesLiabilityGates (if cashCheckApplies then mkCashRequirement r else Nothing) zeroBalanceCheckApplies airportRequirement applyScheduledGate r) afterPrepaid
   where
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
-    checkBalance (counterpartyType, ownerId) required = do
+    -- Fetches balance + holds once per account and evaluates whichever of the
+    -- zero-balance and minimum-requirement gates apply from that single read.
+    -- Previously separate 'hasPositiveCashBalance'/'checkBalance' calls
+    -- independently re-fetched the same two values when both gates applied to
+    -- the same account (the common case) -- 2x wallet lookups per candidate
+    -- driver in this filterM, and non-atomic with each other besides.
+    checkAccountGates (counterpartyType, ownerId) applyZeroBalanceGate mbRequired = do
       mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
       otherOfferHolds <- getWalletOfferHoldTotalExcluding ownerId mbSearchTryId
-      pure $ maybe False (\b -> b - otherOfferHolds >= required) mbBalance
+      pure $ case mbBalance of
+        Nothing -> False
+        Just b ->
+          let available = b - otherOfferHolds
+           in (not applyZeroBalanceGate || available > 0) && maybe True (available >=) mbRequired
 
-    passesLiabilityGates cashReq airportReq applyScheduledGate r = do
+    checkBalance account required = checkAccountGates account False (Just required)
+
+    passesLiabilityGates cashReq applyZeroBalanceGate airportReq applyScheduledGate r = do
       -- Scheduled-ride wallet gate first (short-circuits the cash/airport balance fetches on failure).
       scheduledOk <-
         if applyScheduledGate
@@ -422,11 +446,14 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
               cashAccount = (cashCp, cashOwner)
               airportAccount = (counterpartyDriver, r.driverId.getId)
           case (cashReq, airportReq) of
-            (Nothing, Nothing) -> pure True
-            (Just c, Nothing) -> checkBalance cashAccount c
-            (Nothing, Just a) -> checkBalance airportAccount a
+            (Nothing, Nothing) ->
+              if applyZeroBalanceGate then checkAccountGates cashAccount True Nothing else pure True
+            (Just c, Nothing) -> checkAccountGates cashAccount applyZeroBalanceGate (Just c)
+            (Nothing, Just a) -> do
+              zeroOk <- if applyZeroBalanceGate then checkAccountGates cashAccount True Nothing else pure True
+              if zeroOk then checkBalance airportAccount a else pure False
             (Just c, Just a)
-              | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
+              | cashAccount == airportAccount -> checkAccountGates cashAccount applyZeroBalanceGate (Just (max c a))
               | otherwise -> do
-                cashOk <- checkBalance cashAccount c
+                cashOk <- checkAccountGates cashAccount applyZeroBalanceGate (Just c)
                 if cashOk then checkBalance airportAccount a else pure False
