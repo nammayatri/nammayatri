@@ -471,6 +471,8 @@ data DriverWalletConfig = DriverWalletConfig
     enableWalletGatedTierCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
+    fareRecomputeBufferAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    fareRecomputeBufferPercent :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forceOnlineLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,

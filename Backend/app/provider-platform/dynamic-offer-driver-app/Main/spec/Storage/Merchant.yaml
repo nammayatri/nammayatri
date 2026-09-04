@@ -1073,6 +1073,8 @@ TransporterConfig:
       connectAccountChargeTimeOfDay: Maybe Text
       connectAccountChargeDayOfWeek: Maybe Int
       connectAccountChargeDayOfMonth: Maybe Int
+      fareRecomputeBufferPercent: Maybe Double
+      fareRecomputeBufferAmount: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney

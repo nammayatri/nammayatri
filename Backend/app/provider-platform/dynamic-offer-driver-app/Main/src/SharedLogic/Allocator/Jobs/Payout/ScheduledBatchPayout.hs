@@ -21,7 +21,6 @@ import Domain.Action.UI.DriverWallet
     counterpartyFromRole,
     initiateWalletPayout,
   )
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -274,7 +273,8 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
         Nothing -> pure (0, [], 0)
         Just accountId -> getPayoutEligibilityData accountId cutoff now
-      let payoutableBalance = walletBalance - nonRedeemable
+      holdBalance <- getTotalWalletHoldBalance counterparty personId.getId
+      let payoutableBalance = walletBalance - nonRedeemable - holdBalance
       logDebug $
         "[SBP-DEBUG] payee=" <> personId.getId
           <> " role="
@@ -285,6 +285,8 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
           <> show walletBalance
           <> " nonRedeemable="
           <> show nonRedeemable
+          <> " holdBalance="
+          <> show holdBalance
           <> " payoutableBalance="
           <> show payoutableBalance
           <> " minimum="

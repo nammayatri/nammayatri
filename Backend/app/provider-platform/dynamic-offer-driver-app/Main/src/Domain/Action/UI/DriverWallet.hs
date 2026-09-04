@@ -39,7 +39,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
@@ -174,15 +173,17 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         if useClickhouse
           then fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate
           else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
+      holdBalance <- getTotalWalletHoldBalance counterparty ownerId
       let (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
             aggregateWalletRows accountIds cutoff rows
-          redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
+          redeemableBalance = max 0 (currentBalance - nonRedeemableBalance - holdBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
       pure $
         DriverWallet.WalletSummaryResponse
           { currentBalance,
             redeemableBalance,
             nonRedeemableBalance,
+            holdBalance = Just holdBalance,
             netEarningsBalance,
             additions,
             deductions,
@@ -195,6 +196,7 @@ emptyWalletSummary =
     { currentBalance = 0,
       redeemableBalance = 0,
       nonRedeemableBalance = 0,
+      holdBalance = Just 0,
       netEarningsBalance = 0,
       additions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
       deductions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
@@ -622,8 +624,9 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
       Nothing -> pure (0, [], 0)
       Just accountId -> getPayoutEligibilityData accountId cutoff now
-    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
-    let payoutableBalance = walletBalance - nonRedeemable
+    holdBalance <- getTotalWalletHoldBalance counterparty ctx.driverId.getId
+    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", holdBalance=" <> show holdBalance <> ", redeemableEntryIds=" <> show redeemableIds
+    let payoutableBalance = walletBalance - nonRedeemable - holdBalance
     ensureMinimumPayoutAmount ctx payoutableBalance
     initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
   pure APISuccess.Success
@@ -699,6 +702,11 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
     result <- PayoutRequest.submitPayoutRequest submission payoutCall
     case result of
       PayoutRequest.PayoutInitiated pr _ -> do
+        let mkPayoutHold = createWalletHold (counterpartyFromRole ctx.person.role) ctx.driverId.getId payoutableBalance ctx.transporterConfig.currency ctx.merchantId.getId ctx.mocId.getId pr.id.getId (Just ctx.driverId.getId) Nothing
+        holdResult <- mkPayoutHold >>= either (const mkPayoutHold) (pure . Right)
+        case holdResult of
+          Left err -> logError $ "Failed to create payout hold for payoutRequest " <> pr.id.getId <> " after retry; payout proceeds, payoutable balance unprotected until settlement: " <> show err
+          Right () -> pure ()
         -- Stash redeemable entry IDs in Redis for the webhook handler to settle
         unless (null redeemableEntryIds) $
           Redis.setExp (makePayoutEntryIdsKey pr.id.getId) redeemableEntryIds 86400 -- 24h TTL

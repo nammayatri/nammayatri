@@ -67,6 +67,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
+import SharedLogic.Finance.Wallet (applyFareRecomputeBuffer, getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
@@ -115,6 +116,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
@@ -136,9 +138,11 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           <> booking.id.getId
       throwError $
         InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
-    whenJust mbAccount $ \_ -> do
+    whenJust mbAccount $ \account -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
+        otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
+        existingBookingHold <- maybe 0 (.amount) <$> findPendingPrepaidHoldByReference account.id prepaidRideDebitReferenceType booking.id.getId
         let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
             tollAmount = fromMaybe 0 booking.fareParams.tollCharges
             parkingAmount = fromMaybe 0 booking.fareParams.parkingCharge
@@ -147,7 +151,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
               Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
-        when (balance < rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
+        when (balance + existingBookingHold - otherPrepaidOfferHolds < applyFareRecomputeBuffer transporterConfig.driverWalletConfig rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
         _ <-
           createPrepaidHold
             counterpartyType
@@ -160,7 +164,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             Nothing
             mbVehicleCategory
             >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
-        pure ()
+        whenJust mbSearchTryId $ removePrepaidOfferHold ownerId
+  reserveWalletForCashRide transporterConfig driver booking ((.getId) <$> mFleetOwnerId) mbSearchTryId
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -311,6 +316,8 @@ releaseLien booking ride = do
         booking.id.getId
         "Ride cancelled"
         mbVehicleCategory
+    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ownerId) 10 10 $
+      voidWalletHoldByReference counterpartyType ownerId booking.id.getId "Ride cancelled"
   case result of
     Left (e :: SomeException) ->
       logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)
