@@ -251,7 +251,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
         DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
         pure Nothing
       else pure driverInfo.enabledReasonFlag
-  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else driverInfo.approved == Just True
+  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else True
       bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
       docsDerivedEnable = consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk
       derivedShouldEnable = bypassDocGates || docsDerivedEnable
