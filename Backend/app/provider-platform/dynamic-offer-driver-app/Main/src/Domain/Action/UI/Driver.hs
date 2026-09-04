@@ -275,7 +275,6 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
