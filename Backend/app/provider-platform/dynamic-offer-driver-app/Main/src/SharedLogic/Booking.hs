@@ -90,7 +90,8 @@ cancelBooking booking mbDriver transporter = do
     QBCR.upsert bookingCancellationReason
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     metricsDistanceBucketEdges <- SML.getDistanceBucketEdges booking.merchantOperatingCityId
-    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance)
+    let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance) pickupZone dropZone
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED

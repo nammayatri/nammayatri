@@ -22,6 +22,7 @@ module SharedLogic.MetricsLabels
     poolingVersionLabel,
     searchReqFunnelLabels,
     driverSearchReqFunnelLabels,
+    specialZoneLabels,
   )
 where
 
@@ -35,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -107,6 +109,18 @@ distanceBucketLabel (DistanceBucketEdges edgesKm) (Just distance) = go 0 edgesKm
 
 poolingVersionLabel :: Maybe Int -> Text
 poolingVersionLabel = maybe "unknown" show
+
+-- | Pickup and drop special-zone ids taken straight from the ride's in-memory Area;
+-- "none" when the ride has no special zone at that end. PURE — no lookup, no added
+-- compute; regular rides are just ("none","none"). The two ends are independent, so a ride
+-- can be filtered by its pickup zone, drop zone, or both. The id is opaque: map it to a
+-- readable name in Grafana (the same way the dashboard already maps city ids to names).
+specialZoneLabels :: Maybe SL.Area -> (Text, Text)
+specialZoneLabels Nothing = ("none", "none")
+specialZoneLabels (Just area) =
+  ( fromMaybe "none" (SL.pickupSpecialZoneIdFromArea area),
+    fromMaybe "none" (SL.dropSpecialZoneIdFromArea area)
+  )
 
 -- | The three allocation-funnel label values, in the order every counter expects:
 -- (distance_bucket, pooling_logic_version, pooling_config_version).
