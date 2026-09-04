@@ -139,6 +139,30 @@ instance IsHTTPError PasswordPolicyError where
 
 instance IsAPIError PasswordPolicyError
 
+-- | Layer C (ops gate): the caller holds the endpoint's capability, but the
+-- special-location / ticket-place / … the request targets is not in their
+-- person_resource_access allowlist for this merchant+city (or the allowlist is
+-- empty = deny-all). Carries its own 403 code so the frontend can distinguish
+-- "not in your assigned resources" from a generic denial.
+data ResourceScopeError
+  = -- | resourceType, offending resourceId
+    ResourceOutOfScope Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ResourceScopeError
+
+instance IsBaseError ResourceScopeError where
+  toMessage = \case
+    ResourceOutOfScope rType rId -> Just $ "Resource \"" <> rId <> "\" (" <> rType <> ") is outside your assigned scope."
+
+instance IsHTTPError ResourceScopeError where
+  toErrorCode = \case
+    ResourceOutOfScope _ _ -> "RESOURCE_OUT_OF_SCOPE"
+  toHttpCode = \case
+    ResourceOutOfScope _ _ -> E403
+
+instance IsAPIError ResourceScopeError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken

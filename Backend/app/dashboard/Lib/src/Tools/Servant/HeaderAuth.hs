@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (HasLog)
 import Kernel.Utils.Servant.HeaderAuth (VerificationMethod (..), addResponse401, addSecurityRequirement)
 import Kernel.Utils.Servant.Server
+import Network.HTTP.Types (decodePathSegments)
 import Network.Wai (Request (..))
 import Servant hiding (ResponseHeader (..))
 import Servant.Client
@@ -59,7 +60,9 @@ data VerificationActionWithPayload verify m = VerificationMethodWithPayload veri
   { -- | Check given header value and extract the information which
     -- identifies the current user.
     -- This is allowed to fail with 'ServantError'.
-    runVerifyMethodWithPayload :: VerificationPayloadType verify -> Text -> m (VerificationResult verify)
+    -- The request's path segments are passed too (Layer C reads the scoped
+    -- endpoint's resource id from a `{param}` path capture; see verifyApi).
+    runVerifyMethodWithPayload :: VerificationPayloadType verify -> [Text] -> Text -> m (VerificationResult verify)
   }
 
 -- -- | This server part implementation accepts token in @token@header,
@@ -90,7 +93,11 @@ instance
         requestHeaders req
           & (lookup headerName >>> fromMaybeM (MissingHeader headerName))
           >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
-          >>= verifyMethod (toPayloadType (Proxy @payload))
+          -- NB: use rawPathInfo, not pathInfo. By the time this auth check runs,
+          -- Servant's router has already consumed pathInfo while matching the
+          -- route, so `pathInfo req` is empty here. rawPathInfo is the full,
+          -- unconsumed request path — decode it back into segments for Layer C.
+          >>= verifyMethod (toPayloadType (Proxy @payload)) (decodePathSegments (rawPathInfo req))
       env = getEnvEntry ctx
       VerificationActionWithPayload verifyMethod = getContextEntry ctx :: VerificationActionWithPayload verify (FlowR r)
 

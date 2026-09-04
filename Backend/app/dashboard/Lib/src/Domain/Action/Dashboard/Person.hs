@@ -58,6 +58,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonCapability as QPC
+import qualified Storage.Queries.PersonResourceAccess as QPRA
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
@@ -878,6 +879,9 @@ deletePerson tokenInfo personId mbDeleteReason = do
   -- user granted to others) are kept as history — that FK was dropped in migration
   -- 0097, so the id survives and stays resolvable via deleted_user.
   QPC.deleteAllByPersonId personId
+  -- person_resource_access.person_id is likewise a NOT NULL FK to person; clear
+  -- the departing user's Layer C assignments before the person delete.
+  QPRA.deleteAllByPersonId personId
   QP.deletePerson personId
   pure Success
 

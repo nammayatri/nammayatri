@@ -32,6 +32,7 @@ import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
 import qualified "lib-dashboard" Storage.Beam.MerchantPair as BeamMPair
 import qualified "lib-dashboard" Storage.Beam.Person as BeamP
 import qualified "lib-dashboard" Storage.Beam.PersonCapability as BeamPC
+import qualified "lib-dashboard" Storage.Beam.PersonResourceAccess as BeamPRA
 import qualified "lib-dashboard" Storage.Beam.PersonTier as BeamPT
 import qualified "lib-dashboard" Storage.Beam.RegistrationToken as BeamRT
 import qualified "lib-dashboard" Storage.Beam.Role as BeamR
@@ -58,6 +59,9 @@ instance HasSchemaName BeamCE.CapabilityEndpointT where
   schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamPC.PersonCapabilityT where
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
+
+instance HasSchemaName BeamPRA.PersonResourceAccessT where
   schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamRC.RoleCapabilityT where
