@@ -440,7 +440,9 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           }
     Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId person.merchantOperatingCityId.getId useFakeOtpM False
 
-  let isDashboardEmailDirectAuth = mbIsDashboardRequest == Just True && identifierType == SP.EMAIL
+  let isDashboardRequest = mbIsDashboardRequest == Just True
+      isDashboardEmailDirectAuth = isDashboardRequest && identifierType == SP.EMAIL
+  mbPersonEntity <- if isDashboardRequest then Just <$> buildPersonAPIEntity person else return Nothing
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -465,10 +467,10 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               req.email
               riderConfig.emailOtpConfig
               mbSenderHash
-          return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
+          return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
     else do
       logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-      return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
+      return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing mbPersonEntity person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
@@ -909,6 +911,15 @@ businessEmailSendHitsCountKey personId = "BAP:Registration:businessEmail:send:" 
 businessEmailVerifyHitsCountKey :: Id SP.Person -> Text
 businessEmailVerifyHitsCountKey personId = "BAP:Registration:businessEmail:verify:" <> getId personId <> ":hitsCount"
 
+buildPersonAPIEntity :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> m PersonAPIEntity
+buildPersonAPIEntity person = do
+  decPerson <- decrypt person
+  customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
+  let tag = customerDisability <&> (.tag)
+  safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled person safetySettings
+  return $ SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
+
 verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
@@ -917,12 +928,8 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   when isNewPerson $
     Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
+  personAPIEntity <- buildPersonAPIEntity updPerson
   decPerson <- decrypt updPerson
-  customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
-  let tag = customerDisability <&> (.tag)
-  safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled updPerson safetySettings
-  let personAPIEntity = SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of
