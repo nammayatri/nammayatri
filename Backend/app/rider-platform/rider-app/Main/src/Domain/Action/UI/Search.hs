@@ -173,7 +173,7 @@ extractSearchDetails now = \case
       { riderPreferredOption = DRPO.Rental,
         roundTrip = False,
         stops = fromMaybe [] stops,
-        hasStops = Nothing,
+        hasStops = stops >>= \s -> Just (length s > 1),
         returnTime = Nothing,
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
@@ -219,7 +219,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.InterCity,
         stops = fromMaybe [] stops,
-        hasStops = Nothing,
+        hasStops = stops >>= \s -> Just (length s > 1),
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
         destinationStopCode = Nothing,
@@ -410,6 +410,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOperatingCityId) -- TODO: we aren't using it as such for now, will put proper values later
   riderCfg <- withTimeAPI "rideSearch" "getRiderConfig" $ getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  -- Force Rental & InterCity to always be scheduled: reject if the requested pickup is sooner than the configured lead time.
+  when (riderPreferredOption `elem` [DRPO.Rental, DRPO.InterCity]) $
+    whenJust riderCfg.minScheduleAdvanceTimeForRentalAndIntercity $ \minAdvanceTime ->
+      when (nominalDiffTimeToSeconds (diffUTCTime startTime now) < minAdvanceTime) $
+        throwError (InvalidRequest $ "Rental and InterCity rides must be scheduled at least " <> show minAdvanceTime.getSeconds <> " seconds in advance")
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->

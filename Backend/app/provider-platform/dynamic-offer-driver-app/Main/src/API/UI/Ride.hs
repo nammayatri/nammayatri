@@ -166,7 +166,8 @@ data EndRideReq = EndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe Ride.OdometerReading,
-    driverGpsTurnedOff :: Maybe Bool
+    driverGpsTurnedOff :: Maybe Bool,
+    driverEnteredTollCharges :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

@@ -16,7 +16,8 @@ data FareCacheReq = FareCacheReq
 
 data FareCacheResp = FareCacheResp
   { interCityMinimumFareResp :: Maybe [IntercitySearchResp],
-    rentalsMininumFareResp :: Maybe [RentalsSearchResp]
+    rentalsMininumFareResp :: Maybe [RentalsSearchResp],
+    minScheduleAdvanceTimeForRentalAndIntercity :: Maybe Seconds
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

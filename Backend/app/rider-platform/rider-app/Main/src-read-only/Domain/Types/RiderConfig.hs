@@ -138,6 +138,7 @@ data RiderConfig = RiderConfig
     minRideDistanceSavingForBetterPoint :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minScheduleAdvanceTimeForRentalAndIntercity :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     minimumWalkDistance :: Kernel.Types.Common.Meters,
     monthlyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     monthlyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

@@ -500,13 +500,13 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails Nothing
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
       DQuote.DeliveryDetails _ -> DRB.DeliveryDetails <$> buildDeliveryDetails
-      DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
+      DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, stops = searchRequest.stops, ..})
       DQuote.DriverOfferDetails driverOffer -> DRB.DriverOfferDetails <$> (buildOneWayDetails driverOffer.isUpgradedToCab)
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
       DQuote.MeterRideDetails _ -> DRB.MeterRideDetails <$> buildMeterRideDetails
       -- Same RentalBookingDetails shape as Rental (line above) — EasyBooking has no separate table.
-      DQuote.EasyBookingDetails _ -> pure $ DRB.EasyBookingDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
+      DQuote.EasyBookingDetails _ -> pure $ DRB.EasyBookingDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, stops = searchRequest.stops, ..})
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model

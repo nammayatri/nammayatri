@@ -388,6 +388,7 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             shouldApplyBusinessDiscount = False,
             shouldApplyPersonalDiscount = True,
             tollCharges = Nothing, ------fix it in future
+            isManualToll = False,
             noOfStops = 0, ------fix it in future
             currency,
             distanceUnit,

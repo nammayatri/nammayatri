@@ -37,4 +37,3 @@ instance ConfigDimensions RiderConfigDimensions where
         (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher RiderConfigDimensions DT.RiderConfig]))
         Nothing
-  configFallback a = Just (SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
