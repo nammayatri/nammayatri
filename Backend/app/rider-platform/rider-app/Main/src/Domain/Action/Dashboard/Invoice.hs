@@ -72,13 +72,13 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
             Just $
               Common.InvoiceRes
                 { date = booking.createdAt,
-                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.fullAddress) mbDestination,
+                  destination = maybe notAvailableText (\dest -> fromMaybe notAvailableText dest.ward) mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
                   faresList = catMaybes fareBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
-                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.fullAddress) mbSource,
+                  source = maybe notAvailableText (\src -> fromMaybe notAvailableText src.ward) mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
