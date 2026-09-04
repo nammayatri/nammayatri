@@ -144,6 +144,13 @@ data ServiceHandle m = ServiceHandle
     mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ())
   }
 
+data IssueReportCreationContext = IssueReportCreationContext
+  { person :: Person,
+    driverId :: Maybe (Id Person),
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    scheduledBookingTransactionId :: Maybe Text
+  }
+
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
 getLanguage personId mbLanguage issueHandle = do
   extractLanguage <-
@@ -704,7 +711,23 @@ createIssueReport ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReport = createIssueReportWithContext Nothing
+
+createIssueReportWithContext ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r,
+    HasField "slackNotificationConfig" r SlackNotificationConfig
+  ) =>
+  Maybe IssueReportCreationContext ->
+  (Id Person, Id Merchant) ->
+  Maybe Language ->
+  Common.IssueReportReq ->
+  ServiceHandle m ->
+  Identifier ->
+  Maybe Text ->
+  m Common.IssueReportRes
+createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   -- Guard against a client retrying the same submission (e.g. after a
   -- timeout on a request carrying an attachment) and ending up with two
   -- tickets for what the customer experienced as one submit. Keyed on the
@@ -713,7 +736,8 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
   -- failed upload being dropped/retried), so keying on them would defeat
   -- the guard for the case it's meant to catch.
 
-  let dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> T.take 200 description
+  let scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId)
+      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
   -- Atomic claim (SETNX-style): only the request that actually creates the
   -- key proceeds to do the work. A plain GET-then-SET has a race window —
   -- two requests that both arrive before either has written the cache can
@@ -722,7 +746,7 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
   wonClaim <- Redis.setNxExpire dedupKey 60 (Nothing :: Maybe Common.IssueReportRes)
   if wonClaim
     then do
-      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl args mbLanguage req issueHandle identifier becknIssueId)
+      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId)
       case result of
         Right response -> do
           Redis.setExp dedupKey (Just response) 60
@@ -739,7 +763,7 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
         Just Nothing -> do
           threadDelaySec $ Seconds 1
           awaitDedupedResponse dedupKey
-        Nothing -> createIssueReport args mbLanguage req issueHandle identifier becknIssueId
+        Nothing -> createIssueReportWithContext creationContext args mbLanguage req issueHandle identifier becknIssueId
 
 createIssueReportImpl ::
   ( EsqDBReplicaFlow m r,
@@ -747,6 +771,7 @@ createIssueReportImpl ::
     BeamFlow m r,
     HasField "slackNotificationConfig" r SlackNotificationConfig
   ) =>
+  Maybe IssueReportCreationContext ->
   (Id Person, Id Merchant) ->
   Maybe Language ->
   Common.IssueReportReq ->
@@ -754,7 +779,7 @@ createIssueReportImpl ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
@@ -770,8 +795,9 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
     _ -> pure Nothing
   uploadedMediaFiles <- forM mediaFiles $ \mediaFile ->
     CQMF.findById mediaFile identifier >>= fromMaybeM (FileDoesNotExist mediaFile.getId)
-  person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let mocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+  person <- maybe (issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)) (pure . (.person)) creationContext
+  let defaultMocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+      mocId = maybe defaultMocId (.merchantOperatingCityId) creationContext
   moCity <-
     issueHandle.findMOCityById mocId
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
@@ -856,9 +882,10 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
           { id,
             shortId = Just shortId,
             personId,
-            driverId = if identifier == CUSTOMER then Nothing else Just personId,
+            driverId = maybe (if identifier == CUSTOMER then Nothing else Just personId) (.driverId) creationContext,
             rideId = rideId,
             ticketBookingId = ticketBookingId,
+            scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId),
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
             categoryId = Just categoryId,
@@ -1175,6 +1202,8 @@ issueInfo ::
 issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)

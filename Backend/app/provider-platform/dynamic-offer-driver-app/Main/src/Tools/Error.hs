@@ -41,14 +41,23 @@ instanceExceptionWithParent 'HTTPException ''RatingError
 
 data ScheduledBookingError
   = ScheduledBookingWindowInvalid Text
+  | ScheduledBookingOpsNoteEmpty
+  | ScheduledBookingOpsNoteTooLong Int
   deriving (Eq, Show)
 
 instance IsBaseError ScheduledBookingError where
-  toMessage (ScheduledBookingWindowInvalid reason) = Just reason
+  toMessage = \case
+    ScheduledBookingWindowInvalid reason -> Just reason
+    ScheduledBookingOpsNoteEmpty -> Just "Scheduled booking operations note cannot be empty"
+    ScheduledBookingOpsNoteTooLong maxLength ->
+      Just $ "Scheduled booking operations note cannot exceed " <> show maxLength <> " characters"
 
 instance IsHTTPError ScheduledBookingError where
-  toErrorCode (ScheduledBookingWindowInvalid _) = "SCHEDULED_BOOKING_WINDOW_INVALID"
-  toHttpCode (ScheduledBookingWindowInvalid _) = E400
+  toErrorCode = \case
+    ScheduledBookingWindowInvalid _ -> "SCHEDULED_BOOKING_WINDOW_INVALID"
+    ScheduledBookingOpsNoteEmpty -> "SCHEDULED_BOOKING_OPS_NOTE_EMPTY"
+    ScheduledBookingOpsNoteTooLong _ -> "SCHEDULED_BOOKING_OPS_NOTE_TOO_LONG"
+  toHttpCode _ = E400
 
 instance IsAPIError ScheduledBookingError
 

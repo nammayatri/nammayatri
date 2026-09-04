@@ -94,6 +94,17 @@ data NearbyDriversRes = NearbyDriversRes {radiusKm :: Kernel.Prelude.Double, sea
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data OpsNote = OpsNote {id :: Kernel.Prelude.Text, authorId :: Kernel.Prelude.Text, authorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, content :: Kernel.Prelude.Text, createdAt :: Kernel.Prelude.UTCTime}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OpsNoteReq = OpsNoteReq {content :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets OpsNoteReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data ReallocationEventItem = ReallocationEventItem
   { bookingId :: Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -132,7 +143,8 @@ data ScheduledBookingInfoRes = ScheduledBookingInfoRes
     currency :: Kernel.Types.Common.Currency,
     vehicleServiceTier :: Dashboard.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Text,
-    reallocationHistory :: [ReallocationEventItem]
+    reallocationHistory :: [ReallocationEventItem],
+    opsNotes :: [OpsNote]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -164,7 +176,7 @@ data ScheduledBookingListRes = ScheduledBookingListRes {totalItems :: Kernel.Pre
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper))
+type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper))
 
 type GetScheduledBookingList =
   ( "list" :> QueryParam "assignmentStatus" AssignmentStatus :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "limit" Kernel.Prelude.Int
@@ -199,19 +211,29 @@ type PostScheduledBookingUnassignHelper =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type PostScheduledBookingOpsNote = (Capture "transactionId" Kernel.Prelude.Text :> "opsNote" :> ReqBody '[JSON] OpsNoteReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostScheduledBookingOpsNoteHelper =
+  ( Capture "transactionId" Kernel.Prelude.Text :> "opsNote" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] OpsNoteReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data ScheduledBookingAPIs = ScheduledBookingAPIs
   { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
     getScheduledBookingInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingInfoRes,
     getScheduledBookingDriverDistance :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverDistanceRes,
     getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> EulerHS.Types.EulerClient NearbyDriversRes,
     postScheduledBookingAssign :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> AssignDriverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postScheduledBookingUnassign :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postScheduledBookingUnassign :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postScheduledBookingOpsNote :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> OpsNoteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkScheduledBookingAPIs :: (Client EulerHS.Types.EulerClient API -> ScheduledBookingAPIs)
 mkScheduledBookingAPIs scheduledBookingClient = (ScheduledBookingAPIs {..})
   where
-    getScheduledBookingList :<|> getScheduledBookingInfo :<|> getScheduledBookingDriverDistance :<|> getScheduledBookingNearbyDrivers :<|> postScheduledBookingAssign :<|> postScheduledBookingUnassign = scheduledBookingClient
+    getScheduledBookingList :<|> getScheduledBookingInfo :<|> getScheduledBookingDriverDistance :<|> getScheduledBookingNearbyDrivers :<|> postScheduledBookingAssign :<|> postScheduledBookingUnassign :<|> postScheduledBookingOpsNote = scheduledBookingClient
 
 data ScheduledBookingUserActionType
   = GET_SCHEDULED_BOOKING_LIST
@@ -220,6 +242,7 @@ data ScheduledBookingUserActionType
   | GET_SCHEDULED_BOOKING_NEARBY_DRIVERS
   | POST_SCHEDULED_BOOKING_ASSIGN
   | POST_SCHEDULED_BOOKING_UNASSIGN
+  | POST_SCHEDULED_BOOKING_OPS_NOTE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
