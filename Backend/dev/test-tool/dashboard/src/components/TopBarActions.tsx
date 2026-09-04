@@ -30,6 +30,32 @@ interface ControlCenterStatus {
   pid?: number | null;
 }
 
+/** One entry from a direction's metadata.json on S3, written by DB Manager on
+ *  every successful publish. `status` is a human judgement someone recorded in
+ *  DB Manager's Versions tab after actually importing that bundle — a version
+ *  existing says nothing about whether it works. */
+interface PublishedVersion {
+  version: number;
+  metadata: string;
+  created_at?: string | null;
+  uploaded_by?: string | null;
+  status?: 'stable' | 'not_stable' | 'not_verified';
+  verified_by?: string | null;
+  verified_at?: string | null;
+}
+
+// Prefixed onto the <option> text: browsers won't render per-option colour
+// reliably, so the signal has to survive as plain characters.
+const VERSION_STATUS_MARK: Record<string, string> = {
+  stable: '✅ ',      // ✅
+  not_stable: '⛔ ',  // ⛔
+  not_verified: '',       // no marker — absence of a claim, not a negative one
+};
+
+const versionLabel = (v: PublishedVersion): string =>
+  `${VERSION_STATUS_MARK[v.status || 'not_verified'] ?? ''}v${v.version}` +
+  `${v.metadata ? ` — ${v.metadata}` : ''}`;
+
 /** Top-bar actions: live next to DB Manager / Metabase.
  *  - Flush Redis: wipes all Redis keys.
  *  - Sync Data:  runs config-sync from a chosen env (default: prod) → local.
@@ -42,6 +68,17 @@ export const TopBarActions: React.FC = () => {
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [forceFetch, setForceFetch] = useState(false);
+
+  // Published bundles for the selected source env, read from that direction's
+  // metadata.json on S3 (which DB Manager writes on every successful publish).
+  // Empty selection = don't pass a version, so config_transfer.py falls back to
+  // its built-in DEFAULT_FETCH_VERSIONS — i.e. exactly the old behaviour. That
+  // matters when S3 is unreachable (VPN off): Sync Data still works, it just
+  // can't offer a choice.
+  const [versions, setVersions] = useState<PublishedVersion[]>([]);
+  const [syncVersion, setSyncVersion] = useState('');
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsError, setVersionsError] = useState<string | null>(null);
 
   // Status modal
   const [statusOpen, setStatusOpen] = useState(false);
@@ -127,6 +164,46 @@ export const TopBarActions: React.FC = () => {
     };
   }, []);
 
+  // Published versions follow the selected source env — each env is a different
+  // S3 direction (<from>_to_local), so the list has to be re-fetched on change.
+  // A failure here is deliberately non-fatal: the dropdown just stays on
+  // "default" and the sync proceeds without an explicit version.
+  useEffect(() => {
+    if (!syncFrom) return;
+    let cancelled = false;
+    setVersionsLoading(true);
+    setVersionsError(null);
+    fetch(`${CONTEXT_API}/api/config-sync/versions?from=${encodeURIComponent(syncFrom)}`)
+      .then(r => r.json())
+      .then((d: { versions?: PublishedVersion[]; error?: string }) => {
+        if (cancelled) return;
+        const list = [...(d.versions || [])].sort((a, b) => b.version - a.version);
+        setVersions(list);
+        setVersionsError(d.error || null);
+        // Default to the newest version someone has actually marked stable.
+        // The list is newest-first, so the first 'stable' hit IS the latest one.
+        //
+        // When nothing is marked stable we deliberately leave this blank rather
+        // than falling back to the newest bundle: 'not_verified' means nobody
+        // has confirmed it imports cleanly, so auto-selecting one would put
+        // exactly the unvetted case behind a default nobody looks at. Blank
+        // keeps config_transfer.py's own pinned version, and the user can pick
+        // consciously.
+        //
+        // Recomputed per env because the selection is direction-scoped — a
+        // version number from one direction means nothing in another.
+        const latestStable = list.find(v => v.status === 'stable');
+        setSyncVersion(latestStable ? `v${latestStable.version}` : '');
+      })
+      .catch(e => {
+        if (cancelled) return;
+        setVersions([]);
+        setVersionsError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => { if (!cancelled) setVersionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [syncFrom]);
+
   // On mount, fetch current status to detect a sync that was already running
   // (e.g. the auto-sync triggered on test-context-api startup).
   useEffect(() => {
@@ -205,7 +282,10 @@ export const TopBarActions: React.FC = () => {
   const triggerConfigSync = async () => {
     if (syncRunning) { setStatusOpen(true); return; }
     const ok = await showConfirm(
-      `Sync data from "${syncFrom}" → local?${forceFetch ? '\n\nForce-fetch is ON — local patched data will be discarded and re-downloaded from S3.' : ''}\n\nRider, driver, and mock-registry services will be restarted.`,
+      `Sync data from "${syncFrom}"${syncVersion ? ` (${syncVersion})` : ''} → local?` +
+      `${syncVersion ? `\n\nImporting published bundle ${syncVersion}; the local patched copy will be re-downloaded.` : ''}` +
+      `${!syncVersion && forceFetch ? '\n\nForce-fetch is ON — local patched data will be discarded and re-downloaded from S3.' : ''}` +
+      `\n\nRider, driver, and mock-registry services will be restarted.`,
       { title: 'Sync Data', confirmLabel: `Sync from ${syncFrom}`, variant: 'info' },
     );
     if (!ok) return;
@@ -215,7 +295,7 @@ export const TopBarActions: React.FC = () => {
       const r = await fetch(`${CONTEXT_API}/api/config-sync/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: syncFrom, forceFetch }),
+        body: JSON.stringify({ from: syncFrom, forceFetch, version: syncVersion || undefined }),
       });
       if (!r.ok) {
         setSyncRunning(false);
@@ -552,7 +632,59 @@ export const TopBarActions: React.FC = () => {
                   </select>
                 </div>
                 <div className="tb-modal-form-field">
-                  <label htmlFor="sync-force-fetch" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <label htmlFor="sync-version">Version</label>
+                  <select
+                    id="sync-version"
+                    value={syncVersion}
+                    onChange={e => setSyncVersion(e.target.value)}
+                    disabled={syncRunning || versionsLoading}
+                    title="Published bundle to import. Blank uses whichever version config_transfer.py defaults to."
+                  >
+                    <option value="">
+                      {versionsLoading
+                        ? 'loading…'
+                        : versions.length
+                          ? 'default (config_transfer.py pinned version)'
+                          : 'no published versions'}
+                    </option>
+                    {versions.map(v => (
+                      <option key={v.version} value={`v${v.version}`}>
+                        {versionLabel(v)}
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    // Detail line for whatever is currently selected. The
+                    // dropdown can only carry a marker character, so the
+                    // "who vouched for this, and when" lives here.
+                    const sel = versions.find(v => `v${v.version}` === syncVersion);
+                    if (!sel) return null;
+                    const status = sel.status || 'not_verified';
+                    const when = sel.verified_at
+                      ? new Date(sel.verified_at).toLocaleDateString()
+                      : null;
+                    const text =
+                      status === 'stable'
+                        ? `Marked stable${sel.verified_by ? ` by ${sel.verified_by}` : ''}${when ? ` · ${when}` : ''}`
+                        : status === 'not_stable'
+                          ? `Marked NOT stable${sel.verified_by ? ` by ${sel.verified_by}` : ''}${when ? ` · ${when}` : ''} — avoid unless you know why`
+                          : 'Not verified yet — nobody has confirmed this bundle imports cleanly';
+                    return (
+                      <div className="tb-modal-form-hint">
+                        {text}
+                        {sel.uploaded_by ? ` · published by ${sel.uploaded_by}` : ''}
+                      </div>
+                    );
+                  })()}
+                  {versionsError && (
+                    <div className="tb-modal-form-hint">⚠ {versionsError}</div>
+                  )}
+                </div>
+                <div className="tb-modal-form-field">
+                  {/* Same label-on-top shape as the two selects, so all three
+                      fields line up: heading row, control row, hint row. */}
+                  <label htmlFor="sync-force-fetch">Force fetch</label>
+                  <label className="tb-modal-checkbox" htmlFor="sync-force-fetch">
                     <input
                       id="sync-force-fetch"
                       type="checkbox"
@@ -560,10 +692,10 @@ export const TopBarActions: React.FC = () => {
                       onChange={e => setForceFetch(e.target.checked)}
                       disabled={syncRunning}
                     />
-                    Force fetch
+                    <span>Re-download even if cached</span>
                   </label>
                   <div className="tb-modal-form-hint">
-                    Re-download from S3 even if a patched copy already exists locally.
+                    Ignored when a version is picked — that always re-downloads.
                   </div>
                 </div>
                 <div className="tb-modal-form-actions">
