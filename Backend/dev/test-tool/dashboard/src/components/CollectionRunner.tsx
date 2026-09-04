@@ -181,6 +181,18 @@ interface StepState {
   mockHits?: MockHit[];
 }
 
+// Newman (backend/QA runs) sends request/response bodies as raw text — parse
+// JSON bodies back into objects so they render pretty-printed instead of as
+// an escaped string, same as the in-browser runtime's already-parsed bodies.
+function parseIfJson(body: unknown): unknown {
+  if (typeof body !== 'string') return body;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body; // not JSON (e.g. an HTML error page) — leave as raw text
+  }
+}
+
 // ── JSON Viewer Modal ──────────────────────────────────────────────
 function JsonViewerModal({ data, onClose }: { data: any; onClose: () => void }) {
   const [search, setSearch] = useState('');
@@ -647,26 +659,80 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         const es = new EventSource(qaCollectionEventsUrl(runId));
         backendEsRef.current = es;
         const finish = () => { es.close(); resolve(); };
+
+        // Newman's events arrive one-at-a-time per step (item_start, then
+        // request, then zero or more assertions) — buffer them and emit ONE
+        // combined log line per step on completion, exactly like the
+        // in-browser engine does (a single onLog call carrying `request` +
+        // `response` in `extra`, which is what makes a log line expandable
+        // in the right-hand panel). Flushed on the next item_start or on the
+        // run's terminal events.
+        type PendingStep = {
+          name: string;
+          method?: string;
+          url?: string;
+          status?: number;
+          responseTime?: number;
+          error?: string;
+          requestBody?: any;
+          requestHeaders?: Record<string, string>;
+          responseBody?: any;
+          responseHeaders?: Record<string, string>;
+          assertions: Array<{ name: string; passed: boolean; error?: string }>;
+        };
+        let pending: PendingStep | null = null;
+
+        const flushPending = () => {
+          if (!pending) return;
+          const p = pending;
+          pending = null;
+          const httpFailed = !!p.error || (typeof p.status === 'number' && p.status >= 400);
+          const anyAssertFail = p.assertions.some(a => !a.passed);
+          const failed = httpFailed || anyAssertFail;
+          const assertSummary = p.assertions.length > 0
+            ? ` [${p.assertions.filter(a => a.passed).length}/${p.assertions.length} assertions]`
+            : '';
+          const message = p.error
+            ? `FAIL ${p.name}: ${p.error}`
+            : `${failed ? 'FAIL' : 'PASS'} ${p.name} (${p.responseTime ?? '?'}ms, ${p.status ?? '?'})${assertSummary}`;
+          onLog(failed ? 'error' : 'success', message, {
+            request: { method: p.method ?? '', url: p.url ?? '', body: p.requestBody, headers: p.requestHeaders },
+            response: { status: p.status ?? 0, body: p.responseBody, headers: p.responseHeaders },
+          });
+        };
+
         es.onmessage = (ev) => {
           let msg: any;
           try { msg = JSON.parse(ev.data); } catch { return; }
           switch (msg.type) {
             case 'item_start': {
+              flushPending();
+              pending = { name: msg.name, assertions: [] };
               onLog('req', `${msg.name}`);
               const stepId = nameToId.get(msg.name);
               if (stepId) setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
               break;
             }
             case 'request': {
-              if (msg.error) onLog('error', `FAIL ${msg.name}: ${msg.error}`);
-              else onLog('info', `${msg.method ?? ''} ${msg.name} -> ${msg.status ?? '?'} (${msg.responseTime ?? '?'}ms)`);
+              if (pending && pending.name === msg.name) {
+                pending.method = msg.method;
+                pending.url = msg.url;
+                pending.status = msg.status;
+                pending.responseTime = msg.responseTime;
+                pending.error = msg.error;
+                pending.requestBody = parseIfJson(msg.requestBody);
+                pending.requestHeaders = Array.isArray(msg.requestHeaders)
+                  ? Object.fromEntries(msg.requestHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+                pending.responseBody = parseIfJson(msg.responseBody);
+                pending.responseHeaders = Array.isArray(msg.responseHeaders)
+                  ? Object.fromEntries(msg.responseHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+              }
               const stepId = nameToId.get(msg.name);
               if (stepId) {
                 const httpFailed = !!msg.error || (typeof msg.status === 'number' && msg.status >= 400);
-                let data: any = msg.responseBody;
-                if (typeof data === 'string') {
-                  try { data = JSON.parse(data); } catch { /* leave as raw text (e.g. an HTML error page) */ }
-                }
+                const data = parseIfJson(msg.responseBody);
                 const responseHeaders = Array.isArray(msg.responseHeaders)
                   ? Object.fromEntries(msg.responseHeaders.map((h: any) => [h.key, h.value]))
                   : undefined;
@@ -693,7 +759,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               break;
             }
             case 'assertion': {
-              onLog(msg.passed ? 'success' : 'error', `${msg.passed ? 'PASS' : 'FAIL'} ${msg.name}${msg.error ? ` — ${msg.error}` : ''}`);
+              if (pending && pending.name === msg.item) {
+                pending.assertions.push({ name: msg.name, passed: msg.passed, error: msg.error ?? undefined });
+              }
               const stepId = nameToId.get(msg.item);
               if (stepId) {
                 setStepStates(prev => {
@@ -721,14 +789,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               break;
             }
             case 'collection_result':
+              flushPending();
               onLog('info', `-- ${msg.collection} done: ${msg.passed}✓ ${msg.failed}✗ --`);
               break;
             case 'run_complete':
+              flushPending();
               onLog(msg.failed > 0 ? 'error' : 'success',
                 `-- Collection run complete: ${msg.passed}✓ ${msg.failed}✗ in ${msg.durationMs}ms${msg.aborted ? ' (stopped)' : ''} --`);
               finish();
               break;
             case 'error':
+              flushPending();
               onLog('error', `error: ${msg.error}`);
               finish();
               break;

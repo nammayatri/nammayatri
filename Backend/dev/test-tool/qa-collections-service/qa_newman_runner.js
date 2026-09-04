@@ -63,7 +63,10 @@ run.on('beforeItem', (err, args) => {
   emit('item_start', { name: args.item && args.item.name });
 });
 
-const MAX_BODY_CHARS = 4000;
+// 4000 was too small for real API responses (e.g. booking/ride list payloads)
+// — truncating mid-JSON breaks JSON.parse on the dashboard side, which then
+// falls back to showing the raw escaped string instead of pretty-printing it.
+const MAX_BODY_CHARS = 20000;
 
 function truncate(s) {
   if (typeof s !== 'string') return s;
