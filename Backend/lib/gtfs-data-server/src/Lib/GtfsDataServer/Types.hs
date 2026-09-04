@@ -301,7 +301,35 @@ instance ToJSON GimsTripActionReq where
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
     number_of_trips :: Int,
-    trip_numbers :: Maybe [Int]
+    trip_numbers :: Maybe [Int],
+    gimsConductorId :: Maybe Text,
+    gimsDriverId :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance FromJSON GimsCurrentOperationResp where
+  parseJSON = withObject "GimsCurrentOperationResp" $ \o ->
+    GimsCurrentOperationResp
+      <$> o .: "waybill_no"
+      <*> o .: "number_of_trips"
+      <*> o .:? "trip_numbers"
+      <*> o .:? "conductor_token"
+      <*> o .:? "driver_token"
+
+instance ToJSON GimsCurrentOperationResp where
+  toJSON GimsCurrentOperationResp {..} =
+    object
+      [ "waybill_no" .= waybill_no,
+        "number_of_trips" .= number_of_trips,
+        "trip_numbers" .= trip_numbers,
+        "conductor_token" .= gimsConductorId,
+        "driver_token" .= gimsDriverId
+      ]
+
+data GimsActiveTripResp = GimsActiveTripResp
+  { waybill_no :: Text,
+    active_trip_number :: Maybe Int,
+    route_id :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
