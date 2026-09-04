@@ -283,7 +283,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
-import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner)
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
@@ -3552,6 +3552,20 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
         driverTagTexts = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> Yudhishthira.filterExpiredTags' nowT (fromMaybe [] driver.driverTag)
     unless (scheduledTierEligibleForDriver True scheduledOpenToAll driverTagTexts cityServiceTiersHashMap booking.vehicleServiceTier) $
       throwError (InvalidRequest "Driver is not eligible for this scheduled booking")
+  -- Prepaid credits valid today can still be swept before pickup, so mirror the dispatch-side gate
+  -- on the direct-accept path. Solvency is not relaxed inside the R4 open-to-all window.
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
+    mbFleetAssociation <- QFDA.findByDriverId driver.id True
+    let (ownerType, ownerId) = case mbFleetAssociation of
+          Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
+          Nothing -> (DSP.DRIVER, driver.id.getId)
+        mbVehicleCategory =
+          if fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+            then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier)
+            else Nothing
+    creditsValid <- hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory booking.startTime
+    unless creditsValid $
+      throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking
   pure Success

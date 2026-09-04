@@ -16,6 +16,7 @@ module SharedLogic.Finance.Prepaid
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
     getPrepaidAvailableBalanceByOwner,
+    hasPrepaidCreditsValidAt,
     getSubscriptionRemainingAvailableBalance,
     createPrepaidHold,
     voidPrepaidHold,
@@ -179,6 +180,20 @@ getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory = d
   mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
   pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId mbVehicleCategory
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
+
+-- | Whether the owner still has prepaid credits backing a ride that runs at @atTime@.
+-- A queued purchase (expiryDate = Nothing) has not started its timer yet and takes over when the
+-- FIFO head expires, so it keeps the owner funded past the head's expiry.
+hasPrepaidCreditsValidAt ::
+  (BeamFlow m r) =>
+  Text -> -- Owner ID
+  DSP.SubscriptionOwnerType ->
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  UTCTime ->
+  m Bool
+hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory atTime = do
+  actives <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  pure $ any (\purchase -> maybe True (>= atTime) purchase.expiryDate) actives
 
 counterpartyTypeForSubscription :: DSP.SubscriptionPurchase -> CounterpartyType
 counterpartyTypeForSubscription subscription = case subscription.ownerType of
