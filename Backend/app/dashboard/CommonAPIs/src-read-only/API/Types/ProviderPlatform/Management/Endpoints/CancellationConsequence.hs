@@ -30,6 +30,7 @@ data CancellationConsequenceRowAPI = CancellationConsequenceRowAPI
     faultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancelledBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentInstrument :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
