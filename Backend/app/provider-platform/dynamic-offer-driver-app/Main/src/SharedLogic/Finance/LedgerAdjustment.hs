@@ -281,7 +281,7 @@ validateBaseRideAdjustment personId direction booking req = do
     throwError (InvalidRequest "Invalid personId")
 
   when (direction == DLA.Debit) $ do
-    totalFare <- ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+    totalFare <- ride.fare & fromMaybeM (InvalidRequest "Ride fare is not present.")
     fareParams <- case ride.fareParametersId of
       Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
         B.runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
@@ -310,12 +310,12 @@ validateCancellationAdjustment isDriverCancellation transporterConfig direction 
     throwError (InvalidRequest "Invalid personId")
   if isDriverCancellation
     then do
-      maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InternalError "Driver cancellation penalty amount is not present.")
+      maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InvalidRequest "Driver cancellation penalty amount is not present.")
       -- Credit increases driver balance and reduces driver penalty (vice versa for Debit).
       when (direction == DLA.Credit && amount > maxAmount) $
         throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
     else do
-      maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
+      maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InvalidRequest "User cancellation amount is not present.")
       let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
           gstPct :: Double = fromMaybe 0.0 mbGstRate
           maxAmountExcludingGst =
@@ -354,7 +354,7 @@ validatePayoutRelatedAdjustment merchantOpCity personId direction req = do
 
   payoutAmount <-
     payoutRequest.amount
-      & fromMaybeM (InternalError "Payout request amount is not present.")
+      & fromMaybeM (InvalidRequest "Payout request amount is not present.")
   when (direction == DLA.Debit && req.amount.amount > payoutAmount) $
     throwError (InvalidRequest $ "Could not adjust more than payout amount: " <> show payoutAmount)
 
