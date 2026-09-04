@@ -1385,10 +1385,9 @@ runDynamicPricingLogic' mbDpInputs mbDropQARConfig timeDiffFromUtc (Just _fromLo
       return Nothing
     else do
       response <- withTryCatch "runLogics:getCongestionChargeMultiplierFromModel" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED Nothing allLogics dynamicPricingData
-      logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData <> " and response is : " <> show response
       case response of
         Left e -> do
-          logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+          logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData
           return Nothing
         Right resp ->
           case (A.fromJSON resp.result :: Result DynamicPricingResult) of
@@ -1452,7 +1451,7 @@ runDynamicPricingLogic' mbDpInputs mbDropQARConfig timeDiffFromUtc (Just _fromLo
             A.Error err -> do
               -- DYNAMIC_PRICING_PARSE_FAILURE is a stable, alertable marker: a
               -- broken rule silently degrades every search to static pricing
-              logError $ "DYNAMIC_PRICING_PARSE_FAILURE: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " err " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+              logError $ "DYNAMIC_PRICING_PARSE_FAILURE: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " err " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData
               return $
                 Just $
                   CongestionChargeDetailsModel
