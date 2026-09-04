@@ -104,7 +104,9 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     merchantId :: Maybe (Id Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DTAC.ConditionalCharges],
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    negotiationFareMinTolerancePct :: Maybe Int,
+    negotiationFareMaxTolerancePct :: Maybe Int
   }
   deriving (Generic, Show, ToSchema)
 
@@ -290,7 +292,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     congestionChargeData :: Maybe CongestionChargeData,
     driverCancellationNotAllowed :: Maybe Bool,
     mbArea :: Maybe SL.Area,
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    negotiationFareMinTolerancePct :: Maybe Int,
+    negotiationFareMaxTolerancePct :: Maybe Int
   }
   deriving (Generic, Show)
 

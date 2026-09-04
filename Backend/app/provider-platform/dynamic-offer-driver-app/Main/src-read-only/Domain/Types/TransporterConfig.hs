@@ -258,8 +258,6 @@ data TransporterConfig = TransporterConfig
     minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
     missingMappingFallbackVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
-    negotiationFareMaxTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    negotiationFareMinTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
     nightSafetyStartTime :: Kernel.Types.Common.Seconds,
