@@ -1071,17 +1071,44 @@ buildSingleModeDirectRoutes ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   MultiModalTypes.GeneralVehicleType ->
+  Bool ->
   Flow [MultiModalTypes.MultiModalRoute]
-buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
-  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc True False
-  case mbRouteDetails of
-    Just routeDetails -> do
+buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode enableMetroHop = do
+  mbHopRoute <-
+    if enableMetroHop && vc == Enums.METRO && isNothing mbRouteCode
+      then buildHopRouteDetails
+      else pure Nothing
+  case mbHopRoute of
+    Just (hopRouteDetails, hopDistance) -> mkRoutes hopRouteDetails (Just hopDistance)
+    Nothing -> do
+      (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc True False
+      maybe (return []) (\routeDetails -> mkRoutes (routeDetails :| []) Nothing) mbRouteDetails
+  where
+    mkRoutes routeDetails mbDistance = do
       currentTime <- getCurrentTime
       let (_, currentTimeIST) = getISTTimeInfo currentTime
-      mbPreliminaryLeg <- getPreliminaryLeg (routeDetails.fromStopDetails >>= (.name)) routeDetails.startLocation
-      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails]) Nothing Nothing]
-    Nothing -> return []
-buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
+      let firstRouteDetails = NonEmpty.head routeDetails
+      mbPreliminaryLeg <- getPreliminaryLeg (firstRouteDetails.fromStopDetails >>= (.name)) firstRouteDetails.startLocation
+      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance Nothing]
+
+    buildHopRouteDetails = do
+      eHopLegs <- withTryCatch "buildSingleModeDirectRoutes:getMetroHop" (OTPRest.getMetroHop integratedBppConfig originStopCode destinationStopCode)
+      case eHopLegs of
+        Right (Just hopLegs@(_ : _ : _)) -> do
+          logInfo $ "Metro hop legs for " <> originStopCode <> " -> " <> destinationStopCode <> ": " <> show (map (.routeCode) hopLegs)
+          builtLegs <- mapM buildHopLeg (zip [1 ..] hopLegs)
+          pure $ case sequence builtLegs of
+            Just builtPairs -> (\routeDetails -> (routeDetails, sum (map snd builtPairs))) <$> NonEmpty.nonEmpty (map fst builtPairs)
+            Nothing -> Nothing
+        Right _ -> pure Nothing
+        Left err -> do
+          logError $ "Metro hop lookup failed for " <> originStopCode <> " -> " <> destinationStopCode <> ", falling back to direct route discovery: " <> show err
+          pure Nothing
+
+    buildHopLeg (subLegOrder, hopLeg) = do
+      (mbRouteDetails, mbDistance) <- buildMultimodalRouteDetails subLegOrder (Just hopLeg.routeCode) hopLeg.srcStopCode hopLeg.destStopCode integratedBppConfig mid mocid vc True False
+      pure $ (\routeDetails -> (routeDetails, fromMaybe 0 mbDistance)) <$> mbRouteDetails
+buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ _ = return []
 
 getSubwayValidRoutes ::
   [ViaRouteDetails] ->
