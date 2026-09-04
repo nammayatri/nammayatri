@@ -289,7 +289,29 @@ def _coordinate(run_id: str, config: dict, eq: Queue, run: dict):
         _evict_old_runs()
 
 
+class RunAlreadyActive(Exception):
+    """Raised by start_run() when another run is still going — one run at a
+    time, whoever's calling (the UI or a webhook) should attach to the
+    existing run instead of starting a competing one against the same
+    Newman/network resources."""
+
+    def __init__(self, run_id: str):
+        super().__init__(f"a run is already in progress: {run_id}")
+        self.run_id = run_id
+
+
+def get_active_run_id() -> str | None:
+    with _runs_lock:
+        for rid, r in _runs.items():
+            if r["status"] == "running":
+                return rid
+    return None
+
+
 def start_run(config: dict) -> str:
+    active = get_active_run_id()
+    if active:
+        raise RunAlreadyActive(active)
     run_id = str(uuid.uuid4())[:8]
     eq: Queue = Queue()
     now = int(time.time() * 1000)

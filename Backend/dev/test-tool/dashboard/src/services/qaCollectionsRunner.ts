@@ -27,14 +27,41 @@ async function asJson<T>(resp: Response): Promise<T> {
   return resp.json();
 }
 
+/** Only one QA run may be in flight at a time (server-enforced) — thrown by
+ * startQaCollectionRun when local-api reports 409, carrying the run already
+ * in progress so the caller can attach to it instead of failing blind. */
+export class QaRunConflictError extends Error {
+  constructor(public runId: string) {
+    super(`a QA run is already in progress: ${runId}`);
+  }
+}
+
 export async function startQaCollectionRun(payload: QaRunStartPayload): Promise<string> {
   const resp = await fetch(`${LOCAL_API_BASE}/api/qa-collections/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (resp.status === 409) {
+    const body = await resp.json().catch(() => ({}));
+    throw new QaRunConflictError(body.runId);
+  }
   const { runId } = await asJson<{ runId: string }>(resp);
   return runId;
+}
+
+/** Poll target for "is a QA run happening right now, anywhere" — used to
+ * disable the Run button and auto-attach the viewer when a webhook-triggered
+ * run is already in flight. */
+export async function checkActiveQaRun(): Promise<string | null> {
+  try {
+    const resp = await fetch(`${LOCAL_API_BASE}/api/qa-collections/active`);
+    if (!resp.ok) return null;
+    const body = await resp.json();
+    return body.runId ?? null;
+  } catch {
+    return null; // local-api unreachable — treat as "nothing running" rather than blocking the UI
+  }
 }
 
 export async function stopQaCollectionRun(runId: string): Promise<void> {

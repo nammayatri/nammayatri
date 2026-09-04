@@ -15,7 +15,7 @@ import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../serv
 import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { LoadTestModal } from './LoadTestModal';
 import { StepResult, LogEntry } from '../types';
-import { startQaCollectionRun, stopQaCollectionRun, qaCollectionEventsUrl, syncQaCollectionsRepo } from '../services/qaCollectionsRunner';
+import { startQaCollectionRun, stopQaCollectionRun, qaCollectionEventsUrl, syncQaCollectionsRepo, checkActiveQaRun, QaRunConflictError } from '../services/qaCollectionsRunner';
 
 // Cities whose backing data lives in the EU prod cluster. Any environment
 // matching one of these (by city or envName, case-insensitive) defaults its
@@ -311,6 +311,21 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Live backend (Newman) run — set only while a backendOnly group's run is in flight.
   const backendRunIdRef = useRef<string | null>(null);
   const backendEsRef = useRef<EventSource | null>(null);
+
+  // Only one backend QA run may be in flight at a time (server-enforced) —
+  // poll for it so the button reflects a run someone else (or a webhook)
+  // started, not just one this tab itself kicked off.
+  const [activeQaRunId, setActiveQaRunId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      const id = await checkActiveQaRun();
+      if (!cancelled) setActiveQaRunId(id);
+    };
+    poll();
+    const timer = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
 
   // Expanded steps for viewing details
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -810,7 +825,12 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         es.onerror = () => { /* server closes the stream on completion — transient errors are expected */ };
       });
     } catch (e: any) {
-      onLog('error', `Failed to start backend run: ${e?.message ?? e}`);
+      if (e instanceof QaRunConflictError) {
+        onLog('error', `Could not start — a QA run (${e.runId}) is already in progress`);
+        setActiveQaRunId(e.runId);
+      } else {
+        onLog('error', `Failed to start backend run: ${e?.message ?? e}`);
+      }
     } finally {
       backendEsRef.current = null;
       backendRunIdRef.current = null;
@@ -1343,14 +1363,25 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         </label>
         <div className="cr-actions">
           {currentGroup?.backendOnly ? (
-            <button
-              className="cr-run-btn"
-              onClick={runBackend}
-              disabled={isRunning || !currentSuite || !currentEnv}
-              title="Runs via Newman on test-local-api (backend) — this collection uses setNextRequest branching the in-browser runner doesn't support"
-            >
-              {isRunning ? 'Running (backend)...' : `Run ${currentSuite?.name ?? ''} (backend)`}
-            </button>
+            <>
+              <button
+                className="cr-run-btn"
+                onClick={runBackend}
+                disabled={isRunning || !currentSuite || !currentEnv || (!!activeQaRunId && activeQaRunId !== backendRunIdRef.current)}
+                title="Runs via Newman on test-local-api (backend) — this collection uses setNextRequest branching the in-browser runner doesn't support"
+              >
+                {isRunning ? 'Running (backend)...' : `Run ${currentSuite?.name ?? ''} (backend)`}
+              </button>
+              {activeQaRunId && activeQaRunId !== backendRunIdRef.current && (
+                <a
+                  className="cr-active-run-link"
+                  href={`?qaRunId=${activeQaRunId}`}
+                  title="Another QA run is already in progress — only one can run at a time"
+                >
+                  ⚠ A QA run ({activeQaRunId}) is already in progress — view it
+                </a>
+              )}
+            </>
           ) : (
             <>
               {!manualMode && (

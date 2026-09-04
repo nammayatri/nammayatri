@@ -4065,12 +4065,20 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 return True
             self._send_json(detail)
             return True
+        elif path == "/api/qa-collections/active" and method == "GET":
+            active = _qa_runner.get_active_run_id() if _QA_AVAILABLE else None
+            self._send_json({"runId": active})
+            return True
         elif path == "/api/qa-collections/run" and method == "POST":
             if not _QA_AVAILABLE:
                 self._send_json({"error": "qa collections runner unavailable — run `npm install` in qa-collections-service"}, 503)
                 return True
             body = self._read_json_body() or {}
-            run_id = _qa_runner.start_run({**body, "triggeredBy": "ui"})
+            try:
+                run_id = _qa_runner.start_run({**body, "triggeredBy": "ui"})
+            except _qa_runner.RunAlreadyActive as exc:
+                self._send_json({"error": "a QA run is already in progress", "runId": exc.run_id}, 409)
+                return True
             self._send_json({"runId": run_id})
             return True
         elif path == "/api/qa-collections/webhook" and method == "POST":
@@ -4093,7 +4101,11 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             if not run_config["collections"]:
                 self._send_json({"error": "nothing to run — pass {directory, filename} or populate qa-collections-service/webhook-config.json"}, 400)
                 return True
-            run_id = _qa_runner.start_run(run_config)
+            try:
+                run_id = _qa_runner.start_run(run_config)
+            except _qa_runner.RunAlreadyActive as exc:
+                self._send_json({"error": "a QA run is already in progress", "runId": exc.run_id}, 409)
+                return True
             self._send_json({"runId": run_id, "collections": run_config["collections"]})
             return True
         elif path.startswith("/api/qa-collections/events/") and method == "GET":

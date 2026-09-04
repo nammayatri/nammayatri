@@ -129,3 +129,43 @@
   max-height: 220px;
   overflow-y: auto;
 }
+
+/* Rich viewer: step-tree (left) + LogPanel (right), same layout language as
+   the normal Collections tab so a triggered run looks "just like normal". */
+.qarv-panel-rich {
+  width: min(1400px, 96vw);
+  height: min(88vh, 1000px);
+}
+
+.qarv-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.qarv-steps {
+  flex: 1.2;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 10px 14px;
+  border-right: 1px solid #2a2a2a;
+}
+
+.qarv-logs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qarv-collection-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.qarv-collection-running { background: #1a3060; color: #82b1ff; }
+.qarv-collection-done { background: #24291f; color: #c8d38a; }
