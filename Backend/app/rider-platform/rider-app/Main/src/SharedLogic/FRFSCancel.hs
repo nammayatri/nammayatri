@@ -123,11 +123,6 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     whenJust booking.overrideAppliedEntityId $ \entityId ->
       -- One trip per ticket went out at confirm, so the same number comes back here.
       void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId) fareParameters.totalQuantity)
-  -- The trip is not happening, so its claimed window must go regardless of whether a trip credit
-  -- was owed above: a counter-cancellation spends the trip but still frees the slot. Keyed by the
-  -- booking id, which is the window's owner id unless this booking was itself a reschedule -- in
-  -- which case the chain's parent id owns it and the release is a no-op here. Deliberately not
-  -- gated on refundOwed.
   whenJust booking.overrideAppliedEntityId $ \entityId ->
     void . withTryCatch "FRFSCancel:releaseBookedTrip" $
       FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
