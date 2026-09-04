@@ -28,6 +28,7 @@ module Domain.Action.UI.Registration
     logout,
     cleanCachedTokens,
     createDriverWithDetails,
+    createPersonWithPhoneNumber,
     makePerson,
     marketingEventsPreLogin,
     marketingEventsPostLogin,
@@ -110,6 +111,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified System.Environment as SE
 import qualified TempAppCode.Flow as TempAppCode
@@ -231,8 +233,50 @@ authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsC
 -- owners) and simply returns (Nothing, Nothing).
 lookupDepotManagerFor :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SP.Person -> m (Maybe Text, Maybe Bool)
 lookupDepotManagerFor personId = do
-  mbDepotManager <- QDepotManager.findByPersonId personId
+  mbDepotManager <- QDepotManager.findBestForOperatorByPersonId personId
   return (getId . (.depotCode) <$> mbDepotManager, (.isAdmin) <$> mbDepotManager)
+
+-- Seeds as BUS_CHECKER; auth flow reconciles to BUS_DISPATCHER on first login if depot_manager.isAdmin.
+createPersonWithPhoneNumber ::
+  ( HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  m (Id SP.Person)
+createPersonWithPhoneNumber merchant merchantOperatingCityId mobileNumber countryCode = do
+  mobileHash <- getDbHash mobileNumber
+  mbExisting <- QPExtra.findByMobileNumberAndMerchantId countryCode mobileHash merchant.id
+  case mbExisting of
+    Just person -> pure person.id
+    Nothing -> do
+      transporterConfig <-
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+          >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      mbCloudType <- asks (.cloudType)
+      let authReq =
+            AuthReq
+              { mobileNumber = Just mobileNumber,
+                mobileCountryCode = Just countryCode,
+                merchantId = merchant.shortId.getShortId,
+                merchantOperatingCity = Nothing,
+                email = Nothing,
+                employeeId = Nothing,
+                password = Nothing,
+                name = Nothing,
+                identifierType = Just SP.MOBILENUMBER,
+                registrationLat = Nothing,
+                registrationLon = Nothing,
+                otpChannel = Nothing,
+                isOperatorReq = Just True
+              }
+      basePerson <- makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing Nothing mbCloudType merchant.id merchantOperatingCityId True (Just SP.BUS_CHECKER)
+      void $ QP.create basePerson
+      pure basePerson.id
 
 auth ::
   Bool ->
@@ -424,7 +468,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
                 basePerson <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing cloudType merchant.id merchantOpCityId isDashboard (Just SP.BUS_CHECKER)
                 void $ QP.create basePerson
                 pure basePerson
-            mbDepotManager <- QDepotManager.findByPersonId person.id
+            mbDepotManager <- QDepotManager.findBestForOperatorByPersonId person.id
             let dCode = getId . (.depotCode) <$> mbDepotManager
                 dIsAdmin = (.isAdmin) <$> mbDepotManager
                 -- Reconcile role so BUS_DISPATCHER handler auth checks pick up admin toggles on subsequent logins.

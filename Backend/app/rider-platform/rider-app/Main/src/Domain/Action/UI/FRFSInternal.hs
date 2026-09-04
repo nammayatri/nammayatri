@@ -1,6 +1,7 @@
 module Domain.Action.UI.FRFSInternal
   ( getFrfsTripRouteManifest,
-    postFrfsTripNotifyTripStarted, postFrfsTripStopNotifyApproaching,
+    postFrfsTripNotifyTripStarted,
+    postFrfsTripStopNotifyApproaching,
     postMultimodalTicketVerify,
   )
 where
