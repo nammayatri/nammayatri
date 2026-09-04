@@ -838,6 +838,33 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     }
   }, [isRunning, currentSuite, currentEnv, selectedDir, selectedSuite, steps, onLog]);
 
+  // Run every suite in the currently selected backendOnly directory (NY/MSIL/
+  // YS) at once — same directory-shorthand expansion the webhook uses. Spans
+  // many suites/collections at once, so progress is shown via the same rich
+  // multi-collection viewer a webhook-triggered run gets, not the single-suite
+  // step list above (?qaRunId= — a full navigation so QaRunViewer picks up
+  // the new run id at mount).
+  const runBackendGroup = useCallback(async () => {
+    if (isRunning || !currentGroup?.backendOnly || !currentEnv) return;
+    try {
+      const runId = await startQaCollectionRun({
+        collections: [{ directory: selectedDir, filename: '' }],
+        envFile: currentEnv.filename,
+        concurrency: 2,
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.set('qaRunId', runId);
+      window.location.href = url.toString();
+    } catch (e: any) {
+      if (e instanceof QaRunConflictError) {
+        onLog('error', `Could not start — a QA run (${e.runId}) is already in progress`);
+        setActiveQaRunId(e.runId);
+      } else {
+        onLog('error', `Failed to start collection run: ${e?.message ?? e}`);
+      }
+    }
+  }, [isRunning, currentGroup, currentEnv, selectedDir, onLog]);
+
   const stop = useCallback(() => {
     abortRef.current = true;
     if (backendRunIdRef.current) {
@@ -1371,6 +1398,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                 title="Runs via Newman on test-local-api (backend) — this collection uses setNextRequest branching the in-browser runner doesn't support"
               >
                 {isRunning ? 'Running (backend)...' : `Run ${currentSuite?.name ?? ''} (backend)`}
+              </button>
+              <button
+                className="cr-run-all-btn"
+                onClick={runBackendGroup}
+                disabled={isRunning || !currentEnv || (!!activeQaRunId && activeQaRunId !== backendRunIdRef.current)}
+                title={`Run every suite in ${selectedDir} at once (directory expansion, same as the webhook) — opens the live multi-collection viewer`}
+              >
+                Run All {selectedDir} Suites
               </button>
               {activeQaRunId && activeQaRunId !== backendRunIdRef.current && (
                 <a

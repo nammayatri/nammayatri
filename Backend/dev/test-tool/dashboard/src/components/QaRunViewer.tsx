@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './QaRunViewer.css';
-import { fetchQaRunDetail, qaCollectionEventsUrl, checkActiveQaRun, QaRunDetail, QaRunEvent } from '../services/qaCollectionsRunner';
+import { fetchQaRunDetail, qaCollectionEventsUrl, checkActiveQaRun, stopQaCollectionRun, QaRunDetail, QaRunEvent } from '../services/qaCollectionsRunner';
 import { LogPanel } from './LogPanel';
 import type { LogEntry } from '../types';
 import type { PostmanStepResult } from '../services/api';
@@ -313,6 +313,15 @@ export const QaRunViewer: React.FC = () => {
           <span>QA Run <code>{runId}</code></span>
           {meta && <span className={`qarv-status qarv-status-${meta.status}`}>{meta.status}</span>}
           <span className="qarv-spacer" />
+          {meta?.status === 'running' && (
+            <button
+              className="qarv-stop"
+              onClick={() => runId && stopQaCollectionRun(runId)}
+              title="Stop this run"
+            >
+              ■ Stop
+            </button>
+          )}
           <button className="qarv-close" onClick={() => setDismissed(true)} title="Close (doesn't stop the run)">✕</button>
         </div>
         {error && <div className="qarv-error">Could not load run {runId}: {error}</div>}

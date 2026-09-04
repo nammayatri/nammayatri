@@ -53,6 +53,17 @@
 .qarv-status-failed { background: #4a1f1f; color: #f5b7b7; }
 .qarv-status-stopped { background: #3d3520; color: #e0c97a; }
 
+.qarv-stop {
+  background: #4a1f1f;
+  border: 1px solid #6b2b2b;
+  color: #f5b7b7;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .qarv-close {
   background: transparent;
   border: 1px solid #3a3a3a;
