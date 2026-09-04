@@ -278,6 +278,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               petCharges = Nothing,
               nightShiftCharge = Nothing,
               estimatedCongestionCharge = Nothing,
+              isScheduled = False,
               customerCancellationDues = Nothing,
               nightShiftOverlapChecking = False,
               estimatedDistance = Just representativeMeters,

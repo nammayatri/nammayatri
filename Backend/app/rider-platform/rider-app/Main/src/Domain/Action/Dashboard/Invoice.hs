@@ -59,7 +59,8 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("DRIVER_ALLOWANCE", "Driver Allowance"),
                   ("AIRPORT_CONVENIENCE_FEE", "Airport Convenience Fee"),
                   ("RETURN_FEE", "Return Fee"),
-                  ("BOOTH_CHARGE", "Booth Charge")
+                  ("BOOTH_CHARGE", "Booth Charge"),
+                  ("SCHEDULING_CHARGE", "Scheduling Charge")
                 ]
           fareBreakups <- mapM (getFareBreakup booking) breakupItems
           mbSource <- case booking.fromLocationId of

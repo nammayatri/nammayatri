@@ -379,6 +379,7 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             nightShiftCharge = Nothing,
             customerCancellationDues = Nothing,
             nightShiftOverlapChecking = False, ---------considered only for one way
+            isScheduled = False, ---------this rate-card path is for one-way book-now trips only
             estimatedDistance = mbDistance,
             estimatedRideDuration = mbDuration,
             estimatedRideStaticDuration = Nothing,
@@ -471,6 +472,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
             (Nothing, Just $ mkBreakupItem (show Tags.RETURN_FEE_PERCENTAGE) (mkValue $ show d))
           Nothing -> (Nothing, Nothing)
 
+      (schedulingChargeFixedItem, schedulingChargePercentageItem) =
+        case farePolicy.schedulingCharge of
+          Just (FarePolicyD.ConstantSchedulingCharge hpm) ->
+            (Just $ mkBreakupItem (show Tags.SCHEDULING_CHARGE) (mkValue $ highPrecMoneyToText hpm), Nothing)
+          Just (FarePolicyD.ProgressiveSchedulingCharge percent) ->
+            (Nothing, Just $ mkBreakupItem (show Tags.SCHEDULING_CHARGE_PERCENTAGE) (mkValue $ show percent))
+          Nothing -> (Nothing, Nothing)
+
       governmentChargeCaption = show Tags.GOVERNMENT_CHARGE
       governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> mbGovtChargesRate
 
@@ -548,6 +557,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       boothChargePercentageItem,
       returnFeeFixedItem,
       returnFeePercentageItem,
+      schedulingChargeFixedItem,
+      schedulingChargePercentageItem,
       governmentChargeItem,
       customerExtraFeeTaxItem
     ]
@@ -1188,7 +1199,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
   mbPinnedConfig <- case mbPinnedVersion of
     Nothing -> pure Nothing
     Just (pinnedVersion :: Int) ->
-      if (Just pinnedVersion == ((.version) <$> surgeConfigs.activeConfig))
+      if Just pinnedVersion == ((.version) <$> surgeConfigs.activeConfig)
         then pure surgeConfigs.activeConfig
         else do
           allConfigs <- CQSC.findAllByCityAndServiceTier merchantOperatingCityId serviceTier
@@ -1202,7 +1213,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
   -- end-ride, and a surge ride keeps the version that priced it. Initial
   -- pricing uses pin-or-current-active. Shadow runs on initial pricing only.
   let isRepricing = isJust mbActualDuration
-      mbEffectiveActive = if isRepricing then mbPinnedConfig else (mbPinnedConfig <|> surgeConfigs.activeConfig)
+      mbEffectiveActive = if isRepricing then mbPinnedConfig else mbPinnedConfig <|> surgeConfigs.activeConfig
       mbShadowConfigToRun = if isRepricing then Nothing else surgeConfigs.shadowConfig
   case (mbEffectiveActive, mbShadowConfigToRun) of
     (Nothing, Nothing) -> runWorker mbDpInputs

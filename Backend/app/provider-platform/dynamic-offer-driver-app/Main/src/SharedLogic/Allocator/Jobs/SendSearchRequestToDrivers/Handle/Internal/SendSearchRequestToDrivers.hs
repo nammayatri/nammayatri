@@ -323,6 +323,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           estimatedRideDuration = searchReq.estimatedDuration,
           estimatedRideStaticDuration = searchReq.estimatedStaticDuration,
           estimatedCongestionCharge = Nothing,
+          isScheduled = searchReq.isScheduled,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,

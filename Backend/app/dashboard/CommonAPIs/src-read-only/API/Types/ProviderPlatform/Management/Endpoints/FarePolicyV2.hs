@@ -309,6 +309,7 @@ data FPV2Policy = FPV2Policy
     perLuggageCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     returnFee :: Kernel.Prelude.Maybe FPV2ReturnFee,
     boothCharges :: Kernel.Prelude.Maybe FPV2BoothCharge,
+    schedulingCharge :: Kernel.Prelude.Maybe FPV2SchedulingCharge,
     nightShiftBounds :: Kernel.Prelude.Maybe FPV2NightShiftBounds,
     allowedTripDistanceBounds :: Kernel.Prelude.Maybe FPV2AllowedTripDistanceBounds,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -481,6 +482,12 @@ data FPV2SampleTrip = FPV2SampleTrip
     rideTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     waitingTimeMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FPV2SchedulingCharge
+  = ProgressiveSchedulingCharge Kernel.Prelude.Double
+  | ConstantSchedulingCharge Kernel.Types.Common.HighPrecMoney
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

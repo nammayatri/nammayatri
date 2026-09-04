@@ -1557,6 +1557,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       luggageCharges = maybe 0.0 (.amount.amount) (getFareFromArray "LUGGAGE_CHARGE" fareBreakup)
       boothCharges = maybe 0.0 (.amount.amount) (getFareFromArray "BOOTH_CHARGE" fareBreakup)
       returnCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RETURN_FEE" fareBreakup)
+      schedulingCharges = maybe 0.0 (.amount.amount) (getFareFromArray "SCHEDULING_CHARGE" fareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1592,6 +1593,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "AIRPORT_CONVENIENCE_FEE" -> show airportConvenienceFee
         "BOOTH_CHARGE" -> show boothCharges
         "RETURN_FEE" -> show returnCharges
+        "SCHEDULING_CHARGE" -> show schedulingCharges
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo
