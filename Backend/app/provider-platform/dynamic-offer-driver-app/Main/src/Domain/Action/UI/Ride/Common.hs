@@ -721,16 +721,6 @@ getWaitingChargeInfo fp = case fp.farePolicyDetails of
   FarePolicyD.SlabsDetails _ -> Nothing
   FarePolicyD.AmbulanceDetails _ -> Nothing
 
--- Slabs/Ambulance fare policies price waiting per-slab (by distance/vehicle age);
--- surfacing that would need the same slab-selection logic as fare calculation,
--- so this display-only field only covers the common policy types.
-getWaitingChargeInfo :: FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo
-getWaitingChargeInfo fp = case fp.farePolicyDetails of
-  FarePolicyD.ProgressiveDetails d -> d.waitingChargeInfo
-  FarePolicyD.RentalDetails d -> d.waitingChargeInfo
-  FarePolicyD.InterCityDetails d -> d.waitingChargeInfo
-  FarePolicyD.SlabsDetails _ -> Nothing
-  FarePolicyD.AmbulanceDetails _ -> Nothing
 
 -- calculateLocations moved from UI.Ride
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
