@@ -300,11 +300,15 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassingRoutes = PassingRoutes
-  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
-    isLastStop :: Kernel.Prelude.Bool,
-    isLive :: Kernel.Prelude.Bool,
-    routeCode :: Kernel.Prelude.Text
+data PassingRoutes = PassingRoutes {isLastStop :: Kernel.Prelude.Bool, liveVehicles :: [PassingVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, schedules :: [PassingVehicleInfo]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassingVehicleInfo = PassingVehicleInfo
+  { eta :: Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    vehicleNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

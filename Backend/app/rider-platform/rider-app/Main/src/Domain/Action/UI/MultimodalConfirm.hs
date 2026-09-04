@@ -2710,7 +2710,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
             map
               ( \r ->
                   let (keptLive, keptScheduled) = fromMaybe ([], []) $ Map.lookup r.routeCode topByRoute
-                   in r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled}
+                   in -- PassingRoutes shares liveVehicles/schedules, so the update needs the type spelled out.
+                      (r {API.Types.UI.MultimodalConfirm.liveVehicles = keptLive, API.Types.UI.MultimodalConfirm.schedules = keptScheduled} :: API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
               )
               routes
 
@@ -3243,63 +3244,81 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
-  -- `routeCodes` is an optional comma-separated filter; without it every route passing the stop is returned.
   let filterRouteCodes = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbRouteCodes
       passingRouteCodes = nub (map (.routeCode) mappings)
       routeCodes =
         if null filterRouteCodes
           then passingRouteCodes
           else filter (`elem` filterRouteCodes) passingRouteCodes
-  mapConcurrently (getRouteEtaAtStop integratedBPPConfig) routeCodes
+
+  frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId person.merchantOperatingCityId integratedBPPConfig.id
+  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap) routeCodes
   where
-    getRouteEtaAtStop integratedBPPConfig routeCode = do
-      liveEtasFork <-
-        awaitableFork "getMultimodalTrackStopRoutes->liveEtas" $ do
-          busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
-          pure
-            [ etaEntry
-              | routeWithBuses <- busesForRoutes,
-                bus <- routeWithBuses.buses,
-                etaEntry <- fromMaybe [] bus.busData.eta_data,
-                etaEntry.stopCode == stopCode
-            ]
-      scheduleEtasFork <-
-        awaitableFork "getMultimodalTrackStopRoutes->scheduleEtas" $ do
-          schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
-          pure
-            [ etaEntry
-              | scheduleDetail <- schedules,
-                etaEntry <- scheduleDetail.eta,
-                etaEntry.stopCode == stopCode
-            ]
-      liveEtas <-
-        L.await Nothing liveEtasFork >>= \case
-          Left err -> do
-            logError $ "getMultimodalTrackStopRoutes live ETA fetch failed for route " <> routeCode <> ": " <> show err
-            pure []
-          Right result -> pure result
-      scheduleEtas <-
-        L.await Nothing scheduleEtasFork >>= \case
-          Left err -> do
-            logError $ "getMultimodalTrackStopRoutes schedule ETA fetch failed for route " <> routeCode <> ": " <> show err
-            pure []
-          Right result -> pure result
-      let (etas, isLive) =
-            if not (null liveEtas)
-              then (liveEtas, True)
-              else (scheduleEtas, False)
-      if null etas
-        then pure $ ApiTypes.PassingRoutes {routeCode = routeCode, eta = Nothing, isLastStop = False, isLive = False}
-        else do
-          enrichedEtas <- mapM (JMRouteServiceability.enrichBusStopETA integratedBPPConfig) etas
+    etaAtStop etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode == stopCode) etaEntries))
+
+    getRouteEtaAtStop integratedBPPConfig frfsTierMap routeCode = do
+      mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+      case mbRoute of
+        Nothing -> do
+          logError $ "getMultimodalTrackStopRoutes route not found: " <> routeCode
+          pure Nothing
+        Just route -> do
+          liveVehiclesFork <-
+            awaitableFork "getMultimodalTrackStopRoutes->liveVehicles" $ do
+              busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
+              catMaybes
+                <$> mapConcurrently
+                  ( \(vehicleNo, busEta) -> do
+                      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNo
+                      pure $ (\(_, metadata) -> (vehicleNo, metadata.serviceType, busEta)) <$> mbVehicleMetadata
+                  )
+                  [ (bus.vehicleNumber, busEta)
+                    | routeWithBuses <- busesForRoutes,
+                      bus <- routeWithBuses.buses,
+                      Just busEta <- [etaAtStop (fromMaybe [] bus.busData.eta_data)]
+                  ]
+          scheduleVehiclesFork <-
+            awaitableFork "getMultimodalTrackStopRoutes->schedules" $ do
+              schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
+              pure
+                [ (scheduleDetail.vehicle_no, scheduleDetail.service_tier, detailEta)
+                  | scheduleDetail <- schedules,
+                    Just detailEta <- [etaAtStop scheduleDetail.eta]
+                ]
+          liveVehicles <-
+            L.await Nothing liveVehiclesFork >>= \case
+              Left err -> do
+                logError $ "getMultimodalTrackStopRoutes live vehicle fetch failed for route " <> routeCode <> ": " <> show err
+                pure []
+              Right result -> pure result
+          scheduleVehicles <-
+            L.await Nothing scheduleVehiclesFork >>= \case
+              Left err -> do
+                logError $ "getMultimodalTrackStopRoutes schedule fetch failed for route " <> routeCode <> ": " <> show err
+                pure []
+              Right result -> pure result
+          liveVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) liveVehicles
+          scheduleVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) scheduleVehicles
           routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
                 (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
                 [] -> False
           pure $
-            ApiTypes.PassingRoutes
-              { routeCode = routeCode,
-                eta = Just enrichedEtas,
-                isLastStop = isLastStop,
-                isLive = isLive
-              }
+            Just
+              ApiTypes.PassingRoutes
+                { routeCode = routeCode,
+                  routeShortName = route.shortName,
+                  liveVehicles = liveVehicleInfos,
+                  schedules = scheduleVehicleInfos,
+                  isLastStop = isLastStop
+                }
+
+    mkPassingVehicle integratedBPPConfig frfsTierMap (vehicleNo, serviceTier, etaEntry) = do
+      enrichedEta <- JMRouteServiceability.enrichBusStopETA integratedBPPConfig etaEntry
+      pure $
+        ApiTypes.PassingVehicleInfo
+          { vehicleNumber = vehicleNo,
+            serviceTierType = serviceTier,
+            serviceTierName = (.shortName) <$> lookup serviceTier frfsTierMap,
+            eta = enrichedEta
+          }
