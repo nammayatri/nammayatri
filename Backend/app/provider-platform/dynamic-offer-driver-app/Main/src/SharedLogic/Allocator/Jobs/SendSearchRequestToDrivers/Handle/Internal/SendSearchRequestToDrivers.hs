@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
   ( sendSearchRequestToDrivers,
     buildSearchRequestForDriver,
     attemptPriorityDirectAssign,
+    attemptForwardDirectAssign,
   )
 where
 
@@ -40,6 +41,9 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.ConditionalCharges as DCC
+-- import Domain.Types.VehicleCategory as DTV
+
+import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverPoolConfig
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
@@ -54,7 +58,6 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTR
 import qualified Domain.Types.VehicleServiceTier as VST
--- import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
 import Kernel.External.Types (ServiceFlow)
@@ -68,6 +71,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion (..))
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.DriverCoins.Types as DCT
@@ -84,6 +88,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTFlow
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
@@ -201,7 +206,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
-  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
+  -- Bundle ride tried first: the product goal is keeping an already-on-ride, opted-in driver busy,
+  -- which takes priority over pulling in a fresh AUTO_ACCEPT-eligible idle driver for this ride.
+  forwardAssignedPool <- attemptForwardDirectAssign merchant searchReq searchTry tripQuoteDetails driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
+  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache forwardAssignedPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty dispatchPool
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
@@ -680,3 +688,146 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
         && dp.driverPoolResult.serviceTier `elem` dp.driverPoolResult.selectedAutoAcceptTiers
     priorityCandidates = DL.filter isPriorityCandidate batch
     sortedPriority = DL.sortOn (.actualDistanceToPickup) priorityCandidates
+
+-- | Bundle ride: before broadcast, try to silently direct-assign this search to one
+-- forward-auto-accept-opted-in on-ride driver, nearest-detour-first. Candidates are the
+-- on-ride/forward slice of the batch (isForwardRequest == True) already produced by the normal
+-- forward-batching pool (enableForwardBatching's on-ride candidate pool, radius/threshold-filtered
+-- there); this function only adds the auto-accept-specific opt-in check and the silent commit.
+-- On success returns [] (this ride is fully consumed, same as attemptPriorityDirectAssign -- a
+-- broadcast of the remainder would still notify drivers for an already-assigned ride), else the
+-- batch unchanged so the normal broadcast (or attemptPriorityDirectAssign) can still run.
+attemptForwardDirectAssign ::
+  forall m r c.
+  ( AcceptDynamicOfferFlow m r c,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    TM.HasDriverSearchRequestResponseMetrics m r,
+    EncFlow m r,
+    JobCreator r m,
+    LT.HasLocationService m r,
+    C.MonadCatch m
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  DST.SearchTry ->
+  [SDP.TripQuoteDetail] ->
+  DriverPoolConfig ->
+  SDP.PoolBatchNum ->
+  DTR.TransporterConfig ->
+  Map.Map DVST.ServiceTierType (Maybe Int) ->
+  [SDP.DriverPoolWithActualDistResult] ->
+  m [SDP.DriverPoolWithActualDistResult]
+attemptForwardDirectAssign merchant searchReq searchTry tripQuoteDetails driverPoolCfg batchNum transporterConfig coinConfigCache batch = do
+  if not driverPoolCfg.enableForwardAutoAssign || null sortedForwardCandidates
+    then pure batch
+    else do
+      now <- getCurrentTime
+      let validTill = fromIntegral driverPoolCfg.singleBatchProcessTime `addUTCTime` now
+      quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
+      assigned <- tryAssign validTill quoteRespondCoolDown sortedForwardCandidates
+      pure $ if assigned then [] else batch
+  where
+    tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails
+    forwardCandidates = DL.filter (.isForwardRequest) batch
+    sortedForwardCandidates = DL.sortOn (.actualDistanceToPickup) forwardCandidates
+
+    isAreaPreferenceMatch dp = dp.preferenceMatchScore >= 1.0
+
+    tryAssign :: UTCTime -> Int -> [SDP.DriverPoolWithActualDistResult] -> m Bool
+    tryAssign _ _ [] = pure False
+    tryAssign validTill quoteRespondCoolDown (dp : rest) = do
+      let driverId = cast dp.driverPoolResult.driverId
+          unlockThisDriver = Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
+      locked <- Redis.tryLockRedis (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown
+      if not locked
+        then tryAssign validTill quoteRespondCoolDown rest
+        else do
+          result :: Either SomeException Bool <- C.try $ do
+            mbFreshPoolData <- listToMaybe <$> DPD.getDriverPoolDataBatch [driverId]
+            let isOptedIn = maybe False (fromMaybe False . (.forwardAutoAcceptEnabled)) mbFreshPoolData
+                isStillLive =
+                  maybe False (\d -> not d.blocked && d.enabled && d.subscribed && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+                    && maybe False (not . fromMaybe False . (.hasAdvanceBooking)) mbFreshPoolData
+                    -- On-ride/forward eligibility gate this pool run already required; re-verify it still holds.
+                    && maybe False (.forwardBatchingEnabled) mbFreshPoolData
+                mbDropLoc = mbFreshPoolData >>= (.driverTripEndLocation)
+                mbMode = mbFreshPoolData >>= (.forwardAutoAcceptMode)
+                -- No LTS entry / no drop location / no chosen mode on record reads as not-eligible.
+                onRide = maybe True (.onRide) mbFreshPoolData
+            if not isOptedIn || not isStillLive || not onRide || isNothing mbDropLoc || isNothing mbMode
+              then pure False
+              else do
+                -- The decision criterion is the driver's own chosen method, not a generic merchant
+                -- detour cap: AreaPreference drivers are matched on whether the new ride's drop
+                -- falls in their preferred area (reusing the exact same tag logic normal pooling's
+                -- areaCheck uses); Distance drivers are matched against their own maxPickupDistance
+                -- preference, applied to a freshly re-fetched detour figure -- live re-check
+                -- immediately before commit, since the batch's own distance figure was computed a
+                -- moment earlier (see the ETA/staleness discussion this feature was designed
+                -- against) and this dispatch has no human left to notice drift.
+                isMatch <- case mbMode of
+                  Just DriverInfo.AreaPreference ->
+                    pure $ isAreaPreferenceMatch dp
+                  Just DriverInfo.Distance -> do
+                    freshLocs <- LTFlow.driversLocation [driverId]
+                    pure $ case (mbDropLoc, listToMaybe freshLocs) of
+                      (Just dropLoc, Just freshLoc) ->
+                        let freshDriverPoint = EMaps.LatLong freshLoc.lat freshLoc.lon
+                            freshDetourMeters =
+                              realToFrac (distanceBetweenInMeters freshDriverPoint dropLoc)
+                                + realToFrac (distanceBetweenInMeters dropLoc (EMaps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon)) ::
+                                Double
+                         in maybe True (\maxPickup -> freshDetourMeters <= fromIntegral (getMeters maxPickup)) dp.driverPoolResult.maxPickupDistance
+                      _ -> False
+                  Nothing -> pure False
+                if not isMatch
+                  then pure False
+                  else do
+                    driverUnlockDelay <- asks (.driverUnlockDelay)
+                    activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
+                    mbActiveBooking <-
+                      if DTC.isDynamicOfferTrip searchTry.tripCategory
+                        then runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
+                        else pure Nothing
+                    if not (null activeQuotes) || isJust mbActiveBooking
+                      then pure False
+                      else do
+                        sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True dp
+                        assignResult :: Either SomeException [SearchRequestForDriver] <- C.try $ do
+                          QSRD.createMany [sReqFD]
+                          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                          driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
+                          driverFCMPulledList <- acceptDynamicOfferDriverRequest Nothing merchant.id searchReq.merchantOperatingCityId merchant searchTry searchReq driver sReqFD Nothing Nothing Nothing Nothing Nothing Nothing driverStats transporterConfig
+                          respondedAt <- getCurrentTime
+                          QSRD.updateDriverResponse (Just Accept) Inactive Nothing (Just respondedAt) (Just respondedAt) sReqFD.id
+                          -- Same post-accept bundle as manual/priority accept, so a bundle-ride
+                          -- assignment stays indistinguishable to analytics/funnel/score counters.
+                          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+                            Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
+                          cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
+                          TM.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show Accept) (SML.driverSearchReqFunnelLabels (SML.distanceBucketEdges transporterConfig) sReqFD)
+                          SDP.recordQuoteResponseCounters searchReq.merchantOperatingCityId driverId Accept
+                          pure driverFCMPulledList
+                        case assignResult of
+                          Left err -> do
+                            logError $ "attemptForwardDirectAssign: silent assign failed for driverId " <> driverId.getId <> ", searchTryId " <> searchTry.id.getId <> ": " <> show err
+                            QSRD.updateDriverResponse Nothing Inactive Nothing Nothing Nothing sReqFD.id
+                            pure False
+                          Right driverFCMPulledList -> do
+                            LDS.driverScoreEventHandler searchReq.merchantOperatingCityId $
+                              LDST.OnDriverAcceptingSearchRequest
+                                { merchantId = merchant.id,
+                                  driverId,
+                                  searchTryId = searchTry.id,
+                                  searchReqId = searchReq.id,
+                                  restDriverIds = map (.driverId) driverFCMPulledList,
+                                  response = Accept
+                                }
+                            pure True
+          case result of
+            Right True -> pure True -- lock stays held; initializeRide releases it (same as manual/priority accept)
+            Left err -> do
+              logError $ "attemptForwardDirectAssign: candidate check failed for driverId " <> driverId.getId <> ", searchTryId " <> searchTry.id.getId <> ": " <> show err
+              unlockThisDriver >> tryAssign validTill quoteRespondCoolDown rest
+            Right False -> unlockThisDriver >> tryAssign validTill quoteRespondCoolDown rest

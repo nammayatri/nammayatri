@@ -905,6 +905,7 @@ types:
     - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
     - onRideRadiusConfig: [OnRideRadiusConfig]
     - enableForwardBatching: Bool
+    - enableForwardAutoAssign: Bool
     - currentRideTripCategoryValidForForwardBatching: [Text]
     - batchSizeOnRide: Int
     - batchSizeOnRideWithStraightLineDistance: Maybe Int
@@ -971,6 +972,7 @@ types:
     - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
     - maxParallelSearchRequestsOnRide: Int
     - enableForwardBatching: Bool
+    - enableForwardAutoAssign: Bool
     - currentRideTripCategoryValidForForwardBatching: [Text]
     - batchSizeOnRide: Int
     - actualDistanceThresholdOnRide: Maybe Meters

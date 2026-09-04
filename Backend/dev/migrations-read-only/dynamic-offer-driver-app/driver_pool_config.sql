@@ -156,3 +156,5 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN idle_bulk_chunk
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_forward_auto_assign boolean NOT NULL default false;
+

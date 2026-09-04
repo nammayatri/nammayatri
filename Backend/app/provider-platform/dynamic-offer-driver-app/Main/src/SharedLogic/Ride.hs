@@ -84,6 +84,7 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
+import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.RiderDetails as QRiderD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Storage.Queries.Vehicle as QVeh
@@ -175,7 +176,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           Just otp -> pure otp
   ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
   previousRideInprogress <- bool (QDI.findByPrimaryKey driver.id) (pure Nothing) (booking.isScheduled)
-  let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -191,13 +191,27 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRideD.create rideDetails
   fork "updateRiderDetails" $ do
     whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
-  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
+  -- recursionTimeOut widened from 4s: both this and updateOnRideStatusWithAdvancedRideCheck now
+  -- do extra reads under this same lock, so 4s cuts it closer to real contention than before.
+  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 10 $ do
+    -- Re-check on-ride status fresh under the lock -- the driver's active ride could have
+    -- ended (concurrent EndRide) since previousRideInprogress was read above.
+    freshDriverInfo <- QDI.findByPrimaryKey driver.id >>= fromMaybeM DriverInfoNotFound
+    let isDriverOnRideFresh = freshDriverInfo.onRide
+    -- ride.isAdvanceBooking was baked in from the same stale pre-lock snapshot -- correct it
+    -- here too, since it drives the driver app's Current/Advance tab classification.
+    when (not booking.isScheduled && isDriverOnRideFresh /= ride.isAdvanceBooking) $ do
+      QRide.updateIsAdvanceBooking ride.id isDriverOnRideFresh
+      QRide.updatePreviousRideTripEndPosAndTime freshDriverInfo.driverTripEndLocation Nothing ride.id
     when (not booking.isScheduled) $ do
-      whenJust (booking.toLocation) $ \toLoc -> do
-        QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+      -- Only the driver's actual current ride owns driverTripEndLocation -- a ride confirmed
+      -- while already on-ride is a queued/advance ride and must not clobber it.
+      unless isDriverOnRideFresh $
+        whenJust (booking.toLocation) $ \toLoc -> do
+          QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
       QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
-    when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    when isDriverOnRideFresh $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
@@ -708,9 +722,33 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
     Nothing -> pure True
   if lockAcquired
     then do
-      Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
+      Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 10 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
-        unless hasAdvancedRide $ QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
+        if hasAdvancedRide
+          then do
+            rawNextRide <- QRideExtra.getActiveAdvancedRideByDriverId personId
+            -- This lookup runs before mbRide's own status flips away from NEW/isAdvanceBooking,
+            -- so it can match mbRide itself when the queued ride is the one being cancelled.
+            let isSelfMatch = maybe False (\r -> Just r.id == (mbRide <&> (.id))) rawNextRide
+            if isSelfMatch
+              then -- The queued ride is cancelling itself, not becoming current -- the driver's
+              -- real active ride (if any) is untouched, so leave onRide/tripEndLocation alone.
+                pure ()
+              else do
+                -- Hand the tracked drop over to the queued ride now becoming current. If it can't
+                -- be resolved, fall back to clearing it rather than leaving it stale.
+                mbNextDropLoc <- case rawNextRide of
+                  Nothing -> pure Nothing
+                  Just nextRide -> do
+                    mbNextBooking <- QRB.findById nextRide.bookingId
+                    pure $ (nextRide,) <$> (mbNextBooking >>= (.toLocation))
+                case mbNextDropLoc of
+                  Just (nextRide, toLoc) ->
+                    QDI.updateTripCategoryAndTripEndLocationByDriverId (cast personId) (Just nextRide.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+                  Nothing -> do
+                    logError $ "updateOnRideStatusWithAdvancedRideCheck: hasAdvanceBooking was set for driver " <> personId.getId <> " but no resolvable queued ride/booking/drop was found; clearing stale on-ride tracking instead"
+                    QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
+          else QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
         QDI.updateHasAdvancedRide (cast personId) False
         void $ Redis.del $ editDestinationUpdatedLocGeohashKey personId
     else throwError $ DriverTransactionTryAgain (Just personId.getId)

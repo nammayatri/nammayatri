@@ -908,3 +908,27 @@ updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   updateOneWithKV [Se.Set BeamDI.forwardBatchingEnabled (Just forwardBatchingEnabled), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.forwardBatchingEnabled = LTSSync.Set forwardBatchingEnabled}
+
+-- | Bundle-ride opt-in: silently auto-accept a forward-batched ride instead of requiring a manual accept.
+-- Independent of forwardBatchingEnabled so existing forward-batching drivers keep today's tap-to-accept
+-- behavior until they separately opt into auto-accept.
+-- | Mode travels with the enabled flag in one write: the driver picks both together
+-- ("turn bundle-ride on, matched by distance/area preference"), never enabled without a mode.
+updateForwardAutoAcceptEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Maybe DriverInfo.ForwardAutoAcceptMode -> Id Person.Person -> m ()
+updateForwardAutoAcceptEnabled requestedForwardAutoAcceptEnabled forwardAutoAcceptMode driverId = do
+  now <- getCurrentTime
+  -- Enabled-with-no-mode is not a valid state (the allocator's attemptForwardDirectAssign
+  -- treats a missing mode as ineligible), so normalize it to disabled here instead of
+  -- persisting a flag that silently does nothing.
+  let forwardAutoAcceptEnabled = requestedForwardAutoAcceptEnabled && isJust forwardAutoAcceptMode
+  updateOneWithKV
+    [ Se.Set BeamDI.forwardAutoAcceptEnabled (Just forwardAutoAcceptEnabled),
+      Se.Set BeamDI.forwardAutoAcceptMode forwardAutoAcceptMode,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.forwardAutoAcceptEnabled = LTSSync.Set (Just forwardAutoAcceptEnabled),
+        LTSSync.forwardAutoAcceptMode = LTSSync.Set forwardAutoAcceptMode
+      }

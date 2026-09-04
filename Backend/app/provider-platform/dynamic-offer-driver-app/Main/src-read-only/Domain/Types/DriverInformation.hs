@@ -69,6 +69,8 @@ data DriverInformationE e = DriverInformation
     enabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.EnabledReasonFlag,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     firstVerifiedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    forwardAutoAcceptEnabled :: Kernel.Prelude.Bool,
+    forwardAutoAcceptMode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.ForwardAutoAcceptMode,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -194,6 +196,8 @@ instance EncryptedItem DriverInformation where
           enabledReasonFlag = enabledReasonFlag entity,
           extraFareMitigationFlag = extraFareMitigationFlag entity,
           firstVerifiedAt = firstVerifiedAt entity,
+          forwardAutoAcceptEnabled = forwardAutoAcceptEnabled entity,
+          forwardAutoAcceptMode = forwardAutoAcceptMode entity,
           forwardBatchingEnabled = forwardBatchingEnabled entity,
           hasAdvanceBooking = hasAdvanceBooking entity,
           hasRideStarted = hasRideStarted entity,
@@ -311,6 +315,8 @@ instance EncryptedItem DriverInformation where
             enabledReasonFlag = enabledReasonFlag entity,
             extraFareMitigationFlag = extraFareMitigationFlag entity,
             firstVerifiedAt = firstVerifiedAt entity,
+            forwardAutoAcceptEnabled = forwardAutoAcceptEnabled entity,
+            forwardAutoAcceptMode = forwardAutoAcceptMode entity,
             forwardBatchingEnabled = forwardBatchingEnabled entity,
             hasAdvanceBooking = hasAdvanceBooking entity,
             hasRideStarted = hasRideStarted entity,
@@ -435,6 +441,8 @@ data DriverSummary = DriverSummary
 
 data EnabledReasonFlag = AdminEnabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data ForwardAutoAcceptMode = Distance | AreaPreference deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data MapProvider = GOOGLE_MAPS | WAZE | APPLE_MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -458,6 +466,8 @@ $(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EnabledReasonFlag))
 
 $(mkHttpInstancesForEnum (''EnabledReasonFlag))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ForwardAutoAcceptMode))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MapProvider))
 

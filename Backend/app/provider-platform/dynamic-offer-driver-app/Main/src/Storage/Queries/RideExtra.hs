@@ -336,6 +336,15 @@ updateDriverDeviatedToTollRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateIsAdvanceBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updateIsAdvanceBooking rideId isAdvanceBooking = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.isAdvanceBooking $ Just isAdvanceBooking,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStartTimeAndLoc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
