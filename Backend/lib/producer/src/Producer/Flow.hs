@@ -28,6 +28,7 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
+import Lib.Scheduler.Metrics (ReviverJobStatus (..), ReviverStage (..), addReviverStageCount, incrementReviverJobCounter)
 import Lib.Scheduler.Types as ST
 import Producer.SchedulerJob ()
 import qualified Sequelize as Se
@@ -80,13 +81,31 @@ runProducer = do
 
 runReviver :: ProducerType -> Flow ()
 runReviver producerType = do
+  addReviverStageCount ReviverTick 1
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
       minutesTillNow = secondsTillNow `div` 60
       shouldRunReviver = minutesTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
-  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
+  when shouldRunReviver $ do
+    someErr <- withTryCatch "runReviver:reviverFlow" $ do
+      gotLock <- Hedis.tryLockRedis reviverLockKey 300
+      if gotLock
+        then do
+          addReviverStageCount ReviverLockAcquired 1
+          finally (runReviver' producerType) (Hedis.unlockRedis reviverLockKey)
+        else addReviverStageCount ReviverLockMissed 1
+    case someErr of
+      Left err -> do
+        logError $ "reviver pass failed: " <> show err
+        addReviverStageCount ReviverPassFailed 1
+      Right _ -> pure ()
   threadDelayMilliSec 60000
+
+countJobTypes :: (JobProcessor t) => ReviverJobStatus -> [AnyJob t] -> Flow ()
+countJobTypes reviverStatus jobs =
+  forM_ jobs $ \(AnyJob Job {..}) ->
+    incrementReviverJobCounter (show (fromSing $ jobType jobInfo)) reviverStatus
 
 mkRunningJobKey :: Text -> Text
 mkRunningJobKey jobId = "RunnningJob:" <> jobId
@@ -97,6 +116,7 @@ runReviver' producerType = do
   case producerType of
     Driver -> do
       pendingJobs :: [AnyJob AllocatorJobType] <- getFirst100PendingStuckJobs
+      countJobTypes ReviverStuckPending pendingJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
       filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 65) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
@@ -131,12 +151,14 @@ runReviver' producerType = do
           Hedis.withCrossAppRedis $ Hedis.unlockRedis (mkRunningJobKey x.id.getId)
           logDebug $ "Driver side Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
           pure (AnyJob newJob)
+      countJobTypes ReviverRevived newJobsToExecute
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
       logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
       result <- insertIntoStream newJobsToExecute_
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
     Rider -> do
       pendingJobs :: [AnyJob RiderJobType] <- getFirst100PendingStuckJobs
+      countJobTypes ReviverStuckPending pendingJobs
       let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
       filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 65) pendingJobs
       logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
@@ -171,6 +193,7 @@ runReviver' producerType = do
           Hedis.withCrossAppRedis $ Hedis.unlockRedis (mkRunningJobKey x.id.getId)
           logDebug $ "Rider sideJob Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
           pure (AnyJob newJob)
+      countJobTypes ReviverRevived newJobsToExecute
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
       logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
       result <- insertIntoStream newJobsToExecute_
