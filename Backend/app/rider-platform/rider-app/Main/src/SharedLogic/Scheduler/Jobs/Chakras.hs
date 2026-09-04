@@ -58,7 +58,7 @@ runDailyJob ::
   ChakraJobs m r =>
   Job 'Daily ->
   m ExecutionResult
-runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
@@ -66,7 +66,7 @@ runWeeklyJob ::
   ChakraJobs m r =>
   Job 'Weekly ->
   m ExecutionResult
-runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
@@ -74,7 +74,7 @@ runQuarterlyJob ::
   ChakraJobs m r =>
   Job 'Quarterly ->
   m ExecutionResult
-runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
@@ -82,7 +82,7 @@ runMonthlyJob ::
   ChakraJobs m r =>
   Job 'Monthly ->
   m ExecutionResult
-runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
 
@@ -90,7 +90,7 @@ runDailyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
-runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
@@ -98,7 +98,7 @@ runWeeklyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
-runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
@@ -106,7 +106,7 @@ runQuarterlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
-runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
@@ -114,7 +114,7 @@ runMonthlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
-runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
+runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
   Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Monthly jobInfo.jobData
 

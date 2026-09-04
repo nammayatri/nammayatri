@@ -159,6 +159,7 @@ import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
 import qualified Domain.Types.DriverStats as DStats
 import Domain.Types.Estimate
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
@@ -305,6 +306,7 @@ import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DailyStats as CHDS
@@ -2284,7 +2286,8 @@ buildDriverQuote clientId driver driverStats searchReq sd estimateId tripCategor
   now <- getCurrentTime
   deploymentVersion <- asks (.version)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
+  dynamicPricingExcluded <- CQLF.isFeatureExcluded DYNAMIC_PRICING
+  if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True && not dynamicPricingExcluded
     then
       fork "updateDynamicPricingAcceptanceCounters" $
         geoAddDynamicPricingCounter mkAcceptanceVehicleCategoryWithDistanceBin mkAcceptanceVehicleCategory mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon sd.searchTryId.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
