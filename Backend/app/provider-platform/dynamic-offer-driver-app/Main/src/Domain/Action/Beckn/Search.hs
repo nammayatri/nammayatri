@@ -1098,17 +1098,24 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then [OneWay MeterRide]
           else do
             case dsReq.dropLocation of
-              Just _ -> do
-                if isInterCity
-                  then do
-                    if isCrossCity
-                      then do
-                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                      else do
-                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                  else localBundleForPreference
+              Just _ -> case dsReq.riderPreferredOption of
+                -- Rental is destination-independent (priced by package from the pickup
+                -- city's rental fare policy). When cross-city rentals are enabled, keep the
+                -- rider's Rental preference even for a cross-city drop instead of repricing
+                -- it as a one-way inter/cross-city trip. Scoped strictly to Rental so the
+                -- OneWay-fallback concerns noted below still hold for every other preference.
+                DRPO.Rental | fromMaybe False tConf.allowCrossCityRentals -> localBundleForPreference
+                _ ->
+                  if isInterCity
+                    then
+                      if isCrossCity
+                        then
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                        else
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
               -- back to OneWay in several places (no tag, unparseable tag, unrecognized

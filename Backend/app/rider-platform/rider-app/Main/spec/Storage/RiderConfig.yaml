@@ -124,6 +124,7 @@ RiderConfig:
     distanceWeightage: Int
     isAvoidToll: Bool
     enableRouteCacheRead: Maybe Bool
+    allowCrossCityRentals: Maybe Bool # when True, a rental whose stop is in a different operating city is allowed (priced from the pickup city's rental fare policy); defaults to False (same-city rentals only)
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     passExpiryReminderDays: Maybe Int

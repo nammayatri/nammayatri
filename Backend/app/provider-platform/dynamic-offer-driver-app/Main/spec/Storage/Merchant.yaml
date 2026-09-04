@@ -1319,6 +1319,7 @@ TransporterConfig:
     placeNameCacheExpiryDays: Maybe Int
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     crossTravelCities: "[Kernel.Types.Beckn.City.City]"
+    allowCrossCityRentals: Maybe Bool # when True, a Rental search with a cross-city drop keeps the Rental trip category (priced from the pickup city's rental fare policy) instead of being repriced as a one-way inter/cross-city trip; defaults to False
     useSilentFCMForForwardBatch: Bool
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
@@ -2071,6 +2072,7 @@ TransporterConfig:
     allowPanReupload: "false"
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
+    allowCrossCityRentals: "false"
     allowGstReupload: "false"
     isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
