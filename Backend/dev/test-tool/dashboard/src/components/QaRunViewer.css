@@ -1,0 +1,182 @@
+.qarv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qarv-panel {
+  width: min(900px, 92vw);
+  height: min(80vh, 900px);
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.qarv-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #1c1c1c;
+  border-bottom: 1px solid #2a2a2a;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.qarv-header code {
+  background: #2a2a2a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.qarv-spacer { flex: 1; }
+
+.qarv-status {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.qarv-status-running { background: #1a3060; color: #82b1ff; }
+.qarv-status-passed { background: #1f3d20; color: #98e09a; }
+.qarv-status-failed { background: #4a1f1f; color: #f5b7b7; }
+.qarv-status-stopped { background: #3d3520; color: #e0c97a; }
+
+.qarv-stop {
+  background: #4a1f1f;
+  border: 1px solid #6b2b2b;
+  color: #f5b7b7;
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.qarv-close {
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  color: #ccc;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.qarv-error {
+  padding: 8px 14px;
+  background: #4a1f1f;
+  color: #f5b7b7;
+  font-size: 12px;
+}
+
+.qarv-meta {
+  display: flex;
+  gap: 16px;
+  padding: 6px 14px;
+  background: #181818;
+  border-bottom: 1px solid #2a2a2a;
+  color: #999;
+  font-size: 11px;
+}
+
+.qarv-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+}
+
+.qarv-loading {
+  color: #777;
+}
+
+.qarv-line {
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #ccc;
+}
+
+.qarv-line-info { color: #82b1ff; }
+.qarv-line-muted { color: #999; }
+.qarv-line-pass { color: #6cca6c; }
+.qarv-line-fail { color: #f5b7b7; }
+.qarv-line-summary { color: #e0c97a; font-weight: 600; margin-top: 4px; }
+
+.qarv-failure summary {
+  cursor: pointer;
+}
+.qarv-failure summary::-webkit-details-marker { display: none; }
+
+.qarv-detail-row {
+  margin: 4px 0 2px 16px;
+  color: #999;
+  font-size: 11px;
+}
+
+.qarv-body {
+  margin: 0 0 6px 16px;
+  padding: 6px 8px;
+  background: #1c1c1c;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #cfcfcf;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* Rich viewer: step-tree (left) + LogPanel (right), same layout language as
+   the normal Collections tab so a triggered run looks "just like normal". */
+.qarv-panel-rich {
+  width: min(1400px, 96vw);
+  height: min(88vh, 1000px);
+}
+
+.qarv-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.qarv-steps {
+  flex: 1.2;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 10px 14px;
+  border-right: 1px solid #2a2a2a;
+}
+
+.qarv-logs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qarv-collection-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.qarv-collection-running { background: #1a3060; color: #82b1ff; }
+.qarv-collection-done { background: #24291f; color: #c8d38a; }

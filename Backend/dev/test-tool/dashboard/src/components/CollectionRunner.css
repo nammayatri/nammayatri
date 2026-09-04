@@ -93,6 +93,17 @@
 .cr-run-all-btn:hover { background: #388bfd; }
 .cr-run-all-btn:disabled { opacity: 0.5; cursor: default; }
 
+.cr-active-run-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #e0c97a;
+  font-size: 12px;
+  text-decoration: none;
+  padding: 6px 8px;
+}
+.cr-active-run-link:hover { text-decoration: underline; }
+
 .cr-load-test-btn {
   background: #92400e;
   color: #fde68a;
@@ -419,6 +430,19 @@
   border-color: #388bfd;
 }
 .cr-manual-toggle-active:hover { background: #388bfd; }
+
+/* ny-qa-automation groups: re-sync the checkout from GitHub */
+.cr-sync-btn {
+  background: #21262d;
+  color: #79c0ff;
+  border: 1px solid #1f6feb;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cr-sync-btn:hover { background: #1f2937; }
+.cr-sync-btn:disabled { opacity: 0.5; cursor: default; }
 
 .cr-step-run-btn {
   font-size: 9px;
