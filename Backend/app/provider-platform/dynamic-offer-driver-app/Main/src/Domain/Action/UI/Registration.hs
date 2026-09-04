@@ -28,6 +28,7 @@ module Domain.Action.UI.Registration
     logout,
     cleanCachedTokens,
     createDriverWithDetails,
+    createPersonWithPhoneNumber,
     makePerson,
     marketingEventsPreLogin,
     marketingEventsPostLogin,
@@ -102,6 +103,7 @@ import qualified SharedLogic.OTP as SOTP
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
@@ -110,6 +112,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified System.Environment as SE
 import qualified TempAppCode.Flow as TempAppCode
@@ -136,7 +139,10 @@ data AuthReq = AuthReq
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
-    otpChannel :: Maybe SOTP.OTPChannel
+    otpChannel :: Maybe SOTP.OTPChannel,
+    -- | Anna-app-partner (depot manager) login flag. Routes auth through the
+    -- operator branch which looks up DepotManager and skips driver-artifact creation.
+    isOperatorReq :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -155,7 +161,9 @@ data AuthRes = AuthRes
   { authId :: Id SR.RegistrationToken,
     attempts :: Int,
     token :: Maybe Text,
-    person :: Maybe SP.PersonAPIEntity
+    person :: Maybe SP.PersonAPIEntity,
+    depotCode :: Maybe Text,
+    isDepotAdmin :: Maybe Bool
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -170,7 +178,9 @@ newtype TempCodeRes = TempCodeRes
 data AuthWithOtpRes = AuthWithOtpRes
   { authId :: Id SR.RegistrationToken,
     otpCode :: Text,
-    attempts :: Int
+    attempts :: Int,
+    depotCode :: Maybe Text,
+    isDepotAdmin :: Maybe Bool
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -192,7 +202,9 @@ validateAuthVerifyReq AuthVerifyReq {..} =
 
 data AuthVerifyRes = AuthVerifyRes
   { token :: Text,
-    person :: SP.PersonAPIEntity
+    person :: SP.PersonAPIEntity,
+    depotCode :: Maybe Text,
+    isDepotAdmin :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -216,6 +228,56 @@ data MarketEventReq = MarketEventReq
 
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
+
+-- | DepotManager lookup used to surface depot metadata on auth/verify/resend
+-- responses. Missing row is expected for non-operator persons (drivers, fleet
+-- owners) and simply returns (Nothing, Nothing).
+lookupDepotManagerFor :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SP.Person -> m (Maybe Text, Maybe Bool)
+lookupDepotManagerFor personId = do
+  mbDepotManager <- QDepotManager.findBestForOperatorByPersonId personId
+  return (getId . (.depotCode) <$> mbDepotManager, (.isAdmin) <$> mbDepotManager)
+
+-- Seeds as BUS_CHECKER; auth flow reconciles to BUS_DISPATCHER on first login if depot_manager.isAdmin.
+createPersonWithPhoneNumber ::
+  ( HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  m (Id SP.Person)
+createPersonWithPhoneNumber merchant merchantOperatingCityId mobileNumber countryCode = do
+  mobileHash <- getDbHash mobileNumber
+  mbExisting <- QPExtra.findByMobileNumberAndMerchantId countryCode mobileHash merchant.id
+  case mbExisting of
+    Just person -> pure person.id
+    Nothing -> do
+      transporterConfig <-
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+          >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      mbCloudType <- asks (.cloudType)
+      let authReq =
+            AuthReq
+              { mobileNumber = Just mobileNumber,
+                mobileCountryCode = Just countryCode,
+                merchantId = merchant.shortId.getShortId,
+                merchantOperatingCity = Nothing,
+                email = Nothing,
+                employeeId = Nothing,
+                password = Nothing,
+                name = Nothing,
+                identifierType = Just SP.MOBILENUMBER,
+                registrationLat = Nothing,
+                registrationLon = Nothing,
+                otpChannel = Nothing,
+                isOperatorReq = Just True
+              }
+      basePerson <- makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing Nothing mbCloudType merchant.id merchantOperatingCityId True (Just SP.BUS_CHECKER)
+      void $ QP.create basePerson
+      pure basePerson.id
 
 auth ::
   Bool ->
@@ -267,7 +329,15 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
         \merchant _loginRole badgeToken -> QP.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchant.id
     _ -> do
       authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash mbXForwardedFor
-      return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
+      return $
+        AuthRes
+          { attempts = authRes.attempts,
+            authId = authRes.authId,
+            token = Nothing,
+            person = Nothing,
+            depotCode = authRes.depotCode,
+            isDepotAdmin = authRes.isDepotAdmin
+          }
 
 -- | Shared driver-of-conductor login against GIMS. Both password-based identifier
 -- types (email, employeeId) send their credential to GIMS to verify, and on success
@@ -334,7 +404,20 @@ runGimsEmployeeLogin req' mbBundleVersion mbClientVersion mbClientConfigVersion 
   when person.isNew $ QP.setIsNewFalse False person.id
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
-  return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+  return $
+    AuthRes
+      { authId = token.id,
+        attempts = token.attempts,
+        token = Just token.token,
+        person = Just personAPIEntity,
+        depotCode = Nothing,
+        isDepotAdmin = Nothing
+      }
+
+castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
+castChannelToMedium SOTP.SMS = SR.SMS
+castChannelToMedium SOTP.EMAIL = SR.EMAIL
+castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
 
 authWithOtp ::
   Bool ->
@@ -367,23 +450,50 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     ipBlocked <- isIPBlocked merchantOpCityId.getId clientIP
     when ipBlocked $ throwError IpHitsLimitExceeded
 
-  (person, otpChannel) <-
+  (person, otpChannel, mbDepotCode, mbIsDepotAdmin) <-
     case identifierType of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for mobileNumber auth")
         let otpChannel = fromMaybe SOTP.defaultOTPChannel req.otpChannel
         mobileNumberHash <- getDbHash mobileNumber
-        person <-
-          QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
-        return (person, otpChannel)
+        if req.isOperatorReq == Just True
+          then do
+            existingPerson <- QP.findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash merchant.id [SP.BUS_CHECKER, SP.BUS_DISPATCHER]
+            person <- case existingPerson of
+              Just p -> pure p
+              Nothing -> do
+                transporterConfig <-
+                  getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+                    >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+                basePerson <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing cloudType merchant.id merchantOpCityId isDashboard (Just SP.BUS_CHECKER)
+                void $ QP.create basePerson
+                pure basePerson
+            mbDepotManager <- QDepotManager.findBestForOperatorByPersonId person.id
+            let dCode = getId . (.depotCode) <$> mbDepotManager
+                dIsAdmin = (.isAdmin) <$> mbDepotManager
+                -- Reconcile role so BUS_DISPATCHER handler auth checks pick up admin toggles on subsequent logins.
+                desiredRole = case dIsAdmin of
+                  Just True -> SP.BUS_DISPATCHER
+                  _ -> SP.BUS_CHECKER
+            reconciled <-
+              if person.role /= desiredRole
+                then do
+                  QP.updatePersonRole person.id desiredRole
+                  pure (person {SP.role = desiredRole} :: SP.Person)
+                else pure person
+            pure (reconciled, otpChannel, dCode, dIsAdmin)
+          else do
+            person <-
+              QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
+                >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
+            pure (person, otpChannel, Nothing, Nothing)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
-        return (person, SOTP.EMAIL)
+        pure (person, SOTP.EMAIL, Nothing, Nothing)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
@@ -407,8 +517,9 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
-  let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId (castChannelToMedium otpChannel) SR.OTP
+      mkId = getId merchantId
+      medium = castChannelToMedium otpChannel
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId medium SR.OTP
   _ <- QR.create token
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
   let otpCode = SR.authValueHash token
@@ -425,12 +536,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       mbSenderHash
   let attempts = SR.attempts token
       authId = SR.id token
-  return $ AuthWithOtpRes {attempts, authId, otpCode}
-  where
-    castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
-    castChannelToMedium SOTP.SMS = SR.SMS
-    castChannelToMedium SOTP.EMAIL = SR.EMAIL
-    castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
+  return $ AuthWithOtpRes {attempts, authId, otpCode, depotCode = mbDepotCode, isDepotAdmin = mbIsDepotAdmin}
 
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
@@ -772,8 +878,15 @@ verify tokenId req mbXForwardedFor = do
       case decPerson.mobileNumber of
         Nothing -> throwError $ AuthBlocked "Mobile Number is null"
         Just mobileNo -> callWhatsappOptApi mobileNo person.id req.whatsappNotificationEnroll person.merchantId (Id merchantOperatingCityId)
+  (mbDepotCode, mbIsDepotAdmin) <- lookupDepotManagerFor updPers.id
   let personAPIEntity = SP.makePersonAPIEntity decPerson
-  return $ AuthVerifyRes token personAPIEntity
+  return $
+    AuthVerifyRes
+      { token = token,
+        person = personAPIEntity,
+        depotCode = mbDepotCode,
+        isDepotAdmin = mbIsDepotAdmin
+      }
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
@@ -850,7 +963,16 @@ resend tokenId mbSenderHash = do
     mbSenderHash
 
   void $ QR.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1) Nothing Nothing
+  (mbDepotCode, mbIsDepotAdmin) <- lookupDepotManagerFor person.id
+  return $
+    AuthRes
+      { authId = tokenId,
+        attempts = attempts - 1,
+        token = Nothing,
+        person = Nothing,
+        depotCode = mbDepotCode,
+        isDepotAdmin = mbIsDepotAdmin
+      }
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
@@ -1004,7 +1126,15 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
     QP.setIsNewFalse False person.id
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
-  return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+  return $
+    AuthRes
+      { authId = token.id,
+        attempts = token.attempts,
+        token = Just token.token,
+        person = Just personAPIEntity,
+        depotCode = Nothing,
+        isDepotAdmin = Nothing
+      }
 
 driverTempAppCodeCfg :: TempAppCodeCfg
 driverTempAppCodeCfg =
@@ -1049,7 +1179,15 @@ getToken req = do
   case mbToken of
     Just regToken -> do
       decPerson <- decrypt person
-      pure $ AuthRes regToken.id regToken.attempts (Just regToken.token) (Just $ SP.makePersonAPIEntity decPerson)
+      pure $
+        AuthRes
+          { authId = regToken.id,
+            attempts = regToken.attempts,
+            token = Just regToken.token,
+            person = Just $ SP.makePersonAPIEntity decPerson,
+            depotCode = Nothing,
+            isDepotAdmin = Nothing
+          }
     Nothing -> mintSessionFor person
   where
     mintSessionFor :: SP.Person -> Flow AuthRes
@@ -1066,7 +1204,15 @@ getToken req = do
       QR.deleteByPersonIdExceptNew person.id token.id
       _ <- QR.setVerified True token.id
       decPerson <- decrypt person
-      pure $ AuthRes token.id token.attempts (Just token.token) (Just $ SP.makePersonAPIEntity decPerson)
+      pure $
+        AuthRes
+          { authId = token.id,
+            attempts = token.attempts,
+            token = Just token.token,
+            person = Just $ SP.makePersonAPIEntity decPerson,
+            depotCode = Nothing,
+            isDepotAdmin = Nothing
+          }
 
 -- | Redis key for the phone-number-hashed auth sliding-window counter.
 -- The phone number is passed as a hash (never the raw number) so no PII is stored in Redis.

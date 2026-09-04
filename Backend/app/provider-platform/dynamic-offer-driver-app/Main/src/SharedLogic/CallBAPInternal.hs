@@ -17,19 +17,27 @@ module SharedLogic.CallBAPInternal where
 import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
+import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Encoding.Error as TE
 import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Error (ExternalAPICallError (..))
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.Servant.Client as EC
+import Network.HTTP.Types (Status (..))
 import Servant hiding (throwError)
+import Servant.Client (ClientError (..), ResponseF (..))
+import Tools.Error (BapProxyError (..))
 import Tools.Metrics (CoreMetrics)
 
 data FeedbackAnswer = FeedbackAnswer
@@ -455,3 +463,52 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
   logInfo $ "CallBAPInternal: Notifying FRFS trip started for tripId: " <> tripId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI
+
+-- POST /internal/multimodal/ticket/verify - Proxy to BAP for scanned-QR ticket verification.
+-- Opaque JSON body: driver-app has no schema-level involvement in ticket contents.
+type MultimodalTicketVerifyAPI =
+  "internal"
+    :> "multimodal"
+    :> "ticket"
+    :> "verify"
+    :> Header "token" Text
+    :> QueryParam' '[Required, Strict] "merchantId" Text
+    :> QueryParam' '[Required, Strict] "city" Text
+    :> ReqBody '[JSON] Value
+    :> Post '[JSON] Value
+
+multimodalTicketVerifyClient :: Maybe Text -> Text -> Text -> Value -> EulerClient Value
+multimodalTicketVerifyClient = client (Proxy @MultimodalTicketVerifyAPI)
+
+multimodalTicketVerifyAPI :: Proxy MultimodalTicketVerifyAPI
+multimodalTicketVerifyAPI = Proxy
+
+postMultimodalTicketVerify ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Value ->
+  m Value
+postMultimodalTicketVerify apiKey internalUrl merchantShortId city body = do
+  logInfo $ "CallBAPInternal: Multimodal ticket verify for merchantShortId=" <> merchantShortId <> ", city=" <> city
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (multimodalTicketVerifyClient (Just apiKey) merchantShortId city body) "MultimodalTicketVerify" multimodalTicketVerifyAPI
+    `catch` \e -> case e of
+      -- Passthrough rider-app's HTTP status + APIError envelope verbatim so
+      -- the anna-checker client sees the real 4xx (e.g. bad ticket body → 400
+      -- INVALID_REQUEST) instead of a generic 500 BAP_INTERNAL_API_ERROR.
+      ExternalAPICallError _ _ (FailureResponse _ Response {responseStatusCode = Status code _, responseBody = bodyLBS}) -> do
+        let httpCode = fromMaybe E500 (codeToHttpCode code)
+        case A.decode bodyLBS :: Maybe APIError of
+          Just APIError {errorCode, errorMessage, errorPayload} ->
+            throwError $ BapProxyResponseError httpCode errorCode errorMessage errorPayload
+          Nothing ->
+            let bodyText = TE.decodeUtf8With TE.lenientDecode (LBS.toStrict bodyLBS)
+             in throwError $ BapProxyResponseError httpCode "BAP_INTERNAL_API_ERROR" (Just bodyText) A.Null
+      _ -> throwM e

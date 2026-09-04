@@ -481,3 +481,21 @@ data GimsEmployeeLoginResp = GimsEmployeeLoginResp
     role :: Maybe GimsEmployeeRole
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+data VehicleOperationInfo = VehicleOperationInfo
+  { waybill_id :: Maybe Text,
+    waybill_no :: Maybe Text,
+    depot_id :: Text,
+    depot_name :: Text,
+    conductor_code :: Maybe Text,
+    driver_code :: Maybe Text,
+    schedule_no :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data DepotVehicle = DepotVehicle
+  { fleet_no :: Text,
+    status :: Maybe Text,
+    vehicle_no :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

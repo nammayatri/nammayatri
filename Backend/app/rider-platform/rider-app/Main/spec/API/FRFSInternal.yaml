@@ -1,6 +1,9 @@
 imports:
   FRFSTripPassengerManifestResp: API.Types.UI.FRFSTicketService
+  MultimodalTicketVerifyReq: API.Types.UI.MultimodalConfirm
+  MultimodalTicketVerifyResp: API.Types.UI.MultimodalConfirm
   APISuccess: Kernel.Types.APISuccess
+  City: Kernel.Types.Beckn.Context
 
 module: FRFSInternal
 
@@ -46,3 +49,15 @@ apis:
         type: NotifyBusApproachingReq
       response:
         type: "Kernel.Types.APISuccess.APISuccess"
+  - POST:
+      endpoint: /multimodal/ticket/verify
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        merchantId: Text
+        city: City
+      request:
+        type: "API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq"
+      response:
+        type: "API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp"

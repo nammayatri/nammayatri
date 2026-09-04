@@ -45,6 +45,18 @@ type OperatorVerifyAPI =
     :> ReqBody '[JSON] GimsVerifyReq
     :> Post '[JSON] GimsVerifyResp
 
+type VehicleOperationDataAPI = "vehicle-operation-data" :> Capture "fleet_no" Text :> Get '[JSON] VehicleOperationInfo
+
+type DepotNamesAPI = "depotNames" :> Get '[JSON] [Text]
+
+type DepotIdsAPI = "depotIds" :> Get '[JSON] [Text]
+
+type GetVehiclesFromDepotNameAPI = "getVehiclesFrom" :> QueryParam "depotName" Text :> Get '[JSON] [DepotVehicle]
+
+type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Text :> Get '[JSON] [DepotVehicle]
+
+type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Text :> Get '[JSON] Text
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -81,6 +93,24 @@ stopCodeAPI = Proxy
 operatorVerifyAPI :: Proxy OperatorVerifyAPI
 operatorVerifyAPI = Proxy
 
+nandiVehicleOperationDataAPI :: Proxy VehicleOperationDataAPI
+nandiVehicleOperationDataAPI = Proxy
+
+nandiDepotNamesAPI :: Proxy DepotNamesAPI
+nandiDepotNamesAPI = Proxy
+
+nandiDepotIdsAPI :: Proxy DepotIdsAPI
+nandiDepotIdsAPI = Proxy
+
+nandiGetVehiclesFromDepotNameAPI :: Proxy GetVehiclesFromDepotNameAPI
+nandiGetVehiclesFromDepotNameAPI = Proxy
+
+nandiGetVehiclesFromDepotIdAPI :: Proxy GetVehiclesFromDepotIdAPI
+nandiGetVehiclesFromDepotIdAPI = Proxy
+
+nandiDepotNameByIdAPI :: Proxy DepotNameByIdAPI
+nandiDepotNameByIdAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -116,3 +146,21 @@ getNandiStopCode = ET.client stopCodeAPI
 
 postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
 postOperatorVerify = ET.client operatorVerifyAPI
+
+getNandiVehicleOperationData :: Text -> ET.EulerClient VehicleOperationInfo
+getNandiVehicleOperationData = ET.client nandiVehicleOperationDataAPI
+
+getNandiDepotNames :: ET.EulerClient [Text]
+getNandiDepotNames = ET.client nandiDepotNamesAPI
+
+getNandiDepotIds :: ET.EulerClient [Text]
+getNandiDepotIds = ET.client nandiDepotIdsAPI
+
+getNandiGetVehiclesFromByDepotName :: Maybe Text -> ET.EulerClient [DepotVehicle]
+getNandiGetVehiclesFromByDepotName = ET.client nandiGetVehiclesFromDepotNameAPI
+
+getNandiGetVehiclesFromByDepotId :: Maybe Text -> ET.EulerClient [DepotVehicle]
+getNandiGetVehiclesFromByDepotId = ET.client nandiGetVehiclesFromDepotIdAPI
+
+getNandiDepotNameById :: Text -> ET.EulerClient Text
+getNandiDepotNameById = ET.client nandiDepotNameByIdAPI

@@ -81,3 +81,32 @@ getStopCode baseUrl gtfsId providerStopCode =
 gimsVerifyConductor :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsVerifyReq -> m GimsVerifyResp
 gimsVerifyConductor baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorVerify gtfsId req) "gimsVerifyConductor" NandiAPI.operatorVerifyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_VERIFY_CONDUCTOR_API") baseUrl)
+
+getVehicleOperationInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m (Maybe VehicleOperationInfo)
+getVehicleOperationInfo baseUrl fleetNo =
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiVehicleOperationData fleetNo) "getVehicleOperationInfo" NandiAPI.nandiVehicleOperationDataAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting vehicle operation info: " <> show err
+        pure Nothing
+
+getDepotNames :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [Text]
+getDepotNames baseUrl =
+  withShortRetry $ callAPI baseUrl NandiAPI.getNandiDepotNames "getDepotNames" NandiAPI.nandiDepotNamesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_NAMES_API") baseUrl)
+
+getDepotIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [Text]
+getDepotIds baseUrl =
+  withShortRetry $ callAPI baseUrl NandiAPI.getNandiDepotIds "getDepotIds" NandiAPI.nandiDepotIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_IDS_API") baseUrl)
+
+getVehiclesFromByDepotName :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Maybe Text -> m [DepotVehicle]
+getVehiclesFromByDepotName baseUrl depotName =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetVehiclesFromByDepotName depotName) "getVehiclesFromByDepotName" NandiAPI.nandiGetVehiclesFromDepotNameAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_VEHICLES_FROM_BY_DEPOT_NAME_API") baseUrl)
+
+getVehiclesFromByDepotId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Maybe Text -> m [DepotVehicle]
+getVehiclesFromByDepotId baseUrl depotId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetVehiclesFromByDepotId depotId) "getVehiclesFromByDepotId" NandiAPI.nandiGetVehiclesFromDepotIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_VEHICLES_FROM_BY_DEPOT_ID_API") baseUrl)
+
+getDepotNameById :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m Text
+getDepotNameById baseUrl depotId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotNameById depotId) "getDepotNameById" NandiAPI.nandiDepotNameByIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_NAME_BY_ID_API") baseUrl)
