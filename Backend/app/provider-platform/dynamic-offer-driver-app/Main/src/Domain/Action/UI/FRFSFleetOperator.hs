@@ -40,7 +40,7 @@ import SharedLogic.CallBAPInternal (getFrfsTripManifest, notifyFrfsTripStarted)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import Tools.Error (GenericError (InvalidRequest))
+import Tools.Error (FRFSFleetOperatorTripActionError (..), GenericError (InvalidRequest))
 
 getV2FrfsRoute ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -267,9 +267,9 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
       handleTripStart integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor tripNums redisKey epochNow wbNo
     TripEnd -> do
       mbTransporterConfig <- getTransporterConfig
-      handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums
-    TripReset -> handleTripReset baseUrl gtfsId anchor redisKey tripNums
-    TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums
+      handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums wbNo
+    TripReset -> handleTripReset baseUrl gtfsId anchor redisKey tripNums wbNo
+    TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums wbNo
   where
     getTransporterConfig = getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
     handleTripStart integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor tripNums redisKey epochNow wbNo = do
@@ -277,14 +277,14 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
         logError $ "FRFSFleetOperator: Could not acquire lock for trip start - " <> redisKey
-        throwError $ InvalidRequest "Could not acquire lock for trip action"
+        throwError $ TripActionLockNotAcquired "start" wbNo req.vehicleNumber
       mbCurrentTrip <- Hedis.get redisKey
       let currentTrip = fromMaybe 0 (mbCurrentTrip :: Maybe Int)
       -- Next real trip_number strictly after the current one (dead trips are absent from tripNums).
       case listToMaybe (filter (> currentTrip) tripNums) of
         Nothing -> do
           void $ Hedis.del lockKey
-          throwError $ InvalidRequest "No more trips available for this waybill"
+          throwError $ NoMoreTripsAvailable wbNo req.vehicleNumber
         Just nextTrip -> do
           let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
           flip finally (void $ Hedis.del lockKey) $ do
@@ -292,9 +292,9 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
             -- Fail-open: skipped + logged when config / route / location / schedule is unavailable.
             -- Skipped entirely for dashboard-operator calls (isDashboard), which are already operator-authed.
             withTripRouteChecks isDashboard mbTransporterConfig baseUrl gtfsId req "start" currentTrip nextTrip $ \tc routeId -> do
-              validateStartLeadTime integratedBPPConfig wbNo nextTrip routeId (fromMaybe (Minutes 20) tc.tripStartLeadTime)
+              validateStartLeadTime integratedBPPConfig wbNo req.vehicleNumber nextTrip routeId (fromMaybe (Minutes 20) tc.tripStartLeadTime)
               mbFirstStop <- boundaryStopPoint integratedBPPConfig routeId True
-              validateWithinRadius "start" req.location mbFirstStop (fromMaybe (Meters 500) tc.tripStartGeofenceRadius)
+              validateWithinRadius "start" wbNo req.vehicleNumber req.location mbFirstStop (fromMaybe (Meters 500) tc.tripStartGeofenceRadius)
             void $
               NandiFlow.gimsTripAction
                 baseUrl
@@ -322,17 +322,17 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
                   hasUpcomingTrips = not (null (filter (> nextTrip) tripNums))
                 }
 
-    handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums = do
+    handleTripEnd integratedBPPConfig mbTransporterConfig baseUrl gtfsId anchor redisKey epochNow tripNums wbNo = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
         logError $ "FRFSFleetOperator: Could not acquire lock for trip end - " <> redisKey
-        throwError $ InvalidRequest "Could not acquire lock for trip action"
+        throwError $ TripActionLockNotAcquired "end" wbNo req.vehicleNumber
       mbCurrentTrip <- Hedis.get redisKey
       let currentTrip = fromMaybe 0 (mbCurrentTrip :: Maybe Int)
       when (currentTrip == 0) $ do
         void $ Hedis.del lockKey
-        throwError $ InvalidRequest "No active trip to end"
+        throwError $ NoActiveTripToEnd wbNo req.vehicleNumber
       let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         -- Geofence gate (distance to last stop) before committing the end to GIMS. Fail-open:
@@ -340,7 +340,7 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
         -- dashboard-operator calls (isDashboard), which are already operator-authed.
         withTripRouteChecks isDashboard mbTransporterConfig baseUrl gtfsId req "end" currentTrip currentTrip $ \tc routeId -> do
           mbLastStop <- boundaryStopPoint integratedBPPConfig routeId False
-          validateWithinRadius "end" req.location mbLastStop (fromMaybe (Meters 1000) tc.tripEndGeofenceRadius)
+          validateWithinRadius "end" wbNo req.vehicleNumber req.location mbLastStop (fromMaybe (Meters 1000) tc.tripEndGeofenceRadius)
         void $
           NandiFlow.gimsTripAction
             baseUrl
@@ -360,12 +360,12 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
               hasUpcomingTrips = not (null (filter (> currentTrip) tripNums))
             }
 
-    handleTripReset baseUrl gtfsId anchor redisKey tripNums = do
+    handleTripReset baseUrl gtfsId anchor redisKey tripNums wbNo = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
         logError $ "FRFSFleetOperator: Could not acquire lock for trip reset - " <> redisKey
-        throwError $ InvalidRequest "Could not acquire lock for trip action"
+        throwError $ TripActionLockNotAcquired "reset" wbNo req.vehicleNumber
       let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         void $
@@ -387,19 +387,19 @@ postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) isDashboard 
               hasUpcomingTrips = not (null tripNums)
             }
 
-    handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums = do
+    handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums wbNo = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
         logError $ "FRFSFleetOperator: Could not acquire lock for trip rollback - " <> redisKey
-        throwError $ InvalidRequest "Could not acquire lock for trip action"
+        throwError $ TripActionLockNotAcquired "rollback" wbNo req.vehicleNumber
       mbCurrentTrip <- Hedis.get redisKey
       let currentTrip = fromMaybe 0 (mbCurrentTrip :: Maybe Int)
       -- Previous real trip_number strictly before the current one (largest tripNum < currentTrip).
       case listToMaybe (reverse (filter (< currentTrip) tripNums)) of
         Nothing -> do
           void $ Hedis.del lockKey
-          throwError $ InvalidRequest "No trip to rollback"
+          throwError $ NoTripToRollback wbNo req.vehicleNumber
         Just rolledBackTrip -> do
           let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
           flip finally (void $ Hedis.del lockKey) $ do
@@ -550,23 +550,25 @@ boundaryStopPoint integratedBPPConfig routeCode wantFirstStop = do
 
 -- | Geofence: throw when the driver is beyond @radius@ of the boundary stop. Fail-open (log) when
 -- the driver location or the resolved stop point is unavailable.
-validateWithinRadius :: Text -> Maybe LatLong -> Maybe LatLong -> Meters -> Flow ()
-validateWithinRadius boundaryLabel mbLocation mbStopPoint radius =
+validateWithinRadius :: Text -> Text -> Maybe Text -> Maybe LatLong -> Maybe LatLong -> Meters -> Flow ()
+validateWithinRadius boundaryLabel waybillNo vehicleNumber mbLocation mbStopPoint radius =
   case (mbLocation, mbStopPoint) of
     (Just location, Just stopPoint) -> do
       let distance = highPrecMetersToMeters (distanceBetweenInMeters location stopPoint)
       when (distance > radius) $
         throwError $
-          InvalidRequest $
-            "You are too far from the trip " <> boundaryLabel <> " stop (" <> show distance.getMeters <> "m away, allowed within " <> show radius.getMeters <> "m)."
+          TripGeofenceViolation
+            ("You are too far from the trip " <> boundaryLabel <> " stop (" <> show distance.getMeters <> "m away, allowed within " <> show radius.getMeters <> "m).")
+            waybillNo
+            vehicleNumber
     (Nothing, _) -> logWarning $ "FRFSFleetOperator: trip " <> boundaryLabel <> " geofence skipped - no driver location supplied"
     (_, Nothing) -> logWarning $ "FRFSFleetOperator: trip " <> boundaryLabel <> " geofence skipped - could not resolve " <> boundaryLabel <> " stop"
 
 -- | Lead-time: allow a start only within @leadTime@ before the scheduled start. Scheduled start is
 -- the first stop's ETA epoch from the bus schedule (an absolute instant, so no timezone parsing; we
 -- read the raw unix field, not the pre-IST-shifted arrivalTime). Fail-open when schedule is missing.
-validateStartLeadTime :: DIBC.IntegratedBPPConfig -> Text -> Int -> Text -> Minutes -> Flow ()
-validateStartLeadTime integratedBPPConfig waybillNo tripNumber routeId leadTime = do
+validateStartLeadTime :: DIBC.IntegratedBPPConfig -> Text -> Maybe Text -> Int -> Text -> Minutes -> Flow ()
+validateStartLeadTime integratedBPPConfig waybillNo vehicleNumber tripNumber routeId leadTime = do
   schedules <- OTPRest.getBusTripSchedule integratedBPPConfig waybillNo tripNumber routeId
   let mbScheduledStartEpoch = do
         detail <- listToMaybe schedules
@@ -580,5 +582,7 @@ validateStartLeadTime integratedBPPConfig waybillNo tripNumber routeId leadTime 
           leadWindow = fromIntegral (leadTime.getMinutes * 60) :: NominalDiffTime
       when (diffUTCTime scheduledStart now > leadWindow) $
         throwError $
-          InvalidRequest $
-            "This trip can only be started within " <> show leadTime.getMinutes <> " minutes of its scheduled start time."
+          TripStartTooEarly
+            ("This trip can only be started within " <> show leadTime.getMinutes <> " minutes of its scheduled start time.")
+            waybillNo
+            vehicleNumber
