@@ -80,7 +80,12 @@ createNearestDriverReq nearestRadius now =
             subscriptionTdsRate = Nothing,
             airportEntryFeeGst = Nothing,
             serviceVatPercentage = Nothing,
-            subscriptionGst = DTC.GstBreakup Nothing Nothing Nothing
+            subscriptionGst = DTC.GstBreakup Nothing Nothing Nothing,
+            rideTaxRemittanceMode = Nothing,
+            cancellationTaxRemittanceMode = Nothing,
+            tollTaxRemittanceMode = Nothing,
+            parkingTaxRemittanceMode = Nothing,
+            commissionTaxRemittanceMode = Nothing
           },
       minWalletAmountForCashRides = Nothing,
       currentRideTripCategoryValidForForwardBatching = [],

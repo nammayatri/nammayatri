@@ -113,7 +113,12 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             individualNotLinked = Nothing,
             businessTds = Nothing,
             serviceVatPercentage = Nothing,
-            commissionVatPercentage = Nothing
+            commissionVatPercentage = Nothing,
+            rideTaxRemittanceMode = Nothing,
+            cancellationTaxRemittanceMode = Nothing,
+            tollTaxRemittanceMode = Nothing,
+            parkingTaxRemittanceMode = Nothing,
+            commissionTaxRemittanceMode = Nothing
           }
   -- Legacy flat-number TDS fields are tolerated by TdsConfig's hand-written
   -- FromJSON (Domain.Types.Extra.TransporterConfig), so no post-parse backfill

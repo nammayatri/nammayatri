@@ -79,6 +79,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.RideFootnotes as RFN
+import qualified SharedLogic.TaxRemittance as SLT
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
@@ -300,15 +301,16 @@ buildRideEarnings ::
   HighPrecMoney ->
   Bool ->
   Bool ->
+  HighPrecMoney ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam ridePaymentChargeAmt customerBearsCharge driverBearsCharge = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam ridePaymentChargeAmt customerBearsCharge driverBearsCharge vatDeduction = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
       amountPaidByCustomer = fare - (if customerBearsCharge then ridePaymentChargeAmt else 0) - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge} = labels
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge, lblVatDeduction} = labels
       cancellationDues =
         fromMaybe 0 $
           case finalFareParam of
@@ -335,6 +337,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam rid
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
+            mkComp FareBreakup "VAT_DEDUCTION" lblVatDeduction vatDeduction (vatDeduction > 0),
             mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge ridePaymentChargeAmt ((customerBearsCharge || driverBearsCharge) && ridePaymentChargeAmt > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
@@ -443,7 +446,8 @@ data EarningsLabels = EarningsLabels
     lblFare :: Maybe Text,
     lblAirportConvenienceFee :: Maybe Text,
     lblServiceCharge :: Maybe Text,
-    lblPaymentCharge :: Maybe Text
+    lblPaymentCharge :: Maybe Text,
+    lblVatDeduction :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -462,6 +466,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
     <*> resolveLabel lang "SERVICE_CHARGE"
     <*> resolveLabel lang "PAYMENT_CHARGE"
+    <*> resolveLabel lang "VAT_DEDUCTION"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
@@ -488,8 +493,9 @@ mkDriverRideRes ::
   Bool ->
   [DSI.StopInformation] ->
   ResolvedCalling ->
+  Maybe DTConf.TransporterConfig ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling mbTransporterConfig = do
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
@@ -509,10 +515,28 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       estimatedBaseFareV2 = max 0 (estimatedBaseFareGrossV2 - estimatedCommission - bookingAppFeeP)
       rideCommission = fromMaybe 0 ride.commission
       rideTipsAmount = fromMaybe 0 ride.tipAmount
-      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission - rideAppFeeP + rideTipsAmount)) <$> ride.fare
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
       displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
+  let mbTaxConfig = (.taxConfig) <$> mbTransporterConfig
+      rideVatMode = case mbTaxConfig of
+        Just c -> SLT.resolveMode c.rideTaxRemittanceMode Nothing (SLT.legacyRideMode booking.fareParams.isVatTaxType)
+        Nothing -> SLT.legacyRideMode booking.fareParams.isVatTaxType
+      tollVatMode = case mbTaxConfig of
+        Just c -> SLT.resolveMode c.tollTaxRemittanceMode c.rideTaxRemittanceMode DTConf.DRIVER_DIRECT
+        Nothing -> DTConf.DRIVER_DIRECT
+      parkingVatMode = case mbTaxConfig of
+        Just c -> SLT.resolveMode c.parkingTaxRemittanceMode c.rideTaxRemittanceMode DTConf.DRIVER_DIRECT
+        Nothing -> DTConf.DRIVER_DIRECT
+      driverKeepsVat mode = case mode of DTConf.DRIVER_DIRECT -> True; _ -> False
+      rideVatAmt = fromMaybe 0 (finalFareParams >>= (.govtCharges))
+      tollVatAmt = fromMaybe 0 (finalFareParams >>= (.tollFareTax))
+      parkingVatAmt = if edcCollectsParking then 0 else fromMaybe 0 (finalFareParams >>= (.parkingChargeTax))
+      vatDeduction =
+        (if driverKeepsVat rideVatMode then 0 else rideVatAmt)
+          + (if driverKeepsVat tollVatMode then 0 else tollVatAmt)
+          + (if driverKeepsVat parkingVatMode then 0 else parkingVatAmt)
+      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission - rideAppFeeP - vatDeduction + rideTipsAmount)) <$> ride.fare
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -564,18 +588,18 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         case booking.fareSettlementType of
           Just SL.FullPayment ->
             case ride.fare of
-              Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP + rideTipsAmount)
+              Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP - vatDeduction + rideTipsAmount)
               Nothing -> Nothing
           Just _ -> Nothing
           Nothing ->
             case booking.paymentInstrument of
               Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
               _ -> case ride.fare of
-                Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP + rideTipsAmount)
+                Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP - vatDeduction + rideTipsAmount)
                 Nothing -> Nothing
 
   mbRideEarningsVal <- case mbEarningsLabels of
-    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams ridePaymentCharge customerBearsCharge driverBearsCharge
+    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams ridePaymentCharge customerBearsCharge driverBearsCharge vatDeduction
     Nothing -> pure Nothing
 
   return $

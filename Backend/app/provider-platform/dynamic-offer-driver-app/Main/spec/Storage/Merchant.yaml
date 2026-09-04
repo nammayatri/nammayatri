@@ -1037,6 +1037,8 @@ TransporterConfig:
       enum: "CONNECT_PLATFORM, CONNECT_DRIVER"
     ChargeFrequency:
       enum: "CHARGE_DAILY, CHARGE_WEEKLY, CHARGE_MONTHLY"
+    TaxRemittanceMode:
+      enum: "DRIVER_DIRECT, COMPANY_DIRECT, COMPANY_INDIRECT"
     PayoutFeeConfig:
       feeType: PayoutFeeType
       feeValue: HighPrecMoney
@@ -1097,6 +1099,11 @@ TransporterConfig:
       businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
       commissionVatPercentage: Maybe Double
+      rideTaxRemittanceMode: Maybe TaxRemittanceMode
+      cancellationTaxRemittanceMode: Maybe TaxRemittanceMode
+      tollTaxRemittanceMode: Maybe TaxRemittanceMode
+      parkingTaxRemittanceMode: Maybe TaxRemittanceMode
+      commissionTaxRemittanceMode: Maybe TaxRemittanceMode
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
