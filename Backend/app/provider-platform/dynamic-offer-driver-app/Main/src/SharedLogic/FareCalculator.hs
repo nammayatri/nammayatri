@@ -637,7 +637,8 @@ calculateFareParametersHandler params = do
             cancellationTax = Nothing,
             parkingChargeTaxExclusive = Nothing,
             parkingChargeTax = Nothing,
-            fareSettlementType = params.fareSettlementType
+            fareSettlementType = params.fareSettlementType,
+            negotiatedFareDelta = Nothing
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""

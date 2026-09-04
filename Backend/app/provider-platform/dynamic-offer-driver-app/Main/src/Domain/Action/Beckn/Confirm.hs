@@ -41,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
@@ -55,6 +56,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -310,7 +312,15 @@ validateRequest subscriber transporterId req now = do
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
-  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
+  -- Verifying: MSIL pilot merchants are expected to be non-value-add NPs
+  -- (isValueAddNP is legitimately False for them) yet still need scheduled
+  -- trip categories (e.g. OneWay OneWayOnDemandStaticOffer) allowed through
+  -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
+  -- them specifically, instead of registering them as value-add NPs just to
+  -- satisfy this unrelated check.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter

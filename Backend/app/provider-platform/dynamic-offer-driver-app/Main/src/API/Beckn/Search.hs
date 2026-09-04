@@ -15,10 +15,13 @@
 module API.Beckn.Search (API, handler) where
 
 import qualified Beckn.ACL.Search as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.OnSearch as MSILOnSearch
+import qualified Beckn.OnDemand.Transformer.MSIL.Search as MSILSearch
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Aeson.Text as A
@@ -41,13 +44,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.GatewayDispatch as GatewayDispatch
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 
 type API =
@@ -108,17 +115,48 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
         moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
         void $ Utils.validateSearchContext context transporterId moc.id
-        dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
-        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
+        dSearchReq' <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
+
+        -- Pilot: cities with enableOndcScheduledRideSupport (e.g. MSIL) get
+        -- isSchedule decided from the incoming category descriptor code,
+        -- and the BAP's declared BAP_TERMS.STATIC_TERMS (if any) verified+stored
+        -- against its BapMetadata row (so it can be echoed back later, e.g. at
+        -- on_confirm) -- both done in one pass by
+        -- Beckn.OnDemand.Transformer.MSIL.Search.msilParser; everyone else's
+        -- dSearchReq is passed on exactly as Layer 1 (ACL.buildSearchReqV2) built
+        -- it, unchanged.
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+        let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+        dSearchReq <-
+          if isOndcScheduledRideSupportEnabled
+            then MSILSearch.msilParser reqV2.searchReqMessage dSearchReq'
+            else pure dSearchReq'
+        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
 
         isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
         when isFirst $
           Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
             fork "search request processing" $
               Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-                (dSearchRes, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                -- Same pilot check, applied to the already-built on_search reply
+                -- (Beckn.OnDemand.Transformer.MSIL.OnSearch.msilOnSearchConverter) instead
+                -- of touching anything inside SRP.processSearchRequest's own builder chain.
+                -- Building: BPP_TERMS goes on message.catalog.tags -- on_search has no
+                -- Order (Catalog -> Provider only), so it can't use order.tags like
+                -- on_select/on_init/on_confirm do.
+                onSearchReq <-
+                  if isOndcScheduledRideSupportEnabled
+                    then do
+                      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
+                      mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id dSearchReq.bapId) Domain.MOBILITY
+                      pure $
+                        MSILOnSearch.msilPatchCatalogCompliance $
+                          MSILOnSearch.msilPatchScheduledLocations dSearchRes $
+                            MSILOnSearch.msilPatchProviderFulfillmentTypes (MSILOnSearch.msilAddBppTerms mbBapMetadata bppConfig (MSILOnSearch.msilOnSearchConverter dSearchRes onSearchReq'))
+                    else pure onSearchReq'
                 internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext
                 logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
