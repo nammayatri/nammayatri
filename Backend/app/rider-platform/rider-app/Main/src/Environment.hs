@@ -110,6 +110,7 @@ data AppCfg = AppCfg
     hedisSecondaryClusterCfg :: HedisCfg,
     ltsRedis :: HedisCfg,
     ltsSecondaryRedis :: HedisCfg,
+    ltsReplicaRedis :: Maybe HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
@@ -278,6 +279,7 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
+    ltsReplicaHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -435,6 +437,14 @@ buildAppEnv cfg@AppCfg {..} = do
         putStrLn $ "ERROR: Failed to connect to secondary LTS Redis: " ++ show e
         pure Nothing
       Right env -> pure (Just env)
+  ltsReplicaHedisEnv <- case ltsReplicaRedis of
+    Nothing -> pure Nothing
+    Just replicaCfg ->
+      Kernel.Prelude.try (connectHedis replicaCfg identity) >>= \case
+        Left (e :: SomeException) -> do
+          putStrLn $ "ERROR: Failed to connect to LTS replica Redis: " ++ show e
+          pure Nothing
+        Right env -> pure (Just env)
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
@@ -449,6 +459,7 @@ releaseAppEnv AppEnv {..} = do
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
   disconnectHedis ltsHedisEnv
   maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
+  maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
 
 type Env = EnvR AppEnv
 

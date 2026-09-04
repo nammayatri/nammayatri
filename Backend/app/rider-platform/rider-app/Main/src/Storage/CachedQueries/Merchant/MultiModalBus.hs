@@ -13,7 +13,6 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     hasLiveVehicles,
     mkRouteKey,
     mkUpcomingRouteKey,
-    withCrossAppRedisNew,
     utcToIST,
   )
 where
@@ -49,11 +48,6 @@ data BusStopETA = BusStopETA
     etaSeconds :: Maybe Integer
   }
   deriving (Generic, Show, Eq, ToSchema)
-
-withCrossAppRedisNew ::
-  (Hedis.HedisFlow m env, Kernel.Prelude.HasField "ltsHedisEnv" env Hedis.HedisEnv) => m f -> m f
-withCrossAppRedisNew f = do
-  local (\env -> env{hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv}) f
 
 instance FromJSON BusStopETA where
   parseJSON = withObject "BusStopETA" $ \v -> do
@@ -134,32 +128,32 @@ mkUpcomingRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
   _ -> "route:upcoming:" <> routeId
 
 -- Get all buses for a single route
-getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
+getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
 getRoutesBuses routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
-  busDataPairs <- Hedis.runInMultiCloudLTSRedisForList $ Hedis.hGetAll key
+  busDataPairs <- Hedis.runInMultiCloudLTSRedisForListFromReplica $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
 
-getUpcomingRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
+getUpcomingRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
 getUpcomingRoutesBuses routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkUpcomingRouteKey redisPrefix routeId
-  busDataPairs <- Hedis.runInMultiCloudLTSRedisForList $ Hedis.hGetAll key
+  busDataPairs <- Hedis.runInMultiCloudLTSRedisForListFromReplica $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
 
-getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
+getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
 getBusesForRoutes routeCodes integratedBppConfig = mapConcurrently (\routeCode -> getRoutesBuses routeCode integratedBppConfig) routeCodes
 
-hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Text -> DIBC.IntegratedBPPConfig -> m Bool
+hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Text -> DIBC.IntegratedBPPConfig -> m Bool
 hasLiveVehicles routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
@@ -169,5 +163,5 @@ hasLiveVehicles routeId integratedBppConfig = do
   cloudType <- asks (.cloudType)
   res <- case cloudType of
     Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.ttl key
-    _ -> withCrossAppRedisNew $ Hedis.ttl key
+    _ -> Hedis.withLTSReplicaRedis $ Hedis.ttl key
   return $ res >= -1

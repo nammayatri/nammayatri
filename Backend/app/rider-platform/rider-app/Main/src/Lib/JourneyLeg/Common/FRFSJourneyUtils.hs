@@ -72,7 +72,7 @@ resultKeyFRFS journeyLegId = "journeyLegResult:" <> journeyLegId
 -- point is closest in time to that snapshot -- not the freshest rider point, which may have been
 -- recorded well after the bus moved on.
 checkRiderNearBusFRFS ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
   Text ->
   Maybe Text ->
   Maybe Text ->
@@ -175,7 +175,7 @@ filterBusesYetToReachStop stopCode now includeNoEta merchantOpCityId allBuses = 
     else pure matched
 
 processBusLegState ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
   UTCTime ->
   Maybe DJourneyLeg.JourneyLeg ->
   Maybe Text ->
@@ -365,23 +365,23 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
        in map toNextStopDetails filteredStops
     _ -> []
 
-getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => [Text] -> DIBC.IntegratedBPPConfig -> m [Maybe BusDataWithRoutesInfo]
+getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [Text] -> DIBC.IntegratedBPPConfig -> m [Maybe BusDataWithRoutesInfo]
 getVehicleMetadata vehicleNumbers integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
-  Hedis.runInMultiCloudLTSRedisForMaybeList $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
+  Hedis.runInMultiCloudLTSRedisForMaybeListFromReplica $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
   where
     vehicleMetaKey :: Maybe Text -> Text
     vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
       Just prefix | prefix /= "" -> prefix <> ":bus_metadata_v2"
       _ -> "bus_metadata_v2"
 
-getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
+getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
 getBusLiveInfo vehicleNumber integratedBppConfig = listToMaybe . catMaybes <$> getVehicleMetadata [vehicleNumber] integratedBppConfig
 
-getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> m [BusDataWithRoutesInfo]
+getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> m [BusDataWithRoutesInfo]
 getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let nearbyBusSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
   let redisPrefix = case integratedBppConfig.providerConfig of
@@ -389,7 +389,7 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
         DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   busesBS <-
-    mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForList (Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+    mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForListFromReplica (Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
   buses <-
     if null busesBS

@@ -226,9 +226,7 @@ getISTTimeInfo currentTime =
    in (istOffset, currentTimeIST)
 
 fetchLiveBusTimings ::
-  ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+  ( Hedis.HedisLTSFlowEnv r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -334,9 +332,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
             }
 
 fetchLiveSubwayTimings ::
-  ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+  ( Hedis.HedisLTSFlowEnv r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -390,6 +386,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
 fetchLiveTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
     HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    HasField "ltsReplicaHedisEnv" r (Maybe Hedis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
     CacheFlow m r,
     EsqDBFlow m r,
@@ -427,9 +424,7 @@ findPossibleRoutes ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -530,9 +525,7 @@ processTierGroup ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -1888,9 +1881,7 @@ switchFRFSQuoteTierUtil ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -1939,9 +1930,7 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
         EsqDBReplicaFlow m r,
         EncFlow m r,
         Monad m,
-        HasField "ltsHedisEnv" r Hedis.HedisEnv,
-        HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-        HasField "cloudType" r (Maybe CloudType),
+        Hedis.HedisLTSFlowEnv r,
         HasKafkaProducer r,
         HasShortDurationRetryCfg r c
       ) =>
@@ -1975,9 +1964,7 @@ getLegTierOptionsUtil ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>

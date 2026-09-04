@@ -173,7 +173,7 @@ queueReadFailSafeSize = 10
 readQueueLastTsPresence :: [Text] -> Environment.Flow [Bool]
 readQueueLastTsPresence [] = pure []
 readQueueLastTsPresence lastTsKeys = do
-  primary <- Redis.withLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
+  primary <- Redis.withLTSReplicaRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
   mbSecondary <- asks (.secondaryLTSHedisEnv)
   secondary <- case mbSecondary of
     Nothing -> pure $ map (const Nothing) lastTsKeys

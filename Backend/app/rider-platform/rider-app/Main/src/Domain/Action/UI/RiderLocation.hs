@@ -50,7 +50,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
       busesBS <-
-        mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForList (Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+        mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForListFromReplica (Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       if null busesBS
         then do
@@ -58,7 +58,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           pure []
         else do
           logDebug $ "getNearbyBuses: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-          buses <- Hedis.runInMultiCloudLTSRedisForMaybeList $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
+          buses <- Hedis.runInMultiCloudLTSRedisForMaybeListFromReplica $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
           let validBuses = catMaybes buses
               sortedLimitedBuses = take maxNearbyBuses $ EulerHS.Prelude.sortOn (distanceToUser userPos) validBuses
           pure sortedLimitedBuses

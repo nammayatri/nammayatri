@@ -122,6 +122,7 @@ processPaymentOrder ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "ltsReplicaHedisEnv" r (Maybe Redis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],

@@ -56,7 +56,6 @@ import Kernel.Types.Distance
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -105,13 +104,13 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
-filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
+filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
 filterTransitRoutes riderConfig routes = do
   if riderConfig.enableBusFiltering == Just True
     then filterM filterBusRoutes routes
     else return routes
   where
-    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv), HasField "cloudType" r (Maybe CloudType)) => MultiModalRoute -> m Bool
+    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => MultiModalRoute -> m Bool
     filterBusRoutes route = do
       let legs = route.legs
           busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
@@ -1746,9 +1745,7 @@ switchFRFSQuoteTier ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
@@ -1763,9 +1760,7 @@ getLegTierOptions ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
-    HasField "cloudType" r (Maybe CloudType),
+    Hedis.HedisLTSFlowEnv r,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
