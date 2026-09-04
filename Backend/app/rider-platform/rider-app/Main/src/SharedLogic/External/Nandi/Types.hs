@@ -784,6 +784,32 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+-- | One seated ride of a metro journey, as planned by the in-memory GTFS server's hopper
+-- index. A journey needing a change of line comes back as several of these.
+--
+-- Only the fields the caller uses are declared. The response also carries platform codes and
+-- an interchange type, deliberately ignored here: platform is resolved at confirm time from
+-- the actual trip, which knows the physical train rather than only the route.
+data MetroHopLeg = MetroHopLeg
+  { srcStopCode :: Text,
+    destStopCode :: Text,
+    routeCode :: Text,
+    lineName :: Text,
+    numStops :: Int,
+    alternateRouteCodes :: [Text]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+-- | Response of @GET \/metro\/hop\/{gtfs_id}@.
+--
+-- @legs@ is @Nothing@ when both stops exist but no service connects them on the day asked
+-- about -- a real answer, not an error -- and an empty list when source and destination are
+-- the same station. Both mean there is no journey to offer.
+newtype MetroHopResponse = MetroHopResponse
+  { legs :: Maybe [MetroHopLeg]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   { service_type :: BecknV2.FRFS.Enums.ServiceTierType,
     service_sub_types :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],

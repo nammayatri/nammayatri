@@ -126,6 +126,29 @@ getRoutesByVehicleType integratedBPPConfig vehicleType = do
   routes <- getRoutesByGtfsId integratedBPPConfig
   return $ filter (\route -> route.vehicleType == vehicleType) routes
 
+-- | The metro journey between two stations, one entry per seated ride.
+--
+-- A journey needing a change of line comes back as several legs; one that does not comes back
+-- as a single leg. 'Nothing' means the hopper has no journey to offer -- the stations exist
+-- but nothing connects them on the day asked about, or they are the same station -- which is
+-- an answer rather than a failure, so callers fall back to their own route details.
+--
+-- Cached for an hour, like the other in-memory server lookups here. The index itself only
+-- changes when the feed is reprocessed, but the answer is day-type specific, so an entry must
+-- not outlive the day it was asked on; an hour is well inside that.
+getMetroHop ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  m (Maybe [MetroHopLeg])
+getMetroHop integratedBPPConfig fromStopCode toStopCode =
+  IM.withInMemCache ["METROHOP", integratedBPPConfig.id.getId, fromStopCode, toStopCode] 3600 $ do
+    baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+    response <- Flow.getMetroHop baseUrl integratedBPPConfig.feedKey fromStopCode toStopCode
+    logDebug $ "metro hop " <> fromStopCode <> " -> " <> toStopCode <> ": " <> show response
+    return response.legs
+
 -- Route Stop Mapping Queries
 
 getRouteStopMappingByRouteCode ::

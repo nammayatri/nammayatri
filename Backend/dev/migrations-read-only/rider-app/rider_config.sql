@@ -850,3 +850,23 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_subway_frfs_search boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_metro_frfs_search boolean ;
+
+
+------- SQL updates -------
+
