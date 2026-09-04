@@ -257,10 +257,21 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
   -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
   -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
-  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId || isJust booking.frfsTicketBookingPaymentIdForTicketGeneration) $
-    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
-  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
+    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
+  unless (booking.status == Booking.CONFIRMED) $
+    void . withTryCatch "onConfirm:recordBookedTrip" $ do
+      mbApplied <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+      whenJust ((,) <$> booking.overrideAppliedEntityId <*> mbApplied) $ \(entityId, (_, appliedPass)) -> do
+        mbEnd <- case (booking.tripId, booking.routeCode) of
+          (Just tripId, Just routeCode) -> FRFSUtils.getScheduledTripEndTime tripId routeCode booking.toStationCode integratedBPPConfig
+          _ -> pure Nothing
+        case ((,) <$> booking.startTime <*> mbEnd) of
+          Nothing -> logInfo $ "FRFSPassOverride: no resolvable trip window, overlapping-booking cap not claimed bookingId=" <> booking.id.getId
+          Just tripWindow ->
+            FRFSPassOverride.recordBookedTrip person appliedPass (Id entityId) booking.id.getId tripWindow
+  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   unless (isJust booking.parentBookingId) $
