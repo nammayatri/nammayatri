@@ -20,7 +20,7 @@ module Domain.Action.Beckn.Select
   )
 where
 
-import qualified Beckn.OnDemand.Transformer.MSIL.OnSelect as MSILOnSelect
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect as OSROnSelect
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
@@ -79,7 +79,7 @@ data DSelectReq = DSelectReq
     customerExtraFee :: Maybe HighPrecMoney,
     -- | BAP-proposed total fare for the Quote-based /select negotiation flow
     -- (ONDC v2.1.0 Pre-Order Bid). Layer 1 (Beckn.ACL.Select) always sets this
-    -- to Nothing; only Beckn.OnDemand.Transformer.MSIL.Select.msilParser fills
+    -- to Nothing; only Beckn.OnDemand.Transformer.OndcScheduledRide.Select.ondcScheduledRideParser fills
     -- it in, from item.price.value, for enableOndcScheduledRideSupport cities
     -- pilot merchants. Deliberately a separate field from customerExtraFee,
     -- which is an additive tip/extra-fee delta used by the Estimate-based
@@ -211,7 +211,7 @@ addNammaTags tagData sReq = do
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id
 
--- MSIL pilot: /select for the new Quote-based (static/scheduled) capability --
+-- ONDC scheduled-ride pilot: /select for the new Quote-based (static/scheduled) capability --
 -- Dispatched only for cities with enableOndcScheduledRideSupport,
 -- at the API layer (API.Beckn.Select), when the wire item.id resolves to a Quote
 -- instead of an Estimate.
@@ -257,7 +257,7 @@ applyNegotiatedFare quoteId quote negotiatedFare = do
   return quote {DQuote.estimatedFare = negotiatedFare, DQuote.fareParams = updatedFareParams}
 
 -- | Build and send /on_select for a validated Quote (see
--- Beckn.OnDemand.Transformer.MSIL.OnSelect for the builder). Called from a fork,
+-- Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect for the builder). Called from a fork,
 -- same as 'handler' above, using the inbound /select's own messageId -- unlike
 -- the dynamic-offer flow's callOnSelectV2, there's no driver bid to wait for, so
 -- this is synchronous within the same request, not deferred to a later event.
@@ -271,5 +271,5 @@ handleQuoteSelect msgId merchant searchReq quote = do
       >>= fromMaybeM (VehicleServiceTierNotFound (show quote.vehicleServiceTier))
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
-  onSelectMsg <- MSILOnSelect.mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
+  onSelectMsg <- OSROnSelect.mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
   CallBAP.callOnSelectV2ForQuote merchant searchReq msgId quote onSelectMsg

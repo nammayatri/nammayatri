@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -299,7 +300,7 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
-  m (DM.Merchant, ValidatedQuote)
+  m (DM.Merchant, ValidatedQuote, DTMT.TransporterConfig)
 validateRequest subscriber transporterId req now = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
@@ -312,17 +313,12 @@ validateRequest subscriber transporterId req now = do
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
-  -- Verifying: MSIL pilot merchants are expected to be non-value-add NPs
-  -- (isValueAddNP is legitimately False for them) yet still need scheduled
-  -- trip categories (e.g. OneWay OneWayOnDemandStaticOffer) allowed through
-  -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
-  -- them specifically, instead of registering them as value-add NPs just to
-  -- satisfy this unrelated check.
+  -- Pilot merchants bypass the isValueAddNP restriction above since they're non-value-add NPs but still need scheduled trip categories allowed through /confirm.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
-  case booking.tripCategory of
+  (transporter', validatedQuote) <- case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     Rental RideOtp -> getRideOtpQuoteDetails booking transporter
@@ -349,6 +345,7 @@ validateRequest subscriber transporterId req now = do
     -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
     EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
+  return (transporter', validatedQuote, transporterConfig)
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
