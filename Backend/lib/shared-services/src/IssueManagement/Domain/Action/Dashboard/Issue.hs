@@ -281,6 +281,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             becknIssueId = Nothing,
             customerResponse = Nothing,
             additionalTicketIds = Nothing,
+            scheduledBookingTransactionId = Nothing,
             ..
           }
 
@@ -383,6 +384,8 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
     Nothing -> case mbIssueReportShortId of
       Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoesNotExist iReportShortId.getShortId)
       Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
+  when (isJust issueReport.scheduledBookingTransactionId) $
+    throwError $ IssueReportDoesNotExist issueReport.id.getId
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
   merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
   mkIssueInfoRes person issueReport merchantOpCity.id

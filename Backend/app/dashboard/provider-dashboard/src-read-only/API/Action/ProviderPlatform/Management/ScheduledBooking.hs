@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign))
+type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssign :<|> PostScheduledBookingUnassign :<|> PostScheduledBookingOpsNote))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> getScheduledBookingNearbyDrivers merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city
+handler merchantId city = getScheduledBookingList merchantId city :<|> getScheduledBookingInfo merchantId city :<|> getScheduledBookingDriverDistance merchantId city :<|> getScheduledBookingNearbyDrivers merchantId city :<|> postScheduledBookingAssign merchantId city :<|> postScheduledBookingUnassign merchantId city :<|> postScheduledBookingOpsNote merchantId city
 
 type GetScheduledBookingList =
   ( ApiAuth
@@ -75,6 +75,14 @@ type PostScheduledBookingUnassign =
       :> API.Types.ProviderPlatform.Management.ScheduledBooking.PostScheduledBookingUnassign
   )
 
+type PostScheduledBookingOpsNote =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SCHEDULED_BOOKING / 'API.Types.ProviderPlatform.Management.ScheduledBooking.POST_SCHEDULED_BOOKING_OPS_NOTE)
+      :> API.Types.ProviderPlatform.Management.ScheduledBooking.PostScheduledBookingOpsNote
+  )
+
 getScheduledBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.ScheduledBooking.AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingListRes)
 getScheduledBookingList merchantShortId opCity apiTokenInfo assignmentStatus from limit offset to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.getScheduledBookingList merchantShortId opCity apiTokenInfo assignmentStatus from limit offset to
 
@@ -92,3 +100,6 @@ postScheduledBookingAssign merchantShortId opCity apiTokenInfo transactionId req
 
 postScheduledBookingUnassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postScheduledBookingUnassign merchantShortId opCity apiTokenInfo transactionId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.postScheduledBookingUnassign merchantShortId opCity apiTokenInfo transactionId
+
+postScheduledBookingOpsNote :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.ScheduledBooking.OpsNoteReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postScheduledBookingOpsNote merchantShortId opCity apiTokenInfo transactionId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.ScheduledBooking.postScheduledBookingOpsNote merchantShortId opCity apiTokenInfo transactionId req
