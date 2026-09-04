@@ -5,7 +5,6 @@ import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as DBL
 import Data.Either.Extra (mapLeft)
-import qualified Data.String.Conversions as CS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Text.Lazy as DTE
@@ -71,8 +70,6 @@ runJsonLogic data' ruleText = do
 runLogics :: (MonadFlow m, ToJSON a) => [A.Value] -> a -> m LYT.RunLogicResp
 runLogics logics data_ = do
   let logicData = A.toJSON data_
-  logDebug $ "logics- " <> show logics
-  logDebug $ "logicData- " <> CS.cs (A.encode logicData)
   let startingPoint = LYT.RunLogicResp logicData []
   foldlM
     ( \acc logic -> do
@@ -80,11 +77,9 @@ runLogics logics data_ = do
         res <-
           case result of
             Left err -> do
-              logError $ "Got error: " <> show err <> " while running logic: " <> CS.cs (A.encode logics)
+              logError $ "Got error: " <> show err <> " while running logic"
               pure $ LYT.RunLogicResp acc.result (acc.errors <> [show err])
             Right res -> pure $ LYT.RunLogicResp res acc.errors
-        logDebug $ "logic- " <> (CS.cs . A.encode $ logic)
-        logDebug $ "json logic result - " <> (CS.cs . A.encode $ res)
         return res
     )
     startingPoint
