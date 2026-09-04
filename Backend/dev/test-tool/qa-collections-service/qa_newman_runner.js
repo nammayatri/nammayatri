@@ -80,7 +80,6 @@ run.on('request', (err, args) => {
     let url;
     try { url = args.request && args.request.url && args.request.url.toString(); } catch (_) { /* best-effort */ }
     const status = response && response.code;
-    const failed = !status || status >= 400;
 
     const event = {
       name: args.item && args.item.name,
@@ -90,12 +89,13 @@ run.on('request', (err, args) => {
       responseTime: response && response.responseTime,
     };
 
-    if (failed) {
-      try { event.responseBody = truncate(response && response.text()); } catch (_) { /* binary or unreadable body */ }
-      try { event.responseHeaders = response && response.headers && response.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
-      try { event.requestBody = truncate(args.request && args.request.body && args.request.body.toString()); } catch (_) { /* best-effort */ }
-      try { event.requestHeaders = args.request && args.request.headers && args.request.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
-    }
+    // Always capture body/headers (not just on failure) — the dashboard's step
+    // list shows the raw request/response for every step, pass or fail, same
+    // as the in-browser runtime does for non-QA collections.
+    try { event.responseBody = truncate(response && response.text()); } catch (_) { /* binary or unreadable body */ }
+    try { event.responseHeaders = response && response.headers && response.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
+    try { event.requestBody = truncate(args.request && args.request.body && args.request.body.toString()); } catch (_) { /* best-effort */ }
+    try { event.requestHeaders = args.request && args.request.headers && args.request.headers.all().map(h => ({ key: h.key, value: h.value })); } catch (_) { /* best-effort */ }
 
     emit('request', event);
   } catch (_) { /* never let a malformed event crash the run */ }
