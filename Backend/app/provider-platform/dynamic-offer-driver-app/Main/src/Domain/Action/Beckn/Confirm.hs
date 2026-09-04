@@ -239,7 +239,8 @@ handler merchant req validatedQuote = do
     mkDConfirmResp mbRideInfo uBooking riderDetails = do
       cityLabel <- SML.getCityLabel uBooking.merchantOperatingCityId
       metricsDistanceBucketEdges <- SML.getDistanceBucketEdges uBooking.merchantOperatingCityId
-      Metrics.incrementBookingCreatedCount merchant.shortId.getShortId cityLabel (show uBooking.vehicleServiceTier) (SML.distanceBucketLabel metricsDistanceBucketEdges uBooking.estimatedDistance)
+      let (pickupZone, dropZone) = SML.specialZoneLabels uBooking.area
+      Metrics.incrementBookingCreatedCount merchant.shortId.getShortId cityLabel (show uBooking.vehicleServiceTier) (SML.distanceBucketLabel metricsDistanceBucketEdges uBooking.estimatedDistance) pickupZone dropZone
       mDriverStats <-
         if isNothing mbRideInfo
           then pure Nothing
