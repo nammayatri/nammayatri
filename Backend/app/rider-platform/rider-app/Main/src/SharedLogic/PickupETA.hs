@@ -88,12 +88,12 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
 
       case response of
         Left e -> do
-          logError $ "Error in running PickupETALogics - " <> show e <> " - " <> show inputData <> " - " <> show allLogics
+          logError $ "Error in running PickupETALogics - " <> show e <> " - " <> show inputData
           return Nothing
         Right resp ->
           case (A.fromJSON resp.result :: A.Result PickupETAResult) of
             A.Success result -> do
               return $ (,) <$> result.etaInMinutes <*> mbVersionReturned
             A.Error err -> do
-              logWarning $ "Error parsing PickupETAResult - " <> show err <> " - " <> show resp <> " - " <> show inputData <> " - " <> show allLogics
+              logWarning $ "Error parsing PickupETAResult - " <> show err <> " - " <> show resp <> " - " <> show inputData
               return Nothing
