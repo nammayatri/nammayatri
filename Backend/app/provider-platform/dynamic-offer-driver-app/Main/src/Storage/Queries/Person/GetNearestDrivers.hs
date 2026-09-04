@@ -25,6 +25,7 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
@@ -99,6 +100,7 @@ data NearestDriversReq = NearestDriversReq
     isInterCity :: Bool,
     isScheduled :: Bool,
     scheduledOpenToAll :: Bool,
+    scheduledPickupTime :: Maybe UTCTime,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
@@ -370,17 +372,17 @@ filterByWalletBalance ::
 filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
   afterPrepaid <-
     if isPrepaidEnabled
-      then case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
-        (Just fare, Just _) ->
-          filterM
-            ( \r -> do
-                let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
-                    (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
-                mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-                pure $ maybe False (>= (fare + threshold)) mbBalance
-            )
-            results
-        _ -> pure results
+      then do
+        let mbFareRequirement = case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
+              (Just fare, Just _) -> Just fare
+              _ -> Nothing
+            -- A scheduled ride is dispatched long before pickup, so credits that are valid now can
+            -- still be swept by ExpireSubscriptionPurchase before the ride runs. R4's open-to-all
+            -- relaxation is deliberately not applied: it relaxes eligibility, not solvency.
+            mbCreditsValidAt = if isScheduled then scheduledPickupTime else Nothing
+        if isNothing mbFareRequirement && isNothing mbCreditsValidAt
+          then pure results
+          else filterM (passesPrepaidGates mbFareRequirement mbCreditsValidAt) results
       else pure results
   let cashRequirement =
         case minWalletAmountForCashRides of
@@ -401,6 +403,19 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
+
+    passesPrepaidGates mbFareRequirement mbCreditsValidAt r = do
+      let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
+          (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
+          ownerType = maybe DSP.DRIVER (const DSP.FLEET_OWNER) r.fleetOwnerId
+      balanceOk <- case mbFareRequirement of
+        Nothing -> pure True
+        Just fare -> do
+          mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
+          pure $ maybe False (>= (fare + threshold)) mbBalance
+      if not balanceOk
+        then pure False
+        else maybe (pure True) (hasPrepaidCreditsValidAt ownerId ownerType mbVehicleCategory) mbCreditsValidAt
 
     checkBalance (counterpartyType, ownerId) required = do
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
