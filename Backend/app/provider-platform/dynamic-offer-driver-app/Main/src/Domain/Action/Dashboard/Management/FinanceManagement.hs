@@ -23,7 +23,6 @@ module Domain.Action.Dashboard.Management.FinanceManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
-import qualified AWS.S3 as S3
 import qualified Dashboard.Common
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
@@ -37,7 +36,6 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
-import qualified Domain.Types.Image as DImage
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.LedgerAdjustmentRequest as DLAR
 import qualified Domain.Types.Merchant as DM
@@ -2326,8 +2324,6 @@ getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
   let fleetOwnerName = mbFleetOwner <&> \p -> T.intercalate " " $ catMaybes [Just p.firstName, p.middleName, p.lastName]
       DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
 
-  documentUrl <- resolveTdsDocumentUrl (cast request.documentId)
-
   mappings <- QTdsMap.findAllByRequestId request.id
   invoiceLines <- buildStatusInvoiceLines mappings
   let totalTdsAmount = sum $ map (.tdsAmount) mappings
@@ -2344,18 +2340,13 @@ getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
         certAmount = request.certAmount,
         tdsRate = request.tdsRate,
         tdsSection = request.tdsSection,
-        documentUrl = documentUrl,
+        documentId = cast request.documentId,
         status = castTdsReimbursementRequestStatus request.status,
         rejectionReason = request.rejectionReason,
         submittedAt = request.createdAt,
         invoiceLines = invoiceLines,
         totalTdsAmount = totalTdsAmount
       }
-
-resolveTdsDocumentUrl :: Id DImage.Image -> Flow Text
-resolveTdsDocumentUrl imageId = do
-  image <- QImage.findById imageId >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> imageId.getId)
-  S3.generateDownloadUrl (T.unpack image.s3Path) 3600
 
 postFinanceManagementFinanceAdjustmentSubmit ::
   ShortId DM.Merchant ->

@@ -995,7 +995,7 @@ types:
     - certAmount: HighPrecMoney
     - tdsRate: Double
     - tdsSection: Maybe Text
-    - documentUrl: Text
+    - documentId: Id Image
     - status: TdsReimbursementStatus
     - rejectionReason: Maybe Text
     - submittedAt: UTCTime

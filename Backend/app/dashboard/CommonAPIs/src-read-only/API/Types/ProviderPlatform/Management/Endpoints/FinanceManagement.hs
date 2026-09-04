@@ -547,7 +547,7 @@ data TdsReimbursementDetailRes = TdsReimbursementDetailRes
     certAmount :: Kernel.Types.Common.HighPrecMoney,
     tdsRate :: Kernel.Prelude.Double,
     tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    documentUrl :: Kernel.Prelude.Text,
+    documentId :: Kernel.Types.Id.Id Dashboard.Common.Image,
     status :: TdsReimbursementStatus,
     rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     submittedAt :: Kernel.Prelude.UTCTime,
