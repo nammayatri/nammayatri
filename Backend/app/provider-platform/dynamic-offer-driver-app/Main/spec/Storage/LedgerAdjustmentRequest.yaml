@@ -55,6 +55,10 @@ LedgerAdjustmentRequest:
       kvFunction: findOneWithKV
       where: id
 
+    findByReferenceId:
+      kvFunction: findOneWithKV
+      where: referenceId
+
     findByReferenceIdAndStatuses:
       kvFunction: findOneWithKV
       where:

@@ -413,6 +413,18 @@ apis:
       migrate:
         capability: finance.tds_reimbursement.read
 
+  - POST: #RejectTdsReimbursementRequest
+      endpoint: /tdsReimbursement/{requestId}/reject
+      params:
+        requestId: Id FinanceTdsReimbursementRequest
+      auth: ApiAuthV2
+      request:
+        type: TdsReimbursementRejectReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.tds_reimbursement.write
+
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
@@ -940,6 +952,9 @@ types:
   TdsReimbursementRequestSubmitRes:
     - requestId: Id FinanceTdsReimbursementRequest
     - status: TdsReimbursementStatus
+
+  TdsReimbursementRejectReq:
+    - rejectionReason: Text
 
   TdsReimbursementStatusInvoiceLine:
     - invoiceId: Id Invoice
