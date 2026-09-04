@@ -103,6 +103,32 @@ apis:
       migrate:
         capability: city-operations.scheduled-bookings.write
 
+  - POST: # ScheduledBookingAddOpsNoteAPI
+      endpoint: /{transactionId}/opsNote
+      name: PostScheduledBookingOpsNote
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      request:
+        type: OpsNoteReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{transactionId}/opsNote
+            name: PostScheduledBookingOpsNote
+            auth: ApiAuthV2
+            params:
+              transactionId: Text
+            query:
+              - requestorId: Text
+            request:
+              type: OpsNoteReq
+            response:
+              type: APISuccess
+      migrate:
+        capability: city-operations.scheduled-bookings.write
+
 types:
   ScheduledBookingListRes:
     - totalItems: Int
@@ -152,6 +178,18 @@ types:
     - vehicleServiceTier: ServiceTierType
     - vehicleServiceTierName: Text
     - reallocationHistory: [ReallocationEventItem]
+    - opsNotes: [OpsNote]
+
+  OpsNote:
+    - id: Text
+    - authorId: Text
+    - authorName: Maybe Text
+    - content: Text
+    - createdAt: UTCTime
+
+  OpsNoteReq:
+    - content: Text
+    - derive: "'HideSecrets"
 
   NearbyDriversRes:
     - radiusKm: Double

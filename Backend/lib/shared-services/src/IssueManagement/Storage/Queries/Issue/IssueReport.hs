@@ -175,6 +175,16 @@ updateChats issueId chats = do
 findByBecknIssueId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByBecknIssueId becknIssueId = findOneWithKV [Is BeamIR.becknIssueId $ Eq (Just becknIssueId)]
 
+findByScheduledBookingTransactionId :: BeamFlow m r => Id MerchantOperatingCity -> Text -> m (Maybe IssueReport)
+findByScheduledBookingTransactionId merchantOperatingCityId transactionId =
+  findOneWithKV
+    [ And
+        [ Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId),
+          Is BeamIR.scheduledBookingTransactionId $ Eq (Just transactionId),
+          Is BeamIR.deleted $ Eq False
+        ]
+    ]
+
 instance FromTType' BeamIR.IssueReport IssueReport where
   fromTType' BeamIR.IssueReportT {..} = do
     pure $
@@ -186,6 +196,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
             ticketBookingId = Id <$> ticketBookingId,
+            scheduledBookingTransactionId = scheduledBookingTransactionId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             categoryId = Id <$> categoryId,
             optionId = Id <$> optionId,
@@ -208,6 +219,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.driverId = getId <$> driverId,
         BeamIR.rideId = getId <$> rideId,
         BeamIR.ticketBookingId = getId <$> ticketBookingId,
+        BeamIR.scheduledBookingTransactionId = scheduledBookingTransactionId,
         BeamIR.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamIR.description = description,
         BeamIR.assignee = assignee,
