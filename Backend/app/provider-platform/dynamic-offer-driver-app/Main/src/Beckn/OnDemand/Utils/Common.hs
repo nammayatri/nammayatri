@@ -876,6 +876,7 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -909,6 +910,7 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -941,6 +943,7 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         _ -> True
 
 type MerchantShortId = Text
