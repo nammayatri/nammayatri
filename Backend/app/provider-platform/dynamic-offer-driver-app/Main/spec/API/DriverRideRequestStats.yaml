@@ -1,0 +1,19 @@
+module: DriverRideRequestStats
+
+types:
+  DriverRideRequestStatsRes:
+    totalRequests: Int
+    acceptedRequests: Int
+    rejectedRequests: Int
+    pulledRequests: Int
+    lastRequestAt: Maybe UTCTime
+    lastAcceptedRequestAt: Maybe UTCTime
+
+apis:
+  - GET: # DriverRideRequestStatsAPI
+      endpoint: /driver/rideRequestStats
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - durationInMinutes: Int
+      response:
+        type: DriverRideRequestStatsRes
