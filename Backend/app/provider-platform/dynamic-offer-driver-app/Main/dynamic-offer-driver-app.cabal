@@ -2028,6 +2028,7 @@ library
     , casing
     , cassava
     , cereal
+    , clickhouse-haskell
     , communication-engine
     , config-pilot
     , consequence-engine
@@ -2180,6 +2181,7 @@ executable dynamic-offer-driver-app-exe
     , casing
     , cassava
     , cereal
+    , clickhouse-haskell
     , communication-engine
     , config-pilot
     , consequence-engine

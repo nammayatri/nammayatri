@@ -15,7 +15,12 @@
 module App (startKafkaConsumer, runDriverHealthcheck) where
 
 import Control.Concurrent hiding (threadDelay)
+import qualified Control.Concurrent.MVar as MV
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Function
+import Data.String.Conversions (cs)
+import qualified Data.Text as T
+import qualified Database.ClickHouseDriver.HTTP as CHTTP
 import "dynamic-offer-driver-app" Domain.Types.Message (MessageDict)
 import DriverTrackingHealthCheck.API
 import qualified DriverTrackingHealthCheck.Service.Runner as Service
@@ -28,6 +33,7 @@ import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
 import Kernel.Types.Error
@@ -83,7 +89,11 @@ startConsumer appCfg appEnv = do
         )
           >> L.setOption KBT.KafkaConn appEnv.kafkaProducerTools
       )
+    chDropTables <- readEnvList "KAFKA_CONSUMER_CH_DROP_TABLES"
+    chDropColumns <- readEnvList "KAFKA_CONSUMER_CH_DROP_COLUMNS"
     flowRt'' <- runFlowR flowRt appEnv $ do
+      -- Background drop of unused ClickHouse tables/columns; off the startup path.
+      fork "Clickhouse schema drops" $ runClickhouseSchemaDrops chDropTables chDropColumns
       fork
         "Fetching Kv configs"
         ( forever $ do
@@ -97,6 +107,61 @@ startConsumer appCfg appEnv = do
     case appEnv.transport of
       Kafka -> startKafkaTransport flowRt'' appEnv
       RedisStream -> startRedisStreamTransport flowRt'' appEnv
+
+readEnvList :: String -> IO [Text]
+readEnvList var = do
+  mbVal <- lookupEnv var
+  pure $ maybe [] (filter (not . T.null) . map T.strip . T.splitOn "," . T.pack) mbVal
+
+-- | Drop KAFKA_CONSUMER_CH_DROP_TABLES / _COLUMNS (IF EXISTS) in the background;
+--   logs and skips failures. Optional per-entry cluster via '@':
+--   [cluster@][db.]table  and  [cluster@][db.]table.column.
+runClickhouseSchemaDrops ::
+  (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  [Text] ->
+  [Text] ->
+  m ()
+runClickhouseSchemaDrops [] [] = pure ()
+runClickhouseSchemaDrops dropTables dropColumns = do
+  chEnv <- CH.getClickhouseEnv (Proxy @CH.APP_SERVICE_CLICKHOUSE)
+  forM_ dropTables $ \e ->
+    case splitCluster e of
+      Just (onCluster, table) | isValidName table -> runDrop chEnv $ "DROP TABLE IF EXISTS " <> table <> onCluster
+      _ -> logError $ "[CH SchemaDrop] Skipping malformed/unsafe table entry ([cluster@][db.]table): " <> e
+  forM_ dropColumns $ \e ->
+    case splitCluster e of
+      Just (onCluster, rest) ->
+        case T.breakOnEnd "." rest of
+          (tbl, col)
+            | not (T.null tbl) && not (T.null col) && isValidName rest ->
+              runDrop chEnv $ "ALTER TABLE " <> T.dropEnd 1 tbl <> onCluster <> " DROP COLUMN IF EXISTS " <> col
+          _ -> logMalformedCol e
+      Nothing -> logMalformedCol e
+  where
+    -- Split an optional leading "cluster@" prefix; returns (ON CLUSTER clause, rest).
+    -- No '@' => no cluster. Dots keep their db.table.column meaning in the rest.
+    splitCluster e = case T.splitOn "@" e of
+      [rest] -> Just ("", rest)
+      [c, rest] | isClusterName c -> Just (" ON CLUSTER `" <> c <> "`", rest)
+      _ -> Nothing
+    isClusterName c = not (T.null c) && T.all (\ch -> isIdent ch || ch == '-') c
+    isValidName t =
+      not (T.null t)
+        && not (T.isPrefixOf "." t)
+        && not (T.isSuffixOf "." t)
+        && T.all (\c -> c == '.' || isIdent c) t
+    isIdent c = c == '_' || isAsciiLower c || isAsciiUpper c || isDigit c
+    logMalformedCol e = logError $ "[CH SchemaDrop] Skipping malformed/unsafe column entry ([cluster@][db.]table.column): " <> e
+    runDrop chEnv stmt = do
+      logInfo $ "[CH SchemaDrop] Executing: " <> stmt
+      res <- L.runIO $
+        try $ do
+          connData <- MV.readMVar chEnv.connectionData
+          CHTTP.exec (T.unpack stmt) connData.connection
+      case res of
+        Left (e :: SomeException) -> logError $ "[CH SchemaDrop] FAILED: " <> stmt <> " => " <> show e
+        Right (Left errBytes) -> logError $ "[CH SchemaDrop] FAILED: " <> stmt <> " => " <> cs errBytes
+        Right (Right _) -> logInfo $ "[CH SchemaDrop] OK: " <> stmt
 
 ------------------------------------------------------------
 -- Kafka transport dispatch
