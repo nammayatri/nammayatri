@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
@@ -42,6 +43,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -538,6 +540,11 @@ completeReschedule oldBookingId stagingBookingId = do
     void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.RESCHEDULED oldBookingId
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.RESCHEDULED oldBookingId
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
+  whenJust oldBooking.overrideAppliedEntityId $ \entityId -> do
+    mbRider <- QPerson.findById oldBooking.riderId
+    whenJust mbRider $ \rider ->
+      FRFSPassOverride.releaseBookedTrip rider (Id entityId) oldBookingId.getId
+        (fromMaybe oldBooking.createdAt oldBooking.startTime)
 
 rollbackFailedReschedule ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
@@ -566,4 +573,9 @@ rollbackFailedReschedule stagingBookingId = do
         oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
         syncPaymentCategories oldPayment.id oldQuoteCategories
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.FAILED stagingBookingId
+  whenJust stagingBooking.overrideAppliedEntityId $ \entityId -> do
+    mbRider <- QPerson.findById stagingBooking.riderId
+    whenJust mbRider $ \rider ->
+      FRFSPassOverride.releaseBookedTrip rider (Id entityId) stagingBookingId.getId
+        (fromMaybe stagingBooking.createdAt stagingBooking.startTime)
   logInfo $ "FRFSReschedule:rollbackFailedReschedule stagingBookingId=" <> stagingBookingId.getId

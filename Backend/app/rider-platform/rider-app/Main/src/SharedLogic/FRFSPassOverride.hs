@@ -36,12 +36,17 @@ module SharedLogic.FRFSPassOverride
     consumeTripOnce,
     spendTripForBooking,
     refundTrip,
+    BookedTripWindow (..),
+    checkOverlappingBookingLimit,
+    recordBookedTrip,
+    releaseBookedTrip,
   )
 where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
+import Data.List (nubBy)
 import qualified Data.Time as T
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -63,6 +68,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import Tools.Error
 
 newtype OverrideBenefitConfig = OverrideBenefitConfig
   { overrideBenefits :: [OverrideBenefit]
@@ -413,6 +419,110 @@ data ConsumeResult
 -- else would silently grant or destroy trips.
 makeTripCountKey :: Id DPPP.PurchasedPassPayment -> Text
 makeTripCountKey paymentId = "FRFSPassOverride:availableTripCount-" <> paymentId.getId
+
+data BookedTripWindow = BookedTripWindow
+  { bookingId :: Text,
+    startTime :: UTCTime,
+    endTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+makeOverlappingBookingsKey :: Id DPPP.PurchasedPassPayment -> T.Day -> Text
+makeOverlappingBookingsKey paymentId day = "FRFSPassOverride:FRFSBookings-" <> paymentId.getId <> "-" <> show day
+
+overlappingBookingsTtlBuffer :: Int
+overlappingBookingsTtlBuffer = 6 * 60 * 60
+
+bookingWindowDays :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> (UTCTime, UTCTime) -> m [T.Day]
+bookingWindowDays person (startTime, endTime) = do
+  startDay <- localTripDay person startTime
+  endDay <- localTripDay person endTime
+  pure [startDay .. max startDay endDay]
+
+windowsOverlap :: (UTCTime, UTCTime) -> (UTCTime, UTCTime) -> Bool
+windowsOverlap (aStart, aEnd) (bStart, bEnd) = aStart < bEnd && bStart < aEnd
+
+dropWindowsFor ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DPPP.PurchasedPassPayment ->
+  [T.Day] ->
+  Text ->
+  m ()
+dropWindowsFor paymentId days ownerId =
+  forM_ days $ \day -> do
+    let key = makeOverlappingBookingsKey paymentId day
+    recorded :: [BookedTripWindow] <- Redis.sMembers key
+    let stale = filter (\w -> w.bookingId == ownerId) recorded
+    unless (null stale) $ do
+      void $ Redis.srem key stale
+      logInfo $ "FRFSPassOverride: dropped " <> show (length stale) <> " window(s) for " <> ownerId <> " on " <> show day
+
+releaseBookedTrip ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DP.Person ->
+  Id DPPP.PurchasedPassPayment ->
+  Text ->
+  UTCTime ->
+  m ()
+releaseBookedTrip person paymentId ownerId claimedAround = do
+  day <- localTripDay person claimedAround
+  dropWindowsFor paymentId [day, T.addDays 1 day] ownerId
+
+overlappingBookedTrips ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DP.Person ->
+  Id DPPP.PurchasedPassPayment ->
+  (UTCTime, UTCTime) ->
+  m [BookedTripWindow]
+overlappingBookedTrips person paymentId window = do
+  days <- bookingWindowDays person window
+  recorded <- concat <$> mapM (Redis.sMembers . makeOverlappingBookingsKey paymentId) days
+  let clashing = filter (\w -> windowsOverlap (w.startTime, w.endTime) window) recorded
+  pure $ nubBy (\a b -> a.bookingId == b.bookingId) clashing
+
+checkOverlappingBookingLimit ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DP.Person ->
+  DPass.Pass ->
+  Id DPPP.PurchasedPassPayment ->
+  Text ->
+  (UTCTime, UTCTime) ->
+  m ()
+checkOverlappingBookingLimit person pass paymentId ownerId window =
+  whenJust (mfilter (> 0) pass.timeOverlappingFrfsBookingsLimit) $ \limit -> do
+    clashing <- filter (\w -> w.bookingId /= ownerId) <$> overlappingBookedTrips person paymentId window
+    when (length clashing >= limit) $ do
+      logInfo $
+        "FRFSPassOverride: rejecting booking, " <> show (length clashing) <> " overlapping trip(s) already held against limit "
+          <> show limit
+          <> " paymentId="
+          <> paymentId.getId
+          <> " window="
+          <> show window
+          <> " clashingBookingIds="
+          <> show (map (.bookingId) clashing)
+      throwError (PassOverlappingFRFSBooking paymentId.getId)
+
+recordBookedTrip ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DP.Person ->
+  DPass.Pass ->
+  Id DPPP.PurchasedPassPayment ->
+  Text ->
+  (UTCTime, UTCTime) ->
+  m ()
+recordBookedTrip person pass paymentId ownerId window@(startTime, endTime) =
+  whenJust (mfilter (> 0) pass.timeOverlappingFrfsBookingsLimit) $ \_ -> do
+    now <- getCurrentTime
+    days <- bookingWindowDays person window
+    dropWindowsFor paymentId days ownerId
+    let entry = BookedTripWindow {bookingId = ownerId, startTime = startTime, endTime = endTime}
+        newTtl = max 0 (round (diffUTCTime endTime now)) + overlappingBookingsTtlBuffer
+    forM_ days $ \day -> do
+      let key = makeOverlappingBookingsKey paymentId day
+      existingTtl <- fromInteger <$> Redis.ttl key
+      Redis.sAddExp key [entry] (max newTtl existingTtl)
+    logInfo $ "FRFSPassOverride: recorded booked trip window ownerId=" <> ownerId <> " paymentId=" <> paymentId.getId <> " window=" <> show window
 
 tripCountTtl :: DPPP.PurchasedPassPayment -> UTCTime -> Int
 tripCountTtl payment now =

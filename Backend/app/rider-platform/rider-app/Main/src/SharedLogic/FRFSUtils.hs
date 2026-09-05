@@ -1688,6 +1688,30 @@ getPaymentType isMultiModalBooking = \case
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
 
+getScheduledTripEndTime ::
+  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text -> -- tripId, "<waybillNo>-<tripNumber>"
+  Text -> -- routeCode
+  Text -> -- alighting stop code
+  DIBC.IntegratedBPPConfig ->
+  m (Maybe UTCTime)
+getScheduledTripEndTime tripId routeCode alightingStopCode integratedBPPConfig = do
+  let (waybillNo, tripNo) = case T.splitOn "-" tripId of
+        [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
+        _ -> (tripId, 0 :: Int)
+  withTryCatch "getScheduledTripEndTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
+    Left err -> do
+      logWarning $ "getScheduledTripEndTime: no schedule for tripId=" <> tripId <> ": " <> show err
+      pure Nothing
+    Right schedule -> case concatMap (.eta) schedule of
+      [] -> do
+        logWarning $ "getScheduledTripEndTime: empty schedule for tripId=" <> tripId
+        pure Nothing
+      allEtas -> do
+        let mbAlighting = listToMaybe (filter (\e -> e.stopCode == alightingStopCode) allEtas)
+            chosen = fromMaybe (minimumBy (flip (comparing (.arrivalTimeUnix))) allEtas) mbAlighting
+        pure $ Just (unixToUTC chosen.arrivalTimeUnix)
+
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do
   rsJson <- mbJson

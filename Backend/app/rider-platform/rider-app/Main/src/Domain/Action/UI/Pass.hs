@@ -671,10 +671,9 @@ createPassCatalog merchantShortId opCity req = do
             minFare = req.minFare,
             maxFare = req.maxFare,
             formVerificationConfig = req.formVerificationConfig,
-            -- Overlap threshold and renewal hint are set out of band, like the FRFS override
-            -- columns below: the catalog create API does not carry them.
             minTripsAllowingOverlap = Nothing,
             minDaysToSuggestRenewal = Nothing,
+            timeOverlappingFrfsBookingsLimit = Nothing,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
             -- FRFS fare/cancellation override columns are owned by the override flow,
@@ -878,7 +877,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         formVerificationConfig = pass.formVerificationConfig,
         referenceNumber = (.referenceNumber) =<< mbPassDetails,
         minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
-        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal
+        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
+        timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -940,7 +940,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         referenceNumber = Nothing,
         -- Built from the PurchasedPass snapshot, which carries no catalog config columns.
         minTripsAllowingOverlap = Nothing,
-        minDaysToSuggestRenewal = Nothing
+        minDaysToSuggestRenewal = Nothing,
+        timeOverlappingFrfsBookingsLimit = Nothing
       }
 
 -- Build PurchasedPass API Entity
@@ -966,14 +967,15 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  mbLivePayment <-
-    listToMaybe
+  liveTerms <-
+    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
       <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-        (Just 1)
+        Nothing
         Nothing
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
+  let mbLivePayment = listToMaybe liveTerms
   mbPayment <-
     case mbLivePayment of
       Just live -> pure (Just live)
@@ -1010,6 +1012,11 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
   futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
+  let overlappingTerms = case mbLivePayment of
+        Nothing -> []
+        Just primary ->
+          filter (\t -> hasDateOverlap (t.startDate, t.endDate) (primary.startDate, primary.endDate)) (drop 1 liveTerms)
+  overlappingPassEntities <- buildPurchasedPassPaymentAPIEntities overlappingTerms
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -1032,6 +1039,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
         futureRenewals = futureRenewalEntities,
+        overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
         maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
@@ -1205,12 +1213,13 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
   mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
 
   latestPayments <-
-    QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-      (Just 1)
-      (Just 0)
-      purchasedPass.id
-      [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
-      today
+    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
+      <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+        Nothing
+        Nothing
+        purchasedPass.id
+        [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
+        today
 
   photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
 

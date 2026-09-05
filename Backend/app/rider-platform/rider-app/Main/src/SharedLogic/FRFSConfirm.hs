@@ -182,7 +182,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     (rider, dConfirmRes) <- case confirmResult of
       Right res -> pure res
       Left err -> do
-        when (isJust mbPurchasedPassPaymentId) $ do
+        when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx) $ do
           void $
             withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
               FRFSUtils.updateQuoteCategoriesWithSelections
@@ -447,6 +447,17 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
 
       mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId'
 
+      mbTripWindow <-
+        case (firstTripId, mbRouteCode) of
+          (Just tripId, Just routeCode) -> do
+            mbEnd <- FRFSUtils.getScheduledTripEndTime tripId routeCode quote'.toStationCode integratedBppConfig
+            case mbEnd of
+              Nothing -> do
+                logWarning $ "FRFSConfirm: no scheduled arrival resolved for tripId=" <> tripId <> ", skipping pass overlapping-booking check"
+                pure Nothing
+              Just endTime -> pure $ Just (bookingStartTime, endTime)
+          _ -> pure Nothing
+
       -- Stamped on the insert, not patched in afterwards: a status read hitting the replica in
       -- between would see a booking that is neither payable nor pass-covered and reject it.
       let mbPassOption = snd <$> mbResolved
@@ -531,6 +542,19 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 clientBundleVersion = rider.clientBundleVersion,
                 ..
               }
+      mbPassWindowCtx <-
+        case (,) <$> bookingOverrideAppliedEntityId <*> mbTripWindow of
+          Nothing -> pure Nothing
+          Just (entityId, tripWindow) ->
+            FRFSPassOverride.passForOverrideAppliedEntity (Just entityId) >>= \case
+              Nothing -> do
+                logWarning $ "FRFSConfirm: could not resolve pass for overrideAppliedEntityId=" <> entityId <> ", skipping overlapping-booking cap"
+                pure Nothing
+              Just (_, appliedPass) -> pure $ Just (appliedPass, Id entityId, maybe uuid.getId (.id.getId) mbOldBooking, tripWindow)
+
+      whenJust mbPassWindowCtx $ \(appliedPass, paymentId, parentOwnerId, tripWindow) ->
+        FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass paymentId parentOwnerId tripWindow
+
       QFRFSTicketBooking.create booking
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
