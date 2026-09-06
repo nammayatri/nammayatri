@@ -538,7 +538,12 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                                                 combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
                                                 combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
                                              in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                          _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
+                                          _ ->
+                                            -- Nothing detected and nothing pending: GPS was dark around the gates, so
+                                            -- neither the billing walk nor the deviation walk has any signal
+                                            if thresholdConfig.enableEstimatedTollFallback && canApplyValidatedPendingToll
+                                              then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Unsure)
+                                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
                             else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
                               (True, Just (pendingCharges, pendingNames, pendingIds)) ->
                                 (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)

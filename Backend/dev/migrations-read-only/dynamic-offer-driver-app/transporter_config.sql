@@ -1137,3 +1137,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_coun
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_lead_time integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_geofence_radius integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_end_geofence_radius integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN limits_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_estimated_toll_fallback boolean  default false;
