@@ -1364,6 +1364,7 @@ TransporterConfig:
     issueBreachConfig: Maybe [IssueBreachConfig]
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Bool
+    enableEstimatedTollFallback: Bool # True ⇒ on distance-calc failure with no detected toll, charge the estimated toll (estimate-favoring). False ⇒ current rider-favoring behavior (no toll charged).
     recentScheduledBookingsSafeLimit: Int
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
@@ -1533,6 +1534,7 @@ TransporterConfig:
     issueBreachConfig: Maybe Value
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Maybe Bool
+    enableEstimatedTollFallback: Maybe Bool
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
@@ -1646,6 +1648,7 @@ TransporterConfig:
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     enableGpsTollBehavior: Just enableGpsTollBehavior|E
+    enableEstimatedTollFallback: Just enableEstimatedTollFallback|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
@@ -1767,6 +1770,7 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     enableGpsTollBehavior: fromMaybe False enableGpsTollBehavior|E
+    enableEstimatedTollFallback: fromMaybe False enableEstimatedTollFallback|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recomputeDistanceThresholds: |-
@@ -2049,6 +2053,7 @@ TransporterConfig:
       10,"minThresholdDistance": 1000}]'' :: json'
     minThreshildForPassThroughDestination: "1000"
     enableOverchargingBlocker: "false"
+    enableEstimatedTollFallback: "false"
     fleetUpiPayoutEnabled: "true"
     fleetBankPayoutEnabled: "true"
     generateReferralCodeForFleet: "false"
