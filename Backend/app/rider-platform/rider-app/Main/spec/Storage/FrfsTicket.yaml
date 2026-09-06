@@ -1,5 +1,6 @@
 imports:
   UTCTime: Kernel.Prelude
+  EncryptedHashedField: Kernel.External.Encryption
   Gender: Domain.Types.Person
   TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
@@ -303,7 +304,7 @@ FRFSQuote:
 # ID checks at boarding -- not as an integration requirement.
 FRFSPassengerDetail:
   tableName: frfs_passenger_detail
-  derives: "Generic,Show"
+  derives: "Generic"
   fields:
     id: Id FRFSPassengerDetail
     quoteId: Id FRFSQuote
@@ -317,9 +318,11 @@ FRFSPassengerDetail:
     pickupPointPlaceId: Maybe Text
     dropOffPointPlaceId: Maybe Text
     idProofLookupId: Maybe Text
-    idProofNumber: Maybe Text
+    idProofNumber: Maybe (EncryptedHashedField e Text)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+  fromTType:
+    idProofNumber: EncryptedHashed <$> (Encrypted <$> idProofNumberEncrypted) <*> idProofNumberHash|E
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
@@ -338,7 +341,7 @@ FRFSPassengerDetail:
     deleteAllByQuoteId:
       kvFunction: deleteWithKV
       where: quoteId
-      
+
   excludedFields: [merchantOperatingCityId, merchantId]
 
   extraOperations:

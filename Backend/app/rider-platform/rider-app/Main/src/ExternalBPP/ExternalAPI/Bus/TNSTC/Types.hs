@@ -2,6 +2,7 @@
 
 module ExternalBPP.ExternalAPI.Bus.TNSTC.Types
   ( setcNamespace,
+    parseTnstcTimestamp,
     childText,
     nonEmptyText,
     ServiceIdParts (..),
@@ -31,6 +32,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime, defaultTimeLocale, parseTimeM)
 import GHC.Generics (Generic)
 import Text.Read (readMaybe)
 import Text.XML.Cursor
@@ -306,3 +308,9 @@ parseFareResult cur =
     -- concatenating every match into one unparseable string.
     txt n = listToMaybe (mapMaybe (nonEmptyText . T.concat . ($/ content)) (cur $// laxElement n))
     num n = readMaybe . T.unpack =<< txt n
+
+parseTnstcTimestamp :: Text -> Maybe UTCTime
+parseTnstcTimestamp raw =
+  let istOffset = 19800 :: NominalDiffTime
+   in addUTCTime (negate istOffset)
+        <$> parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" (T.unpack (T.strip raw))
