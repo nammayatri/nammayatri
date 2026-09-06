@@ -30,6 +30,14 @@ library
       ConfigPilotFrontend.Common
       ConfigPilotFrontend.Flow
       ConfigPilotFrontend.Types
+      DashboardAlert.Domain.Action.Dashboard.List
+      DashboardAlert.Domain.Action.InternalAuth
+      DashboardAlert.Domain.Types.Audience
+      DashboardAlert.Domain.Types.Common
+      DashboardAlert.ServiceHandle
+      DashboardAlert.Storage.BeamFlow
+      DashboardAlert.Topic
+      DashboardAlert.Trigger
       Email.OTP.API
       Email.OTP.Types
       FileManagement.Common.UI.File
@@ -142,6 +150,9 @@ library
       API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
       API.Types.RiderPlatform.IssueManagement.Issue
       API.Types.RiderPlatform.IssueManagement.IssueList
+      DashboardAlert.Domain.Types.DashboardAlert
+      DashboardAlert.Storage.Beam.DashboardAlert
+      DashboardAlert.Storage.Queries.DashboardAlert
       MerchantDocuments.Domain.Types.MerchantDocument
       MerchantDocuments.Storage.Beam.MerchantDocument
       MerchantDocuments.Storage.Queries.MerchantDocument

@@ -1,0 +1,55 @@
+imports:
+  NotificationListResp: DashboardAlert.Domain.Action.Dashboard.List
+  AlertRequestStatus: Domain.Types.Alert.AlertRequestStatus
+
+module: Notification
+
+apis:
+  - GET:
+      endpoint: /notification/list
+      auth: ApiAuthV2
+      query:
+        - mbLimit: Int
+        - mbOffset: Int
+      response:
+        type: NotificationListResp
+      migrate:
+        capability: communication.notification.read
+      helperApi:
+        - GET:
+            endpoint: /notification/{topic}/list
+            auth: ApiAuthV2
+            params:
+              topic: Text
+            query:
+              - mbLimit: Int
+              - mbOffset: Int
+            response:
+              type: NotificationListResp
+
+  - POST:
+      endpoint: /notification/respond
+      auth: ApiAuthV2
+      request:
+        type: RespondReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: communication.notification.write
+      helperApi:
+        - POST:
+            endpoint: /notification/{topic}/respond
+            auth: ApiAuthV2
+            params:
+              topic: Text
+            request:
+              type: RespondReq
+            response:
+              type: APISuccess
+
+types:
+  RespondReq:
+    - notificationId: Text
+    - status: AlertRequestStatus
+    - reason: Maybe Text
+    - derive: "'HideSecrets"

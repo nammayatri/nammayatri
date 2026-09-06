@@ -2,12 +2,17 @@ module SharedLogic.WMB where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
+import qualified DashboardAlert.Domain.Types.Audience as DAA
+import qualified DashboardAlert.Domain.Types.DashboardAlert as DADT
+import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
+import qualified DashboardAlert.Trigger as DAT
 import Data.List (sortBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Alert
-import Domain.Types.AlertRequest
+import qualified Domain.Types.Alert.AlertCategory as DAlertCategory
+import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
 import Domain.Types.Common
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.FleetBadge
@@ -41,13 +46,14 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DashboardAlert (driverAlertHandle)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import Storage.Beam.DashboardAlert ()
 import qualified Storage.CachedQueries.Route as QR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetBadge as QFB
@@ -653,30 +659,37 @@ tripTransactionKey driverId = \case
   PAUSED -> "WMB:TP:" <> driverId.getId
   UPCOMING -> "WMB:TU:" <> driverId.getId
 
-triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id AlertRequest)
+triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id DADT.DashboardAlert)
 triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
   let alertRequestType = castAlertRequestDataToRequestType requestData
   if isViolated
     then do
-      alertRequestId <- generateGUID
       now <- getCurrentTime
-      let alertRequest =
-            AlertRequest
-              { id = alertRequestId,
-                requestorId = driverId,
-                requestorType = DriverGenerated,
-                requesteeId = Id requesteeId,
-                requesteeType = FleetOwner,
-                requestType = castAlertRequestDataToRequestType requestData,
-                reason = Nothing,
-                status = AWAITING_APPROVAL,
-                createdAt = now,
-                updatedAt = now,
-                merchantId = tripTransaction.merchantId,
-                merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
-                ..
-              }
-      QAR.create alertRequest
+      alertRequestIds <-
+        DAT.triggerPersist
+          driverAlertHandle
+          [DAA.FleetOwnerAudience (cast (Id requesteeId))]
+          DAT.AlertContent
+            { category = DAlertCategory.WMB_ALERT,
+              title = title,
+              body = body,
+              entityId = tripTransaction.id.getId,
+              entityType = DAlertEntity.TripTransactionEntity,
+              entityData = toJSON requestData,
+              requestType = alertRequestType,
+              requestData = requestData,
+              requestorId = cast driverId,
+              requestorType = DADT.DriverGenerated,
+              requesteeType = DADT.FleetOwner,
+              requiresAction = True,
+              visibility = Notification.SHOW,
+              merchantId = cast tripTransaction.merchantId,
+              merchantOperatingCityId = cast tripTransaction.merchantOperatingCityId,
+              ttlSeconds = Seconds 3600
+            }
+      alertRequestId <- case alertRequestIds of
+        (alertRequestId : _) -> pure alertRequestId
+        [] -> throwError $ InternalError "Failed to persist alert request"
       tripAlertRequestId <- generateGUID
       QTAR.create $
         TripAlertRequest
@@ -697,13 +710,13 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             alertStatus = Just $ AWAITING_APPROVAL
           }
       TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId Nothing requestData
-      pure alertRequest.id
+      pure alertRequestId
     else do
       tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)
       QTAR.updateIsViolated False tripAlertRequest.id
       pure tripAlertRequest.alertRequestId
 
-updateAlertRequestStatus :: AlertRequestStatus -> Kernel.Prelude.Maybe Data.Text.Text -> Id AlertRequest -> Flow ()
+updateAlertRequestStatus :: AlertRequestStatus -> Kernel.Prelude.Maybe Data.Text.Text -> Id DADT.DashboardAlert -> Flow ()
 updateAlertRequestStatus status reason alertRequestId = do
   QAR.updateStatusWithReason status reason alertRequestId
   QTAR.updateStatusWithReason status alertRequestId

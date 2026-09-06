@@ -103,6 +103,8 @@ import qualified "dashboard-helper-api" Dashboard.Common as DC
 import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
 import qualified "dashboard-helper-api" Dashboard.Common.Driver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified DashboardAlert.Domain.Types.DashboardAlert as DTR
+import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
 import Data.Csv
@@ -135,7 +137,6 @@ import qualified Domain.Action.UI.WMB as DWMB
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Alert as DTA
 import Domain.Types.Alert.AlertRequestStatus
-import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DCReason
@@ -214,6 +215,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.WMB as WMB
+import Storage.Beam.DashboardAlert ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -234,7 +236,6 @@ import qualified Storage.Clickhouse.VehicleRegistrationCertificate as CHVRC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
@@ -502,7 +503,7 @@ getDriverFleetGetDriverRequests merchantShortId opCity mbFrom mbTo mbAlertReques
       tripAlertRequests
   pure $ Common.DriverRequestRespT driverRequestList
   where
-    buildDriverRequestListItem fleetOwnerId fleetOwnerName tripTransactionId driverId routeCode isViolated DTR.AlertRequest {..} = do
+    buildDriverRequestListItem fleetOwnerId fleetOwnerName tripTransactionId driverId routeCode isViolated DTR.DashboardAlert {..} = do
       pure $
         Common.DriverRequestDetailsT
           { raisedAt = createdAt,
@@ -526,7 +527,7 @@ postDriverFleetRespondDriverRequest merchantShortId opCity fleetOwnerId req = do
     merchant <- findMerchantByShortId merchantShortId
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
     driverRequest <- B.runInReplica $ QAR.findByPrimaryKey (Id req.approvalRequestId) >>= fromMaybeM (DriverRequestNotFound req.approvalRequestId)
-    driver <- B.runInReplica $ QPerson.findById driverRequest.requestorId >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
+    driver <- B.runInReplica $ QPerson.findById (cast driverRequest.requestorId) >>= fromMaybeM (PersonDoesNotExist driverRequest.requestorId.getId)
     case driverRequest.status of
       DTA.AWAITING_APPROVAL -> WMB.updateAlertRequestStatus req.status (Just req.reason) (Id req.approvalRequestId)
       _ -> throwError $ RequestAlreadyProcessed driverRequest.id.getId
@@ -2618,10 +2619,12 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
     person <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchant.id driver.role
-    when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
+    whenJust person $ \existing ->
+      when (existing.id /= personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
     person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
-    when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
+    whenJust person $ \existing ->
+      when (existing.id /= personId) $ throwError (EmailAlreadyLinked reqEmail)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   encNewPhoneNumber <- forM req.mobileNo encrypt

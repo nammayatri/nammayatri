@@ -30,3 +30,28 @@ ALTER TABLE atlas_driver_offer_bpp.approval_request ADD COLUMN entity_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
