@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './QaRunViewer.css';
-import { fetchQaRunDetail, qaCollectionEventsUrl, checkActiveQaRun, stopQaCollectionRun, QaRunDetail, QaRunEvent } from '../services/qaCollectionsRunner';
+import { fetchQaRunDetail, qaCollectionEventsUrl, stopQaCollectionRun, QaRunDetail, QaRunEvent } from '../services/qaCollectionsRunner';
 import { LogPanel } from './LogPanel';
 import type { LogEntry } from '../types';
 import type { PostmanStepResult } from '../services/api';
@@ -73,7 +73,10 @@ function headersToObject(hs: unknown): Record<string, string> | undefined {
 }
 
 export const QaRunViewer: React.FC = () => {
-  const [runId, setRunId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('qaRunId'));
+  // Only ever set explicitly via ?qaRunId= in the URL — never auto-attached,
+  // so a run happening elsewhere (triggered by the webhook, or from another
+  // tab) doesn't take over the dashboard for everyone who opens it.
+  const [runId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('qaRunId'));
   const [meta, setMeta] = useState<RunMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -84,24 +87,6 @@ export const QaRunViewer: React.FC = () => {
   const esRef = useRef<EventSource | null>(null);
   const initializedRef = useRef(false);
   const pendingRef = useRef<Map<string, PendingStep>>(new Map());
-
-  // Self-attach: no ?qaRunId= yet, but a run is happening anyway.
-  useEffect(() => {
-    if (runId) return;
-    let cancelled = false;
-    const poll = async () => {
-      const id = await checkActiveQaRun();
-      if (!cancelled && id) {
-        setRunId(id);
-        const url = new URL(window.location.href);
-        url.searchParams.set('qaRunId', id);
-        window.history.replaceState(null, '', url.toString());
-      }
-    };
-    poll();
-    const timer = setInterval(poll, 5000);
-    return () => { cancelled = true; clearInterval(timer); };
-  }, [runId]);
 
   const addLog = (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), level, message, ...extra }]);
