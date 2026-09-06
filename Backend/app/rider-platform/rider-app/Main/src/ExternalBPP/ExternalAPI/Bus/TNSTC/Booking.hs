@@ -19,8 +19,8 @@ import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML

@@ -1,7 +1,9 @@
 module ExternalBPP.ExternalAPI.Bus.TNSTC.Error where
 
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Utils.Common
 
 data TNSTCFault = TNSTCFault
   { faultCode :: Text,
@@ -18,3 +20,9 @@ instance IsHTTPError TNSTCFault where
   toHttpCode _ = E500
 
 instance IsAPIError TNSTCFault
+
+surfaceTnstcFault :: (MonadCatch m, Log m) => Text -> m a -> m a
+surfaceTnstcFault context act =
+  act `catch` \(TNSTCFault code msg) -> do
+    logError $ "TNSTC fault [" <> context <> "] code=" <> code <> " surfaced to rider: " <> msg
+    throwError (InvalidRequest msg)
