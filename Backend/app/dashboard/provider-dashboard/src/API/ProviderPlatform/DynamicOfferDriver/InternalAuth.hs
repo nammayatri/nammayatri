@@ -18,7 +18,7 @@ module API.ProviderPlatform.DynamicOfferDriver.InternalAuth
 where
 
 import Data.Aeson as DA
-import Domain.Action.ProviderPlatform.Fleet.Driver
+import Domain.Action.ProviderPlatform.Fleet.Driver (getFleetOwnerIds)
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
+import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 import "lib-dashboard" Tools.Error
 
 type API =
@@ -40,16 +41,16 @@ handler :: FlowServer API
 handler = internalAuthHandler
 
 data InternalAuthResp = InternalAuthResp
-  { personId :: Id DP.Person,
+  { topic :: Text,
     personIds :: [Id DP.Person]
   }
   deriving (Generic, ToSchema)
 
 instance ToJSON InternalAuthResp where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; "personIds" -> "driverIds"; other -> other}
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = \case "topic" -> "driverId"; "personIds" -> "driverIds"; other -> other}
 
 instance FromJSON InternalAuthResp where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = \case "personId" -> "driverId"; "personIds" -> "driverIds"; other -> other}
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = \case "topic" -> "driverId"; "personIds" -> "driverIds"; other -> other}
 
 internalAuthHandler ::
   Maybe Text ->
@@ -60,12 +61,12 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   unless (apiKey == Just internalAuthAPIKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   (personId, _, _) <- Auth.verifyPerson (fromMaybe "" token)
-  fleetOwnerIds <- getFleetOwnerIds personId.getId Nothing
-  case fleetOwnerIds of
-    [] -> throwError $ InternalError "No Fleet Member Association Found"
-    fleetOwner@(fleetOwnerId, _) : fleetOwners ->
-      pure $
-        InternalAuthResp
-          { personId = Id fleetOwnerId,
-            personIds = (Id . fst) <$> ([fleetOwner] <> fleetOwners)
-          }
+  (topic, fleetOwnerIds) <- DTopic.resolveTopicForPerson fleetOwnerLookup personId
+  pure $
+    InternalAuthResp
+      { topic = topic.getTopic,
+        personIds = Id <$> fleetOwnerIds
+      }
+
+fleetOwnerLookup :: Text -> Flow [Text]
+fleetOwnerLookup personId = map fst <$> getFleetOwnerIds personId Nothing

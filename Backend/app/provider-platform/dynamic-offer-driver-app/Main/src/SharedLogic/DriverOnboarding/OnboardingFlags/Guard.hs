@@ -7,13 +7,23 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Guard
   )
 where
 
+import qualified DashboardAlert.Domain.Types.Audience as DAA
 import Data.List (nub)
+import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
+import qualified Domain.Types.Alert.OnboardingAlertAction as DOnboardingAlertAction
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id (Id (..), cast)
+import Kernel.Utils.Common (fork)
+import qualified SharedLogic.DashboardAlert as SDA
 import SharedLogic.DriverOnboarding.OnboardingFlags.Checks
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import Storage.Beam.DashboardAlert ()
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 
 defaultRecomputeSpec :: GuardTarget -> RecomputeSpec
@@ -45,8 +55,9 @@ withOnboardingActionFanout transporterConfig actor verb target body =
   withOnboardingActionLock target $ do
     guardOnboardingAction transporterConfig actor verb target
     (result, extraSpec) <- body
-    when (isUnified transporterConfig) $
+    when (isUnified transporterConfig) $ do
       runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
+      fork "Dashboard onboarding alert" (notifyOnboardingAction actor verb target)
     pure result
 
 onboardingActionLockTTLSeconds :: Int
@@ -68,3 +79,74 @@ withOnboardingActionLock target body = case target of
   where
     locked entityKey =
       Hedis.withWaitAndLockRedis ("Onboarding:Action:" <> entityKey) onboardingActionLockTTLSeconds onboardingActionLockRetryMs body
+
+targetEntity :: GuardTarget -> (DAlertEntity.AlertEntityType, Text, Maybe (Id DP.Person))
+targetEntity = \case
+  TargetDriver personId -> (DAlertEntity.DriverEntity, personId.getId, Just personId)
+  TargetDriverVehicle personId registrationNo -> (DAlertEntity.VehicleEntity, registrationNo, Just personId)
+  TargetFleetOwner personId -> (DAlertEntity.FleetEntity, personId.getId, Nothing)
+  TargetVehicle registrationNo -> (DAlertEntity.VehicleEntity, registrationNo, Nothing)
+  TargetVehicleById rcId -> (DAlertEntity.VehicleEntity, rcId.getId, Nothing)
+
+actorFleetOwner :: Actor -> Maybe (Id DP.Person)
+actorFleetOwner = \case
+  ActorFleet fleetOwnerId -> Just fleetOwnerId
+  ActorFleetAndDriver fleetOwnerId _ -> Just fleetOwnerId
+  ActorDriver _ -> Nothing
+  None -> Nothing
+
+notifyOnboardingAction :: OnboardingFlow m r => Actor -> ActionVerb -> GuardTarget -> m ()
+notifyOnboardingAction actor verb target = do
+  let (entityType, entityId, mbDriverId) = targetEntity target
+  mbTargetFleetOwner <- case mbDriverId of
+    Just driverId -> fmap (Id . (.fleetOwnerId)) <$> QFDA.findByDriverId driverId True
+    Nothing -> pure Nothing
+  let fleetOwnerIds = nub $ catMaybes [actorFleetOwner actor, mbTargetFleetOwner]
+      audiences = DAA.AccessTypeAudience DAA.DASHBOARD_ADMIN : map (DAA.FleetOwnerAudience . cast) fleetOwnerIds
+      requestorId = fromMaybe (Id "system") (actorPersonId actor)
+  mbPerson <- QPerson.findById requestorId
+  whenJust mbPerson $ \person ->
+    SDA.notifyOnboardingChange
+      audiences
+      entityType
+      entityId
+      (castActionVerb verb)
+      ("Onboarding update: " <> show verb)
+      (show verb <> " on " <> show entityType <> " " <> entityId)
+      requestorId
+      person.merchantId
+      person.merchantOperatingCityId
+
+actorPersonId :: Actor -> Maybe (Id DP.Person)
+actorPersonId = \case
+  ActorFleet personId -> Just personId
+  ActorDriver personId -> Just personId
+  ActorFleetAndDriver _ personId -> Just personId
+  None -> Nothing
+
+castActionVerb :: ActionVerb -> DOnboardingAlertAction.OnboardingAlertAction
+castActionVerb = \case
+  LinkVehicle -> DOnboardingAlertAction.LinkVehicleAction
+  UnlinkVehicle -> DOnboardingAlertAction.UnlinkVehicleAction
+  ActivateVehicle -> DOnboardingAlertAction.ActivateVehicleAction
+  DeactivateVehicle -> DOnboardingAlertAction.DeactivateVehicleAction
+  LinkToOperator -> DOnboardingAlertAction.LinkToOperatorAction
+  UnlinkFromOperator -> DOnboardingAlertAction.UnlinkFromOperatorAction
+  UnlinkFromFleet -> DOnboardingAlertAction.UnlinkFromFleetAction
+  Add -> DOnboardingAlertAction.AddAction
+  Delete -> DOnboardingAlertAction.DeleteAction
+  Enable -> DOnboardingAlertAction.EnableAction
+  Disable -> DOnboardingAlertAction.DisableAction
+  Block -> DOnboardingAlertAction.BlockAction
+  Unblock -> DOnboardingAlertAction.UnblockAction
+  Approve -> DOnboardingAlertAction.ApproveAction
+  Reject -> DOnboardingAlertAction.RejectAction
+  SetOnboardingAs -> DOnboardingAlertAction.SetOnboardingAsAction
+  LinkToFleet -> DOnboardingAlertAction.LinkToFleetAction
+  ActivateToFleet -> DOnboardingAlertAction.ActivateToFleetAction
+  DeactivateFromFleet -> DOnboardingAlertAction.DeactivateFromFleetAction
+  View -> DOnboardingAlertAction.ViewAction
+  ChangeFleetOwner -> DOnboardingAlertAction.ChangeFleetOwnerAction
+  Expire -> DOnboardingAlertAction.ExpireAction
+  UnlinkDocument -> DOnboardingAlertAction.UnlinkDocumentAction
+  OnboardingFlagMutation -> DOnboardingAlertAction.OnboardingFlagMutationAction

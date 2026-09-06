@@ -113,6 +113,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
       API.Types.ProviderPlatform.Management.Endpoints.Message
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
+      API.Types.ProviderPlatform.Management.Endpoints.Notification
       API.Types.ProviderPlatform.Management.Endpoints.Payout
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Pricing
@@ -139,6 +140,7 @@ library
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag
+      API.Types.ProviderPlatform.Management.Notification
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Pricing
@@ -173,6 +175,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Media
       API.Types.RiderPlatform.Management.Endpoints.Merchant
       API.Types.RiderPlatform.Management.Endpoints.NammaTag
+      API.Types.RiderPlatform.Management.Endpoints.Notification
       API.Types.RiderPlatform.Management.Endpoints.Offer
       API.Types.RiderPlatform.Management.Endpoints.Payout
       API.Types.RiderPlatform.Management.Endpoints.Rewards
@@ -187,6 +190,7 @@ library
       API.Types.RiderPlatform.Management.Media
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
+      API.Types.RiderPlatform.Management.Notification
       API.Types.RiderPlatform.Management.Offer
       API.Types.RiderPlatform.Management.Payout
       API.Types.RiderPlatform.Management.Rewards

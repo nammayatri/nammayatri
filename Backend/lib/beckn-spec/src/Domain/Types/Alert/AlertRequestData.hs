@@ -1,9 +1,14 @@
 module Domain.Types.Alert.AlertRequestData where
 
+import Data.Aeson
 import Data.Text
+import Domain.Types.Alert.AlertEntityType (AlertEntityType)
+import Domain.Types.Alert.OnboardingAlertAction (OnboardingAlertAction)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 
 data AlertRequestData
   = EndRide EndRideData
@@ -17,6 +22,8 @@ data AlertRequestData
   | TripNotStarted TripNotStartedData
   | SafetyCheck SafetyCheckData
   | RideStopReached RideStopReachedData
+  | GenericNotification GenericNotificationData
+  | Onboarding OnboardingAlertData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data EndRideData = EndRideData
@@ -103,3 +110,22 @@ data RideStopReachedData = RideStopReachedData
     reachedAt :: UTCTime
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data GenericNotificationData = GenericNotificationData
+  { title :: Text,
+    body :: Text
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data OnboardingAlertData = OnboardingAlertData
+  { entityType :: AlertEntityType,
+    entityId :: Text,
+    action :: OnboardingAlertAction,
+    title :: Text,
+    body :: Text
+  }
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnumAndList ''AlertRequestData)
+
+$(mkFromHttpInstanceForEnum ''AlertRequestData)

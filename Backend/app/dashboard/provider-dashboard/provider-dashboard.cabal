@@ -80,6 +80,7 @@ library
       Domain.Action.ProviderPlatform.Management.Merchant
       Domain.Action.ProviderPlatform.Management.Message
       Domain.Action.ProviderPlatform.Management.NammaTag
+      Domain.Action.ProviderPlatform.Management.Notification
       Domain.Action.ProviderPlatform.Management.Payout
       Domain.Action.ProviderPlatform.Management.PlanManagement
       Domain.Action.ProviderPlatform.Management.Pricing
@@ -131,6 +132,7 @@ library
       Domain.Action.RiderPlatform.Management.Media
       Domain.Action.RiderPlatform.Management.Merchant
       Domain.Action.RiderPlatform.Management.NammaTag
+      Domain.Action.RiderPlatform.Management.Notification
       Domain.Action.RiderPlatform.Management.Offer
       Domain.Action.RiderPlatform.Management.Payout
       Domain.Action.RiderPlatform.Management.Rewards
@@ -202,6 +204,7 @@ library
       API.Action.ProviderPlatform.Management.Merchant
       API.Action.ProviderPlatform.Management.Message
       API.Action.ProviderPlatform.Management.NammaTag
+      API.Action.ProviderPlatform.Management.Notification
       API.Action.ProviderPlatform.Management.Payout
       API.Action.ProviderPlatform.Management.PlanManagement
       API.Action.ProviderPlatform.Management.Pricing
@@ -257,6 +260,7 @@ library
       API.Action.RiderPlatform.Management.Media
       API.Action.RiderPlatform.Management.Merchant
       API.Action.RiderPlatform.Management.NammaTag
+      API.Action.RiderPlatform.Management.Notification
       API.Action.RiderPlatform.Management.Offer
       API.Action.RiderPlatform.Management.Payout
       API.Action.RiderPlatform.Management.Rewards
