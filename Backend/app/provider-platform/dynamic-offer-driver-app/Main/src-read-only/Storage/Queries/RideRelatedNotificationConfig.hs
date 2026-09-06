@@ -24,12 +24,12 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndTimeDiffEvent ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m ([Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent -> m [Domain.Types.RideRelatedNotificationConfig.RideRelatedNotificationConfig])
 findAllByMerchantOperatingCityIdAndTimeDiffEvent merchantOperatingCityId timeDiffEvent = do
   findAllWithKV
     [ Se.And
@@ -60,6 +60,7 @@ updateByPrimaryKey (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotifi
       Se.Set Beam.onBookingStatus onBookingStatus,
       Se.Set Beam.onScheduledBooking onScheduledBooking,
       Se.Set Beam.onlyIfOffline onlyIfOffline,
+      Se.Set Beam.repeatInterval repeatInterval,
       Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
       Se.Set Beam.timeDiffEvent timeDiffEvent,
       Se.Set Beam.updatedAt _now
@@ -80,6 +81,7 @@ instance FromTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedN
             onBookingStatus = onBookingStatus,
             onScheduledBooking = onScheduledBooking,
             onlyIfOffline = onlyIfOffline,
+            repeatInterval = repeatInterval,
             timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
             timeDiffEvent = timeDiffEvent,
             createdAt = createdAt,
@@ -98,6 +100,7 @@ instance ToTType' Beam.RideRelatedNotificationConfig Domain.Types.RideRelatedNot
         Beam.onBookingStatus = onBookingStatus,
         Beam.onScheduledBooking = onScheduledBooking,
         Beam.onlyIfOffline = onlyIfOffline,
+        Beam.repeatInterval = repeatInterval,
         Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,
         Beam.timeDiffEvent = timeDiffEvent,
         Beam.createdAt = createdAt,

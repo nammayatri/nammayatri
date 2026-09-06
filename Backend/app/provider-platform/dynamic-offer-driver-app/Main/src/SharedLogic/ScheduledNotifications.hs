@@ -48,5 +48,6 @@ pushReminderUpdatesInScheduler booking ride now driverId DRN.RideRelatedNotifica
           notificationKey = notificationKey,
           onlyIfOffline = onlyIfOffline,
           bookingId = booking.id,
-          driverId = driverId
+          driverId = driverId,
+          repeatInterval = repeatInterval >>= (\i -> if i.getSeconds > 0 then Just i else Nothing)
         }
