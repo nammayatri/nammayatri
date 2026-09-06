@@ -909,15 +909,15 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
           return $
             FRFSTicketService.FRFSQuoteAPIRes
               { tripCategory = quote.tripCategory,
-              providerServiceId = quote.providerServiceId,
-              providerLayoutId = quote.providerLayoutId,
-              providerClassId = quote.providerClassId,
-              providerTripCode = quote.providerTripCode,
-              departureTime = quote.departureTime,
-              arrivalTime = quote.arrivalTime,
-              arrivalDate = quote.arrivalDate,
-              availableSeats = quote.availableSeats,
-              quoteId = quote.id,
+                providerServiceId = quote.providerServiceId,
+                providerLayoutId = quote.providerLayoutId,
+                providerClassId = quote.providerClassId,
+                providerTripCode = quote.providerTripCode,
+                departureTime = quote.departureTime,
+                arrivalTime = quote.arrivalTime,
+                arrivalDate = quote.arrivalDate,
+                availableSeats = quote.availableSeats,
+                quoteId = quote.id,
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $
@@ -1020,8 +1020,7 @@ postFrfsQuoteV2ConfirmWithTimeAPI (mbPersonId, merchantId) quoteId mbIsMockPayme
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatus (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
-  QFRFSPassengerDetail.updateBookingIdByQuoteId (Just res.bookingId) quoteId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId True
   return res
   where
     rateLimitKey :: Text -> Text -> Text
@@ -2322,8 +2321,10 @@ getFrfsQuoteSeats ::
   Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
   Kernel.Prelude.Maybe [Kernel.Prelude.Text] ->
   Environment.Flow SeatLayoutResp
-getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
+getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> quoteId.getId)
+  unless (quote.riderId == personId) $ throwError AccessDenied
   integratedBPPConfig <-
     QIBC.findById quote.integratedBppConfigId
       >>= fromMaybeM (InvalidRequest $ "IntegratedBPPConfig not found: " <> quote.integratedBppConfigId.getId)
@@ -2369,7 +2370,7 @@ getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
   case mbSeatNumbers of
     Just seatNos | not (null seatNos) -> do
       let knownLabels = map (.seatLabel) seats
-          unknown = filter (\sn -> not (sn `elem` knownLabels)) seatNos
+          unknown = filter (`notElem` knownLabels) seatNos
       unless (null unknown) $
         throwError (InvalidRequest $ "Unknown seat number(s): " <> Data.Text.intercalate ", " unknown)
       -- seatNumber is a repeated element and totalNumberOfSeats drives the offered set
@@ -2405,8 +2406,8 @@ getFrfsQuoteSeats _auth quoteId mbSeatNumbers = do
       seatSets <- case seatSetsResult of
         Right sets -> return sets
         Left fault -> do
-          logWarning $ "TNSTC seat map unavailable serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " fault=" <> show fault
-          throwError (InvalidRequest "Seat map unavailable for this service")
+          logError $ "TNSTC seat map unavailable serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " fault=" <> show fault
+          throwError (InvalidRequest $ "Seat map unavailable for this service: " <> fault.faultMessage)
       let seatListWithStatus =
             map
               ( \st ->
@@ -2493,7 +2494,7 @@ restrictInterState isIntraState offered
 -- first known and where the fare is priced on them. The rows are keyed by quoteId because no
 -- booking exists yet; confirm stamps the bookingId onto them once it does.
 storeSelectPassengers ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   DIBC.IntegratedBPPConfig ->
   Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
   Text ->
@@ -2504,6 +2505,7 @@ storeSelectPassengers ::
   m ()
 storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId mbIdProofLookupId mbIdProofNumber passengerRows = do
   now <- getCurrentTime
+  encIdProofNumber <- mapM encrypt mbIdProofNumber
   -- select can be repeated on the same quote; the previous attempt's rows are stale.
   QFRFSPassengerDetail.deleteAllByQuoteId quoteId
   rows <- forM passengerRows $ \(pax, st) -> do
@@ -2522,7 +2524,7 @@ storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId m
           pickupPointPlaceId = Just pickupPlaceId,
           dropOffPointPlaceId = Just dropOffPlaceId,
           idProofLookupId = mbIdProofLookupId,
-          idProofNumber = mbIdProofNumber,
+          idProofNumber = encIdProofNumber,
           merchantId = integratedBPPConfig.merchantId,
           merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
           createdAt = now,
@@ -2564,9 +2566,10 @@ postFrfsQuoteSelect ::
   Kernel.Types.Id.Id DFRFSQuote.FRFSQuote ->
   FRFSTicketService.FRFSSelectReq ->
   Environment.Flow FRFSTicketService.FRFSSelectRes
-postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
-  _personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = TNSTCError.surfaceTnstcFault "select" $ do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest $ "Quote not found: " <> quoteId.getId)
+  unless (quote.riderId == personId) $ throwError AccessDenied
   integratedBPPConfig <-
     QIBC.findById quote.integratedBppConfigId
       >>= fromMaybeM (InvalidRequest $ "IntegratedBPPConfig not found: " <> quote.integratedBppConfigId.getId)
@@ -2595,7 +2598,10 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
 
   seats <- QSeat.findAllByIds selectedSeatIds
   when (length seats /= totalQty) $ throwError (InvalidRequest "One or more selected seats do not exist")
-  let seatById = \sid -> find (\st -> st.id == sid) seats
+  let expectedSeatLayoutId = tnstcSeatLayoutId integratedBPPConfig.merchantOperatingCityId.getId layoutId
+  unless (all (\st -> st.seatLayoutId == expectedSeatLayoutId) seats) $
+    throwError (InvalidRequest "One or more selected seats do not belong to this service's seat layout")
+  let seatById sid = find (\st -> st.id == sid) seats
       seatLabels = map (.seatLabel) seats
 
   concessions <-
@@ -2619,6 +2625,10 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
 
   passengerRows <- forM passengers $ \pax -> do
     st <- seatById pax.seatId & fromMaybeM (InvalidRequest "Selected seat not found")
+    when (isNothing pax.name) $
+      throwError (InvalidRequest $ "Passenger name is required for seat " <> st.seatLabel)
+    when (isNothing pax.age) $
+      throwError (InvalidRequest $ "Passenger age is required for seat " <> st.seatLabel)
     return (pax, st)
 
   let isSleeperSeat st = st.seatType `elem` [Just Domain.Types.Seat.SLEEPER_UPPER, Just Domain.Types.Seat.SLEEPER_LOWER]
@@ -2626,7 +2636,7 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
         | pax.isChild = if isSleeperSeat st then CHILD_SLEEPER else CHILD
         | otherwise = if isSleeperSeat st then ADULT_SLEEPER else ADULT
       offeredCats = map (.category) quoteCategories
-      missingCats = nub [catFor row | row <- passengerRows, not (catFor row `elem` offeredCats)]
+      missingCats = nub [catFor row | row <- passengerRows, catFor row `notElem` offeredCats]
       adultMale = length [() | (pax, _) <- passengerRows, not pax.isChild, pax.gender == Domain.Types.Person.MALE]
       adultFemale = length [() | (pax, _) <- passengerRows, not pax.isChild, pax.gender /= Domain.Types.Person.MALE]
       childMale = length [() | (pax, _) <- passengerRows, pax.isChild, pax.gender == Domain.Types.Person.MALE]
@@ -2717,8 +2727,8 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
   let basicAmt = maybe 0 (HighPrecMoney . toRational) fare.tfrBasicFare
       feesAmt = totalAmt - basicAmt
 
-  let tnstcUserId = fromMaybe "714" tnstcConfig.userId
-      providerRefNo = fromMaybe wsRefNo fare.tfrWsRefNo <> "-" <> tnstcUserId
+  tnstcUserId <- tnstcConfig.userId & fromMaybeM (InternalError "TNSTC userId not configured")
+  let providerRefNo = fromMaybe wsRefNo fare.tfrWsRefNo <> "-" <> tnstcUserId
   logInfo $ "TNSTC WSRefNo sent=" <> wsRefNo <> " echoed=" <> show fare.tfrWsRefNo <> " persisted=" <> providerRefNo
   QFRFSQuote.updateProviderSelectionById
     (Just providerRefNo)
@@ -2760,22 +2770,21 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = do
   updatedCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
   -- Guard the exact invariant OnInit enforces before taking payment:
   -- sum (finalPrice * selectedQuantity) + quote.extraFees must equal the total TNSTC billed.
-  let sum' = foldr (+) 0
-      ourChargeTotal =
-        sum'
+  let ourChargeTotal =
+        sum
           ( map
               (\c -> maybe 0 (.amount) c.finalPrice * HighPrecMoney (toRational c.selectedQuantity))
               updatedCategories
           )
           + feesAmt
-  when (ourChargeTotal /= totalAmt) $
-    logWarning $
+  when (ourChargeTotal /= totalAmt) $ do
+    logError $
       "TNSTC total-fare reconciliation mismatch quoteId=" <> quoteId.getId
         <> " ourCategoryChargeTotal="
         <> show ourChargeTotal
         <> " tnstcTotalFare="
         <> show totalAmt
-        <> " (TNSTC is authoritative)"
+    throwError (InternalError "Could not reconcile the fare for this booking")
 
   return
     FRFSTicketService.FRFSSelectRes

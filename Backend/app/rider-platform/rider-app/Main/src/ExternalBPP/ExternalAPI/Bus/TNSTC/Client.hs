@@ -10,7 +10,6 @@ where
 import qualified Control.Exception as CE
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Data.Text.Lazy as LT
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig (..))
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as ET
@@ -26,10 +25,8 @@ import Network.SOAP (ResponseParser (..), invokeWS)
 import Network.SOAP.Exception (SOAPFault (..), SOAPParsingError (..))
 import Network.SOAP.Transport.HTTP (runQueryM)
 import Servant.Client.Core (ClientError (..))
-import Text.XML (def, renderText)
 import Text.XML.Cursor (Cursor)
-import Text.XML.Writer (ToXML, toXML)
-import qualified Text.XML.Writer as XW
+import Text.XML.Writer (ToXML)
 import Tools.Error
 
 tnstcSoapAction :: TNSTCConfig -> Text -> String
@@ -55,10 +52,9 @@ callTnstc config opName body parseCursor = do
   manager <- case mbPooled of
     Just m -> pure m
     Nothing -> do
-      logWarning "TNSTC: no pooled HTTP manager named 'default'; creating a local one"
+      logInfo "TNSTC: no pooled HTTP manager named 'default'; creating a local one"
       L.runIO $ newManager tlsManagerSettings
   mbRequestId <- asks (.requestId)
-  logDebug $ "TNSTC request [" <> opName <> "]: " <> LT.toStrict (renderText def (XW.document "soapBody" (toXML body)))
   password <- decrypt config.password
 
   let transport =
@@ -89,6 +85,7 @@ callTnstc config opName body parseCursor = do
         . Http.applyBasicAuth (TE.encodeUtf8 config.username) (TE.encodeUtf8 password)
         $ req
           { Http.checkResponse = \_ _ -> pure (),
+            Http.redirectCount = 0,
             Http.responseTimeout = Http.responseTimeoutMicro (30 * 1000000),
             Http.requestHeaders =
               Http.requestHeaders req
