@@ -275,6 +275,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -949,6 +950,11 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   when (person.cloudType /= cloudType) $ QPerson.updateCloudType cloudType person.id
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- maybe (QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound) return mbDriverInfo
+  when (driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER) $ do
+    mbTransporterConfigForFlags <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+    when (maybe False (\tc -> tc.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfigForFlags) $
+      fork "refreshOnboardingFlags:getInformation" . void $
+        SStatus.runRefreshOnboardingFlagsDriver (Just person) mbTransporterConfigForFlags personId
   driverReferralCode <- QDR.findById (cast driverId)
   operatorReferral <- case driverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
