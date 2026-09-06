@@ -18,10 +18,10 @@
 module SharedLogic.Allocator where
 
 import Control.Applicative ((<|>))
+import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson (withObject, (.:))
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
-import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -245,7 +245,7 @@ type instance JobContent 'UnblockAirportDriver = UnblockAirportDriverRequestJobD
 
 data FleetAlertJobData = FleetAlertJobData
   { fleetOwnerId :: Id DP.Driver,
-    entityId :: Id DAR.AlertRequest,
+    entityId :: Id DAR.DashboardAlert,
     appletId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

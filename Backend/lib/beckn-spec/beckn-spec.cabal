@@ -218,10 +218,13 @@ library
       Domain.Tools.Error
       Domain.Types
       Domain.Types.Alert
+      Domain.Types.Alert.AlertCategory
+      Domain.Types.Alert.AlertEntityType
       Domain.Types.Alert.AlertRequestData
       Domain.Types.Alert.AlertRequestStatus
       Domain.Types.Alert.AlertRequestType
       Domain.Types.Alert.DetectionData
+      Domain.Types.Alert.OnboardingAlertAction
       Domain.Types.BookingStatus
       Domain.Types.DocumentFieldConstraints
       Domain.Types.EmptyDynamicParam

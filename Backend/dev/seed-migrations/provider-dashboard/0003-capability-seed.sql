@@ -85,6 +85,8 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('communication.message.read', 'communication', '', false),
     ('communication.message.write', 'communication', '', false),
     ('communication.shortener.execute', 'communication', '', false),
+    ('communication.notification.read', 'communication', '', false),
+    ('communication.notification.write', 'communication', '', false),
     ('transit-operations.master.read', 'transit-operations', '', false),
     ('transit-operations.master.write', 'transit-operations', '', false),
     ('transit-operations.waybill.write', 'transit-operations', '', false),

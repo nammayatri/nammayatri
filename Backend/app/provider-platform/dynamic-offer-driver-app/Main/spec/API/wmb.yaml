@@ -8,7 +8,7 @@ imports:
   AlertRequestData: Domain.Types.Alert.AlertRequestData
   TripStatus: Domain.Types.TripTransaction
   TripTransaction: Domain.Types.TripTransaction
-  AlertRequest: Domain.Types.AlertRequest
+  DashboardAlert: DashboardAlert.Domain.Types.DashboardAlert
   TimeBound: Kernel.Types.TimeBound
   HighPrecMeters: Kernel.Types.Distance
   FleetConfig: Domain.Types.FleetConfig
@@ -53,7 +53,7 @@ types:
 
   TripTransactionDetails:
     tripTransactionId: Id TripTransaction
-    endRideApprovalRequestId: Maybe (Id AlertRequest)
+    endRideApprovalRequestId: Maybe (Id DashboardAlert)
     driverName: Maybe Text
     conductorName: Maybe Text
     vehicleNumber: Text
@@ -195,7 +195,7 @@ apis:
       endpoint: /wmb/requests/{approvalRequestId}/status
       auth: TokenAuth PROVIDER_TYPE
       params:
-        approvalRequestId: Id AlertRequest
+        approvalRequestId: Id DashboardAlert
       response:
         type: AlertRequestResp
 
@@ -203,7 +203,7 @@ apis:
       endpoint: /wmb/requests/{approvalRequestId}/cancel
       auth: TokenAuth PROVIDER_TYPE
       params:
-        approvalRequestId: Id AlertRequest
+        approvalRequestId: Id DashboardAlert
       response:
         type: APISuccess
 

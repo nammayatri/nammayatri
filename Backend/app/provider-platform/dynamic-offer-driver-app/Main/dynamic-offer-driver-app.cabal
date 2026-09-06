@@ -219,6 +219,7 @@ library
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
+      Domain.Action.Dashboard.Management.Notification
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Pricing
@@ -553,6 +554,7 @@ library
       SharedLogic.CancellationFault
       SharedLogic.CancellationOrchestrator
       SharedLogic.CancellationSignals
+      SharedLogic.DashboardAlert
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee
@@ -674,6 +676,7 @@ library
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
+      Storage.Beam.DashboardAlert
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersAmbulanceDetails
       Storage.Beam.FareParameters.FareParametersInterCityDetails
@@ -1105,6 +1108,7 @@ library
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Notification
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Pricing
@@ -1275,7 +1279,6 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
-      Domain.Types.AlertRequest
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -1471,7 +1474,6 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
-      Storage.Beam.AlertRequest
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -1672,7 +1674,6 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
-      Storage.Queries.AlertRequest
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
@@ -1802,7 +1803,6 @@ library
       Storage.Queries.OperationHub
       Storage.Queries.OperationHubRequests
       Storage.Queries.OrphanInstances.AadhaarCard
-      Storage.Queries.OrphanInstances.AlertRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
       Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking

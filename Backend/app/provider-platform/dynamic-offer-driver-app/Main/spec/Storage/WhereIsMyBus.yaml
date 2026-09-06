@@ -7,7 +7,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   Person: Domain.Types.Person
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
-  AlertRequest: Domain.Types.AlertRequest
+  DashboardAlert: DashboardAlert.Domain.Types.DashboardAlert
   FleetBadge: Domain.Types.FleetBadge
   DriverCoinsFunctionType: Lib.DriverCoins.Types
   Value: Data.Aeson
@@ -77,7 +77,7 @@ TripTransaction:
     allowEndingMidRoute: Bool
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
-    endRideApprovalRequestId: Maybe (Id AlertRequest)
+    endRideApprovalRequestId: Maybe (Id DashboardAlert)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     tripStartSource: Maybe ActionSource
@@ -175,7 +175,7 @@ TripAlertRequest:
 
   fields:
     id: Id TripAlertRequest
-    alertRequestId: Id AlertRequest
+    alertRequestId: Id DashboardAlert
     tripTransactionId: Id TripTransaction
     driverId: Id Person
     fleetOwnerId: Id Person
