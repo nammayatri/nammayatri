@@ -559,6 +559,8 @@ data PickupStallMonitoringConfig = PickupStallMonitoringConfig
     detourDisplacementMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     deviationAllowanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     progressThresholdMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    runBehaviourEngineForScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    scheduledMonitoringMode :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ScheduledPickupMonitoringMode,
     stages :: [Domain.Types.TransporterConfig.PickupStallStage],
     staleFixAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickIntervalSec :: Kernel.Prelude.Int
@@ -574,7 +576,9 @@ data PickupStallStage = PickupStallStage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ScheduledPickupMonitoringMode = DISTANCE_BASED | TIME_BASED deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ScheduledRideConfig = ScheduledRideConfig
   { avgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

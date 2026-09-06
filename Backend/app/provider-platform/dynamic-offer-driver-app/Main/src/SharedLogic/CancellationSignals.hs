@@ -60,7 +60,10 @@ data CancellationSignalsReq = CancellationSignalsReq
     fallbackDurationToPickup :: Maybe Seconds,
     initialDisToPickup :: Maybe Meters,
     cancellationDisToPickup :: Maybe Meters,
-    arrivedPickupThreshold :: HighPrecMeters
+    arrivedPickupThreshold :: HighPrecMeters,
+    -- False = scheduled ride in a city without the Behaviour Engine opt-in: the journey stays
+    -- capture-only (ride columns) and never feeds the fault-verdict/coin pipelines.
+    includePickupJourney :: Bool
   }
 
 buildCancellationSignals :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => CancellationSignalsReq -> m CancellationSignals
@@ -68,7 +71,7 @@ buildCancellationSignals req = do
   now <- getCurrentTime
   callAttemptCount <- getCallAttemptCount req.ride.id
   durationToPickup <- maybe (fromMaybe 0 req.fallbackDurationToPickup) (.durationToPickup) <$> QDQ.findById (Id req.quoteId)
-  mbPickupJourney <- PickupStallState.getPickupJourney req.ride
+  mbPickupJourney <- if req.includePickupJourney then PickupStallState.getPickupJourney req.ride else pure Nothing
   let computedAt = now
       estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
       timeOfCancellation = round $ diffUTCTime now req.ride.createdAt

@@ -88,6 +88,7 @@ data BookingLite = BookingLite
     currency :: Kernel.Utils.Common.Currency,
     tripCategory :: Domain.Types.Common.TripCategory,
     startTime :: Kernel.Prelude.UTCTime,
+    isScheduled :: Kernel.Prelude.Bool,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -114,5 +115,6 @@ instance FromTType' BookingLiteTable BookingLite where
             currency = fromMaybe Kernel.Types.Common.INR currency,
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
             startTime = startTime,
+            isScheduled = fromMaybe False isScheduled,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }
