@@ -7,13 +7,12 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
-import Data.Maybe
-import Data.Text as T hiding (any, map, null)
+import Data.Text as T hiding (any, concatMap, elem, filter, map, null)
 import qualified Data.Text.Encoding as TE
 import Database.PostgreSQL.Simple.Types
 import EulerHS.Language as EL
 import EulerHS.Prelude
-import Kernel.Beam.Lib.Utils as KBLU
+import qualified Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
 import Types.DBSync
 import Types.DBSync.Create
@@ -32,10 +31,13 @@ runCreate createDataEntry streamName = do
     Right createDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show createDBModel)
       let tableName = createDBModel.dbModel
-      if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
+          tableSnake = textToSnakeCaseText tableName.getDBModel
+      if shouldPushToDbOnly tableName _dontEnableForKafka || tableSnake `elem` _dropTablesForCh || tableName.getDBModel `elem` _dropTablesForCh || not isPushToKafka'
         then runCreateQuery createDataEntry createDBModel
         else do
-          let createObject = KBLU.replaceMappings (A.Object createDBModel.contentsObj) (HM.fromList . M.toList $ createDBModel.mappings.getMapping)
+          let chCols = columnsForTable tableSnake tableName.getDBModel _dropColumnsForCh
+              rawObject = KBLU.replaceMappings (A.Object createDBModel.contentsObj) (HM.fromList . M.toList $ createDBModel.mappings.getMapping)
+              createObject = filterChColumns chCols rawObject
           res <- EL.runIO $ createInKafka _kafkaProducerTools createObject streamName tableName
           case res of
             Left err -> do
@@ -56,27 +58,34 @@ runCreateQuery createDataEntry dbCreateObject = do
   Env {..} <- ask
   let (entryId, byteString) = createDataEntry
       dbModel = dbCreateObject.dbModel
-  if shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbCreateObject.forceDrainToDB
+      tableSnake = textToSnakeCaseText dbModel.getDBModel
+      pgDropTable = tableSnake `elem` _dropTablesForDb || dbModel.getDBModel `elem` _dropTablesForDb
+  if pgDropTable || (shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbCreateObject.forceDrainToDB)
     then return $ Right entryId
     else do
-      let insertQuery = generateInsertForTable dbCreateObject
-      case insertQuery of
-        Just query -> do
-          result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
-          case result of
-            Left (QueryError errorMsg) -> do
-              EL.logError ("QUERY INSERT FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
-              EL.logError ("QUERY INSERT FAILED: BYTE STRING" :: Text) (show byteString)
-              EL.logError ("QUERY INSERT FAILED: DB OBJECT" :: Text) (show dbCreateObject)
-              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
-              return $ Left entryId
-            Right _ -> do
-              EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
-              setDrainerTtl dbCreateObject.dbModel dbCreateObject.primaryKey
-              return $ Right entryId
-        Nothing -> do
-          EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
-          return $ Left entryId
+      let pgCols = columnsForTable tableSnake dbModel.getDBModel _dropColumnsForDb
+          filteredObj = if null pgCols then dbCreateObject else (dbCreateObject :: DBCreateObject) {contents = filterInsertContents pgCols (dbCreateObject.contents) (dbCreateObject.mappings)}
+          DBCreateObjectContent filteredTerms = filteredObj.contents
+          insertQuery = generateInsertForTable filteredObj
+      if not (null pgCols) && null filteredTerms
+        then return $ Right entryId
+        else case insertQuery of
+          Just query -> do
+            result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
+            case result of
+              Left (QueryError errorMsg) -> do
+                EL.logError ("QUERY INSERT FAILED" :: Text) ("(ENTRY ID :: " <> show entryId <> ") => " <> errorMsg <> " for query :: " <> query)
+                EL.logError ("QUERY INSERT FAILED: BYTE STRING" :: Text) (show byteString)
+                EL.logError ("QUERY INSERT FAILED: DB OBJECT" :: Text) (show dbCreateObject)
+                void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
+                return $ Left entryId
+              Right _ -> do
+                EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+                setDrainerTtl dbCreateObject.dbModel dbCreateObject.primaryKey
+                return $ Right entryId
+          Nothing -> do
+            EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
+            return $ Left entryId
 
 -- | Generate an insert query for a given table and schema
 generateInsertForTable :: DBCreateObject -> Maybe Text
@@ -92,3 +101,30 @@ getCreateObjectForKafka model content =
       "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("INSERT" :: Text)
     ]
+
+-- Extract column names to filter for the given table.
+-- Accepts both snake_case and camelCase table prefix (e.g. "driver_location.col" or "DriverLocation.col").
+-- The column part is matched both as-written and normalised to snake_case, so a config entry in either
+-- case (e.g. "driver_location.some_field" or "driver_location.someField") is handled correctly, because
+-- replaceMappings normalises identifiers to snake_case before comparison.
+columnsForTable :: Text -> Text -> [Text] -> [Text]
+columnsForTable tableSnake tableCamel = concatMap $ \tc ->
+  case T.breakOn "." tc of
+    (tbl, dotCol)
+      | (tbl == tableSnake || tbl == tableCamel) && dotCol /= mempty ->
+        let col = T.drop 1 dotCol in [col, textToSnakeCaseText col]
+    _ -> []
+
+-- Filter TermWraps to exclude configured columns before INSERT.
+filterInsertContents :: [Text] -> DBCreateObjectContent -> Mapping -> DBCreateObjectContent
+filterInsertContents [] c _ = c
+filterInsertContents cols (DBCreateObjectContent tws) mp =
+  DBCreateObjectContent $ filter (\(TermWrap col _) -> replaceMappings col mp `notElem` cols) tws
+
+-- Filter keys from the Kafka/CH JSON payload.
+filterChColumns :: [Text] -> A.Value -> A.Value
+filterChColumns [] v = v
+filterChColumns cols v =
+  case A.fromJSON @(M.Map Text A.Value) v of
+    A.Success m -> A.toJSON $ M.filterWithKey (\k _ -> k `notElem` cols) m
+    A.Error _ -> v
