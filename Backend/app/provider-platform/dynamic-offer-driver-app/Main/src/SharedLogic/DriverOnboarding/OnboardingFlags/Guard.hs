@@ -7,7 +7,6 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Guard
   )
 where
 
-import qualified DashboardAlert.Domain.Types.Audience as DAA
 import Data.List (nub)
 import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
 import qualified Domain.Types.Alert.OnboardingAlertAction as DOnboardingAlertAction
@@ -15,7 +14,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Id (Id (..), cast)
+import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (fork)
 import qualified SharedLogic.DashboardAlert as SDA
 import SharedLogic.DriverOnboarding.OnboardingFlags.Checks
@@ -57,7 +56,8 @@ withOnboardingActionFanout transporterConfig actor verb target body =
     (result, extraSpec) <- body
     when (isUnified transporterConfig) $ do
       runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
-      fork "Dashboard onboarding alert" (notifyOnboardingAction actor verb target)
+      when (verb `elem` notifiableVerbs) $
+        fork "Dashboard onboarding alert" (notifyOnboardingAction actor verb target)
     pure result
 
 onboardingActionLockTTLSeconds :: Int
@@ -80,6 +80,18 @@ withOnboardingActionLock target body = case target of
     locked entityKey =
       Hedis.withWaitAndLockRedis ("Onboarding:Action:" <> entityKey) onboardingActionLockTTLSeconds onboardingActionLockRetryMs body
 
+notifiableVerbs :: [ActionVerb]
+notifiableVerbs =
+  [ UnlinkVehicle,
+    ActivateVehicle,
+    DeactivateVehicle,
+    UnlinkFromFleet,
+    Delete,
+    ActivateToFleet,
+    DeactivateFromFleet,
+    ChangeFleetOwner
+  ]
+
 targetEntity :: GuardTarget -> (DAlertEntity.AlertEntityType, Text, Maybe (Id DP.Person))
 targetEntity = \case
   TargetDriver personId -> (DAlertEntity.DriverEntity, personId.getId, Just personId)
@@ -101,8 +113,9 @@ notifyOnboardingAction actor verb target = do
   mbTargetFleetOwner <- case mbDriverId of
     Just driverId -> fmap (Id . (.fleetOwnerId)) <$> QFDA.findByDriverId driverId True
     Nothing -> pure Nothing
-  let fleetOwnerIds = nub $ catMaybes [actorFleetOwner actor, mbTargetFleetOwner]
-      audiences = DAA.AccessTypeAudience DAA.DASHBOARD_ADMIN : map (DAA.FleetOwnerAudience . cast) fleetOwnerIds
+  let alertActor = maybe SDA.SystemActor SDA.FleetOwnerActor (actorFleetOwner actor)
+      fleetOwnerIds = nub $ catMaybes [actorFleetOwner actor, mbTargetFleetOwner]
+      audiences = SDA.audiencesFor alertActor fleetOwnerIds
       requestorId = fromMaybe (Id "system") (actorPersonId actor)
   mbPerson <- QPerson.findById requestorId
   whenJust mbPerson $ \person ->

@@ -30,6 +30,7 @@ data OnboardingAlertAction
   | ExpireAction
   | UnlinkDocumentAction
   | OnboardingFlagMutationAction
+  | DocumentApprovalPendingAction
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''OnboardingAlertAction)
