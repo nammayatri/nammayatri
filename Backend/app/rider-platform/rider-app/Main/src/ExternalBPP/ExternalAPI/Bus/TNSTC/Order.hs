@@ -1,11 +1,10 @@
 module ExternalBPP.ExternalAPI.Bus.TNSTC.Order (createOrder) where
 
 import qualified Data.Text as T
-import Data.Time (Day)
+import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSPassengerDetail as DFRFSPassengerDetail
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSQuoteCategory
-import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
@@ -13,7 +12,9 @@ import qualified Domain.Types.Person as DPerson
 import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Booking as TNSTCBooking
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Place (tnstcPlaceCode)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types (TnstcPickupPoint)
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Types as TNSTCTypes
 import ExternalBPP.ExternalAPI.Types
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Error
@@ -70,89 +71,88 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
       pairs = concatMap (\c -> zip (fromMaybe [] c.seatLabels) (fromMaybe [] c.providerBlockIds)) selected
       seatLabels = map fst pairs
       blockIds = map snd pairs
-      isChildCat c = c.category `elem` [CHILD, CHILD_SLEEPER]
       isMale p = p.gender == DPerson.MALE
-      countPax childWanted maleWanted =
-        length [p | p <- passengerDetails, p.isChild == childWanted, isMale p == maleWanted]
-      -- Fall back to the category split (all male) only when no passenger rows were captured.
-      havePax = not (null passengerDetails)
-      adultMale = if havePax then countPax False True else sum [c.selectedQuantity | c <- selected, not (isChildCat c)]
-      adultFemale = if havePax then countPax False False else 0
-      childMale = if havePax then countPax True True else sum [c.selectedQuantity | c <- selected, isChildCat c]
-      childFemale = if havePax then countPax True False else 0
       adultOrChildOf p = if p.isChild then "C" else "A"
       basicAmt = booking.totalPrice.amount - fromMaybe 0 quote.extraFees
       showAmt :: HighPrecMoney -> Text
       showAmt = T.pack . show . (realToFrac :: HighPrecMoney -> Double)
-      -- The confirm schema has exactly one additional-passenger slot (addnlPasngrName /
-      -- addnlAge / addnlGender, all singular), so only the first two riders can be named.
-      -- Everyone else travels on the seat numbers alone, which TNSTC accepts.
-      -- Ordered to match the seatNumber list we emit, since TNSTC pairs them positionally.
-      orderedPax = mapMaybe (\lbl -> find (\p -> p.seatLabel == lbl) passengerDetails) seatLabels
       genderOf p = case p.gender of DPerson.FEMALE -> "F"; _ -> "M"
-      -- TNSTC parses addnlAge unconditionally, even for a single passenger, so it must always
-      -- be a number.
-      ageOf p = maybe "30" show p.age
 
   when (null pairs) $ throwError (InvalidRequest "No held seats on this booking; select was not completed")
+  when (null passengerDetails) $
+    throwError (InvalidRequest "No passenger details on this booking; select was not completed")
 
-  -- TNSTC writes these two straight into PNRMASTER.PNR_PICKUPPOINTPICKTIME / DROPOFPOINTTIME.
-  -- Omit them and it composes the literal 'null:00' and dies on a data-truncation error --
-  -- after the seats are held and the rider has paid. Resolved from the cached point list, so
-  -- normally a cache hit rather than another vendor round trip.
-  let tripCode = fromMaybe "" quote.providerTripCode
+  orderedPax <- forM seatLabels $ \lbl ->
+    find (\p -> p.seatLabel == lbl) passengerDetails
+      & fromMaybeM (InternalError $ "No passenger row for held seat " <> lbl <> " on booking " <> booking.id.getId)
+
+  wirePax <- forM orderedPax $ \p -> do
+    name <- p.name & fromMaybeM (InternalError $ "Passenger name missing for seat " <> p.seatLabel <> " on booking " <> booking.id.getId)
+    age <- p.age & fromMaybeM (InternalError $ "Passenger age missing for seat " <> p.seatLabel <> " on booking " <> booking.id.getId)
+    return (p, name, show age)
+  (leadPax, leadName, leadAge) <-
+    listToMaybe wirePax & fromMaybeM (InternalError $ "No passengers on booking " <> booking.id.getId)
+
+  phoneNumber <- mRiderNumber & fromMaybeM (InternalError $ "Rider phone number missing for booking " <> booking.id.getId)
+
+  let countPax childWanted maleWanted =
+        length [p | p <- orderedPax, p.isChild == childWanted, isMale p == maleWanted]
+      adultMale = countPax False True
+      adultFemale = countPax False False
+      childMale = countPax True True
+      childFemale = countPax True False
+
+  tripCode <- quote.providerTripCode & fromMaybeM (InvalidRequest $ "providerTripCode missing on quote " <> quote.id.getId)
   startPlaceCode <- tnstcPlaceCode integratedBPPConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
   endPlaceCode <- tnstcPlaceCode integratedBPPConfig (T.take 3 (T.drop 7 tripCode)) search.toStationCode
   (mbPickup, mbDropOff) <- resolveBoardingPoints tnstcConfig quote passengerDetails journeyDate serviceId counterCode startPlaceCode endPlaceCode
 
-  -- A stored point id that no longer resolves would send an empty pickupPointTime and TNSTC
-  -- would fail on PNR_PICKUPPOINTPICKTIME -- after the rider has paid, with a vendor SQL error
-  -- that says nothing about the cause. Fail here instead, naming the id, so the reason is in
-  -- the booking's failureReason rather than buried in a JDBC message.
-  whenJust (listToMaybe (mapMaybe (.pickupPointPlaceId) passengerDetails)) $ \placeId ->
-    when (isNothing (mbPickup >>= (.tppTime))) $ do
-      logError $
-        "TNSTC pickup point unresolved bookingId=" <> booking.id.getId
+  let describePoint label placeCode mbPoint =
+        "TNSTC " <> label <> " unresolved bookingId=" <> booking.id.getId
           <> " placeId="
-          <> placeId
+          <> show (listToMaybe (mapMaybe (.pickupPointPlaceId) passengerDetails))
           <> " placeCode="
-          <> startPlaceCode
+          <> placeCode
           <> " resolved="
-          <> show (mbPickup <&> (.tppName))
-      throwError (InternalError $ "TNSTC pickup point " <> placeId <> " has no departure time for this service")
-  whenJust (listToMaybe (mapMaybe (.dropOffPointPlaceId) passengerDetails)) $ \placeId ->
-    when (isNothing (mbDropOff >>= (.tppTime))) $ do
-      logError $
-        "TNSTC drop-off point unresolved bookingId=" <> booking.id.getId
-          <> " placeId="
-          <> placeId
-          <> " placeCode="
-          <> endPlaceCode
-      throwError (InternalError $ "TNSTC drop-off point " <> placeId <> " has no arrival time for this service")
-  when (length passengerDetails /= length pairs) $
-    logWarning $
-      "TNSTC confirm bookingId=" <> booking.id.getId <> " has " <> show (length passengerDetails)
-        <> " passenger rows for "
-        <> show (length pairs)
-        <> " held seats"
+          <> show (mbPoint <&> (.tppName))
+  pickupPoint <- case mbPickup of
+    Just p -> return p
+    Nothing -> do
+      logError $ describePoint "pickup point" startPlaceCode mbPickup
+      throwError (InternalError $ "TNSTC pickup point could not be resolved for booking " <> booking.id.getId)
+  dropOffPoint <- case mbDropOff of
+    Just p -> return p
+    Nothing -> do
+      logError $ describePoint "drop-off point" endPlaceCode mbDropOff
+      throwError (InternalError $ "TNSTC drop-off point could not be resolved for booking " <> booking.id.getId)
+  pickupTime <- pickupPoint.tppTime & fromMaybeM (InternalError $ "TNSTC pickup point " <> pickupPoint.tppPlaceId <> " has no departure time for this service")
+  dropOffTime <- dropOffPoint.tppTime & fromMaybeM (InternalError $ "TNSTC drop-off point " <> dropOffPoint.tppPlaceId <> " has no arrival time for this service")
+
+  idProofNumber <- mapM decrypt (listToMaybe (mapMaybe (.idProofNumber) passengerDetails)) :: m (Maybe Text)
+  let idProofLookupId = listToMaybe (mapMaybe (.idProofLookupId) passengerDetails)
+  idProof <- case (idProofLookupId, idProofNumber) of
+    (Nothing, Nothing) -> return Nothing
+    (Just lookupId, Just number) -> return (Just (lookupId, number))
+    (Just _, Nothing) -> throwError (InternalError $ "ID proof type given without a number on booking " <> booking.id.getId)
+    (Nothing, Just _) -> throwError (InternalError $ "ID proof number given without a type on booking " <> booking.id.getId)
 
   res <-
     TNSTCBooking.confirmAdvSeatBooking tnstcConfig $
       TNSTCBooking.ConfirmAdvSeatBookingReq
-        { rqcAdultOrChild = maybe "A" adultOrChildOf (listToMaybe orderedPax),
+        { rqcAdultOrChild = adultOrChildOf leadPax,
           rqcAddnlAdultOrChilds = map adultOrChildOf orderedPax,
           rqcAdultMale = adultMale,
           rqcAdultFemale = adultFemale,
           rqcChildMale = childMale,
           rqcChildFemale = childFemale,
-          rqcAge = maybe "30" ageOf (listToMaybe orderedPax),
-          rqcGender = maybe "M" genderOf (listToMaybe orderedPax),
-          rqcPassengerName = fromMaybe "" (listToMaybe orderedPax >>= (.name)),
-          rqcAddnlAges = map ageOf orderedPax,
+          rqcAge = leadAge,
+          rqcGender = genderOf leadPax,
+          rqcPassengerName = leadName,
+          rqcAddnlAges = map (\(_, _, age) -> age) wirePax,
           rqcAddnlGenders = map genderOf orderedPax,
-          rqcAddnlPassengerNames = map (fromMaybe "" . (.name)) orderedPax,
+          rqcAddnlPassengerNames = map (\(_, name, _) -> name) wirePax,
           rqcEmailId = "",
-          rqcPhoneNumber = fromMaybe "" mRiderNumber,
+          rqcPhoneNumber = phoneNumber,
           rqcBasicFare = showAmt basicAmt,
           rqcTotalFare = showAmt booking.totalPrice.amount,
           rqcClassId = classId,
@@ -162,10 +162,10 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
           rqcEndPlaceCode = endPlaceCode,
           rqcEndPlaceId = search.toStationCode,
           rqcJourneyDate = journeyDate,
-          rqcPickupPointDropOffId = fromMaybe "" (mbDropOff <&> (.tppPlaceId)),
-          rqcPickupPointPlaceId = fromMaybe "" (mbPickup <&> (.tppPlaceId)),
-          rqcPickupPointTime = fromMaybe "" (mbPickup >>= (.tppTime)),
-          rqcPickupPointDropOffTime = fromMaybe "" (mbDropOff >>= (.tppTime)),
+          rqcPickupPointDropOffId = dropOffPoint.tppPlaceId,
+          rqcPickupPointPlaceId = pickupPoint.tppPlaceId,
+          rqcPickupPointTime = pickupTime,
+          rqcPickupPointDropOffTime = dropOffTime,
           rqcSeatBlockIds = blockIds,
           rqcSeatNumbers = seatLabels,
           rqcServiceId = serviceId,
@@ -173,8 +173,8 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
           rqcStartPlaceId = search.fromStationCode,
           rqcUserName = tnstcConfig.username,
           rqcWsRefNo = wsRefNo,
-          rqcIdProofLookupId = fromMaybe "" (listToMaybe (mapMaybe (.idProofLookupId) passengerDetails)),
-          rqcIdProofNumber = fromMaybe "" (listToMaybe (mapMaybe (.idProofNumber) passengerDetails))
+          rqcIdProofLookupId = maybe "" fst idProof,
+          rqcIdProofNumber = maybe "" snd idProof
         }
 
   pnr <- res.tbkPnrNumber & fromMaybeM (InternalError "TNSTC confirmed without returning a PNR")
@@ -189,10 +189,13 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
   -- ticketed by this point, so a failure here must never surface as a booking failure.
   void $ try @_ @SomeException $ storeBoardingDetails search mbPickup mbDropOff
 
-  now <- getCurrentTime
-  -- TNSTC issues no QR; the PNR is the travel document, so it is what each seat's ticket
-  -- carries. Validity runs to the end of the journey day.
-  let qrValidTill = addUTCTime (2 * 86400) now
+  let istOffset = 19800 :: NominalDiffTime
+      mbArrival = do
+        arrivalDate <- quote.arrivalDate
+        arrivalTime <- quote.arrivalTime
+        TNSTCTypes.parseTnstcTimestamp (T.strip arrivalDate <> " " <> T.strip arrivalTime)
+      dayAfterJourneyIST = addUTCTime ((2 * 86400) - istOffset) (UTCTime journeyDate 0)
+      qrValidTill = fromMaybe dayAfterJourneyIST mbArrival
       tickets =
         map
           ( \lbl ->
@@ -241,7 +244,7 @@ resolveBoardingPoints tnstcConfig _quote passengerDetails journeyDate serviceId 
               rqppPlaceId = placeCode,
               rqppUserName = tnstcConfig.username
             }
-      pick placeId points = find (\p -> p.tppPlaceId == placeId) points
+      pick placeId = find (\p -> p.tppPlaceId == placeId)
       _unusedQuote = ()
   let mbPickupId = listToMaybe (mapMaybe (.pickupPointPlaceId) passengerDetails)
       mbDropOffId = listToMaybe (mapMaybe (.dropOffPointPlaceId) passengerDetails)

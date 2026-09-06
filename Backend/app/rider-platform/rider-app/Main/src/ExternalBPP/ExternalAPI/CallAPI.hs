@@ -1,11 +1,12 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types hiding (ONDC)
 import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
@@ -202,15 +203,10 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-parseTnstcTimestamp :: Text -> Maybe UTCTime
-parseTnstcTimestamp raw =
-  addUTCTime (negate 19800)
-    <$> parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" (T.unpack (T.strip raw))
-
 mkTnstcFare :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Maybe FRFSUtils.FRFSFare
 mkTnstcFare now svc = do
   adult <- svc.svcAdultFare
-  let mbStopBooking = svc.svcStopBookingTime >>= parseTnstcTimestamp
+  let mbStopBooking = svc.svcStopBookingTime >>= TNSTCTypes.parseTnstcTimestamp
   case mbStopBooking of
     Just cutoff | cutoff <= now -> Nothing
     _ -> mkTnstcFare' now svc adult mbStopBooking
@@ -252,7 +248,7 @@ mkTnstcFare' _now svc adult mbStopBooking = do
               -- TNSTC leaves childSLPFare empty on sleeper services because a child
               -- occupying a berth is charged the adult sleeper fare; without this
               -- fallback the category is missing and child-on-berth cannot be booked.
-              mkCategory CHILD_SLEEPER <$> (maybe (nonZeroFare svc.svcAdultSlpFare) Just (nonZeroFare svc.svcChildSlpFare))
+              mkCategory CHILD_SLEEPER <$> (nonZeroFare svc.svcChildSlpFare <|> nonZeroFare svc.svcAdultSlpFare)
             ],
         fareDetails = Nothing,
         vehicleServiceTier =
@@ -376,6 +372,7 @@ getTicketStatus integrationBPPConfig booking = do
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
     CRIS _config' -> return []
+    TNSTC _config' -> return []
     _ -> throwError $ InternalError "Unimplemented!"
 
 verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Text -> m TicketPayload
