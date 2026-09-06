@@ -509,8 +509,16 @@ types:
     - nameOnGovtDB: Maybe Text
     - docType: Maybe PanType
     - derive: "'HideSecrets"
+  RegisterGstReq:
+    - gstin: Text
+    - imageId: Id Image
+    - derive: "'HideSecrets"
+  RegisterUdyamReq:
+    - uamNumber: Text
+    - imageId1: Id Image
+    - derive: "'HideSecrets"
   DocumentRegisterMetadata:
-    - enum: "DLData RegisterDLReq, RCData RegisterRCReq, AadhaarData AadhaarCardReq, PanData RegisterPanReq, CommonData CommonDocumentCreateReq"
+    - enum: "DLData RegisterDLReq, RCData RegisterRCReq, AadhaarData AadhaarCardReq, PanData RegisterPanReq, GSTData RegisterGstReq, UDYAMData RegisterUdyamReq, CommonData CommonDocumentCreateReq"
     - derive: "'HideSecrets"
   DocumentRegisterReq:
     - metadata: DocumentRegisterMetadata
