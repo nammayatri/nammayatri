@@ -13,7 +13,9 @@
 -}
 
 module SharedLogic.DashboardAlert
-  ( DashboardAlertFlow,
+  ( AlertActor (..),
+    audiencesFor,
+    DashboardAlertFlow,
     driverAlertHandle,
     notifyOnboardingChange,
     notifyAdminsRealtime,
@@ -25,6 +27,7 @@ import qualified DashboardAlert.Domain.Types.Audience as DAA
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DADT
 import qualified DashboardAlert.ServiceHandle as DAS
 import qualified DashboardAlert.Trigger as DAT
+import Data.List (nub)
 import qualified Domain.Types.Alert.AlertCategory as DAlertCategory
 import qualified Domain.Types.Alert.AlertEntityType as DAlertEntity
 import qualified Domain.Types.Alert.AlertRequestData as DAlertData
@@ -52,6 +55,17 @@ type DashboardAlertFlow m r =
     Redis.HedisFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   )
+
+data AlertActor
+  = AdminActor
+  | FleetOwnerActor (Id DP.Person)
+  | SystemActor
+  deriving (Show, Eq)
+
+audiencesFor :: AlertActor -> [Id DP.Person] -> [DAA.Audience]
+audiencesFor actor fleetOwnerIds =
+  [DAA.AccessTypeAudience DAA.DASHBOARD_ADMIN | actor /= AdminActor]
+    <> [DAA.FleetOwnerAudience (cast fleetOwnerId) | fleetOwnerId <- nub fleetOwnerIds, actor /= FleetOwnerActor fleetOwnerId]
 
 driverAlertHandle :: DashboardAlertFlow m r => DAS.ServiceHandle m
 driverAlertHandle =

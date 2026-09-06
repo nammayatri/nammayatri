@@ -4754,10 +4754,13 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverInfo <- QDriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   newFleetOwner <- validateNewFleetOwner req.newFleetOwnerId
-  mbOldFleetOwner <- QFDAExtra.findByDriverId personId True >>= maybe (pure Nothing) (QPerson.findById . Id . (.fleetOwnerId))
+  mbActiveAssociation <- QFDAExtra.findByDriverId personId True
+  mbExistingAssociation <- maybe (QFDAExtra.findByDriverId personId False) (pure . Just) mbActiveAssociation
+  mbOldFleetOwner <- maybe (pure Nothing) (QPerson.findById . Id . (.fleetOwnerId)) mbExistingAssociation
+  let linkAsActive = isJust mbActiveAssociation
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver newFleetOwner.id personId) SGuard.ChangeFleetOwner (SGuard.TargetDriver personId) $ do
     SA.endDriverAssociations moc.id transporterConfig person
-    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) True req.reason (Just merchant.id) (Just moc.id)
+    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id)
   fork "Fleet owner change notification" $
     SOnboardingComms.notifyOnFleetOwnerChange moc.id person newFleetOwner mbOldFleetOwner
   pure Success
