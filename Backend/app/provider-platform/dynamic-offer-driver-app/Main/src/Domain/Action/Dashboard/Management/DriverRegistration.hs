@@ -68,8 +68,10 @@ import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import Domain.Action.UI.DriverOnboarding.DriverLicense
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import Domain.Action.UI.DriverOnboarding.Image
 import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
+import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
@@ -916,6 +918,8 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
     Common.RCData rcReq -> registerRC merchant merchantOpCityId rcReq
     Common.AadhaarData aadhaarReq -> registerAadhaar merchant merchantOpCityId aadhaarReq
     Common.PanData panReq -> registerPan merchant merchantOpCityId panReq
+    Common.GSTData gstReq -> registerGst merchant merchantOpCityId gstReq
+    Common.UDYAMData udyamReq -> registerUdyam merchantOpCityId udyamReq
     Common.CommonData commonReq -> do
       _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
       return Success
@@ -1003,6 +1007,31 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
         convertPanType = \case
           Common.INDIVIDUAL -> DPan.INDIVIDUAL
           Common.BUSINESS -> DPan.BUSINESS
+
+    registerGst merchant merchantOpCityId Common.RegisterGstReq {..} = do
+      _ <-
+        DGV.verifyGstin
+          defaultVerifyBy
+          (Just merchant)
+          (cast driverId_, cast merchant.id, merchantOpCityId)
+          DGV.DriverGstinReq
+            { gstin = gstin,
+              imageId = imageId.getId,
+              driverId = driverId_.getId
+            }
+          Nothing
+          (defaultVerifyBy /= DPan.FRONTEND_SDK)
+      return Success
+
+    registerUdyam merchantOpCityId Common.RegisterUdyamReq {..} = do
+      _ <-
+        UDYAM.verifyUdyam
+          (cast driverId_, merchantOpCityId)
+          UDYAM.DriverUdyamReq
+            { uamNumber = uamNumber,
+              imageId1 = cast imageId1
+            }
+      return Success
 
 -- DEPRECATED: Use postDriverRegistrationDocumentRegister with AadhaarData metadata instead.
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess

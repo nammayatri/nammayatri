@@ -55,7 +55,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     -- Class 1 fields (sync, driver DB authoritative)
     enabled :: SetField Bool,
     blocked :: SetField Bool,
-    isDisabledReasonFlag :: SetField Bool,
+    isDisabledReasonFlag :: SetField (Maybe Bool),
     subscribed :: SetField Bool,
     canSwitchToRental :: SetField Bool,
     canSwitchToInterCity :: SetField Bool,

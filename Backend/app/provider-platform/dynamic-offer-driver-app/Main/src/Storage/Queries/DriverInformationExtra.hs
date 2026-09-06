@@ -99,7 +99,7 @@ markDisabledForFleetCascade (Id driverId) = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
   LTSSync.syncDriverPoolDataToLTS (Id driverId) $
-    LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set True}
+    LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set (Just True)}
 
 -- | Inverse of 'markDisabledForFleetCascade'. Re-enables a driver and clears
 --   the FleetDisabled flag only if that's the active disable reason — leaves
@@ -119,7 +119,7 @@ clearFleetCascadeAndEnable driverId = do
         ]
     ]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True, LTSSync.isDisabledReasonFlag = LTSSync.Set False}
+    LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True, LTSSync.isDisabledReasonFlag = LTSSync.Set (Just False)}
 
 updateVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateVerifiedState driverId isVerified = do
@@ -155,7 +155,7 @@ updateDisabledReasonFlag mbReason driverId = do
     ([Se.Is BeamDI.driverId (Se.Eq driverId.getId)] <> [Se.Is BeamDI.enabled (Se.Eq True) | isJust mbReason])
   when (isNothing mbReason || maybe False (.enabled) mbDriverInfo) $
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-      LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set (isJust mbReason)}
+      LTSSync.emptyUpdate {LTSSync.isDisabledReasonFlag = LTSSync.Set (Just (isJust mbReason))}
 
 updateEnabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.EnabledReasonFlag -> Id Person.Driver -> m ()
 updateEnabledReasonFlag mbReason driverId = do

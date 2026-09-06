@@ -203,7 +203,7 @@ driverIdsQuery now merchant opCity f = case drivingTable f of
     whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc driverInfo.driverId
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle driverInfo.driverId
     whenFilter (isFleetSeeker f) $ B.not_ (existsActiveFleetAssoc driverInfo.driverId)
-    pure (driverInfo.driverId, if isFleetSeeker f then driverInfo.updatedAt else driverInfo.createdAt)
+    pure (driverInfo.driverId, driverInfo.createdAt)
   DriveFleetAssoc -> do
     fda <- B.filter_ (fleetAssocMatches now f) $ B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle fda.driverId
