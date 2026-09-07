@@ -77,10 +77,16 @@ consumeCancellationRideCredit booking ride consumeAmount transporterConfig
             then Just (Variant.castServiceTierToVehicleCategory booking.vehicleServiceTier)
             else Nothing
     (ownerType, ownerId, counterpartyType) <- resolveOwner
+    markPrepaidSettlementPending ownerId ride.id.getId
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+      allActivePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+      nowForExpiry <- getCurrentTime
+      let expiredPurchases = filter (\p -> maybe False (<= nowForExpiry) p.expiryDate) allActivePurchases
+          mbPurchase = latestSubscriptionPurchase allActivePurchases
       case mbPurchase of
-        Nothing -> logInfo $ "consumeCancellationRideCredit: no active prepaid subscription for owner " <> ownerId
+        Nothing -> do
+          clearPrepaidSettlementPending ownerId ride.id.getId
+          logInfo $ "consumeCancellationRideCredit: no active prepaid subscription for owner " <> ownerId
         Just purchase -> do
           revenueAmount <- prepaidRevenueAmount purchase consumeAmount
           mbMetadata <- allocationMetadata counterpartyType ownerId ownerType consumeAmount mbVehicleCategory
@@ -100,20 +106,26 @@ consumeCancellationRideCredit booking ride consumeAmount transporterConfig
           (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleCategory
           unless (null contributingPurchaseIds) $
             QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
-          when anyExhausted $ do
-            mbActivated <- activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory
-            whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
-              now <- getCurrentTime
-              let delay = diffUTCTime expiry now
-              createJobIn @_ @'ExpireSubscriptionPurchase
-                (Just booking.providerId)
-                (Just booking.merchantOperatingCityId)
-                delay
-                $ ExpireSubscriptionPurchaseJobData
-                  { subscriptionPurchaseId = nextPurchaseId
-                  }
+          when anyExhausted $ scheduleNextQueuedExpiry ownerId ownerType mbVehicleCategory
+          clearPrepaidSettlementPending ownerId ride.id.getId
+          unless (null expiredPurchases) $ do
+            anyExpired <- handleSubscriptionExpiries expiredPurchases
+            when anyExpired $ scheduleNextQueuedExpiry ownerId ownerType mbVehicleCategory
           logInfo $ "consumeCancellationRideCredit: consumed " <> show consumeAmount <> " for owner " <> ownerId <> " on booking " <> booking.id.getId
   where
+    scheduleNextQueuedExpiry ownerId ownerType mbVC = do
+      mbActivated <- activateNextQueuedPurchaseExpiry ownerId ownerType mbVC
+      whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+        now <- getCurrentTime
+        let delay = diffUTCTime expiry now
+        createJobIn @_ @'ExpireSubscriptionPurchase
+          (Just booking.providerId)
+          (Just booking.merchantOperatingCityId)
+          delay
+          $ ExpireSubscriptionPurchaseJobData
+            { subscriptionPurchaseId = nextPurchaseId
+            }
+
     resolveOwner = case ride.fleetOwnerId of
       Just fleetOwnerId -> pure (DSP.FLEET_OWNER, fleetOwnerId.getId, counterpartyFleetOwner)
       Nothing -> do

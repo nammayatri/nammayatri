@@ -396,14 +396,9 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
         let mbFareRequirement = case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
               (Just fare, Just _) -> Just fare
               _ -> Nothing
-            mbCreditsValidAt = if isScheduled then scheduledPickupTime else Nothing
-        if isNothing mbFareRequirement && isNothing mbCreditsValidAt
-          then pure results
-          else do
-            purchasesByOwner <- case mbCreditsValidAt of
-              Just _ -> fetchActivePrepaidPurchasesByOwners (map candidateOwnerId results)
-              Nothing -> pure mempty
-            filterM (passesPrepaidGates mbFareRequirement mbCreditsValidAt purchasesByOwner) results
+            creditsValidAt = if isScheduled then fromMaybe now scheduledPickupTime else now
+        purchasesByOwner <- fetchActivePrepaidPurchasesByOwners (map candidateOwnerId results)
+        filterM (passesPrepaidGates mbFareRequirement creditsValidAt purchasesByOwner) results
       else pure results
 
   let cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
@@ -437,7 +432,7 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
     candidateOwnerId r = let (_, ownerId, _) = resolveOwnerAndThreshold r in ownerId
-    passesPrepaidGates mbFareRequirement mbCreditsValidAt purchasesByOwner r = do
+    passesPrepaidGates mbFareRequirement creditsValidAt purchasesByOwner r = do
       let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
           (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
           ownerType = maybe DSP.DRIVER (const DSP.FLEET_OWNER) r.fleetOwnerId
@@ -450,7 +445,7 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
           pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= bufferedFare + threshold) mbBalance
       if not balanceOk
         then pure False
-        else pure $ maybe True (prepaidCreditsValidAtIn purchasesByOwner ownerId ownerType mbVehicleCategory) mbCreditsValidAt
+        else pure $ prepaidCreditsValidAtIn purchasesByOwner ownerId ownerType mbVehicleCategory creditsValidAt
 
     checkAccountGates accountBalances (counterpartyType, ownerId) applyZeroBalanceGate mbRequired =
       case Map.lookup (counterpartyType, ownerId) accountBalances of

@@ -92,8 +92,13 @@ findAllActiveByOwnerAndServiceName ownerId ownerType serviceName mbVehicleCatego
     Nothing
     Nothing
 
--- | Find the latest active, non-expired subscription.
--- Using the provided expiry handler callback to process any expired subscriptions found.
+-- | Find the latest still-active subscription, running the expiry handler on any
+-- past-due ones first (fallback for failed scheduler jobs).
+--
+-- handleExpiry may *defer* an expiry (e.g. a ride is in flight): such a purchase
+-- stays ACTIVE and is still in force. So when any past-due purchases were handled,
+-- re-read ACTIVE rows — truly-expired ones are now EXPIRED and drop out, while
+-- deferred ones remain visible to callers like planList / subscription-status.
 findLatestActiveByOwnerAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (SubscriptionPurchase -> m ()) ->
@@ -105,12 +110,13 @@ findLatestActiveByOwnerAndServiceName ::
 findLatestActiveByOwnerAndServiceName handleExpiry ownerId ownerType serviceName mbVehicleCategory = do
   now <- getCurrentTime
   allActive <- findAllActiveByOwnerAndServiceName ownerId ownerType serviceName mbVehicleCategory
-  -- Partition into expired and still-valid
   let (expired, valid) = partition (isExpired now) allActive
-  -- Handle expired subscriptions (fallback for failed scheduler jobs)
-  mapM_ handleExpiry expired
-  -- Return latest non-expired (last in ASC-sorted list)
-  pure $ listToMaybe $ reverse valid
+  if null expired
+    then pure $ listToMaybe $ reverse valid
+    else do
+      mapM_ handleExpiry expired
+      stillActive <- findAllActiveByOwnerAndServiceName ownerId ownerType serviceName mbVehicleCategory
+      pure $ listToMaybe $ reverse stillActive
   where
     isExpired now purchase = case purchase.expiryDate of
       Just expiry -> expiry <= now
