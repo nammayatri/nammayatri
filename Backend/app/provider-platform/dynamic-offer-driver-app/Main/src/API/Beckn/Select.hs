@@ -70,7 +70,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
 
     if isOndcScheduledRideSupportEnabled
       then do
-        -- Pilot merchants get negotiatedFare parsed from the wire item's own price object.
+        -- Pilot merchants get negotiatedFare and addOns parsed from the wire item's own price object and add_ons.
         let dSelectReq = OSRSelect.ondcScheduledRideParser reqV2.selectReqMessage dSelectReq'
         itemIdText <- case dSelectReq.estimateIds of
           (eid : _) -> pure eid.getId
@@ -79,7 +79,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
         case mbQuote of
           Just quote ->
             Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-              (validatedMerchant, searchRequest, validatedQuote) <- DSelect.validateQuoteSelect transporterId quote.id dSelectReq.transactionId dSelectReq.negotiatedFare
+              (validatedMerchant, searchRequest, validatedQuote) <- DSelect.validateQuoteSelect transporterId quote.id dSelectReq
               fork "select-quote request processing" $
                 Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
                   DSelect.handleQuoteSelect dSelectReq.messageId validatedMerchant searchRequest validatedQuote
@@ -90,16 +90,16 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
             searchReq <- QSR.findByTransactionIdAndMerchantId dSelectReq.transactionId transporterId >>= fromMaybeM (SearchRequestNotFound dSelectReq.transactionId)
             if searchReq.isScheduled
               then throwError $ InvalidRequest "Scheduled ride select must resolve to a Quote, item_id did not match any Quote"
-              else runEstimateFlow merchant dSelectReq -- for allowing instant ride under ONDC scheduled-ride support
-      else runEstimateFlow merchant dSelectReq'
+              else runEstimateFlow merchant dSelectReq isOndcScheduledRideSupportEnabled -- for allowing instant ride under ONDC scheduled-ride support
+      else runEstimateFlow merchant dSelectReq' isOndcScheduledRideSupportEnabled
     pure Ack
   where
-    runEstimateFlow merchant dSelectReq =
+    runEstimateFlow merchant dSelectReq isPilotMerchant' =
       Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-        (validatedMerchant, searchRequest, estimates) <- DSelect.validateRequest transporterId dSelectReq
-        fork "select request processing" $
+        (validatedMerchant, searchRequest, estimates, addOnData) <- DSelect.validateRequest transporterId dSelectReq isPilotMerchant'
+        fork "select request processing" $ do
           Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
-            DSelect.handler validatedMerchant dSelectReq searchRequest estimates
+            DSelect.handler validatedMerchant dSelectReq searchRequest estimates addOnData
         fork "select received pushing ondc logs" do
           void $ pushLogs "select" (toJSON reqV2) merchant.id.getId "MOBILITY"
 

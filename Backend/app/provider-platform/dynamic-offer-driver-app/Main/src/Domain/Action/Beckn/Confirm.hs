@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
@@ -42,8 +43,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
@@ -57,7 +58,6 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -89,7 +89,10 @@ data DConfirmReq = DConfirmReq
     enableOtpLessRide :: Bool,
     driverPreference :: Maybe [Text],
     customerDiscountAmount :: Maybe HighPrecMoney,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    -- | A BAP can select more than one add-on on the same item -- empty when
+    -- none was echoed, never a single Maybe.
+    addOns :: [Spec.AddOn]
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -215,7 +218,8 @@ handler merchant req validatedQuote = do
                 paymentMethodInfo = paymentMethodInfo,
                 emailDomain = booking.emailDomain,
                 businessEmailDomain = booking.businessEmailDomain,
-                driverPreference = req.driverPreference
+                driverPreference = req.driverPreference,
+                addOnData = booking.addOnData
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id
@@ -301,8 +305,9 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
-  m (DM.Merchant, ValidatedQuote, DTMT.TransporterConfig)
-validateRequest subscriber transporterId req now = do
+  DTMT.TransporterConfig ->
+  m (DM.Merchant, ValidatedQuote)
+validateRequest subscriber transporterId req now transporterConfig = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <- QM.findById transporterId' >>= fromMaybeM (MerchantNotFound transporterId'.getId)
@@ -315,11 +320,14 @@ validateRequest subscriber transporterId req now = do
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
   -- Pilot merchants bypass the isValueAddNP restriction above since they're non-value-add NPs but still need scheduled trip categories allowed through /confirm.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  -- transporterConfig is passed in by the caller (API.Beckn.Confirm), which already fetched it (keyed on the wire request's city) to decide the add-ons patch -- not re-fetched here.
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  -- Synchronous NACK, before any fork -- same shape as /select and /init. Booking already carries whatever was selected at /select and echoed at /init; Ride doesn't exist yet at this point.
+  when isOndcScheduledRideSupportEnabled $
+    SAddOn.verifyAddOnEcho booking.addOnData booking.merchantOperatingCityId (Just booking.vehicleServiceTier) req.addOns
   when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
-  (transporter', validatedQuote) <- case booking.tripCategory of
+  case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     Rental RideOtp -> getRideOtpQuoteDetails booking transporter
@@ -346,7 +354,6 @@ validateRequest subscriber transporterId req now = do
     -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
     EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
-  return (transporter', validatedQuote, transporterConfig)
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

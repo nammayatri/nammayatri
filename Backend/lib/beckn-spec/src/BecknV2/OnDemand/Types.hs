@@ -51,6 +51,8 @@ module BecknV2.OnDemand.Types
     InitReq (..),
     Intent (..),
     Item (..),
+    ItemCount (..),
+    ItemQuantity (..),
     Location (..),
     LocationAddressTag (..),
     OnCancelReq (..),
@@ -450,7 +452,9 @@ data AddOn = AddOn
     -- |
     addOnId :: Maybe Text,
     -- |
-    addOnPrice :: Maybe Price
+    addOnPrice :: Maybe Price,
+    -- | ONDC v2.1.0: how many units of this add-on were selected/are on offer
+    addOnQuantity :: Maybe ItemQuantity
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -470,8 +474,62 @@ optionsAddOn =
     table =
       [ ("addOnDescriptor", "descriptor"),
         ("addOnId", "id"),
-        ("addOnPrice", "price")
+        ("addOnPrice", "price"),
+        ("addOnQuantity", "quantity")
       ]
+
+-- | ONDC v2.1.0: describes the quantity of an item or add-on -- only the
+-- sub-objects meaningful for a flat-count add-on (no measured/available
+-- stock tracking) are modelled: how many were selected, and the maximum
+-- allowed.
+data ItemQuantity = ItemQuantity
+  { -- |
+    itemQuantityMaximum :: Maybe ItemCount,
+    -- |
+    itemQuantitySelected :: Maybe ItemCount
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON ItemQuantity where
+  parseJSON = genericParseJSON optionsItemQuantity
+
+instance ToJSON ItemQuantity where
+  toJSON = genericToJSON optionsItemQuantity
+
+optionsItemQuantity :: Options
+optionsItemQuantity =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("itemQuantityMaximum", "maximum"),
+        ("itemQuantitySelected", "selected")
+      ]
+
+-- | ONDC v2.1.0: a simple item count (used within ItemQuantity)
+data ItemCount = ItemCount
+  { -- |
+    itemCountCount :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON ItemCount where
+  parseJSON = genericParseJSON optionsItemCount
+
+instance ToJSON ItemCount where
+  toJSON = genericToJSON optionsItemCount
+
+optionsItemCount :: Options
+optionsItemCount =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [("itemCountCount", "count")]
 
 -- | Describes the products or services offered by a BPP. This is typically sent as the response to a search intent from a BAP. The payment terms, offers and terms of fulfillment supported by the BPP can also be included here. The BPP can show hierarchical nature of products/services in its catalog using the parent_category_id in categories. The BPP can also send a ttl (time to live) in the context which is the duration for which a BAP can cache the catalog and use the cached catalog.  &lt;br&gt;This has properties like bbp/descriptor,bbp/categories,bbp/fulfillments,bbp/payments,bbp/offers,bbp/providers and exp&lt;br&gt;This is used in the following situations.&lt;br&gt;&lt;ul&gt;&lt;li&gt;This is typically used in the discovery stage when the BPP sends the details of the products and services it offers as response to a search intent from the BAP. &lt;/li&gt;&lt;/ul&gt;
 data Catalog = Catalog

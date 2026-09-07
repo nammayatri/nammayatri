@@ -14,8 +14,10 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
+import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DeliveryDetails as DTDD
@@ -46,6 +48,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
@@ -96,7 +99,10 @@ data InitReq = InitReq
     paymentMode :: Maybe DMPM.PaymentMode,
     displayBookingId :: Maybe Text,
     riderGender :: Maybe Text,
-    discountAmount :: Maybe HighPrecMoney
+    discountAmount :: Maybe HighPrecMoney,
+    -- | A BAP can select more than one add-on on the same item -- empty when
+    -- none was echoed, never a single Maybe.
+    addOns :: [Spec.AddOn]
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -156,13 +162,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
+        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing quote.addOnData
         QRB.createBooking booking
         cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
         distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
@@ -248,8 +254,9 @@ handler merchantId req validatedReq = do
       Maybe Text ->
       Maybe Text ->
       Maybe Bool ->
+      [DAddOnConfig.AddOnData] ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide mbPreferenceMatchScore searchTryId dqDurationToPickup emailDomain businessEmailDomain isAutoAccepted = do
+    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide mbPreferenceMatchScore searchTryId dqDurationToPickup emailDomain businessEmailDomain isAutoAccepted addOnData = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -345,6 +352,7 @@ handler merchantId req validatedReq = do
             paymentChargeBearer = chargeRes.paymentChargeBearer,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
+            addOnData = addOnData,
             exotelDeclinedCallStatusReceivingTime = Nothing,
             numberOfLuggages = searchRequest.numberOfLuggages,
             isPickupOrDestinationEdited = Just False,
@@ -419,8 +427,9 @@ validateRequest ::
   ) =>
   Id DM.Merchant ->
   InitReq ->
+  Bool ->
   m ValidatedInitReq
-validateRequest _merchantId req = do
+validateRequest _merchantId req isOndcScheduledRideSupportEnabled = do
   now <- getCurrentTime
   case req.fulfillmentId of
     DriverQuoteId driverQuoteId -> do
@@ -436,6 +445,12 @@ validateRequest _merchantId req = do
         updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
         when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
           throwError $ QuoteExpired updatedDriverQuote.id.getId
+        -- Synchronous NACK, before any fork -- same shape as /select. The
+        -- add-on selection lives on SearchTry (not DriverQuote) for the
+        -- Estimate-based/dynamic-offer path. Pilot-gated, like every
+        -- other add-on touchpoint.
+        when isOndcScheduledRideSupportEnabled $
+          SAddOn.verifyAddOnEcho searchTry.addOnData searchRequest.merchantOperatingCityId (Just updatedDriverQuote.vehicleServiceTier) req.addOns
         return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate updatedDriverQuote searchTry}
     QuoteId quoteId -> do
       quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -443,6 +458,10 @@ validateRequest _merchantId req = do
         throwError $ QuoteExpired quote.id.getId
       searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       validatePaymentMode searchRequest
+      -- Synchronous NACK, before any fork -- same shape as /select.
+      -- Pilot-gated, like every other add-on touchpoint.
+      when isOndcScheduledRideSupportEnabled $
+        SAddOn.verifyAddOnEcho quote.addOnData searchRequest.merchantOperatingCityId (Just quote.vehicleServiceTier) req.addOns
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
     callWithErrorHandling transactionId action = do

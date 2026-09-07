@@ -17,6 +17,7 @@ module Domain.Types.Quote where
 
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import Domain.Types.AddOnConfig (AddOnData)
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Merchant as DMerchant
@@ -50,6 +51,7 @@ data Quote = Quote
     navigationInstruction :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    addOnData :: [AddOnData]
   }
   deriving (Generic, Show)

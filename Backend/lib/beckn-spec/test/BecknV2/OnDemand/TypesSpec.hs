@@ -59,7 +59,8 @@ sampleAddOn =
   Spec.AddOn
     { addOnDescriptor = Just sampleDescriptor,
       addOnId = Just "extra_km_10",
-      addOnPrice = Just samplePrice
+      addOnPrice = Just samplePrice,
+      addOnQuantity = Just Spec.ItemQuantity {itemQuantityMaximum = Just Spec.ItemCount {itemCountCount = Just 1}, itemQuantitySelected = Just Spec.ItemCount {itemCountCount = Just 1}}
     }
 
 sampleCancellationTerm :: Spec.CancellationTerm
@@ -95,7 +96,7 @@ spec = describe "BecknV2.OnDemand.Types" $ do
       roundTrip sampleAddOn
 
     it "round-trips with Nothing fields" $ do
-      let addOn = Spec.AddOn {addOnDescriptor = Nothing, addOnId = Nothing, addOnPrice = Nothing}
+      let addOn = Spec.AddOn {addOnDescriptor = Nothing, addOnId = Nothing, addOnPrice = Nothing, addOnQuantity = Nothing}
       roundTrip addOn
 
     it "serializes to correct JSON keys" $ do

@@ -3,6 +3,7 @@
 
 module Storage.Beam.SearchTry where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -18,7 +19,8 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data SearchTryT f = SearchTryT
-  { baseFare :: B.C f Kernel.Types.Common.Money,
+  { addOnData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    baseFare :: B.C f Kernel.Types.Common.Money,
     baseFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     batchingMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPoolConfig.BatchingMode),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),

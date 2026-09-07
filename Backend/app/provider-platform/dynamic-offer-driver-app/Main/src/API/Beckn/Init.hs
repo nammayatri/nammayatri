@@ -93,12 +93,10 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
       OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
 
-    -- Layer 1's echo-based fulfillment-id parse is unreliable once our fulfillment.type override runs, so pilot merchants re-derive it via OSRInit.correctFulfillmentId.
+    -- Pilot merchants: corrects Layer 1's echo-based fulfillment-id parse (unreliable once our fulfillment.type override runs) and patches in the wire item's add-ons, in one pass.
     dInitReq' <-
       if isOndcScheduledRideSupportEnabled
-        then do
-          correctedFulfillmentId <- OSRInit.correctFulfillmentId transactionId dInitReq.fulfillmentId
-          pure dInitReq {DInit.fulfillmentId = correctedFulfillmentId}
+        then OSRInit.buildOndcScheduledRideInitReq transactionId reqV2 dInitReq
         else pure dInitReq
 
     let txnId = Just transactionId
@@ -109,7 +107,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
       mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
       unless (isJust mbProcessed) $ do
-        validatedRes <- DInit.validateRequest transporterId dInitReq'
+        validatedRes <- DInit.validateRequest transporterId dInitReq' isOndcScheduledRideSupportEnabled
         fork "init request processing" $ do
           Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
             dInitRes <-

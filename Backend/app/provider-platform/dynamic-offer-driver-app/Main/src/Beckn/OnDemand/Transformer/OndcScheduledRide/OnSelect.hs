@@ -28,7 +28,7 @@ import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 -- | Builds the on_select order from a Quote and applies the ONDC overrides (route info, fulfillment.type, vehicle.energy_type).
 mkOnSelectMessageV2FromQuote ::
-  (CacheFlow m r, MonadFlow m) =>
+  (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
   Bool ->
   DBC.BecknConfig ->
   DM.Merchant ->
@@ -50,7 +50,7 @@ mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchRequest quote
             Spec.orderPayments = Just [paymentV2],
             Spec.orderProvider = mkProviderFromQuote bppConfig
           }
-  patchedOrder <- OSRCommon.applyOnSelectOrderOverrides searchRequest.transactionId order
+  patchedOrder <- OSRCommon.applyOnSelectOrderOverrides searchRequest.transactionId quote.addOnData order
   pure $ Spec.OnSelectReqMessage (Just patchedOrder)
 
 mkFulfillmentFromQuote :: SearchRequest -> DQuote.Quote -> Spec.Fulfillment

@@ -646,10 +646,12 @@ buildOnConfirmMessage booking ride driver veh transporterConfig = do
   -- transporterConfig is passed in by the caller (API.Beckn.Confirm), which
   -- already has it -- not re-fetched here.
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      onConfirmMessage =
-        if isOndcScheduledRideSupportEnabled
-          then onConfirmMessage' {Spec.confirmReqMessageOrder = OSRCommon.applyOndcScheduledRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder onConfirmMessage')}
-          else onConfirmMessage'
+  onConfirmMessage <-
+    if isOndcScheduledRideSupportEnabled
+      then do
+        orderWithOverrides <- OSRCommon.applyOndcScheduledRideAssignedOrderOverrides booking.isScheduled booking.quoteId False booking.addOnData (Spec.confirmReqMessageOrder onConfirmMessage')
+        pure onConfirmMessage' {Spec.confirmReqMessageOrder = orderWithOverrides}
+      else pure onConfirmMessage'
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
   pure onConfirmMessage
@@ -726,7 +728,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   rideAssignedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   -- Applies the ride-assigned ONDC overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, gated on booking.isScheduled, since pilot merchants need them on this push too.
-  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId False rideAssignedMsgV2'.onUpdateReqMessage
+  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId False booking.addOnData rideAssignedMsgV2'.onUpdateReqMessage
   let rideAssignedMsgV2 = rideAssignedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
@@ -783,7 +785,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2' <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
   -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
-  patchedOnStatusReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True rideStartedMsgV2'.onStatusReqMessage
+  patchedOnStatusReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True booking.addOnData rideStartedMsgV2'.onStatusReqMessage
   let rideStartedMsgV2 = rideStartedMsgV2' {Spec.onStatusReqMessage = patchedOnStatusReqMessage}
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
   fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
@@ -906,7 +908,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
   -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
-  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True rideCompletedMsgV2'.onUpdateReqMessage
+  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True booking.addOnData rideCompletedMsgV2'.onUpdateReqMessage
   let rideCompletedMsgV2 = rideCompletedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
@@ -970,11 +972,13 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   onSelectMsg' <- buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy
-  -- Fixes item.descriptor.code, item.tags and quote.breakup titles to match ONDC v2.1.0, since the dynamic-offer/bidding flow's on_select has no ONDC compliance override applied, unlike the Quote-based flow.
+  -- Fixes item.descriptor.code, item.tags and quote.breakup titles to match ONDC v2.1.0, since the dynamic-offer/bidding flow's on_select has no ONDC compliance override applied, unlike the Quote-based flow; also echoes back the selected add-ons.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchTry.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      fixMsg msg = msg {Spec.onSelectReqMessageOrder = (OSRCommon.overrideOrderItemCompliance . OSRCommon.overrideOrderBreakupTitles) <$> Spec.onSelectReqMessageOrder msg}
-      onSelectMsg = if isOndcScheduledRideSupportEnabled then fixMsg onSelectMsg' else onSelectMsg'
+  onSelectMsg <-
+    if isOndcScheduledRideSupportEnabled
+      then OSRCommon.applyDynamicOfferOnSelectOverrides searchTry.addOnData onSelectMsg'
+      else pure onSelectMsg'
   callOnSelectV2 transporter searchReq srfd searchTry onSelectMsg
   where
     buildOnSelectReq ::
@@ -1064,7 +1068,9 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   if isOndcScheduledRideSupportEnabled
-    then void $ callOnStatusV2 (OSROnStatus.ondcScheduledRideOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
+    then do
+      onStatusMsg <- OSROnStatus.ondcScheduledRideOnStatusMessageBuild booking.addOnData driverArrivedMsgV2
+      void $ callOnStatusV2 onStatusMsg retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 

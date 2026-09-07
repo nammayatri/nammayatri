@@ -78,3 +78,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN payment_instrument text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN batching_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN add_on_data json ;
