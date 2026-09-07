@@ -890,7 +890,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     DP.PREPAID_SUBSCRIPTION -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName Nothing
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (void . handleSubscriptionExpiry) ownerId ownerType serviceName Nothing
       pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))

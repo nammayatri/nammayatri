@@ -478,7 +478,7 @@ getSubcriptionStatusWithPlanPrepaid driverId = do
         subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId (show PREPAID_SUBSCRIPTION))
         Just <$> getVehicleCategory (cast driverId) subscriptionConfig
       else pure Nothing
-  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName (void . handleSubscriptionExpiry) ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
 updateSubscriptionStatusGeneric ::
@@ -621,7 +621,7 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
             subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show PREPAID_SUBSCRIPTION))
             Just <$> getVehicleCategory (cast personId) subscriptionConfig
           else pure Nothing
-      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName (void . handleSubscriptionExpiry) ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan

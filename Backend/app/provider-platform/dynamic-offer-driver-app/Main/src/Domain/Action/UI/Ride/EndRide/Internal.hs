@@ -198,6 +198,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   whenJust mbRiderDetailsId $ \riderDetailsId -> do
     QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   whenJust mbFareParams QFare.create
+  let settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
+  markPrepaidSettlementPending settlementOwnerId ride.id.getId
   QRB.updateStatus booking.id SRB.COMPLETED
   QRide.updateAll ride.id ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
@@ -294,6 +296,7 @@ processEndRideFinance ::
   TransporterConfig ->
   m ()
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
+  markPrepaidSettlementPending settlementOwnerId ride.id.getId
   -- Compute fare components
   let totalFare = fromMaybe 0 ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
@@ -319,12 +322,15 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       if DCommon.checkFleetOwnerRole person.role
         then pure (DSP.FLEET_OWNER, person.id.getId)
         else pure (DSP.DRIVER, person.id.getId)
-  mbPrepaidPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
-  let serviceName = if isJust mbPrepaidPurchase then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
 
-  -- 1. Subscription Flow — route by serviceName
+  allActivePrepaidPurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  nowForPrepaidExpiry <- getCurrentTime
+  let expiredPrepaidPurchases = filter (\p -> maybe False (<= nowForPrepaidExpiry) p.expiryDate) allActivePrepaidPurchases
+      serviceName = if not (null allActivePrepaidPurchases) then PREPAID_SUBSCRIPTION else YATRI_SUBSCRIPTION
+
+  -- 1. Subscription Flow — route by serviceName.
   case serviceName of
-    PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFare mbVehicleCategory
+    PREPAID_SUBSCRIPTION -> processEndRidePrepaidSubscription baseFare mbVehicleCategory expiredPrepaidPurchases
     _ | thresholdConfig.subscription -> createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
     _ -> pure ()
 
@@ -334,8 +340,29 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
   AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
+
+  clearPrepaidSettlementPending settlementOwnerId ride.id.getId
   where
-    processEndRidePrepaidSubscription fare mbVC = do
+    settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
+
+    finalizeDeferredExpiry expiredPurchases ownerId ownerType mbVC = do
+      clearPrepaidSettlementPending settlementOwnerId ride.id.getId
+      unless (null expiredPurchases) $ do
+        logInfo $ "Finalizing deferred subscription expiry after end-ride debit for: " <> show ((.getId) . (.id) <$> expiredPurchases)
+        anyExpired <- Kernel.Prelude.or <$> mapM handleSubscriptionExpiry expiredPurchases
+        when anyExpired $ do
+          mbActivated <- activateNextQueuedPurchaseExpiry ownerId ownerType mbVC
+          whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+            now <- getCurrentTime
+            createJobIn @_ @'ExpireSubscriptionPurchase
+              (Just booking.providerId)
+              (Just booking.merchantOperatingCityId)
+              (diffUTCTime expiry now)
+              $ ExpireSubscriptionPurchaseJobData
+                { subscriptionPurchaseId = nextPurchaseId
+                }
+
+    processEndRidePrepaidSubscription fare mbVC expiredPurchases = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
@@ -369,7 +396,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                   $ ExpireSubscriptionPurchaseJobData
                     { subscriptionPurchaseId = nextPurchaseId
                     }
-            pure ()
+            finalizeDeferredExpiry expiredPurchases fleetOwnerId.getId DSP.FLEET_OWNER mbVC
         Nothing -> do
           Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
@@ -413,6 +440,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
               let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
                   unsubscribedTitle = "Low Balance Alert!"
               sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+            finalizeDeferredExpiry expiredPurchases ride.driverId.getId DSP.DRIVER mbVC
 
     mkRideDebitAllocationMetadata counterpartyType ownerId ownerType fare mbVC = do
       allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVC
@@ -443,7 +471,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
           if DCommon.checkFleetOwnerRole person.role
             then pure (DSP.FLEET_OWNER, person.id.getId)
             else pure (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId' ownerType' PREPAID_SUBSCRIPTION mbVC
+      mbPurchase <- lastMay . DL.sortOn (.purchaseTimestamp) <$> QSPE.findAllActiveByOwnerAndServiceName ownerId' ownerType' PREPAID_SUBSCRIPTION mbVC
       let mbSyntheticPlan = Plan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
       plan <- getPlan mbSyntheticPlan PREPAID_SUBSCRIPTION booking.merchantOperatingCityId Nothing Nothing
       case plan of
