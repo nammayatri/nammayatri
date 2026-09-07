@@ -862,3 +862,18 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN route_cache_max_duration_deviation
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_adjacent_geo_hash_place_name_lookup boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN always_allowed_notification_categories text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_categories SET DEFAULT '{RIDE_RELATED,SAFETY}';
+
+
+------- SQL updates -------
+

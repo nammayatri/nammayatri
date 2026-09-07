@@ -202,4 +202,4 @@ notifyPersonOnAmountCredit person = do
   mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
-    Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+    Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)

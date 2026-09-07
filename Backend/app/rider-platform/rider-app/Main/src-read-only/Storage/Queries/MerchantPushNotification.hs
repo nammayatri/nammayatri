@@ -4,6 +4,7 @@
 
 module Storage.Queries.MerchantPushNotification where
 
+import qualified Domain.Types.Extra.RiderPreferences
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification
 import qualified Domain.Types.Trip
@@ -25,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityAndMessageKeyAndTripCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId key tripCategory = do
   findAllWithKV
     [ Se.And
@@ -37,12 +38,12 @@ findAllByMerchantOpCityAndMessageKeyAndTripCategory merchantOperatingCityId key 
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOpCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m ([Domain.Types.MerchantPushNotification.MerchantPushNotification]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
 findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
   findAllWithKV
     [ Se.And
@@ -67,6 +68,7 @@ updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotificati
       Se.Set Beam.language language,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.notificationCategory (Kernel.Prelude.Just notificationCategory),
       Se.Set Beam.shouldTrigger (Kernel.Prelude.Just shouldTrigger),
       Se.Set Beam.title title,
       Se.Set Beam.tripCategory tripCategory,
@@ -87,6 +89,7 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
             language = language,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            notificationCategory = Kernel.Prelude.fromMaybe Domain.Types.Extra.RiderPreferences.RIDE_RELATED notificationCategory,
             shouldTrigger = Kernel.Prelude.fromMaybe True shouldTrigger,
             title = title,
             tripCategory = tripCategory,
@@ -105,6 +108,7 @@ instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotific
         Beam.language = language,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.notificationCategory = Kernel.Prelude.Just notificationCategory,
         Beam.shouldTrigger = Kernel.Prelude.Just shouldTrigger,
         Beam.title = title,
         Beam.tripCategory = tripCategory,
