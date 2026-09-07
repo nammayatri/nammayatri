@@ -21,6 +21,7 @@ import qualified Data.Aeson.Types as A
 import Data.Default.Class
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import Domain.Types.Common as DI (DriverMode (..))
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -463,5 +464,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     billingCategory :: SLT.BillingCategory,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
-    driverPreference :: Maybe [Text]
+    driverPreference :: Maybe [Text],
+    addOnData :: [DAddOnConfig.AddOnData]
   }

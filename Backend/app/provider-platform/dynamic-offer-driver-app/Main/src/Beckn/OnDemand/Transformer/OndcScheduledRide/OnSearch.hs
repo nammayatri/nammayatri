@@ -6,6 +6,7 @@ module Beckn.OnDemand.Transformer.OndcScheduledRide.OnSearch
     ondcScheduledRidePatchProviderFulfillmentTypes,
     ondcScheduledRidePatchScheduledLocations,
     ondcScheduledRidePatchCatalogCompliance,
+    ondcScheduledRidePatchAddOns,
   )
 where
 
@@ -14,28 +15,35 @@ import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
+import qualified Data.Map as M
 import qualified Domain.Action.Beckn.Search as DSearch
+import Domain.Types.AddOnConfig (AddOnConfig)
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
+import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
+import qualified SharedLogic.AddOn as SAddOn
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
--- | Single entry point for API.Beckn.Search.search: fetches beckn_config and
--- the BAP's BapMetadata, then applies every ONDC-scheduled-ride patch to the
--- already-built on_search reply, in order.
-ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Text -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
-ondcScheduledRideOnSearchMessageBuild merchantId bapId dSearchRes onSearchReq = do
+-- | Single entry point for API.Beckn.Search.search: fetches beckn_config,
+-- the BAP's BapMetadata, and the add-ons on offer in this city, then applies
+-- every ONDC-scheduled-ride patch to the already-built on_search reply, in order.
+ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
+ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId bapId dSearchRes onSearchReq = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
   mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
+  addOnMap <- SAddOn.getAddOn merchantOpCityId True
   pure $
-    ( ondcScheduledRidePatchCatalogCompliance
+    ( ondcScheduledRidePatchAddOns addOnMap dSearchRes
+        . ondcScheduledRidePatchCatalogCompliance
         . ondcScheduledRidePatchScheduledLocations dSearchRes
         . ondcScheduledRidePatchProviderFulfillmentTypes
         . ondcScheduledRideAddBppTerms mbBapMetadata bppConfig
@@ -147,3 +155,25 @@ ondcScheduledRidePatchCatalogCompliance onSearchReq =
       | otherwise = "SEDAN"
     fixFulfillment fulfillment = fulfillment {Spec.fulfillmentVehicle = fixVehicle <$> fulfillment.fulfillmentVehicle}
     fixVehicle vehicle = vehicle {Spec.vehicleVariant = overrideVehicleVariant <$> vehicle.vehicleVariant}
+
+-- | Attaches item.add_ons for every add_on_config row on offer in this city, additive alongside whatever Layer 1 already put there. Each item's wire id is the pricingId Layer 1 gave it (always an estimate or quote id), so its tier is recovered by looking that id back up in DSearchRes's own estimates/quotes.
+ondcScheduledRidePatchAddOns :: M.Map (Maybe ServiceTierType) [AddOnConfig] -> DSearch.DSearchRes -> Spec.OnSearchReq -> Spec.OnSearchReq
+ondcScheduledRidePatchAddOns addOnMap dSearchRes onSearchReq =
+  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
+  where
+    tierByItemId :: M.Map Text ServiceTierType
+    tierByItemId =
+      M.fromList $
+        map (\(estimate, tier, _, _) -> (getId estimate.id, tier.serviceTierType)) dSearchRes.estimates
+          <> map (\(quote, tier, _, _) -> (getId quote.id, tier.serviceTierType)) dSearchRes.quotes
+
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog msg.onSearchReqMessageCatalog}
+    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> cat.catalogProviders}
+    fixProvider provider = provider {Spec.providerItems = map fixItem <$> provider.providerItems}
+    fixItem item = case item.itemId >>= (`M.lookup` tierByItemId) of
+      Nothing -> item
+      Just tier ->
+        let configAddOns = map SAddOn.buildSpecAddOn $ SAddOn.mkAddOnCatalogEntries addOnMap tier
+         in case item.itemAddOns <> Just configAddOns of
+              Just [] -> item
+              addOns -> item {Spec.itemAddOns = addOns}

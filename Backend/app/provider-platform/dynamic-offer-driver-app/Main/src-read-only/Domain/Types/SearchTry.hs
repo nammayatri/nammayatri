@@ -4,6 +4,7 @@
 module Domain.Types.SearchTry where
 
 import Data.Aeson
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -20,7 +21,8 @@ import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data SearchTry = SearchTry
-  { baseFare :: Kernel.Types.Common.HighPrecMoney,
+  { addOnData :: [Domain.Types.AddOnConfig.AddOnData],
+    baseFare :: Kernel.Types.Common.HighPrecMoney,
     batchingMode :: Kernel.Prelude.Maybe Domain.Types.DriverPoolConfig.BatchingMode,
     billingCategory :: SharedLogic.Type.BillingCategory,
     businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
