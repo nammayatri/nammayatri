@@ -7,6 +7,7 @@
 imports:
   RiderPreferences: Domain.Types.RiderPreferences
   PreferenceType: Domain.Types.Extra.RiderPreferences
+  NotificationCategory: Domain.Types.Extra.RiderPreferences
   APISuccess: Kernel.Types.APISuccess
 
 module: RiderPreferences
@@ -24,11 +25,19 @@ types:
     pickupAddress: Maybe Text
     pickupAddressSubtitle: Maybe Text
 
+  # Notification category opt-in, sent once the rider has responded to the in-app
+  # notification-permission popup (or whenever the client re-syncs OS permission state).
+  # enabledCategories is the ONLY field the backend send-path gate reads;
+  # osPermissionGranted is stored for visibility/analytics only.
+  NotificationPreferenceReqData:
+    osPermissionGranted: Bool
+    enabledCategories: "[NotificationCategory]"
+
   # Top-level POST body — preferenceType tells us which optional data block to read.
-  # Only locationData is relevant right now; other blocks can be added later.
   RiderPreferenceReq:
     preferenceType: PreferenceType
     locationData: Maybe LocationPickupReqData
+    notificationPreferenceData: Maybe NotificationPreferenceReqData
 
   # ---------- GET response ----------
   # One entry per saved pickup location (one per source geohash).
@@ -52,10 +61,19 @@ types:
   RiderPreferencesResp:
     locationPickups: "[LocationPickupRespData]"
 
+  NotificationPreferenceRespData:
+    osPermissionGranted: Bool
+    enabledCategories: "[NotificationCategory]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
   # GET ALL response — all preferences for the rider, grouped by type.
   # locationPickups contains all saved pickup locations (not filtered by geohash).
+  # notificationPreference is Nothing if the rider has never responded to the popup —
+  # the client should treat that as "not yet decided" and may show the popup.
   AllRiderPreferencesResp:
     locationPickups: "[LocationPickupRespData]"
+    notificationPreference: Maybe NotificationPreferenceRespData
 
 apis:
   # Save or update a preference.

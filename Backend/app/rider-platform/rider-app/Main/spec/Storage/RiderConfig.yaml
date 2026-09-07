@@ -25,6 +25,7 @@ imports:
   BaseUrl: Servant.Client.Core
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
+  NotificationCategory: Domain.Types.Extra.RiderPreferences
 
 RiderConfig:
   types:
@@ -315,6 +316,12 @@ RiderConfig:
     # With it off an unnamed point keeps the customer's own address, which is a short walk
     # away -- a worse name, not a wrong place.
     betterPointResolvePlaceNameOnSelect: Maybe Bool
+    # Categories sent regardless of the rider's own NOTIFICATION_PREFERENCE
+    # (isNotificationCategoryAllowed in Tools/Notifications.hs checks this first, before
+    # the rider's own opt-in list) -- for notifications that drive in-app behaviour
+    # (e.g. state sync, live tracking) rather than being purely informational, where
+    # suppressing the send would break the app, not just annoy the rider.
+    alwaysAllowedNotificationCategories: "[NotificationCategory]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -379,6 +386,7 @@ RiderConfig:
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
+    alwaysAllowedNotificationCategories: "Maybe [Text]"
   constraints:
     merchantOperatingCityId: PrimaryKey
     frfsMetricsApiKey: "!SecondaryKey"
@@ -449,6 +457,7 @@ RiderConfig:
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    alwaysAllowedNotificationCategories: fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack))|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -512,9 +521,11 @@ RiderConfig:
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
     invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
     syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
+    alwaysAllowedNotificationCategories: Just (map show alwaysAllowedNotificationCategories)|E
 
 
   default:
+    alwaysAllowedNotificationCategories: "'{RIDE_RELATED,SAFETY}'"
     enableLocalPoliceSupport: "false"
     enableIGMIssueFlow: "false"
     enableSupportForSafety: "false"
@@ -597,6 +608,7 @@ RiderConfig:
     subwayTransitTypes: text []
     busTrackingNotificationTiers: text []
     busApproachingNotificationTiers: text []
+    alwaysAllowedNotificationCategories: text []
     domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []
