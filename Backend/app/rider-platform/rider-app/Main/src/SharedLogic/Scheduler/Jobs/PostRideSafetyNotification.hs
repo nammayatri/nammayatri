@@ -52,7 +52,7 @@ postRideSafetyNotification Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     let entityData = NotifReq {title = "Did you have a safe journey?", message = "Thank you for riding with us. Please share your ride experience."}
     logDebug "Triggering notification for post ride safety check"
-    notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK
+    notifyPersonOnEvents person entityData POST_RIDE_SAFETY_CHECK Nothing
     let scheduleAfter = riderConfig.ivrTriggerDelay
         safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = personId}
     createJobIn @_ @'SafetyIVR ride.merchantId ride.merchantOperatingCityId scheduleAfter (safetyIvrJobData :: SafetyIVRJobData)

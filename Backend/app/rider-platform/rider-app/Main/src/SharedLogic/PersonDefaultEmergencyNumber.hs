@@ -73,7 +73,7 @@ sendNotificationToEmergencyContact senderPersonId recipientPerson body title not
   notificationSoundFromConfig <- SQNSC.findByNotificationType notificationType recipientPerson.merchantOperatingCityId
   disabilityTag <- getDisabilityTag recipientPerson.hasDisability recipientPerson.id
   notificationSound <- getNotificationSound disabilityTag notificationSoundFromConfig
-  notifyPerson recipientPerson.merchantId recipientPerson.merchantOperatingCityId recipientPerson.id (buildNotificationData notificationSound) Nothing
+  notifyPerson recipientPerson.merchantId recipientPerson.merchantOperatingCityId recipientPerson.id Nothing (buildNotificationData notificationSound) Nothing
   where
     buildNotificationData notificationSound =
       Notification.NotificationReq
