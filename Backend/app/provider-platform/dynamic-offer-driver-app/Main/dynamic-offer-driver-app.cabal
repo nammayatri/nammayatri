@@ -668,6 +668,7 @@ library
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
+      SharedLogic.TaxRemittance
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type

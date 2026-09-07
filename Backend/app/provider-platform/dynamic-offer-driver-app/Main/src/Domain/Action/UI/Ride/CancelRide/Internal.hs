@@ -83,6 +83,7 @@ import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import qualified SharedLogic.TaxRemittance as SLT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -319,8 +320,8 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           cancelIsVat = fromMaybe False booking.fareParams.isVatTaxType
-          -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-          cancellationTaxDest = if cancelIsVat then OwnerLiability else GovtIndirect
+          cancellationAccounts = SLT.taxAccountsFor (SLT.resolveMode transporterConfig.taxConfig.cancellationTaxRemittanceMode transporterConfig.taxConfig.rideTaxRemittanceMode (SLT.legacyRideMode booking.fareParams.isVatTaxType))
+          cancellationTaxDest = cancellationAccounts.forwardDest
           cancellationComponents =
             [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
               (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
@@ -463,14 +464,13 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
       -- No overdue amounts configured => no reduction: the driver keeps the full fee.
       overdueCharge = fromMaybe cancellationFee (mbCancellationDuesDetails >>= (.overdueCancellationCharge))
       overdueTax = fromMaybe cancellationFeeTax (mbCancellationDuesDetails >>= (.overdueCancellationTax))
-      -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-      cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
+      cancellationAccounts = SLT.taxAccountsFor (SLT.resolveMode transporterConfig.taxConfig.cancellationTaxRemittanceMode transporterConfig.taxConfig.rideTaxRemittanceMode (SLT.legacyRideMode booking.fareParams.isVatTaxType))
+      cancellationTaxDest = cancellationAccounts.forwardDest
       -- When a cancellation goes overdue the driver only gets the (lower) overdue charge; the
       -- platform keeps the (cancellation - overdue) difference as SellerRevenue.
       overdueBenefit = max 0 (cancellationFee - overdueCharge)
       overdueBenefitTax = max 0 (cancellationFeeTax - overdueTax)
-      -- Benefit tax: VAT portion is the platform's revenue, GST is remitted to govt.
-      overdueBenefitTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then SellerRevenue else GovtIndirect
+      overdueBenefitTaxDest = cancellationAccounts.benefitForwardDest
       -- Only the driver's entries reach a payout, so only these ever carry a settlementStatus.
       overdueDriverRefs = [walletReferenceOverdueCancellationCharge, walletReferenceOverdueCancellationTax]
       overdueAllRefs = overdueDriverRefs <> [walletReferenceCancellationOverdueBenefit, walletReferenceCancellationOverdueBenefitTax]

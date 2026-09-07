@@ -1143,3 +1143,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN limits_config j
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_estimated_toll_fallback boolean  default false;
+
+
+
+------- SQL updates -------
+
