@@ -41,6 +41,7 @@ module Tools.Verification
     fetchAndExtractVerifiedAadhaar,
     getVerifiedAadhaarXML,
     getOCRResultPAN,
+    detectImage,
   )
 where
 
@@ -57,7 +58,8 @@ import qualified Kernel.External.Tokenize.Interface.Types as TIFT
 import qualified Kernel.External.Tokenize.Types as TT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
-  ( extractAadhaarImage,
+  ( detectImage,
+    extractAadhaarImage,
     extractDLImage,
     extractGSTImage,
     extractPanImage,
@@ -84,7 +86,7 @@ import Kernel.External.Verification as Reexport hiding
   )
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
-import Kernel.External.Verification.Interface.InternalScripts hiding (validateImage)
+import Kernel.External.Verification.Interface.InternalScripts hiding (detectImage, validateImage)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -517,3 +519,12 @@ getVerifiedAadhaarXML ::
   m Text
 getVerifiedAadhaarXML _merchantId merchantOpCityId req =
   callService merchantOpCityId DigiLocker Verification.getVerifiedAadhaarXML req
+
+detectImage ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  OCRRequest ->
+  m FaceDetectionSummary
+detectImage _merchantId merchantOpCityId req =
+  callService merchantOpCityId VT.InternalImageDetection Verification.detectImage req

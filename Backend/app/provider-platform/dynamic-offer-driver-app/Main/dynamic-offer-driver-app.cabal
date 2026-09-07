@@ -314,6 +314,7 @@ library
       Domain.Action.UI.DriverOnboarding.HyperVergeWebhook
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
+      Domain.Action.UI.DriverOnboarding.ImageDetection
       Domain.Action.UI.DriverOnboarding.PanVerification
       Domain.Action.UI.DriverOnboarding.PullDocument
       Domain.Action.UI.DriverOnboarding.Referral

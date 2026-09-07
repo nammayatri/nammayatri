@@ -20,6 +20,7 @@ import qualified Domain.Action.UI.DriverOnboarding.DocumentRegistration as Docum
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.ImageDetection as ImageDetection
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
@@ -116,6 +117,10 @@ type API =
                       :> QueryParam "imageId" Text
                       :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
                 )
+           :<|> "detectImage"
+             :> TokenAuth
+             :> ReqBody '[JSON] ImageDetection.DetectImageReq
+             :> Post '[JSON] ImageDetection.DetectImageResp
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -159,6 +164,7 @@ handler =
       :<|> verifyAadhaarOtp
       :<|> unVerifiedAadhaarData
       :<|> (getOCRResultRC :<|> getOCRResultDL :<|> getOCRResultPAN)
+      :<|> detectImageHandler
   )
     :<|> addReferral
     :<|> getReferredDrivers
@@ -240,3 +246,6 @@ getOCRResultDL (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ 
 
 getOCRResultPAN :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 getOCRResultPAN (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultPAN personId mbImageId
+
+detectImageHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> ImageDetection.DetectImageReq -> FlowHandler ImageDetection.DetectImageResp
+detectImageHandler (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ ImageDetection.detectImage (personId, merchantId, merchantOpCityId) req
