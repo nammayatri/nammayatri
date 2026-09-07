@@ -618,6 +618,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 domainTransactionId = Nothing,
                 isMockPayment = Just False,
                 isExternalOrder = Nothing,
+                useWebhookConfig = Nothing,
                 effectAmount = Nothing,
                 pgBaseFee = Nothing,
                 pgGst = Nothing,
@@ -928,9 +929,6 @@ buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderV
         DOrder.PaymentOrder
           { id = Id req.orderId,
             shortId = ShortId req.orderShortId,
-            -- Placeholder: the column is NOT NULL and there is no session response to take the
-            -- gateway's own id from. orderStatusService overwrites this with the real id the first
-            -- time order status reports it.
             paymentServiceOrderId = req.orderShortId,
             requestId = Nothing,
             service = Nothing,
@@ -972,6 +970,7 @@ buildExternalPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderV
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
             isExternalOrder = Just True,
+            useWebhookConfig = Nothing,
             paytmTid = Nothing,
             groupId = mbGroupId,
             vpa = Nothing,
@@ -1107,6 +1106,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             effectAmount = Nothing,
             isMockPayment = Just isMockPayment,
             isExternalOrder = Nothing,
+            useWebhookConfig = Nothing,
             paytmTid = Nothing,
             groupId = mbGroupId,
             vpa = Nothing,
@@ -2443,6 +2443,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             effectAmount = Nothing,
             isMockPayment = Just False,
             isExternalOrder = Nothing,
+            useWebhookConfig = Nothing,
             paytmTid = Nothing,
             groupId = Nothing,
             vpa = Nothing,
@@ -2460,7 +2461,7 @@ createRefundService ::
   ) =>
   Id MerchantOperatingCity ->
   ShortId DOrder.PaymentOrder ->
-  (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
+  (Maybe Bool -> Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
   m (Maybe Payment.AutoRefundResp)
 createRefundService merchantOpCityId orderShortId refundsCall =
   do
@@ -2498,7 +2499,7 @@ createRefundService merchantOpCityId orderShortId refundsCall =
           refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount PInterface.REFUND_PENDING
           let mbAction = Just "create refunds service"
           HQRefunds.create merchantOpCityId refundsEntry mbAction
-          resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
+          resp <- withTryCatch "refundsCall:refundService" (refundsCall order.useWebhookConfig refundReq)
           case resp of
             Right response -> do
               mapM_ (upsertRefundStatus merchantOpCityId order) response.refunds

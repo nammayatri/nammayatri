@@ -1570,16 +1570,9 @@ buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType
   serviceConfig <- TPayment.getPaymentServiceConfig merchantId merchantOperatingCityId Nothing paymentType person.clientSdkVersion
   case serviceConfig of
     KT.JuspayConfig cfg -> do
-      let clientId = fromMaybe cfg.merchantId cfg.pseudoClientId
-          -- Same assembly as Interface.Juspay.createOrder: host from the request, path from config.
-          -- Both must be present, so this is Nothing whenever the config carries no webhookUrl.
-          cfgWebhookUrl = do
-            reqUrl <- interfaceReq.webhookUrl
-            configPath <- cfg.webhookUrl
-            let baseHost = showBaseUrl reqUrl {baseUrlPath = ""}
-                normalizedPath = if "/" `T.isPrefixOf` configPath then configPath else "/" <> configPath
-            pure $ baseHost <> normalizedPath
-      Juspay.mkCreateOrderReq cfg.returnUrl cfg.autoRefundConflictThresholdMinutes cfgWebhookUrl clientId cfg.merchantId interfaceReq
+      when (paymentOrder.useWebhookConfig /= Just True) $
+        QOrder.updateUseWebhookConfig paymentOrder.id (Just True)
+      Juspay.getCreateOrderReq cfg (Just True) interfaceReq
     _ -> throwError $ InternalError "Expected a Juspay payment service config to build an external order request"
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text

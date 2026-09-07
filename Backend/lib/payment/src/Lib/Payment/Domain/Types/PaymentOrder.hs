@@ -69,6 +69,7 @@ data PaymentOrderE e = PaymentOrder
     effectAmount :: Maybe HighPrecMoney,
     isMockPayment :: Maybe Bool,
     isExternalOrder :: Maybe Bool,
+    useWebhookConfig :: Maybe Bool,
     paytmTid :: Maybe Text,
     groupId :: Maybe Text,
     vpa :: Maybe Text,

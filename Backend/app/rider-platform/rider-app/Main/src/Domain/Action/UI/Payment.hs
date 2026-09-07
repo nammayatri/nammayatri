@@ -579,18 +579,22 @@ fetchPaymentServiceConfig ::
   Maybe Context.City ->
   Maybe Payment.PaymentServiceType ->
   Maybe Text ->
+  Maybe Bool ->
   Payment.PaymentService ->
   Flow (Payment.PaymentServiceConfig, DMOC.MerchantOperatingCity)
-fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service = do
+fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId mbUseWebhookConfig service = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let city = fromMaybe merchant.defaultCity mbCity
+      useWebhookConfig = mbUseWebhookConfig == Just True
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
   placeBasedConfig <- case mbPlaceId of
-    Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
-    Nothing -> return Nothing
+    Just id | not useWebhookConfig -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
+    _ -> return Nothing
+  let serviceName = if useWebhookConfig then DMSC.WebhookPaymentService service else getPaymentServiceByType mbServiceType
+  logDebug $ "fetchPaymentServiceConfig|serviceName=" <> show serviceName <> "|useWebhookConfig=" <> show useWebhookConfig
   merchantServiceConfig' <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)}) Nothing
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just serviceName}) Nothing
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show serviceName))
   (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
@@ -598,6 +602,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.WebhookPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.JuspayWalletServiceConfig vsc) -> pure vsc
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -619,11 +624,12 @@ juspayWebhookHandler ::
   Maybe Context.City ->
   Maybe Payment.PaymentServiceType ->
   Maybe Text ->
+  Maybe Bool ->
   BasicAuthData ->
   Value ->
   Flow AckResponse
-juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
-  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
+juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbUseWebhookConfig authData value = do
+  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId mbUseWebhookConfig Payment.Juspay
   let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCity.id
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig (DPayment.juspayWebhookService commonMerchantOperatingCityId) authData value
   osr <- case orderWebhookResponse of
@@ -642,7 +648,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
             ticketBooking <- QTB.findById (cast paymentOrder.id)
             return $ ticketBooking <&> (.ticketPlaceId)
           _ -> return Nothing
-      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
+      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType paymentOrder.useWebhookConfig (Just paymentOrder.personId.getId) person.clientSdkVersion paymentOrder.isMockPayment
       void $ callWebhookHandlerWithOrderStatus merchantOperatingCity paymentServiceType (ShortId orderShortId) orderStatusCall
   pure Ack
   where
@@ -795,7 +801,7 @@ stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId
   let serviceName = case paymentMode of
         DMPM.LIVE -> Payment.Stripe
         DMPM.TEST -> Payment.StripeTest
-  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
+  (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Nothing serviceName
   let checkDuplicatedEvent eventId =
         isDuplicateStripeWebhookEvent
           (stripePaymentWebhookEventDedupKey paymentMode eventId)

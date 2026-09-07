@@ -58,6 +58,7 @@ data ServiceName
   | PassPaymentService Payment.PaymentService
   | ParkingPaymentService Payment.PaymentService
   | MembershipPaymentService Payment.PaymentService
+  | WebhookPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
@@ -92,6 +93,7 @@ instance Show ServiceName where
   show (PassPaymentService s) = "PassPayment_" <> show s
   show (ParkingPaymentService s) = "ParkingPayment_" <> show s
   show (MembershipPaymentService s) = "MembershipPayment_" <> show s
+  show (WebhookPaymentService s) = "WebhookPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
@@ -166,6 +168,10 @@ instance Read ServiceName where
                ]
             ++ [ (MembershipPaymentService v1, r2)
                  | r1 <- stripPrefix "MembershipPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (WebhookPaymentService v1, r2)
+                 | r1 <- stripPrefix "WebhookPayment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (IssueTicketService v1, r2)
@@ -244,6 +250,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PassPaymentServiceConfig !PaymentServiceConfig
   | ParkingPaymentServiceConfig !PaymentServiceConfig
   | MembershipPaymentServiceConfig !PaymentServiceConfig
+  | WebhookPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
@@ -285,6 +292,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (PassPaymentServiceConfig cfg) = "PassPaymentServiceConfig " <> show cfg
   show (ParkingPaymentServiceConfig cfg) = "ParkingPaymentServiceConfig " <> show cfg
   show (MembershipPaymentServiceConfig cfg) = "MembershipPaymentServiceConfig " <> show cfg
+  show (WebhookPaymentServiceConfig cfg) = "WebhookPaymentServiceConfig " <> show cfg
   show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
   show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
   show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg
@@ -316,6 +324,7 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (PassPaymentServiceConfig cfg) = "PassPaymentServiceConfig " <> show cfg
   show (ParkingPaymentServiceConfig cfg) = "ParkingPaymentServiceConfig " <> show cfg
   show (MembershipPaymentServiceConfig cfg) = "MembershipPaymentServiceConfig " <> show cfg
+  show (WebhookPaymentServiceConfig cfg) = "WebhookPaymentServiceConfig " <> show cfg
   show (IssueTicketServiceConfig cfg) = "IssueTicketServiceConfig " <> show cfg
   show (TokenizationServiceConfig cfg) = "TokenizationServiceConfig " <> show cfg
   show (IncidentReportServiceConfig cfg) = "IncidentReportServiceConfig " <> show cfg

@@ -135,7 +135,7 @@ processPaymentOrder ::
 processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
-      orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+      orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast merchantId) paymentOrder.id
   void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
   where

@@ -146,8 +146,8 @@ getPaymentServiceConfig merchantId merchantOperatingCityId mbPlaceId paymentServ
 updateOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderUpdateReq -> m Payment.OrderUpdateResp
 updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
-orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
-orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
+orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Bool -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus = runWithServiceConfigAndServiceName' Payment.orderStatus
 
 abortOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Maybe Bool -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 abortOrder = runWithServiceConfigAndServiceName Payment.abortOrder
@@ -158,8 +158,8 @@ offerList merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRouti
 offerApply :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferApplyReq -> m Payment.OfferApplyResp
 offerApply merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.offerApply merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
 
-refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
-refundOrder merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.autoRefunds merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
+refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Bool -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
+refundOrder merchantId merchantOperatingCityId mbPlaceId paymentServiceType mbUseWebhookConfig mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName' Payment.autoRefunds merchantId merchantOperatingCityId mbPlaceId paymentServiceType mbUseWebhookConfig mRoutingId clientSdkVersion Nothing
 
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion = runWithServiceConfigAndServiceName Payment.verifyVPA merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion Nothing
@@ -230,13 +230,33 @@ runWithServiceConfigAndServiceName ::
   Maybe Bool ->
   req ->
   m resp
-runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType mRoutingId clientSdkVersion mbIsMockPayment req = do
+runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPlaceId paymentServiceType =
+  runWithServiceConfigAndServiceName' func merchantId merchantOperatingCityId mbPlaceId paymentServiceType Nothing
+
+runWithServiceConfigAndServiceName' ::
+  ServiceFlow m r =>
+  (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  Maybe Bool ->
+  Maybe Text ->
+  Maybe Version ->
+  Maybe Bool ->
+  req ->
+  m resp
+runWithServiceConfigAndServiceName' func merchantId merchantOperatingCityId mbPlaceId paymentServiceType mbUseWebhookConfig mRoutingId clientSdkVersion mbIsMockPayment req = do
+  let useWebhookConfig = mbUseWebhookConfig == Just True
   placeBasedConfig <- case mbPlaceId of
-    Just id -> do
+    Just id | not useWebhookConfig -> do
       paymentServiceName <- decidePaymentService (DMSC.PaymentService Payment.Juspay) clientSdkVersion
       CQPBSC.findByPlaceIdAndServiceName id paymentServiceName
-    Nothing -> return Nothing
-  paymentServiceName <- getPaymentServiceByType paymentServiceType
+    _ -> return Nothing
+  paymentServiceName <-
+    if useWebhookConfig
+      then pure $ DMSC.WebhookPaymentService Payment.Juspay
+      else getPaymentServiceByType paymentServiceType
   merchantServiceConfig <-
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just paymentServiceName}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show rideBookingPaymentService))
@@ -247,6 +267,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.PassPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
+    Just (DMSC.WebhookPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     Just (DMSC.JuspayWalletServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"

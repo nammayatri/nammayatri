@@ -1081,7 +1081,7 @@ getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId = do
         withPaymentOrder paymentBooking = do
           paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
           let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
-          let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+          let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
               commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity booking.merchantOperatingCityId
           paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrder.id orderStatusCall
           action (paymentBooking, paymentOrder, Just paymentStatusResponse)

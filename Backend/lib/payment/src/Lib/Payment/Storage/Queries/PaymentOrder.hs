@@ -249,6 +249,15 @@ updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId d
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+updateUseWebhookConfig :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe Bool -> m ()
+updateUseWebhookConfig orderId mbUseWebhookConfig = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.useWebhookConfig mbUseWebhookConfig,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
 updatePaytmTid :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe Text -> m ()
 updatePaytmTid orderId mbPaytmTid = do
   now <- getCurrentTime

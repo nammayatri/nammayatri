@@ -163,6 +163,10 @@ getServiceNameConfigJSON = \case
     Payment.JuspayConfig cfg -> (Domain.MembershipPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.MembershipPaymentService Payment.Stripe, toJSON cfg)
     Payment.PaytmEDCConfig cfg -> (Domain.MembershipPaymentService Payment.PaytmEDC, toJSON cfg)
+  Domain.WebhookPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.WebhookPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.WebhookPaymentService Payment.Stripe, toJSON cfg)
+    Payment.PaytmEDCConfig cfg -> (Domain.WebhookPaymentService Payment.PaytmEDC, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
     Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
