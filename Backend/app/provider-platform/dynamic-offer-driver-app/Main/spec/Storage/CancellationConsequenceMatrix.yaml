@@ -39,6 +39,7 @@ CancellationConsequenceMatrix:
     faultRule: Maybe Text
     cancelledBy: Maybe CancellationType
     tripCategory: Maybe TripCategory
+    isAutoAccepted: Maybe Bool
     vehicleServiceTier: Maybe ServiceTierType
     area: Maybe Area
     paymentInstrument: Maybe PaymentInstrument

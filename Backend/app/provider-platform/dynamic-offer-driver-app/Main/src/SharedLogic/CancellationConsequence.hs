@@ -52,6 +52,7 @@ data ConsequenceInput = ConsequenceInput
     faultVerdict :: Maybe CancellationFault.FaultVerdict,
     cancelledBy :: DCT2.CancellationType,
     tripCategory :: DTC.TripCategory,
+    isAutoAccepted :: Maybe Bool,
     vehicleServiceTier :: DTC.ServiceTierType,
     area :: Maybe SL.Area,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
@@ -70,6 +71,7 @@ resolveConsequence input = do
           && dimMatches row.faultRule eventRule
           && dimMatches row.cancelledBy (Just input.cancelledBy)
           && dimMatches row.tripCategory (Just input.tripCategory)
+          && dimMatches row.isAutoAccepted input.isAutoAccepted
           && dimMatches row.vehicleServiceTier (Just input.vehicleServiceTier)
           && dimMatches row.area input.area
           && dimMatches row.paymentInstrument input.paymentInstrument
@@ -92,13 +94,15 @@ dimMatches Nothing _ = True
 dimMatches (Just rowVal) (Just eventVal) = rowVal == eventVal
 dimMatches (Just _) Nothing = False
 
--- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > vehicleServiceTier > area/paymentInstrument
-specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Int)
+-- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > isAutoAccepted
+-- > vehicleServiceTier > area/paymentInstrument
+specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Int)
 specificity row =
   ( isJust row.faultRule,
     isJust row.faultVerdict,
     isJust row.cancelledBy,
     isJust row.tripCategory,
+    isJust row.isAutoAccepted,
     isJust row.vehicleServiceTier,
     fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument)
   )
@@ -119,6 +123,7 @@ buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy = do
         faultVerdict = mbFaultVerdict,
         cancelledBy = cancelledBy,
         tripCategory = booking.tripCategory,
+        isAutoAccepted = booking.isAutoAccepted,
         vehicleServiceTier = booking.vehicleServiceTier,
         area = booking.area,
         paymentInstrument = Just bookingPaymentInstrument,

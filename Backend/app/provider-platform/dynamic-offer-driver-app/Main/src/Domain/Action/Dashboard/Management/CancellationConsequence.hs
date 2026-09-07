@@ -164,6 +164,7 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
         faultRule = apiRow.faultRule,
         cancelledBy = cancelledBy,
         tripCategory = tripCategory,
+        isAutoAccepted = apiRow.isAutoAccepted,
         vehicleServiceTier = vehicleServiceTier,
         area = area,
         paymentInstrument = paymentInstrument,
@@ -199,6 +200,7 @@ validateRow merchantOpCityId mbSelfId row =
         && a.faultRule == b.faultRule
         && a.cancelledBy == b.cancelledBy
         && a.tripCategory == b.tripCategory
+        && a.isAutoAccepted == b.isAutoAccepted
         && a.vehicleServiceTier == b.vehicleServiceTier
         && a.area == b.area
         && a.paymentInstrument == b.paymentInstrument
@@ -267,6 +269,7 @@ toListItem row =
             faultRule = row.faultRule,
             cancelledBy = show <$> row.cancelledBy,
             tripCategory = show <$> row.tripCategory,
+            isAutoAccepted = row.isAutoAccepted,
             vehicleServiceTier = show <$> row.vehicleServiceTier,
             area = show <$> row.area,
             paymentInstrument = show <$> row.paymentInstrument,
