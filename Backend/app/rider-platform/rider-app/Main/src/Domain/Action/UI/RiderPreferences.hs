@@ -1,13 +1,14 @@
 module Domain.Action.UI.RiderPreferences
   ( postRiderPreference,
     getRiderPreference,
-    getAllRiderPreferences,
+    getRiderPreferenceAll,
     deleteRiderPreference,
   )
 where
 
 import qualified API.Types.UI.RiderPreferences as API
 import qualified Data.Geohash as Geohash
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Domain.Types.Extra.RiderPreferences as RP
 import qualified Domain.Types.Merchant
@@ -19,6 +20,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.RiderPreferences as CQRP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderPreferences as QRP
 import Tools.Error
@@ -60,6 +62,42 @@ postRiderPreference (mbPersonId, _merchantId) req = do
                 createdAt = now,
                 updatedAt = now
               }
+    RP.NOTIFICATION_PREFERENCE -> do
+      notifData <- req.notificationPreferenceData & fromMaybeM (InvalidRequest "notificationPreferenceData is required for NOTIFICATION_PREFERENCE")
+      existingPrefs <- QRP.findByRiderIdAndType personId RP.NOTIFICATION_PREFERENCE
+      now <- getCurrentTime
+      let newPreferenceData =
+            RP.NotificationPreference
+              RP.NotificationPreferenceData
+                { osPermissionGranted = notifData.osPermissionGranted,
+                  enabledCategories = notifData.enabledCategories
+                }
+      case listToMaybe existingPrefs of
+        -- One NOTIFICATION_PREFERENCE row per rider — overwrite it on every save
+        Just existing ->
+          QRP.updateByPrimaryKey
+            existing
+              { DRP.preferenceData = newPreferenceData,
+                DRP.updatedAt = now
+              }
+        Nothing -> do
+          newId <- generateGUID
+          person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+          QRP.create
+            DRP.RiderPreferences
+              { id = Id newId,
+                riderId = personId,
+                preferenceType = RP.NOTIFICATION_PREFERENCE,
+                preferenceData = newPreferenceData,
+                merchantId = person.merchantId,
+                merchantOperatingCityId = person.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      -- Every write invalidates the cache the send-path gate reads from
+      -- (Tools.Notifications.isNotificationCategoryAllowed) -- including the create
+      -- branch, which must clear a cached "no row" from before this rider's first save.
+      CQRP.clearNotificationPreferenceCache personId
   pure APISuccess.Success
   where
     buildPickupData locData geohashText =
@@ -88,22 +126,20 @@ getRiderPreference (mbPersonId, _merchantId) mbSourceLat mbSourceLon = do
   geohash <- Geohash.encode 8 (sourceLat, sourceLon) & fromMaybeM (InvalidRequest "Invalid source coordinates")
   let geohashText = T.pack geohash
   mbPref <- QRP.findLocationPickupByGeohash personId geohashText
-  let locationPickups = maybe [] (pure . toLocationPickupRespData) mbPref
+  let locationPickups = maybe [] (mapMaybe toLocationPickupRespData . pure) mbPref
   pure API.RiderPreferencesResp {locationPickups}
 
-getAllRiderPreferences ::
+getRiderPreferenceAll ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
     Id Domain.Types.Merchant.Merchant
   ) ->
   Environment.Flow API.AllRiderPreferencesResp
-getAllRiderPreferences (mbPersonId, _merchantId) = do
+getRiderPreferenceAll (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   allPrefs <- QRP.findAllByRiderId personId
-  let locationPickups = map toLocationPickupRespData $ filter isLocationPickup allPrefs
-  pure API.AllRiderPreferencesResp {locationPickups}
-  where
-    isLocationPickup pref = case pref.preferenceData of
-      RP.LocationPickupPreference _ -> True
+  let locationPickups = mapMaybe toLocationPickupRespData allPrefs
+      notificationPreference = listToMaybe $ mapMaybe toNotificationPreferenceRespData allPrefs
+  pure API.AllRiderPreferencesResp {locationPickups, notificationPreference}
 
 deleteRiderPreference ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
@@ -120,19 +156,33 @@ deleteRiderPreference (mbPersonId, _merchantId) preferenceId = do
   QRP.deleteByRiderIdAndId personId preferenceId
   pure APISuccess.Success
 
-toLocationPickupRespData :: DRP.RiderPreferences -> API.LocationPickupRespData
+toLocationPickupRespData :: DRP.RiderPreferences -> Kernel.Prelude.Maybe API.LocationPickupRespData
 toLocationPickupRespData pref = case pref.preferenceData of
   RP.LocationPickupPreference d ->
-    API.LocationPickupRespData
-      { id = pref.id,
-        sourceGeohash = d.sourceGeohash,
-        sourceLat = d.sourceLat,
-        sourceLon = d.sourceLon,
-        sourceAddress = d.sourceAddress,
-        pickupLat = d.pickupLat,
-        pickupLon = d.pickupLon,
-        pickupAddress = d.pickupAddress,
-        pickupAddressSubtitle = d.pickupAddressSubtitle,
-        createdAt = pref.createdAt,
-        updatedAt = pref.updatedAt
-      }
+    Kernel.Prelude.Just
+      API.LocationPickupRespData
+        { id = pref.id,
+          sourceGeohash = d.sourceGeohash,
+          sourceLat = d.sourceLat,
+          sourceLon = d.sourceLon,
+          sourceAddress = d.sourceAddress,
+          pickupLat = d.pickupLat,
+          pickupLon = d.pickupLon,
+          pickupAddress = d.pickupAddress,
+          pickupAddressSubtitle = d.pickupAddressSubtitle,
+          createdAt = pref.createdAt,
+          updatedAt = pref.updatedAt
+        }
+  RP.NotificationPreference _ -> Kernel.Prelude.Nothing
+
+toNotificationPreferenceRespData :: DRP.RiderPreferences -> Kernel.Prelude.Maybe API.NotificationPreferenceRespData
+toNotificationPreferenceRespData pref = case pref.preferenceData of
+  RP.NotificationPreference d ->
+    Kernel.Prelude.Just
+      API.NotificationPreferenceRespData
+        { osPermissionGranted = d.osPermissionGranted,
+          enabledCategories = d.enabledCategories,
+          createdAt = pref.createdAt,
+          updatedAt = pref.updatedAt
+        }
+  RP.LocationPickupPreference _ -> Kernel.Prelude.Nothing

@@ -103,7 +103,7 @@ listMerchantMessages' channel opCityId = do
 
 sendPush' :: Webhook.Contact -> Notification.NotificationReq Value () -> Flow ()
 sendPush' contact req =
-  Notify.notifyPerson (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Id contact.personId) req Nothing
+  Notify.notifyPerson (Id contact.merchantId) (Id contact.merchantOperatingCityId) (Id contact.personId) Nothing req Nothing
 
 sendSms' :: Webhook.Contact -> Webhook.SmsMsg -> Flow ()
 sendSms' contact msg = do

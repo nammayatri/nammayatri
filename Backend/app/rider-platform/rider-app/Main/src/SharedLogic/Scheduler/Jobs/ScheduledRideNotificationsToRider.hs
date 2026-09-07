@@ -153,7 +153,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
     PN -> do
       merchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId notificationKey Nothing Nothing person.language configInExperimentVersions >>= fromMaybeM (MerchantPNNotFound merchantOperatingCityId.getId notificationKey)
       let entityData = generateReq merchantPN.title merchantPN.body
-      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
     SMS -> do
       smsCfg <- asks (.smsCfg)
       messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")

@@ -10,6 +10,7 @@ import Data.Aeson
 import qualified Data.Time
 import Domain.Types.Extra.RiderConfig as ReExport
 import qualified Domain.Types.Extra.RiderConfig
+import qualified Domain.Types.Extra.RiderPreferences
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences
@@ -26,7 +27,8 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
-  { appUrl :: Kernel.Prelude.Text,
+  { alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
+    appUrl :: Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,

@@ -1879,7 +1879,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
         mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
         whenJust mbMerchantPN $ \merchantPN -> do
           let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
-          Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+          Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
 
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey personId = "Payout:Processing:PersonId" <> personId
