@@ -24,7 +24,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
-  { appUrl :: B.C f Kernel.Prelude.Text,
+  { alwaysAllowedNotificationCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    appUrl :: B.C f Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),

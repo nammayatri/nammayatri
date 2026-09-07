@@ -4,6 +4,7 @@
 module Domain.Types.MerchantPushNotification where
 
 import Data.Aeson
+import qualified Domain.Types.Extra.RiderPreferences
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Trip
@@ -22,6 +23,7 @@ data MerchantPushNotification = MerchantPushNotification
     language :: Kernel.External.Types.Language,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    notificationCategory :: Domain.Types.Extra.RiderPreferences.NotificationCategory,
     shouldTrigger :: Kernel.Prelude.Bool,
     title :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,

@@ -6,6 +6,7 @@ module Storage.Queries.RiderConfig where
 
 import qualified Data.Aeson
 import qualified Data.Text
+import qualified Domain.Types.Extra.RiderPreferences
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.ServiceTierType
@@ -48,7 +49,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.appUrl appUrl,
+    [ Se.Set Beam.alwaysAllowedNotificationCategories (Just (map show alwaysAllowedNotificationCategories)),
+      Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
@@ -256,7 +258,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
-          { appUrl = appUrl,
+          { alwaysAllowedNotificationCategories = fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack)),
+            appUrl = appUrl,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
@@ -461,7 +464,8 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
 instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
-      { Beam.appUrl = appUrl,
+      { Beam.alwaysAllowedNotificationCategories = Just (map show alwaysAllowedNotificationCategories),
+        Beam.appUrl = appUrl,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,

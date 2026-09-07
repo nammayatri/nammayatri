@@ -850,3 +850,17 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN always_allowed_notification_categories text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_categories SET DEFAULT '{RIDE_RELATED,SAFETY}';
+
+
+------- SQL updates -------
+

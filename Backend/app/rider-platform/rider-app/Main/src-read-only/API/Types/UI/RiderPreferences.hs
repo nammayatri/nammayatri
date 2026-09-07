@@ -11,6 +11,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data AllRiderPreferencesResp = AllRiderPreferencesResp {locationPickups :: [LocationPickupRespData], notificationPreference :: Kernel.Prelude.Maybe NotificationPreferenceRespData}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LocationPickupReqData = LocationPickupReqData
   { pickupAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupAddressSubtitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -39,14 +43,27 @@ data LocationPickupRespData = LocationPickupRespData
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RiderPreferenceReq = RiderPreferenceReq {locationData :: Kernel.Prelude.Maybe LocationPickupReqData, preferenceType :: Domain.Types.Extra.RiderPreferences.PreferenceType}
+data NotificationPreferenceReqData = NotificationPreferenceReqData {enabledCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory], osPermissionGranted :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NotificationPreferenceRespData = NotificationPreferenceRespData
+  { createdAt :: Kernel.Prelude.UTCTime,
+    enabledCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
+    osPermissionGranted :: Kernel.Prelude.Bool,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RiderPreferenceReq = RiderPreferenceReq
+  { locationData :: Kernel.Prelude.Maybe LocationPickupReqData,
+    notificationPreferenceData :: Kernel.Prelude.Maybe NotificationPreferenceReqData,
+    preferenceType :: Domain.Types.Extra.RiderPreferences.PreferenceType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderPreferencesResp = RiderPreferencesResp {locationPickups :: [LocationPickupRespData]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data AllRiderPreferencesResp = AllRiderPreferencesResp {locationPickups :: [LocationPickupRespData]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

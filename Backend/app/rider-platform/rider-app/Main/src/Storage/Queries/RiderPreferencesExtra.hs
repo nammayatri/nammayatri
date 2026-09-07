@@ -36,3 +36,4 @@ findLocationPickupByGeohash riderId geohash = do
   where
     matchesGeohash rp = case rp.preferenceData of
       LocationPickupPreference d -> d.sourceGeohash == geohash
+      NotificationPreference _ -> False
