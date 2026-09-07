@@ -375,37 +375,45 @@ stopAction rideId pt stopLocId action = do
       stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      fork "BAPInternal:stopEventsDepart" . withShortRetry $
+        void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       let mbNextStopFEIndex = if currentStopFEIndex + 1 < length stopsLM then Just (currentStopFEIndex + 1) else Nothing
       fork "FleetEngine:notifyStopDeparted" $
         FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id mbNextStopFEIndex
       pure Success
-    ARRIVE -> do
-      unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
-      id <- generateGUID
-      let stopInfo =
-            DSI.StopInformation
-              { stopLocId = stopLocId,
-                stopOrder = stopLM.order,
-                waitingTimeStart = now,
-                waitingTimeEnd = Nothing,
-                stopStartLatLng = pt,
-                rideId = rideId,
-                stopEndLatLng = Nothing,
-                createdAt = now,
-                updatedAt = now,
-                id,
-                merchantOperatingCityId = Just ride.merchantOperatingCityId,
-                merchantId = ride.merchantId
-              }
-      QSI.create stopInfo
-      let nowTs = floor $ utcTimeToPOSIXSeconds now
-      VID.addReachedStop rideId stopLM.order pt nowTs
-      let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
-      fork "FleetEngine:notifyStopArrived" $
-        FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id currentStopFEIndex
-      pure Success
+    ARRIVE ->
+      case find (\stop -> stop.stopLocId == stopLocId) stopsInfo of
+        Just _ -> do
+          -- Idempotent retry: stop already marked arrived (e.g. first request's response was lost); return Success so the app can sync its UI
+          logInfo $ "Stop already marked arrived with stopLocId " <> stopLocId.getId <> " for ride " <> ride.id.getId <> ", returning Success"
+          pure Success
+        Nothing -> do
+          unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
+          id <- generateGUID
+          let stopInfo =
+                DSI.StopInformation
+                  { stopLocId = stopLocId,
+                    stopOrder = stopLM.order,
+                    waitingTimeStart = now,
+                    waitingTimeEnd = Nothing,
+                    stopStartLatLng = pt,
+                    rideId = rideId,
+                    stopEndLatLng = Nothing,
+                    createdAt = now,
+                    updatedAt = now,
+                    id,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId,
+                    merchantId = ride.merchantId
+                  }
+          QSI.create stopInfo
+          let nowTs = floor $ utcTimeToPOSIXSeconds now
+          VID.addReachedStop rideId stopLM.order pt nowTs
+          let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
+          fork "BAPInternal:stopEventsArrive" . withShortRetry $
+            void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+          fork "FleetEngine:notifyStopArrived" $
+            FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id currentStopFEIndex
+          pure Success
   where
     isValidStopArrivedAction stopLM =
       all (\stopInfo -> stopInfo.stopOrder < stopLM.order && isJust stopInfo.waitingTimeEnd && isJust stopInfo.stopEndLatLng)
