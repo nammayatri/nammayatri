@@ -662,7 +662,11 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let docType = mapDocumentType req.imageType
-  docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) Nothing
+  directDocConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) Nothing
+  docConfigs <-
+    if null directDocConfigs && docType `elem` VDocs.vehicleDocsByRcIdList
+      then getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DVC.VehicleInspectionForm, vehicleCategory = Nothing}) Nothing
+      else pure directDocConfigs
   -- Nothing or empty list = no role restriction (all allowed); non-empty = only those roles can upload (enforced in validateImageHandler)
   let mbRolesAllowed = listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)
   let isRoleRestricted = case mbRolesAllowed of Nothing -> False; Just roles -> not (Kernel.Prelude.null roles)
