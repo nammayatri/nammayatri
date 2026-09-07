@@ -1323,6 +1323,7 @@ data DriverOnboardingError
   | PanGstNumberMismatch
   | GstLegalNameNotFound
   | ImageExtractionFailed
+  | OCRExtractionFailed Text
   | ImageNotFound Text
   | ImageAccessDenied Text
   | ImageNotValid Text
@@ -1418,6 +1419,7 @@ instance IsBaseError DriverOnboardingError where
     PanGstNumberMismatch -> Just "PAN and GST do not belong to the same entity. Please re-upload the document."
     GstLegalNameNotFound -> Just "Legal name not found in the GSTIN verification response."
     ImageExtractionFailed -> Just "Image extraction failed"
+    OCRExtractionFailed msg -> Just msg
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
     ImageAccessDenied id_ -> Just $ "Access denied for image with imageId \"" <> id_ <> "\"."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
@@ -1514,6 +1516,7 @@ instance IsHTTPError DriverOnboardingError where
     PanGstNumberMismatch -> "PAN_GST_NUMBER_MISMATCH"
     GstLegalNameNotFound -> "GST_LEGAL_NAME_NOT_FOUND"
     ImageExtractionFailed -> "IMAGE_EXTRACTION_FAILED"
+    OCRExtractionFailed _ -> "OCR_EXTRACTION_FAILED"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
     ImageAccessDenied _ -> "IMAGE_ACCESS_DENIED"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
@@ -1603,6 +1606,7 @@ instance IsHTTPError DriverOnboardingError where
     PanGstNumberMismatch -> E400
     GstLegalNameNotFound -> E400
     ImageExtractionFailed -> E400
+    OCRExtractionFailed _ -> E400
     ImageNotFound _ -> E400
     ImageAccessDenied _ -> E403
     ImageNotValid _ -> E400
