@@ -189,7 +189,8 @@ getOCRResultRC personId merchantOpCityId mbImageId = do
   let resolvedImageId = maybe (Id "") Id mbImageId
   case mbRC of
     Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
-    Just rc ->
+    Just rc -> do
+      whenJust rc.errorMessage $ \errMsg -> throwError (OCRExtractionFailed errMsg)
       pure $
         (emptyValidateDocumentImageResponse resolvedImageId)
           { documentNumber = preProcessDocumentIdentifier transporterConfig <$> rc.rcNumber,
@@ -217,6 +218,7 @@ getOCRResultDL personId merchantOpCityId mbImageId = do
   case mbDL of
     Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
     Just dl -> do
+      whenJust dl.errorMessage $ \errMsg -> throwError (OCRExtractionFailed errMsg)
       operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
       let documentNumber = preProcessDocumentIdentifier transporterConfig <$> dl.dlNumber
       let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< dl.dateOfBirth)
@@ -240,7 +242,8 @@ getOCRResultPAN personId mbImageId = do
   let resolvedImageId = maybe (Id "") Id mbImageId
   case mbPAN of
     Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
-    Just pan ->
+    Just pan -> do
+      whenJust pan.errorMessage $ \errMsg -> throwError (OCRExtractionFailed errMsg)
       pure $
         (emptyValidateDocumentImageResponse resolvedImageId)
           { documentNumber = removeSpaceAndDash <$> pan.panNumber,
