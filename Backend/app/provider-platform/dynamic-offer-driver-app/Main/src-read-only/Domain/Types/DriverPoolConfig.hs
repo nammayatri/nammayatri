@@ -22,6 +22,7 @@ data DriverPoolConfig = DriverPoolConfig
     area :: Lib.Types.SpecialLocation.Area,
     batchSizeOnRide :: Kernel.Prelude.Int,
     batchSizeOnRideWithStraightLineDistance :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    batchingMode :: Kernel.Prelude.Maybe Domain.Types.DriverPoolConfig.BatchingMode,
     createdAt :: Kernel.Prelude.UTCTime,
     currentRideTripCategoryValidForForwardBatching :: [Kernel.Prelude.Text],
     distanceBasedBatchSplit :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
@@ -46,6 +47,7 @@ data DriverPoolConfig = DriverPoolConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     minRadiusOfSearch :: Kernel.Types.Common.Meters,
+    nextBatchScheduleTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     onRideBatchSplitConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistanceOnRide],
     onRideRadiusConfig :: [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.OnRideRadiusConfig],
     radiusShrinkValueForDriversOnRide :: Kernel.Types.Common.Meters,
@@ -63,4 +65,8 @@ data DriverPoolConfig = DriverPoolConfig
     useOneToOneOsrmMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data BatchingMode = OFF | CONTINUOUS | STAGGERED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BatchingMode)

@@ -89,6 +89,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
   pure
     DSRD.SearchRequestForDriver
       { id = guid,
+        batchingMode = searchTry.batchingMode,
         driverId = driversNotFoundDriverId,
         searchTryId = searchTry.id,
         requestId = searchReq.id,
@@ -245,7 +246,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
   -- An early batch advance orphans the job that was already scheduled. Terminate the orphan here
   -- (Complete, so it does *not* reschedule) to keep exactly one live batch chain per search try.
-  superseded <- I.isBatchChainSuperseded driverPoolConfig searchTryId jobData.batchEpoch
+  superseded <- maybe (I.isBatchChainSuperseded driverPoolConfig searchTryId jobData.batchEpoch) (const $ pure False) jobData.topUpSize
   if superseded
     then return Complete
     else do
@@ -294,7 +295,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference
               }
-      (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
+      (res, _, _) <- sendSearchRequestToDriversWithTopUp jobData.topUpSize driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
       return res
   where
     buildEstimateTripQuoteDetails ::
@@ -376,7 +377,18 @@ sendSearchRequestToDrivers' ::
   DriverSearchBatchInput m ->
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
-sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput' goHomeCfg = do
+sendSearchRequestToDrivers' = sendSearchRequestToDriversWithTopUp Nothing
+
+sendSearchRequestToDriversWithTopUp ::
+  ( SendSearchRequestJobFlow m r c
+  ) =>
+  Maybe Int ->
+  DriverPoolConfig ->
+  SearchTry ->
+  DriverSearchBatchInput m ->
+  GoHomeConfig ->
+  m (ExecutionResult, PoolType, Maybe Seconds)
+sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry driverSearchBatchInput' goHomeCfg = do
   searchReqWithPoolingVersion <- I.ensurePoolingLogicVersion driverSearchBatchInput'.searchReq
   let driverSearchBatchInput = driverSearchBatchInput' {searchReq = searchReqWithPoolingVersion}
   -- In case of static offer flow we will have booking created before driver ride request is sent
@@ -385,16 +397,19 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput' g
   where
     handle mbBooking driverSearchBatchInput =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
+        { isBatchNumExceedLimit = I.isDispatchBudgetExhausted driverPoolConfig searchTry.id driverSearchBatchInput.searchReq.transactionId,
+          mbTopUpSize = mbTopUpSize,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
+          popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.id,
+          markDriversAttempted = I.markDriversAttempted searchTry.id,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           logDriversExhausted = do
             logInfo $ "Drivers exhausted mid-search for searchTry: " <> searchTry.id.getId <> "; inserting analytics marker row"
             batchNumber <- I.getPoolBatchNum searchTry.id -- read post-increment, matching real rows' numbering
             markerRow <- buildDriversExhaustedMarker driverSearchBatchInput.searchReq searchTry batchNumber
             QSRD.createWithoutDriverLookup markerRow,
-          getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
+          getRescheduleTime = I.getRescheduleTime (getNextBatchScheduleTime driverPoolConfig),
           metrics =
             MetricsHandle
               { incrementTaskCounter = Metrics.incrementTaskCounter driverSearchBatchInput.merchant.name,

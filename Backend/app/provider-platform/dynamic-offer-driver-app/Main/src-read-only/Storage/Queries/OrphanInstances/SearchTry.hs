@@ -3,7 +3,6 @@
 
 module Storage.Queries.OrphanInstances.SearchTry where
 
-import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,6 +24,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
       Just
         Domain.Types.SearchTry.SearchTry
           { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
+            batchingMode = batchingMode,
             billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             businessEmailDomain = businessEmailDomain,
             createdAt = createdAt,
@@ -62,6 +62,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
     Beam.SearchTryT
       { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
         Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
+        Beam.batchingMode = batchingMode,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.businessEmailDomain = businessEmailDomain,
         Beam.createdAt = createdAt,

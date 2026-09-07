@@ -298,6 +298,7 @@ library
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverAcceptOffer
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument

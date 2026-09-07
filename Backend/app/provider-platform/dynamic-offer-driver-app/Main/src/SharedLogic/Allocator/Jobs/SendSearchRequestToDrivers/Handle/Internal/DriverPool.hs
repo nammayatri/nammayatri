@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
   ( isBatchNumExceedLimit,
+    isDispatchBudgetExhausted,
     incrementBatchNum,
     getPoolBatchNum,
     module Reexport,
@@ -27,6 +28,8 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     splitSilentDriversAndSortWithDistance,
     previouslyAttemptedDriversKey,
     isBatchChainSuperseded,
+    popTopUpDrivers,
+    markDriversAttempted,
   )
 where
 
@@ -70,6 +73,7 @@ import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
+import qualified Tools.SharedRedisKeys as SharedRedisKeys
 
 isBatchNumExceedLimit ::
   ( CacheFlow m r
@@ -81,6 +85,29 @@ isBatchNumExceedLimit driverPoolConfig searchTryId = do
   let maxNumberOfBatches = driverPoolConfig.maxNumberOfBatches
   currentBatchNum <- getPoolBatchNum searchTryId
   return $ currentBatchNum >= maxNumberOfBatches
+
+isDispatchBudgetExhausted ::
+  ( CacheFlow m r
+  ) =>
+  DriverPoolConfig ->
+  Id DST.SearchTry ->
+  Text ->
+  m Bool
+isDispatchBudgetExhausted driverPoolConfig searchTryId transactionId
+  | not (isContinuousBatchingEnabled driverPoolConfig) = isBatchNumExceedLimit driverPoolConfig searchTryId
+  | otherwise = do
+    mbBatchConfig <- SharedRedisKeys.getBatchConfig transactionId
+    case mbBatchConfig of
+      Nothing -> isBatchNumExceedLimit driverPoolConfig searchTryId
+      Just batchConfig -> do
+        now <- getCurrentTime
+        let exhausted = now >= batchConfig.batchingExpireAt
+        when exhausted $
+          logInfo $
+            "DispatchBudgetExhausted: searchTryId=" <> searchTryId.getId
+              <> " expireAt="
+              <> show batchConfig.batchingExpireAt
+        pure exhausted
 
 previouslyAttemptedDriversKey :: Id DST.SearchTry -> Maybe Bool -> Text
 previouslyAttemptedDriversKey searchTryId consideOnRideDrivers = do
@@ -329,6 +356,8 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         pure (underSoft <> backfill)
 
   pushTaggedPoolToKafka sortedPool
+  when (isContinuousBatchingEnabled driverPoolCfg && not isOnRidePool) $
+    setDriverReserveList searchTryId (getNextBatchScheduleTime driverPoolCfg + driverReserveListTtlBufferSeconds) (drop batchSize sortedPool)
   return (mbVersion, take batchSize sortedPool)
   where
     updateVersionInSearchReq mbVersion =
@@ -413,6 +442,44 @@ incrementBatchNum searchTryId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolBatchNumKey searchTryId)
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
+
+popTopUpDrivers ::
+  ( Redis.HedisFlow m r,
+    Log m
+  ) =>
+  DriverPoolConfig ->
+  Id DST.SearchTry ->
+  Int ->
+  m [DriverPoolWithActualDistResult]
+popTopUpDrivers driverPoolCfg searchTryId topUpSize
+  | not (isContinuousBatchingEnabled driverPoolCfg) = pure []
+  | otherwise = do
+    attempted <- previouslyAttemptedDrivers searchTryId Nothing
+    let attemptedIds = map fst attempted
+    go attemptedIds topUpSize []
+  where
+    go _ 0 acc = pure $ reverse acc
+    go attemptedIds n acc = do
+      mbDriver <- popDriverFromReserveList searchTryId
+      case mbDriver of
+        Nothing -> pure $ reverse acc
+        Just driver
+          | driver.driverPoolResult.driverId `elem` attemptedIds -> go attemptedIds n acc
+          | otherwise -> go attemptedIds (n - 1) (driver : acc)
+
+markDriversAttempted ::
+  ( Redis.HedisFlow m r
+  ) =>
+  Id DST.SearchTry ->
+  [DriverPoolWithActualDistResult] ->
+  m ()
+markDriversAttempted searchTryId drivers =
+  unless (null drivers) $
+    Redis.withCrossAppRedis $ do
+      let key = previouslyAttemptedDriversKey searchTryId Nothing
+      existing <- fromMaybe [] <$> Redis.safeGet key
+      let newEntries = (\dp -> (dp.driverPoolResult.driverId, dp.driverPoolResult.serviceTier)) <$> drivers
+      Redis.setExp key (existing <> newEntries :: [(Id Driver, DVST.ServiceTierType)]) (60 * 30)
 
 isBookAny :: [DVST.ServiceTierType] -> Bool
 isBookAny vehicleServiceTiers = length vehicleServiceTiers > 1

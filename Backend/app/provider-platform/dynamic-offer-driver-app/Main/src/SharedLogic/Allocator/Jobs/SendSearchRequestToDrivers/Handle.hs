@@ -54,7 +54,10 @@ data Handle m r = Handle
     initiateDriverSearchBatch :: m DST.SearchTry,
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
-    isScheduledBooking :: Bool
+    isScheduledBooking :: Bool,
+    mbTopUpSize :: Maybe Int,
+    popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
+    markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
   }
 
 handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
@@ -76,7 +79,24 @@ handler h@Handle {..} goHomeCfg transactionId = do
           else processRequestSending h goHomeCfg transactionId
 
 processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
-processRequestSending Handle {..} goHomeCfg transactionId = do
+processRequestSending h@Handle {..} goHomeCfg transactionId =
+  case mbTopUpSize of
+    Just topUpSize -> processTopUpDispatch h goHomeCfg topUpSize
+    Nothing -> processBatchChainDispatch h goHomeCfg transactionId
+
+processTopUpDispatch :: HandleMonad m r => Handle m r -> GoHomeConfig -> Int -> m (ExecutionResult, PoolType, Maybe Seconds)
+processTopUpDispatch Handle {..} goHomeCfg topUpSize = do
+  topUpDrivers <- popTopUpDrivers topUpSize
+  if null topUpDrivers
+    then logInfo "Reserve pool empty; batch chain continues on its timer."
+    else do
+      logInfo $ "processTopUpDispatch sending to " <> show (length topUpDrivers) <> " reserve driver(s)"
+      sendSearchRequestToDrivers topUpDrivers [] goHomeCfg
+      markDriversAttempted topUpDrivers
+  return (Complete, NormalPool, Nothing)
+
+processBatchChainDispatch :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
+processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
   logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
   if isBatchNumExceedLimit'

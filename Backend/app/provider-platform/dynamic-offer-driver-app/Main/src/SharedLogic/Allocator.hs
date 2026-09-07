@@ -212,7 +212,8 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
     -- the search try's current one has been superseded by an early batch advance and must
     -- terminate without rescheduling, so only one chain stays live. Nothing == epoch 0, which
     -- keeps jobs enqueued by older deployments valid.
-    batchEpoch :: Maybe Int
+    batchEpoch :: Maybe Int,
+    topUpSize :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

@@ -35,6 +35,7 @@ SearchRequestForDriver:
 
   fields:
     id : Id SearchRequestForDriver
+    batchingMode : Maybe Domain.Types.DriverPoolConfig.BatchingMode
     requestId : Id SearchRequest
     searchTryId : Id SearchTry
     estimateId : Maybe Text
@@ -238,6 +239,7 @@ SearchRequestForDriver:
       where: id
 
   sqlType:
+    batchingMode: text
     actualDistanceToPickup: bigint
     durationToPickup: bigint
     vehicleVariant: character varying (255)

@@ -62,11 +62,21 @@ module SharedLogic.DriverPool
     incrementSearchTryRejectCount,
     getSearchTryRejectCount,
     setBatchSentCount,
+    incrementBatchSentCount,
     getBatchSentCount,
     incrementBatchRejectCount,
     getBatchRejectCount,
     getBatchEpoch,
     bumpBatchEpoch,
+    getNextBatchScheduleTime,
+    getBatchingMode,
+    isContinuousBatchingEnabled,
+    driverReserveListKey,
+    setDriverReserveList,
+    popDriverFromReserveList,
+    hasDriverReserveList,
+    maxDriverReserveListSize,
+    driverReserveListTtlBufferSeconds,
   )
 where
 
@@ -268,6 +278,13 @@ getBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m (Ma
 getBatchSentCount searchTryId batchNum =
   Redis.withCrossAppRedis $ Redis.get (mkBatchSentCountKey searchTryId.getId batchNum)
 
+incrementBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> Int -> m ()
+incrementBatchSentCount searchTryId batchNum sentCount =
+  Redis.withCrossAppRedis $ do
+    let key = mkBatchSentCountKey searchTryId.getId batchNum
+    void $ Redis.incrby key (fromIntegral sentCount)
+    Redis.expire key searchTryDispatchCounterTtl
+
 -- | Returns the post-increment count. The INCR is atomic, so of several drivers rejecting at
 -- once exactly one observes `rejects == sent` — that one owns the early advance.
 incrementBatchRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m Int
@@ -294,6 +311,47 @@ bumpBatchEpoch searchTryId = Redis.withCrossAppRedis $ do
   epoch <- Redis.incr key
   Redis.expire key searchTryDispatchCounterTtl
   pure $ fromIntegral epoch
+
+getBatchingMode :: DriverPoolConfig -> BatchingMode
+getBatchingMode driverPoolCfg = fromMaybe OFF driverPoolCfg.batchingMode
+
+getNextBatchScheduleTime :: DriverPoolConfig -> Seconds
+getNextBatchScheduleTime driverPoolCfg =
+  case getBatchingMode driverPoolCfg of
+    STAGGERED -> fromMaybe driverPoolCfg.singleBatchProcessTime driverPoolCfg.nextBatchScheduleTime
+    _ -> driverPoolCfg.singleBatchProcessTime
+
+isContinuousBatchingEnabled :: DriverPoolConfig -> Bool
+isContinuousBatchingEnabled driverPoolCfg = getBatchingMode driverPoolCfg == CONTINUOUS
+
+maxDriverReserveListSize :: Int
+maxDriverReserveListSize = 50
+
+driverReserveListTtlBufferSeconds :: Seconds
+driverReserveListTtlBufferSeconds = 2
+
+driverReserveListKey :: Id DSTry.SearchTry -> Text
+driverReserveListKey searchTryId = "Driver-Offer:SearchTry:ReservePool:" <> searchTryId.getId
+
+setDriverReserveList :: (Redis.HedisFlow m r, Log m) => Id DSTry.SearchTry -> Seconds -> [DriverPoolWithActualDistResult] -> m ()
+setDriverReserveList searchTryId ttl reserve = Redis.withCrossAppRedis $ do
+  let key = driverReserveListKey searchTryId
+      reserve' = take maxDriverReserveListSize reserve
+  Redis.del key
+  unless (null reserve') $ do
+    Redis.rPushExp key (reverse reserve') (fromIntegral ttl)
+    logInfo $
+      "DriverReserveList set: searchTryId=" <> searchTryId.getId
+        <> " size="
+        <> show (length reserve')
+        <> " ttl="
+        <> show ttl
+
+popDriverFromReserveList :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m (Maybe DriverPoolWithActualDistResult)
+popDriverFromReserveList searchTryId = Redis.withCrossAppRedis $ Redis.rPop (driverReserveListKey searchTryId)
+
+hasDriverReserveList :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Bool
+hasDriverReserveList searchTryId = Redis.withCrossAppRedis $ (> 0) <$> Redis.lLen (driverReserveListKey searchTryId)
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig _merchantOpCityId _windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days

@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges
 import qualified Domain.Types.DriverGoHomeRequest
+import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ParcelType
@@ -30,6 +31,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     baseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     batchNumber :: Kernel.Prelude.Int,
+    batchingMode :: Kernel.Prelude.Maybe Domain.Types.DriverPoolConfig.BatchingMode,
     cancellationRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -104,12 +106,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
