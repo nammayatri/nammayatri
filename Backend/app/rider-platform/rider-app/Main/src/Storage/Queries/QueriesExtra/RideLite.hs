@@ -35,6 +35,11 @@ findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (K
 findByBPPRideIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.BPPRide -> m (Maybe RideLite)
 findByBPPRideIdLite bppRideId = findOneWithKV [Se.Is Beam.bppRideId $ Se.Eq (Kernel.Types.Id.getId bppRideId)]
 
+-- | Batched My Rides read: one KV read for a page of bookings' rides (no location decode).
+findAllByRBIdsLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Types.Id.Id Domain.Types.Booking.Booking] -> m [RideLite]
+findAllByRBIdsLite [] = pure []
+findAllByRBIdsLite bookingIds = findAllWithKV [Se.Is Beam.bookingId $ Se.In (Kernel.Types.Id.getId <$> bookingIds)]
+
 data RideLite = RideLite
   { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     driverName :: Kernel.Prelude.Text,
@@ -55,7 +60,10 @@ data RideLite = RideLite
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
     driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus,
-    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
+    totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

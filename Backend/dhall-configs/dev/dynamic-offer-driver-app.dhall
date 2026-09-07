@@ -10,7 +10,7 @@ let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
 
 let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
 
-let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8098)
 
 let mockRegistryPort = Natural/show (env:MOCK_REGISTRY_PORT ? 8020)
 

@@ -252,6 +252,7 @@ Booking:
     configInExperimentVersions: "[ConfigVersionMap]"
     preferSafetyPlus: Bool
     driverPreference: Maybe [Text]
+    locationNames: Maybe [Text]
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool
     insuredAmount: Maybe Text

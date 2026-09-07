@@ -8,7 +8,7 @@ let riderAppPort = Natural/show (env:SERVICE_PORT ? 8013)
 
 let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
 
-let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8098)
 
 let driverAppInternalPort = Natural/show (env:DRIVER_APP_INTERNAL_PORT ? 8116)
 

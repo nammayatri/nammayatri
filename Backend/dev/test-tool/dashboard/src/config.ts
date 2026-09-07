@@ -90,7 +90,7 @@ const DEFAULT_PORTS: Record<string, number> = {
   'rider-dashboard': 8017,
   'provider-dashboard': 8018,
   'mock-server': 8080,
-  'location-tracking-service': 8081,
+  'location-tracking-service': 8098,
   'beckn-gateway': 8015,
   'mock-registry': 8020,
   'test-context-api': 7082,

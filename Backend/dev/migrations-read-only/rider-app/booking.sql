@@ -576,3 +576,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_whatsapp_request boolean ;
 
 ALTER TABLE atlas_app.booking ADD COLUMN payment_charge_bearer text ;
 ALTER TABLE atlas_app.booking ADD COLUMN payment_charge double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN location_names text[] ;

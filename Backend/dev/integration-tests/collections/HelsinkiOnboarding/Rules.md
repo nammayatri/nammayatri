@@ -24,7 +24,7 @@ ledger/invoice generation post-ride.
    - `dev/feature-migrations/0007-helsinki-vat-config.sql`
 4. Mock-servers running on `:8080` (Stripe etc.).
 5. rider-app (`:8013`), dynamic-offer-driver-app (`:8016`), BPP dashboard (`:8018`),
-   BAP dashboard (`:8017`), LTS (`:8081`) all up.
+   BAP dashboard (`:8017`), LTS (`:8098`) all up.
 
 The orchestrator `Backend/dev/integration-tests/run-helsinki-e2e.sh` chains all of
 the above; running individual collections directly is supported for debugging.

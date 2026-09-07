@@ -417,7 +417,7 @@ Steps:
 | mock-fcm | 4545 | Haskell |
 | mock-idfy | 6235 | Haskell |
 | mock-server (unified) | 8080 | Python |
-| location-tracking-service | 8081 | External |
+| location-tracking-service | 8098 | External |
 | PostgreSQL | 5434 | Infrastructure |
 | Redis | 6379 | Infrastructure |
 | Redis Cluster | 30001-30006 | Infrastructure |

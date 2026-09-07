@@ -1,4 +1,4 @@
-@location-tracking-service-host = http://localhost:8081
+@location-tracking-service-host = http://localhost:8098
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
 ###

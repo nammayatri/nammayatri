@@ -249,8 +249,8 @@ if [ "$NY_RN_PLATFORM" = "android" ]; then
     local label="$1"
     # Metro ports: 8088 (customer) / 8089 (driver). Dodges every
     # reservation in Backend/nix/services/ports.nix — most importantly
-    # 8081 (location-tracking-service); pointing the emulator's
-    # localhost:8081 at host:8081 would route Metro requests INTO LTS.
+    # 8098 (location-tracking-service); pointing the emulator's
+    # localhost:8098 at host:8098 would route Metro requests INTO LTS.
     adb reverse tcp:8088  tcp:8088  >/dev/null 2>&1 || true   # Metro (customer)
     adb reverse tcp:8089  tcp:8089  >/dev/null 2>&1 || true   # Metro (driver)
     adb reverse tcp:8013  tcp:8013  >/dev/null 2>&1 || true   # rider-app HTTP (BAP)
@@ -754,7 +754,7 @@ kill_stale_metros_for_app() {
   # touching siblings.
 }
 
-METRO_PORT_BASE=8088   # Metro default. 8081 is location-tracking-service;
+METRO_PORT_BASE=8088   # Metro default. 8098 is location-tracking-service;
                        # 8082 is kept as buffer. Both customer (8088) and
                        # driver (8088→find_free_port→8089) walk up from
                        # this base — dodges every reservation in
