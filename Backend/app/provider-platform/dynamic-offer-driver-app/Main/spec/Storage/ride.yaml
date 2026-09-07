@@ -318,6 +318,7 @@ Ride:
     bookingId: "!SecondaryKey" # forcing to be a secondary key
     driverId: "!SecondaryKey" # forcing to be a secondary key
     driverGoHomeRequestId: "!SecondaryKey" # forcing to be a secondary key
+    fleetOwnerId: "!SecondaryKey" # forcing to be a secondary key; prepaid expiry must read a fleet's INPROGRESS rides from KV (a DB-only read misses rides not yet flushed)
     shortId: SecondaryKey
 
   queries:

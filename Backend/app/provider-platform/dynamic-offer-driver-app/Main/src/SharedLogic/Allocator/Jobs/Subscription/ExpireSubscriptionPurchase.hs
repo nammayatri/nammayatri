@@ -15,9 +15,13 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), ExpireSubscriptionPurchaseJobData (..))
-import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry, resolvePrepaidScope)
+import SharedLogic.Finance.Prepaid (activateNextQueuedPurchaseExpiry, handleSubscriptionExpiry, ownerHasRideInFlight, resolvePrepaidScope)
+import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SubscriptionPurchase as QSP
+
+rideInFlightRetryDelay :: NominalDiffTime
+rideInFlightRetryDelay = 15 * 60
 
 expireSubscriptionPurchase ::
   ( BeamFlow m r,
@@ -43,19 +47,37 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       logInfo $ "Subscription purchase not found: " <> jobData.subscriptionPurchaseId.getId
       pure Complete
     Just purchase -> do
-      handleSubscriptionExpiry purchase
-      -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
-      when (purchase.status == DSP.ACTIVE) $ do
-        prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
-        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType prepaidScope
-        whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+      rideInFlight <-
+        if purchase.status == DSP.ACTIVE
+          then ownerHasRideInFlight purchase.ownerType purchase.ownerId purchase.expiryDate
+          else pure False
+      if rideInFlight
+        then do
           now <- getCurrentTime
-          let delay = diffUTCTime expiry now
-          createJobIn @_ @'ExpireSubscriptionPurchase
-            (Just purchase.merchantId)
-            (Just purchase.merchantOperatingCityId)
-            delay
-            $ ExpireSubscriptionPurchaseJobData
-              { subscriptionPurchaseId = nextPurchaseId
-              }
-      pure Complete
+          let retryAt = addUTCTime rideInFlightRetryDelay now
+          logInfo $ "Subscription expiry deferred for " <> purchase.id.getId <> " (ride in progress); rescheduling to " <> show retryAt
+          pure $ ReSchedule retryAt
+        else do
+          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey purchase.ownerId) 10 10 $ do
+            didExpire <- handleSubscriptionExpiry purchase
+            when didExpire $ do
+              prepaidScope <- resolvePrepaidScope purchase.merchantOperatingCityId purchase.vehicleCategory
+              mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType prepaidScope
+              whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
+                now <- getCurrentTime
+                let delay = diffUTCTime expiry now
+                createJobIn @_ @'ExpireSubscriptionPurchase
+                  (Just purchase.merchantId)
+                  (Just purchase.merchantOperatingCityId)
+                  delay
+                  $ ExpireSubscriptionPurchaseJobData
+                    { subscriptionPurchaseId = nextPurchaseId
+                    }
+          mbPurchaseAfter <- QSP.findByPrimaryKey purchase.id
+          if maybe False (\p -> p.status == DSP.ACTIVE) mbPurchaseAfter
+            then do
+              now <- getCurrentTime
+              let retryAt = addUTCTime rideInFlightRetryDelay now
+              logInfo $ "Subscription expiry did not complete for " <> purchase.id.getId <> "; rescheduling to " <> show retryAt
+              pure $ ReSchedule retryAt
+            else pure Complete

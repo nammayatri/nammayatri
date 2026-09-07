@@ -28,8 +28,13 @@ module SharedLogic.Finance.Prepaid
     debitPrepaidBalance,
     debitPrepaidBalanceDirect,
     computeFifoSubscriptionAllocations,
+    latestSubscriptionPurchase,
     attributableRideDebitAmount,
     handleSubscriptionExpiry,
+    handleSubscriptionExpiries,
+    ownerHasRideInFlight,
+    markPrepaidSettlementPending,
+    clearPrepaidSettlementPending,
     checkAndMarkExhaustedSubscriptions,
     activateNextQueuedPurchaseExpiry,
     InvoiceCreationParams (..),
@@ -49,9 +54,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Common (Currency (..), HighPrecMoney, MonadFlow)
+import Kernel.Types.Common (Currency (..), HighPrecMoney, MonadFlow, Seconds (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, logWarning, withTryCatch)
+import Kernel.Utils.Common (HasRequestId, addUTCTime, diffUTCTime, fork, getCurrentTime, secondsToNominalDiffTime, withTryCatch)
+import Kernel.Utils.Logging (logError, logInfo, logWarning)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
 import qualified Lib.Finance.Core.Types as Finance
@@ -64,7 +70,10 @@ import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.WalletAccount (computeTdsRateReason)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
@@ -974,6 +983,9 @@ debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount cur
 -- Always writes at least one allocation when there is a contributing purchase
 -- (including the single-subscription case). Remainder after the walk is folded
 -- into the last allocation so sum(allocations) == debitAmount when funds exist.
+latestSubscriptionPurchase :: [DSP.SubscriptionPurchase] -> Maybe DSP.SubscriptionPurchase
+latestSubscriptionPurchase = lastMay . DL.sortOn (.purchaseTimestamp)
+
 computeFifoSubscriptionAllocations ::
   HighPrecMoney -> -- debit / settled fare
   HighPrecMoney -> -- wallet balance before debit
@@ -1038,10 +1050,88 @@ attributableRideDebitAmount (Id subPurchaseId) entry =
         pure entry.amount
     Nothing -> pure entry.amount
 
+-- | A ride running longer than tripStartTime + estimatedDuration + this is
+-- treated as stuck/abandoned and stops blocking subscription expiry. Matches the
+-- 6h "ONGOING_6HRS" cutoff used elsewhere for INPROGRESS rides.
+inFlightRideGracePeriod :: Seconds
+inFlightRideGracePeriod = 6 * 60 * 60
+
+prepaidSettlementPendingKey :: Text -> Text
+prepaidSettlementPendingKey ownerId = "PrepaidSettlementPending:" <> ownerId
+
+prepaidSettlementPendingTtl :: Int
+prepaidSettlementPendingTtl = 30 * 60
+
+prepaidSettlementPendingWindow :: NominalDiffTime
+prepaidSettlementPendingWindow = 30 * 60
+
+-- | Stored as a hash (field = rideId, value = marked-at) rather than a set, so an entry
+-- can be cleared by ride id without knowing its timestamp.
+markPrepaidSettlementPending :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> m ()
+markPrepaidSettlementPending ownerId rideId = do
+  now <- getCurrentTime
+  Redis.hSetExp (prepaidSettlementPendingKey ownerId) rideId now prepaidSettlementPendingTtl
+
+clearPrepaidSettlementPending :: (Redis.HedisFlow m r) => Text -> Text -> m ()
+clearPrepaidSettlementPending ownerId rideId =
+  Redis.hDel (prepaidSettlementPendingKey ownerId) [rideId]
+
+ownerHasRideInFlight ::
+  (BeamFlow m r, Redis.HedisFlow m r) =>
+  DSP.SubscriptionOwnerType ->
+  Text ->
+  Maybe UTCTime ->
+  m Bool
+ownerHasRideInFlight ownerType ownerId mbExpiryDate = do
+  pendingSettlements :: [(Text, UTCTime)] <- Redis.hGetAll (prepaidSettlementPendingKey ownerId)
+  nowForPending <- getCurrentTime
+  let pendingWithinWindow = filter (\(_, markedAt) -> diffUTCTime nowForPending markedAt < prepaidSettlementPendingWindow) pendingSettlements
+  if not (null pendingWithinWindow)
+    then pure True
+    else do
+      inProgressRides <- case ownerType of
+        DSP.DRIVER -> maybeToList <$> QRide.getInProgressByDriverId (Id ownerId)
+        DSP.FLEET_OWNER -> QRide.getInProgressByFleetOwnerId ownerId
+      let ownedRides = filter (\ride -> maybe True (ride.createdAt <) mbExpiryDate) inProgressRides
+      if null ownedRides
+        then pure False
+        else do
+          bookings <- QRB.findAllByIds (ownedRides <&> (.bookingId))
+          now <- getCurrentTime
+          let estDurationByBooking = Map.fromList [(b.id, b.estimatedDuration) | b <- bookings]
+          pure $ any (rideStillInFlight now estDurationByBooking) ownedRides
+  where
+    rideStillInFlight now estDurationByBooking ride = case ride.tripStartTime of
+      Nothing -> False
+      Just startedAt ->
+        let estDuration = fromMaybe (Seconds 0) (join $ Map.lookup ride.bookingId estDurationByBooking)
+            staleAfter = addUTCTime (secondsToNominalDiffTime (estDuration + inFlightRideGracePeriod)) startedAt
+         in now < staleAfter
+
 -- | Handle subscription expiry: compute expired credits, create revenue recognition
 -- and credit transfer entries, then mark the subscription as EXPIRED.
 -- NOTE: Does NOT activate the next queued purchase's expiry timer.
 -- The caller is responsible for calling activateNextQueuedPurchaseExpiry if needed.
+-- If the owner has a ride still INPROGRESS, expiry is deferred (no-op): the
+-- scheduled job reschedules itself and EndRide re-runs this after the fare debit.
+--
+-- Returns True iff this call actually performed the ACTIVE -> EXPIRED transition.
+-- Callers that cascade to the next queued purchase MUST gate that cascade on this
+-- result, not on a pre-call status snapshot (the ride-in-flight check can flip
+-- between the caller's own check and this one).
+handleSubscriptionExpiries ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
+  ) =>
+  [DSP.SubscriptionPurchase] ->
+  m Bool
+handleSubscriptionExpiries purchases = do
+  expiredFlags <- mapM handleSubscriptionExpiry purchases
+  pure $ foldr (||) False expiredFlags
+
 handleSubscriptionExpiry ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
@@ -1050,9 +1140,20 @@ handleSubscriptionExpiry ::
     Finance.HasActorInfo m r
   ) =>
   DSP.SubscriptionPurchase ->
-  m ()
-handleSubscriptionExpiry purchase = do
-  when (purchase.status == DSP.ACTIVE) $ do
+  m Bool
+handleSubscriptionExpiry stalePurchase = do
+  mbFreshPurchase <- QSP.findByPrimaryKey stalePurchase.id
+  let purchase = fromMaybe stalePurchase mbFreshPurchase
+  rideInFlight <-
+    if purchase.status == DSP.ACTIVE
+      then ownerHasRideInFlight purchase.ownerType purchase.ownerId purchase.expiryDate
+      else pure False
+  when rideInFlight $
+    logInfo $
+      "Deferring subscription expiry for " <> purchase.id.getId <> ": owner " <> purchase.ownerId
+        <> " has a ride in progress; expiry will run after the ride ends and its fare is debited."
+  let shouldExpire = purchase.status == DSP.ACTIVE && not rideInFlight
+  when shouldExpire $ do
     let counterpartyType = case purchase.ownerType of
           DSP.FLEET_OWNER -> counterpartyFleetOwner
           DSP.DRIVER -> counterpartyDriver
@@ -1146,6 +1247,7 @@ handleSubscriptionExpiry purchase = do
           mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) Nothing
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
+  pure shouldExpire
 
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
