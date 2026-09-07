@@ -73,6 +73,16 @@ type API =
            '[JSON]
            API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
       :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "activeManifest"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
+      :<|> TokenAuth
       :> "v2"
       :> "frfs"
       :> "busTripSchedule"
@@ -91,7 +101,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> getV2FrfsBusTripSchedule
+handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsFleetOperatorActiveManifest :<|> getV2FrfsBusTripSchedule
 
 getV2FrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -137,6 +147,16 @@ postFrfsFleetOperatorCurrentOperation ::
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
   )
 postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsFleetOperatorActiveManifest ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq ->
+    Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
+  )
+postFrfsFleetOperatorActiveManifest a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorActiveManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getV2FrfsBusTripSchedule ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
