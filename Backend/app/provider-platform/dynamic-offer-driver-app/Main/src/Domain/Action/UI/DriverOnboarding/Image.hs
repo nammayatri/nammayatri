@@ -276,29 +276,33 @@ validateUploadedFileType ::
   m (Maybe UploadedFileType)
 validateUploadedFileType enforce docType content mbDeclaredExtension = do
   let mbDeclared = normalizeExtension =<< mbDeclaredExtension
-  case detectUploadedFileType mbDeclared content of
-    Nothing ->
-      reject ("Unrecognized file content, declared extension: " <> show mbDeclared) Nothing $
-        "Unsupported file type. Only JPEG, PNG, WEBP, HEIC, AVIF and PDF documents are accepted."
-    Just fileType -> do
-      let extensionMismatch = case mbDeclared of
-            Just declared -> declared `notElem` allowedExtensionsFor fileType
-            Nothing -> False
-      if extensionMismatch
-        then
-          reject ("Declared extension " <> show mbDeclared <> " contradicts detected " <> show fileType) (Just fileType) $
-            "File extension does not match the uploaded file content."
-        else
-          if isImageOnlyDocument docType && not (isImageFileType fileType)
-            then
-              reject (show fileType <> " uploaded for image-only document " <> show docType) (Just fileType) $
-                show docType <> " must be an image, not a " <> T.toLower (show fileType) <> "."
-            else case (fileType, pdfActiveContentFinding content) of
-              -- Matched left-to-right, so the scan is only forced for a PDF.
-              (PDF, Just marker) ->
-                reject ("PDF carries active content name " <> show marker) (Just fileType) $
-                  "This PDF contains scripts, embedded files or interactive forms and cannot be accepted. Please upload a plain scanned document."
-              _ -> pure (Just fileType)
+  if BS.null content
+    then do
+      logInfo $ "UploadFileTypeCheck: empty payload for " <> show docType <> ", skipping file type check."
+      pure Nothing
+    else case detectUploadedFileType mbDeclared content of
+      Nothing ->
+        reject ("Unrecognized file content, declared extension: " <> show mbDeclared) Nothing $
+          "Unsupported file type. Only JPEG, PNG, WEBP, HEIC, AVIF and PDF documents are accepted."
+      Just fileType -> do
+        let extensionMismatch = case mbDeclared of
+              Just declared -> declared `notElem` allowedExtensionsFor fileType
+              Nothing -> False
+        if extensionMismatch
+          then
+            reject ("Declared extension " <> show mbDeclared <> " contradicts detected " <> show fileType) (Just fileType) $
+              "File extension does not match the uploaded file content."
+          else
+            if isImageOnlyDocument docType && not (isImageFileType fileType)
+              then
+                reject (show fileType <> " uploaded for image-only document " <> show docType) (Just fileType) $
+                  show docType <> " must be an image, not a " <> T.toLower (show fileType) <> "."
+              else case (fileType, pdfActiveContentFinding content) of
+                -- Matched left-to-right, so the scan is only forced for a PDF.
+                (PDF, Just marker) ->
+                  reject ("PDF carries active content name " <> show marker) (Just fileType) $
+                    "This PDF contains scripts, embedded files or interactive forms and cannot be accepted. Please upload a plain scanned document."
+                _ -> pure (Just fileType)
   where
     reject logDetail mbFileType userMessage
       | enforce = throwError $ InvalidRequest userMessage
