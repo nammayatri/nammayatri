@@ -95,6 +95,7 @@ import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOpe
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
+import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -1147,7 +1148,8 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated True ticketBooking
+  mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
+  mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision ticketBooking
   whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) ->
     FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
   return APISuccess.Success
@@ -1163,11 +1165,13 @@ getFrfsBookingCanCancelStatus _ bookingId = do
       (mbCancelEntityId, mbCancelEntityName) = case (.source) <$> mbQuota of
         Just (FRFSUtils.PassQuota eid ename) -> (Just eid, ename)
         _ -> (Nothing, Nothing)
+  mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
+  let liveDenied = maybe False (not . (.canCancel)) mbLiveDecision
   return $
     FRFSCanCancelStatus
       { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
         refundAmount = getAbsoluteValue ticketBooking.refundAmount,
-        isCancellable = if quotaExhausted then Just False else ticketBooking.isBookingCancellable,
+        isCancellable = if quotaExhausted || liveDenied then Just False else ticketBooking.isBookingCancellable,
         cancellationsUsed = mbCancellationsUsed,
         maxCancellationCount = (.maxCancellations) <$> mbQuota,
         cancelOverrideEntityType = DFRFSTicketBooking.PassOverride <$ mbCancelEntityId,
@@ -1181,7 +1185,8 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL CallExternalBPP.UserInitiated True ticketBooking
+  mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision ticketBooking
+  mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL CallExternalBPP.UserInitiated True mbLiveDecision ticketBooking
   whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
     FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
     FRFSCancelJourney.cancelJourney updatedBooking
@@ -1220,7 +1225,8 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
       serviceTierType <-
         FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
           & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
-      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig
+      mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision oldBooking
+      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId, merchantId = oldBooking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback oldBooking.merchantOperatingCityId oldBooking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
       FRFSReschedule.withRescheduleLock oldBooking.id $ do
         freshOldBooking <- QFRFSTicketBooking.findById oldBooking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")

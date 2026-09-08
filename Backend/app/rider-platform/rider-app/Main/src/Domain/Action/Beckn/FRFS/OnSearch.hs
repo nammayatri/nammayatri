@@ -706,6 +706,8 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   maxRescheduleDaysAhead = Nothing,
                   maxCancellationCount = Nothing,
                   cancellationWindowSeconds = Nothing,
+                  cancellationDelayThresholdSeconds = Nothing,
+                  useLiveForCancellationAndRescheduling = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }

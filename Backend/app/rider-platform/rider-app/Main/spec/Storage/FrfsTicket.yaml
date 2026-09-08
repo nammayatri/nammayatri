@@ -1319,6 +1319,8 @@ FRFSVehicleServiceTier:
     # a negative maxCancellationCount means unlimited. See SharedLogic.FRFSUtils.getCancellationQuota.
     maxCancellationCount: Maybe Int
     cancellationWindowSeconds: Maybe Int
+    cancellationDelayThresholdSeconds: Maybe Seconds
+    useLiveForCancellationAndRescheduling: Maybe Bool
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
