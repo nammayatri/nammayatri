@@ -27,6 +27,7 @@ import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.CancellationReasons as DCancellationReasons
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
@@ -38,6 +39,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Cancel as SharedCancel
+import qualified SharedLogic.SilentReallocation as SilentRealloc
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
@@ -110,7 +113,16 @@ cancel ::
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
     booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-    mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
-    dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser
-    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
-    return Success
+    mbSilentCtx <- SilentRealloc.getSilentReallocation personId
+    case mbSilentCtx of
+      Just silentCtx | silentCtx.bookingId == booking.id && booking.status == SRB.REALLOCATED -> do
+        -- Rider cancelled inside a silent reallocation window. The booking is already
+        -- reallocated on both sides, so cancel the running search and close the window.
+        SilentRealloc.clearSilentReallocation personId
+        void $ SharedCancel.cancelSearchUtil (personId, merchantId) silentCtx.estimateId
+        return Success
+      _ -> do
+        mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+        dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser
+        void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
+        return Success

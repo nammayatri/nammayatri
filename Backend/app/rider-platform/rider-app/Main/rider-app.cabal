@@ -600,11 +600,13 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+      SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
       SharedLogic.TicketRule.Apply
