@@ -572,7 +572,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   processRefund person paymentOrder paymentServiceType
   let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
   paymentStatusResp <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
   refundStatusHandler paymentOrder paymentServiceType
@@ -595,7 +595,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
     processRefund person paymentOrder paymentServiceType = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-      let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      let refundsOrderCall mbUseWebhookConfig = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType mbUseWebhookConfig (Just person.id.getId) person.clientSdkVersion
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
@@ -738,7 +738,7 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
         return $ ticketBooking <&> (.ticketPlaceId)
       DOrder.RideBooking -> return Nothing
       _ -> return Nothing
-  let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+  let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
   orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
 
 -------------------------------------------------------------------------------------------------------

@@ -691,7 +691,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           then do
             paymentOrder <- QOrder.findById (Kernel.Types.Id.Id id.getId) >>= fromMaybeM (PaymentOrderNotFound id.getId)
             let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+                orderStatusCall = Payment.orderStatus merchantId' merchantOperatingCityId (Just ticketPlaceId) Payment.Normal paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                 commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
             paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId (Kernel.Types.Id.Id id.getId) orderStatusCall
             mapM (mkRefundDetails shortId merchantId') paymentStatus.refunds
@@ -1244,7 +1244,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal (Just person.id.getId) person.clientSdkVersion order.isMockPayment -- api call
+      orderStatusCall = Payment.orderStatus merchantId ticketBooking'.merchantOperatingCityId (Just ticketBooking'.ticketPlaceId) Payment.Normal order.useWebhookConfig (Just person.id.getId) person.clientSdkVersion order.isMockPayment -- api call
   ticketBookingServices <- QTicketBookingService.findAllByBookingId ticketBooking'.id
   tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
   let ticketBookingServiceCategories = concat tBookingServiceCats
@@ -1935,7 +1935,7 @@ updateCancelledSeatsInSeatManagement categoryId noOfSeatsToCancel date = do
 
 intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Maybe Text -> Maybe Version -> Environment.Flow ()
 intializeRefundProcess ticketBookingShortId ticketPlaceId _amountToRefund personMerchantId personMerchantOperatingCityId mRoutingId mSdkVersion = do
-  let createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
+  let createRefundCall mbUseWebhookConfig = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mbUseWebhookConfig mRoutingId mSdkVersion
   let commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity personMerchantOperatingCityId
   void $ DPayment.createRefundService commonMerchantOperatingCityId (Kernel.Types.Id.ShortId ticketBookingShortId.getShortId) createRefundCall
 

@@ -72,6 +72,7 @@ type MainAPI =
              :> QueryParam "city" Context.City
              :> QueryParam "serviceType" TPayment.PaymentServiceType
              :> QueryParam "placeId" Text
+             :> QueryParam "useWebhookConfig" Bool
              :> Juspay.JuspayWebhookAPI
          )
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
@@ -158,11 +159,12 @@ juspayWebhookHandler ::
   Maybe Context.City ->
   Maybe TPayment.PaymentServiceType ->
   Maybe Text ->
+  Maybe Bool ->
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret =
-  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret
+juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbUseWebhookConfig secret =
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbUseWebhookConfig secret
 
 stripeWebhookHandler ::
   ShortId DM.Merchant ->

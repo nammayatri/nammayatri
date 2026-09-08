@@ -169,7 +169,7 @@ getBbpsGetOrderStatus (_, _) refIdTxt = do
     withPaymentStatusResponseHandler :: DBBPS.BBPS -> DP.Person -> (DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
     withPaymentStatusResponseHandler bbpsInfo person action = do
       paymentOrder <- QOrder.findById (Kernel.Types.Id.cast bbpsInfo.refId) >>= fromMaybeM (PaymentOrderNotFound bbpsInfo.refId.getId)
-      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS paymentOrder.useWebhookConfig (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
           commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity bbpsInfo.merchantOperatingCityId
       orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall

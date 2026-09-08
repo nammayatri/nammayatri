@@ -72,6 +72,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.PassPaymentService paymentServiceName -> Domain.PassPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.ParkingPaymentService paymentServiceName -> Domain.ParkingPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.WebhookPaymentService paymentServiceName -> Domain.WebhookPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> valueToMaybe configJSON
@@ -164,6 +165,7 @@ getServiceNameConfigJson = \case
       Nothing -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
     Payment.PaytmEDCConfig cfg -> (Domain.ParkingPaymentService Payment.PaytmEDC, toJSON cfg)
   Domain.MembershipPaymentServiceConfig paymentCfg -> first Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.WebhookPaymentServiceConfig paymentCfg -> first Domain.WebhookPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
     Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
