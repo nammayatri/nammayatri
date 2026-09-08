@@ -74,10 +74,11 @@ triggerRealtime ::
   m ()
 triggerRealtime svc audiences content = do
   cfg <- svc.getGRPCConfig content.merchantOperatingCityId
+  alertContext <- svc.getAlertContext content.merchantId content.merchantOperatingCityId
   now <- getCurrentTime
   forM_ audiences $ \audience -> do
     notificationId <- generateGUID
-    publishToTopic svc.platform cfg content now notificationId (audienceTopic audience)
+    publishToTopic svc.platform alertContext cfg content now notificationId (audienceTopic audience)
 
 triggerPersist ::
   (TriggerFlow m r, BeamFlow m r) =>
@@ -87,39 +88,42 @@ triggerPersist ::
   m [Id DashboardAlert]
 triggerPersist svc audiences content = do
   cfg <- svc.getGRPCConfig content.merchantOperatingCityId
+  alertContext <- svc.getAlertContext content.merchantId content.merchantOperatingCityId
   now <- getCurrentTime
   forM audiences $ \audience -> do
     alertId <- generateGUID
     let topic = audienceTopic audience
     QDA.create (buildAlert content now alertId topic)
-    publishToTopic svc.platform cfg content now alertId.getId topic
+    publishToTopic svc.platform alertContext cfg content now alertId.getId topic
     pure alertId
 
 publishToTopic ::
   TriggerFlow m r =>
   AlertPlatform ->
+  AlertContext ->
   GRPC.GRPCConfig ->
   AlertContent ->
   UTCTime ->
   Text ->
   Topic ->
   m ()
-publishToTopic platform cfg content now notificationId topic = do
+publishToTopic platform alertContext cfg content now notificationId topic = do
   let expiresAt = addUTCTime (fromIntegral content.ttlSeconds.getSeconds) now
-  GRPC.notifyPerson cfg (buildNotificationData platform content expiresAt notificationId topic)
+  GRPC.notifyPerson cfg (buildNotificationData platform alertContext content expiresAt notificationId topic)
 
 buildNotificationData ::
   AlertPlatform ->
+  AlertContext ->
   AlertContent ->
   UTCTime ->
   Text ->
   Topic ->
   GRPC.GrpcNotificationData Value
-buildNotificationData platform content expiresAt notificationId topic =
+buildNotificationData platform alertContext content expiresAt notificationId topic =
   GRPC.GrpcNotificationData
     { entityId = content.entityId,
       entityType = show content.entityType,
-      entityData = withPlatform platform content.entityData,
+      entityData = withAlertEnvelope platform alertContext content.entityData,
       category = show content.category,
       title = GRPC.GRPCNotificationTitle content.title,
       body = GRPC.GRPCNotificationBody content.body,
@@ -164,7 +168,15 @@ platformLabel = \case
   DriverPlatform -> "DRIVER"
   RiderPlatform -> "RIDER"
 
-withPlatform :: AlertPlatform -> Value -> Value
-withPlatform p = \case
-  Object o -> Object (AKM.insert "platform" (String (platformLabel p)) o)
+withAlertEnvelope :: AlertPlatform -> AlertContext -> Value -> Value
+withAlertEnvelope p ctx = \case
+  Object o ->
+    Object
+      . AKM.insert "platform" (String (platformLabel p))
+      . insertMaybeText "merchantName" ctx.merchantName
+      . insertMaybeText "cityName" ctx.cityName
+      $ o
   other -> other
+  where
+    insertMaybeText _ Nothing obj = obj
+    insertMaybeText key (Just value) obj = AKM.insert key (String value) obj

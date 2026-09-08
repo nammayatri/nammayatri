@@ -15,11 +15,21 @@
 module DashboardAlert.ServiceHandle where
 
 import DashboardAlert.Domain.Types.Audience (AlertPlatform)
-import DashboardAlert.Domain.Types.Common (MerchantOperatingCity)
+import DashboardAlert.Domain.Types.Common (Merchant, MerchantOperatingCity)
 import Kernel.External.Notification.GRPC.Types (GRPCConfig)
+import Kernel.Prelude
 import Kernel.Types.Id (Id)
+
+data AlertContext = AlertContext
+  { merchantName :: Maybe Text,
+    cityName :: Maybe Text
+  }
+
+emptyAlertContext :: AlertContext
+emptyAlertContext = AlertContext {merchantName = Nothing, cityName = Nothing}
 
 data ServiceHandle m = ServiceHandle
   { getGRPCConfig :: Id MerchantOperatingCity -> m GRPCConfig,
+    getAlertContext :: Id Merchant -> Id MerchantOperatingCity -> m AlertContext,
     platform :: AlertPlatform
   }

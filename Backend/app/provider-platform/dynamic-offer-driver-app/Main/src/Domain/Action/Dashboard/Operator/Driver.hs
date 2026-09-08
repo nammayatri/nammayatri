@@ -325,7 +325,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         whenJust mbPersonId $ \personId -> do
           mbVehicle <- QVehicle.findById personId
           when (isNothing mbVehicle && allVehicleDocsVerified) $
-            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity.merchantId merchantOpCity.id registrationNo)
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
