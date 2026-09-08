@@ -231,7 +231,7 @@ checkResourceIds ::
   m ()
 checkResourceIds person endpointId merchantId city resourceType targetIds = do
   allowed <- QPRA.findResourceIds person.id merchantId city resourceType
-  logTagInfo "LAYER_C" $ "checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
+  logDebug $ "LAYER_C checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
   let allowedSet = Set.fromList allowed
   unless (DRS.wildcardResourceId `Set.member` allowedSet) $
     case targetIds of
@@ -286,20 +286,24 @@ enforceResourceScopeFromRequest ::
   [Text] ->
   m ()
 enforceResourceScopeFromRequest access endpoints person endpointId merchantId city pathSegments = do
-  logTagInfo "LAYER_C" $ "enter endpointId=" <> endpointId <> " adminTier=" <> access.adminTier <> " capsCount=" <> show (length access.capabilities) <> " pathSegs=[" <> T.intercalate "," pathSegments <> "]"
+  logDebug $ "LAYER_C enter endpointId=" <> endpointId <> " adminTier=" <> access.adminTier <> " capsCount=" <> show (length access.capabilities) <> " pathSegs=[" <> T.intercalate "," pathSegments <> "]"
   unless (access.adminTier == DC.superAdminTier) $ do
     let heldRows = filter (\ce -> ce.capabilityId.getId `elem` access.capabilities) endpoints
         binding = listToMaybe (mapMaybe (.resourceIdParam) heldRows)
-    logTagInfo "LAYER_C" $ "binding=" <> show binding
-    unless (binding == Just DRS.BindSkip || binding == Just DRS.BindHandler) $ do
+    logDebug $ "LAYER_C binding=" <> show binding
+    -- Nothing (no binding at all) can only ever pass — skip the capability
+    -- lookups on the hot auth path. RESOURCE_SCOPE_UNRESOLVED then fires only for
+    -- a genuinely-bound endpoint whose marker resolved no id (a real mis-seed),
+    -- not for every unbound endpoint.
+    unless (binding == Just DRS.BindSkip || binding == Just DRS.BindHandler || isNothing binding) $ do
       heldCaps <- catMaybes <$> mapM (QCap.findById . (.capabilityId)) heldRows
       let heldTypes = map (.resourceType) heldCaps
           mbTypes = if any isNothing heldTypes then Nothing else Just (nub (catMaybes heldTypes))
-      logTagInfo "LAYER_C" $ "mbTypes=" <> show mbTypes
+      logDebug $ "LAYER_C mbTypes=" <> show mbTypes
       forM_ mbTypes $ \types ->
         forM_ types $ \resourceType -> do
           let ids = case binding of
                 Just (DRS.BindParam name) -> pathValueAfter name pathSegments
                 _ -> []
-          logTagInfo "LAYER_C" $ "checking type=" <> show resourceType <> " ids=" <> show ids
+          logDebug $ "LAYER_C checking type=" <> show resourceType <> " ids=" <> show ids
           checkResourceIds person endpointId merchantId city resourceType ids
