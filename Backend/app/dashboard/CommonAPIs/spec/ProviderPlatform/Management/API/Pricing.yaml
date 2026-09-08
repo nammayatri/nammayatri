@@ -102,6 +102,15 @@ types:
     - supplyDemandRatioMax: Maybe Double
     - distanceKmMin: Maybe Int
     - distanceKmMax: Maybe Int
+    - durationMinutesMin: Maybe Int
+    - durationMinutesMax: Maybe Int
+    # drop-location QAR; bounds are only accepted when the city's transporter
+    # config has isDropLocQARCalEnabled, otherwise the row would be dead code
+    - dropQarMin: Maybe Double
+    - dropQarMax: Maybe Double
+    # membership test against the Weather Union rain status (free text) of the
+    # pickup geohash; the row fires only when the status is present AND listed
+    - rainStatuses: Maybe [Text]
     - congestionMultiplier: Maybe Centesimal
     - congestionPerMinCharge: Maybe Double
   PricingSurgeConfig:
@@ -147,6 +156,9 @@ types:
     - qar: Maybe Double
     - supplyDemandRatio: Maybe Double
     - distanceKm: Maybe Int
+    - durationMinutes: Maybe Int
+    - dropQar: Maybe Double
+    - rainStatus: Maybe Text
   PricingSurgePreviewReq:
     - surgeConfigId: Maybe (Id SurgeConfig)
     - rows: Maybe [PricingSurgeRow]

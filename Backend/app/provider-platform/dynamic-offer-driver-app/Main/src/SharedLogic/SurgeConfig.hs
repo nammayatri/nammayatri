@@ -47,6 +47,14 @@ data SurgeSignals = SurgeSignals
   { qar :: Maybe Double,
     supplyDemandRatio :: Maybe Double,
     distanceKm :: Maybe Int,
+    -- actual (end-ride) when available, else the route estimate — same
+    -- fresh-actuals-on-repricing semantics the json-logic path uses
+    durationMinutes :: Maybe Int,
+    -- QAR around the drop; Nothing unless drop-QAR calculation is enabled
+    -- for the city AND the search has a drop location
+    dropQar :: Maybe Double,
+    -- Weather Union rain status for the pickup geohash (free text)
+    rainStatus :: Maybe Text,
     -- the fare product's area, matched against the config's excludedAreas
     -- opt-out list
     area :: Maybe SL.Area
@@ -68,16 +76,25 @@ data SurgeConfigsForPricing = SurgeConfigsForPricing
 
 -- | A bound only matches when the signal is PRESENT: missing data never
 -- satisfies a bounded row, so a cold Redis key cannot read as scarcity.
+-- The same rule covers the categorical rain check: a rain-bounded row never
+-- fires when the weather key is cold.
 rowMatches :: SurgeSignals -> SurgeRow -> Bool
 rowMatches signals row =
   boundsOk signals.qar row.qarMin row.qarMax
     && boundsOk signals.supplyDemandRatio row.supplyDemandRatioMin row.supplyDemandRatioMax
     && boundsOk (fromIntegral <$> signals.distanceKm) (fromIntegral <$> row.distanceKmMin) (fromIntegral <$> row.distanceKmMax)
+    && boundsOk (fromIntegral <$> signals.durationMinutes) (fromIntegral <$> row.durationMinutesMin) (fromIntegral <$> row.durationMinutesMax)
+    && boundsOk signals.dropQar row.dropQarMin row.dropQarMax
+    && rainOk signals.rainStatus row.rainStatuses
   where
     boundsOk :: Maybe Double -> Maybe Double -> Maybe Double -> Bool
     boundsOk _ Nothing Nothing = True -- unbounded on this signal
     boundsOk Nothing _ _ = False -- bounded but signal missing
     boundsOk (Just v) mbMin mbMax = maybe True (v >=) mbMin && maybe True (v <) mbMax
+    rainOk :: Maybe Text -> Maybe [Text] -> Bool
+    rainOk _ Nothing = True -- unbounded on rain
+    rainOk Nothing (Just _) = False -- bounded but signal missing
+    rainOk (Just status) (Just allowed) = status `elem` allowed
 
 -- | Rows evaluated top-down, first match wins; Nothing when no row matches
 -- (the caller falls back to the fare policy's static multiplier). An area on

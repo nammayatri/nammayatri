@@ -145,13 +145,25 @@ data PricingSurgeRow = PricingSurgeRow
     supplyDemandRatioMax :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     distanceKmMin :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distanceKmMax :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    durationMinutesMin :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    durationMinutesMax :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    dropQarMin :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    dropQarMax :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    rainStatuses :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     congestionPerMinCharge :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PricingSurgeSignals = PricingSurgeSignals {qar :: Kernel.Prelude.Maybe Kernel.Prelude.Double, supplyDemandRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double, distanceKm :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data PricingSurgeSignals = PricingSurgeSignals
+  { qar :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    supplyDemandRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    distanceKm :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    durationMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    dropQar :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    rainStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
