@@ -171,6 +171,24 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 
+# ny-qa-automation is a private repo checked out on disk (not part of this repo,
+# not baked into any image). Its NY/MSIL/YS collections are surfaced through the
+# same /api/collections + /api/collection endpoints as the collections above —
+# see _scan_qa_collections(). Resolved fresh on every call — not cached at
+# import time — so the dashboard's "Sync" button (POST /api/qa-collections/sync
+# on test-local-api, qa_runner.sync_repo()) is picked up immediately without a
+# restart: $QA_AUTOMATION_DIR env override, else <repo-root>/data/ny-qa-automation
+# (the managed clone sync_repo() creates/pulls), else a sibling checkout for
+# anyone who already had it cloned there.
+def _qa_automation_dir() -> Path:
+    env_override = os.environ.get("QA_AUTOMATION_DIR")
+    if env_override:
+        return Path(env_override)
+    data_repo = PROJECT_ROOT / "data" / "ny-qa-automation" / "src" / "api_tests"
+    if data_repo.is_dir():
+        return data_repo
+    return PROJECT_ROOT.parent / "ny-qa-automation" / "src" / "api_tests"
+
 # Resolved ports, in preference order: data/ports.json published by the
 # run-mobility-stack-dev preflight (single source of truth, also what the local
 # test-dashboard SSHes in to read), then the devbox registry slice
@@ -2106,56 +2124,113 @@ def _read_env_file(f, env_type):
         return None
 
 
+def _scan_collection_files(dir_path):
+    """List Postman collection JSONs (i.e. everything except *.postman_environment.json) in dir_path."""
+    suites = []
+    for f in sorted(dir_path.iterdir()):
+        if not f.is_file() or f.suffix != ".json":
+            continue
+        if f.name.endswith(".postman_environment.json"):
+            continue
+        try:
+            col_data = json.loads(f.read_text())
+            info = col_data.get("info", {})
+            suites.append({
+                "filename": f.name,
+                "name": info.get("name", f.stem),
+                "description": info.get("description", ""),
+                "itemCount": len(col_data.get("item", [])),
+            })
+        except Exception:
+            pass
+    return suites
+
+
 def scan_collections():
     """Walk integration-tests/collections/ and return metadata for each collection group."""
     result = []
-    if not COLLECTIONS_DIR.is_dir():
+    if COLLECTIONS_DIR.is_dir():
+        for subdir in sorted(COLLECTIONS_DIR.iterdir()):
+            if not subdir.is_dir():
+                continue
+            group = {
+                "directory": subdir.name,
+                "envTypes": list(ENV_TYPES),
+                "environments": [],
+                "suites": _scan_collection_files(subdir),
+            }
+            for env_type in ENV_TYPES:
+                env_dir = subdir / env_type
+                if not env_dir.is_dir():
+                    continue
+                for f in sorted(env_dir.iterdir()):
+                    if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
+                        continue
+                    env = _read_env_file(f, env_type)
+                    if env is not None:
+                        group["environments"].append(env)
+            if group["environments"] or group["suites"]:
+                result.append(group)
+    result.extend(_scan_qa_collections())
+    return result
+
+
+def _scan_qa_collections():
+    """Walk ny-qa-automation/src/api_tests/{NY,MSIL,YS} the same way scan_collections()
+    walks integration-tests/collections/<Suite>/, except that repo keeps its Local/Master
+    environments as shared top-level files instead of per-suite Local/ + Master/ folders.
+    Collections here run via the backend Newman engine (qa-collections-service), not the
+    in-browser postman-runtime — they rely on pm.execution.setNextRequest() branching,
+    which postman-runtime.ts does not implement — hence "backendOnly".
+    """
+    result = []
+    qa_dir = _qa_automation_dir()
+    if not qa_dir.is_dir():
         return result
-    for subdir in sorted(COLLECTIONS_DIR.iterdir()):
+
+    shared_local = qa_dir / "Local.postman_environment.json"
+    shared_master = qa_dir / "Masterc2.postman_environment.json"
+
+    for subdir in sorted(qa_dir.iterdir()):
         if not subdir.is_dir():
             continue
-        group = {
+        suites = _scan_collection_files(subdir)
+        if not suites:
+            continue
+
+        environments = []
+        if shared_local.is_file():
+            env = _read_env_file(shared_local, "Local")
+            if env is not None:
+                environments.append(env)
+
+        suite_master = subdir / "Master.postman_environment.json"
+        if suite_master.is_file():
+            env = _read_env_file(suite_master, "Master")
+            if env is not None:
+                env["filename"] = f"{subdir.name}/{suite_master.name}"
+                environments.append(env)
+        elif shared_master.is_file():
+            env = _read_env_file(shared_master, "Master")
+            if env is not None:
+                environments.append(env)
+
+        result.append({
             "directory": subdir.name,
             "envTypes": list(ENV_TYPES),
-            "environments": [],
-            "suites": [],
-        }
-        for env_type in ENV_TYPES:
-            env_dir = subdir / env_type
-            if not env_dir.is_dir():
-                continue
-            for f in sorted(env_dir.iterdir()):
-                if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
-                    continue
-                env = _read_env_file(f, env_type)
-                if env is not None:
-                    group["environments"].append(env)
-        for f in sorted(subdir.iterdir()):
-            if not f.is_file() or f.suffix != ".json":
-                continue
-            if f.name.endswith(".postman_environment.json"):
-                continue
-            try:
-                col_data = json.loads(f.read_text())
-                info = col_data.get("info", {})
-                group["suites"].append({
-                    "filename": f.name,
-                    "name": info.get("name", f.stem),
-                    "description": info.get("description", ""),
-                    "itemCount": len(col_data.get("item", [])),
-                })
-            except Exception:
-                pass
-        if group["environments"] or group["suites"]:
-            result.append(group)
+            "environments": environments,
+            "suites": suites,
+            "backendOnly": True,
+        })
     return result
 
 
 def get_collection_file(directory, filename):
     """Return raw Postman collection JSON."""
-    path = COLLECTIONS_DIR / directory / filename
-    if path.is_file() and path.suffix == ".json":
-        return json.loads(path.read_text())
+    for root in (COLLECTIONS_DIR, _qa_automation_dir()):
+        path = root / directory / filename
+        if path.is_file() and path.suffix == ".json":
+            return json.loads(path.read_text())
     return None
 
 
