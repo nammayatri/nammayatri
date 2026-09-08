@@ -308,3 +308,9 @@ ALTER TABLE atlas_app.person ADD COLUMN has_pass_till date ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN blocked_reason text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN firebase_app_instance_id text ;

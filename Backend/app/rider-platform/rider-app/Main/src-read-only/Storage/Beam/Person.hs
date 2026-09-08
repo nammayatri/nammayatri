@@ -60,6 +60,7 @@ data PersonT f = PersonT
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enabled :: B.C f Kernel.Prelude.Bool,
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    firebaseAppInstanceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     firstName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     followsRide :: B.C f Kernel.Prelude.Bool,
     frequentLocGeohashes :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
