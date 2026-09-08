@@ -16,6 +16,7 @@
 
 module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
+    mkRefundSplitSettlementDetails,
     createOrderService,
     orderStatusService,
     juspayWebhookService,
@@ -80,7 +81,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
-import Data.List (sortBy)
+import Data.List (partition, sortBy)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
@@ -2460,9 +2461,13 @@ createRefundService ::
   ) =>
   Id MerchantOperatingCity ->
   ShortId DOrder.PaymentOrder ->
+  -- | Caller-supplied refund amount, for flows that refund less than the full
+  -- order (e.g. an FRFS cancellation net of cancellation charges). Nothing
+  -- preserves the previous behaviour.
+  Maybe HighPrecMoney ->
   (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
   m (Maybe Payment.AutoRefundResp)
-createRefundService merchantOpCityId orderShortId refundsCall =
+createRefundService merchantOpCityId orderShortId mbRefundAmount refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
     logDebug $ "Payment order details - shortId: " <> orderShortId.getShortId <> ", id: " <> order.id.getId <> ", status: " <> show order.status <> ", amount: " <> show order.amount.getHighPrecMoney <> ", currency: " <> show order.currency <> ", paymentServiceType: " <> show order.paymentServiceType <> ", paymentServiceOrderId: " <> order.paymentServiceOrderId
@@ -2479,14 +2484,19 @@ createRefundService merchantOpCityId orderShortId refundsCall =
       if isNothing existingOrderRefunds
         then do
           paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
-          splitSettlementDetails <-
-            case order.effectAmount of
-              Just effectAmount | effectAmount /= order.amount -> return Nothing
-              _ -> mkSplitSettlementDetails paymentSplits
           refundId <- generateGUID
-          let refundAmount = case order.effectAmount of
-                Just effectAmount | effectAmount /= order.amount -> effectAmount
-                _ -> order.amount
+          let refundAmount = case mbRefundAmount of
+                Just callerAmount -> callerAmount
+                Nothing -> case order.effectAmount of
+                  Just effectAmount | effectAmount /= order.amount -> effectAmount
+                  _ -> order.amount
+          -- Split rows were written from order.amount at creation. When the gateway charged a
+          -- different amount (effectAmount, e.g. a gateway-side offer) and no caller amount was
+          -- given, those caps are stale, so send no split block -- as before this change.
+          splitSettlementDetails <-
+            case (mbRefundAmount, order.effectAmount) of
+              (Nothing, Just effectAmount) | effectAmount /= order.amount -> return Nothing
+              _ -> mkRefundSplitSettlementDetails paymentSplits refundAmount
           let refundReq =
                 PInterface.AutoRefundReq
                   { orderId = order.shortId.getShortId,
@@ -2509,30 +2519,52 @@ createRefundService merchantOpCityId orderShortId refundsCall =
               HQRefunds.updateIsApiCallSuccess merchantOpCityId (Just False) refundsEntry mbAction
               return Nothing
         else return Nothing
-    mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> m (Maybe PInterface.RefundSplitSettlementDetails)
-    mkSplitSettlementDetails paymentSplits = do
-      if null paymentSplits
-        then return Nothing
-        else do
-          marketPlaceSplit <- find (\split -> split.vendorId == "marketPlace") paymentSplits & fromMaybeM (InternalError "marketPlace Split Detail not Found")
-          let vendorSplits =
-                map
-                  ( \split ->
-                      PInterface.RefundSplit
-                        { refundAmount = split.amount.amount,
-                          subMid = split.vendorId,
-                          uniqueSplitId = fromMaybe split.id.getId split.transactionId
-                        }
-                  )
-                  paymentSplits
-              mdrBorneBy = marketPlaceSplit.mdrBorneBy
-          return $
-            Just $
-              PInterface.RefundSplitSettlementDetails
-                { marketplace = PInterface.RefundMarketplace marketPlaceSplit.amount.amount,
-                  mdrBorneBy,
-                  vendor = PInterface.RefundVendor vendorSplits
-                }
+
+mkRefundSplitSettlementDetails ::
+  MonadFlow m =>
+  [DPaymentOrderSplit.PaymentOrderSplit] ->
+  HighPrecMoney ->
+  m (Maybe PInterface.RefundSplitSettlementDetails)
+mkRefundSplitSettlementDetails paymentSplits refundAmount =
+  if null paymentSplits
+    then return Nothing
+    else do
+      let (marketPlaceRows, vendorRows) = partition (\split -> split.vendorId == "marketPlace") paymentSplits
+      marketPlaceSplit <- listToMaybe marketPlaceRows & fromMaybeM (InternalError "marketPlace Split Detail not Found")
+      let vendorAmounts = map (\split -> split.amount.amount) vendorRows
+          (vendorRefunds, leftover) = fillVendors refundAmount vendorAmounts
+          marketPlaceRefund = max 0 (min marketPlaceSplit.amount.amount leftover)
+          vendorSplits =
+            zipWith
+              ( \split amount ->
+                  PInterface.RefundSplit
+                    { refundAmount = amount,
+                      subMid = split.vendorId,
+                      uniqueSplitId = fromMaybe split.id.getId split.transactionId
+                    }
+              )
+              vendorRows
+              vendorRefunds
+      logDebug $
+        "Refund split apportionment: refundAmount=" <> show refundAmount
+          <> " marketplace="
+          <> show marketPlaceRefund
+          <> " vendors="
+          <> show vendorRefunds
+      return $
+        Just $
+          PInterface.RefundSplitSettlementDetails
+            { marketplace = PInterface.RefundMarketplace marketPlaceRefund,
+              mdrBorneBy = marketPlaceSplit.mdrBorneBy,
+              vendor = PInterface.RefundVendor vendorSplits
+            }
+  where
+    fillVendors :: HighPrecMoney -> [HighPrecMoney] -> ([HighPrecMoney], HighPrecMoney)
+    fillVendors remaining [] = ([], remaining)
+    fillVendors remaining (cap : caps) =
+      let allocated = max 0 (min cap remaining)
+          (rest, leftover) = fillVendors (remaining - allocated) caps
+       in (allocated : rest, leftover)
 
 refundProccessingKey :: Text -> Text
 refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId

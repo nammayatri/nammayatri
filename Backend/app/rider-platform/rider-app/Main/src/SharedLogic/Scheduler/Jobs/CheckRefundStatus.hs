@@ -143,7 +143,7 @@ processRefundStatus refundEntry person paymentOrder = do
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
             let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-            void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+            void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall Nothing
           return True
         Nothing -> return False
     else return False

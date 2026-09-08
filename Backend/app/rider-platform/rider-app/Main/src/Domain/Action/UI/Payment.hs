@@ -331,7 +331,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                 let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast order.merchantId) order.id
                 eitherResult <-
                   withTryCatch "PaytmEDC:StatusPoll" $
-                    SPayment.syncOrderStatus fulfillmentHandler merchantId personId order
+                    SPayment.syncOrderStatus fulfillmentHandler merchantId personId order Nothing
                 case eitherResult of
                   Left err -> do
                     let newConsecutiveFailures = consecutiveFailures + 1 :: Int
@@ -458,7 +458,7 @@ getStatus (personId, merchantId) orderId = do
   paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-  currentOrderStatus <- SPayment.syncOrderStatus fulfillmentHandler merchantId personId paymentOrder
+  currentOrderStatus <- SPayment.syncOrderStatus fulfillmentHandler merchantId personId paymentOrder Nothing
   -- Check if current order is not successful and has a groupId
   case (currentOrderStatus.paymentFulfillmentStatus, paymentOrder.groupId) of
     (Just DPayment.FulfillmentSucceeded, _) -> pure currentOrderStatus
@@ -474,7 +474,7 @@ getStatus (personId, merchantId) orderId = do
           ( \order -> do
               let orderPaymentServiceType = fromMaybe DOrder.Normal order.paymentServiceType
                   orderFulfillmentHandler = mkFulfillmentHandler orderPaymentServiceType (cast order.merchantId) order.id
-              void $ SPayment.syncOrderStatus orderFulfillmentHandler merchantId personId order
+              void $ SPayment.syncOrderStatus orderFulfillmentHandler merchantId personId order Nothing
           )
           remainingOrders
       -- Check if any other order has FulfillmentSucceeded status
@@ -483,7 +483,7 @@ getStatus (personId, merchantId) orderId = do
           let successPaymentServiceType = fromMaybe DOrder.Normal successfulOrder.paymentServiceType
               successFulfillmentHandler = mkFulfillmentHandler successPaymentServiceType (cast successfulOrder.merchantId) successfulOrder.id
           logInfo $ "Found successful order in group: " <> successfulOrder.id.getId <> ", syncing instead of current order: " <> paymentOrder.id.getId
-          SPayment.syncOrderStatus successFulfillmentHandler merchantId personId successfulOrder
+          SPayment.syncOrderStatus successFulfillmentHandler merchantId personId successfulOrder Nothing
         Nothing -> pure currentOrderStatus
 
 -- order status s2s -----------------------------------------------------
@@ -653,7 +653,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
       let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
           fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
-      SPayment.orderStatusHandler merchantOperatingCity.id fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+      SPayment.orderStatusHandler merchantOperatingCity.id fulfillmentHandler paymentServiceType paymentOrder orderStatusCall Nothing
 
 -- | Idempotent: confirm ride booking after payment success. Single place for Paytm EDC callback and rideBookingOrderStatusHandler.
 confirmRideBookingFromPaymentOrder :: DOrder.PaymentOrder -> Flow (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
@@ -733,6 +733,7 @@ paytmEdcCallbackHandler req = do
             paymentOrder
             paymentOrder
             paymentStatusResp
+            Nothing
   pure Ack
 
 rideBookingOrderStatusHandler ::
