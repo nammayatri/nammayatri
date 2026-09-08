@@ -384,6 +384,13 @@ castDocumentMetadata = \case
           regionCovered = p.regionCovered,
           rcNumber = p.rcNumber
         }
+  VehicleDocs.VehicleNOCMetadata n ->
+    CommonOnboarding.VehicleNOCMetadata
+      CommonOnboarding.VehicleNOCDocumentMetadata
+        { nocNumber = n.nocNumber,
+          nocExpiry = n.nocExpiry,
+          rcNumber = n.rcNumber
+        }
   VehicleDocs.UDYAMMetadata u ->
     CommonOnboarding.UDYAMMetadata
       CommonOnboarding.UDYAMDocumentMetadata

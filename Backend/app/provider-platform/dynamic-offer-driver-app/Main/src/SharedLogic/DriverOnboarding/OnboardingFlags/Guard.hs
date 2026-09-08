@@ -80,17 +80,22 @@ withOnboardingActionLock target body = case target of
     locked entityKey =
       Hedis.withWaitAndLockRedis ("Onboarding:Action:" <> entityKey) onboardingActionLockTTLSeconds onboardingActionLockRetryMs body
 
-notifiableVerbs :: [ActionVerb]
-notifiableVerbs =
+fleetOnlyNotifiableVerbs :: [ActionVerb]
+fleetOnlyNotifiableVerbs =
   [ UnlinkVehicle,
     ActivateVehicle,
     DeactivateVehicle,
     UnlinkFromFleet,
-    Delete,
     ActivateToFleet,
-    DeactivateFromFleet,
-    ChangeFleetOwner
+    DeactivateFromFleet
   ]
+
+notifiableVerbs :: [ActionVerb]
+notifiableVerbs =
+  fleetOnlyNotifiableVerbs
+    <> [ Delete,
+         ChangeFleetOwner
+       ]
 
 targetEntity :: GuardTarget -> (DAlertEntity.AlertEntityType, Text, Maybe (Id DP.Person))
 targetEntity = \case
@@ -115,17 +120,26 @@ notifyOnboardingAction actor verb target = do
     Nothing -> pure Nothing
   let alertActor = maybe SDA.SystemActor SDA.FleetOwnerActor (actorFleetOwner actor)
       fleetOwnerIds = nub $ catMaybes [actorFleetOwner actor, mbTargetFleetOwner]
-      audiences = SDA.audiencesFor alertActor fleetOwnerIds
+      allAudiences = SDA.audiencesFor alertActor fleetOwnerIds
+      audiences =
+        if verb `elem` fleetOnlyNotifiableVerbs
+          then SDA.withoutAdminAudience allAudiences
+          else allAudiences
       requestorId = fromMaybe (Id "system") (actorPersonId actor)
   mbPerson <- QPerson.findById requestorId
-  whenJust mbPerson $ \person ->
+  whenJust mbPerson $ \person -> do
+    let dynamicParams =
+          [ ("entityId", entityId),
+            ("entityType", show entityType),
+            ("action", show verb),
+            ("requestorName", person.firstName <> maybe "" (" " <>) person.lastName)
+          ]
     SDA.notifyOnboardingChange
       audiences
       entityType
       entityId
       (castActionVerb verb)
-      ("Onboarding update: " <> show verb)
-      (show verb <> " on " <> show entityType <> " " <> entityId)
+      dynamicParams
       requestorId
       person.merchantId
       person.merchantOperatingCityId

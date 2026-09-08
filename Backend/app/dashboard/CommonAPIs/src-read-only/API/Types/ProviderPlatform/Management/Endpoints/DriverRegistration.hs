@@ -182,6 +182,13 @@ data DocumentRegisterMetadata
   | GSTData RegisterGstReq
   | UDYAMData RegisterUdyamReq
   | CommonData CommonDocumentCreateReq
+  | VehiclePermitData VPermitApproveDetails
+  | VehiclePUCData VPUCApproveDetails
+  | VehicleFitnessData FitnessApproveDetails
+  | VehicleInsuranceData VInsuranceRegisterReq
+  | VehicleNOCData NOCApproveDetails
+  | GSTCertificateData GSTApproveDetails
+  | BusinessLicenseData BusinessLicenseApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -660,6 +667,22 @@ data VInsuranceApproveDetails = VInsuranceApproveDetails
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VInsuranceRegisterReq = VInsuranceRegisterReq
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    policyNumber :: Kernel.Prelude.Text,
+    policyExpiry :: Kernel.Prelude.UTCTime,
+    policyProvider :: Kernel.Prelude.Text,
+    rcNumber :: Kernel.Prelude.Text,
+    insuredName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issueDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    limitsOfLiability :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets VInsuranceRegisterReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data VPUCApproveDetails = VPUCApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,

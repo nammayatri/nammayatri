@@ -53,7 +53,6 @@ import Data.Ord (Down (..))
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import Domain.Types.CommonDocumentData (renderCommonDocumentData)
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
@@ -623,7 +622,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 markEnableDisableReasonFlags False person FleetRejectionDisable
               -- Then check if fleet should be enabled (all mandatory docs valid)
               when allFleetDocsVerified $
-                enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId True
+                enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId True Nothing
             -- Check driver enablement separately (only driver docs + driver inspection)
             when (person.role == DP.DRIVER) $ do
               let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
@@ -636,7 +635,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 when driverInspectionNotRequired $ do
                   unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
                   when autoEnableAllowed $ do
-                    enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
+                    enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True Nothing
                     whenJust onboardingVehicleCategory $ \category -> do
                       DIIQuery.updateOnboardingVehicleCategory (Just category) personId
             -- Check vehicle enablement separately (only vehicle docs + vehicle inspection)
@@ -650,7 +649,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 let autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
                 unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
                 when autoEnableAllowed $ do
-                  enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True
+                  enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId True Nothing
                   whenJust onboardingVehicleCategory $ \category -> do
                     DIIQuery.updateOnboardingVehicleCategory (Just category) personId
             -- Check vehicle enablement (old combined logic - checks both driver and vehicle docs)
@@ -753,19 +752,16 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             allowAutoActivate =
               isActive
                 || (firstTimeOnboarding && not dontAutoEnable)
-            driverLiveForAutoActivate = maybe False (\driverInfo -> driverInfo.enabled && isNothing driverInfo.disabledReasonFlag) mbDriverInfo
         let unifiedRecompute = entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && driverLiveForAutoActivate) $ do
-          void $ withTryCatch "activateRCAutomatically:statusHandler:unifiedRecompute" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
-        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && allowAutoActivate) $ do
-          void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
+        when (not unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && allowAutoActivate) $ do
+          void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity.merchantId merchantOpCityId vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
           -- When separated, driver enablement is handled separately in the driver enablement section
           unless separateEnablement $ do
             when (checkToActivateRC && not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver)) $ do
               case (isVehicleCategoryExcludedFromVerification, mDL) of
-                (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
-                (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True
+                (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True Nothing
+                (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId True Nothing
                 (_, _) -> return ()
         if unifiedRecompute
           then do
@@ -990,15 +986,6 @@ ensureNoActiveRidesUnderFleet fleetOwnerId = do
   anyActive <- anyM (fmap isJust . QRideExtra.getUpcomingOrActiveByDriverId) driverIds
   when anyActive $
     throwError $ InvalidRequest "Cannot disable fleet: one or more drivers have active rides"
-
-activateRCAutomatically :: OnboardingFlow m r => Id DP.Person -> DMOC.MerchantOperatingCity -> Text -> m ()
-activateRCAutomatically personId merchantOpCity rcNumber = do
-  let rcStatusReq =
-        DomainRC.RCStatusReq
-          { rcNo = rcNumber,
-            isActivate = True
-          }
-  void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) False rcStatusReq
 
 mkDLMetadata :: OnboardingFlow m r => Maybe DL.DriverLicense -> m (Maybe DocumentMetadata)
 mkDLMetadata mbDl = forM mbDl $ \dl -> do

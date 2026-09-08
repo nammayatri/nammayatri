@@ -191,11 +191,12 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           filter (\config -> config.vehicleCategory == vehicleCategory && isVehicleSideDocType config.documentCategory config.documentType) driverDocConfigs
       checkDriverDocs mode = checkAllDocsValid mode (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       checkVehicleDocs mode category docs = checkAllDocsValid mode (Just isFleetDriver) (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
+      mbValidVehicleDoc mode = find (\item -> checkVehicleDocs mode (vehicleDocCategory item) item.documents) vehicleDocuments
       vehicleDocsOk mode =
         not useUnifiedOnboardingFlagsRecompute
           || ( case vehicleDocuments of
                  [] -> checkVehicleDocs mode vehicleCategory unavailableVehicleDocs
-                 items -> any (\item -> checkVehicleDocs mode (vehicleDocCategory item) item.documents) items
+                 _ -> isJust (mbValidVehicleDoc mode)
              )
       allMandatoryDocsValid = checkDriverDocs ForVerified && vehicleDocsOk ForVerified
       allEnablingDocsValid = checkDriverDocs ForEnabling && vehicleDocsOk ForEnabling
@@ -267,7 +268,11 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure Nothing
   if justEnabled
     then do
-      enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId verifiedToWrite
+      let mbRcNumberToActivate =
+            if useUnifiedOnboardingFlagsRecompute
+              then (.registrationNo) <$> mbValidVehicleDoc ForEnabling
+              else Nothing
+      enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId verifiedToWrite mbRcNumberToActivate
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
     else
