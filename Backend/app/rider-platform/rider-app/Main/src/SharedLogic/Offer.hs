@@ -70,7 +70,8 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerSponsoredBy :: [Text],
     offerIds :: [Text],
     offerListResp :: Payment.OfferListResp,
-    metadata :: Maybe A.Value
+    metadata :: Maybe A.Value,
+    promoCard :: Maybe PromoCard
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -471,6 +472,32 @@ listOffersForPerson merchantId person mbAmount = do
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
+cumulativeOffersForPerson ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
+  Id Merchant.Merchant ->
+  Person.Person ->
+  Maybe HighPrecMoney ->
+  m CumulativeOfferResp
+cumulativeOffersForPerson merchantId person mbAmount = do
+  let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+  let offerListResp = Payment.OfferListResp {Payment.bestOfferCombination = Nothing, Payment.offerResp = concatMap (\(_, resp) -> resp.offerResp) productOffers}
+  mbResp <- mkCumulativeOfferResp person.merchantOperatingCityId offerListResp [] Nothing Nothing
+  case mbResp of
+    Just resp -> pure resp
+    Nothing -> do
+      offers <- mapM (mkOfferRespAPIEntity Nothing) offerListResp.offerResp
+      pure
+        CumulativeOfferResp
+          { offerTitle = "",
+            offerDescription = "",
+            offerSponsoredBy = [],
+            offerIds = map (.offerId) offers,
+            offerListResp = offers,
+            metadata = Nothing,
+            promoCard = Nothing
+          }
+
 mkOfferRespAPIEntity ::
   (MonadFlow m) =>
   OfferFareCtx ->
@@ -491,7 +518,8 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         amountSaved = discountAmount + cashbackAmount,
         postOfferAmount = postOfferAmount,
         estimatedAmountSaved = discountAmount + cashbackAmount,
-        estimatedPostOfferAmount = postOfferAmount
+        estimatedPostOfferAmount = postOfferAmount,
+        offerType = readMaybe (T.unpack benefitType)
       }
 
 -- | Replace each offer's display text (title/description/tnc) with the rider's

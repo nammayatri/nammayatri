@@ -1,0 +1,1591 @@
+{
+  "info": {
+    "_postman_id": "ca4c9038-6e75-47cf-adef-64be255d059d",
+    "name": "Offline Ride Cashback Offer — /offers/list/v2 promo card (eligible → card, used → none)",
+    "description": "Cash ride with the first-ride CASHBACK offer, driven through the new GET /offers/list/v2. The collection installs the city's CUMULATIVE_OFFER_POLICY rule with a `promoCard` under an \"offers not empty\" condition (the rule uses only `if`, `in`, `map`, `var`, `cat`, all used by production rules), then asserts: a fresh rider gets the eligible offers plus the card from v2 (same offers as v1, every offer typed), the estimate carries the same card through unchanged (no `source` input to the rule), v1 is unaffected, the ride completes with the cashback applied, and afterwards v2 lists no offer and `promoCard` is null while the response shape stays intact. The rider is registered under `bap_short_id` at the search origin so the rule installed for that merchant and city is the one the person-based v2 call resolves. Needs `bap_dashboard_url` / `bap_dashboard_token` in the env.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+              "console.log('AddVehicle:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+              "console.log('Enable:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/18911beb-28ba-456d-8cca-4d019461d2b0/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "18911beb-28ba-456d-8cca-4d019461d2b0",
+            "subscribe"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22YATRI_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\", \"registrationLat\": {{origin_lat}}, \"registrationLon\": {{origin_lon}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Offers List (Rider) — v1 baseline, capture offer ids for the rule",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('v1 offers list is an array', function () { pm.expect(d).to.be.an('array'); });",
+              "var ids = d.map(function (o) { return o.offerId; });",
+              "pm.collectionVariables.set('_test_offer_ids_json', JSON.stringify(ids));",
+              "pm.collectionVariables.set('_test_v1_offer_count', String(d.length));",
+              "var first = d[0];",
+              "pm.collectionVariables.set('_test_rule_title', (first && first.offerTitle) || 'First ride cashback');",
+              "pm.collectionVariables.set('_test_rule_desc', (first && first.offerDescription) || 'Cashback on your first ride');",
+              "console.log('v1 offers for the rider:', ids.length, ids);",
+              "if (ids.length === 0) { console.log('WARNING: no eligible offer for a fresh rider; the promo-card assertions below expect at least one (first-ride cashback).'); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/offers/list?amount=100"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bap_dashboard_token', d.authToken);",
+              "pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Cumulative Offer Logic with Promo Card (BAP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Logic version:', d.version, 'updated:', d.isRuleUpdated);",
+              "if (d.version) { pm.environment.set('offer_logic_version', d.version); }",
+              "pm.test('Rule with promoCard accepted by verify (output decodes as CumulativeOfferRespI)', function () { pm.response.to.have.status(200); });",
+              "pm.test('A new rule version was created', function () { pm.expect(d.version, 'version').to.be.a('number'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/verify",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"CUMULATIVE_OFFER_POLICY\"}, \"shouldUpdateRule\": true, \"updatePassword\": \"dummy-password\", \"description\": \"Promo card integration test (offers/list/v2)\", \"inputData\": [{\"offerListResp\": {\"bestOfferCombination\": null, \"offerResp\": []}, \"extraParams\": [], \"offerSegment\": null}], \"rules\": [{\"if\": [{\"in\": [1, {\"map\": [{\"var\": \"offerListResp.offerResp\"}, 1]}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"{{_test_rule_title}}\"}, {\"offerDescription\": \"{{_test_rule_desc}}\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": {{_test_offer_ids_json}}}, {\"promoCard\": {\"header\": \"Welcome!\", \"title\": \"Your first ride is on us\", \"subtitle\": \"Cashback on your first ride\", \"subtitleInfo\": \"Integration test card\", \"imageUrl\": \"https://example.com/promo-card.png\", \"textColor\": \"#123D02\", \"bgGradientColors\": [\"#fce0e5\", \"#f8f9f9\"]}}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"\"}, {\"offerDescription\": \"\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": []}]}]}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rollout Offer Logic (BAP)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 20000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "upsertLogicRollout"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"CUMULATIVE_OFFER_POLICY\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{offer_logic_version}},\"versionDescription\":\"Promo card integration test\"}]}]"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Offers List V2 (Rider) — promo card for an eligible rider",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('v2 returns a cumulative offer object, never null', function () {",
+              "    pm.expect(d, 'body').to.be.an('object');",
+              "    pm.expect(d.offerListResp, 'offerListResp').to.be.an('array');",
+              "    pm.expect(d.offerTitle, 'offerTitle').to.be.a('string');",
+              "    pm.expect(d.offerDescription, 'offerDescription').to.be.a('string');",
+              "    pm.expect(d.offerSponsoredBy, 'offerSponsoredBy').to.be.an('array');",
+              "    pm.expect(d.offerIds, 'offerIds').to.be.an('array');",
+              "    pm.expect(d, 'promoCard key').to.have.property('promoCard');",
+              "});",
+              "var v1Count = parseInt(pm.collectionVariables.get('_test_v1_offer_count') || '0');",
+              "pm.test('v2 lists the same eligible offers as v1', function () {",
+              "    pm.expect(d.offerListResp.length).to.equal(v1Count);",
+              "    var ids = d.offerListResp.map(function (o) { return o.offerId; }).sort();",
+              "    pm.expect(ids).to.eql(JSON.parse(pm.collectionVariables.get('_test_offer_ids_json') || '[]').sort());",
+              "});",
+              "pm.test('A fresh rider is eligible for the first-ride offer', function () {",
+              "    pm.expect(d.offerListResp.length, 'eligible offers').to.be.above(0);",
+              "});",
+              "pm.test('Every listed offer carries offerType', function () {",
+              "    d.offerListResp.forEach(function (o) { pm.expect(o.offerType, 'offerType of ' + o.offerId).to.be.oneOf(['DISCOUNT', 'CASHBACK']); });",
+              "});",
+              "pm.test('The rule ran: title, ids and promo card come from the rule', function () {",
+              "    pm.expect(d.offerTitle).to.equal(pm.collectionVariables.get('_test_rule_title'));",
+              "    pm.expect(d.offerIds.slice().sort()).to.eql(JSON.parse(pm.collectionVariables.get('_test_offer_ids_json') || '[]').sort());",
+              "    function expectCard(card) {",
+              "        pm.expect(card, 'promoCard').to.be.an('object');",
+              "        pm.expect(card.title).to.equal('Your first ride is on us');",
+              "        pm.expect(card.header).to.equal('Welcome!');",
+              "        pm.expect(card.subtitle).to.equal('Cashback on your first ride');",
+              "        pm.expect(card.subtitleInfo).to.equal('Integration test card');",
+              "        pm.expect(card.imageUrl).to.equal('https://example.com/promo-card.png');",
+              "        pm.expect(card.textColor).to.equal('#123D02');",
+              "        pm.expect(card.bgGradientColors).to.eql(['#fce0e5', '#f8f9f9']);",
+              "        pm.expect(card.lottieUrl == null, 'lottieUrl absent').to.be.true;",
+              "    }",
+              "    expectCard(d.promoCard);",
+              "});",
+              "pm.collectionVariables.set('_test_v2_had_offers', d.offerListResp.length > 0 ? 'yes' : 'no');",
+              "console.log('v2 response:', JSON.stringify(d));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/offers/list/v2?amount=100"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Offers List (Rider) — v1 unchanged after the rule",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('v1 still returns the plain offers array (no rule, no card)', function () {",
+              "    pm.expect(d).to.be.an('array');",
+              "    pm.expect(d.length).to.equal(parseInt(pm.collectionVariables.get('_test_v1_offer_count') || '0'));",
+              "    d.forEach(function (o) { pm.expect(o).to.not.have.property('promoCard'); });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/offers/list?amount=100"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results (with Cashback Offer) — promo card passed through on the estimate",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Wait for estimates to be aggregated",
+              "const _w0 = Date.now(); while (Date.now() - _w0 < 5000) { /* busy wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d.estimates, 'estimates').to.be.an('array').that.is.not.empty; });",
+              "var est = (d.estimates || []).find(function (e) { return e.offer && e.offer.offerIds && e.offer.offerIds.length > 0; }) || (d.estimates || [])[0];",
+              "if (est) {",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
+              "}",
+              "pm.test('Estimate carries a cashback offer to select', function () {",
+              "    pm.expect(est && est.offer, 'estimate.offer').to.be.an('object');",
+              "    pm.expect(est.offer.offerIds, 'offer.offerIds').to.be.an('array').that.is.not.empty;",
+              "});",
+              "var selectedId = est && est.offer && est.offer.offerIds ? est.offer.offerIds[0] : null;",
+              "if (selectedId) {",
+              "    pm.collectionVariables.set('selected_offer_id', selectedId);",
+              "    console.log('Selected offer:', est.offer.offerTitle, selectedId);",
+              "}",
+              "// New field: each offer in estimate.offer.offerListResp is typed.",
+              "pm.test('Estimate offer list exposes offerType on every offer', function () {",
+              "    var list = est.offer.offerListResp;",
+              "    pm.expect(list, 'offer.offerListResp').to.be.an('array').that.is.not.empty;",
+              "    list.forEach(function (o) {",
+              "        pm.expect(o, 'offer ' + o.offerId).to.have.property('offerType');",
+              "        pm.expect(o.offerType, 'offerType of ' + o.offerId).to.be.oneOf(['DISCOUNT', 'CASHBACK']);",
+              "    });",
+              "});",
+              "pm.test('Offer being selected is typed as CASHBACK on the estimate', function () {",
+              "    var picked = (est.offer.offerListResp || []).find(function (o) { return o.offerId === selectedId; });",
+              "    pm.expect(picked, 'offerListResp entry for ' + selectedId).to.be.an('object');",
+              "    pm.expect(picked.offerType).to.equal('CASHBACK');",
+              "    pm.expect(picked.estimatedAmountSaved, 'estimatedAmountSaved').to.be.above(0);",
+              "});",
+              "if (est && est.offer) { console.log('estimate.offer.offerListResp:', JSON.stringify(est.offer.offerListResp)); }",
+              "// P-4: no source field — the rule attaches the card for every caller; estimates carry it through unchanged.",
+              "pm.test('Estimate offer carries the same promo card as /offers/list/v2', function () {",
+              "    function expectCard(card) {",
+              "        pm.expect(card, 'promoCard').to.be.an('object');",
+              "        pm.expect(card.title).to.equal('Your first ride is on us');",
+              "        pm.expect(card.header).to.equal('Welcome!');",
+              "        pm.expect(card.subtitle).to.equal('Cashback on your first ride');",
+              "        pm.expect(card.subtitleInfo).to.equal('Integration test card');",
+              "        pm.expect(card.imageUrl).to.equal('https://example.com/promo-card.png');",
+              "        pm.expect(card.textColor).to.equal('#123D02');",
+              "        pm.expect(card.bgGradientColors).to.eql(['#fce0e5', '#f8f9f9']);",
+              "        pm.expect(card.lottieUrl == null, 'lottieUrl absent').to.be.true;",
+              "    }",
+              "    expectCard(est.offer.promoCard);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Select Estimate with Cashback Offer (Cash)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"selectedOfferId\": \"{{selected_offer_id}}\", \"paymentInstrument\": {\"tag\": \"Cash\"}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait briefly before checking nearby requests",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "} else {",
+              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests', function () {",
+              "    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Rider) — selected cashback offer on the active ride",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Wait for booking to be created after driver acceptance",
+              "const delay = pm.environment.get('booking_wait_ms') || 5000;",
+              "const start = Date.now();",
+              "while (Date.now() - start < delay) { /* busy wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has an active booking', function () { pm.expect(d.list, 'list').to.be.an('array').that.is.not.empty; });",
+              "var booking = d.list && d.list[0];",
+              "var ride = booking && booking.rideList && booking.rideList[0];",
+              "if (booking) {",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var otp = booking.rideOtp || (ride && ride.rideOtp);",
+              "    pm.environment.set('ride_otp', otp);",
+              "    if (ride) { pm.environment.set('rider_ride_id', ride.id); }",
+              "    console.log('Booking:', booking.id, 'status:', booking.status, 'ride:', ride && ride.id, ride && ride.status);",
+              "}",
+              "pm.test('Active ride exposes selectedOffers', function () {",
+              "    pm.expect(ride, 'rideList[0]').to.be.an('object');",
+              "    pm.expect(ride.selectedOffers, 'rideList[0].selectedOffers').to.be.an('object');",
+              "    pm.expect(ride.selectedOffers.offers, 'selectedOffers.offers').to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.test('Selected offer is typed as CASHBACK', function () {",
+              "    pm.expect(ride.selectedOffers.offers[0].offerType).to.equal('CASHBACK');",
+              "});",
+              "pm.test('Selected offer matches the one chosen at select', function () {",
+              "    pm.expect(ride.selectedOffers.offers[0].offerId).to.equal(pm.collectionVariables.get('selected_offer_id'));",
+              "});",
+              "pm.test('Estimated saving is exposed while pending', function () {",
+              "    pm.expect(ride.selectedOffers).to.have.property('estimatedTotalAmountSaved');",
+              "    pm.expect(ride.selectedOffers.offers[0]).to.have.property('estimatedAmountSaved');",
+              "});",
+              "if (ride && ride.selectedOffers) { console.log('selectedOffers (pending):', JSON.stringify(ride.selectedOffers)); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Offer Still Attached During Ride (Rider)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Give the BAP a moment to process ride start",
+              "const _w0 = Date.now(); while (Date.now() - _w0 < 2000) { /* busy wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var ride = d.rideList && d.rideList[0];",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Ride is in progress', function () { pm.expect(ride && ride.status).to.be.oneOf(['INPROGRESS', 'NEW']); });",
+              "pm.test('selectedOffers still attached mid-ride', function () {",
+              "    pm.expect(ride.selectedOffers, 'selectedOffers').to.be.an('object');",
+              "    pm.expect(ride.selectedOffers.offers, 'offers').to.be.an('array').that.is.not.empty;",
+              "});",
+              "pm.test('offerType unchanged mid-ride', function () {",
+              "    pm.expect(ride.selectedOffers.offers[0].offerType).to.equal('CASHBACK');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Small delay before ending ride",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Cashback Offer on Completed Ride (Rider)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Wait for on_update(ride completed) to reach the BAP",
+              "const _w0 = Date.now(); while (Date.now() - _w0 < 3000) { /* busy wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var ride = d.rideList && d.rideList[0];",
+              "var settled = d.status === 'COMPLETED' && ride && ride.status === 'COMPLETED' && ride.selectedOffers;",
+              "var attempt = parseInt(pm.collectionVariables.get('_complete_attempt') || '0');",
+              "if (!settled && attempt < 8) {",
+              "    console.log('Booking not settled yet (attempt', attempt + 1, ') status:', d.status, 'ride:', ride && ride.status);",
+              "    var t0 = Date.now(); while (Date.now() - t0 < 3000) {}",
+              "    pm.collectionVariables.set('_complete_attempt', String(attempt + 1));",
+              "    pm.execution.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "    pm.collectionVariables.set('_complete_attempt', '0');",
+              "    pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "    pm.test('Booking completed', function () { pm.expect(d.status).to.equal('COMPLETED'); });",
+              "    pm.test('Ride completed', function () { pm.expect(ride && ride.status).to.equal('COMPLETED'); });",
+              "    pm.test('Applied offer is typed as CASHBACK', function () {",
+              "        pm.expect(ride.selectedOffers.offers, 'offers').to.be.an('array').that.is.not.empty;",
+              "        pm.expect(ride.selectedOffers.offers[0].offerType).to.equal('CASHBACK');",
+              "    });",
+              "    pm.test('Applied offer is the one selected', function () {",
+              "        pm.expect(ride.selectedOffers.offers[0].offerId).to.equal(pm.collectionVariables.get('selected_offer_id'));",
+              "    });",
+              "    pm.test('Final saving is positive and recomputed on the real fare', function () {",
+              "        pm.expect(ride.selectedOffers.totalAmountSaved).to.be.above(0);",
+              "        pm.expect(ride.selectedOffers.totalAmountSavedV2).to.have.property('amount');",
+              "        pm.expect(ride.selectedOffers.totalPostOfferAmount).to.be.at.least(0);",
+              "    });",
+              "    console.log('selectedOffers (completed):', JSON.stringify(ride.selectedOffers));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Offers List V2 (Rider) — no promo card once the first-ride offer is used",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Give the BAP a moment to settle the completed ride before checking eligibility.",
+              "const _w0 = Date.now(); while (Date.now() - _w0 < 3000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var attempt = parseInt(pm.collectionVariables.get('_v2_attempt') || '0');",
+              "var stillListed = d && d.offerListResp && d.offerListResp.length > 0;",
+              "if (stillListed && attempt < 6) {",
+              "    // Offer stats are updated when the BAP settles the ride; poll a few times before judging.",
+              "    console.log('First-ride offer still listed (attempt', attempt + 1, '), waiting for offer stats to settle');",
+              "    var t0 = Date.now(); while (Date.now() - t0 < 3000) {}",
+              "    pm.collectionVariables.set('_v2_attempt', String(attempt + 1));",
+              "    pm.execution.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "    pm.collectionVariables.set('_v2_attempt', '0');",
+              "    pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "    pm.test('v2 still returns an object with an offers array', function () {",
+              "        pm.expect(d, 'body').to.be.an('object');",
+              "        pm.expect(d.offerListResp, 'offerListResp').to.be.an('array');",
+              "    });",
+              "    pm.test('First-ride offer is no longer listed after the ride', function () {",
+              "        pm.expect(d.offerListResp.length).to.equal(0);",
+              "    });",
+              "    pm.test('No eligible offer means promoCard is null (P-5 / P-6)', function () {",
+              "        pm.expect(d.promoCard, 'promoCard').to.be.null;",
+              "    });",
+              "    pm.test('Empty-offers response keeps the shape the app decodes', function () {",
+              "        pm.expect(d.offerIds).to.eql([]);",
+              "        pm.expect(d.offerTitle).to.equal('');",
+              "        pm.expect(d.offerSponsoredBy).to.eql([]);",
+              "    });",
+              "    console.log('v2 after the ride:', JSON.stringify(d));",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/offers/list/v2?amount=100"
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get(\"_test_driver_number\")) {",
+          "    var dNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
+          "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+          "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+          "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
+    },
+    {
+      "key": "selected_offer_id",
+      "value": ""
+    },
+    {
+      "key": "_complete_attempt",
+      "value": ""
+    },
+    {
+      "key": "_v2_attempt",
+      "value": ""
+    },
+    {
+      "key": "_test_offer_ids_json",
+      "value": ""
+    },
+    {
+      "key": "_test_v1_offer_count",
+      "value": ""
+    },
+    {
+      "key": "_test_v2_had_offers",
+      "value": ""
+    },
+    {
+      "key": "_test_rule_title",
+      "value": ""
+    },
+    {
+      "key": "_test_rule_desc",
+      "value": ""
+    }
+  ]
+}

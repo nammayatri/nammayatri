@@ -1,5 +1,6 @@
 imports:
   OfferRespAPIEntity: SharedLogic.Offer
+  CumulativeOfferResp: SharedLogic.Offer
   HighPrecMoney: Kernel.Types.Common
 
 module: Offers
@@ -14,3 +15,10 @@ apis:
         - amount: HighPrecMoney
       response:
         type: "[OfferRespAPIEntity]"
+  - GET:
+      endpoint: /offers/list/v2
+      auth: TokenAuth
+      query:
+        - amount: HighPrecMoney
+      response:
+        type: CumulativeOfferResp

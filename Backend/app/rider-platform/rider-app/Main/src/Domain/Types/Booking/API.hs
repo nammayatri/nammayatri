@@ -60,6 +60,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -696,7 +697,8 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                               amountSaved = offerEntity.amountSaved,
                               postOfferAmount = offerEntity.postOfferAmount,
                               estimatedAmountSaved = estimatedOfferEntity.amountSaved,
-                              estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount
+                              estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount,
+                              offerType = Just (if offerEntity.payoutAmount > 0 then DOffer.CASHBACK else DOffer.DISCOUNT)
                             }
                         ],
                       totalAmountSaved = offerEntity.amountSaved,
