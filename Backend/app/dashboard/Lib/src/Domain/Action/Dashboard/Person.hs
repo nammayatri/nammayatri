@@ -256,9 +256,8 @@ adminEmailDomainError = "Administrator accounts must use an approved organizatio
 --
 -- One person row carries one email across every merchant that person can reach, so checking only
 -- the caller's merchant is too weak: an admin of a permissive merchant could set an address that
--- violates a stricter merchant the same person administers. Reachability is defined exactly as in
--- 'assertPersonInCallerMerchant' — access rows when there are any, the provisioning merchant
--- otherwise — so the two guards cannot drift apart. The caller's own merchant is always included,
+-- violates a stricter merchant the same person administers. Reachability is access rows when
+-- there are any, the provisioning merchant otherwise. The caller's own merchant is always included,
 -- which is what preserves today's behaviour for a person with neither access rows nor a
 -- provisioning merchant.
 --
@@ -293,46 +292,6 @@ assertAdminEmailDomainForPerson tokenInfo person role mbEmail =
     merchants <- policyMerchantsForPerson tokenInfo person
     forM_ merchants $ \merchantId -> assertAdminEmailDomain merchantId role mbEmail
 
--- | Admin mutations that address a person directly by id must not reach across merchants.
--- Without this an admin of any merchant could act on an arbitrary person id.
---
--- merchant_access rows are authoritative whenever the person has any: those merchants, and only
--- those, may act on them. A person shared across merchants therefore stays manageable by each.
---
--- The access rows cannot be the whole story though, because they are deletable. An earlier
--- version of this function used them alone and was bypassable: resetMerchantAccess and
--- resetMerchantCityAccess delete access rows and leave the person row alive, so an attacker could
--- empty a victim's rows and then claim them as "unowned". That state is also reachable with no
--- attack at all — a merchant revoking its own user's last access produces it.
---
--- person.merchantId, the merchant the person was provisioned under, closes that. It is written
--- once at creation, never updated, and not settable from any admin endpoint, so it holds the
--- claim when the rows are gone. It is deliberately consulted ONLY as a fallback rather than
--- unioned in: unioning would leave the provisioning merchant with authority forever, including
--- over a person whose access has since moved entirely to somebody else. Access, once granted,
--- decides; provisioning only decides when there is no access to speak of.
---
--- No claimant at all is still permitted, and now means one of two things: the person was created
--- moments ago and has not been granted access yet (createPerson writes no access row;
--- createUserForMerchant grants it on the next line), so rejecting would strand an admin who
--- typo'd an email at creation; or the row predates this column and the backfill found no access
--- row to derive one from. Neither is forgeable by a caller.
-assertPersonInCallerMerchant ::
-  BeamFlow m r =>
-  TokenInfo ->
-  Id DP.Person ->
-  m ()
-assertPersonInCallerMerchant tokenInfo personId = do
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  allAccess <- QAccess.findAllMerchantAccessByPersonId personId
-  let claimants =
-        if null allAccess
-          then maybe [] (: []) person.merchantId
-          else map (.merchantId) allAccess
-  unless (null claimants) $
-    unless (tokenInfo.merchantId `elem` claimants) $
-      throwError (PersonDoesNotExist personId.getId)
-
 -- | Granting a person access to a merchant is how somebody becomes a user of that merchant, so
 -- leaving this open undoes every other cross-merchant guard: an admin of B could grant their own
 -- user access to merchant A. Callers are held to their own merchant, with an escape hatch for a
@@ -340,14 +299,13 @@ assertPersonInCallerMerchant tokenInfo personId = do
 --
 -- Unconditional, matching DCap.guardAdminMutation: the SUPER_ADMIN tier is seeded (seed-migration
 -- 0018), so the existence guard that once kept these rules dormant no longer has anything to wait
--- for. Returns True when this is a cross-merchant grant that was permitted.
-assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m Bool
+-- for.
+assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m ()
 assertMayGrantAccessToMerchant tokenInfo targetMerchantId
-  | targetMerchantId == tokenInfo.merchantId = pure False
-  | otherwise = do
+  | targetMerchantId == tokenInfo.merchantId = pure ()
+  | otherwise =
     unlessM (isSuperAdmin tokenInfo.personId) $
       throwError AccessDenied
-    pure True
 
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
 -- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
@@ -475,7 +433,6 @@ assignRole ::
   Id DRole.Role ->
   m APISuccess
 assignRole tokenInfo personId roleId = do
-  assertPersonInCallerMerchant tokenInfo personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
@@ -512,12 +469,9 @@ assignMerchantCityAccess tokenInfo personId req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  isCrossMerchantGrant <- assertMayGrantAccessToMerchant tokenInfo merchant.id
-  -- A same-merchant grant must not adopt another merchant's user. One person row means one
-  -- password across every merchant they can reach, so adopting merchant A's user and then
-  -- resetting their password would hand the caller a working session on A. Cross-merchant grants
-  -- skip this because they are already SUPER_ADMIN-gated above.
-  unless isCrossMerchantGrant $ assertPersonInCallerMerchant tokenInfo personId
+  -- Same-merchant grants are open to any admin of that merchant, including onto persons
+  -- provisioned under other merchants; cross-merchant grants remain SUPER_ADMIN-gated.
+  assertMayGrantAccessToMerchant tokenInfo merchant.id
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
@@ -552,9 +506,7 @@ resetMerchantAccess tokenInfo personId req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  -- Revoking access is a mutation on somebody else's user like any other, and it used to be the
-  -- one that let a caller manufacture an "unowned" person for assertPersonInCallerMerchant.
-  assertPersonInCallerMerchant tokenInfo personId
+  assertMayGrantAccessToMerchant tokenInfo merchant.id
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
@@ -581,7 +533,7 @@ resetMerchantCityAccess tokenInfo personId req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  assertPersonInCallerMerchant tokenInfo personId
+  assertMayGrantAccessToMerchant tokenInfo merchant.id
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
@@ -754,7 +706,11 @@ changePasswordByAdmin ::
   ChangePasswordByAdminReq ->
   m APISuccess
 changePasswordByAdmin tokenInfo personId req = do
-  assertPersonInCallerMerchant tokenInfo personId
+  -- Password resets grant control of the target account across every merchant it can
+  -- reach (one person row = one credential), so this is SUPER_ADMIN-only rather than
+  -- merchant-ownership-scoped.
+  unlessM (isSuperAdmin tokenInfo.personId) $
+    throwError AccessDenied
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -775,7 +731,6 @@ changeMobileNumberByAdmin ::
   ChangeMobileNumberByAdminReq ->
   m APISuccess
 changeMobileNumberByAdmin tokenInfo personId req = do
-  assertPersonInCallerMerchant tokenInfo personId
   runRequestValidation validateChangeMobileNumberReq req
   mobileDbHash <- getDbHash req.newMobileNumber
   result <- QP.findByIdWithRoleAndCheckMobileHash personId (Just mobileDbHash)
@@ -800,7 +755,6 @@ changeEnabledStatus tokenInfo personId req = do
   -- Writes here are already merchant+city scoped, so a cross-merchant call is inert rather than
   -- harmful. Guarding anyway turns a silent no-op into an explicit error and keeps every
   -- person-id-addressed admin endpoint consistent.
-  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
@@ -816,7 +770,6 @@ changeEmailByAdmin tokenInfo personId req = do
   -- Authorization first, and specifically before the uniqueness probe below: that probe reports
   -- whether an address is already registered, so running it for an unauthorized caller would turn
   -- this endpoint into an account-enumeration oracle over the whole person table.
-  assertPersonInCallerMerchant tokenInfo personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   runRequestValidation validateChangeEmailReq req
   let newEmail = T.toLower req.newEmail
@@ -847,9 +800,10 @@ deletePerson ::
   Maybe Text ->
   m APISuccess
 deletePerson tokenInfo personId mbDeleteReason = do
-  -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
-  -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
-  assertPersonInCallerMerchant tokenInfo personId
+  -- Every write below is keyed on personId alone and none is merchant-scoped; deletion
+  -- destroys the person across all merchants at once, so it is SUPER_ADMIN-only.
+  unlessM (isSuperAdmin tokenInfo.personId) $
+    throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
