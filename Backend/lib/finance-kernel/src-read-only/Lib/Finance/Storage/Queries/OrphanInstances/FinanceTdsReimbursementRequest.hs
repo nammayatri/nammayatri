@@ -17,7 +17,11 @@ instance FromTType' Beam.FinanceTdsReimbursementRequest Lib.Finance.Domain.Types
     pure $
       Just
         Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest
-          { assessmentYear = assessmentYear,
+          { adminCheckerId = adminCheckerId,
+            adminCheckerName = adminCheckerName,
+            adminMakerId = adminMakerId,
+            adminMakerName = adminMakerName,
+            assessmentYear = assessmentYear,
             certAmount = certAmount,
             certNumber = certNumber,
             createdAt = createdAt,
@@ -38,7 +42,11 @@ instance FromTType' Beam.FinanceTdsReimbursementRequest Lib.Finance.Domain.Types
 instance ToTType' Beam.FinanceTdsReimbursementRequest Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest where
   toTType' (Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest {..}) = do
     Beam.FinanceTdsReimbursementRequestT
-      { Beam.assessmentYear = assessmentYear,
+      { Beam.adminCheckerId = adminCheckerId,
+        Beam.adminCheckerName = adminCheckerName,
+        Beam.adminMakerId = adminMakerId,
+        Beam.adminMakerName = adminMakerName,
+        Beam.assessmentYear = assessmentYear,
         Beam.certAmount = certAmount,
         Beam.certNumber = certNumber,
         Beam.createdAt = createdAt,
