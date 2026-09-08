@@ -1558,9 +1558,6 @@ buildWalletLedgerItem walletAccountId entry =
           reason = entry.metadataV2 >>= (.reason)
         }
 
-paginateWalletLedgerEntries :: Int -> Int -> [a] -> [a]
-paginateWalletLedgerEntries limit offset = take limit . drop offset
-
 mkWalletLedgerRes ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
@@ -1662,13 +1659,13 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id
           let lastUpdated = mbLatestEntry <&> (.createdAt)
 
-          -- Query ledger entries with filters
+          -- Query ledger entries with filters. Ordering (createdAt DESC) and
+          -- limit/offset are applied by the query, so the first page is the most
+          -- recent activity — slicing here instead would return an arbitrary window.
           let mbReferenceTypes = (\st -> [st]) <$> mbSourceType
-          filteredEntries <- LedgerService.findByAccountWithFiltersAndConcernedIndividual account.id mbFrom mbTo Nothing Nothing Nothing mbReferenceTypes mbConcernedIndividualIdFilter
+          filteredEntries <- LedgerService.findByAccountWithFiltersAndConcernedIndividual account.id mbFrom mbTo Nothing Nothing Nothing mbReferenceTypes mbConcernedIndividualIdFilter (Just limit) (Just offset)
 
-          let ledgerItems =
-                map (buildWalletLedgerItem account.id) $
-                  paginateWalletLedgerEntries limit offset filteredEntries
+          let ledgerItems = map (buildWalletLedgerItem account.id) filteredEntries
 
           pure $
             mkWalletLedgerRes
