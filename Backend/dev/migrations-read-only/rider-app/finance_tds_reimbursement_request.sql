@@ -28,3 +28,11 @@ ALTER TABLE atlas_app.finance_tds_reimbursement_request ALTER COLUMN assessment_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_tds_reimbursement_request ALTER COLUMN document_id TYPE character varying(36);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_tds_reimbursement_request ADD COLUMN admin_maker_name text ;
+ALTER TABLE atlas_app.finance_tds_reimbursement_request ADD COLUMN admin_maker_id text ;
+ALTER TABLE atlas_app.finance_tds_reimbursement_request ADD COLUMN admin_checker_name text ;
+ALTER TABLE atlas_app.finance_tds_reimbursement_request ADD COLUMN admin_checker_id text ;

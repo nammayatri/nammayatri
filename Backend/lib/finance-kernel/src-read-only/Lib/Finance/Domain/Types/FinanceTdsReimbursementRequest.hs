@@ -11,7 +11,11 @@ import qualified Lib.Finance.Core.Types
 import qualified Tools.Beam.UtilsTH
 
 data FinanceTdsReimbursementRequest = FinanceTdsReimbursementRequest
-  { assessmentYear :: Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear,
+  { adminCheckerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    adminCheckerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    adminMakerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    adminMakerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    assessmentYear :: Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear,
     certAmount :: Kernel.Types.Common.HighPrecMoney,
     certNumber :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

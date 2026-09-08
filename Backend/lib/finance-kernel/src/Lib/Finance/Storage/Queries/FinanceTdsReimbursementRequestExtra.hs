@@ -18,10 +18,11 @@ findAllByMerchantOpCityIdWithFilters ::
   Maybe FinanceTdsReimbursementRequestStatus ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   m [FinanceTdsReimbursementRequest]
-findAllByMerchantOpCityIdWithFilters merchantOpCityId mbFleetOwnerId mbTan mbQuarter mbAssessmentYear mbStatus mbFrom mbTo mbLimit mbOffset = do
+findAllByMerchantOpCityIdWithFilters merchantOpCityId mbFleetOwnerId mbTan mbQuarter mbAssessmentYear mbStatus mbFrom mbTo mbExcludeAdminMakerId mbLimit mbOffset = do
   let limit = max 0 . min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = max 0 . fromMaybe 0 $ mbOffset
   findAllWithOptionsKV
@@ -35,6 +36,14 @@ findAllByMerchantOpCityIdWithFilters merchantOpCityId mbFleetOwnerId mbTan mbQua
           <> [Se.Is Beam.status $ Se.Eq st | Just st <- [mbStatus]]
           <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq f | Just f <- [mbFrom]]
           <> [Se.Is Beam.createdAt $ Se.LessThanOrEq t | Just t <- [mbTo]]
+          -- NULL-safe: a plain `Se.Not (Se.Eq (Just x))` renders as `<> x`, which silently drops
+          -- rows where admin_maker_id IS NULL (no adjustment submitted yet) via SQL 3-valued logic.
+          <> [ Se.Or
+                 [ Se.Is Beam.adminMakerId $ Se.Eq Nothing,
+                   Se.Is Beam.adminMakerId $ Se.Not $ Se.Eq (Just excludeAdminMakerId)
+                 ]
+               | Just excludeAdminMakerId <- [mbExcludeAdminMakerId]
+             ]
     ]
     (Se.Desc Beam.createdAt)
     (Just limit)

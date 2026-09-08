@@ -2090,6 +2090,10 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
           documentId = cast req.documentId,
           status = DTdsReq.PENDING,
           rejectionReason = Nothing,
+          adminMakerId = Nothing,
+          adminMakerName = Nothing,
+          adminCheckerId = Nothing,
+          adminCheckerName = Nothing,
           createdAt = now,
           updatedAt = now
         }
@@ -2248,23 +2252,27 @@ castTdsReimbursementStatusToDomain API.TDS_REJECTED = DTdsReq.REJECTED
 getFinanceManagementTdsReimbursementList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe API.TdsReimbursementQuarter ->
-  Maybe API.TdsReimbursementStatus ->
   Maybe Text ->
+  Maybe Bool ->
+  Maybe API.TdsReimbursementStatus ->
   Maybe UTCTime ->
+  Maybe UTCTime ->
+  Text ->
   Flow API.TdsReimbursementListRes
-getFinanceManagementTdsReimbursementList merchantShortId opCity mbAssessmentYear mbFleetOwnerId mbFrom mbLimit mbOffset mbQuarter mbStatus mbTan mbTo = do
+getFinanceManagementTdsReimbursementList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbTan mbQuarter mbAssessmentYear mbExcludeCurrentAdminMaker mbStatus mbFrom mbTo requestorId = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   mbAssessmentYearTyped <- traverse DTdsReqExtra.mkAssessmentYear mbAssessmentYear
   let mbQuarterTyped = castTdsReimbursementQuarter <$> mbQuarter
       mbStatusTyped = castTdsReimbursementStatusToDomain <$> mbStatus
+
+  let mbExcludeAdminMakerId = if mbExcludeCurrentAdminMaker == Just True then Just requestorId else Nothing
 
   requests <-
     QTdsReqExtra.findAllByMerchantOpCityIdWithFilters
@@ -2276,6 +2284,7 @@ getFinanceManagementTdsReimbursementList merchantShortId opCity mbAssessmentYear
       mbStatusTyped
       mbFrom
       mbTo
+      mbExcludeAdminMakerId
       mbLimit
       mbOffset
 
@@ -2296,6 +2305,10 @@ buildTdsReimbursementListItem request = do
       { requestId = cast request.id,
         fleetOwnerId = request.fleetOwnerId,
         fleetOwnerName = fleetOwnerName,
+        adminMakerId = Id @Dashboard.Common.Person <$> request.adminMakerId,
+        adminCheckerId = Id @Dashboard.Common.Person <$> request.adminCheckerId,
+        adminMakerName = request.adminMakerName,
+        adminCheckerName = request.adminCheckerName,
         tanNumber = request.tanNumber,
         certNumber = request.certNumber,
         quarter = castDomainQuarterToTds request.quarter,
@@ -2357,9 +2370,11 @@ postFinanceManagementTdsReimbursementReject ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Dashboard.Common.FinanceTdsReimbursementRequest ->
+  Text ->
+  Text ->
   API.TdsReimbursementRejectReq ->
   Flow APISuccess
-postFinanceManagementTdsReimbursementReject merchantShortId opCity requestId req = do
+postFinanceManagementTdsReimbursementReject merchantShortId opCity requestId requestorId requestorName req = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -2385,7 +2400,9 @@ postFinanceManagementTdsReimbursementReject merchantShortId opCity requestId req
       whenJust mbExistingAdjustment $ \_ ->
         throwError (InvalidRequest "A ledger adjustment request already exists for this TDS reimbursement request.")
 
-      QTdsReq.updateStatusAndRejectionReason DTdsReq.REJECTED (Just req.rejectionReason) (cast requestId)
+      mbAdminMaker <- QPerson.findById (Id @DP.Person requestorId)
+      let adminMakerName = LedgerAdjustment.mkAdminName requestorName mbAdminMaker
+      QTdsReq.updateStatusRejectionReasonAndAdminMaker DTdsReq.REJECTED (Just req.rejectionReason) (Just requestorId) (Just adminMakerName) (cast requestId)
 
       pure Success
 
