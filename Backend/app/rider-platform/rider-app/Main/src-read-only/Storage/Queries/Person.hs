@@ -97,6 +97,11 @@ updateCustomerTags customerNammaTags id = do
 updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFirebaseAppInstanceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFirebaseAppInstanceId firebaseAppInstanceId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.firebaseAppInstanceId firebaseAppInstanceId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateFollowsRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFollowsRide followsRide id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.followsRide followsRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -220,6 +225,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
+      Se.Set Beam.firebaseAppInstanceId firebaseAppInstanceId,
       Se.Set Beam.firstName firstName,
       Se.Set Beam.followsRide followsRide,
       Se.Set Beam.frequentLocGeohashes frequentLocGeohashes,
