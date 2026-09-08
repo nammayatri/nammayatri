@@ -380,6 +380,7 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             vehicleAge = Nothing,
             driverSelectedFare = Nothing,
             customerExtraFee = Nothing,
+            negativeFareAdjustment = Nothing,
             nightShiftCharge = Nothing,
             customerCancellationDues = Nothing,
             nightShiftOverlapChecking = False, ---------considered only for one way

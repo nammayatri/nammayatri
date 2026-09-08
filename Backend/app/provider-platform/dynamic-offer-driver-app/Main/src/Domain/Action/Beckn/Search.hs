@@ -48,6 +48,7 @@ import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import Domain.Types.FareParameters ()
+import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -802,6 +803,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           vehicleAge = Nothing,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
+          negativeFareAdjustment = Nothing,
           petCharges = Nothing,
           nightShiftCharge = Nothing,
           estimatedCongestionCharge = Nothing,
@@ -898,6 +900,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               vehicleAge = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
+              negativeFareAdjustment = Nothing,
               petCharges = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = mbSearchReq >>= (.customerCancellationDues),
@@ -962,6 +965,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         fareParams = Just maxFareParams,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tipOptions = fullFarePolicy.tipOptions,
+        negativeFareSuggestion = mkNegativeFareSuggestion transporterConfig fullFarePolicy mbDistance maxFareParams,
         specialLocationTag = specialLocationTag,
         specialLocationName = mbSpecialLocName,
         isScheduled = isScheduled,
@@ -995,6 +999,30 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         area = fullFarePolicy.mbArea >>= (\a -> if a == SL.Default then Nothing else Just (SL.areaToText a)),
         ..
       }
+
+mkNegativeFareSuggestion ::
+  DTMT.TransporterConfig ->
+  DFP.FullFarePolicy ->
+  Maybe Meters ->
+  DFareParameters.FareParameters ->
+  Maybe HighPrecMoney
+mkNegativeFareSuggestion transporterConfig fullFarePolicy mbDistance fareParams = do
+  threshold <- transporterConfig.negativeFareAdjustmentCongestionThreshold
+  minDistanceMeters <- transporterConfig.negativeFareAdjustmentMinDistanceMeters
+  maxAmount <- transporterConfig.negativeFareAdjustmentMaxAmount
+  distance <- mbDistance
+  congestionChargeMultiplier <- fullFarePolicy.congestionChargeMultiplier
+  let (partOfNightShiftCharge, _, _) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+      fullRideCost = fareParams.baseFare + partOfNightShiftCharge
+      congestionBase = case congestionChargeMultiplier of
+        DFP.BaseFareAndExtraDistanceFare _ -> fullRideCost
+        DFP.ExtraDistanceFare _ -> partOfNightShiftCharge
+      congestion = realToFrac (DFP.congestionChargeMultiplierToCentesimal congestionChargeMultiplier) :: Double
+  if distance.getMeters < minDistanceMeters || congestion <= threshold
+    then Nothing
+    else
+      let rawDiscount = negate (congestion - threshold) * realToFrac congestionBase.getHighPrecMoney :: Double
+       in Just $ HighPrecMoney (realToFrac (max rawDiscount (fromIntegral maxAmount)))
 
 validateRequest :: DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
 validateRequest merchant sReq = do
@@ -1327,6 +1355,7 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
         navigationInstruction = Nothing,
         shadowSurgeMultiplier = Nothing,
         shadowSurgeVersion = Nothing,
+        negativeFareSuggestion = Nothing,
         ..
       }
 

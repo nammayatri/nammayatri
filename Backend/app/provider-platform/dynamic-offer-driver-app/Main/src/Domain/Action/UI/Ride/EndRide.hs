@@ -990,6 +990,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               estimatedRideStaticDuration = booking.estimatedStaticDuration,
               driverSelectedFare = booking.fareParams.driverSelectedFare,
               customerExtraFee = booking.fareParams.customerExtraFee,
+              negativeFareAdjustment = booking.fareParams.negativeFareAdjustment,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
               petCharges = booking.fareParams.petCharges,
               estimatedCongestionCharge = endRideCongestionCharge,
