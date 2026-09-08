@@ -527,3 +527,14 @@ ALTER TABLE atlas_app.search_request ADD COLUMN route_cache_used boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN has_better_point_suggestion boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment_amount double precision ;
+ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment integer ;
+
+
+------- SQL updates -------
+

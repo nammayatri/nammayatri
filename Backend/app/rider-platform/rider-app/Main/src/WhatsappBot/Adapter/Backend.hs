@@ -317,6 +317,8 @@ mkBackendHandle merchantId mocId _ctx =
       UISelect.DSelectReq
         { customerExtraFee = Nothing,
           customerExtraFeeWithCurrency = Nothing,
+          negativeFareAdjustment = Nothing,
+          negativeFareAdjustmentWithCurrency = Nothing,
           autoAssignEnabled = True,
           autoAssignEnabledV2 = Just True,
           isPetRide = Just False,

@@ -170,6 +170,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           actualRideDuration = Nothing,
           driverSelectedFare = reqOfferedValue,
           customerExtraFee = searchTry.customerExtraFee,
+          negativeFareAdjustment = searchTry.negativeFareAdjustment,
           petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,

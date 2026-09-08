@@ -109,6 +109,7 @@ data Pricing = Pricing
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    negativeFareSuggestion :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double,
@@ -1082,6 +1083,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
+      negativeFareSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
@@ -1112,6 +1114,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fareSettlementType = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
+      negativeFareSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
@@ -1142,6 +1145,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
           Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
+          Tags.NEGATIVE_FARE_SUGGESTION Tags.~=? guardVNP (show <$> pricing.negativeFareSuggestion),
           Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar)
         ]
   where

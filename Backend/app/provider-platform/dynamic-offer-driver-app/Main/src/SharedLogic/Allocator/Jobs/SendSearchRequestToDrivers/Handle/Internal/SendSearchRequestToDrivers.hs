@@ -331,6 +331,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           isScheduled = searchReq.isScheduled,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
+          negativeFareAdjustment = Nothing,
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,
           nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,

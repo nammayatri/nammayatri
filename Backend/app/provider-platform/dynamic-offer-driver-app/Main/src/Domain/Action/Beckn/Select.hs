@@ -88,6 +88,7 @@ data DSelectReq = DSelectReq
     -- which is an additive tip/extra-fee delta used by the Estimate-based
     -- dynamic-offer flow -- this one is the bid's absolute proposed total.
     negotiatedFare :: Maybe HighPrecMoney,
+    negativeFareAdjustment :: Maybe HighPrecMoney,
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
@@ -149,7 +150,7 @@ handler merchant sReq searchReq estimates = do
           petCharges' = if sReq.isPetRide then (.petCharges) =<< estimate.farePolicy else Nothing
           businessDiscount = if sReq.billingCategory == SLT.BUSINESS then fromMaybe 0.0 estimate.businessDiscount else 0.0
           personalDiscount = if sReq.billingCategory == SLT.PERSONAL then fromMaybe 0.0 estimate.personalDiscount else 0.0
-      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 petCharges' - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed))
+      buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 sReq.negativeFareAdjustment + fromMaybe 0 petCharges' - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed))
   let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
       -- Quotes-first airport flow: the picked estimate carries its own gate area (e.g.
       -- Pickup_<slId>_Gate_<gateId>). Refine the SearchRequest.area/pickupGateId from
@@ -179,6 +180,7 @@ handler merchant sReq searchReq estimates = do
             searchReq = updatedSearchRequest,
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
+            negativeFareAdjustment = sReq.negativeFareAdjustment,
             messageId = sReq.messageId,
             isRepeatSearch = False,
             billingCategory = sReq.billingCategory,

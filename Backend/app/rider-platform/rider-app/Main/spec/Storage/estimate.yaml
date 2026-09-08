@@ -132,6 +132,7 @@ Estimate:
     validTill : UTCTime
     vehicleIconUrl : Maybe BaseUrl
     smartTipSuggestion: Maybe HighPrecMoney
+    negativeFareSuggestion: Maybe HighPrecMoney
     boostSearchPreSelectionServiceTierConfig : "Maybe [ServiceTierType]"
     smartTipReason: Maybe Text
     isInsured: Bool

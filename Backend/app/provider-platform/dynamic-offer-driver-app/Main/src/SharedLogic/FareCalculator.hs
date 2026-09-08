@@ -157,7 +157,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
 
       congestionChargeCaption = show Enums.CONGESTION_CHARGE
-      mbCongestionChargeItem = fmap (mkBreakupItem congestionChargeCaption) (mkPrice <$> fareParams.congestionCharge)
+      mbCongestionChargeItem = fmap (mkBreakupItem congestionChargeCaption) (mkPrice . (+ fromMaybe 0 fareParams.negativeFareAdjustment) <$> fareParams.congestionCharge)
 
       mkSelectedFareCaption = show Enums.DRIVER_SELECTED_FARE
       mbSelectedFareItem =
@@ -396,6 +396,7 @@ fareSum fareParams conditionalChargeCategories =
   pureFareSum
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
+    + fromMaybe 0.0 fareParams.negativeFareAdjustment
     - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
     - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
   where
@@ -464,6 +465,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     actualRideDuration :: Maybe Seconds,
     driverSelectedFare :: Maybe HighPrecMoney,
     customerExtraFee :: Maybe HighPrecMoney,
+    negativeFareAdjustment :: Maybe HighPrecMoney,
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
@@ -577,6 +579,7 @@ calculateFareParametersHandler params = do
           { id,
             driverSelectedFare = params.driverSelectedFare,
             customerExtraFee = params.customerExtraFee,
+            negativeFareAdjustment = params.negativeFareAdjustment,
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             shouldApplyPersonalDiscount = params.shouldApplyPersonalDiscount,
             serviceCharge = fp.serviceCharge,

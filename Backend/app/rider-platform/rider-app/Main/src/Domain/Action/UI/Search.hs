@@ -811,6 +811,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         language = person.language,
         customerExtraFee = Nothing,
+        negativeFareAdjustment = Nothing,
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         selectedPaymentMethodId = Nothing,

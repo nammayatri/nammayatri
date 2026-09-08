@@ -286,6 +286,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 searchReq,
                 tripQuoteDetails,
                 customerExtraFee = searchTry.customerExtraFee,
+                negativeFareAdjustment = searchTry.negativeFareAdjustment,
                 messageId = searchTry.messageId,
                 isRepeatSearch = False,
                 isAllocatorBatch = True,

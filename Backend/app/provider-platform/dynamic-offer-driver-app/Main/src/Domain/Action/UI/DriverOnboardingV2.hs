@@ -394,6 +394,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   driverSelectedFare = Nothing,
                   petCharges = Nothing,
                   customerExtraFee = Nothing,
+                  negativeFareAdjustment = Nothing,
                   nightShiftCharge = Nothing,
                   customerCancellationDues = Nothing,
                   nightShiftOverlapChecking = isFixedNightCharge tripCategory,
