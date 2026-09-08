@@ -541,6 +541,8 @@ in  { esqDBCfg
     , frfsMetricsRateLimitHits = +100
     , frfsMetricsRateLimitWindowSec = +60
     , corporatePartnerApiToken = sec.corporatePartnerApiToken
+    , transactionalApiRoutes = [] : List Text
+    , configApiRoutes = [] : List Text
     , noSignatureSubscribers
     , sftpConfig =
       { host = "localhost"

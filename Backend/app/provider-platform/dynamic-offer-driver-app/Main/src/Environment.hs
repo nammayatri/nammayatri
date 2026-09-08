@@ -36,6 +36,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis hiding (ttl)
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
+import qualified Kernel.Tools.Metrics.ApiCategory as ApiCategory
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
@@ -191,6 +192,8 @@ data AppCfg = AppCfg
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemConfig :: KTC.InMemConfig,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
+    transactionalApiRoutes :: [Text],
+    configApiRoutes :: [Text],
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
@@ -325,6 +328,7 @@ data AppEnv = AppEnv
     inMemEnv :: KTC.InMemEnv,
     url :: Maybe Text,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
+    apiCategoryConfig :: ApiCategory.ApiCategoryConfig,
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
@@ -427,6 +431,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let apiCategoryConfig = ApiCategory.mkApiCategoryConfig transactionalApiRoutes configApiRoutes
   let url = Nothing
   masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
