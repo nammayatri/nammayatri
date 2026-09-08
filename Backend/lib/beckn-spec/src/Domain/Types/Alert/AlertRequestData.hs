@@ -22,7 +22,8 @@ data AlertRequestData
   | TripNotStarted TripNotStartedData
   | SafetyCheck SafetyCheckData
   | RideStopReached RideStopReachedData
-  | GenericNotification GenericNotificationData
+  | FareConfigUpdated ConfigAlertData
+  | OperatingCityCreated ConfigAlertData
   | Onboarding OnboardingAlertData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -111,8 +112,10 @@ data RideStopReachedData = RideStopReachedData
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data GenericNotificationData = GenericNotificationData
-  { title :: Text,
+data ConfigAlertData = ConfigAlertData
+  { entityType :: AlertEntityType,
+    entityId :: Text,
+    title :: Text,
     body :: Text
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -27,6 +27,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleFitnessCertificate as VFC
 import qualified Domain.Types.VehicleInsurance as VIns
+import qualified Domain.Types.VehicleNOC as VNOC
 import qualified Domain.Types.VehiclePUC as VPUC
 import qualified Domain.Types.VehiclePermit as VPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
@@ -122,14 +123,21 @@ data RCDocumentMetadata = RCDocumentMetadata
 
 data VehiclePUCDocumentMetadata = VehiclePUCDocumentMetadata
   { pucNumber :: Maybe T.Text,
-    pucExpiry :: UTCTime
+    pucExpiry :: UTCTime,
+    testDate :: Maybe UTCTime,
+    rcNumber :: T.Text
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
 data VehicleFitnessCertificateDocumentMetadata = VehicleFitnessCertificateDocumentMetadata
   { fitnessExpiry :: UTCTime,
     applicationNumber :: T.Text,
-    rcNumber :: T.Text
+    rcNumber :: T.Text,
+    categoryOfVehicle :: Maybe T.Text,
+    inspectingAuthority :: Maybe T.Text,
+    inspectingOn :: Maybe UTCTime,
+    nextInspectionDate :: Maybe UTCTime,
+    receiptDate :: Maybe UTCTime
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
@@ -137,7 +145,10 @@ data VehicleInsuranceDocumentMetadata = VehicleInsuranceDocumentMetadata
   { policyNumber :: T.Text,
     insuranceExpiry :: UTCTime,
     insuranceProvider :: T.Text,
-    rcNumber :: T.Text
+    rcNumber :: T.Text,
+    insuredName :: Maybe T.Text,
+    issueDate :: Maybe UTCTime,
+    limitsOfLiability :: Maybe T.Text
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
@@ -145,6 +156,16 @@ data VehiclePermitDocumentMetadata = VehiclePermitDocumentMetadata
   { permitNumber :: T.Text,
     permitExpiry :: UTCTime,
     regionCovered :: T.Text,
+    rcNumber :: T.Text,
+    issueDate :: Maybe UTCTime,
+    nameOfPermitHolder :: Maybe T.Text,
+    purposeOfJourney :: Maybe T.Text
+  }
+  deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
+
+data VehicleNOCDocumentMetadata = VehicleNOCDocumentMetadata
+  { nocNumber :: T.Text,
+    nocExpiry :: UTCTime,
     rcNumber :: T.Text
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
@@ -211,6 +232,7 @@ data DocumentMetadata
   | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata
   | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata
   | VehiclePermitMetadata VehiclePermitDocumentMetadata
+  | VehicleNOCMetadata VehicleNOCDocumentMetadata
   | UDYAMMetadata UDYAMDocumentMetadata
   | TANMetadata TANDocumentMetadata
   | LDCMetadata LDCDocumentMetadata
@@ -589,28 +611,66 @@ mkRCMetadata vehicleRC = do
   vehicleNumberPlate <- decrypt vehicleRC.certificateNumber
   pure $ RCMetadata RCDocumentMetadata {fitnessExpiry = vehicleRC.fitnessExpiry, vehicleNumberPlate, vehicleVariant = show <$> vehicleRC.vehicleVariant, vehicleManufacturer = vehicleRC.vehicleManufacturer, vehicleModel = vehicleRC.vehicleModel, vehicleModelYear = vehicleRC.vehicleModelYear, vehicleColor = vehicleRC.vehicleColor, imageId = Just vehicleRC.documentImageId.getId, imageId2 = vehicleRC.documentImageId2 <&> (.getId)}
 
-mkVehiclePUCMetadata :: OnboardingFlow m r => Maybe VPUC.VehiclePUC -> m (Maybe DocumentMetadata)
-mkVehiclePUCMetadata mbDoc = forM mbDoc $ \doc -> do
+mkVehiclePUCMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VPUC.VehiclePUC -> m (Maybe DocumentMetadata)
+mkVehiclePUCMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
   mbPucNo <- mapM decrypt doc.pucNumber
-  pure $ VehiclePUCMetadata VehiclePUCDocumentMetadata {pucNumber = mbPucNo, pucExpiry = doc.pucExpiry}
+  rcNo <- decrypt vehicleRC.certificateNumber
+  pure $ VehiclePUCMetadata VehiclePUCDocumentMetadata {pucNumber = mbPucNo, pucExpiry = doc.pucExpiry, testDate = doc.testDate, rcNumber = rcNo}
 
 mkVehiclePermitMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VPermit.VehiclePermit -> m (Maybe DocumentMetadata)
 mkVehiclePermitMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
   pNo <- decrypt doc.permitNumber
   rcNo <- decrypt vehicleRC.certificateNumber
-  pure $ VehiclePermitMetadata VehiclePermitDocumentMetadata {permitNumber = pNo, permitExpiry = doc.permitExpiry, regionCovered = doc.regionCovered, rcNumber = rcNo}
+  pure $
+    VehiclePermitMetadata
+      VehiclePermitDocumentMetadata
+        { permitNumber = pNo,
+          permitExpiry = doc.permitExpiry,
+          regionCovered = doc.regionCovered,
+          rcNumber = rcNo,
+          issueDate = doc.issueDate,
+          nameOfPermitHolder = doc.nameOfPermitHolder,
+          purposeOfJourney = doc.purposeOfJourney
+        }
+
+mkVehicleNOCMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VNOC.VehicleNOC -> m (Maybe DocumentMetadata)
+mkVehicleNOCMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
+  nocNo <- decrypt doc.nocNumber
+  rcNo <- decrypt vehicleRC.certificateNumber
+  pure $ VehicleNOCMetadata VehicleNOCDocumentMetadata {nocNumber = nocNo, nocExpiry = doc.nocExpiry, rcNumber = rcNo}
 
 mkVehicleFitnessMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VFC.VehicleFitnessCertificate -> m (Maybe DocumentMetadata)
 mkVehicleFitnessMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
   appNo <- decrypt doc.applicationNumber
   rcNo <- decrypt vehicleRC.certificateNumber
-  pure $ VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata {fitnessExpiry = doc.fitnessExpiry, applicationNumber = appNo, rcNumber = rcNo}
+  pure $
+    VehicleFitnessMetadata
+      VehicleFitnessCertificateDocumentMetadata
+        { fitnessExpiry = doc.fitnessExpiry,
+          applicationNumber = appNo,
+          rcNumber = rcNo,
+          categoryOfVehicle = doc.categoryOfVehicle,
+          inspectingAuthority = doc.inspectingAuthority,
+          inspectingOn = doc.inspectingOn,
+          nextInspectionDate = doc.nextInspectionDate,
+          receiptDate = doc.receiptDate
+        }
 
 mkVehicleInsuranceMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VIns.VehicleInsurance -> m (Maybe DocumentMetadata)
 mkVehicleInsuranceMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
   polNo <- decrypt doc.policyNumber
   rcNo <- decrypt vehicleRC.certificateNumber
-  pure $ VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata {policyNumber = polNo, insuranceExpiry = doc.policyExpiry, insuranceProvider = doc.policyProvider, rcNumber = rcNo}
+  pure $
+    VehicleInsuranceMetadata
+      VehicleInsuranceDocumentMetadata
+        { policyNumber = polNo,
+          insuranceExpiry = doc.policyExpiry,
+          insuranceProvider = doc.policyProvider,
+          rcNumber = rcNo,
+          insuredName = doc.insuredName,
+          issueDate = doc.issueDate,
+          limitsOfLiability = doc.limitsOfLiability
+        }
 
 data CommonDocumentStatusResult = CommonDocumentStatusResult
   { status :: ResponseStatus,
@@ -684,12 +744,13 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
       DVC.VehiclePUC -> do
         mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-        mbMetadata <- if enableMetadata then mkVehiclePUCMetadata mbDoc else pure Nothing
+        mbMetadata <- if enableMetadata then mkVehiclePUCMetadata vehicleRC mbDoc else pure Nothing
         return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, Nothing, mbMetadata, Nothing)
       DVC.VehicleNOC -> do
         mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing, Nothing, Nothing)
+        mbMetadata <- if enableMetadata then mkVehicleNOCMetadata vehicleRC mbDoc else pure Nothing
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing, mbMetadata, Nothing)
       DVC.VehicleInspectionForm -> do
         -- Check all vehicle photos based on RC, not driver
         (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo

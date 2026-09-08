@@ -27,6 +27,7 @@ module SharedLogic.DriverOnboarding.Common
 
     -- * Enablement side effects
     enableDriver,
+    activateRCAutomatically,
     sendEnablementSms,
   )
 where
@@ -34,6 +35,7 @@ where
 import Control.Applicative ((<|>))
 import Data.List (partition)
 import qualified Data.List as List
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DocumentOnboardingStage as DOS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -302,8 +304,8 @@ isFleetOfDriverDisabled driverId = do
 
 -- | Enable a driver/fleet (cascades fleet→drivers). @verifiedToSet@ is written for `verified` too;
 --   legacy callers pass True.
-enableDriver :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> DP.Role -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Bool -> m ()
-enableDriver merchantOpCityId personId role driverName transporterConfig merchantId verifiedToSet = do
+enableDriver :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> DP.Role -> Maybe Text -> DTC.TransporterConfig -> Id DM.Merchant -> Bool -> Maybe Text -> m ()
+enableDriver merchantOpCityId personId role driverName transporterConfig merchantId verifiedToSet mbRcNumberToActivate = do
   if SDO.isFleetRole role
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -314,10 +316,23 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
         QFOI.updateFleetOwnerDisabledReasonFlag Nothing personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+      let firstTimeOnboarding = isNothing driverInfo.enabledAt
       unless (driverInfo.enabled && driverInfo.verified) $ do
         SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verifiedToSet
         whenJust driverName $ \name -> QPerson.updateName name personId
         sendEnablementSms merchantOpCityId personId transporterConfig merchantId
+        when firstTimeOnboarding $
+          whenJust mbRcNumberToActivate $ \rcNumber ->
+            void $ withTryCatch "activateRCAutomatically:enableDriver" (activateRCAutomatically personId merchantId merchantOpCityId rcNumber)
+
+activateRCAutomatically :: OnboardingFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> m ()
+activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
+  let rcStatusReq =
+        DomainRC.RCStatusReq
+          { rcNo = rcNumber,
+            isActivate = True
+          }
+  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) False rcStatusReq
 
 sendEnablementSms :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> m ()
 sendEnablementSms merchantOpCityId personId transporterConfig merchantId =

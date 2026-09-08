@@ -20,11 +20,13 @@ castAlertRequestDataToRequestType = \case
   TripNotStarted _ -> TripNotStartedAlert
   SafetyCheck _ -> SafetyCheckAlert
   RideStopReached _ -> RideStopReachedAlert
-  GenericNotification _ -> GenericAlert
+  FareConfigUpdated _ -> FareConfigUpdate
+  OperatingCityCreated _ -> OperatingCityCreate
   Onboarding _ -> OnboardingAlert
 
 castAlertRequestTypeToCategory :: AlertRequestType -> AlertCategory
 castAlertRequestTypeToCategory = \case
   OnboardingAlert -> ONBOARDING_UPDATE
-  GenericAlert -> GENERIC_NOTIFICATION
+  FareConfigUpdate -> CONFIG_CHANGE
+  OperatingCityCreate -> CONFIG_CHANGE
   _ -> WMB_ALERT

@@ -545,7 +545,9 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
         pure (mb <&> (.documentImageId1), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
       DVC.VehiclePUC -> do
         mb <- QVPUC.findByPrimaryKey (Id docId)
-        mbMeta <- VDocs.mkVehiclePUCMetadata mb
+        mbMeta <- case mb of
+          Just doc -> QRC.findById doc.rcId >>= maybe (pure Nothing) (\rc -> VDocs.mkVehiclePUCMetadata rc (Just doc))
+          Nothing -> pure Nothing
         pure (mb <&> (.documentImageId), encodeMeta mbMeta, Nothing, mb <&> (.verificationStatus))
       DVC.VehiclePermit -> do
         mb <- QVPermit.findByPrimaryKey (Id docId)
@@ -913,16 +915,26 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy :: DPan.VerifiedBy -> Short
 postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantShortId opCity driverId_ Common.DocumentRegisterReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  case metadata of
-    Common.DLData dlReq -> registerDL merchant merchantOpCityId dlReq
-    Common.RCData rcReq -> registerRC merchant merchantOpCityId rcReq
-    Common.AadhaarData aadhaarReq -> registerAadhaar merchant merchantOpCityId aadhaarReq
-    Common.PanData panReq -> registerPan merchant merchantOpCityId panReq
-    Common.GSTData gstReq -> registerGst merchant merchantOpCityId gstReq
-    Common.UDYAMData udyamReq -> registerUdyam merchantOpCityId udyamReq
-    Common.CommonData commonReq -> do
-      _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
-      return Success
+  void $
+    case metadata of
+      Common.DLData dlReq -> registerDL merchant merchantOpCityId dlReq
+      Common.RCData rcReq -> registerRC merchant merchantOpCityId rcReq
+      Common.AadhaarData aadhaarReq -> registerAadhaar merchant merchantOpCityId aadhaarReq
+      Common.PanData panReq -> registerPan merchant merchantOpCityId panReq
+      Common.GSTData gstReq -> registerGst merchant merchantOpCityId gstReq
+      Common.UDYAMData udyamReq -> registerUdyam merchantOpCityId udyamReq
+      Common.CommonData commonReq -> do
+        _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
+        return Success
+      Common.VehiclePermitData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePermit (\st -> upsertPermit st req)
+      Common.VehiclePUCData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePUC (\st -> upsertPUC st req)
+      Common.VehicleFitnessData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleFitnessCertificate (\st -> upsertFitnessCertificate st req)
+      Common.VehicleInsuranceData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleInsurance (\st -> upsertInsurance st (insuranceApproveDetails req))
+      Common.VehicleNOCData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleNOC (\st -> upsertNOC st req)
+      Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate (\st -> upsertGST st req)
+      Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense (\st -> upsertBusinessLicense st req)
+  refreshOnboardingFlags (cast driverId_)
+  pure Success
   where
     registerDL merchant merchantOpCityId Common.RegisterDLReq {..} = do
       let verifyBy = case defaultVerifyBy of
@@ -1032,6 +1044,44 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               imageId1 = cast imageId1
             }
       return Success
+
+    registerDocWithData merchant merchantOpCityId docType upsertDoc = do
+      docStatus <- docRegisterStatus merchantOpCityId docType
+      void $ upsertDoc docStatus merchant.id merchantOpCityId
+      return Success
+
+    docRegisterStatus :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> Flow VerificationStatus
+    docRegisterStatus merchantOpCityId docType = do
+      mbDocConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) Nothing
+      pure $
+        if maybe False (.doStrictVerifcation) mbDocConfig
+          then Documents.PENDING
+          else Documents.MANUAL_VERIFICATION_REQUIRED
+
+insuranceApproveDetails :: Common.VInsuranceRegisterReq -> Common.VInsuranceApproveDetails
+insuranceApproveDetails Common.VInsuranceRegisterReq {..} =
+  Common.VInsuranceApproveDetails
+    { documentImageId = documentImageId,
+      insuredName = insuredName,
+      issueDate = issueDate,
+      limitsOfLiability = limitsOfLiability,
+      policyExpiry = Just policyExpiry,
+      policyNumber = Just policyNumber,
+      policyProvider = Just policyProvider,
+      rcNumber = Just rcNumber
+    }
+
+refreshOnboardingFlags :: Id DP.Person -> Flow ()
+refreshOnboardingFlags personId = do
+  mbPerson <- QPerson.findById personId
+  void $
+    withTryCatch "refreshDocsStatus:registerDocWithData" $
+      case mbPerson of
+        Just person
+          | DCommon.checkFleetOwnerRole person.role ->
+            void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) Nothing personId
+        _ ->
+          void $ SStatus.runRefreshOnboardingFlagsDriver mbPerson Nothing personId
 
 -- DEPRECATED: Use postDriverRegistrationDocumentRegister with AadhaarData metadata instead.
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
@@ -1365,9 +1415,12 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
           _ -> throwError (InternalError "RC not found by image id")
 
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
+approveAndUpdateInsurance req = upsertInsurance VALID req
+
+upsertInsurance :: VerificationStatus -> Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertInsurance docStatus req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusAndExpiry (Just VALID) req.policyExpiry DVC.VehicleInsurance imageId
+  QImage.updateVerificationStatusAndExpiry (Just docStatus) req.policyExpiry DVC.VehicleInsurance imageId
   vinsurance <- QVI.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -1381,7 +1434,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                 DVI.limitsOfLiability = req.limitsOfLiability <|> insurance.limitsOfLiability,
                 DVI.policyNumber = fromMaybe insurance.policyNumber policyNo,
                 DVI.policyProvider = fromMaybe insurance.policyProvider req.policyProvider,
-                DVI.verificationStatus = VALID,
+                DVI.verificationStatus = docStatus,
                 DVI.policyExpiry = fromMaybe insurance.policyExpiry req.policyExpiry
               }
       QVI.updateByPrimaryKey updatedInsurance
@@ -1407,7 +1460,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                     id = uuid,
                     policyNumber = policyNo,
                     rcId = rc.id,
-                    verificationStatus = VALID,
+                    verificationStatus = docStatus,
                     createdAt = now,
                     updatedAt = now,
                     merchantId = Just mId,
@@ -1434,9 +1487,12 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             _ -> pure ()
 
 approveAndUpdatePUC :: Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
+approveAndUpdatePUC req = upsertPUC VALID req
+
+upsertPUC :: VerificationStatus -> Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertPUC docStatus req@Common.VPUCApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.pucExpiry) DVC.VehiclePUC imageId
+  QImage.updateVerificationStatusAndExpiry (Just docStatus) (Just req.pucExpiry) DVC.VehiclePUC imageId
   vpuc <- QVPUC.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -1449,7 +1505,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
                 DPUC.pucExpiry = req.pucExpiry,
                 DPUC.rcId = rc.id,
                 DPUC.testDate = req.testDate <|> puc.testDate,
-                DPUC.verificationStatus = VALID
+                DPUC.verificationStatus = docStatus
                }
       QVPUC.updateByPrimaryKey updatedpuc
       -- Create reminders for PUC when it's updated
@@ -1472,7 +1528,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
                 pucNumber = Just pucNoEnc,
                 rcId = rc.id,
                 testDate = req.testDate,
-                verificationStatus = VALID,
+                verificationStatus = docStatus,
                 merchantId = Just mId,
                 merchantOperatingCityId = Just mOpCityId,
                 createdAt = now,
@@ -1490,9 +1546,12 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
         Nothing
 
 approveAndUpdatePermit :: Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
+approveAndUpdatePermit req = upsertPermit VALID req
+
+upsertPermit :: VerificationStatus -> Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertPermit docStatus req@Common.VPermitApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.permitExpiry) DVC.VehiclePermit imageId
+  QImage.updateVerificationStatusAndExpiry (Just docStatus) (Just req.permitExpiry) DVC.VehiclePermit imageId
   vPremit <- QVPermit.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -1509,7 +1568,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
                 DVPermit.purposeOfJourney = req.purposeOfJourney <|> permit.purposeOfJourney,
                 DVPermit.rcId = rc.id,
                 DVPermit.regionCovered = req.regionCovered,
-                DVPermit.verificationStatus = VALID
+                DVPermit.verificationStatus = docStatus
               }
       QVPermit.updateByPrimaryKey updatedpermit
       -- Create reminders for Permit when it's updated
@@ -1535,7 +1594,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
                 purposeOfJourney = req.purposeOfJourney,
                 rcId = rc.id,
                 regionCovered = req.regionCovered,
-                verificationStatus = VALID,
+                verificationStatus = docStatus,
                 merchantId = Just mId,
                 merchantOperatingCityId = Just mOpCityId,
                 createdAt = now,
@@ -1553,9 +1612,12 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
         Nothing
 
 approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
+approveAndUpdateFitnessCertificate req = upsertFitnessCertificate VALID req
+
+upsertFitnessCertificate :: VerificationStatus -> Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertFitnessCertificate docStatus req@Common.FitnessApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleFitnessCertificate
+  QImage.updateVerificationStatusByIdAndType docStatus imageId DVC.VehicleFitnessCertificate
   mbFitnessCert <- QFC.findByImageId imageId
   applicationNo <- encrypt req.applicationNumber
   now <- getCurrentTime
@@ -1571,7 +1633,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
                 DFC.inspectingOn = req.inspectingOn <|> certificate.inspectingOn,
                 DFC.nextInspectionDate = req.nextInspectionDate <|> certificate.nextInspectionDate,
                 DFC.receiptDate = req.receiptDate <|> certificate.receiptDate,
-                DFC.verificationStatus = VALID
+                DFC.verificationStatus = docStatus
               }
       QFC.updateByPrimaryKey updatedFitnessCert
       -- Create reminders for Fitness Certificate when it's updated
@@ -1593,7 +1655,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
                 driverId = certificateImage.personId,
                 id = uuid,
                 rcId = rc.id,
-                verificationStatus = VALID,
+                verificationStatus = docStatus,
                 createdAt = now,
                 updatedAt = now,
                 merchantId = Just mId,
@@ -1820,9 +1882,12 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
           Nothing
 
 approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
+approveAndUpdateNOC req = upsertNOC VALID req
+
+upsertNOC :: VerificationStatus -> Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertNOC docStatus req@Common.NOCApproveDetails {..} mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
-  QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.nocExpiry) DVC.VehicleNOC imageId
+  QImage.updateVerificationStatusAndExpiry (Just docStatus) (Just req.nocExpiry) DVC.VehicleNOC imageId
   vnoc <- QVNOC.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
@@ -1834,7 +1899,7 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
             noc{DNOC.nocNumber = nocNoEnc,
                 DNOC.nocExpiry = req.nocExpiry,
                 DNOC.rcId = rc.id,
-                DNOC.verificationStatus = VALID
+                DNOC.verificationStatus = docStatus
                }
       QVNOC.updateByPrimaryKey updatednoc
     Nothing -> do
@@ -1847,7 +1912,7 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
                 nocExpiry = req.nocExpiry,
                 nocNumber = nocNoEnc,
                 rcId = rc.id,
-                verificationStatus = VALID,
+                verificationStatus = docStatus,
                 merchantId = Just mId,
                 merchantOperatingCityId = Just mOpCityId,
                 createdAt = now,
@@ -1856,7 +1921,10 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
       QVNOC.create noc
 
 approveAndUpdateBusinessLicense :: Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateBusinessLicense req mId mOpCityId = do
+approveAndUpdateBusinessLicense req = upsertBusinessLicense VALID req
+
+upsertBusinessLicense :: VerificationStatus -> Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertBusinessLicense docStatus req mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   blImage <- findApproveImage DVC.BusinessLicense imageId
   let driverId = blImage.personId
@@ -1873,13 +1941,13 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
   case mbBl of
     Just bl -> do
       businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
-      QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.licenseExpiry) DVC.BusinessLicense imageId
+      QImage.updateVerificationStatusAndExpiry (Just docStatus) (Just req.licenseExpiry) DVC.BusinessLicense imageId
       let updatedBl =
             bl
               { DBL.documentImageId = imageId,
                 DBL.licenseNumber = businessLicenseNumberEnc,
                 DBL.licenseExpiry = req.licenseExpiry,
-                DBL.verificationStatus = VALID,
+                DBL.verificationStatus = docStatus,
                 DBL.driverId = driverId
               }
       -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
@@ -1893,13 +1961,14 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
         (Just $ updatedBl.id.getId)
         (Just updatedBl.licenseExpiry)
         Nothing
-      updateFleetOwnerInfoOnDocApproval person $ \personId ->
-        QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
+      when (docStatus == VALID) $
+        updateFleetOwnerInfoOnDocApproval person $ \personId ->
+          QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
     Nothing -> whenCreateDocumentRequired mOpCityId (throwError (InternalError "Business License not found by image id")) $ do
       businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
       now <- getCurrentTime
       uuid <- generateGUID
-      QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.licenseExpiry) DVC.BusinessLicense imageId
+      QImage.updateVerificationStatusAndExpiry (Just docStatus) (Just req.licenseExpiry) DVC.BusinessLicense imageId
       let bl =
             DBL.BusinessLicense
               { documentImageId = imageId,
@@ -1907,7 +1976,7 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
                 id = uuid,
                 licenseExpiry = req.licenseExpiry,
                 licenseNumber = businessLicenseNumberEnc,
-                verificationStatus = VALID,
+                verificationStatus = docStatus,
                 merchantId = Just mId,
                 merchantOperatingCityId = Just mOpCityId,
                 createdAt = now,
@@ -1923,8 +1992,9 @@ approveAndUpdateBusinessLicense req mId mOpCityId = do
         (Just $ bl.id.getId)
         (Just bl.licenseExpiry)
         Nothing
-      updateFleetOwnerInfoOnDocApproval person $ \personId ->
-        QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
+      when (docStatus == VALID) $
+        updateFleetOwnerInfoOnDocApproval person $ \personId ->
+          QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
 
 approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePan req mId mOpCityId = do
@@ -2878,7 +2948,10 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         pure $ (.driverId) =<< mbRequest
 
 approveGST :: Common.GSTApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveGST req merchantId merchantOperatingCityId = do
+approveGST req = upsertGST VALID req
+
+upsertGST :: VerificationStatus -> Common.GSTApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+upsertGST docStatus req merchantId merchantOperatingCityId = do
   let fleetOwnerId = cast req.fleetOwnerId :: Id DP.Person
       imageId = Id req.documentImageId.getId
   gstImage <- findApproveImage DVC.GSTCertificate imageId
@@ -2893,7 +2966,7 @@ approveGST req merchantId merchantOperatingCityId = do
     Nothing -> QGstin.findByDriverId fleetOwnerId
   -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
   validateDocumentApprovalChecks DVC.GSTCertificate (Just req.gstNumber) fleetOwnerId (GstApproveData <$> mbGstin)
-  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.GSTCertificate
+  QImage.updateVerificationStatusByIdAndType docStatus imageId DVC.GSTCertificate
   gstEnc <- encrypt req.gstNumber
   now <- getCurrentTime
   uuid <- generateGUID
@@ -2902,7 +2975,7 @@ approveGST req merchantId merchantOperatingCityId = do
       let updatedGstin =
             gstin
               { DGstin.gstin = gstEnc,
-                DGstin.verificationStatus = VALID,
+                DGstin.verificationStatus = docStatus,
                 DGstin.verifiedBy = Just DPan.DASHBOARD,
                 DGstin.updatedAt = now,
                 DGstin.driverId = fleetOwnerId,
@@ -2919,7 +2992,7 @@ approveGST req merchantId merchantOperatingCityId = do
                 DGstin.documentImageId1 = imageId,
                 DGstin.documentImageId2 = Nothing,
                 DGstin.gstin = gstEnc,
-                DGstin.verificationStatus = VALID,
+                DGstin.verificationStatus = docStatus,
                 DGstin.rejectReason = Nothing,
                 DGstin.verifiedBy = Just DPan.DASHBOARD,
                 DGstin.driverName = Nothing,
@@ -2942,8 +3015,9 @@ approveGST req merchantId merchantOperatingCityId = do
               }
       deleteInvalidDocumentOfDriver DVC.GSTCertificate fleetOwnerId
       QGstin.create gstin
-  updateFleetOwnerInfoOnDocApproval person $ \personId ->
-    QFOIE.updateGstImage (Just gstEnc) (Just imageId.getId) personId
+  when (docStatus == VALID) $
+    updateFleetOwnerInfoOnDocApproval person $ \personId ->
+      QFOIE.updateGstImage (Just gstEnc) (Just imageId.getId) personId
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}

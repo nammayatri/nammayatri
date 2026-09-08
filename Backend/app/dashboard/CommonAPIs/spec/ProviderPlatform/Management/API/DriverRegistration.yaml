@@ -517,8 +517,18 @@ types:
     - uamNumber: Text
     - imageId1: Id Image
     - derive: "'HideSecrets"
+  VInsuranceRegisterReq:
+    - documentImageId: Id Image
+    - policyNumber: Text
+    - policyExpiry: UTCTime
+    - policyProvider: Text
+    - rcNumber: Text
+    - insuredName: Maybe Text
+    - issueDate: Maybe UTCTime
+    - limitsOfLiability: Maybe Text
+    - derive: "'HideSecrets"
   DocumentRegisterMetadata:
-    - enum: "DLData RegisterDLReq, RCData RegisterRCReq, AadhaarData AadhaarCardReq, PanData RegisterPanReq, GSTData RegisterGstReq, UDYAMData RegisterUdyamReq, CommonData CommonDocumentCreateReq"
+    - enum: "DLData RegisterDLReq, RCData RegisterRCReq, AadhaarData AadhaarCardReq, PanData RegisterPanReq, GSTData RegisterGstReq, UDYAMData RegisterUdyamReq, CommonData CommonDocumentCreateReq, VehiclePermitData VPermitApproveDetails, VehiclePUCData VPUCApproveDetails, VehicleFitnessData FitnessApproveDetails, VehicleInsuranceData VInsuranceRegisterReq, VehicleNOCData NOCApproveDetails, GSTCertificateData GSTApproveDetails, BusinessLicenseData BusinessLicenseApproveDetails"
     - derive: "'HideSecrets"
   DocumentRegisterReq:
     - metadata: DocumentRegisterMetadata

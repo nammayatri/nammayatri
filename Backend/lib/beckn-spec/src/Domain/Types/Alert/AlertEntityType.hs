@@ -11,6 +11,7 @@ data AlertEntityType
   | FleetEntity
   | TripTransactionEntity
   | RideEntity
+  | ConfigChangeEntity
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''AlertEntityType)
