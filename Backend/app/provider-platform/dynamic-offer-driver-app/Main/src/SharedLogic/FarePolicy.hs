@@ -351,7 +351,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           logInfo $ "Calling DynamicPricing 1" <> show localTimeZoneSeconds <> show fromLocGeohash <> show mbToLocGeohash <> show fareProduct.vehicleServiceTier <> show mbDistance <> show mbDuration <> show transporterConfig.isDynamicPricingQARCalEnabled <> show transporterConfig.qarCalRadiusInKm <> show mbAppDynamicLogicVersion <> show fareProduct.merchantOperatingCityId
           let vehicleCategory = maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem
               mbDpInputs = lookup vehicleCategory dpInputsList
-          getCongestionChargeMultiplierFromModel' mbDpInputs (mkDropQARConfig transporterConfig mbToLocation) localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier vehicleCategory mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing (Just fareProduct.tripCategory) (txnId >>= surgePricingContextId) (Just fareProduct.area)
+          getCongestionChargeMultiplierFromModel' mbDpInputs (mkDropQARConfig transporterConfig mbToLocation) localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier vehicleCategory mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing (Just fareProduct.tripCategory) (txnId >>= surgePricingContextId) (Just fareProduct.area) transporterConfig.useSurgeConfigPricing
         else return Nothing
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds -> FarePolicyD.FarePolicy
@@ -1173,8 +1173,9 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe DTC.TripCategory ->
   Maybe Text ->
   Maybe SL.Area ->
+  Maybe Bool ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromUtc mbFromLocation mbFromLocGeohash toLocGeohash serviceTier vehicleCategory mbDistance mbDuration dpQarEnabled radius' mbSpecialLocName mbDynamicPricingLogicVersion merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory mbPricingContextId mbArea = do
+getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromUtc mbFromLocation mbFromLocGeohash toLocGeohash serviceTier vehicleCategory mbDistance mbDuration dpQarEnabled radius' mbSpecialLocName mbDynamicPricingLogicVersion merchantOperatingCityId mbEstimatedDuration mbActualDuration mbTripCategory mbPricingContextId mbArea mbUseSurgeConfigPricing = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   surgeConfigs <- SSC.findConfigsForPricing merchantOperatingCityId serviceTier localTime
   -- Per-transaction version pin: once a transaction is priced by surge version
@@ -1201,11 +1202,23 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
   -- priced by json-logic or static before activation must not be surged at
   -- end-ride, and a surge ride keeps the version that priced it. Initial
   -- pricing uses pin-or-current-active. Shadow runs on initial pricing only.
-  let isRepricing = isJust mbActualDuration
-      mbEffectiveActive = if isRepricing then mbPinnedConfig else (mbPinnedConfig <|> surgeConfigs.activeConfig)
+  --
+  -- The transporter config's useSurgeConfigPricing is the engine switch for
+  -- INITIAL pricing: off/absent keeps the json-logic path and ignores ACTIVE
+  -- tables (so a table can be activated before the city is cut over); on uses
+  -- the surge table only — no table or no matching row falls back to STATIC,
+  -- never to json-logic. Pins and shadow evaluation are unaffected by it.
+  let surgeEngineOn = mbUseSurgeConfigPricing == Just True
+      isRepricing = isJust mbActualDuration
+      mbEffectiveActive =
+        if isRepricing
+          then mbPinnedConfig
+          else mbPinnedConfig <|> (if surgeEngineOn then surgeConfigs.activeConfig else Nothing)
       mbShadowConfigToRun = if isRepricing then Nothing else surgeConfigs.shadowConfig
   case (mbEffectiveActive, mbShadowConfigToRun) of
-    (Nothing, Nothing) -> runWorker mbDpInputs
+    (Nothing, Nothing)
+      | surgeEngineOn && not isRepricing -> pure Nothing -- surge engine, no table: static
+      | otherwise -> runWorker mbDpInputs
     _ -> do
       -- resolve signals once; the resolved inputs are reused by the logic path
       mbInputs <- case (mbDpInputs, mbFromLocation, mbFromLocGeohash, mbDistance) of
@@ -1219,6 +1232,11 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
               { qar = mbInputs >>= (.actualQAR),
                 supplyDemandRatio = mbInputs >>= (.mbSupplyDemandRatioFromLoc),
                 distanceKm = (\(Meters d) -> d `div` 1000) <$> mbDistance,
+                -- actual duration wins on end-ride recompute (same-version pin +
+                -- fresh actuals, mirroring the json-logic path); estimate otherwise
+                durationMinutes = (\(Seconds s) -> s `div` 60) <$> (mbActualDuration <|> mbEstimatedDuration),
+                dropQar = mbInputs >>= (.actualQARToLoc),
+                rainStatus = mbInputs >>= (.mbRainStatus),
                 area = mbArea
               }
           mbShadowOutcome = mbShadowConfigToRun >>= \cfg -> SSC.evaluateSurgeConfig cfg surgeSignals
@@ -1229,7 +1247,12 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
         logInfo $ "SURGE_SHADOW_EVAL: city " <> merchantOperatingCityId.getId <> " tier " <> show serviceTier <> " v" <> show shadowCfg.version <> " signals " <> show surgeSignals <> " outcome " <> show mbShadowOutcome
       case mbEffectiveActive of
         Nothing -> do
-          result <- runWorker (mbInputs <|> mbDpInputs)
+          -- under the surge engine the applied path with no table is STATIC —
+          -- the worker must not run — but the shadow outcome still persists
+          result <-
+            if surgeEngineOn && not isRepricing
+              then pure Nothing
+              else runWorker (mbInputs <|> mbDpInputs)
           -- shadow-only city: persist the candidate outcome on the estimate even
           -- when the logic path returned nothing, so comparison stays complete
           case result of

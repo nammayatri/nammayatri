@@ -1171,6 +1171,13 @@ TransporterConfig:
     dropQarCalRadiusInKm: Maybe Double
     isDynamicPricingQARCalEnabled: Maybe Bool
     isDropLocQARCalEnabled: Maybe Bool
+    # Engine switch for demand pricing (fare-policy revamp Phase 4): Just True
+    # prices initial searches from the typed SurgeConfig table only (no ACTIVE
+    # table or no matching row => static fallback, never json-logic); False or
+    # absent keeps the DYNAMIC_PRICING_UNIFIED json-logic path and ignores
+    # ACTIVE tables. SHADOW tables evaluate either way, and end-ride recompute
+    # replays the pinned surge version regardless of this flag.
+    useSurgeConfigPricing: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
     enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int

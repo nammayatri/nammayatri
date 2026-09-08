@@ -350,6 +350,7 @@ data TransporterConfigT f = TransporterConfigT
     useDBForAnalytics :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
+    useSurgeConfigPricing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],

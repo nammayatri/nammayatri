@@ -237,7 +237,9 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
           -- mbTxnId (booking.transactionId) lets the surge wrapper replay the
           -- surge version PINNED at search time, mirroring how mbDpVersion pins
           -- the json-logic rule version for this recompute
-          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing mbDropQARConfig timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur mbTripCategory mbTxnId mbArea
+          -- trailing Nothing: the engine flag only affects initial pricing;
+          -- this recompute path replays the pin or the json-logic version
+          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing mbDropQARConfig timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur mbTripCategory mbTxnId mbArea Nothing
       }
 
 -- Helper function to get driver number from Person record

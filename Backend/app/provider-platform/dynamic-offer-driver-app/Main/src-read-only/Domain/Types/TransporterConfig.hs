@@ -353,6 +353,7 @@ data TransporterConfig = TransporterConfig
     useDBForAnalytics :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     useOfferListCache :: Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
+    useSurgeConfigPricing :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
     validNameComparePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],

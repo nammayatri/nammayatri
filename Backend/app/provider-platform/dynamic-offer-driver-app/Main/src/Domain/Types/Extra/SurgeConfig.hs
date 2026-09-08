@@ -38,6 +38,18 @@ data SurgeRow = SurgeRow
     supplyDemandRatioMax :: Maybe Double,
     distanceKmMin :: Maybe Int,
     distanceKmMax :: Maybe Int,
+    durationMinutesMin :: Maybe Int,
+    durationMinutesMax :: Maybe Int,
+    -- QAR around the DROP location; only populated when the transporter
+    -- config enables drop-QAR calculation (isDropLocQARCalEnabled), which the
+    -- dashboard write path enforces before accepting a bound on it
+    dropQarMin :: Maybe Double,
+    dropQarMax :: Maybe Double,
+    -- categorical membership test against the Weather Union rain status of the
+    -- pickup geohash; Nothing = unbounded, Just = signal must be present AND in
+    -- the list (all Maybe fields are absent-tolerant in JSON, so rows persisted
+    -- before a field existed decode with Nothing — never add a non-Maybe field)
+    rainStatuses :: Maybe [Text],
     -- outputs; at least one must be set (validated at write time)
     congestionMultiplier :: Maybe Centesimal,
     congestionPerMinCharge :: Maybe Double

@@ -59,11 +59,13 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SurgeConfig as SSC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SurgeConfig as CQSC
 import qualified Storage.Clickhouse.Estimate as CHEst
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.RiderDetailsExtra as QRD
 import qualified Storage.Queries.SearchRequestExtra as QSR
@@ -92,7 +94,7 @@ getPricingSurgeList merchantShortId opCity mbServiceTier = do
 postPricingSurgeCreate :: ShortId DM.Merchant -> Context.City -> Common.PricingSurgeConfigReq -> Flow Common.PricingSurgeConfigRes
 postPricingSurgeCreate merchantShortId opCity req = do
   (merchant, merchantOpCity) <- resolveCity merchantShortId opCity
-  validateConfigReq req
+  validateConfigReq merchantOpCity req
   createdBy <- fromMaybeM (InvalidRequest "createdBy missing (must be set by the dashboard proxy)") req.createdBy
   siblings <- QSC.findAllByCityAndServiceTier merchantOpCity.id req.vehicleServiceTier
   let version = 1 + foldr (max . (.version)) 0 siblings
@@ -126,7 +128,7 @@ postPricingSurgeUpdate merchantShortId opCity reqConfigId req = do
   config <- findScopedConfig merchantOpCity (cast reqConfigId)
   unless (config.status `elem` [DSC.DRAFT, DSC.SHADOW]) $
     throwError (InvalidRequest "only DRAFT or SHADOW configs are editable; create a new version instead")
-  validateConfigReq req
+  validateConfigReq merchantOpCity req
   now <- getCurrentTime
   QSC.updateByPrimaryKey
     config
@@ -184,7 +186,16 @@ postPricingSurgePreview merchantShortId opCity req = do
       pure (config.rows, config.minMultiplier, config.maxMultiplier)
     (Nothing, Just apiRows) -> pure (map fromApiRow apiRows, fromMaybe 0.1 req.minMultiplier, fromMaybe 10 req.maxMultiplier)
     (Nothing, Nothing) -> throwError (InvalidRequest "either surgeConfigId or inline rows are required")
-  let signals = SSC.SurgeSignals {qar = req.signals.qar, supplyDemandRatio = req.signals.supplyDemandRatio, distanceKm = req.signals.distanceKm, area = Nothing}
+  let signals =
+        SSC.SurgeSignals
+          { qar = req.signals.qar,
+            supplyDemandRatio = req.signals.supplyDemandRatio,
+            distanceKm = req.signals.distanceKm,
+            durationMinutes = req.signals.durationMinutes,
+            dropQar = req.signals.dropQar,
+            rainStatus = req.signals.rainStatus,
+            area = Nothing
+          }
       mbMatch = find (SSC.rowMatches signals . snd) (zip [0 :: Int ..] rows)
       clamp m = max minMultiplier (min maxMultiplier m)
   pure
@@ -201,11 +212,16 @@ findScopedConfig merchantOpCity configId = do
     throwError (InvalidRequest "Surge config belongs to a different operating city")
   pure config
 
-validateConfigReq :: Common.PricingSurgeConfigReq -> Flow ()
-validateConfigReq req = do
+validateConfigReq :: DMOC.MerchantOperatingCity -> Common.PricingSurgeConfigReq -> Flow ()
+validateConfigReq merchantOpCity req = do
   when (null req.rows) $ throwError (InvalidRequest "at least one surge row is required")
   when (req.minMultiplier > req.maxMultiplier) $ throwError (InvalidRequest "minMultiplier must not exceed maxMultiplier")
   when (req.minMultiplier <= 0) $ throwError (InvalidRequest "minMultiplier must be positive")
+  -- drop-QAR is only computed when the city's transporter config enables it;
+  -- accepting a bound on it anyway would ship a row that can never fire
+  -- (missing-signal-never-matches) — a silent no-op, so reject at write time
+  dropQarAvailable <-
+    maybe False (\tc -> tc.isDropLocQARCalEnabled == Just True) <$> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
   forM_ (zip [0 :: Int ..] req.rows) $ \(idx, row) -> do
     let rowErr msg = throwError (InvalidRequest $ "row " <> show idx <> ": " <> msg)
     when (isNothing row.congestionMultiplier && isNothing row.congestionPerMinCharge) $
@@ -218,6 +234,13 @@ validateConfigReq req = do
     whenJust ((,) <$> row.qarMin <*> row.qarMax) $ \(lo, hi) -> when (lo >= hi) $ rowErr "qarMin must be below qarMax"
     whenJust ((,) <$> row.supplyDemandRatioMin <*> row.supplyDemandRatioMax) $ \(lo, hi) -> when (lo >= hi) $ rowErr "supplyDemandRatioMin must be below supplyDemandRatioMax"
     whenJust ((,) <$> row.distanceKmMin <*> row.distanceKmMax) $ \(lo, hi) -> when (lo >= hi) $ rowErr "distanceKmMin must be below distanceKmMax"
+    whenJust ((,) <$> row.durationMinutesMin <*> row.durationMinutesMax) $ \(lo, hi) -> when (lo >= hi) $ rowErr "durationMinutesMin must be below durationMinutesMax"
+    whenJust ((,) <$> row.dropQarMin <*> row.dropQarMax) $ \(lo, hi) -> when (lo >= hi) $ rowErr "dropQarMin must be below dropQarMax"
+    when ((isJust row.dropQarMin || isJust row.dropQarMax) && not dropQarAvailable) $
+      rowErr "dropQar bounds require isDropLocQARCalEnabled in the city's transporter config; the row would never fire"
+    whenJust row.rainStatuses $ \statuses -> do
+      when (null statuses) $ rowErr "rainStatuses must be non-empty when present (an empty list can never match)"
+      when (any (T.null . T.strip) statuses) $ rowErr "rainStatuses must not contain blank entries"
 
 maxRowMultiplier :: DSC.SurgeConfig -> Centesimal
 maxRowMultiplier config = foldr (max . fromMaybe 1 . (.congestionMultiplier)) 1 config.rows
@@ -254,6 +277,11 @@ toApiRow r =
       supplyDemandRatioMax = r.supplyDemandRatioMax,
       distanceKmMin = r.distanceKmMin,
       distanceKmMax = r.distanceKmMax,
+      durationMinutesMin = r.durationMinutesMin,
+      durationMinutesMax = r.durationMinutesMax,
+      dropQarMin = r.dropQarMin,
+      dropQarMax = r.dropQarMax,
+      rainStatuses = r.rainStatuses,
       congestionMultiplier = r.congestionMultiplier,
       congestionPerMinCharge = r.congestionPerMinCharge
     }
@@ -267,6 +295,11 @@ fromApiRow r =
       supplyDemandRatioMax = r.supplyDemandRatioMax,
       distanceKmMin = r.distanceKmMin,
       distanceKmMax = r.distanceKmMax,
+      durationMinutesMin = r.durationMinutesMin,
+      durationMinutesMax = r.durationMinutesMax,
+      dropQarMin = r.dropQarMin,
+      dropQarMax = r.dropQarMax,
+      rainStatuses = map T.strip <$> r.rainStatuses,
       congestionMultiplier = r.congestionMultiplier,
       congestionPerMinCharge = r.congestionPerMinCharge
     }

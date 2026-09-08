@@ -422,6 +422,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.useDBForAnalytics useDBForAnalytics,
       Se.Set Beam.useOfferListCache useOfferListCache,
       Se.Set Beam.useSilentFCMForForwardBatch useSilentFCMForForwardBatch,
+      Se.Set Beam.useSurgeConfigPricing useSurgeConfigPricing,
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
       Se.Set Beam.validNameComparePercentage validNameComparePercentage,
       Se.Set Beam.variantsToEnableForSubscription variantsToEnableForSubscription,
