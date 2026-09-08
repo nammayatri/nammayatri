@@ -839,6 +839,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         blockedCount = Just 0,
         deviceId = Nothing,
         androidId = Nothing,
+        firebaseAppInstanceId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         juspayCustomerPaymentID = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,

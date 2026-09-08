@@ -62,6 +62,7 @@ PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 GOHOME_DIR="$SCRIPT_DIR/collections/GoHomeSpecialLocationFlow"
 PHONE_CONSENT_DIR="$SCRIPT_DIR/collections/PhoneShareConsentFlow"
+EVENT_TRACKING_DIR="$SCRIPT_DIR/collections/EventTrackingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -205,7 +206,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR" "Event Tracking:$EVENT_TRACKING_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -649,6 +650,38 @@ run_phone_consent() {
     run_frfs "$PHONE_CONSENT_DIR" "PHONE SHARE CONSENT" "${1:-}" "${2:-}"
 }
 
+# Event tracking: seed all three S2S providers (see collections/EventTrackingFlow/Rules.md).
+seed_event_tracking_config() {
+    local sql="$EVENT_TRACKING_DIR/setup-event-tracking.sql"
+    echo "Seeding event-tracking config (Moengage, Clevertap, FirebaseAnalytics for every city)..."
+    if ! psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$sql" >/dev/null 2>&1; then
+        echo "ERROR: event-tracking seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql"
+        return 1
+    fi
+    flush_redis
+    restart_rider_app_if_running
+}
+# ConfigPilot caches config in-process; a running rider-app keeps the pre-seed provider list.
+# Under process-compose the exe is restarted automatically once killed.
+restart_rider_app_if_running() {
+    pgrep -x rider-app-exe >/dev/null || return 0
+    echo "Restarting rider-app so it picks up the seeded config..."
+    pkill -x rider-app-exe
+    for _ in $(seq 1 90); do
+        sleep 2
+        if curl -sf -o /dev/null "http://localhost:8013/v2"; then
+            echo "rider-app is back."
+            return 0
+        fi
+    done
+    echo "WARNING: rider-app did not come back within 3 minutes; start it manually before running the suite."
+    return 1
+}
+run_event_tracking() {
+    seed_event_tracking_config || { echo "Event-tracking seeding failed; not running the suite."; exit 1; }
+    run_frfs "$EVENT_TRACKING_DIR" "EVENT TRACKING" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -681,6 +714,7 @@ show_help() {
     echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
     echo "  phone-consent       Run rider phone-share consent gate suite (auto-seeds DirectCall + consent flag, flushes Redis)"
+    echo "  event-tracking      Run S2S event tracking suite with Moengage, Clevertap and FirebaseAnalytics live (auto-seeds provider rows, flushes Redis)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -828,6 +862,9 @@ case "${1:-}" in
         ;;
     phone-consent|consent)
         run_phone_consent "${2:-}" "${3:-}"
+        ;;
+    event-tracking|tracking)
+        run_event_tracking "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

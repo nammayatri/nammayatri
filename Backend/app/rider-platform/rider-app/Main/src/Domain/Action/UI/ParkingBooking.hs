@@ -175,6 +175,7 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
                   enabled = True,
                   deviceToken = Nothing,
                   notificationToken = Nothing,
+                  firebaseAppInstanceId = Nothing,
                   description = Nothing,
                   merchantId = merchantOpCity.merchantId,
                   currentCity = merchantOpCity.city,

@@ -165,6 +165,7 @@ data ProfileRes = ProfileRes
     customerReferralCode :: Maybe Text,
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
+    firebaseAppInstanceId :: Maybe Text,
     aadhaarVerified :: Bool,
     hasTakenValidBusRide :: Bool,
     payoutVpa :: Maybe Text,
@@ -200,6 +201,7 @@ data UpdateProfileReq = UpdateProfileReq
     enableOtpLessRide :: Maybe Bool,
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
+    firebaseAppInstanceId :: Maybe Text,
     liveActivityToken :: Maybe Text,
     dateOfBirth :: Maybe UTCTime,
     profilePicture :: Maybe Text,
@@ -513,6 +515,9 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing
       Nothing
       cloudType
+  whenJust req.firebaseAppInstanceId $ \appInstanceId ->
+    when (person.firebaseAppInstanceId /= Just appInstanceId) $
+      QPerson.updateFirebaseAppInstanceId (Just appInstanceId) personId
   _ <- updateDisability req.hasDisability req.disability personId
   whenJust req.driverPreference $ \prefs -> do
     let driverPreferenceTagName = LYT.TagNameValueExpiry "driverPreference#"

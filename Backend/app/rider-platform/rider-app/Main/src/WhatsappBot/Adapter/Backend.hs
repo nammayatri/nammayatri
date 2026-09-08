@@ -355,6 +355,7 @@ mkBackendHandle merchantId mocId _ctx =
           enableOtpLessRide = Nothing,
           deviceId = Nothing,
           androidId = Nothing,
+          firebaseAppInstanceId = Nothing,
           liveActivityToken = Nothing,
           dateOfBirth = Nothing,
           profilePicture = Nothing,

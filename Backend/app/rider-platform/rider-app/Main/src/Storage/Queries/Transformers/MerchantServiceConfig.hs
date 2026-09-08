@@ -98,6 +98,7 @@ getServiceConfigFromDomain serviceName configJSON = do
       _ -> Nothing
     Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
     Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> valueToMaybe configJSON
+    Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
 
@@ -197,6 +198,7 @@ getServiceNameConfigJson = \case
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
     EventTrackingInterface.ClevertapConfig cfg -> (Domain.EventTrackingService EventTracking.Clevertap, toJSON cfg)
+    EventTrackingInterface.FirebaseAnalyticsConfig cfg -> (Domain.EventTrackingService EventTracking.FirebaseAnalytics, toJSON cfg)
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
