@@ -36,3 +36,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"UpdatePassOverrideConfig","migration":"capability","param":"city-config.pass_catalog.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.pass_catalog.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS_OVERRIDE_CONFIG' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostPassTripsAdjust","migration":"capability","param":"city-operations.pass.execute","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_TRIPS_ADJUST' ) ON CONFLICT DO NOTHING;

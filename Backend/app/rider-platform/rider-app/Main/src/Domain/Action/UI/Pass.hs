@@ -33,6 +33,7 @@ module Domain.Action.UI.Pass
     updatePassType,
     getPassOverrideConfig,
     updatePassOverrideConfig,
+    postPassTripsAdjust,
   )
 where
 
@@ -996,6 +997,104 @@ fromOverrideBenefitAPIEntity apiBenefit =
       maximumTripCount = apiBenefit.maximumTripCount,
       maxTicketQuantityPerOverride = apiBenefit.maxTicketQuantityPerOverride
     }
+
+-- | Operator adjustment of a pass's remaining trips.
+--
+-- The authoritative counter is the Redis key seeded per term by
+-- FRFSPassOverride.seededRemainingTrips; purchased_pass_payment.available_trip_count
+-- is a mirror it reseeds from. Writing only the column would look like a no-op to
+-- the rider until the key expired, so both move here, in that order.
+postPassTripsAdjust ::
+  Id.ShortId DM.Merchant ->
+  Context.City ->
+  Id.Id DP.Person ->
+  Id.Id DPurchasedPass.PurchasedPass ->
+  DashPass.PassTripAdjustReq ->
+  Environment.Flow DashPass.PassTripAdjustResp
+postPassTripsAdjust merchantShortId opCity personId purchasedPassId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  when (req.value <= 0) $ throwError (InvalidRequest "value must be positive; the operation carries the direction")
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  unless (purchasedPass.personId == personId) $
+    throwError (InvalidRequest $ "Pass " <> purchasedPassId.getId <> " does not belong to customer " <> personId.getId)
+
+  -- Active-term selection is date-bounded, and the boundary is local, not UTC.
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) Nothing
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
+  let today = DT.utctDay istTime
+  payment <- resolveAdjustPayment purchasedPassId today req.purchasedPassPaymentId
+  unless (payment.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass term does not belong to city " <> show opCity)
+
+  pass <- maybe (pure Nothing) CQPass.findById payment.passId >>= fromMaybeM (PassNotFound $ maybe "<none>" (.getId) payment.passId)
+  benefit <- FRFSPassOverride.benefitFromPass pass >>= fromMaybeM (InvalidRequest "Pass has no usable override benefit, so it has no trip ledger to adjust")
+  -- An unlimited benefit keeps no counter at all (remainingTrips returns Nothing),
+  -- so there is nothing meaningful to add to or take from.
+  when (FRFSPassOverride.isUnlimitedBenefit benefit) $
+    throwError (InvalidRequest "Pass benefit is unlimited; it has no trip count to adjust")
+
+  let key = FRFSPassOverride.makeTripCountKey payment.id
+      delta = fromIntegral req.value :: Integer
+  -- Seed before the incr/decr: INCRBY on a missing key starts from 0 and would
+  -- silently discard the term's remaining allowance.
+  before <- FRFSPassOverride.seededRemainingTrips payment (FRFSPassOverride.allowanceFor payment benefit)
+  -- A term holds between zero and the benefit's configured maximum. INCRBY/DECRBY
+  -- are atomic but unbounded, so the adjustment is applied, checked, and put
+  -- straight back if it left the range -- the same shape consumeTrip uses for an
+  -- overspend. Rejecting rather than silently clamping: an operator asking for 400
+  -- trips on a 15-trip pass has made a mistake worth surfacing, not rounding off.
+  let ceiling' = fromIntegral (fromMaybe 0 benefit.maximumTripCount) :: Integer
+  adjusted <- case req.operation of
+    DashPass.IncrementBy -> Redis.incrby key delta
+    DashPass.DecrementBy -> Redis.decrby key delta
+  when (adjusted < 0 || adjusted > ceiling') $ do
+    void $ case req.operation of
+      DashPass.IncrementBy -> Redis.decrby key delta
+      DashPass.DecrementBy -> Redis.incrby key delta
+    throwError . InvalidRequest $
+      "Adjustment would put the trip count outside the pass's range of 0 to "
+        <> show ceiling'
+        <> " (currently "
+        <> show before
+        <> ", requested "
+        <> show adjusted
+        <> ")"
+  let remaining = adjusted
+  FRFSPassOverride.refreshTripCountTtl payment key
+  QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
+  logInfo $
+    "PassTripAdjust: paymentId=" <> payment.id.getId <> " op=" <> show req.operation
+      <> " value="
+      <> show req.value
+      <> " before="
+      <> show before
+      <> " after="
+      <> show remaining
+  pure $
+    DashPass.PassTripAdjustResp
+      { purchasedPassPaymentId = payment.id,
+        remainingTrips = Just (fromIntegral remaining),
+        previousTrips = Just before
+      }
+
+-- | The named term, or the pass's active one when none is given.
+resolveAdjustPayment ::
+  Id.Id DPurchasedPass.PurchasedPass ->
+  DT.Day ->
+  Maybe (Id.Id DPurchasedPassPayment.PurchasedPassPayment) ->
+  Environment.Flow DPurchasedPassPayment.PurchasedPassPayment
+resolveAdjustPayment purchasedPassId today = \case
+  Just paymentId -> do
+    payment <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= fromMaybeM (PurchasedPassPaymentNotFound paymentId.getId)
+    unless (payment.purchasedPassId == purchasedPassId) $
+      throwError (InvalidRequest $ "Payment " <> paymentId.getId <> " does not belong to pass " <> purchasedPassId.getId)
+    pure payment
+  Nothing -> do
+    payments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPassId [DPurchasedPass.Active] today
+    fromMaybeM
+      (InvalidRequest $ "Pass " <> purchasedPassId.getId <> " has no active term; pass purchasedPassPaymentId explicitly")
+      (listToMaybe payments)
 
 mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
 mkFrfsOverrideConfig benefit =
