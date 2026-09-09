@@ -1265,12 +1265,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
               || isChangedProfilePicture
        in return (newPass, Just newPassPayment, hasChanged)
     Nothing ->
-      let newPass =
-            purchasedPass
-              { DPurchasedPass.status = DPurchasedPass.Expired,
-                DPurchasedPass.updatedAt = now
-              }
-       in return (newPass, Nothing, True)
+      return (purchasedPass, Nothing, False)
 
 -- ToDo: needs to be removed once the desired state is attained.
 refillProfilePictureFromS3 ::
