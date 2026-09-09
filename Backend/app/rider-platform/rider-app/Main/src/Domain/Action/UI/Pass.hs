@@ -25,6 +25,14 @@ module Domain.Action.UI.Pass
     createPassCatalog,
     updatePassCatalog,
     deletePassCatalog,
+    listPassCategories,
+    createPassCategory,
+    updatePassCategory,
+    listPassTypes,
+    createPassType,
+    updatePassType,
+    getPassOverrideConfig,
+    updatePassOverrideConfig,
   )
 where
 
@@ -120,9 +128,9 @@ import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 -- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
 -- both the generated CRUD and the hand-written Extra queries.
 import qualified Storage.Queries.Pass as QPass
-import qualified Storage.Queries.PassCategoryExtra as QPassCategory
+import qualified Storage.Queries.PassCategory as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
-import qualified Storage.Queries.PassTypeExtra as QPassType
+import qualified Storage.Queries.PassType as QPassType
 import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
@@ -593,17 +601,17 @@ buildPassTypeAPIEntity passType =
 listPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe (Id.Id DPassType.PassType) -> Environment.Flow [DashPass.PassCatalogItem]
 listPassCatalog merchantShortId opCity mbEnable mbPassTypeId = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
-  categories <- CQPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  categories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
   passTypes <- case mbPassTypeId of
     Just passTypeId ->
-      CQPassType.findById passTypeId
+      QPassType.findById passTypeId
         <&> maybeToList . mfilter ((== merchantOperatingCity.id) . (.merchantOperatingCityId))
-    Nothing -> concat <$> mapM (CQPassType.findAllByPassCategoryId . (.id)) categories
+    Nothing -> concat <$> mapM (QPassType.findAllByPassCategoryId . (.id)) categories
   let categoryNameById = map (\c -> (c.id, c.name)) categories
       enableFilters = maybe [True, False] (: []) mbEnable
   fmap concat $
     forM passTypes $ \passType -> do
-      passes <- concat <$> mapM (CQPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
+      passes <- concat <$> mapM (QPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
       pure $ map (mkPassCatalogItem passType (lookup passType.passCategoryId categoryNameById)) passes
 
 mkPassCatalogItem :: DPassType.PassType -> Maybe Text -> DPass.Pass -> DashPass.PassCatalogItem
@@ -741,6 +749,253 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
+
+-- Pass category / pass type catalog: the two levels above `pass`. No delete
+-- counterpart -- neither table has an `enable` column, and a hard delete would
+-- orphan pass / purchased_pass rows that still resolve their parent by id for
+-- rider history.
+
+listPassCategories :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow [DashPass.PassCategoryItem]
+listPassCategories merchantShortId opCity = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  -- Uncached reads: the dashboard must see its own write immediately, and the
+  -- CQ* in-mem layer (1h) survives clearCache*, which only drops the Redis key.
+  categories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  forM categories $ \category -> do
+    passTypes <- QPassType.findAllByPassCategoryId category.id
+    pure $
+      DashPass.PassCategoryItem
+        { id = category.id,
+          name = category.name,
+          description = category.description,
+          order = category.order,
+          passTypeCount = length passTypes
+        }
+
+createPassCategory :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassCategoryCreateReq -> Environment.Flow DashPass.PassCategoryCreateResp
+createPassCategory merchantShortId opCity req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passCategoryId <- generateGUID
+  now <- getCurrentTime
+  QPassCategory.create
+    DPassCategory.PassCategory
+      { id = passCategoryId,
+        name = req.name,
+        description = req.description,
+        order = req.order,
+        merchantId = merchant.id,
+        merchantOperatingCityId = merchantOperatingCity.id,
+        createdAt = now,
+        updatedAt = now
+      }
+  CQPassCategory.clearCacheByMerchantOperatingCityId merchantOperatingCity.id
+  pure $ DashPass.PassCategoryCreateResp {passCategoryId = passCategoryId}
+
+updatePassCategory :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPassCategory.PassCategory -> DashPass.PassCategoryUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassCategory merchantShortId opCity passCategoryId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  category <- findPassCategoryInCity passCategoryId merchantOperatingCity.id opCity
+  now <- getCurrentTime
+  QPassCategory.updateByPrimaryKey
+    category
+      { DPassCategory.name = fromMaybe category.name req.name,
+        DPassCategory.description = fromMaybe category.description req.description,
+        DPassCategory.order = req.order <|> category.order,
+        DPassCategory.updatedAt = now
+      }
+  CQPassCategory.clearCacheById passCategoryId
+  CQPassCategory.clearCacheByMerchantOperatingCityId merchantOperatingCity.id
+  pure APISuccess.Success
+
+listPassTypes :: Id.ShortId DM.Merchant -> Context.City -> Maybe (Id.Id DPassCategory.PassCategory) -> Environment.Flow [DashPass.PassTypeItem]
+listPassTypes merchantShortId opCity mbPassCategoryId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  allCategories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  let categories = case mbPassCategoryId of
+        Just categoryId -> filter ((== categoryId) . (.id)) allCategories
+        Nothing -> allCategories
+  fmap concat $
+    forM categories $ \category -> do
+      passTypes <- QPassType.findAllByPassCategoryId category.id
+      forM passTypes $ \passType -> do
+        -- Both enable buckets, so the count reflects every pass authored under
+        -- the type rather than only the live ones.
+        passes <- concat <$> mapM (QPass.findAllByPassTypeIdAndEnabled passType.id) [True, False]
+        pure $ mkPassTypeItem category passType (length passes)
+
+mkPassTypeItem :: DPassCategory.PassCategory -> DPassType.PassType -> Int -> DashPass.PassTypeItem
+mkPassTypeItem category passType passCount =
+  DashPass.PassTypeItem
+    { id = passType.id,
+      passCategoryId = passType.passCategoryId,
+      passCategoryName = category.name,
+      name = passType.name,
+      catchline = passType.catchline,
+      title = passType.title,
+      description = passType.description,
+      order = passType.order,
+      passEnum = passType.passEnum,
+      maxPhotoChangeLimit = passType.maxPhotoChangeLimit,
+      photoReUploadTimeLimit = passType.photoReUploadTimeLimit,
+      passCount = passCount
+    }
+
+createPassType :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassTypeCreateReq -> Environment.Flow DashPass.PassTypeCreateResp
+createPassType merchantShortId opCity req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  -- A pass type under a category from another city would never be reached by the
+  -- city-scoped catalog walk, so reject rather than create an orphan row.
+  void $ findPassCategoryInCity req.passCategoryId merchantOperatingCity.id opCity
+  passTypeId <- generateGUID
+  now <- getCurrentTime
+  QPassType.create
+    DPassType.PassType
+      { id = passTypeId,
+        passCategoryId = req.passCategoryId,
+        name = req.name,
+        catchline = req.catchline,
+        title = req.title,
+        description = req.description,
+        order = req.order,
+        passEnum = req.passEnum,
+        maxPhotoChangeLimit = req.maxPhotoChangeLimit,
+        photoReUploadTimeLimit = req.photoReUploadTimeLimit,
+        merchantId = merchant.id,
+        merchantOperatingCityId = merchantOperatingCity.id,
+        createdAt = now,
+        updatedAt = now
+      }
+  CQPassType.clearCacheByPassCategoryId req.passCategoryId
+  pure $ DashPass.PassTypeCreateResp {passTypeId = passTypeId}
+
+updatePassType :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPassType.PassType -> DashPass.PassTypeUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassType merchantShortId opCity passTypeId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passType <- QPassType.findById passTypeId >>= fromMaybeM (PassTypeNotFound passTypeId.getId)
+  unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass type " <> passTypeId.getId <> " does not belong to city " <> show opCity)
+  whenJust req.passCategoryId $ \newCategoryId ->
+    void $ findPassCategoryInCity newCategoryId merchantOperatingCity.id opCity
+  now <- getCurrentTime
+  let updatedPassType =
+        passType
+          { DPassType.passCategoryId = fromMaybe passType.passCategoryId req.passCategoryId,
+            DPassType.name = req.name <|> passType.name,
+            DPassType.catchline = req.catchline <|> passType.catchline,
+            DPassType.title = fromMaybe passType.title req.title,
+            DPassType.description = req.description <|> passType.description,
+            DPassType.order = fromMaybe passType.order req.order,
+            DPassType.passEnum = req.passEnum <|> passType.passEnum,
+            DPassType.maxPhotoChangeLimit = req.maxPhotoChangeLimit <|> passType.maxPhotoChangeLimit,
+            DPassType.photoReUploadTimeLimit = req.photoReUploadTimeLimit <|> passType.photoReUploadTimeLimit,
+            DPassType.updatedAt = now
+          }
+  QPassType.updateByPrimaryKey updatedPassType
+  CQPassType.clearCacheById passTypeId
+  CQPassType.clearCacheByPassCategoryId passType.passCategoryId
+  CQPassType.clearCacheByPassCategoryId updatedPassType.passCategoryId
+  pure APISuccess.Success
+
+findPassCategoryInCity :: Id.Id DPassCategory.PassCategory -> Id.Id DMOC.MerchantOperatingCity -> Context.City -> Environment.Flow DPassCategory.PassCategory
+findPassCategoryInCity passCategoryId merchantOperatingCityId opCity = do
+  category <- QPassCategory.findById passCategoryId >>= fromMaybeM (PassCategoryNotFound passCategoryId.getId)
+  unless (category.merchantOperatingCityId == merchantOperatingCityId) $
+    throwError (InvalidRequest $ "Pass category " <> passCategoryId.getId <> " does not belong to city " <> show opCity)
+  pure category
+
+-- FRFS pass override / config. Separate from the catalog CRUD because these
+-- columns drive SharedLogic.FRFSPassOverride, not the rider-facing pass listing.
+
+getPassOverrideConfig :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> Environment.Flow DashPass.PassOverrideConfig
+getPassOverrideConfig merchantShortId opCity passId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  -- Report a broken blob rather than rendering an empty form over it: the
+  -- dashboard would otherwise overwrite a config it never showed the author.
+  let (mbBenefit, mbError) = readOverrideBenefit passRow
+  pure $
+    DashPass.PassOverrideConfig
+      { passId = passRow.id,
+        code = passRow.code,
+        frfsPriceOverrideApplicable = passRow.frfsPriceOverrideApplicable,
+        frfsCancelLimit = passRow.frfsCancelLimit,
+        minTripsAllowingOverlap = passRow.minTripsAllowingOverlap,
+        minDaysToSuggestRenewal = passRow.minDaysToSuggestRenewal,
+        timeOverlappingFrfsBookingsLimit = passRow.timeOverlappingFrfsBookingsLimit,
+        benefit = mkOverrideBenefitAPIEntity <$> mbBenefit,
+        benefitConfigError = mbError
+      }
+
+-- | The stored blob is OverrideBenefitConfig { override_benefits :: [..] }, but
+-- only the first entry is ever applied (FRFSPassOverride.benefitFromPass logs
+-- and ignores the rest), so the dashboard exposes exactly one.
+readOverrideBenefit :: DPass.Pass -> (Maybe FRFSPassOverride.OverrideBenefit, Maybe Text)
+readOverrideBenefit passRow = case passRow.overrideBenefitConfigJson of
+  Nothing -> (Nothing, Nothing)
+  Just configJson -> case FRFSPassOverride.parseOverrideBenefitConfig configJson of
+    Left err -> (Nothing, Just $ "unparseable override_benefit_config_json: " <> show err)
+    Right config -> case listToMaybe config.overrideBenefits of
+      Nothing -> (Nothing, Just "override_benefits is empty")
+      Just benefit -> case FRFSPassOverride.validateBenefit benefit of
+        Left reason -> (Just benefit, Just reason)
+        Right valid -> (Just valid, Nothing)
+
+updatePassOverrideConfig :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassOverrideUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassOverrideConfig merchantShortId opCity passId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  -- Validate with the same predicate the runtime uses to decide whether a pass
+  -- is usable, so the dashboard cannot save a config that silently disqualifies
+  -- the pass at booking time.
+  mbBenefitJson <- forM req.benefit $ \apiBenefit -> do
+    let benefit = fromOverrideBenefitAPIEntity apiBenefit
+    validated <- either (throwError . InvalidRequest . ("Invalid override benefit: " <>)) pure (FRFSPassOverride.validateBenefit benefit)
+    pure $ A.toJSON (FRFSPassOverride.OverrideBenefitConfig {overrideBenefits = [validated]})
+  now <- getCurrentTime
+  let updatedPass =
+        passRow
+          { DPass.frfsPriceOverrideApplicable = req.frfsPriceOverrideApplicable <|> passRow.frfsPriceOverrideApplicable,
+            DPass.frfsCancelLimit = req.frfsCancelLimit <|> passRow.frfsCancelLimit,
+            DPass.minTripsAllowingOverlap = req.minTripsAllowingOverlap <|> passRow.minTripsAllowingOverlap,
+            DPass.minDaysToSuggestRenewal = req.minDaysToSuggestRenewal <|> passRow.minDaysToSuggestRenewal,
+            DPass.timeOverlappingFrfsBookingsLimit = req.timeOverlappingFrfsBookingsLimit <|> passRow.timeOverlappingFrfsBookingsLimit,
+            DPass.overrideBenefitConfigJson = mbBenefitJson <|> passRow.overrideBenefitConfigJson,
+            DPass.updatedAt = now
+          }
+  QPass.updateByPrimaryKey updatedPass
+  CQPass.clearCacheById passId
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  pure APISuccess.Success
+
+mkOverrideBenefitAPIEntity :: FRFSPassOverride.OverrideBenefit -> DashPass.OverrideBenefitAPIEntity
+mkOverrideBenefitAPIEntity benefit =
+  DashPass.OverrideBenefitAPIEntity
+    { percentageSaving =
+        benefit.percentageSaving <&> \p ->
+          DashPass.PercentageSavingAPIEntity {applicableValue = p.applicableValue, enabled = p.enabled},
+      fixedSaving =
+        benefit.fixedSaving <&> \f ->
+          DashPass.FixedSavingAPIEntity {applicableValue = f.applicableValue, currencyType = f.currencyType, enabled = f.enabled},
+      unlimitedTripCount = benefit.unlimitedTripCount,
+      maximumTripCount = benefit.maximumTripCount,
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+    }
+
+fromOverrideBenefitAPIEntity :: DashPass.OverrideBenefitAPIEntity -> FRFSPassOverride.OverrideBenefit
+fromOverrideBenefitAPIEntity apiBenefit =
+  FRFSPassOverride.OverrideBenefit
+    { percentageSaving =
+        apiBenefit.percentageSaving <&> \p ->
+          FRFSPassOverride.PercentageSaving {applicableValue = p.applicableValue, enabled = p.enabled},
+      fixedSaving =
+        apiBenefit.fixedSaving <&> \f ->
+          FRFSPassOverride.FixedSaving {applicableValue = f.applicableValue, currencyType = f.currencyType, enabled = f.enabled},
+      unlimitedTripCount = apiBenefit.unlimitedTripCount,
+      maximumTripCount = apiBenefit.maximumTripCount,
+      maxTicketQuantityPerOverride = apiBenefit.maxTicketQuantityPerOverride
+    }
 
 mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
 mkFrfsOverrideConfig benefit =
