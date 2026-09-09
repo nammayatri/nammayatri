@@ -851,7 +851,10 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType merchant.id
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
+  let mbBoolVerified =
+        if not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True)
+          then Just True
+          else Nothing
   QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess
 
