@@ -728,42 +728,22 @@ createIssueReportWithContext ::
   Maybe Text ->
   m Common.IssueReportRes
 createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
-  -- Guard against a client retrying the same submission (e.g. after a
-  -- timeout on a request carrying an attachment) and ending up with two
-  -- tickets for what the customer experienced as one submit. Keyed on the
-  -- submission's stable identity, NOT mediaFiles — attachments are exactly
-  -- what's likely to differ between the original attempt and a retry (a
-  -- failed upload being dropped/retried), so keying on them would defeat
-  -- the guard for the case it's meant to catch.
-
   let scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId)
-      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
-  -- Atomic claim (SETNX-style): only the request that actually creates the
-  -- key proceeds to do the work. A plain GET-then-SET has a race window —
-  -- two requests that both arrive before either has written the cache can
-  -- both see "no cache" and both create a ticket; setNxExpire is atomic at
-  -- the Redis level, so only one of two truly concurrent requests can win.
-  wonClaim <- Redis.setNxExpire dedupKey 60 (Nothing :: Maybe Common.IssueReportRes)
-  if wonClaim
-    then do
-      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId)
-      case result of
-        Right response -> do
-          Redis.setExp dedupKey (Just response) 60
-          pure response
-        Left err -> do
-          Redis.del dedupKey
-          throwM err
-    else awaitDedupedResponse dedupKey
-  where
-    awaitDedupedResponse dedupKey = do
-      mbVal <- Redis.get dedupKey
-      case mbVal of
-        Just (Just res) -> pure res
-        Just Nothing -> do
-          threadDelaySec $ Seconds 1
-          awaitDedupedResponse dedupKey
-        Nothing -> createIssueReportWithContext creationContext args mbLanguage req issueHandle identifier becknIssueId
+      dedupIdentity = personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
+      cacheKey = "IssueSubmitCache:" <> dedupIdentity
+      lockKey = "IssueSubmitLock:" <> dedupIdentity
+  mbCached <- Redis.get cacheKey
+  case mbCached of
+    Just cachedResponse -> pure cachedResponse
+    Nothing ->
+      Redis.withWaitAndLockRedis lockKey 60 1000000 $ do
+        mbCachedInLock <- Redis.get cacheKey
+        case mbCachedInLock of
+          Just cachedResponse -> pure cachedResponse
+          Nothing -> do
+            response <- createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId
+            Redis.setExp cacheKey response 60
+            pure response
 
 createIssueReportImpl ::
   ( EsqDBReplicaFlow m r,
