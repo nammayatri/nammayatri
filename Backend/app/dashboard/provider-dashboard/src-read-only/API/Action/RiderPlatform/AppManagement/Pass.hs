@@ -35,10 +35,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass :<|> ListPassCategories :<|> CreatePassCategory :<|> UpdatePassCategory :<|> ListPassTypes :<|> CreatePassType :<|> UpdatePassType :<|> GetPassOverrideConfig :<|> UpdatePassOverrideConfig))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass :<|> ListPassCategories :<|> CreatePassCategory :<|> UpdatePassCategory :<|> ListPassTypes :<|> CreatePassType :<|> UpdatePassType :<|> GetPassOverrideConfig :<|> UpdatePassOverrideConfig :<|> PostPassTripsAdjust))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city :<|> listPassCatalog merchantId city :<|> createPass merchantId city :<|> updatePass merchantId city :<|> deletePass merchantId city :<|> listPassCategories merchantId city :<|> createPassCategory merchantId city :<|> updatePassCategory merchantId city :<|> listPassTypes merchantId city :<|> createPassType merchantId city :<|> updatePassType merchantId city :<|> getPassOverrideConfig merchantId city :<|> updatePassOverrideConfig merchantId city
+handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city :<|> listPassCatalog merchantId city :<|> createPass merchantId city :<|> updatePass merchantId city :<|> deletePass merchantId city :<|> listPassCategories merchantId city :<|> createPassCategory merchantId city :<|> updatePassCategory merchantId city :<|> listPassTypes merchantId city :<|> createPassType merchantId city :<|> updatePassType merchantId city :<|> getPassOverrideConfig merchantId city :<|> updatePassOverrideConfig merchantId city :<|> postPassTripsAdjust merchantId city
 
 type GetPassCustomerAvailablePasses =
   ( ApiAuth
@@ -216,6 +216,14 @@ type UpdatePassOverrideConfig =
       :> API.Types.Dashboard.AppManagement.Pass.UpdatePassOverrideConfig
   )
 
+type PostPassTripsAdjust =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_TRIPS_ADJUST)
+      :> API.Types.Dashboard.AppManagement.Pass.PostPassTripsAdjust
+  )
+
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language
 
@@ -281,3 +289,6 @@ getPassOverrideConfig merchantShortId opCity apiTokenInfo passId = withFlowHandl
 
 updatePassOverrideConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassOverrideUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 updatePassOverrideConfig merchantShortId opCity apiTokenInfo passId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.updatePassOverrideConfig merchantShortId opCity apiTokenInfo passId req
+
+postPassTripsAdjust :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> API.Types.Dashboard.AppManagement.Pass.PassTripAdjustReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassTripAdjustResp)
+postPassTripsAdjust merchantShortId opCity apiTokenInfo customerId purchasedPassId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassTripsAdjust merchantShortId opCity apiTokenInfo customerId purchasedPassId req
