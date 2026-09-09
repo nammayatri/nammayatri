@@ -488,6 +488,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
+    LYT.RIDE_FOOTNOTES_DISPLAY -> do
+      logicData :: A.Value <- YudhishthiraFlow.createLogicData (A.object []) (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSUC.MerchantServiceUsageConfig))
       let configWrap = LYT.Config defaultConfig Nothing 1
