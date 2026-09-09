@@ -19,6 +19,7 @@ import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOF
+import qualified Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory as BeamOFSH
 import qualified Lib.Payment.Storage.Beam.OfferStats as BeamOS
 import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -29,6 +30,7 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
+import qualified Lib.Payment.Storage.Beam.PersonOfferFrequencyStats as BeamPOFS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
@@ -56,5 +58,7 @@ type BeamFlow m r =
     HasSchemaName BeamOF.OfferT,
     HasSchemaName BeamOS.OfferStatsT,
     HasSchemaName BeamPDOS.PersonDailyOfferStatsT,
+    HasSchemaName BeamPOFS.PersonOfferFrequencyStatsT,
+    HasSchemaName BeamOFSH.OfferFrequencyStatsHistoryT,
     HasSchemaName BeamOfflineOffer.OfflineOfferT
   )

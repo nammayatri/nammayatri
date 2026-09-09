@@ -25,3 +25,20 @@ ALTER TABLE atlas_driver_offer_bpp.offer ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN valid_till timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN minimum_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN is_hidden boolean ;
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN auto_apply boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN frequency_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN max_apply_count integer ;

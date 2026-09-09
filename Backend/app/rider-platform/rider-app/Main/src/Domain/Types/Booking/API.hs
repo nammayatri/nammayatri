@@ -679,35 +679,39 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
       let currency = booking.estimatedFare.currency
           mkPriceEntity = mkPriceAPIEntity . mkPrice (Just currency)
       case mbOfferEntity of
-        Just offerEntity ->
+        Just offerEntity -> do
           let estimatedOfferEntity = fromMaybe offerEntity mbBookingOfferEntity
-           in return $
-                Just $
-                  SOffer.OffersRespAPIEntity
-                    { offers =
-                        [ SOffer.OfferRespAPIEntity
-                            { offerId = offerEntity.offerId,
-                              offerTitle = offerEntity.offerTitle,
-                              offerDescription = offerEntity.offerDescription,
-                              offerTnc = offerEntity.offerTnc,
-                              offerSponsoredBy = offerEntity.offerSponsoredBy,
-                              offerCode = offerEntity.offerCode,
-                              autoApply = offerEntity.autoApply,
-                              isHidden = offerEntity.isHidden,
-                              amountSaved = offerEntity.amountSaved,
-                              postOfferAmount = offerEntity.postOfferAmount,
-                              estimatedAmountSaved = estimatedOfferEntity.amountSaved,
-                              estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount,
-                              offerType = Just (if offerEntity.payoutAmount > 0 then DOffer.CASHBACK else DOffer.DISCOUNT)
-                            }
-                        ],
-                      totalAmountSaved = offerEntity.amountSaved,
-                      totalPostOfferAmount = offerEntity.postOfferAmount,
-                      totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
-                      totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
-                      estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
-                      estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
-                    }
+          return $
+            Just $
+              SOffer.OffersRespAPIEntity
+                { offers =
+                    [ SOffer.OfferRespAPIEntity
+                        { offerId = offerEntity.offerId,
+                          offerTitle = offerEntity.offerTitle,
+                          offerDescription = offerEntity.offerDescription,
+                          offerTnc = offerEntity.offerTnc,
+                          offerSponsoredBy = offerEntity.offerSponsoredBy,
+                          offerCode = offerEntity.offerCode,
+                          autoApply = offerEntity.autoApply,
+                          isHidden = offerEntity.isHidden,
+                          amountSaved = offerEntity.amountSaved,
+                          postOfferAmount = offerEntity.postOfferAmount,
+                          estimatedAmountSaved = estimatedOfferEntity.amountSaved,
+                          estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount,
+                          offerType = Just (if offerEntity.payoutAmount > 0 then DOffer.CASHBACK else DOffer.DISCOUNT),
+                          minimumAmount = Nothing,
+                          frequencyType = offerEntity.frequencyType,
+                          appliedCount = offerEntity.appliedCount,
+                          maxApplyCount = offerEntity.maxApplyCount
+                        }
+                    ],
+                  totalAmountSaved = offerEntity.amountSaved,
+                  totalPostOfferAmount = offerEntity.postOfferAmount,
+                  totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
+                  totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
+                  estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
+                  estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
+                }
         Nothing -> return Nothing
   return $
     RideAPIEntity
