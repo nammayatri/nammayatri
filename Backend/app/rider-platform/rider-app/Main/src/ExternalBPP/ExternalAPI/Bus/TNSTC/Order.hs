@@ -60,7 +60,7 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
   wsRefNo <- quote.providerRefNo & fromMaybeM (InvalidRequest "providerRefNo missing on quote; select was not completed")
   concessionTypeId <- quote.concessionTypeId & fromMaybeM (InvalidRequest "concessionTypeId missing on quote")
 
-  passengerDetails <- QFRFSPassengerDetail.findAllByBookingId (Just booking.id)
+  passengerDetails <- QFRFSPassengerDetail.findAllByQuoteId booking.quoteId
   -- Deliberately re-read rather than using the categories passed in: FRFSStatus hands us
   -- payment categories when they exist, and paymentCategoryToQuoteCategory drops
   -- providerBlockIds. Losing the hold ids here would fail the booking after payment.

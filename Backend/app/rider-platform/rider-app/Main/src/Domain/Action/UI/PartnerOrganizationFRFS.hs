@@ -559,7 +559,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             partnerOrgId = Just partnerOrg'.orgId,
             isOnSearchReceived = Nothing,
             journeyDate = Nothing,
-            isSingleLady = Nothing,
+            travellerGroup = Nothing,
             onSearchFailed = Nothing,
             integratedBppConfigId = integratedBPPConfig.id,
             recentLocationId = Nothing,

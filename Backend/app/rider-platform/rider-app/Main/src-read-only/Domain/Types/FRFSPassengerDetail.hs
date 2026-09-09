@@ -5,7 +5,6 @@ module Domain.Types.FRFSPassengerDetail where
 
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -17,7 +16,6 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSPassengerDetailE e = FRFSPassengerDetail
   { age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    bookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking),
     dropOffPointPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail,
@@ -47,7 +45,6 @@ instance EncryptedItem FRFSPassengerDetail where
     pure
       FRFSPassengerDetail
         { age = age entity,
-          bookingId = bookingId entity,
           dropOffPointPlaceId = dropOffPointPlaceId entity,
           gender = gender entity,
           id = id entity,
@@ -69,7 +66,6 @@ instance EncryptedItem FRFSPassengerDetail where
     pure
       ( FRFSPassengerDetail
           { age = age entity,
-            bookingId = bookingId entity,
             dropOffPointPlaceId = dropOffPointPlaceId entity,
             gender = gender entity,
             id = id entity,
