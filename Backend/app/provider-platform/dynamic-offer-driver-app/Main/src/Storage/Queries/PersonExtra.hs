@@ -570,6 +570,7 @@ updatePersonDetails person = do
   updateOneWithKV
     [ Se.Set BeamP.firstName $ person.firstName,
       Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.gender $ person.gender,
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.email $ person.email,

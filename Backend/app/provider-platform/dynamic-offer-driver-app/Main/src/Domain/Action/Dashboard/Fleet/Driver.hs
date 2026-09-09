@@ -3652,7 +3652,11 @@ data CreateDriversCSVRow = CreateDriversCSVRow
     badgeRank :: Maybe Text,
     badgeType :: Maybe Text,
     driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text
+    fleetPhoneCountryCode :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    gender :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
@@ -3665,7 +3669,11 @@ data DriverDetails = DriverDetails
     badgeRank :: Maybe Text,
     badgeType :: Maybe DFBT.FleetBadgeType,
     driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text
+    fleetPhoneCountryCode :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    gender :: Maybe DP.Gender
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -3680,6 +3688,10 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> optional (r .: "badge_type")
       <*> optional (r .: "driver_phone_country_code")
       <*> optional (r .: "fleet_phone_country_code")
+      <*> optional (r .: "first_name")
+      <*> optional (r .: "last_name")
+      <*> optional (r .: "email")
+      <*> optional (r .: "gender")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -3883,7 +3895,14 @@ validateDriverName mbDriverName isMandatory isStrongNameCheckRequired = do
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
-  let driverName :: Maybe Text = row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name"
+  let firstName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.firstName) "First name"
+      lastName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.lastName) "Last name"
+      email :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.email) "Email"
+      gender :: Maybe DP.Gender = Csv.readMaybeCSVField idx (fromMaybe "" row.gender) "Gender"
+      -- first_name/last_name win over the combined column; the combined form stays filled
+      -- either way since SMS, badges and name validation read it.
+      fullName = firstName <&> \fn -> maybe fn (\ln -> fn <> " " <> ln) lastName
+      driverName :: Maybe Text = fullName <|> (row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name")
       -- Do not hard-fail the whole upload on a blank phone; keep the row (with an empty
       -- phone) so it can be reported per-row in unprocessedEntities during processing.
       driverPhoneNumber :: Text = fromMaybe "" (Csv.cleanMaybeCSVField idx row.driverPhoneNumber "Mobile number")
@@ -3905,7 +3924,11 @@ parseDriverInfo idx row = do
         badgeRank = badgeRank,
         badgeType = badgeType,
         driverPhoneCountryCode = driverPhoneCountryCode,
-        fleetPhoneCountryCode = fleetPhoneCountryCode
+        fleetPhoneCountryCode = fleetPhoneCountryCode,
+        firstName = firstName,
+        lastName = lastName,
+        email = email,
+        gender = gender
       }
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
@@ -3930,8 +3953,12 @@ fetchOrCreatePerson moc req_ = do
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
     >>= \case
       Nothing -> do
+        whenJust req_.email $ \reqEmail -> do
+          runRequestValidation (\e -> validateField "email" e P.email) reqEmail
+          mbExistingByEmail <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) moc.merchantId DP.DRIVER
+          when (isJust mbExistingByEmail) $ throwError (EmailAlreadyLinked reqEmail)
         cloudType <- asks (.cloudType)
-        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True
+        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True req_.firstName req_.lastName req_.email req_.gender
         let isNew = True in pure (person, isNew)
       Just person -> do
         let isNew = False in pure (person, isNew)
@@ -4387,6 +4414,7 @@ postDriverFleetGetDriverDetails _ _ _fleetOwnerId req = do
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
+            gender = Just $ show person.gender,
             mobileCountryCode = person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             email = person.email,
@@ -4838,8 +4866,11 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
     unless isValid $ throwError AccessDenied
 
+  mbGender <- forM req.gender $ \genderText ->
+    readMaybe (T.unpack genderText) & fromMaybeM (InvalidRequest $ "Invalid gender: " <> genderText)
+
   -- Update basic profile fields (name, email, mobile) in one go
-  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
+  when (isJust req.firstName || isJust req.lastName || isJust req.gender || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
     -- Email uniqueness
     whenJust req.email $ \reqEmail -> do
       existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
@@ -4865,6 +4896,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
               DP.lastName = req.lastName <|> driver.lastName,
+              DP.gender = fromMaybe driver.gender mbGender,
               DP.email = req.email <|> driver.email,
               DP.mobileCountryCode = newMobileCountryCode,
               DP.mobileNumber = newMobileNumber

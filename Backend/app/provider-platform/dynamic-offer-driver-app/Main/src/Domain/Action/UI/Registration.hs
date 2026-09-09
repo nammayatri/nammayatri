@@ -376,13 +376,13 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard Nothing Nothing Nothing Nothing) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
-            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard Nothing Nothing Nothing Nothing) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
@@ -717,10 +717,23 @@ createDriverWithDetails ::
   Id DO.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe SP.Gender ->
   m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard = do
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard mbFirstName mbLastName mbEmail mbGender = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard Nothing
+  person0 <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard Nothing
+  -- Persons are normally created as stubs at login and later updated with these details;
+  -- set these at the insert when the caller already knows them.
+  let person =
+        person0
+          { SP.firstName = fromMaybe person0.firstName mbFirstName,
+            SP.lastName = mbLastName <|> person0.lastName,
+            SP.email = mbEmail <|> person0.email,
+            SP.gender = fromMaybe person0.gender mbGender
+          }
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person
@@ -985,7 +998,7 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
-      >>= maybe (createDriverWithDetails reqWithMobileNumber mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice (Just $ deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId False) return -- Simple fallback for create, refining
+      >>= maybe (createDriverWithDetails reqWithMobileNumber mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice (Just $ deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId False Nothing Nothing Nothing Nothing) return -- Simple fallback for create, refining
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp

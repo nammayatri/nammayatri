@@ -296,6 +296,7 @@ types:
     - firstName: Text
     - middleName: Maybe Text
     - lastName: Maybe Text
+    - gender: Maybe Text
     - numberOfRides: Int
     - mobileNumber: Maybe Text
     - mobileCountryCode: Maybe Text
