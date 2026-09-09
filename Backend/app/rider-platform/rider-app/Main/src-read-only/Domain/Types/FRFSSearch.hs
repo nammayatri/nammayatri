@@ -32,7 +32,6 @@ data FRFSSearch = FRFSSearch
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isSingleLady :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyDate :: Kernel.Prelude.Maybe Data.Time.Day,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -50,6 +49,7 @@ data FRFSSearch = FRFSSearch
     toStationCode :: Kernel.Prelude.Text,
     toStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    travellerGroup :: Kernel.Prelude.Maybe Domain.Types.FRFSSearch.FRFSTravellerGroup,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
@@ -57,3 +57,7 @@ data FRFSSearch = FRFSSearch
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data FRFSTravellerGroup = GENERAL | SINGLE_LADY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTravellerGroup)
