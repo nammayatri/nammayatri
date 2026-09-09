@@ -4,9 +4,11 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SearchRequest as Domain
+import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -44,6 +46,44 @@ createDSReq searchRequest = do
 
 createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> m ()
 createStopsLocation = QL.createMany
+
+createDSReqFresh :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
+createDSReqFresh searchRequest = do
+  now <- getCurrentTime
+  let entityId = searchRequest.id.getId
+      stops = searchRequest.stops
+      mkMapping locationId order = do
+        id <- generateGUID
+        pure
+          DLM.LocationMapping
+            { id,
+              entityId,
+              locationId,
+              order,
+              tag = DLM.SEARCH_REQUEST,
+              version = QLM.latestTag,
+              merchantId = Just searchRequest.providerId,
+              merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+  fromMapping <- mkMapping searchRequest.fromLocation.id 0
+  stopMappings <- zipWithM (\stop order -> mkMapping stop.id order) stops [1 ..]
+  mbToMapping <- forM searchRequest.toLocation $ \toLocation -> mkMapping toLocation.id (length stops + 1)
+  let locations = searchRequest.fromLocation : stops <> maybeToList searchRequest.toLocation
+      mappings = fromMapping : stopMappings <> maybeToList mbToMapping
+  runWritesConcurrently $
+    map (\loc -> ("createDSReqFresh:location", QL.create loc)) locations
+      <> map (\m -> ("createDSReqFresh:locationMapping", QLM.create m)) mappings
+      <> [("createDSReqFresh:searchRequest", createDSReq' searchRequest)]
+
+runWritesConcurrently :: (MonadFlow m) => [(Text, m ())] -> m ()
+runWritesConcurrently writes = do
+  awaitables <- forM writes $ \(tag, write) -> awaitableFork tag write
+  forM_ (zip (map fst writes) awaitables) $ \(tag, awaitable) ->
+    L.await Nothing awaitable >>= \case
+      Right () -> pure ()
+      Left err -> throwError $ InternalError $ tag <> " failed: " <> show err
 
 updateAutoAssign ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

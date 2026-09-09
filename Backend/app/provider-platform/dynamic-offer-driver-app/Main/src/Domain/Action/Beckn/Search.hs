@@ -380,7 +380,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   unless sReq.isShadowSearch $
     triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
-  void $ withTimeAPI "search" "createSearchRequest" $ QSR.createDSReq searchReq
+  void $ withTimeAPI "search" "createSearchRequest" $ QSR.createDSReqFresh searchReq
 
   unless sReq.isShadowSearch $ do
     fork "Add Namma Tags" $ do
