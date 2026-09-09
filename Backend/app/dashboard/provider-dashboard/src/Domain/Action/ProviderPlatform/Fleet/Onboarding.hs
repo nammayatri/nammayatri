@@ -32,7 +32,14 @@ getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs docsVerificationStatus enableDocumentMetadata rcNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingRegisterStatus) fleetOwnerId driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs docsVerificationStatus enableDocumentMetadata rcNo
+  res <- Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.getOnboardingRegisterStatus) fleetOwnerId driverId makeSelfieAadhaarPanMandatory onboardingVehicleCategory providePrefillDetails onlyMandatoryDocs docsVerificationStatus enableDocumentMetadata rcNo
+  let statusPersonId = maybe fleetOwnerId (.getId) driverId
+  when (statusPersonId == fleetOwnerId) $ do
+    mbPerson <- QP.findById (Id fleetOwnerId)
+    Kernel.Prelude.whenJust mbPerson $ \person ->
+      when (person.verified /= Just res.verified) $
+        QP.updatePersonVerifiedStatus (Id fleetOwnerId) res.verified
+  pure res
 
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
