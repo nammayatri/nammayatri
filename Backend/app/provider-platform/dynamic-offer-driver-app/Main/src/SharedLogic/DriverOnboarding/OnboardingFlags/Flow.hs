@@ -205,6 +205,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
+      approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
       newApproved =
         if useUnifiedOnboardingFlagsRecompute
           then
@@ -213,7 +214,16 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
                 other -> other
             )
           else if allMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
-      verifiedToWrite = if driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed then driverInfo.verified else allMandatoryDocsValid
+      holdEnabledWithoutDocsVerifiedEnabledOrApproved =
+        useUnifiedOnboardingFlagsRecompute
+          && not approvalSupported
+          && driverInfo.enabled
+          && driverInfo.verified
+          && not (allMandatoryDocsValid && allEnablingDocsValid && newApproved == Just True)
+      verifiedToWrite =
+        if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed)
+          then driverInfo.verified
+          else allMandatoryDocsValid
       approvedToWrite = if driverInfo.approved == Just True && newApproved /= Just True && not mutationAllowed then driverInfo.approved else newApproved
   when (verifiedToWrite /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= driverInfo.approved)) $
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) verifiedToWrite approvedToWrite
@@ -243,15 +253,21 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   -- A disabled driver keeps its force-enable marker unless the city wants the disable to send them
   -- back to onboarding; clearing it is what makes `enabled` derive from documents again.
   effectiveEnabledReasonFlag <-
-    if useUnifiedOnboardingFlagsRecompute
-      && mutationAllowed
-      && isJust effectiveDisabledReasonFlag
-      && driverInfo.enabledReasonFlag == Just DI.AdminEnabled
-      && transporterConfig.forceEnabledBypassingDocsUponDisableTakesToOnboarding == Just True
+    if holdEnabledWithoutDocsVerifiedEnabledOrApproved
       then do
-        DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
-        pure Nothing
-      else pure driverInfo.enabledReasonFlag
+        unless (driverInfo.enabledReasonFlag == Just DI.AdminEnabled) $
+          DIQueryExtra.updateEnabledReasonFlag (Just DI.AdminEnabled) (cast person.id)
+        pure (Just DI.AdminEnabled)
+      else
+        if useUnifiedOnboardingFlagsRecompute
+          && mutationAllowed
+          && isJust effectiveDisabledReasonFlag
+          && driverInfo.enabledReasonFlag == Just DI.AdminEnabled
+          && transporterConfig.forceEnabledBypassingDocsUponDisableTakesToOnboarding == Just True
+          then do
+            DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
+            pure Nothing
+          else pure driverInfo.enabledReasonFlag
   let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else True
       bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
       docsDerivedEnable = consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk
@@ -316,16 +332,24 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
   let allFleetMandatoryDocsValid = checkAllDriverDocsValidForVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allFleetEnablingDocsValid = checkAllDriverDocsValidForEnabling allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       derivedApproved = computeApprovedFromDocs Nothing allDocVerificationConfigs person.role driverDocuments
+      approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
       newApproved =
         if useUnifiedOnboardingFlagsRecompute
           then case derivedApproved of
             Just True | not allFleetMandatoryDocsValid -> Nothing
             other -> other
           else if allFleetMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
-  when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= fleetOwnerInfo.approved)) $
-    QFOI.updateFleetOwnerVerifiedAndApprovedStatus allFleetMandatoryDocsValid newApproved person.id
+      holdEnabledWithoutDocsVerifiedEnabledOrApproved =
+        useUnifiedOnboardingFlagsRecompute
+          && not approvalSupported
+          && fleetOwnerInfo.enabled
+          && fleetOwnerInfo.verified
+          && not (allFleetMandatoryDocsValid && allFleetEnablingDocsValid && newApproved == Just True)
+      verifiedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.verified else allFleetMandatoryDocsValid
+  when (verifiedToWrite /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= fleetOwnerInfo.approved)) $
+    QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite newApproved person.id
   let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else True
-      newEnabled = allFleetEnablingDocsValid && approvedGateOk
+      newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
   -- docsVerificationStatus is derived from the same documents as the flags and is written on every
@@ -342,7 +366,7 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
     person.merchantOperatingCityId
     (Just person.id.getId)
     (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
-    (bucketsOfFlags' allFleetMandatoryDocsValid newApproved newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
+    (bucketsOfFlags' verifiedToWrite newApproved newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
   pure newEnabled
 
 recomputeVehicleFlagsArm ::

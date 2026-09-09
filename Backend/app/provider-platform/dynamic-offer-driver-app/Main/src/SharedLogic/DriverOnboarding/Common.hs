@@ -19,6 +19,7 @@ module SharedLogic.DriverOnboarding.Common
     checkAllVehicleDocsValidForVerified,
     computeApprovedFromDocs,
     docSupportsApproval,
+    approvalSupportedInConfigs,
     partitionDocsBySide,
 
     -- * Fleet / driver association lookups
@@ -267,6 +268,11 @@ computeApprovedFromDocs mbIsFleetDriver configs role docs =
       INVALID -> Just False
       FAILED -> Just False
       _ -> Nothing
+
+approvalSupportedInConfigs :: DocVerificationConfigs -> Bool
+approvalSupportedInConfigs = \case
+  Left fleetConfigs -> any (\c -> c.isApprovalSupported == Just True) fleetConfigs
+  Right driverConfigs -> any (\c -> c.isApprovalSupported == Just True) driverConfigs
 
 docSupportsApproval :: Maybe Bool -> DocVerificationConfigs -> DP.Role -> DocumentStatusItem -> Bool
 docSupportsApproval _mbIsFleetDriver (Left fleetConfigs) role d =
