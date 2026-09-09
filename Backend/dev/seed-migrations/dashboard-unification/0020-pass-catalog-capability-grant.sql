@@ -12,17 +12,24 @@
 -- from what the matrix already allows, rather than naming roles that differ
 -- per environment.
 --
--- Read and write are granted together deliberately. The matrix only ever
--- covered the four original endpoints and only with USER_FULL_ACCESS, so a
--- role that could author the catalog before can author it now — no widening
--- beyond what it already had.
+-- Read and write are derived separately. access_matrix grants each endpoint
+-- independently, so a role may hold USER_FULL_ACCESS on LIST_PASS_CATALOG alone;
+-- granting both from one match would hand that role authoring rights it never had.
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
-SELECT DISTINCT am.role_id, c.cap
+SELECT DISTINCT am.role_id, 'city-config.pass_catalog.read'
 FROM atlas_dashboard.access_matrix am
-CROSS JOIN (VALUES ('city-config.pass_catalog.read'),
-                   ('city-config.pass_catalog.write')) AS c(cap)
 WHERE am.user_action_type IN (
         'RIDER_APP_MANAGEMENT/PASS/LIST_PASS_CATALOG',
+        'RIDER_APP_MANAGEMENT/PASS/CREATE_PASS',
+        'RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS',
+        'RIDER_APP_MANAGEMENT/PASS/DELETE_PASS')
+  AND am.user_access_type = 'USER_FULL_ACCESS'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT DISTINCT am.role_id, 'city-config.pass_catalog.write'
+FROM atlas_dashboard.access_matrix am
+WHERE am.user_action_type IN (
         'RIDER_APP_MANAGEMENT/PASS/CREATE_PASS',
         'RIDER_APP_MANAGEMENT/PASS/UPDATE_PASS',
         'RIDER_APP_MANAGEMENT/PASS/DELETE_PASS')

@@ -76,6 +76,11 @@ data PassCatalogItem = PassCatalogItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassCategoryClearableField
+  = PassCategoryOrder
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassCategoryCreateReq = PassCategoryCreateReq {description :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text, order :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -97,12 +102,31 @@ data PassCategoryItem = PassCategoryItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassCategoryUpdateReq = PassCategoryUpdateReq {description :: Kernel.Prelude.Maybe Kernel.Prelude.Text, name :: Kernel.Prelude.Maybe Kernel.Prelude.Text, order :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data PassCategoryUpdateReq = PassCategoryUpdateReq
+  { clearFields :: Kernel.Prelude.Maybe [PassCategoryClearableField],
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets PassCategoryUpdateReq where
   hideSecrets = Kernel.Prelude.identity
+
+data PassClearableField
+  = PassName
+  | PassDescription
+  | PassBenefit
+  | PassPricingTiers
+  | PassMaxValidTrips
+  | PassMaxValidDays
+  | PassMaxSwitchCount
+  | PassMinFare
+  | PassMaxFare
+  | PassFormVerificationConfig
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassCreateReq = PassCreateReq
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -137,6 +161,16 @@ data PassCreateResp = PassCreateResp {passId :: Kernel.Types.Id.Id Domain.Types.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassOverrideClearableField
+  = OverrideFrfsPriceOverrideApplicable
+  | OverrideFrfsCancelLimit
+  | OverrideMinTripsAllowingOverlap
+  | OverrideMinDaysToSuggestRenewal
+  | OverrideTimeOverlappingFrfsBookingsLimit
+  | OverrideBenefit
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassOverrideConfig = PassOverrideConfig
   { benefit :: Kernel.Prelude.Maybe OverrideBenefitAPIEntity,
     benefitConfigError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -153,6 +187,7 @@ data PassOverrideConfig = PassOverrideConfig
 
 data PassOverrideUpdateReq = PassOverrideUpdateReq
   { benefit :: Kernel.Prelude.Maybe OverrideBenefitAPIEntity,
+    clearFields :: Kernel.Prelude.Maybe [PassOverrideClearableField],
     frfsCancelLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     frfsPriceOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minDaysToSuggestRenewal :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -182,6 +217,16 @@ data PassTripAdjustResp = PassTripAdjustResp
     remainingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassTypeClearableField
+  = PassTypeName
+  | PassTypeCatchline
+  | PassTypeDescription
+  | PassTypePassEnum
+  | PassTypeMaxPhotoChangeLimit
+  | PassTypePhotoReUploadTimeLimit
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassTypeCreateReq = PassTypeCreateReq
@@ -224,6 +269,7 @@ data PassTypeItem = PassTypeItem
 
 data PassTypeUpdateReq = PassTypeUpdateReq
   { catchline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    clearFields :: Kernel.Prelude.Maybe [PassTypeClearableField],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maxPhotoChangeLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -245,6 +291,7 @@ data PassUpdateReq = PassUpdateReq
     autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
     benefitDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    clearFields :: Kernel.Prelude.Maybe [PassClearableField],
     code :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentsRequired :: Kernel.Prelude.Maybe [Domain.Types.Pass.PassDocumentType],

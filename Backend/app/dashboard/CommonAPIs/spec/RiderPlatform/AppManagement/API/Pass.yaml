@@ -78,6 +78,9 @@ types:
     formVerificationConfig: Maybe Value
     derive: "'HideSecrets"
 
+  PassClearableField:
+    enum: "PassName, PassDescription, PassBenefit, PassPricingTiers, PassMaxValidTrips, PassMaxValidDays, PassMaxSwitchCount, PassMinFare, PassMaxFare, PassFormVerificationConfig"
+
   # Partial patch — every field optional, absent means "leave as is".
   PassUpdateReq:
     passTypeId: Maybe (Id PassType)
@@ -101,6 +104,7 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    clearFields: "Maybe [PassClearableField]"
     derive: "'HideSecrets"
 
   PassCatalogItem:
@@ -140,11 +144,15 @@ types:
     order: Maybe Int
     derive: "'HideSecrets"
 
+  PassCategoryClearableField:
+    enum: "PassCategoryOrder"
+
   # Partial patch - every field optional, absent means "leave as is".
   PassCategoryUpdateReq:
     name: Maybe Text
     description: Maybe Text
     order: Maybe Int
+    clearFields: "Maybe [PassCategoryClearableField]"
     derive: "'HideSecrets"
 
   PassCategoryItem:
@@ -169,6 +177,9 @@ types:
     photoReUploadTimeLimit: Maybe Seconds
     derive: "'HideSecrets"
 
+  PassTypeClearableField:
+    enum: "PassTypeName, PassTypeCatchline, PassTypeDescription, PassTypePassEnum, PassTypeMaxPhotoChangeLimit, PassTypePhotoReUploadTimeLimit"
+
   PassTypeUpdateReq:
     passCategoryId: Maybe (Id PassCategory)
     name: Maybe Text
@@ -179,6 +190,7 @@ types:
     passEnum: Maybe PassEnum
     maxPhotoChangeLimit: Maybe Int
     photoReUploadTimeLimit: Maybe Seconds
+    clearFields: "Maybe [PassTypeClearableField]"
     derive: "'HideSecrets"
 
   PassTypeItem:
@@ -240,6 +252,9 @@ types:
     # empty form over it and silently overwriting on save.
     benefitConfigError: Maybe Text
 
+  PassOverrideClearableField:
+    enum: "OverrideFrfsPriceOverrideApplicable, OverrideFrfsCancelLimit, OverrideMinTripsAllowingOverlap, OverrideMinDaysToSuggestRenewal, OverrideTimeOverlappingFrfsBookingsLimit, OverrideBenefit"
+
   # Partial patch; absent means "leave as is". benefit replaces the whole blob.
   PassOverrideUpdateReq:
     frfsPriceOverrideApplicable: Maybe Bool
@@ -248,6 +263,7 @@ types:
     minDaysToSuggestRenewal: Maybe Int
     timeOverlappingFrfsBookingsLimit: Maybe Int
     benefit: Maybe OverrideBenefitAPIEntity
+    clearFields: "Maybe [PassOverrideClearableField]"
     derive: "'HideSecrets"
 
   # ---- Trip allowance adjustment (customer support) ----

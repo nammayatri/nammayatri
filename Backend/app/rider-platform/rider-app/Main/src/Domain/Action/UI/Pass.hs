@@ -699,6 +699,12 @@ createPassCatalog merchantShortId opCity req = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
   pure $ DashPass.PassCreateResp {passId = passId}
 
+patchNullable :: (Eq f, Show f) => Maybe [f] -> f -> Maybe a -> Maybe a -> Environment.Flow (Maybe a)
+patchNullable mbClearFields field mbNew stored
+  | field `notElem` fromMaybe [] mbClearFields = pure (mbNew <|> stored)
+  | isJust mbNew = throwError . InvalidRequest $ show field <> " is listed in clearFields and also given a value; send one or the other"
+  | otherwise = pure Nothing
+
 updatePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
 updatePassCatalog merchantShortId opCity passId req = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
@@ -710,29 +716,39 @@ updatePassCatalog merchantShortId opCity passId req = do
   whenJust (mfilter (/= passRow.code) req.code) $ \newCode ->
     assertPassCodeFree newCode merchantOperatingCity.id
   now <- getCurrentTime
+  newPassConfig <- patchNullable req.clearFields DashPass.PassMaxSwitchCount (DPass.PassConfig <$> req.maxSwitchCount) passRow.passConfig
+  newName <- patchNullable req.clearFields DashPass.PassName req.name passRow.name
+  newDescription <- patchNullable req.clearFields DashPass.PassDescription req.description passRow.description
+  newBenefit <- patchNullable req.clearFields DashPass.PassBenefit req.benefit passRow.benefit
+  newPricingTiers <- patchNullable req.clearFields DashPass.PassPricingTiers req.pricingTiers passRow.pricingTiers
+  newMaxValidTrips <- patchNullable req.clearFields DashPass.PassMaxValidTrips req.maxValidTrips passRow.maxValidTrips
+  newMaxValidDays <- patchNullable req.clearFields DashPass.PassMaxValidDays req.maxValidDays passRow.maxValidDays
+  newMinFare <- patchNullable req.clearFields DashPass.PassMinFare req.minFare passRow.minFare
+  newMaxFare <- patchNullable req.clearFields DashPass.PassMaxFare req.maxFare passRow.maxFare
+  newFormVerificationConfig <- patchNullable req.clearFields DashPass.PassFormVerificationConfig req.formVerificationConfig passRow.formVerificationConfig
   let updatedPass =
         passRow
           { DPass.passTypeId = fromMaybe passRow.passTypeId req.passTypeId,
             DPass.code = fromMaybe passRow.code req.code,
-            DPass.name = req.name <|> passRow.name,
-            DPass.description = req.description <|> passRow.description,
+            DPass.name = newName,
+            DPass.description = newDescription,
             DPass.amount = fromMaybe passRow.amount req.amount,
             DPass.benefitDescription = fromMaybe passRow.benefitDescription req.benefitDescription,
-            DPass.benefit = req.benefit <|> passRow.benefit,
+            DPass.benefit = newBenefit,
             DPass.applicableVehicleServiceTiers = fromMaybe passRow.applicableVehicleServiceTiers req.applicableVehicleServiceTiers,
             DPass.vehicleType = fromMaybe passRow.vehicleType req.vehicleType,
             DPass.documentsRequired = fromMaybe passRow.documentsRequired req.documentsRequired,
-            DPass.pricingTiers = req.pricingTiers <|> passRow.pricingTiers,
-            DPass.maxValidTrips = req.maxValidTrips <|> passRow.maxValidTrips,
-            DPass.maxValidDays = req.maxValidDays <|> passRow.maxValidDays,
+            DPass.pricingTiers = newPricingTiers,
+            DPass.maxValidTrips = newMaxValidTrips,
+            DPass.maxValidDays = newMaxValidDays,
             DPass.verificationValidity = fromMaybe passRow.verificationValidity req.verificationValidity,
             DPass.order = fromMaybe passRow.order req.order,
             DPass.enable = fromMaybe passRow.enable req.enable,
             DPass.autoApply = fromMaybe passRow.autoApply req.autoApply,
-            DPass.passConfig = (DPass.PassConfig <$> req.maxSwitchCount) <|> passRow.passConfig,
-            DPass.minFare = req.minFare <|> passRow.minFare,
-            DPass.maxFare = req.maxFare <|> passRow.maxFare,
-            DPass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
+            DPass.passConfig = newPassConfig,
+            DPass.minFare = newMinFare,
+            DPass.maxFare = newMaxFare,
+            DPass.formVerificationConfig = newFormVerificationConfig,
             DPass.updatedAt = now
           }
   QPass.updateByPrimaryKey updatedPass
@@ -798,11 +814,12 @@ updatePassCategory merchantShortId opCity passCategoryId req = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
   category <- findPassCategoryInCity passCategoryId merchantOperatingCity.id opCity
   now <- getCurrentTime
+  newOrder <- patchNullable req.clearFields DashPass.PassCategoryOrder req.order category.order
   QPassCategory.updateByPrimaryKey
     category
       { DPassCategory.name = fromMaybe category.name req.name,
         DPassCategory.description = fromMaybe category.description req.description,
-        DPassCategory.order = req.order <|> category.order,
+        DPassCategory.order = newOrder,
         DPassCategory.updatedAt = now
       }
   CQPassCategory.clearCacheById passCategoryId
@@ -880,17 +897,23 @@ updatePassType merchantShortId opCity passTypeId req = do
   whenJust req.passCategoryId $ \newCategoryId ->
     void $ findPassCategoryInCity newCategoryId merchantOperatingCity.id opCity
   now <- getCurrentTime
+  newName <- patchNullable req.clearFields DashPass.PassTypeName req.name passType.name
+  newCatchline <- patchNullable req.clearFields DashPass.PassTypeCatchline req.catchline passType.catchline
+  newDescription <- patchNullable req.clearFields DashPass.PassTypeDescription req.description passType.description
+  newPassEnum <- patchNullable req.clearFields DashPass.PassTypePassEnum req.passEnum passType.passEnum
+  newMaxPhotoChangeLimit <- patchNullable req.clearFields DashPass.PassTypeMaxPhotoChangeLimit req.maxPhotoChangeLimit passType.maxPhotoChangeLimit
+  newPhotoReUploadTimeLimit <- patchNullable req.clearFields DashPass.PassTypePhotoReUploadTimeLimit req.photoReUploadTimeLimit passType.photoReUploadTimeLimit
   let updatedPassType =
         passType
           { DPassType.passCategoryId = fromMaybe passType.passCategoryId req.passCategoryId,
-            DPassType.name = req.name <|> passType.name,
-            DPassType.catchline = req.catchline <|> passType.catchline,
+            DPassType.name = newName,
+            DPassType.catchline = newCatchline,
             DPassType.title = fromMaybe passType.title req.title,
-            DPassType.description = req.description <|> passType.description,
+            DPassType.description = newDescription,
             DPassType.order = fromMaybe passType.order req.order,
-            DPassType.passEnum = req.passEnum <|> passType.passEnum,
-            DPassType.maxPhotoChangeLimit = req.maxPhotoChangeLimit <|> passType.maxPhotoChangeLimit,
-            DPassType.photoReUploadTimeLimit = req.photoReUploadTimeLimit <|> passType.photoReUploadTimeLimit,
+            DPassType.passEnum = newPassEnum,
+            DPassType.maxPhotoChangeLimit = newMaxPhotoChangeLimit,
+            DPassType.photoReUploadTimeLimit = newPhotoReUploadTimeLimit,
             DPassType.updatedAt = now
           }
   QPassType.updateByPrimaryKey updatedPassType
@@ -955,14 +978,20 @@ updatePassOverrideConfig merchantShortId opCity passId req = do
     validated <- either (throwError . InvalidRequest . ("Invalid override benefit: " <>)) pure (FRFSPassOverride.validateBenefit benefit)
     pure $ A.toJSON (FRFSPassOverride.OverrideBenefitConfig {overrideBenefits = [validated]})
   now <- getCurrentTime
+  newPriceOverrideApplicable <- patchNullable req.clearFields DashPass.OverrideFrfsPriceOverrideApplicable req.frfsPriceOverrideApplicable passRow.frfsPriceOverrideApplicable
+  newCancelLimit <- patchNullable req.clearFields DashPass.OverrideFrfsCancelLimit req.frfsCancelLimit passRow.frfsCancelLimit
+  newMinTripsAllowingOverlap <- patchNullable req.clearFields DashPass.OverrideMinTripsAllowingOverlap req.minTripsAllowingOverlap passRow.minTripsAllowingOverlap
+  newMinDaysToSuggestRenewal <- patchNullable req.clearFields DashPass.OverrideMinDaysToSuggestRenewal req.minDaysToSuggestRenewal passRow.minDaysToSuggestRenewal
+  newTimeOverlappingFrfsBookingsLimit <- patchNullable req.clearFields DashPass.OverrideTimeOverlappingFrfsBookingsLimit req.timeOverlappingFrfsBookingsLimit passRow.timeOverlappingFrfsBookingsLimit
+  newBenefitJson <- patchNullable req.clearFields DashPass.OverrideBenefit mbBenefitJson passRow.overrideBenefitConfigJson
   let updatedPass =
         passRow
-          { DPass.frfsPriceOverrideApplicable = req.frfsPriceOverrideApplicable <|> passRow.frfsPriceOverrideApplicable,
-            DPass.frfsCancelLimit = req.frfsCancelLimit <|> passRow.frfsCancelLimit,
-            DPass.minTripsAllowingOverlap = req.minTripsAllowingOverlap <|> passRow.minTripsAllowingOverlap,
-            DPass.minDaysToSuggestRenewal = req.minDaysToSuggestRenewal <|> passRow.minDaysToSuggestRenewal,
-            DPass.timeOverlappingFrfsBookingsLimit = req.timeOverlappingFrfsBookingsLimit <|> passRow.timeOverlappingFrfsBookingsLimit,
-            DPass.overrideBenefitConfigJson = mbBenefitJson <|> passRow.overrideBenefitConfigJson,
+          { DPass.frfsPriceOverrideApplicable = newPriceOverrideApplicable,
+            DPass.frfsCancelLimit = newCancelLimit,
+            DPass.minTripsAllowingOverlap = newMinTripsAllowingOverlap,
+            DPass.minDaysToSuggestRenewal = newMinDaysToSuggestRenewal,
+            DPass.timeOverlappingFrfsBookingsLimit = newTimeOverlappingFrfsBookingsLimit,
+            DPass.overrideBenefitConfigJson = newBenefitJson,
             DPass.updatedAt = now
           }
   QPass.updateByPrimaryKey updatedPass
@@ -1036,33 +1065,42 @@ postPassTripsAdjust merchantShortId opCity personId purchasedPassId req = do
 
   let key = FRFSPassOverride.makeTripCountKey payment.id
       delta = fromIntegral req.value :: Integer
-  -- Seed before the incr/decr: INCRBY on a missing key starts from 0 and would
-  -- silently discard the term's remaining allowance.
-  before <- FRFSPassOverride.seededRemainingTrips payment (FRFSPassOverride.allowanceFor payment benefit)
-  -- A term holds between zero and the benefit's configured maximum. INCRBY/DECRBY
-  -- are atomic but unbounded, so the adjustment is applied, checked, and put
-  -- straight back if it left the range -- the same shape consumeTrip uses for an
-  -- overspend. Rejecting rather than silently clamping: an operator asking for 400
-  -- trips on a 15-trip pass has made a mistake worth surfacing, not rounding off.
-  let ceiling' = fromIntegral (fromMaybe 0 benefit.maximumTripCount) :: Integer
-  adjusted <- case req.operation of
-    DashPass.IncrementBy -> Redis.incrby key delta
-    DashPass.DecrementBy -> Redis.decrby key delta
-  when (adjusted < 0 || adjusted > ceiling') $ do
-    void $ case req.operation of
-      DashPass.IncrementBy -> Redis.decrby key delta
-      DashPass.DecrementBy -> Redis.incrby key delta
-    throwError . InvalidRequest $
-      "Adjustment would put the trip count outside the pass's range of 0 to "
-        <> show ceiling'
-        <> " (currently "
-        <> show before
-        <> ", requested "
-        <> show adjusted
-        <> ")"
-  let remaining = adjusted
-  FRFSPassOverride.refreshTripCountTtl payment key
-  QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
+  (before, remaining) <- FRFSPassOverride.withTripCountLock payment.id $ do
+    -- Seed before the incr/decr: INCRBY on a missing key starts from 0 and would
+    -- silently discard the term's remaining allowance.
+    before <- FRFSPassOverride.seededRemainingTrips payment (FRFSPassOverride.allowanceFor payment benefit)
+    -- A term holds between zero and the benefit's configured maximum. INCRBY/DECRBY
+    -- are atomic but unbounded, so the adjustment is applied, checked, and put
+    -- straight back if it left the range -- the same shape consumeTrip uses for an
+    -- overspend. Rejecting rather than silently clamping: an operator asking for 400
+    -- trips on a 15-trip pass has made a mistake worth surfacing, not rounding off.
+    let ceiling' = fromIntegral (fromMaybe 0 benefit.maximumTripCount) :: Integer
+    adjusted <- case req.operation of
+      DashPass.IncrementBy -> Redis.incrby key delta
+      DashPass.DecrementBy -> Redis.decrby key delta
+    when (adjusted < 0 || adjusted > ceiling') $ do
+      void $ case req.operation of
+        DashPass.IncrementBy -> Redis.decrby key delta
+        DashPass.DecrementBy -> Redis.incrby key delta
+      throwError . InvalidRequest $
+        "Adjustment would put the trip count outside the pass's range of 0 to "
+          <> show ceiling'
+          <> " (currently "
+          <> show before
+          <> ", requested "
+          <> show adjusted
+          <> ")"
+    let remaining = adjusted
+    FRFSPassOverride.refreshTripCountTtl payment key
+    withTryCatch "postPassTripsAdjust:mirror" (QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id) >>= \case
+      Right () -> pure ()
+      Left err -> do
+        void $ case req.operation of
+          DashPass.IncrementBy -> Redis.decrby key delta
+          DashPass.DecrementBy -> Redis.incrby key delta
+        logError $ "PassTripAdjust: mirror write failed, rolled the counter back paymentId=" <> payment.id.getId <> " err=" <> show err
+        throwError . InternalError $ "Failed to persist the trip adjustment; the count is unchanged, retry is safe"
+    pure (before, remaining)
   logInfo $
     "PassTripAdjust: paymentId=" <> payment.id.getId <> " op=" <> show req.operation
       <> " value="
@@ -1089,6 +1127,8 @@ resolveAdjustPayment purchasedPassId today = \case
     payment <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= fromMaybeM (PurchasedPassPaymentNotFound paymentId.getId)
     unless (payment.purchasedPassId == purchasedPassId) $
       throwError (InvalidRequest $ "Payment " <> paymentId.getId <> " does not belong to pass " <> purchasedPassId.getId)
+    unless (payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+      throwError (InvalidRequest $ "Payment " <> paymentId.getId <> " is " <> show payment.status <> "; only Active or PreBooked terms can be adjusted")
     pure payment
   Nothing -> do
     payments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPassId [DPurchasedPass.Active] today
