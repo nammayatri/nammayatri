@@ -24,7 +24,7 @@ validateRegisterReqV2 FleetOwnerRegisterReqV2 {..} =
 validateRegisterReqWithLooseCheck :: Validate FleetOwnerRegisterReqV2
 validateRegisterReqWithLooseCheck FleetOwnerRegisterReqV2 {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ P.NotEmpty `P.And` P.nameWithNumber,
-      validateField "lastName" lastName P.nameWithNumber,
+    [ validateField "firstName" firstName $ P.NotEmpty `P.And` P.nameWithSymbols,
+      validateField "lastName" lastName P.nameWithSymbols,
       validateField "email" email $ P.InMaybe P.email
     ]

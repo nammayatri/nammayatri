@@ -704,9 +704,9 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 validateUpdateDriverReqWithLooseCheck :: Validate UpdateDriverReq
 validateUpdateDriverReqWithLooseCheck UpdateDriverReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
-      validateField "middleName" middleName $ InMaybe P.nameWithNumber,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber
+    [ validateField "firstName" firstName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
+      validateField "middleName" middleName $ InMaybe P.nameWithSymbols,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithSymbols
     ]
 
 type UpdateDriverRes = DriverInformationRes
