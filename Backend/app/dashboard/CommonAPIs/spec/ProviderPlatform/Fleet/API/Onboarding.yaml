@@ -179,6 +179,7 @@ types:
     order: Int
     stageDependency: '[DocumentOnboardingStage]'
     media: Maybe [MediaInfo]
+    guidelines: Maybe [ImageInfo]
   # Generic on purpose: an entry may be an image or a video, inferred from the URL.
   MediaInfo:
     title: Text

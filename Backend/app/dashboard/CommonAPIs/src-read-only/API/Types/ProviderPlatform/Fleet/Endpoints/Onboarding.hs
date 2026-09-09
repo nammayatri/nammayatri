@@ -95,6 +95,7 @@ data DocumentMetadata
 data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
   { applicableTo :: DocumentApplicableType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    guidelines :: Kernel.Prelude.Maybe [ImageInfo],
     hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     media :: Kernel.Prelude.Maybe [MediaInfo],
     order :: Kernel.Prelude.Int,
