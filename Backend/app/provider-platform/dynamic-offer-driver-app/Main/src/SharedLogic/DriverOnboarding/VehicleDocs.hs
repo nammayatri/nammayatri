@@ -92,7 +92,8 @@ data AadhaarDocumentMetadata = AadhaarDocumentMetadata
 data PanDocumentMetadata = PanDocumentMetadata
   { panNumber :: T.Text,
     panDocType :: Maybe DPan.PanType,
-    driverDob :: Maybe UTCTime
+    driverDob :: Maybe UTCTime,
+    driverNameOnGovtDB :: Maybe T.Text
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
