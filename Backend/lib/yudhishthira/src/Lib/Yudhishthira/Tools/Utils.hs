@@ -218,6 +218,14 @@ elemTagNameValue tag tags = convertToTagNameValue tag `elem` (convertToTagNameVa
 elemTagName :: (HasTagNameValue tag1, HasTagNameValue tag2) => tag1 -> [tag2] -> Bool
 elemTagName tag tags = parseTagName tag `elem` (parseTagName <$> tags)
 
+-- | True if `value` is one of the "&"-separated values stored under `tagName`.
+elemTagValue :: HasTagNameValue tag => LYT.TagName -> Text -> [tag] -> Bool
+elemTagValue (LYT.TagName name) value tags = any matches tags
+  where
+    matches tag = case T.splitOn "#" (LYT.getTagNameValue (convertToTagNameValue tag)) of
+      (tagName : tagValue : _) -> tagName == name && value `elem` T.splitOn "&" tagValue
+      _ -> False
+
 -- this way older value will be replaced to new one with upated expiry
 replaceTagNameValue :: HasTagNameValue tag => Maybe [tag] -> tag -> [tag]
 replaceTagNameValue Nothing tag = [tag]

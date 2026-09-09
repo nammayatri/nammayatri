@@ -634,7 +634,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     now <- getCurrentTime
     let hasAutoAssignTag tier =
-          Yudhishthira.elemTagNameValue (LYT.TagNameValue ("AutoAssign#" <> show tier)) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
+          Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
