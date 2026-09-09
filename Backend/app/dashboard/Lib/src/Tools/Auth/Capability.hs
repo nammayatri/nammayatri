@@ -231,18 +231,21 @@ checkResourceIds ::
   m ()
 checkResourceIds person endpointId merchantId city resourceType targetIds = do
   allowed <- QPRA.findResourceIds person.id merchantId city resourceType
-  logTagInfo "LAYER_C" $ "checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
+  logDebug $ "LAYER_C checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
   let allowedSet = Set.fromList allowed
-  unless (DRS.wildcardResourceId `Set.member` allowedSet) $
+  -- Scope is OPT-IN: no rows for this (person, MOC, resourceType) => the person
+  -- is unrestricted for it => allow all. A person is only limited once they have
+  -- explicit rows. '*' (wildcardResourceId) is the same allow-all, kept for
+  -- explicitness/back-compat. Only a NON-EMPTY, non-wildcard row set restricts.
+  unless (null allowed || DRS.wildcardResourceId `Set.member` allowedSet) $
     case targetIds of
-      -- Scoped endpoint but no id resolved from the request: almost always a
-      -- binding gap (the id is in the body / under a param the convention doesn't
-      -- cover — such endpoints should be marked __HANDLER__ or __SKIP__). We log
-      -- LOUDLY but PASS rather than deny: a single capability can back many
-      -- endpoints (some id-carrying, some not, some a different resource type),
-      -- so failing closed here would break every not-yet-bound sibling. Flip this
-      -- to a throw once every endpoint under a scoped capability carries an
-      -- explicit binding. See review finding I-security.
+      -- Reached only when the person HAS restricting rows but no id resolved from
+      -- the request: almost always a binding gap (the id is in the body / under a
+      -- param the convention doesn't cover — such endpoints should be marked
+      -- __HANDLER__ or __SKIP__). We log LOUDLY but PASS: scoping is opt-in
+      -- (allow-by-default), so passing here is consistent, and a single capability
+      -- backs many endpoints (id-carrying and not). Fix by binding the endpoint
+      -- (resource_id_param) or marking it __SKIP__/__HANDLER__.
       [] ->
         logTagError "RESOURCE_SCOPE_UNRESOLVED" $
           "scoped endpoint resolved zero resource ids — passing (fail-open); set capability_endpoint.resource_id_param (or __SKIP__/__HANDLER__). "
@@ -286,20 +289,24 @@ enforceResourceScopeFromRequest ::
   [Text] ->
   m ()
 enforceResourceScopeFromRequest access endpoints person endpointId merchantId city pathSegments = do
-  logTagInfo "LAYER_C" $ "enter endpointId=" <> endpointId <> " adminTier=" <> access.adminTier <> " capsCount=" <> show (length access.capabilities) <> " pathSegs=[" <> T.intercalate "," pathSegments <> "]"
+  logDebug $ "LAYER_C enter endpointId=" <> endpointId <> " adminTier=" <> access.adminTier <> " capsCount=" <> show (length access.capabilities) <> " pathSegs=[" <> T.intercalate "," pathSegments <> "]"
   unless (access.adminTier == DC.superAdminTier) $ do
     let heldRows = filter (\ce -> ce.capabilityId.getId `elem` access.capabilities) endpoints
         binding = listToMaybe (mapMaybe (.resourceIdParam) heldRows)
-    logTagInfo "LAYER_C" $ "binding=" <> show binding
-    unless (binding == Just DRS.BindSkip || binding == Just DRS.BindHandler) $ do
+    logDebug $ "LAYER_C binding=" <> show binding
+    -- Nothing (no binding at all) can only ever pass — skip the capability
+    -- lookups on the hot auth path. RESOURCE_SCOPE_UNRESOLVED then fires only for
+    -- a genuinely-bound endpoint whose marker resolved no id (a real mis-seed),
+    -- not for every unbound endpoint.
+    unless (binding == Just DRS.BindSkip || binding == Just DRS.BindHandler || isNothing binding) $ do
       heldCaps <- catMaybes <$> mapM (QCap.findById . (.capabilityId)) heldRows
       let heldTypes = map (.resourceType) heldCaps
           mbTypes = if any isNothing heldTypes then Nothing else Just (nub (catMaybes heldTypes))
-      logTagInfo "LAYER_C" $ "mbTypes=" <> show mbTypes
+      logDebug $ "LAYER_C mbTypes=" <> show mbTypes
       forM_ mbTypes $ \types ->
         forM_ types $ \resourceType -> do
           let ids = case binding of
                 Just (DRS.BindParam name) -> pathValueAfter name pathSegments
                 _ -> []
-          logTagInfo "LAYER_C" $ "checking type=" <> show resourceType <> " ids=" <> show ids
+          logDebug $ "LAYER_C checking type=" <> show resourceType <> " ids=" <> show ids
           checkResourceIds person endpointId merchantId city resourceType ids
