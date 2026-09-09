@@ -13,6 +13,14 @@ module Domain.Action.Dashboard.AppManagement.Pass
     createPass,
     updatePass,
     deletePass,
+    listPassCategories,
+    createPassCategory,
+    updatePassCategory,
+    listPassTypes,
+    createPassType,
+    updatePassType,
+    getPassOverrideConfig,
+    updatePassOverrideConfig,
   )
 where
 
@@ -23,6 +31,7 @@ import qualified "this" Domain.Action.UI.Pass as DPass
 import qualified Domain.Action.UI.Payment as UIPayment
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassCategory
 import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
@@ -117,3 +126,27 @@ updatePass merchantShortId opCity passId req = DPass.updatePassCatalog merchantS
 
 deletePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deletePass merchantShortId opCity passId = DPass.deletePassCatalog merchantShortId opCity passId
+
+listPassCategories :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.PassCategoryItem])
+listPassCategories merchantShortId opCity = DPass.listPassCategories merchantShortId opCity
+
+createPassCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.PassCategoryCreateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassCategoryCreateResp)
+createPassCategory merchantShortId opCity req = DPass.createPassCategory merchantShortId opCity req
+
+updatePassCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory -> API.Types.Dashboard.AppManagement.Pass.PassCategoryUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePassCategory merchantShortId opCity passCategoryId req = DPass.updatePassCategory merchantShortId opCity passCategoryId req
+
+listPassTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory) -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.PassTypeItem])
+listPassTypes merchantShortId opCity mbPassCategoryId = DPass.listPassTypes merchantShortId opCity mbPassCategoryId
+
+createPassType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.PassTypeCreateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassTypeCreateResp)
+createPassType merchantShortId opCity req = DPass.createPassType merchantShortId opCity req
+
+updatePassType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.PassType.PassType -> API.Types.Dashboard.AppManagement.Pass.PassTypeUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePassType merchantShortId opCity passTypeId req = DPass.updatePassType merchantShortId opCity passTypeId req
+
+getPassOverrideConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassOverrideConfig)
+getPassOverrideConfig merchantShortId opCity passId = DPass.getPassOverrideConfig merchantShortId opCity passId
+
+updatePassOverrideConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassOverrideUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePassOverrideConfig merchantShortId opCity passId req = DPass.updatePassOverrideConfig merchantShortId opCity passId req
