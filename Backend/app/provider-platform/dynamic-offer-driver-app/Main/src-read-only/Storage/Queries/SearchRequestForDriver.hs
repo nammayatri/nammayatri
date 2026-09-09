@@ -24,12 +24,12 @@ import Storage.Queries.Transformers.SearchRequestForDriver
 
 findAllActiveBySRId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
+  (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m ([Domain.Types.SearchRequestForDriver.SearchRequestForDriver]))
 findAllActiveBySRId requestId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 findAllActiveBySTId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
+  (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m ([Domain.Types.SearchRequestForDriver.SearchRequestForDriver]))
 findAllActiveBySTId searchTryId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.searchTryId $ Se.Eq (Kernel.Types.Id.getId searchTryId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 updateDriverResponse ::
@@ -62,16 +62,16 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral <$> baseFare),
-      Se.Set Beam.baseFareAmount baseFare,
+      Se.Set Beam.baseFareAmount (baseFare),
       Se.Set Beam.batchNumber batchNumber,
       Se.Set Beam.batchingMode batchingMode,
       Se.Set Beam.cancellationRatio cancellationRatio,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
-      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
-      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
-      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
+      Se.Set Beam.clientManufacturer ((clientDevice >>= (.deviceManufacturer))),
+      Se.Set Beam.clientModelName ((clientDevice <&> (.deviceModel))),
+      Se.Set Beam.clientOsType ((clientDevice <&> (.deviceType))),
+      Se.Set Beam.clientOsVersion ((clientDevice <&> (.deviceVersion))),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.coinsRewardedOnGoldTierRide coinsRewardedOnGoldTierRide,
       Se.Set Beam.commissionCharges commissionCharges,
@@ -83,15 +83,15 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.driverAvailableTime driverAvailableTime,
       Se.Set Beam.driverCancellationNotAllowed driverCancellationNotAllowed,
       Se.Set Beam.driverDefaultStepFee (Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee),
-      Se.Set Beam.driverDefaultStepFeeAmount driverDefaultStepFee,
+      Se.Set Beam.driverDefaultStepFeeAmount (driverDefaultStepFee),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverMaxExtraFee (Kernel.Prelude.roundToIntegral <$> driverMaxExtraFee),
-      Se.Set Beam.driverMaxExtraFeeAmount driverMaxExtraFee,
+      Se.Set Beam.driverMaxExtraFeeAmount (driverMaxExtraFee),
       Se.Set Beam.driverMinExtraFee (Kernel.Prelude.roundToIntegral <$> driverMinExtraFee),
-      Se.Set Beam.driverMinExtraFeeAmount driverMinExtraFee,
+      Se.Set Beam.driverMinExtraFeeAmount (driverMinExtraFee),
       Se.Set Beam.driverSpeed driverSpeed,
       Se.Set Beam.driverStepFee (Kernel.Prelude.roundToIntegral <$> driverStepFee),
-      Se.Set Beam.driverStepFeeAmount driverStepFee,
+      Se.Set Beam.driverStepFeeAmount (driverStepFee),
       Se.Set Beam.driverTagScore driverTagScore,
       Se.Set Beam.driverTags driverTags,
       Se.Set Beam.durationToPickup durationToPickup,
@@ -99,6 +99,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId <$> fleetOwnerId),
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.goHomeRequestId (Kernel.Types.Id.getId <$> goHomeRequestId),
+      Se.Set Beam.hasAvailableForRidesTag hasAvailableForRidesTag,
       Se.Set Beam.isAutoAccepted isAutoAccepted,
       Se.Set Beam.isFavourite isFavourite,
       Se.Set Beam.isForwardRequest (Kernel.Prelude.Just isForwardRequest),

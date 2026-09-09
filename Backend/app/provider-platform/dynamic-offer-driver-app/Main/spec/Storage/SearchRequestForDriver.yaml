@@ -115,6 +115,9 @@ SearchRequestForDriver:
     commissionCharges: Maybe HighPrecMoney
     driverCancellationNotAllowed: Maybe Bool
     isAutoAccepted: Maybe Bool
+    # True when the driver held a live "AvailableForRides" tag at the moment this
+    # request was built. Nothing on rows written before the feature existed.
+    hasAvailableForRidesTag: Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text

@@ -83,6 +83,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -232,6 +233,15 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
         TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
       QSRD.setInactiveAndPulledByIds reOfferedSRFDs
   _ <- QSRD.createMany searchRequestsForDrivers
+  -- Charge this dispatch against the "available for rides" budget of every driver that
+  -- reached the batch on that boost, dropping the tag from whoever just spent theirs.
+  -- Forked because it is bookkeeping for a small minority of drivers and must never add
+  -- latency to (or fail) the dispatch itself.
+  let boostedSearchRequests = filter (fromMaybe False . (.hasAvailableForRidesTag)) searchRequestsForDrivers
+  unless (null boostedSearchRequests) $
+    whenJust ((,) <$> transporterConfig.availableForRidesTagValidityMinutes <*> transporterConfig.availableForRidesMaxSearchRequests) $ \(validity, maxRequests) ->
+      fork "availableForRidesRequestBudget" $
+        forM_ boostedSearchRequests $ \sReqFD -> AvailableForRides.recordRequestSent sReqFD.driverId validity maxRequests
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
   if isTopUpDispatch
@@ -477,6 +487,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             commissionCharges = tripQuoteDetail.commissionCharges,
             driverCancellationNotAllowed = tripQuoteDetail.driverCancellationNotAllowed,
             isAutoAccepted = Just isAutoAccepted,
+            hasAvailableForRidesTag = Just $ AvailableForRides.hasAvailableForRidesTag dpRes.driverTags,
             ..
           }
   pure searchRequestForDriver

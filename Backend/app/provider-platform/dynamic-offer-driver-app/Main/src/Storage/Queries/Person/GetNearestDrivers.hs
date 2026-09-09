@@ -330,7 +330,10 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         latestScheduledBooking = dpd.latestScheduledBooking,
         latestScheduledPickup = dpd.latestScheduledPickup,
         selectedAutoAcceptTiers = fromMaybe [] dpd.selectedAutoAcceptTiers,
-        driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ fromMaybe [] dpd.driverTag),
+        -- Expiry-filtered, like the cohort and scheduled-eligibility checks above: the pool
+        -- data is a long-lived Redis cache, so a tag that has already run out of time is
+        -- still sitting in `dpd.driverTag` until the driver's next tag write.
+        driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ Yudhishthira.filterExpiredTags' now (fromMaybe [] dpd.driverTag)),
         score = Nothing,
         tripDistanceMinThreshold = dpd.tripDistanceMinThreshold,
         tripDistanceMaxThreshold = dpd.tripDistanceMaxThreshold,

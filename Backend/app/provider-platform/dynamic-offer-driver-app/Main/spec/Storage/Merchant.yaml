@@ -1208,6 +1208,14 @@ TransporterConfig:
     # Fewest cells a driver must select for a preferred-area (cells method) selection
     # to be accepted.
     areaPreferenceMinCells: Maybe Int
+    # Driver-initiated "available for rides" boost, stored as the AvailableForRides
+    # tag on person.driverTag. All three are Maybe so the feature stays off for a
+    # city until it is explicitly configured; a missing validity disables it.
+    availableForRidesTagValidityMinutes: Maybe Minutes
+    # How many times a driver may switch the boost on within one local day.
+    availableForRidesDailyLimit: Maybe Int
+    # How many search requests the boost survives before the tag is dropped.
+    availableForRidesMaxSearchRequests: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
@@ -1849,6 +1857,7 @@ TransporterConfig:
     addDriverCountWindow: json
     authIpBlockedUntilInMins: integer
     scheduledRideOpenToAllThresholdMinutes: integer
+    availableForRidesTagValidityMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     tripStartLeadTime: integer
@@ -2182,6 +2191,9 @@ TransporterConfig:
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
         - areaPreferenceMinCells
+        - availableForRidesTagValidityMinutes
+        - availableForRidesDailyLimit
+        - availableForRidesMaxSearchRequests
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
