@@ -21,6 +21,7 @@ module SharedLogic.FRFSPassOverride
     passForOverrideAppliedEntity,
     paymentForOverrideAppliedEntity,
     parseOverrideBenefitConfig,
+    validateBenefit,
     isFullyPassCovered,
     fullyCoveredByPass,
     PassCandidate (..),

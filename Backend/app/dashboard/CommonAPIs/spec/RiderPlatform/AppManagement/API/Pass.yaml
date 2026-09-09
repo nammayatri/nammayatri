@@ -17,12 +17,15 @@ imports:
   IssueMediaUploadReq: IssueManagement.Common.UI.Issue
   IssueMediaUploadRes: IssueManagement.Common.UI.Issue
   PassType: Domain.Types.PassType
+  PassEnum: Domain.Types.PassType
+  PassCategory: Domain.Types.PassCategory
   Benefit: Domain.Types.Pass
   PassDocumentType: Domain.Types.Pass
   ServiceTierType: BecknV2.FRFS.Enums
   VehicleCategory: BecknV2.FRFS.Enums
   HighPrecMoney: Kernel.Types.Common
   Seconds: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   Value: Data.Aeson
 
 importPackageOverrides:
@@ -34,6 +37,7 @@ importPackageOverrides:
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Domain.Types.Pass: "rider-app"
   Domain.Types.PassType: "rider-app"
+  Domain.Types.PassCategory: "rider-app"
   API.Types.UI.Pass: "rider-app"
   IssueManagement.Domain.Types.MediaFile: "shared-services"
   IssueManagement.Common.UI.Issue: "shared-services"
@@ -124,6 +128,127 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+
+  # ---- Pass category / pass type catalog (the two levels above `pass`) ----
+  # No delete request types: pass_category and pass_type have no `enable` column,
+  # and a hard delete would orphan pass / purchased_pass rows that still read the
+  # parent by id for rider history. Deletion stays a manual DB operation.
+
+  PassCategoryCreateReq:
+    name: Text
+    description: Text
+    order: Maybe Int
+    derive: "'HideSecrets"
+
+  # Partial patch - every field optional, absent means "leave as is".
+  PassCategoryUpdateReq:
+    name: Maybe Text
+    description: Maybe Text
+    order: Maybe Int
+    derive: "'HideSecrets"
+
+  PassCategoryItem:
+    id: Id PassCategory
+    name: Text
+    description: Text
+    order: Maybe Int
+    passTypeCount: Int
+
+  PassCategoryCreateResp:
+    passCategoryId: Id PassCategory
+
+  PassTypeCreateReq:
+    passCategoryId: Id PassCategory
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    order: Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    derive: "'HideSecrets"
+
+  PassTypeUpdateReq:
+    passCategoryId: Maybe (Id PassCategory)
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Maybe Text
+    description: Maybe Text
+    order: Maybe Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    derive: "'HideSecrets"
+
+  PassTypeItem:
+    id: Id PassType
+    passCategoryId: Id PassCategory
+    passCategoryName: Text
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    order: Int
+    passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
+    passCount: Int
+
+  PassTypeCreateResp:
+    passTypeId: Id PassType
+
+  # ---- FRFS pass override / config ----
+  # The columns the catalog CRUD deliberately leaves alone. They drive
+  # SharedLogic.FRFSPassOverride at runtime, which stores its benefit as an
+  # untyped JSON blob in pass.override_benefit_config_json using snake_case keys.
+  # These entities are the typed, camelCase dashboard view of that blob; the
+  # handler converts both ways so the stored shape keeps working unchanged.
+
+  PercentageSavingAPIEntity:
+    applicableValue: HighPrecMoney
+    enabled: Maybe Bool
+
+  FixedSavingAPIEntity:
+    applicableValue: HighPrecMoney
+    currencyType: Maybe Currency
+    enabled: Maybe Bool
+
+  # Exactly one of percentageSaving / fixedSaving may have enabled = true, and a
+  # metered benefit needs maximumTripCount. Enforced on write by
+  # SharedLogic.FRFSPassOverride.validateBenefit -- the same predicate the
+  # runtime uses to decide whether a pass is usable, so what the dashboard
+  # accepts and what the rider flow honours cannot drift.
+  OverrideBenefitAPIEntity:
+    percentageSaving: Maybe PercentageSavingAPIEntity
+    fixedSaving: Maybe FixedSavingAPIEntity
+    unlimitedTripCount: Maybe Bool
+    maximumTripCount: Maybe Int
+    maxTicketQuantityPerOverride: Maybe Int
+
+  PassOverrideConfig:
+    passId: Id Pass
+    code: Text
+    frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    benefit: Maybe OverrideBenefitAPIEntity
+    # Set when override_benefit_config_json is present but unparseable or
+    # invalid. Surfaces a broken config in the dashboard instead of rendering an
+    # empty form over it and silently overwriting on save.
+    benefitConfigError: Maybe Text
+
+  # Partial patch; absent means "leave as is". benefit replaces the whole blob.
+  PassOverrideUpdateReq:
+    frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    benefit: Maybe OverrideBenefitAPIEntity
+    derive: "'HideSecrets"
 
   PassCreateResp:
     passId: Id Pass
@@ -261,6 +386,8 @@ apis:
       endpoint: /catalog/list
       name: ListPassCatalog
       auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.read
       query:
         passTypeId: Id PassType
         enable: Bool
@@ -271,6 +398,8 @@ apis:
       endpoint: /catalog/create
       name: CreatePass
       auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
       request:
         type: PassCreateReq
       response:
@@ -280,6 +409,8 @@ apis:
       endpoint: /catalog/{passId}/update
       name: UpdatePass
       auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
       params:
         passId: Id Pass
       request:
@@ -293,7 +424,107 @@ apis:
       endpoint: /catalog/{passId}/delete
       name: DeletePass
       auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
       params:
         passId: Id Pass
+      response:
+        type: APISuccess
+
+  # ---- Pass category catalog ----
+
+  - GET:
+      endpoint: /catalog/passCategory/list
+      name: ListPassCategories
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.read
+      response:
+        type: "[PassCategoryItem]"
+
+  - POST:
+      endpoint: /catalog/passCategory/create
+      name: CreatePassCategory
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
+      request:
+        type: PassCategoryCreateReq
+      response:
+        type: PassCategoryCreateResp
+
+  - PUT:
+      endpoint: /catalog/passCategory/{passCategoryId}/update
+      name: UpdatePassCategory
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
+      params:
+        passCategoryId: Id PassCategory
+      request:
+        type: PassCategoryUpdateReq
+      response:
+        type: APISuccess
+
+  # ---- Pass type catalog ----
+
+  - GET:
+      endpoint: /catalog/passType/list
+      name: ListPassTypes
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.read
+      query:
+        passCategoryId: Id PassCategory
+      response:
+        type: "[PassTypeItem]"
+
+  - POST:
+      endpoint: /catalog/passType/create
+      name: CreatePassType
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
+      request:
+        type: PassTypeCreateReq
+      response:
+        type: PassTypeCreateResp
+
+  - PUT:
+      endpoint: /catalog/passType/{passTypeId}/update
+      name: UpdatePassType
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
+      params:
+        passTypeId: Id PassType
+      request:
+        type: PassTypeUpdateReq
+      response:
+        type: APISuccess
+
+  # ---- FRFS pass override / config ----
+
+  - GET:
+      endpoint: /catalog/{passId}/override
+      name: GetPassOverrideConfig
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.read
+      params:
+        passId: Id Pass
+      response:
+        type: PassOverrideConfig
+
+  - PUT:
+      endpoint: /catalog/{passId}/override/update
+      name: UpdatePassOverrideConfig
+      auth: ApiAuthV2
+      migrate:
+        capability: city-config.pass_catalog.write
+      params:
+        passId: Id Pass
+      request:
+        type: PassOverrideUpdateReq
       response:
         type: APISuccess
