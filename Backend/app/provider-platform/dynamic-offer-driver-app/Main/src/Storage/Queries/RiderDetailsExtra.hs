@@ -31,6 +31,10 @@ findByMobileNumberAndMerchantAndBapId mobileNumber_ (Id merchantId) bapId_ = do
 findByMobileNumberHashAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
+findAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id RiderDetails] -> m [RiderDetails]
+findAllByIds [] = pure []
+findAllByIds riderIds = findAllWithKV [Se.Is BeamRD.id $ Se.In (getId <$> riderIds)]
+
 findAllByMobileNumberHashesAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DbHash] -> Id Merchant -> m [RiderDetails]
 findAllByMobileNumberHashesAndMerchant mobileNumberHashes (Id merchantId) =
   findAllWithKV
