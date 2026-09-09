@@ -2284,7 +2284,7 @@ getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
                 rqssServiceClass = classId,
                 rqssServiceId = serviceId,
                 rqssStartPlaceId = search.fromStationCode,
-                rqssSingleLady = fromMaybe False search.isSingleLady,
+                rqssPassengerCounts = travellerGroupCounts search.travellerGroup,
                 rqssUserName = tnstcConfig.username
               }
       seatSets <- case seatSetsResult of
@@ -2298,7 +2298,7 @@ getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
                   SeatWithStatus
                     { seat =
                         st
-                          { Domain.Types.Seat.isLadiesOnly = Just (fromMaybe False search.isSingleLady && st.seatLabel `elem` seatSets.tssSet2),
+                          { Domain.Types.Seat.isLadiesOnly = Just (search.travellerGroup == Just DFRFSSearch.SINGLE_LADY && st.seatLabel `elem` seatSets.tssSet2),
                             Domain.Types.Seat.isDifferentlyAbled = Just (st.seatLabel `elem` seatSets.tssSet5)
                           },
                       status = fromMaybe BOOKED (tnstcSeatStatus seatSets st.seatLabel)
@@ -2398,7 +2398,6 @@ storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId m
       Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail
         { id = Kernel.Types.Id.Id passengerId,
           quoteId = quoteId,
-          bookingId = Nothing,
           seatId = pax.seatId,
           seatLabel = st.seatLabel,
           name = pax.name,
@@ -2442,6 +2441,12 @@ tnstcSeatStatus sets seatNo
 
 tnstcHoldSeconds :: Int
 tnstcHoldSeconds = 420
+
+-- | TNSTC's seat-availability call takes passenger gender counts (totFemales/totMales), not a
+-- flag. Map the traveller group onto the composition it stands for; GENERAL sends no counts.
+travellerGroupCounts :: Maybe DFRFSSearch.FRFSTravellerGroup -> Maybe (Int, Int)
+travellerGroupCounts (Just DFRFSSearch.SINGLE_LADY) = Just (1, 0)
+travellerGroupCounts _ = Nothing
 
 postFrfsQuoteSelect ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -197,6 +197,10 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSIdProofType = FRFSIdProofType {lookupId :: Data.Text.Text, name :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   { availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -207,10 +211,6 @@ data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
     purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     unlimitedTripCount :: Kernel.Prelude.Bool
   }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FRFSIdProofType = FRFSIdProofType {lookupId :: Data.Text.Text, name :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -383,7 +383,6 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
-    isSingleLady :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     journeyDate :: Data.Maybe.Maybe Data.Time.Calendar.Day,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
@@ -392,8 +391,9 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
-    tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    travellerGroup :: Data.Maybe.Maybe Domain.Types.FRFSSearch.FRFSTravellerGroup,
     tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
+    tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)

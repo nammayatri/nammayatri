@@ -14,7 +14,6 @@ import Tools.Beam.UtilsTH
 
 data FRFSPassengerDetailT f = FRFSPassengerDetailT
   { age :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    bookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dropOffPointPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gender :: B.C f Domain.Types.Person.Gender,
     id :: B.C f Kernel.Prelude.Text,
@@ -40,6 +39,6 @@ instance B.Table FRFSPassengerDetailT where
 
 type FRFSPassengerDetail = FRFSPassengerDetailT Identity
 
-$(enableKVPG ''FRFSPassengerDetailT ['id] [['bookingId], ['quoteId]])
+$(enableKVPG ''FRFSPassengerDetailT ['id] [['quoteId]])
 
 $(mkTableInstances ''FRFSPassengerDetailT "frfs_passenger_detail")

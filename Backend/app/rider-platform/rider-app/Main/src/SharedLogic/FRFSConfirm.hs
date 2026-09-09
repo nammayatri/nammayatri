@@ -201,9 +201,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
       logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
       SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
-    case integratedBppConfig.providerConfig of
-      DIBC.TNSTC _ -> QFRFSPassengerDetail.updateBookingIdByQuoteId (Just dConfirmRes.id) quote.id
-      _ -> pure ()
     return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)
   where
     confirmLockTtlSec :: Int

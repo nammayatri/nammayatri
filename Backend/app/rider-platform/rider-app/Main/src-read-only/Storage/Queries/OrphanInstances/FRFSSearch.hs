@@ -18,8 +18,8 @@ import qualified Storage.Beam.FRFSSearch as Beam
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
@@ -35,7 +35,6 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
-            isSingleLady = isSingleLady,
             isSingleMode = isSingleMode,
             journeyDate = journeyDate,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -53,6 +52,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             toStationCode = toStationId,
             toStationName = toStationName,
             toStationPoint = Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon,
+            travellerGroup = travellerGroup,
             validTill = validTill,
             vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
@@ -76,7 +76,6 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
-        Beam.isSingleLady = isSingleLady,
         Beam.isSingleMode = isSingleMode,
         Beam.journeyDate = journeyDate,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -95,6 +94,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.toStationName = toStationName,
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
+        Beam.travellerGroup = travellerGroup,
         Beam.validTill = validTill,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,

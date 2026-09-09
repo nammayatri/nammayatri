@@ -6,11 +6,9 @@ module Storage.Queries.FRFSPassengerDetail where
 
 import qualified Domain.Types.FRFSPassengerDetail
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -26,20 +24,8 @@ createMany = traverse_ create
 deleteAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
 deleteAllByQuoteId quoteId = do deleteWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
 
-findAllByBookingId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) -> m [Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail])
-findAllByBookingId bookingId = do findAllWithKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId <$> bookingId)]
-
 findAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail])
 findAllByQuoteId quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
-
-updateBookingIdByQuoteId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
-updateBookingIdByQuoteId bookingId quoteId = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId), Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -51,7 +37,6 @@ updateByPrimaryKey (Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.age age,
-      Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
       Se.Set Beam.dropOffPointPlaceId dropOffPointPlaceId,
       Se.Set Beam.gender gender,
       Se.Set Beam.idProofLookupId idProofLookupId,
@@ -75,7 +60,6 @@ instance FromTType' Beam.FRFSPassengerDetail Domain.Types.FRFSPassengerDetail.FR
       Just
         Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail
           { age = age,
-            bookingId = Kernel.Types.Id.Id <$> bookingId,
             dropOffPointPlaceId = dropOffPointPlaceId,
             gender = gender,
             id = Kernel.Types.Id.Id id,
@@ -97,7 +81,6 @@ instance ToTType' Beam.FRFSPassengerDetail Domain.Types.FRFSPassengerDetail.FRFS
   toTType' (Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail {..}) = do
     Beam.FRFSPassengerDetailT
       { Beam.age = age,
-        Beam.bookingId = Kernel.Types.Id.getId <$> bookingId,
         Beam.dropOffPointPlaceId = dropOffPointPlaceId,
         Beam.gender = gender,
         Beam.id = Kernel.Types.Id.getId id,
