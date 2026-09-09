@@ -51,6 +51,18 @@ getLatestStartByEntityId entityId =
     Nothing
     <&> listToMaybe
 
+-- Batched form of 'getLatestStartByEntityId': one read for a whole page of entities.
+getLatestStartByEntityIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [LocationMapping]
+getLatestStartByEntityIds [] = pure []
+getLatestStartByEntityIds entityIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.In entityIds,
+          Se.Is BeamLM.order $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
+
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId entityId = do
   stops <- getLatestStopsByEntityId' entityId
