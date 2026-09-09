@@ -37,9 +37,10 @@ import Tools.Error
 -- Layer C management surface. `resourceType` is a closed enum (DRS.ResourceType);
 -- `resourceId` is opaque Text (route code, special-location id, zone name, …).
 -- Reset-then-insert so a
--- person's stored set for a (merchant, city, type) is exactly what was sent;
--- a DRS.wildcardResourceId ("*") id means full-MOC. /user/resourceScope is what
--- control-center analytics + the ops gate read.
+-- person's stored set for a (merchant, city, type) is exactly what was sent.
+-- Scope is opt-in: no rows = unscoped = allow-all; a DRS.wildcardResourceId ("*")
+-- row is the same allow-all; a specific list restricts. /user/resourceScope is
+-- what control-center analytics + the ops gate read.
 
 --------------------------------------------------------------------- types
 
@@ -145,7 +146,8 @@ getPersonResourceAccess tokenInfo personId = do
         visible
 
 -- | Reset-then-insert: the person's rows for this (merchant, city, type) become
--- exactly `resourceIds`. [] clears (deny-all); [DRS.wildcardResourceId] = full.
+-- exactly `resourceIds`. [] clears all rows → unrestricted (allow-all);
+-- [DRS.wildcardResourceId] is the explicit allow-all; a specific list restricts.
 assignResourceAccess :: BeamFlow m r => TokenInfo -> Id DP.Person -> AssignResourceAccessReq -> m APISuccess
 assignResourceAccess tokenInfo personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
