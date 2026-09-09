@@ -144,6 +144,7 @@ castOnboardingStageAPIEntity Onboarding.DocumentOnboardingStageAPIEntity {..} =
       stageDependency = map SDO.castDocumentOnboardingStage stageDependency,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       media = fmap (map castMediaInfo) media,
+      guidelines = fmap (map SDO.castImageInfo) guidelines,
       ..
     }
 

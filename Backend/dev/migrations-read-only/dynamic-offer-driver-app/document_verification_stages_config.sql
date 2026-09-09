@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_stages_config ADD COLUM
 ALTER TABLE atlas_driver_offer_bpp.document_verification_stages_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_stages_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_stages_config ADD PRIMARY KEY ( applicable_to, document_category, document_onboarding_stage, merchant_operating_city_id, vehicle_category);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_stages_config ADD COLUMN guidelines_json json ;

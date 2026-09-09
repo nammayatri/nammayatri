@@ -102,6 +102,7 @@ data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel
 data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    guidelines :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
     hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     media :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationStagesConfig.MediaInfo],
     order :: Kernel.Prelude.Int,

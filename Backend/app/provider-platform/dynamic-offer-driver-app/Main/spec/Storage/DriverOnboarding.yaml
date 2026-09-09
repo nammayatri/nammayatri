@@ -1456,6 +1456,7 @@ DocumentVerificationStagesConfig:
     order: Int
     stageDependency: "[DocumentOnboardingStage]"
     media: Maybe [MediaInfo]
+    guidelines: Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo]
     isHidden: Bool
   default:
     order: "0"
@@ -1471,13 +1472,18 @@ DocumentVerificationStagesConfig:
   sqlType:
     stageDependency: text[]
     mediaJSON: json
+    guidelinesJSON: json
   beamFields:
     media:
       mediaJSON: Maybe Value
+    guidelines:
+      guidelinesJSON: Maybe Value
   toTType:
     mediaJSON: Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkMediaJSON media|E
+    guidelinesJSON: Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkGuidelinesJSON guidelines|E
   fromTType:
     media: Storage.Queries.Transformers.DocumentVerificationStagesConfig.getMediaFromJSON|M
+    guidelines: Storage.Queries.Transformers.DocumentVerificationStagesConfig.getGuidelinesFromJSON|M
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV

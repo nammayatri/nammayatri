@@ -7,6 +7,7 @@ imports:
   DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
   DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
   MediaInfo: Domain.Types.DocumentVerificationStagesConfig
+  ImageInfo: Domain.Types.DocumentVerificationConfig
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
@@ -72,6 +73,7 @@ types:
     order: Int
     stageDependency: '[DocumentOnboardingStage]'
     media: Maybe [MediaInfo]
+    guidelines: Maybe [ImageInfo]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory

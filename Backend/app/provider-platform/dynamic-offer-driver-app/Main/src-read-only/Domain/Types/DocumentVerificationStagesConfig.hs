@@ -18,6 +18,7 @@ data DocumentVerificationStagesConfig = DocumentVerificationStagesConfig
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
+    guidelines :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
     hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isHidden :: Kernel.Prelude.Bool,
     media :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationStagesConfig.MediaInfo],
