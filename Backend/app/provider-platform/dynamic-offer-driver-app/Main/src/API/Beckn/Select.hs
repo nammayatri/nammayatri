@@ -15,7 +15,7 @@
 module API.Beckn.Select (API, handler) where
 
 import qualified Beckn.ACL.Select as ACL
-import qualified Beckn.OnDemand.Transformer.MSIL.Select as MSILSelect
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Select as OSRSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -70,11 +70,8 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
 
     if isOndcScheduledRideSupportEnabled
       then do
-        -- MSIL pilot: negotiatedFare is decided from the wire item's own price
-        -- object (Beckn.OnDemand.Transformer.MSIL.Select.msilParser, see doc 28).
-        -- Non-pilot merchants never run this parser and never pay for the Quote
-        -- lookup below -- both only happen inside this branch.
-        let dSelectReq = MSILSelect.msilParser reqV2.selectReqMessage dSelectReq'
+        -- Pilot merchants get negotiatedFare parsed from the wire item's own price object.
+        let dSelectReq = OSRSelect.ondcScheduledRideParser reqV2.selectReqMessage dSelectReq'
         itemIdText <- case dSelectReq.estimateIds of
           (eid : _) -> pure eid.getId
           [] -> throwError $ InvalidRequest "User need to select at least one item"
@@ -89,16 +86,11 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
               fork "select received pushing ondc logs" do
                 void $ pushLogs "select" (toJSON reqV2) merchant.id.getId "MOBILITY"
           Nothing -> do
-            -- item.id didn't resolve to a Quote -- whether that's fine (fall
-            -- through to the ordinary Estimate flow) or a bad request (NACK)
-            -- depends on whether this transaction was ever a scheduled ride:
-            -- scheduled rides only ever go through the Quote-based flow (doc 25
-            -- s3), so one that shows up here without a Quote is a genuine
-            -- mismatch, not just a plain dynamic-offer select.
+            -- No matching Quote: NACK if this was a scheduled ride (those only ever go through the Quote-based flow), else fall through to the ordinary Estimate flow.
             searchReq <- QSR.findByTransactionIdAndMerchantId dSelectReq.transactionId transporterId >>= fromMaybeM (SearchRequestNotFound dSelectReq.transactionId)
             if searchReq.isScheduled
               then throwError $ InvalidRequest "Scheduled ride select must resolve to a Quote, item_id did not match any Quote"
-              else runEstimateFlow merchant dSelectReq -- for allowing instant ride in msil
+              else runEstimateFlow merchant dSelectReq -- for allowing instant ride under ONDC scheduled-ride support
       else runEstimateFlow merchant dSelectReq'
     pure Ack
   where

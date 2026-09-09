@@ -52,17 +52,10 @@ import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnSupport as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
-import qualified Beckn.OnDemand.Transformer.MSIL.OnStatus as MSILOnStatus
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus as OSROnStatus
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
-import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentId as MSILFulfillmentId
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentState as MSILFulfillmentState
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.ItemCompliance as MSILItemCompliance
-import qualified Beckn.OnDemand.Utils.MSIL.StopAuthorization as MSILStopAuthorization
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
@@ -113,6 +106,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
+import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
@@ -227,15 +221,7 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
 
--- | MSIL pilot: /on_select for the new Quote-based (static/scheduled) /select
--- capability. Unlike 'callOnSelectV2' above (which answers a /select for the
--- dynamic-offer/bidding flow asynchronously, once a driver has bid -- hence
--- its Redis-cached message_id lookup, since /select's Ack and this call can be
--- far apart in time), this is called synchronously from within the same
--- request that validated the Quote: no driver bid to wait for, no
--- SearchRequestForDriver/SearchTry exist yet for this flow (driver assignment
--- happens later, at Confirm-time batching), so the
--- messageId from the inbound /select is used directly instead.
+-- Sends on_select synchronously using the inbound /select's own messageId, no Redis lookup needed, since the Quote-based (static/scheduled) /select flow has no driver bid to wait for, unlike the dynamic-offer flow.
 callOnSelectV2ForQuote ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -629,34 +615,6 @@ rideAssignedCommon booking ride driver veh = do
           return (birthMonth == curMonth && birthDay == curDay)
         Nothing -> return False
 
--- | MSIL pilot: shared set of Layer 2 overrides for the ride-assignment
--- order, used identically by both consumers of Common.tfAssignedReqToOrder's
--- output (the phased on_confirm push, buildOnConfirmMessage below, and the
--- on_update ride-assigned push, sendRideAssignedUpdateToBAP) -- both build
--- through the same Layer 1 path (rideAssignedCommon -> tfAssignedReqToOrder),
--- so both need the identical fix: SCHEDULED_RIDE_ASSIGNED fulfillment-state,
--- ON_DEMAND_* category_ids, non-ONDC breakup titles, the DELIVERY/SELF_PICKUP
--- fulfillment.type restriction, and the SETTLEMENT_TERMS order-tag group
--- (from tfAssignedReqToOrder's mkOrderSettlementTags, invalid at
--- order.tags[*].descriptor.code per ONDC v2.1.0's TRV10 schema) all need the
--- same fix here as elsewhere. Also pins order.fulfillments[*].id (and the
--- item's fulfillment_ids) back to the quote id on_confirm first announced --
--- Layer 1's mkFulfillmentV2 (Beckn.OnDemand.Utils.Common) uses ride.id here
--- instead, which drifts from on_confirm's booking.quoteId and gets NACKed by
--- ONDC Workbench's "fulfillment.id must match selection" check. See
--- Beckn.OnDemand.Utils.MSIL.FulfillmentId. Also flips the START stop's OTP
--- authorization.status to "CLAIMED" once the ride has started -- see
--- Beckn.OnDemand.Utils.MSIL.StopAuthorization.
-applyMsilRideAssignedOrderOverrides :: Bool -> Text -> Bool -> Spec.Order -> Spec.Order
-applyMsilRideAssignedOrderOverrides isScheduled quoteId isRideStarted =
-  MSILTerms.dropNonConformingOrderTags
-    . MSILFulfillmentType.patchOrderFulfillmentTypes
-    . MSILCategory.overrideOrderCategoryIds isScheduled
-    . MSILFulfillmentState.overrideOrderFulfillmentState
-    . MSILBreakup.overrideOrderBreakupTitles
-    . MSILFulfillmentId.overrideOrderFulfillmentId quoteId
-    . MSILStopAuthorization.overrideOrderStopAuthorizationStatus isRideStarted
-
 buildOnConfirmMessage ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -677,18 +635,20 @@ buildOnConfirmMessage ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
+  DTMT.TransporterConfig ->
   m Spec.ConfirmReqMessage
-buildOnConfirmMessage booking ride driver veh = do
+buildOnConfirmMessage booking ride driver veh transporterConfig = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   onConfirmMessage' <- fromJust <$> TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
-  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  -- ONDC scheduled-ride pilot: see OSRCommon.applyOndcScheduledRideAssignedOrderOverrides above.
+  -- transporterConfig is passed in by the caller (API.Beckn.Confirm), which
+  -- already has it -- not re-fetched here.
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
       onConfirmMessage =
         if isOndcScheduledRideSupportEnabled
-          then onConfirmMessage' {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder onConfirmMessage')}
+          then onConfirmMessage' {Spec.confirmReqMessageOrder = OSRCommon.applyOndcScheduledRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder onConfirmMessage')}
           else onConfirmMessage'
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
@@ -716,8 +676,9 @@ sendOnConfirmToBAP ::
   DVeh.Vehicle ->
   DM.Merchant ->
   Spec.Context ->
+  DTMT.TransporterConfig ->
   m ()
-sendOnConfirmToBAP booking ride driver veh transporter context = do
+sendOnConfirmToBAP booking ride driver veh transporter context transporterConfig = do
   transactionId <- Utils.getTransactionId context
   let bppId = context.contextBppId
       txnId = Just transactionId
@@ -730,7 +691,7 @@ sendOnConfirmToBAP booking ride driver veh transporter context = do
   context' <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
   let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  onConfirmMessage <- buildOnConfirmMessage booking ride driver veh
+  onConfirmMessage <- buildOnConfirmMessage booking ride driver veh transporterConfig
   void $ callOnConfirmV2 transporter context' onConfirmMessage becknConfig
 
 sendRideAssignedUpdateToBAP ::
@@ -764,17 +725,9 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   rideAssignedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
-  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above. Gated on
-  -- booking.isScheduled, not the isScheduledRideAssignment parameter above --
-  -- that one only distinguishes which caller/notification path this is, not
-  -- whether the underlying booking itself is a scheduled one.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder msg)}
-      rideAssignedMsgV2 =
-        if isOndcScheduledRideSupportEnabled
-          then rideAssignedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideAssignedMsgV2'}
-          else rideAssignedMsgV2'
+  -- Applies the ride-assigned ONDC overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, gated on booking.isScheduled, since pilot merchants need them on this push too.
+  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId False rideAssignedMsgV2'.onUpdateReqMessage
+  let rideAssignedMsgV2 = rideAssignedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
@@ -829,16 +782,9 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2' <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
-  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above -- Beckn.ACL.OnStatus's
-  -- tfOrder (RideStartedReq -> Common.tfStartReqToOrder) shares the identical
-  -- ONDC-non-compliance gaps as tfAssignedReqToOrder.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId True (Spec.confirmReqMessageOrder msg)}
-      rideStartedMsgV2 =
-        if isOndcScheduledRideSupportEnabled
-          then rideStartedMsgV2' {Spec.onStatusReqMessage = fixMsg <$> Spec.onStatusReqMessage rideStartedMsgV2'}
-          else rideStartedMsgV2'
+  -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
+  patchedOnStatusReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True rideStartedMsgV2'.onStatusReqMessage
+  let rideStartedMsgV2 = rideStartedMsgV2' {Spec.onStatusReqMessage = patchedOnStatusReqMessage}
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
   fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
 
@@ -936,10 +882,6 @@ sendRideCompletedUpdateToBAP ::
   Bool ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
-  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above -- Beckn.ACL.Common.Order.tfCompleteReqToOrder
-  -- shares the identical ONDC-non-compliance gaps as tfAssignedReqToOrder.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -963,11 +905,9 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
-  let fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId True (Spec.confirmReqMessageOrder msg)}
-      rideCompletedMsgV2 =
-        if isOndcScheduledRideSupportEnabled
-          then rideCompletedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideCompletedMsgV2'}
-          else rideCompletedMsgV2'
+  -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
+  patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True rideCompletedMsgV2'.onUpdateReqMessage
+  let rideCompletedMsgV2 = rideCompletedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
 
@@ -1030,22 +970,10 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   onSelectMsg' <- buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy
-  -- MSIL pilot: the dynamic-offer/bidding flow's on_select (unlike the
-  -- Quote-based flow's, which already goes through MSILOnSelect) has no MSIL
-  -- override applied -- Beckn.OnDemand.Utils.MSIL.ItemCompliance and
-  -- .Breakup.overrideOrderBreakupTitles fix item.descriptor.code, item.tags,
-  -- and quote.breakup titles to match ONDC v2.1.0's TRV10 schema.
+  -- Fixes item.descriptor.code, item.tags and quote.breakup titles to match ONDC v2.1.0, since the dynamic-offer/bidding flow's on_select has no ONDC compliance override applied, unlike the Quote-based flow.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchTry.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      -- Beckn.ACL.OnSelect.mkFulfillmentV2 sets fulfillment.id to
-      -- driverQuote.id (the internal DriverQuote row id) instead of
-      -- driverQuote.estimateId -- the id the original /select actually
-      -- echoed (order.fulfillments[0].id, == item.id, from the on_search
-      -- catalog). ONDC Workbench requires it stay the same value throughout
-      -- the flow and NACKs otherwise ("Fulfillment ID ... does not match
-      -- selection"), same class of bug as the on_update one -- reusing
-      -- MSILFulfillmentId here too.
-      fixMsg msg = msg {Spec.onSelectReqMessageOrder = (MSILItemCompliance.overrideOrderItemCompliance . MSILBreakup.overrideOrderBreakupTitles) <$> Spec.onSelectReqMessageOrder msg}
+      fixMsg msg = msg {Spec.onSelectReqMessageOrder = (OSRCommon.overrideOrderItemCompliance . OSRCommon.overrideOrderBreakupTitles) <$> Spec.onSelectReqMessageOrder msg}
       onSelectMsg = if isOndcScheduledRideSupportEnabled then fixMsg onSelectMsg' else onSelectMsg'
   callOnSelectV2 transporter searchReq srfd searchTry onSelectMsg
   where
@@ -1132,17 +1060,11 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  -- Pilot: cities with enableOndcScheduledRideSupport get this push re-routed
-  -- through on_status, built in one pass by
-  -- Beckn.OnDemand.Transformer.MSIL.OnStatus.msilOnStatusMessageBuild (relabel +
-  -- fulfillment.type override), spec-correct per ONDC v2.1.0; everyone else keeps
-  -- getting it via on_update, unchanged (doc 25 s11). Do NOT dual-send on both
-  -- endpoints -- see doc 23 s10's idempotency risk: the BAP has no way to dedupe
-  -- the same event on two APIs.
+  -- Re-routes through on_status for pilot cities (everyone else keeps getting it via on_update), since ONDC v2.1.0 categorizes this event under on_status, not on_update, for pilot merchants only.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   if isOndcScheduledRideSupportEnabled
-    then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
+    then void $ callOnStatusV2 (OSROnStatus.ondcScheduledRideOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
@@ -1395,9 +1317,7 @@ sendSafetyAlertToBAP ::
 sendSafetyAlertToBAP booking ride reason driver vehicle = do
   logDebug $ "sendSafetyAlertToBAP: reason: " <> T.pack (show reason)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  -- Pilot: cities with enableOndcScheduledRideSupport get this push re-routed
-  -- through on_support instead of on_update; everyone else keeps the on_update
-  -- push, unchanged.
+  -- Re-routes through on_support for pilot cities (everyone else keeps on_update), since ONDC v2.1.0 categorizes this event under on_support, not on_update, for pilot merchants only.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   if isValueAddNP
