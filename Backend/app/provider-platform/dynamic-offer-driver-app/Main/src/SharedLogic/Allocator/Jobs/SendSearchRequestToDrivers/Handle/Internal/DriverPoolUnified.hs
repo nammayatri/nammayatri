@@ -172,7 +172,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- Blocklisted drivers are excluded at LTS-level inside calculateDriverPoolWithActualDist;
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
-      (allDriversNotOnRide', allOnRideDriverPoolResults) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
       favDrivers <- maybe (pure []) (`QFavDrivers.findFavDriversForRider` True) searchReq.riderId
       let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
@@ -414,6 +415,34 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         batchSize = getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
+
+filterTollRouteBlockedDrivers ::
+  (MonadFlow m) =>
+  DSR.SearchRequest ->
+  Id DST.SearchTry ->
+  PoolBatchNum ->
+  [DriverPoolWithActualDistResult] ->
+  [DriverPoolResult] ->
+  m ([DriverPoolWithActualDistResult], [DriverPoolResult])
+filterTollRouteBlockedDrivers searchReq searchTryId batchNum notOnRidePool onRidePool
+  | not isTollRide = pure (notOnRidePool, onRidePool)
+  | otherwise = do
+    let eligibleNotOnRide = filter (\dp -> dp.driverPoolResult.isTollRouteEligible) notOnRidePool
+        eligibleOnRide = filter (\dpr -> dpr.isTollRouteEligible) onRidePool
+        droppedCount = (length notOnRidePool - length eligibleNotOnRide) + (length onRidePool - length eligibleOnRide)
+    when (droppedCount > 0) $
+      logInfo $
+        "TollRouteBlockedDriversExcluded: searchTryId=" <> searchTryId.getId
+          <> " batchNum="
+          <> show batchNum
+          <> " dropped="
+          <> show droppedCount
+    pure (eligibleNotOnRide, eligibleOnRide)
+  where
+    isTollRide =
+      isJust searchReq.tollCharges
+        || maybe False (not . null) searchReq.tollNames
+        || maybe False (not . null) searchReq.tollIds
 
 assignDriverGateTags ::
   ( EncFlow m r,
