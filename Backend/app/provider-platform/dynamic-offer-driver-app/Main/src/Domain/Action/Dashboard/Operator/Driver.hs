@@ -678,7 +678,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QDRC.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -714,7 +714,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QDRC.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
         verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success

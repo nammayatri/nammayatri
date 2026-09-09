@@ -1281,7 +1281,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         -- Check if there's an active association before ending it
         mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
         SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
-          QRCAssociation.endAllRCAssociationsForDriver personId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         -- Only decrement analytics if there was an active association
@@ -2981,7 +2981,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QRCAssociation.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
         void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
         whenJust mbOperator $ \referredOperator ->
           DOR.makeDriverReferredByOperator merchantOpCityId person.id referredOperator.id
@@ -3010,7 +3010,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QRCAssociation.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
         assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
         QFDV.create assoc
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
@@ -3817,7 +3817,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             unless isNew $ do
               SA.endDriverAssociations moc.id transporterConfig person
               when (merchant.overwriteAssociation == Just True) $
-                QRCAssociation.endAllRCAssociationsForDriver person.id
+                DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
@@ -4707,7 +4707,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         SA.endDriverAssociations merchantOpCityId transporterConfig driver
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         when (merchant.overwriteAssociation == Just True) $ do
-          QRCAssociation.endAllRCAssociationsForDriver driverId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle driverId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
