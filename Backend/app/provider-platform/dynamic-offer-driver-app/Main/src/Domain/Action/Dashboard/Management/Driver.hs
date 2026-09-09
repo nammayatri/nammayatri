@@ -1214,15 +1214,19 @@ postDriverClearFee _merchantShortId _opCity mbRequestorId driverId req = ActorIn
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = DCommon.mapServiceName req.serviceName
-  let feeType = castCommonFeeTypeToDomainFeeType req.feeType
+  feeType <- castCommonFeeTypeToDomainFeeType req.feeType
   let currency = fromMaybe INR req.currency
       gstPercentages = (,) <$> req.sgstPercentage <*> req.cgstPercentage
   void $ DDriver.clearDriverFeeWithCreate (personId, driver.merchantId, merchantOpCityId) serviceName (gstBreakup gstPercentages req.platformFee) feeType currency Nothing req.sendManualLink
   return Kernel.Types.APISuccess.Success
   where
     castCommonFeeTypeToDomainFeeType feeTypeCommon = case feeTypeCommon of
-      Common.PAYOUT_REGISTRATION -> PAYOUT_REGISTRATION
-      Common.ONE_TIME_SECURITY_DEPOSIT -> ONE_TIME_SECURITY_DEPOSIT
+      -- Payout registration moved to the app flow (Lib.Payment.Payout.Registration),
+      -- which creates only a payment_order — no driver_fee/invoice. The dashboard
+      -- never used this arm; reports source app-flow registrations from
+      -- payment_order directly.
+      Common.PAYOUT_REGISTRATION -> throwError $ InvalidRequest "PAYOUT_REGISTRATION collection via dashboard clearFee is discontinued; payout registration is app-driven"
+      Common.ONE_TIME_SECURITY_DEPOSIT -> pure ONE_TIME_SECURITY_DEPOSIT
     gstBreakup gstPercentages fee = case gstPercentages of
       Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
       _ -> (fee, Nothing, Nothing)

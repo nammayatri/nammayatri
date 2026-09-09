@@ -2698,7 +2698,13 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   --------- to crub up cases related to double debit ----------
   successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
-  forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
+  -- collectedAt must be when the payment actually succeeded (the SUCCESS
+  -- invoice's updatedAt), not "now": this path can run days after a missed
+  -- clear, and stamping "now" lands the fee in the wrong collection window
+  -- in finance reports.
+  forM_ allPaidFeeNotMarkedCleared $ \feeId -> do
+    let paidAt = maybe now minimum $ nonEmpty [inv.updatedAt | inv <- concat successfulInvoices, inv.driverFeeId == feeId]
+    QDF.updateClearedStatusByIdsWithCollectedAt [feeId] paidAt now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
   Redis.runInMasterCloudRedisCell $

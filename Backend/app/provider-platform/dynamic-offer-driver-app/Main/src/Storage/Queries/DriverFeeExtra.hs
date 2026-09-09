@@ -609,6 +609,21 @@ updateStatusByIds status driverFeeIds now = do
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
 
+-- Like updateStatusByIds for CLEARED, but stamps collectedAt with the time the
+-- payment actually succeeded instead of the processing wall-clock. Use from any
+-- path that clears a fee retroactively (delayed webhook, paid-but-not-cleared
+-- reconciliation): stamping "now" there lands the fee in the wrong collection
+-- window in finance reports.
+updateClearedStatusByIdsWithCollectedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> UTCTime -> UTCTime -> m ()
+updateClearedStatusByIdsWithCollectedAt driverFeeIds collectedAt now = do
+  updateWithKV
+    [ Se.Set BeamDF.status CLEARED,
+      Se.Set BeamDF.updatedAt now,
+      Se.Set BeamDF.collectedAt (Just collectedAt)
+    ]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+  fork "set bad recovery date" $ do updateBadDebtRecoveryDate CLEARED driverFeeIds
+
 updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
 updateFeeTypeByIds feeType driverFeeIds now =
   updateWithKV
