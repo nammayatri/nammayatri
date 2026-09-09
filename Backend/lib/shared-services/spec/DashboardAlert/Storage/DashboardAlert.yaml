@@ -1,14 +1,10 @@
 imports:
   Text: Data.Text
-  LatLong: Kernel.External.Maps.Types
-  ServiceTierType: Domain.Types.Common
-  Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  EncryptedHashedField: Kernel.External.Encryption
-  Person: Domain.Types.Person
-  EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+  Merchant: DashboardAlert.Domain.Types.Common
+  MerchantOperatingCity: DashboardAlert.Domain.Types.Common
+  Person: DashboardAlert.Domain.Types.Common
 
-AlertRequest:
+DashboardAlert:
   tableName: approval_request
 
   types:
@@ -21,13 +17,15 @@ AlertRequest:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
-    id: Id AlertRequest
+    id: Id DashboardAlert
     requestorId: Id Person
     requestorType: RequestorType
     requesteeId: Id Person
     requesteeType: RequesteeType
     requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
     requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
+    entityId: Maybe Text
+    entityType: Maybe Domain.Types.Alert.AlertEntityType.AlertEntityType
     title: Text
     body: Text
     status: Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
@@ -43,14 +41,17 @@ AlertRequest:
     requestType: Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType
 
   fromTType:
-    requestorType: Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.DriverGenerated|I
-    requesteeType: Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.FleetOwner|I
+    requestorType: Kernel.Prelude.fromMaybe DashboardAlert.Domain.Types.DashboardAlert.DriverGenerated|I
+    requesteeType: Kernel.Prelude.fromMaybe DashboardAlert.Domain.Types.DashboardAlert.FleetOwner|I
     requestType: Kernel.Prelude.fromMaybe Domain.Types.Alert.AlertRequestType.EndRideApproval|I
 
   toTType:
     requestorType: Kernel.Prelude.Just|I
     requesteeType: Kernel.Prelude.Just|I
     requestType: Kernel.Prelude.Just|I
+
+  defaultQueryTypeConstraint: "(DashboardAlert.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
 
   constraints:
     id: PrimaryKey
@@ -62,6 +63,13 @@ AlertRequest:
       kvFunction: updateOneWithKV
       params: [status, reason]
       where: id
+
+    findAllByRequesteeId:
+      kvFunction: findAllWithOptionsKV
+      where: requesteeId
+      orderBy:
+        field: createdAt
+        order: desc
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestorType>

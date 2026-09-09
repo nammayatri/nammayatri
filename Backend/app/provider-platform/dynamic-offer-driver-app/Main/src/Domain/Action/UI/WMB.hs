@@ -19,6 +19,8 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
+import qualified DashboardAlert.Domain.Types.DashboardAlert as DADT
+import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe
@@ -26,7 +28,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Alert
-import Domain.Types.AlertRequest
 import Domain.Types.Common
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
@@ -59,11 +60,11 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
+import Storage.Beam.DashboardAlert ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Route as QR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetBadge as QFB
@@ -416,14 +417,14 @@ postWmbRequestsCancel ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Id AlertRequest ->
+    Id DADT.DashboardAlert ->
     Flow APISuccess
   )
 postWmbRequestsCancel (mbPersonId, _, _) alertRequestId = do
   Redis.whenWithLockRedis (driverRequestLockKey alertRequestId.getId) 60 $ do
     alertRequest <- QAR.findByPrimaryKey alertRequestId >>= fromMaybeM (AlertRequestIdNotFound alertRequestId.getId)
     case mbPersonId of
-      Just personId -> unless (alertRequest.requestorId == personId) $ throwError NotAnExecutor
+      Just personId -> unless (cast alertRequest.requestorId == personId) $ throwError NotAnExecutor
       _ -> pure ()
     unless (alertRequest.status == AWAITING_APPROVAL) $ throwError (RequestAlreadyProcessed alertRequest.id.getId)
     WMB.updateAlertRequestStatus REVOKED (Just "Cancelled by driver") alertRequestId
@@ -434,12 +435,12 @@ getWmbRequestsStatus ::
       Id Merchant,
       Id MerchantOperatingCity
     ) ->
-    Id AlertRequest ->
+    Id DADT.DashboardAlert ->
     Flow AlertRequestResp
   )
 getWmbRequestsStatus (mbPersonId, _, _) alertRequestId = do
   alertRequest <- QAR.findByPrimaryKey alertRequestId >>= fromMaybeM (AlertRequestIdNotFound alertRequestId.getId)
-  whenJust mbPersonId $ \personId -> unless (alertRequest.requestorId == personId) $ throwError NotAnExecutor
+  whenJust mbPersonId $ \personId -> unless (cast alertRequest.requestorId == personId) $ throwError NotAnExecutor
   pure $ AlertRequestResp {status = alertRequest.status}
 
 postWmbTripRequest ::
@@ -538,7 +539,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
 driverRequestLockKey :: Text -> Text
 driverRequestLockKey reqId = "Driver:Request:Id-" <> reqId
 
-createAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow (Id AlertRequest)
+createAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> TripTransaction -> Flow (Id DADT.DashboardAlert)
 createAlertRequest driverId requesteeId title body requestData tripTransaction = do
   alertRequestId <- triggerAlertRequest driverId requesteeId title body requestData True tripTransaction
   QTT.updateEndRideApprovalRequestId (Just alertRequestId) tripTransaction.id

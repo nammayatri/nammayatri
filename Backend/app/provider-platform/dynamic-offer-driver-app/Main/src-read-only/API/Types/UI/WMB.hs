@@ -2,11 +2,11 @@
 
 module API.Types.UI.WMB where
 
+import qualified DashboardAlert.Domain.Types.DashboardAlert
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Alert.AlertRequestData
 import qualified Domain.Types.Alert.AlertRequestStatus
-import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.Common
 import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.TripTransaction
@@ -86,7 +86,7 @@ data TripTransactionDetails = TripTransactionDetails
     destination :: StopInfo,
     driverName :: Kernel.Prelude.Maybe Data.Text.Text,
     dutyType :: Kernel.Prelude.Maybe Data.Text.Text,
-    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
+    endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert),
     routeInfo :: RouteInfo,
     scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     source :: StopInfo,

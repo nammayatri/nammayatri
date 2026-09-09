@@ -105,6 +105,7 @@ library
       Tools.Auth.Dashboard
       Tools.Auth.Merchant
       Tools.Client
+      Tools.DashboardTopic
       Tools.Error
       Tools.InternalClient
       Tools.Metrics

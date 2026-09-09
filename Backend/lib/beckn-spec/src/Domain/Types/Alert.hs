@@ -1,8 +1,11 @@
 module Domain.Types.Alert (module Domain.Types.Alert, module Reexport) where
 
+import Domain.Types.Alert.AlertCategory as Reexport
+import Domain.Types.Alert.AlertEntityType as Reexport
 import Domain.Types.Alert.AlertRequestData as Reexport
 import Domain.Types.Alert.AlertRequestStatus as Reexport
 import Domain.Types.Alert.AlertRequestType as Reexport
+import Domain.Types.Alert.OnboardingAlertAction as Reexport
 
 castAlertRequestDataToRequestType :: AlertRequestData -> AlertRequestType
 castAlertRequestDataToRequestType = \case
@@ -17,3 +20,13 @@ castAlertRequestDataToRequestType = \case
   TripNotStarted _ -> TripNotStartedAlert
   SafetyCheck _ -> SafetyCheckAlert
   RideStopReached _ -> RideStopReachedAlert
+  FareConfigUpdated _ -> FareConfigUpdate
+  OperatingCityCreated _ -> OperatingCityCreate
+  Onboarding _ -> OnboardingAlert
+
+castAlertRequestTypeToCategory :: AlertRequestType -> AlertCategory
+castAlertRequestTypeToCategory = \case
+  OnboardingAlert -> ONBOARDING_UPDATE
+  FareConfigUpdate -> CONFIG_CHANGE
+  OperatingCityCreate -> CONFIG_CHANGE
+  _ -> WMB_ALERT

@@ -216,6 +216,7 @@ library
       Domain.Action.Dashboard.Media
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
+      Domain.Action.Dashboard.Notification
       Domain.Action.Dashboard.Offer
       Domain.Action.Dashboard.Payout
       Domain.Action.Dashboard.Rewards
@@ -615,6 +616,7 @@ library
       SharedLogic.Utils
       Storage.Beam.BecknRequest
       Storage.Beam.Common
+      Storage.Beam.DashboardAlert
       Storage.Beam.EstimateBreakup
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
@@ -904,6 +906,7 @@ library
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Notification
       API.Action.Dashboard.Management.Offer
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.Rewards

@@ -27,6 +27,7 @@ import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
+import qualified API.Types.ProviderPlatform.Management.Notification
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.Pricing
@@ -73,6 +74,7 @@ data ManagementUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
   | MESSAGE API.Types.ProviderPlatform.Management.Message.MessageUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
+  | NOTIFICATION API.Types.ProviderPlatform.Management.Notification.NotificationUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
   | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
@@ -116,6 +118,7 @@ instance Text.Show.Show ManagementUserActionType where
     MERCHANT e -> "MERCHANT/" <> show e
     MESSAGE e -> "MESSAGE/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
+    NOTIFICATION e -> "NOTIFICATION/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
     PRICING e -> "PRICING/" <> show e
@@ -336,6 +339,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "NAMMA_TAG/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( NOTIFICATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "NOTIFICATION/" r,
                    ( v1,
                      r2
                      ) <-

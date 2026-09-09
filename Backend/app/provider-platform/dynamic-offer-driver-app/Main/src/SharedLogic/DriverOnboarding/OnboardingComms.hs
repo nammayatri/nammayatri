@@ -17,6 +17,7 @@ module SharedLogic.DriverOnboarding.OnboardingComms
     UnlinkInitiator (..),
     notifyOnDriverFleetUnlink,
     notifyOnVehicleFleetUnlink,
+    notifyFlagChanges,
   )
 where
 
@@ -29,8 +30,9 @@ import qualified Kernel.External.Notification.Interface.Types as Notification
 import Kernel.Prelude
 import Kernel.Types.Forkable (Forkable, fork)
 import Kernel.Types.Id
+import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
-import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
@@ -87,8 +89,8 @@ setOnboardingAs transporterConfig driver onboardingAs = do
       when (onboardingAs /= DI.FLEET_DRIVER) $ do
         mbDriverInfo <- QDIExtra.findById (cast driver.id)
         when (((.onboardingAs) =<< mbDriverInfo) == Just DI.FLEET_DRIVER) $ do
-          activeAssociations <- QFDA.findAllByDriverId driver.id True
-          forM_ activeAssociations $ \association ->
+          associations <- QFDA.findAllByDriverIdWithStatus driver.id
+          forM_ associations $ \association ->
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
               QFDA.endFleetDriverAssociation association.fleetOwnerId association.driverId
               fork "Driver fleet unlink notification" $
@@ -188,3 +190,19 @@ findActiveFleetOwner :: OnboardingFlow m r => Id DP.Person -> m (Maybe DP.Person
 findActiveFleetOwner driverId = do
   mbAssoc <- QFDA.findByDriverId driverId True
   maybe (pure Nothing) (QPerson.findById . Id . (.fleetOwnerId)) mbAssoc
+
+notifyFlagChanges :: OnboardingFlow m r => SDA.AlertActor -> [EntityFlagChange] -> m ()
+notifyFlagChanges actor changes =
+  forM_ changes $ \change -> do
+    let audiences = SDA.audiencesFor actor (maybeToList change.efcFleetOwnerId)
+    unless (null audiences) $
+      forM_ (flagTransitions change) $ \transition ->
+        SDA.notifyOnboardingChange
+          audiences
+          change.efcEntityType
+          change.efcEntityId
+          transition.ftAction
+          transition.ftParams
+          (fromMaybe (Id "system") change.efcFleetOwnerId)
+          change.efcMerchantId
+          change.efcMerchantOperatingCityId

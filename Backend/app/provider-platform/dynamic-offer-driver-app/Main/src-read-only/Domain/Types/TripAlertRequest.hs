@@ -3,11 +3,11 @@
 
 module Domain.Types.TripAlertRequest where
 
+import qualified DashboardAlert.Domain.Types.DashboardAlert
 import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
-import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.FleetBadge
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -18,7 +18,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TripAlertRequest = TripAlertRequest
-  { alertRequestId :: Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest,
+  { alertRequestId :: Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert,
     alertRequestType :: Domain.Types.Alert.AlertRequestType.AlertRequestType,
     alertStatus :: Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus,
     conductorFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),

@@ -110,6 +110,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import Domain.Types
+import qualified Domain.Types.Alert.AlertRequestData as DAlertData
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -194,7 +195,8 @@ import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool -- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -2841,7 +2843,19 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             success = "Fare Policies updated successfully"
           }
   case result of
-    Right res -> return res
+    Right res -> do
+      SDA.notifyDashboardConfigChange
+        SDA.dashboardAudiences
+        merchantOpCity.id.getId
+        DAlertData.FareConfigUpdated
+        [ ("merchantName", merchant.name),
+          ("cityName", show opCity),
+          ("unprocessedCount", show (length res.unprocessedFarePolicies))
+        ]
+        (Id "system")
+        merchant.id
+        merchantOpCity.id
+      return res
     Left e -> throwError $ InvalidRequest (show e)
   where
     readCsv merchantId distanceUnit csvFile merchantOpCity = do
@@ -4103,6 +4117,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
+
+  SDA.notifyDashboardConfigChange
+    SDA.dashboardAudiences
+    newMerchantOperatingCityId.getId
+    DAlertData.OperatingCityCreated
+    [ ("merchantName", baseRequestedCityMerchant.name),
+      ("cityName", show req.city),
+      ("baseCityName", show baseMerchantCity)
+    ]
+    (Id "system")
+    baseRequestedCityMerchant.id
+    baseOperatingCityId
 
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
