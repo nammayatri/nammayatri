@@ -64,11 +64,8 @@ findByQuoteId quoteId = findAllWithKV [Se.Is BeamB.quoteId $ Se.Eq quoteId] <&> 
 
 findByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
 findByTransactionId txnId =
-  findAllWithKVAndConditionalDB
-    [ Se.Is BeamB.transactionId $ Se.Eq txnId
-    ]
-    (Just (Se.Desc BeamB.createdAt))
-    <&> listToMaybe
+  findAllWithKV [Se.Is BeamB.transactionId $ Se.Eq txnId]
+    <&> listToMaybe . sortOn (Down . (.createdAt))
 
 findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> BookingStatus -> m (Maybe Booking)
 findByTransactionIdAndStatus txnId status =
@@ -79,9 +76,8 @@ findByTransactionIdAndStatus txnId status =
 -- is the basis for reconstructing the reallocation history for an ops/scheduled booking.
 findAllByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Booking]
 findAllByTransactionId txnId =
-  findAllWithKVAndConditionalDB
-    [Se.Is BeamB.transactionId $ Se.Eq txnId]
-    (Just (Se.Asc BeamB.createdAt))
+  findAllWithKV [Se.Is BeamB.transactionId $ Se.Eq txnId]
+    <&> sortOn (.createdAt)
 
 findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatuses transactionId statusList =

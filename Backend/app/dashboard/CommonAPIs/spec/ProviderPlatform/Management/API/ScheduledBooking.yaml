@@ -159,6 +159,8 @@ types:
     - bookingId: Text
     - tripCategory: TripCategory
     - scheduledAt: UTCTime
+    - roundTrip: Maybe Bool
+    - returnTime: Maybe UTCTime
     - fromLocation: LocationAPIEntity
     - toLocation: Maybe LocationAPIEntity
     - riderName: Maybe Text
