@@ -423,7 +423,8 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               numberOfLuggages = Nothing,
               govtChargesRate = Just transporterConfig.taxConfig.rideGst,
               pickupGateId = Nothing,
-              fareSettlementType = Nothing
+              fareSettlementType = Nothing,
+              isManualToll = False
             }
     fareParams <- SFC.calculateFareParameters params
     let totalFare = SFC.fareSum fareParams (Just [])

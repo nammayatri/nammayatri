@@ -191,6 +191,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,
           isScheduled = searchTry.isScheduled,
+          isManualToll = False,
           ..
         }
   driverQuote <- buildDriverQuote clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
