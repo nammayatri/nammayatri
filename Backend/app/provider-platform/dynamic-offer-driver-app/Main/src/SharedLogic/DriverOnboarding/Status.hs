@@ -1000,7 +1000,7 @@ mkAadhaarMetadata mbAadhaarCard = forM mbAadhaarCard $ \aadhaar -> do
 mkPanMetadata :: OnboardingFlow m r => Maybe DPan.DriverPanCard -> m (Maybe DocumentMetadata)
 mkPanMetadata mbPanCard = forM mbPanCard $ \pan -> do
   panNumberDec <- decrypt pan.panCardNumber
-  pure $ PanMetadata PanDocumentMetadata {panNumber = panNumberDec, panDocType = pan.docType, driverDob = pan.driverDob}
+  pure $ PanMetadata PanDocumentMetadata {panNumber = panNumberDec, panDocType = pan.docType, driverDob = pan.driverDob, driverNameOnGovtDB = pan.driverNameOnGovtDB}
 
 mkGSTMetadata :: OnboardingFlow m r => Maybe DGstin.DriverGstin -> m (Maybe DocumentMetadata)
 mkGSTMetadata mbGSTCertificate = forM mbGSTCertificate $ \gst -> do
