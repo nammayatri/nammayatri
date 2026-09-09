@@ -42,6 +42,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -247,43 +248,53 @@ validateQuoteSelect merchantId quoteId sReq = do
   searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
   unless (searchReq.transactionId == sReq.transactionId) $
     throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
-  quote' <- applyNegotiatedFare searchReq.merchantOperatingCityId quoteId quote sReq
+  quote' <- applyNegotiatedFare searchReq.merchantOperatingCityId quoteId sReq
   return (merchant, searchReq, quote')
 
 -- | Validates and persists whatever /select actually sent -- the negotiated fare tolerance check (if a bid was made) and the add-on selection (if one was made) -- in a single update to the Quote row, instead of two separate ones.
-applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DQuote.Quote -> DSelectReq -> Flow DQuote.Quote
-applyNegotiatedFare merchantOpCityId quoteId quote sReq = do
-  (estimatedFare, updatedFareParams) <- computeNegotiatedFare
-  addOnData <- computeAddOnData
-  let updatedQuote =
-        quote
-          { DQuote.estimatedFare = estimatedFare,
-            DQuote.fareParams = updatedFareParams,
-            DQuote.addOnData = addOnData
-          }
-  when (isJust sReq.negotiatedFare || not (Kernel.Prelude.null sReq.addOns)) $
-    QQuote.updateEstimatedFareAndAddOnDetails quoteId updatedQuote.estimatedFare updatedQuote.addOnData
-  return updatedQuote
+applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DSelectReq -> Flow DQuote.Quote
+applyNegotiatedFare merchantOpCityId quoteId sReq =
+  -- Concurrent /select calls on the same quote would race their reads/writes.
+  -- This locks per quoteId and re-fetches the quote inside the lock.
+  Redis.withLockRedisAndReturnValue (quoteNegotiationLockKey quoteId.getId) 60 $ do
+    quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+    (estimatedFare, updatedFareParams) <- computeNegotiatedFare quote
+    addOnData <- computeAddOnData quote
+    let updatedQuote =
+          quote
+            { DQuote.estimatedFare = estimatedFare,
+              DQuote.fareParams = updatedFareParams,
+              DQuote.addOnData = addOnData
+            }
+    when (isJust sReq.negotiatedFare || not (Kernel.Prelude.null sReq.addOns)) $
+      QQuote.updateEstimatedFareAndAddOnDetails quoteId updatedQuote.estimatedFare updatedQuote.addOnData
+    return updatedQuote
   where
     -- Tolerance lives on the quote's own FarePolicy (per-vehicle-tier), not TransporterConfig (city-level) -- a Sedan and an Auto on the same city can negotiate different bands. Defaults to +-10% when unset on the policy.
-    computeNegotiatedFare = case sReq.negotiatedFare of
+    computeNegotiatedFare quote = case sReq.negotiatedFare of
       Nothing -> pure (quote.estimatedFare, quote.fareParams)
       Just negotiatedFare -> do
         let negotiationFareMinTolerancePct = fromMaybe 10 (quote.farePolicy >>= (.negotiationFareMinTolerancePct))
             negotiationFareMaxTolerancePct = fromMaybe 10 (quote.farePolicy >>= (.negotiationFareMaxTolerancePct))
             negotiationFareMinToleranceFraction = fromIntegral negotiationFareMinTolerancePct / 100
             negotiationFareMaxToleranceFraction = fromIntegral negotiationFareMaxTolerancePct / 100
-            currentFare = quote.estimatedFare
+            -- quote.estimatedFare gets overwritten by a prior negotiation, which would let repeated /select calls ratchet the fare away from the original.
+            -- This recovers the true original fare so the tolerance band always anchors to it.
+            currentFare = quote.estimatedFare - fromMaybe 0 quote.fareParams.negotiatedFareDelta
             minAcceptable = currentFare * (1 - negotiationFareMinToleranceFraction)
             maxAcceptable = currentFare * (1 + negotiationFareMaxToleranceFraction)
         unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $ -- We can discuss on this comparisation logic
           throwError $ NegotiatedFareNotAcceptable quoteId.getId
+        -- Since currentFare is now the original fare, this is the total delta from original, not just this negotiation round's step.
         let negotiationDelta = negotiatedFare - currentFare
             updatedFareParams = quote.fareParams {DFareParams.negotiatedFareDelta = Just negotiationDelta}
         QFareParams.updateFareParameters updatedFareParams quote.fareParams.id
         pure (negotiatedFare, updatedFareParams)
 
-    computeAddOnData = SAddOn.resolveAddOnData merchantOpCityId (Just quote.vehicleServiceTier) sReq.addOns
+    computeAddOnData quote = SAddOn.resolveAddOnData merchantOpCityId (Just quote.vehicleServiceTier) sReq.addOns
+
+quoteNegotiationLockKey :: Text -> Text
+quoteNegotiationLockKey id = "Driver:Select:Negotiate:QuoteId-" <> id
 
 -- | Build and send /on_select for a validated Quote (see
 -- Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect for the builder). Called from a fork,

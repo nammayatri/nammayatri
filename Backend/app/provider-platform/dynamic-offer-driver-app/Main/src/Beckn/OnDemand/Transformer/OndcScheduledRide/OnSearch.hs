@@ -12,7 +12,6 @@ where
 
 import qualified Beckn.OnDemand.Utils.OnSearch as Utils
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
-import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Data.Map as M
@@ -38,7 +37,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 -- every ONDC-scheduled-ride patch to the already-built on_search reply, in order.
 ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
 ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId bapId dSearchRes onSearchReq = do
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
+  bppConfig <- QBC.findAnyByMerchantIdAndDomain merchantId "MOBILITY" >>= fromMaybeM (InternalError "Beckn Config not found")
   mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
   addOnMap <- SAddOn.getAddOn merchantOpCityId True
   pure $

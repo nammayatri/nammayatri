@@ -315,17 +315,17 @@ validateRequest subscriber transporterId req now transporterConfig = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  -- OneWay OneWayOnDemandStaticOffer is the only category the pilot newly allows for non-value-add (external) BAPs -- everything else they were never validated for must stay blocked, even in a pilot-enabled city.
+  -- This allows the two pre-existing dynamic-offer categories always, and OneWay OneWayOnDemandStaticOffer only when the city has the pilot enabled.
   let isAllowedForNonValueAddNP = case booking.tripCategory of
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
+        OneWay OneWayOnDemandStaticOffer -> isOndcScheduledRideSupportEnabled
         _ -> False
-  -- Pilot merchants bypass the isValueAddNP restriction above since they're non-value-add NPs but still need scheduled trip categories allowed through /confirm.
-  -- transporterConfig is passed in by the caller (API.Beckn.Confirm), which already fetched it (keyed on the wire request's city) to decide the add-ons patch -- not re-fetched here.
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-  -- Synchronous NACK, before any fork -- same shape as /select and /init. Booking already carries whatever was selected at /select and echoed at /init; Ride doesn't exist yet at this point.
   when isOndcScheduledRideSupportEnabled $
     SAddOn.verifyAddOnEcho booking.addOnData booking.merchantOperatingCityId (Just booking.vehicleServiceTier) req.addOns
-  when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
+  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
