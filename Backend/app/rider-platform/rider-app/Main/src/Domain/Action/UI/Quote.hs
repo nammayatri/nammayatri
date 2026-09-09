@@ -142,8 +142,10 @@ data SuggestedEstimates = SuggestedEstimates
     walkDistanceFromDrop :: Maybe Meters,
     -- | How much shorter the ride becomes.
     rideDistanceSaved :: Meters,
-    -- | The other ways this ride could be reshaped, unpriced. Fares for these are only
-    -- fetched when the customer asks for one, via /rideSearch/suggestedFare.
+    -- | The other ways this ride could be reshaped, without their fares. Not unpriced: a
+    -- search was dispatched for each during /rideSearch, and its fare arrives through
+    -- 'alternateSuggestions' on a results poll, or through /rideSearch/suggestedFare, which
+    -- answers from that same search rather than running another.
     alternatives :: [SuggestedOption]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
