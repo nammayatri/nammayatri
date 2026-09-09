@@ -32,10 +32,10 @@ import Text.Show (Show (..))
 -- constructor name (ROUTE, SPECIAL_LOCATION, …) via mkBeamInstancesForEnum, so the
 -- existing varchar columns need no migration. `resourceId` stays open Text — it
 -- holds whatever the data keys on: an id (`route_123`) or a name ("Airport Zone").
--- Semantics per (person, merchant, city, resourceType):
---   * a wildcardResourceId ("*") row → all resources of that type in the MOC
---   * specific ids                   → restricted to those
---   * no rows                        → deny-all (ops gate) / unscoped (analytics)
+-- Semantics per (person, merchant, city, resourceType) — scope is OPT-IN:
+--   * no rows                        → unscoped → allow-all (both ops gate + analytics)
+--   * a wildcardResourceId ("*") row → also allow-all (explicit form of the above)
+--   * specific ids                   → restricted to exactly those
 
 -- | The kinds of resource Layer C can scope. Serialized (DB + JSON) as the
 -- constructor name. Adding a kind = a new constructor here.

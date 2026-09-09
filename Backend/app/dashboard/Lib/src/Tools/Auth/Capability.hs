@@ -233,16 +233,19 @@ checkResourceIds person endpointId merchantId city resourceType targetIds = do
   allowed <- QPRA.findResourceIds person.id merchantId city resourceType
   logDebug $ "LAYER_C checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
   let allowedSet = Set.fromList allowed
-  unless (DRS.wildcardResourceId `Set.member` allowedSet) $
+  -- Scope is OPT-IN: no rows for this (person, MOC, resourceType) => the person
+  -- is unrestricted for it => allow all. A person is only limited once they have
+  -- explicit rows. '*' (wildcardResourceId) is the same allow-all, kept for
+  -- explicitness/back-compat. Only a NON-EMPTY, non-wildcard row set restricts.
+  unless (null allowed || DRS.wildcardResourceId `Set.member` allowedSet) $
     case targetIds of
-      -- Scoped endpoint but no id resolved from the request: almost always a
-      -- binding gap (the id is in the body / under a param the convention doesn't
-      -- cover — such endpoints should be marked __HANDLER__ or __SKIP__). We log
-      -- LOUDLY but PASS rather than deny: a single capability can back many
-      -- endpoints (some id-carrying, some not, some a different resource type),
-      -- so failing closed here would break every not-yet-bound sibling. Flip this
-      -- to a throw once every endpoint under a scoped capability carries an
-      -- explicit binding. See review finding I-security.
+      -- Reached only when the person HAS restricting rows but no id resolved from
+      -- the request: almost always a binding gap (the id is in the body / under a
+      -- param the convention doesn't cover — such endpoints should be marked
+      -- __HANDLER__ or __SKIP__). We log LOUDLY but PASS: scoping is opt-in
+      -- (allow-by-default), so passing here is consistent, and a single capability
+      -- backs many endpoints (id-carrying and not). Fix by binding the endpoint
+      -- (resource_id_param) or marking it __SKIP__/__HANDLER__.
       [] ->
         logTagError "RESOURCE_SCOPE_UNRESOLVED" $
           "scoped endpoint resolved zero resource ids — passing (fail-open); set capability_endpoint.resource_id_param (or __SKIP__/__HANDLER__). "
