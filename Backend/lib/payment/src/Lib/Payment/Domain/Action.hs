@@ -125,6 +125,7 @@ import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPersonDailyOfferStats
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
+import qualified Lib.Payment.Offer.Counters as Counters
 import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
 import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -1196,6 +1197,19 @@ makeOfferListCacheKey version serviceType customerId =
 
 -- domain offer functions --------------------------------------------------
 
+eligibleDomainOffers ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  Maybe Value ->
+  Maybe Counters.OfferRiderContext ->
+  m [(DOffer.Offer, Maybe Int)]
+eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider = do
+  now <- getCurrentTime
+  allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
+  let activeOffers = filter (\offer -> maybe True (> now) offer.validTill) allActiveOffers
+  catMaybes <$> forM activeOffers (\offer -> offersEligibilityFlow offer mbDomainContext mbRider now)
+
 listDomainOffers ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Text ->
@@ -1203,26 +1217,21 @@ listDomainOffers ::
   HighPrecMoney ->
   Currency ->
   Maybe Value ->
+  Maybe Counters.OfferRiderContext ->
   m PInterface.OfferListResp
-listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDomainContext = do
-  now <- getCurrentTime
-  allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
-  let activeOffers = filter (\offer -> maybe True (> now) offer.validTill) allActiveOffers
-  -- Filter by eligibility using offersEligibilityFlow
-  eligibleResults <- forM activeOffers $ \offer -> do
-    isOfferEligible <- offersEligibilityFlow offer.id.getId mbDomainContext
-    pure (offer, isOfferEligible)
-  let eligibleOffers = filter (\(_, isOfferEligible) -> isOfferEligible) eligibleResults
-      offerResps = map (\(offer, _) -> buildOfferResp orderAmount offer) eligibleOffers
-      offers = map fst eligibleOffers
-      bestCombo = buildBestOfferCombination orderAmount offerResps offers
-  return $
-    PInterface.OfferListResp
-      { bestOfferCombination = bestCombo,
-        offerResp = offerResps
-      }
+listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDomainContext mbRider =
+  buildDomainOfferList orderAmount <$> eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider
+
+buildDomainOfferList :: HighPrecMoney -> [(DOffer.Offer, Maybe Int)] -> PInterface.OfferListResp
+buildDomainOfferList orderAmount eligible =
+  let offers = map fst eligible
+      offerResps = map (buildOfferResp orderAmount) eligible
+   in PInterface.OfferListResp
+        { bestOfferCombination = buildBestOfferCombination orderAmount offerResps offers,
+          offerResp = offerResps
+        }
   where
-    buildOfferResp amt offer =
+    buildOfferResp amt (offer, mbUses) =
       let computedOfferAmount = computeOfferAmount offer amt
        in PInterface.OfferResp
             { offerId = offer.id.getId,
@@ -1240,9 +1249,29 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
               cashbackAmount = computedOfferAmount.payoutAmount,
               benefitType = show offer.offerType,
               offerCode = offer.offerCode,
-              uiConfigs = Nothing,
-              productDiscounts = Nothing
+              uiConfigs = mkUiConfigs offer,
+              productDiscounts = Nothing,
+              minimumAmount = offer.minimumAmount,
+              counters =
+                Just
+                  PInterface.OfferCounters
+                    { frequencyType = show <$> offer.frequencyType,
+                      appliedCount = mbUses,
+                      maxApplyCount = offer.maxApplyCount
+                    }
             }
+
+    mkUiConfigs offer =
+      if isNothing offer.autoApply && isNothing offer.isHidden
+        then Nothing
+        else
+          Just
+            PInterface.OfferUIConfigs
+              { offerDisplayPriority = Nothing,
+                autoApply = offer.autoApply,
+                shouldValidate = Nothing,
+                isHidden = offer.isHidden
+              }
 
     buildBestOfferCombination amt resps offers =
       case resps of
@@ -1282,8 +1311,6 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
                             }
                       }
 
--- | Basket-based domain offer listing: runs listDomainOffers per product, returns [(productId, OfferListResp)].
---   bestOfferCombination is set to Nothing for basket case.
 listDomainOffersWithBasket ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Text ->
@@ -1291,11 +1318,11 @@ listDomainOffersWithBasket ::
   [(Text, HighPrecMoney)] -> -- [(productId, amount)]
   Currency ->
   Maybe Value ->
+  Maybe Counters.OfferRiderContext ->
   m [(Text, PInterface.OfferListResp)]
-listDomainOffersWithBasket merchantId merchantOperatingCityId products currency mbDomainContext = do
-  forM products $ \(productId, amount) -> do
-    resp <- listDomainOffers merchantId merchantOperatingCityId amount currency mbDomainContext
-    pure (productId, resp {PInterface.bestOfferCombination = Nothing})
+listDomainOffersWithBasket merchantId merchantOperatingCityId products _currency mbDomainContext mbRider = do
+  eligible <- eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider
+  pure [(productId, (buildDomainOfferList amount eligible) {PInterface.bestOfferCombination = Nothing}) | (productId, amount) <- products]
 
 -- | Split a PG basket OfferListResp into per-product responses using productDiscounts.
 --   For PRODUCT-level offers (productDiscounts present): creates per-product entries with product amounts.
@@ -1341,33 +1368,37 @@ splitOfferRespByProduct products resp =
 --   Returns Nothing if offer not found, inactive, or ineligible.
 --   mbDomainContext: optional domain-specific data (e.g., person stats, ride history)
 --   that gets merged into the eligibility check data before running json logic.
+-- | Active, passes its own rule and, for this rider, under its maxApplyCount; returns the offer with the rider's use count.
 offersEligibilityFlow ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
-  Text ->
+  DOffer.Offer ->
   Maybe Value ->
-  m Bool
-offersEligibilityFlow offerId mbDomainContext = do
-  mbOffer <- QOffer.findById (Id offerId)
-  case mbOffer of
-    Nothing -> pure False
-    Just offer
-      | not offer.isActive -> pure False
-      | otherwise ->
-        case offer.offerEligibilityJsonLogic of
-          Nothing -> pure True
-          Just logic -> do
-            let baseData = A.object []
-                eligibilityData = case mbDomainContext of
-                  Just (A.Object ctx) -> case baseData of
-                    A.Object base -> A.Object (base <> ctx)
-                    _ -> baseData
-                  _ -> baseData
-            logicResp <- LYUtils.runLogics [logic] eligibilityData
-            case logicResp.result of
-              A.Bool result -> pure result
-              _ -> do
-                logError $ "Offer eligibility logic returned non-boolean for offerId: " <> offer.id.getId <> " errors: " <> show logicResp.errors
-                pure False
+  Maybe Counters.OfferRiderContext ->
+  UTCTime ->
+  m (Maybe (DOffer.Offer, Maybe Int))
+offersEligibilityFlow offer mbDomainContext mbRider now
+  | not offer.isActive = pure Nothing
+  | otherwise = do
+    passesRule <- case offer.offerEligibilityJsonLogic of
+      Nothing -> pure True
+      Just logic -> do
+        let eligibilityData = case mbDomainContext of
+              Just ctx@(A.Object _) -> ctx
+              _ -> A.object []
+        logicResp <- LYUtils.runLogics [logic] eligibilityData
+        case logicResp.result of
+          A.Bool result -> pure result
+          _ -> do
+            logError $ "Offer eligibility logic returned non-boolean for offerId: " <> offer.id.getId <> " errors: " <> show logicResp.errors
+            pure False
+    if not passesRule
+      then pure Nothing
+      else do
+        mbUses <- forM mbRider $ \rider -> Counters.countUses rider now offer.id offer.frequencyType
+        let withheld = case mbUses of
+              Just uses -> Counters.isUsedUp offer.maxApplyCount uses
+              Nothing -> isJust offer.maxApplyCount
+        pure $ if withheld then Nothing else Just (offer, mbUses)
 
 -- offer computation functions ---------------------------------------------
 
@@ -1382,11 +1413,15 @@ data ComputedOfferAmount = ComputedOfferAmount
 -- | Compute offer amounts for a single Offer.
 computeOfferAmount :: DOffer.Offer -> HighPrecMoney -> ComputedOfferAmount
 computeOfferAmount offer amount =
-  let offerAmount = case offer.discountType of
-        DOffer.FLAT -> min offer.discountValue amount
-        DOffer.PERCENTAGE ->
-          let pctAmount = amount * offer.discountValue / 100
-           in maybe pctAmount (min pctAmount) offer.maxDiscount
+  let -- below minimumAmount the offer stays listed but is worth nothing
+      meetsMinimum = maybe True (amount >=) offer.minimumAmount
+      offerAmount
+        | not meetsMinimum = 0
+        | otherwise = case offer.discountType of
+          DOffer.FLAT -> min offer.discountValue amount
+          DOffer.PERCENTAGE ->
+            let pctAmount = amount * offer.discountValue / 100
+             in maybe pctAmount (min pctAmount) offer.maxDiscount
       (discountAmount, payoutAmount) = case offer.offerType of
         DOffer.DISCOUNT -> (offerAmount, 0)
         DOffer.CASHBACK -> (0, offerAmount)
@@ -1517,7 +1552,8 @@ data OfferStatsInput = OfferStatsInput
     staticPersonId :: Maybe Text, -- static customer UUID (Nothing or same as personId means skip)
     deviceId :: Maybe Text, -- device IMEI (Nothing or empty means skip)
     email :: Maybe Text,
-    mobile :: Maybe Text
+    mobile :: Maybe Text,
+    timeDiffFromUtc :: Seconds
   }
   deriving (Show)
 
@@ -1557,7 +1593,7 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
               }
   -- Upsert PersonDailyOfferStats (keyed by personId, not per entity)
   let dailyLockKey = "UpsertOfferStats:Daily:PersonId:" <> statsInput.personId <> ":OfferId:" <> offerId.getId
-  Redis.whenWithLockRedis dailyLockKey 60 $ do
+  Redis.withWaitOnLockRedisWithExpiry dailyLockKey 10 20 $ do
     let today = utctDay now
     mbDailyStats <- QPersonDailyOfferStats.findByPersonIdAndDate statsInput.personId today
     case mbDailyStats of
@@ -1586,6 +1622,7 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
               createdAt = now,
               updatedAt = now
             }
+  Counters.upsertOfferFrequencyStats offerId entities statsInput.timeDiffFromUtc discountAmount payoutAmount payoutCurr merchantId merchantOperatingCityId now
 
 buildEntities :: OfferStatsInput -> Id DOffer.Offer -> [(DOfferStats.OfferStatsEntityType, Text)]
 buildEntities OfferStatsInput {..} offerId =

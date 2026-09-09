@@ -24,3 +24,20 @@ ALTER TABLE atlas_app.offer ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.offer ADD COLUMN valid_till timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN minimum_amount double precision ;
+ALTER TABLE atlas_app.offer ADD COLUMN is_hidden boolean ;
+ALTER TABLE atlas_app.offer ADD COLUMN auto_apply boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN frequency_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN max_apply_count integer ;

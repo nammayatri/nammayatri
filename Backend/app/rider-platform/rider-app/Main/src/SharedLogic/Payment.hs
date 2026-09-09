@@ -872,13 +872,15 @@ buildOfferStatsInput person = do
   staticCustomerId <- case personPhone of
     Just phone -> SLUtils.getStaticCustomerId person phone
     Nothing -> pure person.id.getId
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   pure
     DPayment.OfferStatsInput
       { personId = person.id.getId,
         staticPersonId = if staticCustomerId /= person.id.getId then Just staticCustomerId else Nothing,
         deviceId = person.deviceId,
         email = personEmail,
-        mobile = personPhone
+        mobile = personPhone,
+        timeDiffFromUtc = riderConfig.timeDiffFromUtc
       }
 
 -- | Retrieve the ride payment order for a rideId (domainEntityId = rideId).

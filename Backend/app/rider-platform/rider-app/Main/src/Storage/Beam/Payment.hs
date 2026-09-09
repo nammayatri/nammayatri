@@ -38,6 +38,7 @@ import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
 import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as BeamSettlementFileInfo
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOF
+import qualified Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory as BeamOFSH
 import qualified Lib.Payment.Storage.Beam.OfferStats as BeamOfferStats
 import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -48,6 +49,7 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
+import qualified Lib.Payment.Storage.Beam.PersonOfferFrequencyStats as BeamPOFS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
@@ -160,6 +162,12 @@ instance HasSchemaName BeamOfferStats.OfferStatsT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPDOS.PersonDailyOfferStatsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPOFS.PersonOfferFrequencyStatsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamOFSH.OfferFrequencyStatsHistoryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamOfflineOffer.OfflineOfferT where

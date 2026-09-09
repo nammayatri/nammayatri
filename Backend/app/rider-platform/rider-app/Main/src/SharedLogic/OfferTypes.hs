@@ -46,7 +46,11 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     postOfferAmount :: HighPrecMoney,
     estimatedAmountSaved :: HighPrecMoney,
     estimatedPostOfferAmount :: HighPrecMoney,
-    offerType :: Maybe DOffer.OfferType
+    offerType :: Maybe DOffer.OfferType,
+    minimumAmount :: Maybe HighPrecMoney,
+    frequencyType :: Maybe DOffer.OfferFrequency,
+    appliedCount :: Maybe Int,
+    maxApplyCount :: Maybe Int
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

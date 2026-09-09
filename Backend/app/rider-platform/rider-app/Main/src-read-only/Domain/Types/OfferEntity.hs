@@ -11,17 +11,21 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.Payment.Domain.Types.Offer
 import qualified Tools.Beam.UtilsTH
 
 data OfferEntity = OfferEntity
   { amountSaved :: Kernel.Types.Common.HighPrecMoney,
+    appliedCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     autoApply :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     discountAmount :: Kernel.Types.Common.HighPrecMoney,
     entityId :: Kernel.Prelude.Text,
     entityType :: Domain.Types.OfferEntity.EntityType,
+    frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
     id :: Kernel.Types.Id.Id Domain.Types.OfferEntity.OfferEntity,
     isHidden :: Kernel.Prelude.Bool,
+    maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     offerCode :: Kernel.Prelude.Text,
@@ -34,7 +38,7 @@ data OfferEntity = OfferEntity
     postOfferAmount :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data EntityType = BOOKING | RIDE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 

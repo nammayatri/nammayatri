@@ -133,3 +133,15 @@ library:
           - -j4
   dependencies:
     - mobility-core
+
+tests:
+  payment-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - payment
+      - mobility-core
+      - tasty
+      - tasty-hunit
