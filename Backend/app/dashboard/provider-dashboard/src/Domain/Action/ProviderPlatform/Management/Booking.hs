@@ -14,46 +14,86 @@
 
 module Domain.Action.ProviderPlatform.Management.Booking
   ( postBookingCancelAllStuck,
+    postBookingCancelAllStuckInternal,
     postBookingSyncMultiple,
+    postBookingSyncMultipleInternal,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Management
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Booking as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow)
+import Kernel.Utils.Common (encodeToText)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
-buildTransaction ::
+-- | Transaction builder shared by the RBAC-guarded dashboard route and the
+-- internal service-token route for the same endpoint. Records an audit row in
+-- the dashboard transaction table; @requestor@ is @Just personId.getId@ for
+-- person-token calls and a caller tag (e.g. "INTERNAL_ADMIN_API") for
+-- service-token calls, so internal actions stay attributable.
+buildBookingTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  DT.Endpoint ->
+  Maybe Text ->
+  Maybe (Id DM.Merchant) ->
   Maybe request ->
   m DT.Transaction
-buildTransaction apiTokenInfo =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+buildBookingTransaction endpoint mbRequestor mbMerchantId request = do
+  T.validateRequestorId mbRequestor
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = Id <$> mbRequestor,
+        serverName = Just DRIVER_OFFER_BPP_MANAGEMENT,
+        merchantId = mbMerchantId,
+        endpoint,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        request = encodeToText . Common.hideSecrets <$> request,
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now
+      }
 
 postBookingCancelAllStuck :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> Flow Common.StuckBookingsCancelRes
 postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just req)
+  postBookingCancelAllStuckInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+-- | Implementation shared by the public RBAC route and the internal
+-- service-token route (@API.ProviderPlatform.DynamicOfferDriver.InternalAdmin@).
+-- Callers must have resolved and validated the merchant/city themselves: the
+-- merchant-city-vs-token check is the public route's job, the @api-key@ check
+-- the internal route's job.
+postBookingCancelAllStuckInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.StuckBookingsCancelReq -> Flow Common.StuckBookingsCancelRes
+postBookingCancelAllStuckInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  transaction <- buildBookingTransaction (DT.castEndpoint $ PROVIDER_MANAGEMENT $ Management.BOOKING Common.POST_BOOKING_CANCEL_ALL_STUCK) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.bookingDSL.postBookingCancelAllStuck) req
 
 postBookingSyncMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
 postBookingSyncMultiple merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Common.validateMultipleBookingSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just req)
+  postBookingSyncMultipleInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+postBookingSyncMultipleInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
+postBookingSyncMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  runRequestValidation Common.validateMultipleBookingSyncReq req
+  transaction <- buildBookingTransaction (DT.castEndpoint $ PROVIDER_MANAGEMENT $ Management.BOOKING Common.POST_BOOKING_SYNC_MULTIPLE) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.bookingDSL.postBookingSyncMultiple) req

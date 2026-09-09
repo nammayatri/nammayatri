@@ -15,10 +15,13 @@
 module Domain.Action.ProviderPlatform.Management.Ride
   ( getRideList,
     postRideEndMultiple,
+    postRideEndMultipleInternal,
     postRideCancelMultiple,
+    postRideCancelMultipleInternal,
     getRideInfo,
     postRideSync,
     postRideSyncMultiple,
+    postRideSyncMultipleInternal,
     postRideRoute,
     getRideKaptureList,
     getRideFareBreakUp,
@@ -32,6 +35,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Management
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -41,6 +45,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (encodeToText)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp as RiderClient
 import qualified SharedLogic.Transaction as T
@@ -58,6 +63,39 @@ buildManagementServerTransaction ::
   m DT.Transaction
 buildManagementServerTransaction apiTokenInfo =
   T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing
+
+-- | Transaction builder shared by the RBAC-guarded dashboard route and the
+-- internal service-token route for the same endpoint. Records an audit row in
+-- the dashboard transaction table; @requestor@ is @Just personId.getId@ for
+-- person-token calls and a caller tag (e.g. "INTERNAL_ADMIN_API") for
+-- service-token calls, so internal actions stay attributable.
+buildRideTransaction ::
+  ( MonadFlow m,
+    Common.HideSecrets request
+  ) =>
+  DT.Endpoint ->
+  Maybe Text ->
+  Maybe (Id DM.Merchant) ->
+  Maybe request ->
+  m DT.Transaction
+buildRideTransaction endpoint mbRequestor mbMerchantId request = do
+  T.validateRequestorId mbRequestor
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = Id <$> mbRequestor,
+        serverName = Just DRIVER_OFFER_BPP_MANAGEMENT,
+        merchantId = mbMerchantId,
+        endpoint,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        request = encodeToText . Common.hideSecrets <$> request,
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now
+      }
 
 getRideList ::
   ShortId DM.Merchant ->
@@ -88,19 +126,32 @@ getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerC
 
 postRideEndMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
 postRideEndMultiple merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Common.validateMultipleRideEndReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction apiTokenInfo Nothing (Just req)
+  postRideEndMultipleInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+-- | Implementation shared by the public RBAC route and the internal
+-- service-token route (@API.ProviderPlatform.DynamicOfferDriver.InternalAdmin@).
+-- Callers must have resolved and validated the merchant/city themselves: the
+-- merchant-city-vs-token check is the public route's job, the @api-key@ check
+-- the internal route's job.
+postRideEndMultipleInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
+postRideEndMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  runRequestValidation Common.validateMultipleRideEndReq req
+  transaction <- buildRideTransaction (DT.castEndpoint $ PROVIDER_MANAGEMENT $ Management.RIDE Common.POST_RIDE_END_MULTIPLE) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideEndMultiple) (Just apiTokenInfo.personId.getId) req
+    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideEndMultiple) mbRequestor req
 
 postRideCancelMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
 postRideCancelMultiple merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Common.validateMultipleRideCancelReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction apiTokenInfo Nothing (Just req)
+  postRideCancelMultipleInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+postRideCancelMultipleInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
+postRideCancelMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  runRequestValidation Common.validateMultipleRideCancelReq req
+  transaction <- buildRideTransaction (DT.castEndpoint $ PROVIDER_MANAGEMENT $ Management.RIDE Common.POST_RIDE_CANCEL_MULTIPLE) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideCancelMultiple) (Just apiTokenInfo.personId.getId) req
+    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideCancelMultiple) mbRequestor req
 
 getRideInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Maybe Bool -> Flow Common.RideInfoRes
 getRideInfo merchantShortId opCity apiTokenInfo rideId mbFinanceData = do
@@ -115,11 +166,16 @@ postRideSync merchantShortId opCity apiTokenInfo rideId = do
     Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideSync) rideId
 
 postRideSyncMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> Flow Common.MultipleRideSyncRes
-postRideSyncMultiple merchantShortId opCity apiTokenInfo rideSyncReq = do
+postRideSyncMultiple merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction apiTokenInfo Nothing (Just rideSyncReq)
+  postRideSyncMultipleInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+-- | See 'postRideEndMultipleInternal'.
+postRideSyncMultipleInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.MultipleRideSyncReq -> Flow Common.MultipleRideSyncRes
+postRideSyncMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  transaction <- buildRideTransaction (DT.castEndpoint $ PROVIDER_MANAGEMENT $ Management.RIDE Common.POST_RIDE_SYNC_MULTIPLE) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideSyncMultiple) rideSyncReq
+    Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideSyncMultiple) req
 
 postRideRoute ::
   ShortId DM.Merchant ->

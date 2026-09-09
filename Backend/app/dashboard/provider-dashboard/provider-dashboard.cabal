@@ -35,8 +35,10 @@ library
       API.ProviderPlatform.DriverInfoByPhoneNumber
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
+      API.ProviderPlatform.DynamicOfferDriver.InternalAdmin
       API.ProviderPlatform.DynamicOfferDriver.InternalAuth
       API.RiderPlatform
+      API.RiderPlatform.InternalAdmin
       API.SpecialZone
       App
       Domain.Action.Entity

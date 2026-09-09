@@ -15,10 +15,13 @@
 module Domain.Action.RiderPlatform.Management.Booking
   ( postBookingCancelAllStuck,
     postBookingSyncMultiple,
+    buildBookingTransaction,
+    postBookingSyncMultipleInternal,
   )
 where
 
 import qualified API.Client.RiderPlatform.Management as Client
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as Management
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Booking as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -26,7 +29,7 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow)
+import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
@@ -52,8 +55,40 @@ postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req = do
 
 postBookingSyncMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
 postBookingSyncMultiple merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Common.validateMultipleBookingSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just req)
+  postBookingSyncMultipleInternal checkedMerchantId opCity (Just apiTokenInfo.personId.getId) (Just apiTokenInfo.merchant.id) req
+
+buildBookingTransaction ::
+  ( MonadFlow m,
+    Common.HideSecrets request
+  ) =>
+  DT.Endpoint ->
+  Maybe Text ->
+  Maybe (Id DM.Merchant) ->
+  Maybe request ->
+  m DT.Transaction
+buildBookingTransaction endpoint mbRequestor mbMerchantId request = do
+  T.validateRequestorId mbRequestor
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = Id <$> mbRequestor,
+        serverName = Just APP_BACKEND_MANAGEMENT,
+        merchantId = mbMerchantId,
+        endpoint,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        request = encodeToText . Common.hideSecrets <$> request,
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now
+      }
+
+postBookingSyncMultipleInternal :: CheckedShortId DM.Merchant -> City.City -> Maybe Text -> Maybe (Id DM.Merchant) -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
+postBookingSyncMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  runRequestValidation Common.validateMultipleBookingSyncReq req
+  transaction <- buildBookingTransaction (DT.castEndpoint $ RIDER_MANAGEMENT $ Management.BOOKING Common.POST_BOOKING_SYNC_MULTIPLE) mbRequestor mbMerchantId (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.bookingDSL.postBookingSyncMultiple) req

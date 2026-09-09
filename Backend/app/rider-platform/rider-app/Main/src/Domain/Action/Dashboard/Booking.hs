@@ -126,11 +126,14 @@ postBookingSyncMultiple merchantShortId opCity req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  respItems <- forM req.bookings $ \reqItem -> do
+  results <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       bookingSync merchant merchantOpCity.id reqItem.bookingId
       pure Common.SuccessItem
-    pure $ Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info}
+    pure (cast @Common.Booking @DBooking.Booking reqItem.bookingId, info, Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info})
+  let respItems = (\(_, _, item) -> item) <$> results
+      syncedBookingIds = [bId | (bId, Common.SuccessItem, _) <- results]
+  QBooking.updateIsStucked syncedBookingIds True
   logTagInfo "dashboard -> multipleBookingSync: " $ show (req.bookings <&> (.bookingId))
   pure $ Common.MultipleBookingSyncResp {list = respItems}
 

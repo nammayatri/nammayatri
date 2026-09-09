@@ -8,6 +8,8 @@ module Domain.Action.RiderPlatform.Management.Ride
     getRideTripRoute,
     getRidePickupRoute,
     postRideSyncMultiple,
+    buildRideTransaction,
+    postRideSyncMultipleInternal,
     postRidePayoutOfferSync,
     postRideCancelMultiple,
     getRideKaptureList,
@@ -18,6 +20,7 @@ where
 
 import qualified API.Client.RiderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Ride
+import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
@@ -31,6 +34,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction
@@ -89,9 +93,41 @@ getRidePickupRoute merchantShortId opCity rideId lat lon = do
 
 postRideSyncMultiple :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.Flow Dashboard.Common.Ride.MultipleRideSyncResp
 postRideSyncMultiple merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Domain.Action.Dashboard.Ride.validateMultipleRideSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  postRideSyncMultipleInternal checkedMerchantId opCity (Kernel.Prelude.Just apiTokenInfo.personId.getId) (Kernel.Prelude.Just apiTokenInfo.merchant.id) req
+
+buildRideTransaction ::
+  ( Kernel.Utils.Common.MonadFlow m,
+    Dashboard.Common.Ride.HideSecrets request
+  ) =>
+  Domain.Types.Transaction.Endpoint ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Maybe request ->
+  m Domain.Types.Transaction.Transaction
+buildRideTransaction endpoint mbRequestor mbMerchantId request = do
+  SharedLogic.Transaction.validateRequestorId mbRequestor
+  uid <- Kernel.Utils.Common.generateGUID
+  now <- Kernel.Utils.Common.getCurrentTime
+  Kernel.Prelude.pure
+    Domain.Types.Transaction.Transaction
+      { id = uid,
+        requestorId = Kernel.Types.Id.Id <$> mbRequestor,
+        serverName = Kernel.Prelude.Just APP_BACKEND_MANAGEMENT,
+        merchantId = mbMerchantId,
+        endpoint,
+        commonDriverId = Kernel.Prelude.Nothing,
+        commonRideId = Kernel.Prelude.Nothing,
+        request = Kernel.Utils.Common.encodeToText . Dashboard.Common.Ride.hideSecrets <$> request,
+        response = Kernel.Prelude.Nothing,
+        responseError = Kernel.Prelude.Nothing,
+        createdAt = now
+      }
+
+postRideSyncMultipleInternal :: Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.Flow Dashboard.Common.Ride.MultipleRideSyncResp
+postRideSyncMultipleInternal checkedMerchantId opCity mbRequestor mbMerchantId req = do
+  runRequestValidation Domain.Action.Dashboard.Ride.validateMultipleRideSyncReq req
+  transaction <- buildRideTransaction (Domain.Types.Transaction.castEndpoint $ RIDER_MANAGEMENT $ API.Types.RiderPlatform.Management.RIDE API.Types.RiderPlatform.Management.Ride.POST_RIDE_SYNC_MULTIPLE) mbRequestor mbMerchantId (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withResponseTransactionStoring transaction $
     API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideSyncMultiple) req
 

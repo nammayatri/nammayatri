@@ -72,6 +72,7 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   -- drivers going out of ride, update location from redis to db
   QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
   QBooking.cancelBookings allStuckBookingIds now
+  QBooking.updateIsStucked allStuckBookingIds True
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   QDrInfo.updateNotOnRideMultiple stuckDriverIds
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
@@ -122,9 +123,9 @@ postBookingSyncMultiple merchantShortId opCity req = do
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
       distanceUnit = merchantOpCity.distanceUnit
   rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant merchantOpCity reqBookingIds
-  respItems <- forM req.bookings $ \reqItem -> do
+  results <- forM req.bookings $ \reqItem -> do
+    let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId
     info <- handle Common.listItemErrHandler $ do
-      let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId
       let mbRideBooking = HashMap.lookup (getId bookingId) rideBookingsMap
       case mbRideBooking of
         Nothing -> throwError (BookingDoesNotExist bookingId.getId)
@@ -157,6 +158,9 @@ postBookingSyncMultiple merchantShortId opCity req = do
               let updBooking = booking{status = DBooking.CANCELLED}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) Nothing updBooking merchant True
           pure Common.SuccessItem
-    pure $ Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info}
+    pure (bookingId, info, Common.MultipleBookingSyncRespItem {bookingId = reqItem.bookingId, info})
+  let respItems = (\(_, _, item) -> item) <$> results
+      syncedBookingIds = [bId | (bId, Common.SuccessItem, _) <- results]
+  QBooking.updateIsStucked syncedBookingIds True
   logTagInfo "dashboard -> multipleBookingSync: " $ show reqBookingIds
   pure $ Common.MultipleBookingSyncResp {list = respItems}
