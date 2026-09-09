@@ -33,6 +33,7 @@ GateInfo:
     walkDescription: Maybe Text
     navigationInstructions: Maybe (Map Text Text)
     entryFeeAmount: Maybe Double
+    entryFeeDisabledServiceTiers: Maybe [Text]
     minDriverThresholds: Maybe (Map Text Int)
     maxDriverThresholds: Maybe (Map Text Int)
     demandThresholds: Maybe (Map Text Int)

@@ -100,6 +100,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
+    gateInfoEntryFeeDisabledServiceTiers :: Maybe Text,
     gateInfoGateConfig :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text,
@@ -150,6 +151,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    gateInfoEntryFeeDisabledServiceTiers <- optional (r .: "gate_info_entry_fee_disabled_service_tiers")
     gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
@@ -375,6 +377,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
             notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
             enableQueueFilter = parseBoolMap row.enableQueueFilter,
+            entryFeeDisabledServiceTiers = fromMaybe [] . parseGateTags <$> row.gateInfoEntryFeeDisabledServiceTiers,
             gateConfig = resolvedGateConfig
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
@@ -506,5 +509,6 @@ mergeGateInfoWithExisting new (Just old) =
       -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
       DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
       DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+      DGI.entryFeeDisabledServiceTiers = new.entryFeeDisabledServiceTiers <|> old.entryFeeDisabledServiceTiers,
       DGI.gateConfig = new.gateConfig <|> old.gateConfig
      }

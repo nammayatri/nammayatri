@@ -23,6 +23,7 @@ data GateInfo = GateInfo
     demandThresholds :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Int),
     enableQueueFilter :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Bool),
     entryFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    entryFeeDisabledServiceTiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gateConfig :: Kernel.Prelude.Maybe Lib.Types.GateInfo.GateConfig,
     gateTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gateType :: Lib.Types.GateInfo.GateType,

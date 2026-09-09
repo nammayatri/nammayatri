@@ -73,6 +73,7 @@ import Kernel.Types.Price
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
@@ -684,7 +685,12 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         pickupZoneGateId = booking.pickupGateId,
         pickupZoneGateName = mbGateInfo <&> (.name),
         pickupZoneGateType = mbGateInfo <&> (pack . show . (.gateType)),
-        pickupZoneEntryFeeAmount = mbGateInfo >>= (.entryFeeAmount),
+        -- What this booking's service tier is actually charged: a gate can exempt
+        -- individual tiers from its entry fee.
+        pickupZoneEntryFeeAmount =
+          mbGateInfo >>= \gate ->
+            let fee = DGI.gateEntryFeeFor gate (Just . pack . show $ booking.vehicleServiceTier)
+             in if fee > 0 then Just fee else Nothing,
         specialLocationName = mbSpecialLoc <&> (.locationName),
         specialLocationCategory = mbSpecialLoc <&> (.category),
         isValidRide = Just $ Tools.isValidRide ride,
