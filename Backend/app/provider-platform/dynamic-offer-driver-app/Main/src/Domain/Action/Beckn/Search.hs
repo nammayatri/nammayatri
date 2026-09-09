@@ -64,7 +64,6 @@ import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
-import Domain.Utils (mapConcurrently)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude ((+||), (||+))
@@ -343,7 +342,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOpCityId) -- TODO: isn't used much, so fo
   (_, mbVersion) <- withTimeAPI "search" "getAppDynamicLogic" $ getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ getAllFarePoliciesProducts merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion possibleTripOption.tripCategories configVersionMap dpInputsSharing
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
@@ -454,18 +453,6 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone, (.id.getId) <$> mbPickupZone)
         else pure (False, Nothing, Nothing)
-
-    combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
-    combineFarePoliciesProducts products =
-      FarePoliciesProduct
-        { farePolicies = concatMap farePolicies products,
-          area = maybe SL.Default (.area) $ listToMaybe products,
-          specialLocationTag = listToMaybe products >>= (.specialLocationTag),
-          specialLocationName = listToMaybe products >>= (.specialLocationName),
-          specialLocationSupportNumber = listToMaybe products >>= (.specialLocationSupportNumber),
-          fareSettlementType = listToMaybe products >>= (.fareSettlementType),
-          mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea)
-        }
 
     processPolicy ::
       (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
