@@ -18,6 +18,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
+import qualified SharedLogic.FareCalculator as FC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -51,7 +52,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   -- matrix row), via the orchestrator's dry-run entry: no Redis caches, no ride-row
   -- persistence — the cancellation may never happen.
   decision <- Orchestrator.previewCancellationConsequences booking ride transporterConfig SBCR.ByDriver Nothing mbDriverDistToPickup
-  let penaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row booking.estimatedFare) =<< decision.consequenceRow
+  let penaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row (FC.netRideFare booking.fareParams booking.estimatedFare)) =<< decision.consequenceRow
       isApplicable = isJust penaltyAmount
       -- Verdict-based validity (the RideCancel tag rules are retired). "Valid" follows
       -- the legacy DriverCancellation#Valid convention: the cancellation VALIDLY COUNTS

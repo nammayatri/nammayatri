@@ -17,6 +17,8 @@
 
 module SharedLogic.FareCalculator
   ( fareSum,
+    netRideFare,
+    customerCancellationFareBasis,
     perRideKmFareParamsSum,
     getPerMinuteRate,
     CalculateFareParametersParams (..),
@@ -454,6 +456,24 @@ fareSum fareParams conditionalChargeCategories =
         + parkingTaxContribution
         -- Commission is intentionally excluded - stored for breakdown only
         + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
+
+netRideFare :: FareParameters -> HighPrecMoney -> HighPrecMoney
+netRideFare fareParams total =
+  max 0 $
+    total
+      - fromMaybe 0.0 fareParams.govtCharges
+      - fromMaybe 0.0 fareParams.tollCharges
+      - fromMaybe 0.0 fareParams.tollFareTax
+      - parkingAmount
+      - parkingTaxAmount
+  where
+    edcParkingCollected = SL.edcCollectsParking fareParams.fareSettlementType
+    parkingAmount = if edcParkingCollected then 0.0 else fromMaybe 0.0 fareParams.parkingCharge
+    parkingTaxAmount = if edcParkingCollected then 0.0 else fromMaybe 0.0 fareParams.parkingChargeTax
+
+customerCancellationFareBasis :: FareParameters -> HighPrecMoney -> HighPrecMoney
+customerCancellationFareBasis fareParams total =
+  max 0 (netRideFare fareParams total - fromMaybe 0.0 fareParams.customerCancellationDues)
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do

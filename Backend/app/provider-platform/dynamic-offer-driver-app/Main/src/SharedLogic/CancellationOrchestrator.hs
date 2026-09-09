@@ -101,6 +101,7 @@ import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -268,7 +269,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     -- turns the constructor into the signed amount DCP expects). Row-driven for every
     -- source, so customer-at-fault rows can compensate the driver with money.
     applyDriverMoneyConsequence driver =
-      whenJust ((\r -> CancellationConsequence.driverMoneyDeduction r ctx.booking.estimatedFare) =<< row) $ \signedAmount ->
+      whenJust ((\r -> CancellationConsequence.driverMoneyDeduction r (FC.netRideFare ctx.booking.fareParams ctx.booking.estimatedFare)) =<< row) $ \signedAmount ->
         fork "cancellationConsequenceDriverMoney" $ do
           let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || ctx.transporterConfig.driverWalletConfig.enableDriverWallet
           DCP.accumulateCancellationPenalty isWalletEnabled ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
@@ -368,7 +369,7 @@ applyTerminalConsequences ctx createLedgerEntries = do
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
             when (isWalletEnabled && totalCharges > 0) $
-              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r booking.estimatedFare) =<< decision.consequenceRow)
+              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r (FC.netRideFare booking.fareParams booking.estimatedFare)) =<< decision.consequenceRow)
         pure mbOutcome
       case chargesE of
         Left err -> do
@@ -502,7 +503,7 @@ chargesOutcomeFromRow ::
 chargesOutcomeFromRow booking = \case
   Nothing -> pure Nothing
   Just row -> do
-    let breakup = CancellationConsequence.computeCustomerCharge row booking.estimatedFare
+    let breakup = CancellationConsequence.computeCustomerCharge row (FC.customerCancellationFareBasis booking.fareParams booking.estimatedFare)
     logTagInfo ("bookingId-" <> getId booking.id) ("consequence matrix row " <> row.id.getId <> ": fee=" <> show breakup.fee <> " tax=" <> show breakup.tax <> " commission=" <> show breakup.commission <> " overdue=" <> show breakup.overdueFee)
     pure $
       Just
