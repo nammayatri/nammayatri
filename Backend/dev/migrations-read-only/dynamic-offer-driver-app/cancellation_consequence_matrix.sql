@@ -33,3 +33,14 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD PRIMARY K
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN is_auto_accepted boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN time_bounds text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN min_driver_rating double precision ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN max_driver_rating double precision ;

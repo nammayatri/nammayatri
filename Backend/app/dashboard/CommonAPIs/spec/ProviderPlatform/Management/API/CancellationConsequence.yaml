@@ -1,6 +1,8 @@
 imports:
   CancellationConsequenceMatrix: Dashboard.Common
   HighPrecMoney: Kernel.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  Centesimal: Kernel.Types.Common
 
 module: CancellationConsequence
 
@@ -86,6 +88,9 @@ types:
     - vehicleServiceTier: Maybe Text
     - area: Maybe Text
     - paymentInstrument: Maybe Text
+    - minDriverRating: Maybe Centesimal
+    - maxDriverRating: Maybe Centesimal
+    - timeBounds: Maybe TimeBound
     - customerDeduction: Maybe DeductionAPIEntity
     - customerCommissionAndTax: Maybe CommissionAndTaxAPI
     - driverDeduction: Maybe DeductionAPIEntity

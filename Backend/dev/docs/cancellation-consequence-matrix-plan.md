@@ -225,7 +225,8 @@ attribution; every consequence becomes a legible, diffable table row.
 | `vehicleServiceTier` | ServiceTierType | yes | user-proposed |
 | `area` | SL.Area | yes | SUGGESTED: airport/special-zone cancellations routinely need distinct policy (FareProduct is already area-keyed) |
 | `paymentInstrument` | Cash \| Prepaid… | yes | SUGGESTED: replaces `cancellationFeePaymentMethodExceptions` — a Cash row with zero charge instead of a code-level exemption |
-| `timeBounds` | TimeBound | yes | OPTIONAL, phase 2: peak-hour no-show penalties; skip initially |
+| `minDriverRating` / `maxDriverRating` | Centesimal | both null = wildcard | SHIPPED: driver-rating band (DriverStats.rating of the assigned driver). min INCLUSIVE, max EXCLUSIVE so "< 4.5" / ">= 4.5" rows tile without overlap; unrated drivers only match band-less rows. Specificity sits just above timeBounds (band = conditional override of the identical base row). Upsert allows same-dims rows with non-overlapping bands; rejects overlap. |
+| `timeBounds` | TimeBound | `Unbounded` = wildcard | SHIPPED: peak-hour penalties. City-LOCAL windows (transporterConfig.timeDiffFromUtc), `findBoundedDomain` semantics. Lowest specificity: a matching bounded row beats an otherwise-identical Unbounded base row, never a more specific dimension match. Upsert allows same-dims rows when their bounds can't overlap (base + peak override); rejects same-boundedness overlap via `timeBoundsOverlap`. |
 
 Deliberately NOT dimensions: `searchSource` (dashboard bookings — handle as a boolean
 exemption output instead, see below), rider/driver history counters (that's the fault
@@ -244,8 +245,9 @@ faultRule (32) > faultVerdict (16) > cancelledBy (8) > tripCategory (4) > vehicl
 
 - A city-only row (all wildcards) is the city default — exactly the user's "one entry with
   only merchant_operating_city_id" case.
-- Upsert-time validation rejects two rows with identical dimension tuples; the weighted
-  precedence makes any remaining overlap resolve deterministically.
+- Upsert-time validation rejects two rows with identical dimension tuples (identical
+  boundedness class + overlapping timeBounds); the weighted precedence makes any
+  remaining overlap resolve deterministically.
 - No row matched → **no consequences applied** (logError "matrix miss"). There is NO
   fallback to the old JsonLogic amount rules — the matrix is authoritative from day one.
   Consequence: a city must have its rows authored before cancellations there carry any
