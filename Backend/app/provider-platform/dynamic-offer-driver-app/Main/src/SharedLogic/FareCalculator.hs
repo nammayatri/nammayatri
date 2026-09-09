@@ -82,7 +82,7 @@ import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
-import qualified Lib.Types.GateInfo as DGI
+import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -1230,7 +1230,7 @@ applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, p
     if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
       then pure fareParams
       else do
-        airportFee <- entryFeeForGateId (Id gateIdText)
+        airportFee <- entryFeeForGateId (Id gateIdText) (Just params.farePolicy.vehicleServiceTier)
         let currentParking = fromMaybe 0 fareParams.parkingCharge
         pure $
           if airportFee > 0
@@ -1239,14 +1239,16 @@ applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, p
   _ -> pure fareParams
 
 -- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
---   Returns 0 if gate not found or no fee configured.
+--   Returns 0 if gate not found, no fee configured, or the gate exempts the given
+--   service tier ('Nothing' means "no tier context" and charges the configured fee).
 entryFeeForGateId ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DGI.GateInfo ->
+  Maybe ServiceTierType ->
   m HighPrecMoney
-entryFeeForGateId gateId = do
+entryFeeForGateId gateId mbServiceTier = do
   mbGate <- QGI.findById gateId
-  pure $ maybe 0 (fromMaybe 0 . fmap realToFrac . (.entryFeeAmount)) mbGate
+  pure $ maybe 0 (\gate -> realToFrac $ DGI.gateEntryFeeFor gate (show <$> mbServiceTier)) mbGate
 
 -- | Compute a configured charge (VAT, commission, or toll tax)
 --

@@ -22,6 +22,7 @@ module SharedLogic.AirportEntryFee
 where
 
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Common as DVST
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -49,22 +50,25 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
 
--- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
---   Returns Nothing if no gateId, no fee configured, or the fee was already collected via booth EDC
---   (see applyAirportEntryFee, which folds this same amount into FareParameters.parkingCharge).
+-- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is)
+--   and the booking's service tier, since a gate can exempt individual tiers.
+--   Returns Nothing if no gateId, no fee configured, the tier is exempt, or the fee was already
+--   collected via booth EDC (see applyAirportEntryFee, which folds this same amount into
+--   FareParameters.parkingCharge).
 requiredEntryFeeForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Bool ->
   Maybe Text ->
+  Maybe DVST.ServiceTierType ->
   Maybe SL.FareSettlementType ->
   m (Maybe HighPrecMoney)
-requiredEntryFeeForBooking enabled mbGateId mbFareSettlementType
+requiredEntryFeeForBooking enabled mbGateId mbServiceTier mbFareSettlementType
   | not enabled = pure Nothing
   | SL.edcCollectsParking mbFareSettlementType = do
     logInfo $ "requiredEntryFeeForBooking: skipping - parking already EDC-collected, fareSettlementType: " <> show mbFareSettlementType
     pure Nothing
   | otherwise = do
-    fee <- maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) mbGateId
+    fee <- maybe (pure 0) (\gateId -> FareCalculator.entryFeeForGateId (Id gateId) mbServiceTier) mbGateId
     pure $ if fee > 0 then Just fee else Nothing
 
 isAirportPickupArea ::
@@ -101,7 +105,7 @@ checkAirportEntryFeeBalanceBeforeStartRide ::
   SRB.Booking ->
   m ()
 checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
-  mbRequired <- requiredEntryFeeForBooking enabled booking.pickupGateId booking.fareSettlementType
+  mbRequired <- requiredEntryFeeForBooking enabled booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType
   whenJust mbRequired $ \required -> do
     mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
     let available = maybe 0 (.balance) mbAccount
@@ -117,7 +121,7 @@ deductAirportEntryFeeAtEndRide ::
   SRB.Booking ->
   m ()
 deductAirportEntryFeeAtEndRide enabled ride booking = do
-  mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId booking.fareSettlementType
+  mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType
   whenJust mbTotalFee $ \totalFee -> do
     transporterConfig <-
       getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
