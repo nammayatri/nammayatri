@@ -79,6 +79,7 @@ data DriverInfoRes = DriverInfoRes
     firstName :: Kernel.Prelude.Text,
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    gender :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     numberOfRides :: Kernel.Prelude.Int,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
