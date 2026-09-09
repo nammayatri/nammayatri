@@ -73,7 +73,7 @@ FRFSSearch:
     quantity: Int
     vehicleType: VehicleCategory
     journeyDate: Maybe Day
-    isSingleLady: Maybe Bool
+    travellerGroup: Maybe FRFSTravellerGroup
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -94,6 +94,9 @@ FRFSSearch:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
 
+  types:
+    FRFSTravellerGroup:
+      enum: "GENERAL, SINGLE_LADY"
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -308,7 +311,6 @@ FRFSPassengerDetail:
   fields:
     id: Id FRFSPassengerDetail
     quoteId: Id FRFSQuote
-    bookingId: Maybe (Id FRFSTicketBooking)
     seatId: Id Seat
     seatLabel: Text
     name: Maybe Text
@@ -326,17 +328,9 @@ FRFSPassengerDetail:
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
-    bookingId: SecondaryKey
   queries:
     findAllByQuoteId:
       kvFunction: findAllWithKV
-      where: quoteId
-    findAllByBookingId:
-      kvFunction: findAllWithKV
-      where: bookingId
-    updateBookingIdByQuoteId:
-      kvFunction: updateWithKV
-      params: [bookingId]
       where: quoteId
     deleteAllByQuoteId:
       kvFunction: deleteWithKV

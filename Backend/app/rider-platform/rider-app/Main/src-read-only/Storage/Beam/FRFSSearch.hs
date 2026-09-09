@@ -8,6 +8,7 @@ import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.FRFSSearch
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -28,7 +29,6 @@ data FRFSSearchT f = FRFSSearchT
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isSingleLady :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSingleMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -47,6 +47,7 @@ data FRFSSearchT f = FRFSSearchT
     toStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     toStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    travellerGroup :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSSearch.FRFSTravellerGroup),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
