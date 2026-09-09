@@ -53,6 +53,9 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   merchantServerAccessCheck merchant
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
+  whenJust mbPerson $ \p ->
+    unless (DP.isFleetOwner p) $
+      throwError (InvalidRequest "A user with this mobile number already exists with a different role.")
   let req' = buildFleetOwnerRegisterReqV2 merchantShortId opCity req
   fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
   res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) ((.id.getId) <$> mbPerson) enabled req
