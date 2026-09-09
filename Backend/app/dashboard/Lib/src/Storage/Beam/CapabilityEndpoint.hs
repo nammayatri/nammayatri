@@ -16,6 +16,7 @@ module Storage.Beam.CapabilityEndpoint where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import qualified Domain.Types.ResourceScope as DRS
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 
@@ -23,6 +24,7 @@ data CapabilityEndpointT f = CapabilityEndpointT
   { capabilityId :: B.C f Text,
     serverName :: B.C f Text,
     endpointId :: B.C f Text,
+    resourceIdParam :: B.C f (Maybe DRS.ResourceBinding),
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)

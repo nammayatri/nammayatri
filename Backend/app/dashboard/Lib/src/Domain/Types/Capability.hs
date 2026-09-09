@@ -15,6 +15,7 @@
 module Domain.Types.Capability where
 
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ResourceScope as DRS
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -35,6 +36,7 @@ data Capability = Capability
     domain :: Text,
     description :: Text,
     isSystem :: Bool,
+    resourceType :: Maybe DRS.ResourceType,
     createdAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -43,6 +45,12 @@ data CapabilityEndpoint = CapabilityEndpoint
   { capabilityId :: Id Capability,
     serverName :: Text,
     endpointId :: Text,
+    -- | Layer C ops-gate binding: WHERE this endpoint carries its resource id.
+    -- "param:<name>" → the path-capture segment after <name> (the only extraction);
+    -- "__SKIP__" → not gated (list/read); "__HANDLER__" → id not in the URL
+    -- (indirection) → the handler enforces; NULL → nothing to resolve → gate passes.
+    -- Read by verifyApi's generic gate (Tools.Auth.Capability).
+    resourceIdParam :: Maybe DRS.ResourceBinding,
     createdAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

@@ -21,26 +21,36 @@ module Tools.Auth.Capability
     isSuperAdmin,
     invalidatePerson,
     invalidateEveryone,
+    endpointCapabilities,
     enforce,
+    enforceResourceScopeFromRequest,
+    endpointIdForAction,
   )
 where
 
+import Data.List (nub)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Capability as DC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ResourceScope as DRS
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
+import qualified Storage.Queries.Capability as QCap
 import qualified Storage.Queries.CapabilityEndpoint as QCE
 import qualified Storage.Queries.PersonCapability as QPC
+import qualified Storage.Queries.PersonResourceAccess as QPRA
 import qualified Storage.Queries.PersonTier as QPT
 import qualified Storage.Queries.RoleCapability as QRC
+import Tools.Error (ResourceScopeError (..))
 
 -- Capability enforcement — THE authority for dashboard API authorization.
 --
@@ -65,6 +75,12 @@ mkEndpointId lvl = do
   case lvl.apiEntity of
     DMatrix.DSL -> actionStr
     entity -> "LEGACY/" <> show entity <> "/" <> actionStr
+
+-- | The endpoint_id for a DSL action, from just its UserActionType — what a
+-- proxy handler has on its ApiTokenInfo. Same value mkEndpointId produces for
+-- DSL entities. Handlers use it to look up the endpoint's resource scoping.
+endpointIdForAction :: DMatrix.UserActionType -> Text
+endpointIdForAction uat = show (DMatrix.UserActionTypeWrapper uat)
 
 -- | Everything the auth path needs about a person, cached as one value so a
 -- request costs one Redis read instead of three Postgres queries.
@@ -151,14 +167,20 @@ resolveAccess personId roleId = do
 
 -------------------------------------------------------------- enforcement
 
--- | Authorize a request, or throw AccessDenied. No legacy fallback.
+-- | The capability_endpoint rows for an endpoint — which capabilities grant it
+-- and each one's Layer C binding. verifyApi fetches this ONCE and shares it with
+-- both the Layer A (enforce) and Layer C (enforceResourceScopeFromRequest) checks.
+endpointCapabilities :: BeamFlow m r => Text -> m [DC.CapabilityEndpoint]
+endpointCapabilities = QCE.findAllByEndpointId
+
 enforce ::
-  (BeamFlow m r, Redis.HedisFlow m r) =>
+  BeamFlow m r =>
+  CachedAccess ->
+  [DC.CapabilityEndpoint] ->
   DP.Person ->
   Text ->
   m ()
-enforce person endpointId = do
-  access <- resolveAccess person.id person.roleId
+enforce access endpoints person endpointId =
   if access.adminTier == DC.superAdminTier
     then
       logTagError "SUPER_ADMIN_BREAKGLASS" $
@@ -167,7 +189,6 @@ enforce person endpointId = do
       -- An endpoint may be assigned to several capabilities; holding ANY of
       -- them grants the call. Same ANY-of rule the frontend applies to
       -- NavItem.requires.
-      endpoints <- QCE.findAllByEndpointId endpointId
       let capabilityIds = map (.capabilityId.getId) endpoints
       case capabilityIds of
         -- Fail closed. An unmapped endpoint is a seeding bug, not an open
@@ -187,3 +208,105 @@ enforce person endpointId = do
                 <> ", roleId: "
                 <> person.roleId.getId
             throwError AccessDenied
+
+------------------------------------------------- resource scope (Layer C)
+
+-- | Path-capture read: the segment(s) immediately following @marker@ in the
+-- request's path segments — e.g. marker "specialLocation" on
+-- @[…,"specialLocation","sl-42","gates","upsert"]@ → @["sl-42"]@.
+pathValueAfter :: Text -> [Text] -> [Text]
+pathValueAfter marker segs = [nxt | (s, nxt) <- zip segs (drop 1 segs), s == marker]
+
+-- | Core check: the request's ids for one type must be in the caller's allowlist
+-- (DRS.wildcardResourceId "*" = full-MOC; empty allowlist = deny-all). 403 on the
+-- first stray id.
+checkResourceIds ::
+  BeamFlow m r =>
+  DP.Person ->
+  Text ->
+  Id DM.Merchant ->
+  City.City ->
+  DRS.ResourceType ->
+  [Text] ->
+  m ()
+checkResourceIds person endpointId merchantId city resourceType targetIds = do
+  allowed <- QPRA.findResourceIds person.id merchantId city resourceType
+  logDebug $ "LAYER_C checkResourceIds type=" <> show resourceType <> " city=" <> show city <> " merchantId=" <> merchantId.getId <> " allowed=" <> show allowed <> " targets=" <> show targetIds
+  let allowedSet = Set.fromList allowed
+  -- Scope is OPT-IN: no rows for this (person, MOC, resourceType) => the person
+  -- is unrestricted for it => allow all. A person is only limited once they have
+  -- explicit rows. '*' (wildcardResourceId) is the same allow-all, kept for
+  -- explicitness/back-compat. Only a NON-EMPTY, non-wildcard row set restricts.
+  unless (null allowed || DRS.wildcardResourceId `Set.member` allowedSet) $
+    case targetIds of
+      -- Reached only when the person HAS restricting rows but no id resolved from
+      -- the request: almost always a binding gap (the id is in the body / under a
+      -- param the convention doesn't cover — such endpoints should be marked
+      -- __HANDLER__ or __SKIP__). We log LOUDLY but PASS: scoping is opt-in
+      -- (allow-by-default), so passing here is consistent, and a single capability
+      -- backs many endpoints (id-carrying and not). Fix by binding the endpoint
+      -- (resource_id_param) or marking it __SKIP__/__HANDLER__.
+      [] ->
+        logTagError "RESOURCE_SCOPE_UNRESOLVED" $
+          "scoped endpoint resolved zero resource ids — passing (fail-open); set capability_endpoint.resource_id_param (or __SKIP__/__HANDLER__). "
+            <> "endpointId: "
+            <> endpointId
+            <> ", personId: "
+            <> person.id.getId
+            <> ", resourceType: "
+            <> show resourceType
+      _ ->
+        case filter (`Set.notMember` allowedSet) targetIds of
+          [] -> pure ()
+          (stray : _) -> do
+            logTagError "RESOURCE_OUT_OF_SCOPE" $
+              "endpointId: " <> endpointId <> ", personId: " <> person.id.getId
+                <> ", roleId: "
+                <> person.roleId.getId
+                <> ", merchantId: "
+                <> merchantId.getId
+                <> ", city: "
+                <> show city
+                <> ", resourceType: "
+                <> show resourceType
+                <> ", resourceId: "
+                <> stray
+            throwError (ResourceOutOfScope (show resourceType) stray)
+
+-- | The GENERIC ops gate — run in verifyApi for every endpoint, no per-handler
+-- code. Resolves the endpoint's scoping from data (capability.resource_type +
+-- capability_endpoint.resource_id_param) and reads the resource id from the
+-- request's path captures only ("param:<name>"). SUPER_ADMIN / unscoped-capability
+-- holders pass; a "__SKIP__"/"__HANDLER__" binding short-circuits.
+enforceResourceScopeFromRequest ::
+  BeamFlow m r =>
+  CachedAccess ->
+  [DC.CapabilityEndpoint] ->
+  DP.Person ->
+  Text ->
+  Id DM.Merchant ->
+  City.City ->
+  [Text] ->
+  m ()
+enforceResourceScopeFromRequest access endpoints person endpointId merchantId city pathSegments = do
+  logDebug $ "LAYER_C enter endpointId=" <> endpointId <> " adminTier=" <> access.adminTier <> " capsCount=" <> show (length access.capabilities) <> " pathSegs=[" <> T.intercalate "," pathSegments <> "]"
+  unless (access.adminTier == DC.superAdminTier) $ do
+    let heldRows = filter (\ce -> ce.capabilityId.getId `elem` access.capabilities) endpoints
+        binding = listToMaybe (mapMaybe (.resourceIdParam) heldRows)
+    logDebug $ "LAYER_C binding=" <> show binding
+    -- Nothing (no binding at all) can only ever pass — skip the capability
+    -- lookups on the hot auth path. RESOURCE_SCOPE_UNRESOLVED then fires only for
+    -- a genuinely-bound endpoint whose marker resolved no id (a real mis-seed),
+    -- not for every unbound endpoint.
+    unless (binding == Just DRS.BindSkip || binding == Just DRS.BindHandler || isNothing binding) $ do
+      heldCaps <- catMaybes <$> mapM (QCap.findById . (.capabilityId)) heldRows
+      let heldTypes = map (.resourceType) heldCaps
+          mbTypes = if any isNothing heldTypes then Nothing else Just (nub (catMaybes heldTypes))
+      logDebug $ "LAYER_C mbTypes=" <> show mbTypes
+      forM_ mbTypes $ \types ->
+        forM_ types $ \resourceType -> do
+          let ids = case binding of
+                Just (DRS.BindParam name) -> pathValueAfter name pathSegments
+                _ -> []
+          logDebug $ "LAYER_C checking type=" <> show resourceType <> " ids=" <> show ids
+          checkResourceIds person endpointId merchantId city resourceType ids
