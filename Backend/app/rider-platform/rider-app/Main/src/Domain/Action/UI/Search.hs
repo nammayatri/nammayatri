@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Serviceability as DSrv
 import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.CachedRouteResponse as DCachedRouteResponse
 import qualified Domain.Types.Client as DC
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (HOTSPOT))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -79,6 +80,7 @@ import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -712,12 +714,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     updateRideSearchHotSpot :: SearchRequestFlow m r => DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> m ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
       fork "ride search geohash frequencyUpdater" $ do
-        HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) Nothing >>= fromMaybeM (InternalError "config not found for merchant")
-        when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
-          let mbHotSpotConfig = Just $ HotSpotConfig {..}
-          mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
-          hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved mbHotSpotConfig
-          updateForSpecialLocation person.merchantId origin isSpecialLocation mbHotSpotConfig
+        hotSpotExcluded <- CQLF.isFeatureExcluded HOTSPOT
+        unless hotSpotExcluded $ do
+          HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) Nothing >>= fromMaybeM (InternalError "config not found for merchant")
+          when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
+            let mbHotSpotConfig = Just $ HotSpotConfig {..}
+            mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
+            hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved mbHotSpotConfig
+            updateForSpecialLocation person.merchantId origin isSpecialLocation mbHotSpotConfig
 
     fraudCheck :: SearchRequestFlow m r => DPerson.Person -> DMOC.MerchantOperatingCity -> SearchRequest.SearchRequest -> m ()
     fraudCheck person merchantOperatingCity searchRequest = do

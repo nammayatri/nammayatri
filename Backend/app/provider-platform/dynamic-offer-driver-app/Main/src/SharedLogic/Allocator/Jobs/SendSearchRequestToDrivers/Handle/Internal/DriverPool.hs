@@ -45,6 +45,7 @@ import qualified Data.Text as T
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DRIVER_ACCEPTANCE_SCORES))
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
@@ -70,6 +71,7 @@ import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
@@ -262,10 +264,11 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
+  driverAcceptanceScoresExcluded <- CQLF.isFeatureExcluded DRIVER_ACCEPTANCE_SCORES
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
     let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-    countersMap <- getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds
-    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
+    countersMap <- if driverAcceptanceScoresExcluded then pure Map.empty else getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds
+    idleMap <- if driverAcceptanceScoresExcluded then pure Map.empty else DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
     return $
       map
         ( \driver ->
