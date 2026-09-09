@@ -165,7 +165,7 @@ decideCancellationConsequences ::
 decideCancellationConsequences booking ride transporterConfig source reasonCode disToPickup = do
   let cancelledBy = cancellationSourceToType source
   (signals, mbFaultVerdict) <- buildCancellationContext booking ride transporterConfig cancelledBy reasonCode disToPickup
-  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy
+  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy transporterConfig.timeDiffFromUtc ride.driverId
   mbConsequenceRow <- CancellationConsequence.resolveConsequence consequenceInput
   pure
     CancellationDecision
@@ -475,7 +475,7 @@ previewCancellationConsequences booking ride transporterConfig source reasonCode
   mbFaultVerdict <-
     CancellationFault.computeFaultVerdictDryRun ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $
       CancellationFault.mkFaultVerdictData signals cancelledBy reasonCode
-  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy
+  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy transporterConfig.timeDiffFromUtc ride.driverId
   mbConsequenceRow <- CancellationConsequence.resolveConsequence consequenceInput
   pure
     CancellationDecision

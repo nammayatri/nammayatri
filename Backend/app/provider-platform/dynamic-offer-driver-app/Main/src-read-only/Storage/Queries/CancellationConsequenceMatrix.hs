@@ -12,6 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationConsequenceMatrix as Beam
@@ -24,7 +25,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateActiveById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix -> m ())
@@ -55,10 +56,13 @@ updateByPrimaryKey (Domain.Types.CancellationConsequenceMatrix.CancellationConse
       Se.Set Beam.faultRule faultRule,
       Se.Set Beam.faultVerdict faultVerdict,
       Se.Set Beam.isAutoAccepted isAutoAccepted,
+      Se.Set Beam.maxDriverRating maxDriverRating,
       Se.Set Beam.maxWaiveOffsPerPeriod maxWaiveOffsPerPeriod,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.minDriverRating minDriverRating,
       Se.Set Beam.paymentInstrument paymentInstrument,
+      Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.tripCategory tripCategory,
       Se.Set Beam.vehicleServiceTier vehicleServiceTier,
       Se.Set Beam.waiveOffAllowed waiveOffAllowed,
@@ -89,10 +93,13 @@ instance FromTType' Beam.CancellationConsequenceMatrix Domain.Types.Cancellation
             faultVerdict = faultVerdict,
             id = Kernel.Types.Id.Id id,
             isAutoAccepted = isAutoAccepted,
+            maxDriverRating = maxDriverRating,
             maxWaiveOffsPerPeriod = maxWaiveOffsPerPeriod,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            minDriverRating = minDriverRating,
             paymentInstrument = paymentInstrument,
+            timeBounds = Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
             tripCategory = tripCategory,
             vehicleServiceTier = vehicleServiceTier,
             waiveOffAllowed = waiveOffAllowed,
@@ -121,10 +128,13 @@ instance ToTType' Beam.CancellationConsequenceMatrix Domain.Types.CancellationCo
         Beam.faultVerdict = faultVerdict,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoAccepted = isAutoAccepted,
+        Beam.maxDriverRating = maxDriverRating,
         Beam.maxWaiveOffsPerPeriod = maxWaiveOffsPerPeriod,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.minDriverRating = minDriverRating,
         Beam.paymentInstrument = paymentInstrument,
+        Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.tripCategory = tripCategory,
         Beam.vehicleServiceTier = vehicleServiceTier,
         Beam.waiveOffAllowed = waiveOffAllowed,

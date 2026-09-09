@@ -29,45 +29,45 @@ handler merchantId city = getCancellationConsequenceList merchantId city :<|> po
 
 type GetCancellationConsequenceList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE) / ('API.Types.ProviderPlatform.Management.CancellationConsequence.GET_CANCELLATION_CONSEQUENCE_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE / 'API.Types.ProviderPlatform.Management.CancellationConsequence.GET_CANCELLATION_CONSEQUENCE_LIST)
       :> API.Types.ProviderPlatform.Management.CancellationConsequence.GetCancellationConsequenceList
   )
 
 type PostCancellationConsequenceCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE) / ('API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE / 'API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_CREATE)
       :> API.Types.ProviderPlatform.Management.CancellationConsequence.PostCancellationConsequenceCreate
   )
 
 type PostCancellationConsequenceUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE) / ('API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE / 'API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_UPDATE)
       :> API.Types.ProviderPlatform.Management.CancellationConsequence.PostCancellationConsequenceUpdate
   )
 
 type GetCancellationConsequenceRegistryList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE) / ('API.Types.ProviderPlatform.Management.CancellationConsequence.GET_CANCELLATION_CONSEQUENCE_REGISTRY_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE / 'API.Types.ProviderPlatform.Management.CancellationConsequence.GET_CANCELLATION_CONSEQUENCE_REGISTRY_LIST)
       :> API.Types.ProviderPlatform.Management.CancellationConsequence.GetCancellationConsequenceRegistryList
   )
 
 type PostCancellationConsequenceRegistryUpsert =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE) / ('API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_REGISTRY_UPSERT))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.CANCELLATION_CONSEQUENCE / 'API.Types.ProviderPlatform.Management.CancellationConsequence.POST_CANCELLATION_CONSEQUENCE_REGISTRY_UPSERT)
       :> API.Types.ProviderPlatform.Management.CancellationConsequence.PostCancellationConsequenceRegistryUpsert
   )
 
-getCancellationConsequenceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CancellationConsequence.CancellationConsequenceListRes)
+getCancellationConsequenceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CancellationConsequence.CancellationConsequenceListRes)
 getCancellationConsequenceList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CancellationConsequence.getCancellationConsequenceList merchantShortId opCity apiTokenInfo limit offset
 
 postCancellationConsequenceCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.CancellationConsequence.CreateCancellationConsequenceReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
