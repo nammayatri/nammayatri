@@ -76,7 +76,6 @@ import Data.Fixed
 import qualified Data.Geohash as DG
 import Data.List (length, partition)
 import qualified Data.List.NonEmpty as NE
-import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime)
@@ -693,6 +692,43 @@ convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> Boo
 convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide_ isSpecialLocWarrior DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
   NearestGoHomeDriversResult {distanceToDriver = distanceToPickup, tripDistanceMinThreshold = Nothing, tripDistanceMaxThreshold = Nothing, onRide = onRide_, selectedAutoAcceptTiers = Just selectedAutoAcceptTiers, ..}
 
+-- When straight-line pickup is within `thresholdToIgnoreActualDistanceThreshold`, skip Maps
+-- and treat that straight-line distance as `actualDistanceToPickup` for inclusion + ranking.
+mkDriverPoolWithStraightLineAsActualDistance ::
+  Seconds ->
+  DriverPoolResult ->
+  DriverPoolWithActualDistResult
+mkDriverPoolWithStraightLineAsActualDistance defaultPopupDelay dpr =
+  DriverPoolWithActualDistResult
+    { driverPoolResult = dpr,
+      actualDistanceToPickup = dpr.distanceToPickup,
+      actualDurationToPickup = Seconds 60,
+      intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+      isPartOfIntelligentPool = False,
+      pickupZone = False,
+      specialZoneExtraTip = Nothing,
+      searchTags = Nothing,
+      tripDistance = Nothing,
+      keepHiddenForSeconds = Seconds 0,
+      goHomeReqId = Nothing,
+      specialLocWarriorPreferredSpecialLocId = Nothing,
+      isForwardRequest = False,
+      previousDropGeoHash = Nothing,
+      score = dpr.score,
+      poolingLogicVersion = Nothing,
+      searchReqDriverStatsCounters = Nothing,
+      idleTimeSeconds = Nothing,
+      preferenceMatchScore = 1.0
+    }
+
+partitionByIgnoreActualDistanceThreshold ::
+  Maybe Meters ->
+  [DriverPoolResult] ->
+  ([DriverPoolResult], [DriverPoolResult]) -- (skipMaps, needMaps)
+partitionByIgnoreActualDistanceThreshold (Just ignoreThresh) =
+  partition (\dpr -> dpr.distanceToPickup <= ignoreThresh)
+partitionByIgnoreActualDistanceThreshold Nothing = \xs -> ([], xs)
+
 -- this is not required in the flow where we convert them
 
 filterOutGoHomeDriversAccordingToHomeLocation ::
@@ -757,14 +793,29 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
     case convertedDriverPoolRes of
       [] -> return []
       _ -> do
-        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, mbPreferredSpecialLocId, _), dpwAD) -> (ghr, driver, mbPreferredSpecialLocId, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, _, c) -> c) convertedDriverPoolRes) currentSearchInfo
-        case driverPoolCfg.actualDistanceThreshold of
-          Nothing -> return driverGoHomePoolWithActualDistance
-          Just threshold -> do
-            logDebug $ "Threshold :" <> show threshold
-            let res = filter (\(_, driver, _, dpwAD) -> filterFunc threshold dpwAD driver.distanceToDriver) driverGoHomePoolWithActualDistance
-            logDebug $ "secondly filtered go home driver pool" <> show (map (\(_, driver, _, _) -> driver) res)
-            return res
+        let (skipMapsRes, needMapsRes) =
+              case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
+                Just ignoreThresh -> partition (\(_, driver, _, _) -> driver.distanceToDriver <= ignoreThresh) convertedDriverPoolRes
+                Nothing -> ([], convertedDriverPoolRes)
+            skippedWithStraightLine =
+              map
+                (\(ghr, driver, mbPreferredSpecialLocId, dpr) -> (ghr, driver, mbPreferredSpecialLocId, mkDriverPoolWithStraightLineAsActualDistance transporterConfig.defaultPopupDelay dpr))
+                skipMapsRes
+        needMapsWithActualDistance <-
+          case needMapsRes of
+            [] -> return []
+            _ -> do
+              computed <-
+                zipWith (curry (\((ghr, driver, mbPreferredSpecialLocId, _), dpwAD) -> (ghr, driver, mbPreferredSpecialLocId, dpwAD))) needMapsRes . NE.toList
+                  <$> computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, _, c) -> c) needMapsRes) currentSearchInfo
+              case driverPoolCfg.actualDistanceThreshold of
+                Nothing -> return computed
+                Just threshold -> do
+                  logDebug $ "Threshold :" <> show threshold
+                  let res = filter (\(_, _, _, dpwAD) -> getMeters dpwAD.actualDistanceToPickup <= fromIntegral threshold) computed
+                  logDebug $ "secondly filtered go home driver pool" <> show (map (\(_, driver, _, _) -> driver) res)
+                  return res
+        return $ skippedWithStraightLine <> needMapsWithActualDistance
 
   driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance
   let driversRoutes = map (refactorRoutesResp goHomeCfg) driversRoutes'
@@ -782,11 +833,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
   logDebug $ "MetroWarriorDebugging goHomeDriverPoolWithActualDist -----" <> show goHomeDriverPoolWithActualDist
   return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
-    filterFunc threshold estDist distanceToPickup =
-      case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
-        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
-        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
-
     makeDriverPoolRes NearestGoHomeDriversResult {..} =
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
@@ -1127,12 +1173,23 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
       _ -> case chunkOffRide of
         [] -> pure []
         (a : as) -> do
-          let chunkPool = makeDriverPoolResult <$> (a :| as)
-          drvPoolWithDist <- withTimeAPI "driverPooling" "computeActualDistance" $ computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup chunkPool currentSearchInfo
-          let thresholded = case driverPoolCfg.actualDistanceThreshold of
-                Nothing -> NE.toList drvPoolWithDist
-                Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) drvPoolWithDist) (NE.sortOn (.driverId) chunkPool)
-          withTimeAPI "driverPooling" "filterM scheduledRideFilter" $ applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig thresholded
+          let chunkPool = NE.toList $ makeDriverPoolResult <$> (a :| as)
+              (skipMapsPool, needMapsPool) =
+                partitionByIgnoreActualDistanceThreshold driverPoolCfg.thresholdToIgnoreActualDistanceThreshold chunkPool
+              skippedWithStraightLine =
+                map (mkDriverPoolWithStraightLineAsActualDistance transporterConfig.defaultPopupDelay) skipMapsPool
+          mapsThresholded <- case needMapsPool of
+            [] -> pure []
+            (b : bs) -> do
+              drvPoolWithDist <-
+                withTimeAPI "driverPooling" "computeActualDistance" $
+                  computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup (b :| bs) currentSearchInfo
+              pure $
+                case driverPoolCfg.actualDistanceThreshold of
+                  Nothing -> NE.toList drvPoolWithDist
+                  Just threshold -> filter (\dis -> getMeters dis.actualDistanceToPickup <= fromIntegral threshold) (NE.toList drvPoolWithDist)
+          withTimeAPI "driverPooling" "filterM scheduledRideFilter" $
+            applyScheduledRideFilter currentSearchInfo merchantId merchantOperatingCityId isRental isInterCity transporterConfig (skippedWithStraightLine <> mapsThresholded)
 
     mkSpecialZoneQueueActualDistanceResult dpr = do
       DriverPoolWithActualDistResult
@@ -1156,11 +1213,6 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0
         }
-
-    filterFunc threshold estDist distanceToPickup =
-      case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
-        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
-        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
 scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.CurrentSearchInfo -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Bool -> DTC.TransporterConfig -> DriverPoolWithActualDistResult -> m Bool
 scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isIntercity transporterConfig driverPoolWithActualDistResult = do
