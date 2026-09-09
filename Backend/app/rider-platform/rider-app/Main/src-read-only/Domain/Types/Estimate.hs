@@ -57,6 +57,7 @@ data Estimate = Estimate
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    negativeFareSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.NightShiftInfo,
     personalDiscountInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.PersonalDiscountInfo,
     providerCompletedRidesCount :: Kernel.Prelude.Int,

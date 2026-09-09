@@ -179,6 +179,7 @@ data EstimateInfo = EstimateInfo
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    negativeFareSuggestion :: Maybe HighPrecMoney,
     area :: Maybe Text,
     navigationInstruction :: Maybe Text
   }
@@ -403,6 +404,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
               { customerExtraFee = Nothing,
                 isPetRide = Nothing,
                 customerExtraFeeWithCurrency = Nothing,
+                negativeFareAdjustment = Nothing,
+                negativeFareAdjustmentWithCurrency = Nothing,
                 autoAssignEnabled = True,
                 autoAssignEnabledV2 = Just True,
                 paymentMethodId = Nothing,

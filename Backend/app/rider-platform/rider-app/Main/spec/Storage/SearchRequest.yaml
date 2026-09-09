@@ -66,6 +66,7 @@ SearchRequest:
     language: Maybe Language
     disabilityTag: Maybe Text
     customerExtraFee: Maybe Price
+    negativeFareAdjustment: Maybe Price
     isPetRide: Maybe Bool
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
@@ -184,6 +185,9 @@ SearchRequest:
       customerExtraFee: Maybe Money
       customerExtraFeeAmount: Maybe HighPrecMoney
       currency: Maybe Currency
+    negativeFareAdjustment:
+      negativeFareAdjustment: Maybe Money
+      negativeFareAdjustmentAmount: Maybe HighPrecMoney
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -204,7 +208,9 @@ SearchRequest:
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     customerExtraFee: (customerExtraFee <&> (.amountInt))|E
     customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
-    currency: (customerExtraFee <&> (.currency))|E
+    negativeFareAdjustment: (negativeFareAdjustment <&> (.amountInt))|E
+    negativeFareAdjustmentAmount: (negativeFareAdjustment <&> (.amount))|E
+    currency: maybe (negativeFareAdjustment <&> (.currency)) Just (customerExtraFee <&> (.currency))|E
     riderPreferredOption: (Just riderPreferredOption)|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
@@ -226,6 +232,7 @@ SearchRequest:
     maxDistance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance)|E
     riderPreferredOption: fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption|E
     customerExtraFee: Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee|E
+    negativeFareAdjustment: Kernel.Utils.Common.mkPriceWithDefault negativeFareAdjustmentAmount currency <$> negativeFareAdjustment|E
     fromLocation: Storage.Queries.Transformers.SearchRequest.getFromLocation id|EM
     stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
     toLocation: Storage.Queries.Transformers.SearchRequest.getToLocation id|EM

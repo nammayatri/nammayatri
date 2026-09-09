@@ -53,6 +53,8 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
+      Se.Set Beam.negativeFareAdjustment (Kernel.Prelude.roundToIntegral <$> negativeFareAdjustment),
+      Se.Set Beam.negativeFareAdjustmentAmount negativeFareAdjustment,
       Se.Set Beam.paymentInstrument paymentInstrument,
       Se.Set Beam.petCharges (Kernel.Prelude.roundToIntegral <$> petCharges),
       Se.Set Beam.petChargesAmount petCharges,

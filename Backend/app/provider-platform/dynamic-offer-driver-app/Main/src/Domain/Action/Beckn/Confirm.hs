@@ -207,6 +207,7 @@ handler merchant req validatedQuote = do
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
+                negativeFareAdjustment = Nothing,
                 messageId = booking.id.getId,
                 billingCategory = booking.billingCategory,
                 isRepeatSearch = False,

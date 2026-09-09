@@ -793,6 +793,9 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe Double
     - scheduledRideMinLeadTime: Maybe Seconds
     - scheduledRideMaxLeadTime: Maybe Seconds
+    - negativeFareAdjustmentCongestionThreshold: Maybe Double
+    - negativeFareAdjustmentMinDistanceMeters: Maybe Int
+    - negativeFareAdjustmentMaxAmount: Maybe Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -839,6 +842,9 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe (OptionalValue Double)
     - scheduledRideMinLeadTime: Maybe (OptionalValue Seconds)
     - scheduledRideMaxLeadTime: Maybe (OptionalValue Seconds)
+    - negativeFareAdjustmentCongestionThreshold: Maybe (OptionalValue Double)
+    - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
+    - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type

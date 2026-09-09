@@ -1,5 +1,6 @@
 module Storage.Queries.SearchRequestExtra where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -65,12 +66,14 @@ findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderI
 findLastSearchRequestInKV :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
 findLastSearchRequestInKV (Id riderId) = findAllFromKvRedis [Se.Is BeamSR.riderId $ Se.Eq riderId] (Just $ Se.Desc BeamSR.createdAt) <&> listToMaybe
 
-updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe Payment.PaymentMethodId -> Maybe DMPM.PaymentInstrument -> m ()
-updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId paymentInstrument =
+updateCustomerExtraFeeAndPaymentMethod :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Price -> Maybe Price -> Maybe Payment.PaymentMethodId -> Maybe DMPM.PaymentInstrument -> m ()
+updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee negativeFareAdjustment paymentMethodId paymentInstrument =
   updateOneWithKV
     [ Se.Set BeamSR.customerExtraFee $ customerExtraFee <&> (.amountInt),
       Se.Set BeamSR.customerExtraFeeAmount $ customerExtraFee <&> (.amount),
-      Se.Set BeamSR.currency $ customerExtraFee <&> (.currency),
+      Se.Set BeamSR.negativeFareAdjustment $ negativeFareAdjustment <&> (.amountInt),
+      Se.Set BeamSR.negativeFareAdjustmentAmount $ negativeFareAdjustment <&> (.amount),
+      Se.Set BeamSR.currency $ (customerExtraFee <&> (.currency)) <|> (negativeFareAdjustment <&> (.currency)),
       Se.Set BeamSR.selectedPaymentMethodId paymentMethodId,
       Se.Set BeamSR.selectedPaymentInstrument paymentInstrument
     ]

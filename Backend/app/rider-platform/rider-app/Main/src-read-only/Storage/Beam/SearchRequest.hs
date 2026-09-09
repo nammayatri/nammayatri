@@ -78,6 +78,8 @@ data SearchRequestT f = SearchRequestT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    negativeFareAdjustment :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Money),
+    negativeFareAdjustmentAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     offersFraudCheckFailureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     originStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

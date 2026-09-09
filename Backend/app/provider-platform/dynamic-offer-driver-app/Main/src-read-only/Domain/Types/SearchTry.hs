@@ -37,6 +37,7 @@ data SearchTry = SearchTry
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
+    negativeFareAdjustment :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     preferSafetyPlus :: Kernel.Prelude.Bool,

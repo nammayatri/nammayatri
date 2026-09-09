@@ -136,6 +136,8 @@ type SelectFlow m r c =
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
+    negativeFareAdjustment :: Maybe Money,
+    negativeFareAdjustmentWithCurrency :: Maybe PriceAPIEntity,
     autoAssignEnabled :: Bool,
     autoAssignEnabledV2 :: Maybe Bool,
     isPetRide :: Maybe Bool,
@@ -158,6 +160,12 @@ data DSelectReq = DSelectReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+minNegativeFareAdjustment :: Money
+minNegativeFareAdjustment = -1000
+
+minNegativeFareAdjustmentAmount :: HighPrecMoney
+minNegativeFareAdjustmentAmount = -1000.0
+
 validateDSelectReq :: Validate DSelectReq
 validateDSelectReq DSelectReq {..} =
   sequenceA_
@@ -165,6 +173,10 @@ validateDSelectReq DSelectReq {..} =
       whenJust customerExtraFeeWithCurrency $ \obj ->
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0,
+      validateField "negativeFareAdjustment" negativeFareAdjustment $ InMaybe $ InRange @Money minNegativeFareAdjustment 0,
+      whenJust negativeFareAdjustmentWithCurrency $ \obj ->
+        validateObject "negativeFareAdjustmentWithCurrency" obj $ \obj' ->
+          validateField "amount" obj'.amount $ InRange @HighPrecMoney minNegativeFareAdjustmentAmount 0.0,
       whenJust deliveryDetails $ \(DTDD.DeliveryDetails {..}) ->
         sequenceA_
           [ validateObject "senderDetails" senderDetails validatePersonDetails,
@@ -189,6 +201,8 @@ data DSelectRes = DSelectRes
     variant :: DV.VehicleVariant,
     customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
+    negativeFareAdjustment :: Maybe Money,
+    negativeFareAdjustmentWithCurrency :: Maybe PriceAPIEntity,
     merchant :: DM.Merchant,
     city :: Context.City,
     billingCategory :: BillingCategory,
@@ -267,6 +281,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
+  let mbNegativeFareAdjustment = (mkPriceFromAPIEntity <$> req.negativeFareAdjustmentWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.negativeFareAdjustment)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
       throwError $ InvalidRequest "Invalid currency"
@@ -325,8 +340,8 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QEstimate.updateSelectedOfferId selectedOfferId estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
-  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
-    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId req.paymentInstrument
+  when (isJust mbCustomerExtraFee || isJust mbNegativeFareAdjustment || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
+    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee mbNegativeFareAdjustment req.paymentMethodId req.paymentInstrument
   when (isJust req.isPetRide) $ do
     QSearchRequest.updatePetRide req.isPetRide searchRequest.id
   whenJust mbUpdatedJourneyData $ \(journey, journeyLeg) -> do

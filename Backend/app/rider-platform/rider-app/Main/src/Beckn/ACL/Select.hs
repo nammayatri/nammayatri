@@ -140,6 +140,7 @@ mkItemTags res =
             Tags.BILLING_CATEGORY Tags.~= show res.billingCategory,
             Tags.EMAIL_DOMAIN Tags.~=? res.emailDomain,
             Tags.CUSTOMER_TIP Tags.~=? ((\charges -> show charges.getMoney) <$> res.customerExtraFee),
+            Tags.NEGATIVE_FARE_ADJUSTMENT Tags.~=? ((\charges -> show charges.getMoney) <$> res.negativeFareAdjustment),
             Tags.OTHER_SELECT_ESTIMATES Tags.~=| (not (null res.remainingEstimateBppIds), show (getId <$> res.remainingEstimateBppIds))
           ]
       deliveryTags = mkSelectResDetailsTagGroup res

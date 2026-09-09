@@ -1196,6 +1196,9 @@ TransporterConfig:
     # replays the pinned surge version regardless of this flag.
     useSurgeConfigPricing: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
+    negativeFareAdjustmentCongestionThreshold: Maybe Double
+    negativeFareAdjustmentMinDistanceMeters: Maybe Int
+    negativeFareAdjustmentMaxAmount: Maybe Int
     enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text

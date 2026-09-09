@@ -402,6 +402,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               vehicleAge = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
+              negativeFareAdjustment = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = Nothing,
               nightShiftOverlapChecking = isJust trip.rideTime,

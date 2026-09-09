@@ -456,6 +456,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     searchReq :: DSR.SearchRequest,
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
+    negativeFareAdjustment :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,

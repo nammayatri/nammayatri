@@ -67,6 +67,7 @@ buildSelectReqV2 subscriber req = do
   let customerExtraFeeFromTag = getCustomerExtraFeeV2 item.itemTags
       customerExtraFeeFromBreakup = getCustomerSelectedFareFromBreakup order.orderQuote
       customerExtraFee = customerExtraFeeFromTag <|> customerExtraFeeFromBreakup
+      negativeFareAdjustment = getNegativeFareAdjustmentV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
@@ -103,6 +104,7 @@ buildSelectReqV2 subscriber req = do
         -- pilot's Layer 2 parser (Beckn.OnDemand.Transformer.MSIL.Select) fills
         -- this in, from item.price.value, for pilot merchants.
         negotiatedFare = Nothing,
+        negativeFareAdjustment = negativeFareAdjustment,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
@@ -122,6 +124,11 @@ getBookAnyEstimates tagGroups = do
 getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
 getCustomerExtraFeeV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.CUSTOMER_TIP tagGroups
+  highPrecMoneyFromText tagValue
+
+getNegativeFareAdjustmentV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
+getNegativeFareAdjustmentV2 tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.NEGATIVE_FARE_ADJUSTMENT tagGroups
   highPrecMoneyFromText tagValue
 
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
