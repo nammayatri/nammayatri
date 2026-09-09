@@ -14,7 +14,6 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
-import Kernel.Types.Common (Minutes (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
