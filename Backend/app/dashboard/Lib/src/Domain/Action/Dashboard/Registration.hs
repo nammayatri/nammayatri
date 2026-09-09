@@ -832,7 +832,7 @@ validateFleetOwner FleetRegisterReq {..} =
 weakValidateFleetOwner :: Validate FleetRegisterReq
 weakValidateFleetOwner FleetRegisterReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ MinLength 3 `And` P.nameWithNumber,
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.nameWithSymbols,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]

@@ -3890,7 +3890,11 @@ validateDriverName mbDriverName isMandatory isStrongNameCheckRequired = do
       let validateFn = if isStrongNameCheckRequired then Common.validateUpdateDriverNameReq else Common.validateUpdateDriverNameReqWithLooseCheck
       result <- try (void $ runRequestValidation validateFn (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
       case result of
-        Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
+        Left (_ :: SomeException) ->
+          throwError . InvalidRequest $
+            if isStrongNameCheckRequired
+              then "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
+              else "Driver name must be 1 to 50 characters: letters, digits, spaces and ' \x2019 - . , & / ( ) + are allowed"
         Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
@@ -4832,9 +4836,9 @@ validateUpdateDriverReq Common.UpdateDriverReq {..} =
 validateUpdateDriverReqWithLooseCheck :: Validate Common.UpdateDriverReq
 validateUpdateDriverReqWithLooseCheck Common.UpdateDriverReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.nameWithNumber,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
-      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.nameWithSymbols,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
+      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
       validateField "email" email $ InMaybe P.email
     ]
 
