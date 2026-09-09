@@ -276,7 +276,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
-            processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
+            processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices Nothing
           processMandate (serviceName, serviceConfig) (personId, merchantId, merchantOperatingCityId) mandateStatus (Just mandateStartDate) (Just mandateEndDate) (Id mandateId) mandateMaxAmount payerVpa upi order.shortId.getShortId --- needs refactoring ----
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False (serviceName, serviceConfig)
@@ -319,7 +319,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
               when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
                 processWalletTopupWebhook driver order status
               unless (status /= Payment.CHARGED) $ do
-                processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
+                processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices Nothing
               QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
               notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False (serviceName, serviceConfig)
         DPayment.PDNNotificationStatusResp {..} -> do
@@ -490,7 +490,11 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                 when (order.entityName == Just DPayment.DRIVER_WALLET_TOPUP) $
                   processWalletTopupAndUpdateStatus driver order transactionStatus
                 unless (transactionStatus /= Payment.CHARGED) $ do
-                  processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
+                  -- dateCreated is the order-creation time at the gateway; for a
+                  -- retried/retargeted order the payment can happen much later, so
+                  -- only trust it for first-attempt orders.
+                  let mbChargeTime = if isRetriedOrder == Just True || isRetargetedOrder == Just True then Nothing else dateCreated
+                  processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices mbChargeTime
                 notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
                 QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
     Payment.MandateOrderStatusResp {..} -> do
@@ -498,7 +502,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
-          processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices
+          processPayment merchantId driver order.id (shouldSendSuccessNotification mandateStatus) (serviceName, serviceConfig) invoices dateCreated
         processMandate (serviceName, serviceConfig) (cast order.personId, merchantId, driver.merchantOperatingCityId) mandateStatus mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount payerVpa upi order.shortId.getShortId
         notifyAndUpdateInvoiceStatusIfPaymentFailed (cast order.personId) order.id transactionStatus eventName bankErrorCode True (serviceName, serviceConfig)
         QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -597,26 +601,44 @@ processPayment ::
   Bool ->
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   [INV.Invoice] ->
+  Maybe UTCTime ->
   m ()
-processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices = do
+processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices mbChargeTime = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
-  Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
+  outerLockRes <- Redis.whenWithLockRedisAndReturnValue (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((mbInvoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (mbInvoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
       maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (mbInvoice <&> (.driverFeeId))
-    Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
+    innerLockRes <- Redis.whenWithLockRedisAndReturnValue (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
       nowUtc <- getCurrentTime
-      QDF.updateStatusByIds CLEARED driverFeeIds nowUtc
+      -- collectedAt: "now" for on-time processing (identical to earlier
+      -- behaviour), but if this webhook is processing a payment more than a
+      -- day after the order was created at the gateway, "now" is not when the
+      -- driver paid — fall back to the gateway's order time so collectedAt
+      -- lands in the right collection window. The >1d gate keeps normal
+      -- traffic untouched (dateCreated precedes the charge by a few minutes,
+      -- which would otherwise flip fees across IST day boundaries vs the
+      -- gateway's own payment_date).
+      let collectionTime = case mbChargeTime of
+            Just chargeTime | diffUTCTime nowUtc chargeTime > 86400 -> chargeTime
+            _ -> nowUtc
+      QDF.updateClearedStatusByIdsWithCollectedAt driverFeeIds collectionTime nowUtc
       Redis.runInMasterCloudRedisCell $
         forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
+    case innerLockRes of
+      Left () -> logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
+      Right () -> pure ()
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
+  case outerLockRes of
+    Left () -> logError $ "processPayment: payment processing lock held, skipped success processing for order " <> orderId.getId <> " driver " <> driver.id.getId
+    Right () -> pure ()
 
 processNonClearedDriverFees ::
   ( CacheFlow m r,
