@@ -104,6 +104,7 @@ import qualified Domain.Types.VehicleNOC as DNOC
 import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
+import Domain.Types.VehicleVariant (castVehicleVariantToVehicleCategory)
 import Environment
 import EulerHS.Prelude hiding (elem, find, foldl', map, null, whenJust)
 import Kernel.Beam.Functions
@@ -930,13 +931,13 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
       Common.CommonData commonReq -> do
         _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
         return Success
-      Common.VehiclePermitData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePermit (\st -> upsertPermit st req)
-      Common.VehiclePUCData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePUC (\st -> upsertPUC st req)
-      Common.VehicleFitnessData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleFitnessCertificate (\st -> upsertFitnessCertificate st req)
-      Common.VehicleInsuranceData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleInsurance (\st -> upsertInsurance st (insuranceApproveDetails req))
-      Common.VehicleNOCData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleNOC (\st -> upsertNOC st req)
-      Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate (\st -> upsertGST st req)
-      Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense (\st -> upsertBusinessLicense st req)
+      Common.VehiclePermitData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePermit (Just req.rcNumber) (\st -> upsertPermit st req)
+      Common.VehiclePUCData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePUC (Just req.rcNumber) (\st -> upsertPUC st req)
+      Common.VehicleFitnessData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleFitnessCertificate (Just req.rcNumber) (\st -> upsertFitnessCertificate st req)
+      Common.VehicleInsuranceData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleInsurance (Just req.rcNumber) (\st -> upsertInsurance st (insuranceApproveDetails req))
+      Common.VehicleNOCData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleNOC (Just req.rcNumber) (\st -> upsertNOC st req)
+      Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate Nothing (\st -> upsertGST st req)
+      Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense Nothing (\st -> upsertBusinessLicense st req)
   refreshOnboardingFlags (cast driverId_)
   pure Success
   where
@@ -1049,14 +1050,20 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
             }
       return Success
 
-    registerDocWithData merchant merchantOpCityId docType upsertDoc = do
-      docStatus <- docRegisterStatus merchantOpCityId docType
+    registerDocWithData merchant merchantOpCityId docType mbRcNumber upsertDoc = do
+      mbVehicleCategory <- maybe (pure Nothing) rcVehicleCategory mbRcNumber
+      docStatus <- docRegisterStatus merchantOpCityId docType mbVehicleCategory
       void $ upsertDoc docStatus merchant.id merchantOpCityId
       return Success
 
-    docRegisterStatus :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> Flow VerificationStatus
-    docRegisterStatus merchantOpCityId docType = do
-      mbDocConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) Nothing
+    rcVehicleCategory :: Text -> Flow (Maybe DVCat.VehicleCategory)
+    rcVehicleCategory rcNumber = do
+      mbRc <- QRC.findLastVehicleRCWrapper rcNumber
+      pure $ castVehicleVariantToVehicleCategory <$> (mbRc >>= (.vehicleVariant))
+
+    docRegisterStatus :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> Maybe DVCat.VehicleCategory -> Flow VerificationStatus
+    docRegisterStatus merchantOpCityId docType mbVehicleCategory = do
+      mbDocConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = mbVehicleCategory}) Nothing
       pure $
         if maybe False (.doStrictVerifcation) mbDocConfig
           then Documents.PENDING
