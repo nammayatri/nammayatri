@@ -460,7 +460,7 @@ in  { esqDBCfg
       , "dev/ddl-migrations/scheduler"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/ddl-migrations/rider-app"
       ]
-    , autoMigrate = True
+    , autoMigrate = False
     , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig

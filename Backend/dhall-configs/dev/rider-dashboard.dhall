@@ -131,7 +131,7 @@ in  { esqDBCfg
       , "dev/seed-migrations/rider-dashboard"
       , "dev/migrations-read-only/rider-dashboard"
       ]
-    , autoMigrate = True
+    , autoMigrate = False
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/rider-dashboard.log" }
     , graceTerminationPeriod = +90
