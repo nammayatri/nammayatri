@@ -30,13 +30,16 @@ instance FromTType' Beam.OfferEntity Domain.Types.OfferEntity.OfferEntity where
       Just
         Domain.Types.OfferEntity.OfferEntity
           { amountSaved = amountSaved,
+            appliedCount = appliedCount,
             autoApply = (Kernel.Prelude.fromMaybe False autoApply),
             createdAt = createdAt,
             discountAmount = discountAmount,
             entityId = entityId,
             entityType = entityType,
+            frequencyType = frequencyType,
             id = Kernel.Types.Id.Id id,
             isHidden = (Kernel.Prelude.fromMaybe True isHidden),
+            maxApplyCount = maxApplyCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             offerCode = offerCode,
@@ -54,13 +57,16 @@ instance ToTType' Beam.OfferEntity Domain.Types.OfferEntity.OfferEntity where
   toTType' (Domain.Types.OfferEntity.OfferEntity {..}) = do
     Beam.OfferEntityT
       { Beam.amountSaved = amountSaved,
+        Beam.appliedCount = appliedCount,
         Beam.autoApply = (Kernel.Prelude.Just autoApply),
         Beam.createdAt = createdAt,
         Beam.discountAmount = discountAmount,
         Beam.entityId = entityId,
         Beam.entityType = entityType,
+        Beam.frequencyType = frequencyType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isHidden = (Kernel.Prelude.Just isHidden),
+        Beam.maxApplyCount = maxApplyCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.offerCode = offerCode,

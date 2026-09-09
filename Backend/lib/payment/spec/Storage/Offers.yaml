@@ -6,6 +6,8 @@ imports:
   PayoutStatus: Lib.Payment.Domain.Types.Common
   Value: Data.Aeson
   OfferState: Kernel.External.Payment.Interface.Types
+  OfferStatsEntityType: Lib.Payment.Domain.Types.OfferStats
+  OfferFrequency: Lib.Payment.Domain.Types.Offer
 
 Offer:
   tableName: offer
@@ -28,6 +30,11 @@ Offer:
     currency: Currency
     validTill: Maybe UTCTime
     isActive: Bool
+    minimumAmount: Maybe HighPrecMoney
+    autoApply: Maybe Bool
+    isHidden: Maybe Bool
+    frequencyType: Maybe OfferFrequency
+    maxApplyCount: Maybe Int
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
@@ -38,6 +45,8 @@ Offer:
       enum: "DISCOUNT, CASHBACK"
     DiscountType:
       enum: "FLAT, PERCENTAGE"
+    OfferFrequency:
+      enum: "HOURLY, DAILY, WEEKLY, MONTHLY"
 
   sqlType:
     offerEligibilityJsonLogic: json
@@ -165,6 +174,88 @@ PersonDailyOfferStats:
       kvFunction: findAllWithKV
       where:
         and: [date, payoutStatus]
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+OfferFrequencyStatsHistory:
+  tableName: offer_frequency_stats_history
+  derives: "Generic, Show, ToJSON, FromJSON"
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+  fields:
+    id: Id OfferFrequencyStatsHistory
+    entityId: Text
+    entityType: OfferStatsEntityType
+    offerId: Id Offer
+    frequencyType: OfferFrequency
+    periodStart: UTCTime
+    periodEnd: UTCTime
+    appliedCount: Int
+    totalDiscountAmount: HighPrecMoney
+    totalCashbackAmount: HighPrecMoney
+    currency: Currency
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  extraIndexes:
+    - columns: [entityId, entityType, offerId, frequencyType, periodStart]
+      unique: true
+
+  queries:
+    findByEntityIdEntityTypeOfferIdFrequencyTypeAndPeriodStart:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, entityType, offerId, frequencyType, periodStart]
+    findAllByEntityIdEntityTypeAndOfferId:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, entityType, offerId]
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+PersonOfferFrequencyStats:
+  tableName: person_offer_frequency_stats
+  derives: "Generic, Show, ToJSON, FromJSON"
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+  fields:
+    id: Id PersonOfferFrequencyStats
+    entityId: Text
+    entityType: OfferStatsEntityType
+    offerId: Id Offer
+    appliedCount: Int
+    periodStart: Maybe UTCTime
+    totalDiscountAmount: HighPrecMoney
+    totalCashbackAmount: HighPrecMoney
+    currency: Currency
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  extraIndexes:
+    - columns: [entityId, entityType, offerId]
+      unique: true
+
+  queries:
+    findByEntityIdOfferIdEntityType:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, offerId, entityType]
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

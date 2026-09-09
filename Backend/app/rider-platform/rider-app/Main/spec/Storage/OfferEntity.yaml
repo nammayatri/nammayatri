@@ -2,6 +2,7 @@ imports:
   Booking: Domain.Types.Booking
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  OfferFrequency: Lib.Payment.Domain.Types.Offer
 
 OfferEntity:
   tableName: offer_entity
@@ -22,6 +23,9 @@ OfferEntity:
     payoutAmount: HighPrecMoney
     amountSaved: HighPrecMoney
     postOfferAmount: HighPrecMoney
+    frequencyType: Maybe OfferFrequency
+    appliedCount: Maybe Int
+    maxApplyCount: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "ca4c9038-6e75-47cf-adef-64be255d059d",
     "name": "Offline Ride Cashback Offer — /offers/list/v2 promo card (eligible → card, used → none)",
-    "description": "Cash ride with the first-ride CASHBACK offer, driven through the new GET /offers/list/v2. The collection installs the city's CUMULATIVE_OFFER_POLICY rule with a `promoCard` under an \"offers not empty\" condition (the rule uses only `if`, `in`, `map`, `var`, `cat`, all used by production rules), then asserts: a fresh rider gets the eligible offers plus the card from v2 (same offers as v1, every offer typed), the estimate carries the same card through unchanged (no `source` input to the rule), v1 is unaffected, the ride completes with the cashback applied, and afterwards v2 lists no offer and `promoCard` is null while the response shape stays intact. The rider is registered under `bap_short_id` at the search origin so the rule installed for that merchant and city is the one the person-based v2 call resolves. Needs `bap_dashboard_url` / `bap_dashboard_token` in the env.",
+    "description": "Cash ride with the first-ride CASHBACK offer, driven through the new GET /offers/list/v2. The collection installs the city's CUMULATIVE_OFFER_POLICY rule with a `promoCard` under an \"offers not empty\" condition (the rule uses only `if`, `in`, `map`, `var`, `cat`, all used by production rules), then asserts: a fresh rider gets the eligible offers plus the card from v2 (same offers as v1, every offer typed), the estimate carries the same card through unchanged (no `source` input to the rule), v1 is unaffected, the ride completes with the cashback applied, and afterwards v2 lists no offer and `promoCard` is null while the response shape stays intact. The rider is registered under `bap_short_id` at the search origin so the rule installed for that merchant and city is the one the person-based v2 call resolves. Needs `bap_dashboard_url` / `bap_dashboard_token` in the env. Offer usage counter and cap: right after the v1 baseline the rider's first offer is given `frequencyType` DAILY and `maxApplyCount` 1 through the BAP dashboard. v2 and the estimate then show `appliedCount` 0 and that offer's own cap (the rule no longer publishes limits); after the ride the receipt is polled until the applied offer shows `frequencyType` DAILY, `appliedCount` 1 and `maxApplyCount` 1, a second read asserts the counter is unchanged, and v2 no longer lists the offer because its cap is used up.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -475,6 +475,7 @@
               "pm.collectionVariables.set('_test_offer_ids_json', JSON.stringify(ids));",
               "pm.collectionVariables.set('_test_v1_offer_count', String(d.length));",
               "var first = d[0];",
+              "pm.collectionVariables.set('_test_capped_offer_id', (first && first.offerId) || '');",
               "pm.collectionVariables.set('_test_rule_title', (first && first.offerTitle) || 'First ride cashback');",
               "pm.collectionVariables.set('_test_rule_desc', (first && first.offerDescription) || 'Cashback on your first ride');",
               "console.log('v1 offers for the rider:', ids.length, ids);",
@@ -546,6 +547,53 @@
       "response": []
     },
     {
+      "name": "Set DAILY Frequency and Cap 1 on the Rider's Offer (BAP Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Offer frequencyType DAILY and maxApplyCount 1 set through the dashboard', function () { pm.response.to.have.status(200); });",
+              "console.log('offer', pm.collectionVariables.get('_test_capped_offer_id'), 'frequencyType -> DAILY, maxApplyCount -> 1:', pm.response.code);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/offer/{{_test_capped_offer_id}}/update",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "offer",
+            "{{_test_capped_offer_id}}",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"frequencyType\": \"DAILY\", \"maxApplyCount\": 1}"
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Create Cumulative Offer Logic with Promo Card (BAP)",
       "event": [
         {
@@ -590,7 +638,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"domain\": {\"tag\": \"CUMULATIVE_OFFER_POLICY\"}, \"shouldUpdateRule\": true, \"updatePassword\": \"dummy-password\", \"description\": \"Promo card integration test (offers/list/v2)\", \"inputData\": [{\"offerListResp\": {\"bestOfferCombination\": null, \"offerResp\": []}, \"extraParams\": [], \"offerSegment\": null}], \"rules\": [{\"if\": [{\"in\": [1, {\"map\": [{\"var\": \"offerListResp.offerResp\"}, 1]}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"{{_test_rule_title}}\"}, {\"offerDescription\": \"{{_test_rule_desc}}\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": {{_test_offer_ids_json}}}, {\"promoCard\": {\"header\": \"Welcome!\", \"title\": \"Your first ride is on us\", \"subtitle\": \"Cashback on your first ride\", \"subtitleInfo\": \"Integration test card\", \"imageUrl\": \"https://example.com/promo-card.png\", \"textColor\": \"#123D02\", \"bgGradientColors\": [\"#fce0e5\", \"#f8f9f9\"]}}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"\"}, {\"offerDescription\": \"\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": []}]}]}]}"
+          "raw": "{\"domain\": {\"tag\": \"CUMULATIVE_OFFER_POLICY\"}, \"shouldUpdateRule\": true, \"updatePassword\": \"dummy-password\", \"description\": \"Promo card integration test (offers/list/v2)\", \"inputData\": [{\"offerListResp\": {\"bestOfferCombination\": null, \"offerResp\": []}, \"extraParams\": [], \"offerSegment\": null}, {\"offerListResp\": {\"bestOfferCombination\": null, \"offerResp\": [{\"offerId\": \"verify-sample-offer\", \"offerCode\": \"SAMPLE\", \"status\": \"ELIGIBLE\", \"benefitType\": \"CASHBACK\", \"offerDescription\": {\"title\": null, \"description\": null, \"tnc\": null, \"sponsoredBy\": null}, \"uiConfigs\": null, \"orderAmount\": 100, \"finalOrderAmount\": 100, \"discountAmount\": 0, \"cashbackAmount\": 20, \"productDiscounts\": null}]}, \"extraParams\": [], \"offerSegment\": null}], \"rules\": [{\"if\": [{\"in\": [1, {\"map\": [{\"var\": \"offerListResp.offerResp\"}, 1]}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"{{_test_rule_title}}\"}, {\"offerDescription\": \"{{_test_rule_desc}}\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": {{_test_offer_ids_json}}}, {\"promoCard\": {\"header\": \"Welcome!\", \"title\": \"Your first ride is on us\", \"subtitle\": \"Cashback on your first ride\", \"subtitleInfo\": \"Integration test card\", \"imageUrl\": \"https://example.com/promo-card.png\", \"textColor\": \"#123D02\", \"bgGradientColors\": [\"#fce0e5\", \"#f8f9f9\"]}}]}, {\"cat\": [{\"var\": \"\"}, {\"offerTitle\": \"\"}, {\"offerDescription\": \"\"}, {\"offerSponsoredBy\": []}, {\"offerIds\": []}]}]}]}"
         }
       },
       "response": []
@@ -698,7 +746,20 @@
               "    expectCard(d.promoCard);",
               "});",
               "pm.collectionVariables.set('_test_v2_had_offers', d.offerListResp.length > 0 ? 'yes' : 'no');",
-              "console.log('v2 response:', JSON.stringify(d));"
+              "console.log('v2 response:', JSON.stringify(d));",
+              "pm.test('Usage counter starts at zero for a fresh rider', function () {",
+              "    d.offerListResp.forEach(function (o) {",
+              "        pm.expect(o, 'offer ' + o.offerId).to.have.property('frequencyType');",
+              "        pm.expect(o, 'offer ' + o.offerId).to.have.property('maxApplyCount');",
+              "        pm.expect(o.appliedCount, 'appliedCount of ' + o.offerId).to.equal(0);",
+              "    });",
+              "});",
+              "pm.test('The capped offer is listed with its own period and cap, DAILY and 1', function () {",
+              "    var capped = d.offerListResp.find(function (o) { return o.offerId === pm.collectionVariables.get('_test_capped_offer_id'); });",
+              "    pm.expect(capped, 'capped offer').to.be.an('object');",
+              "    pm.expect(capped.frequencyType).to.equal('DAILY');",
+              "    pm.expect(capped.maxApplyCount).to.equal(1);",
+              "});"
             ]
           }
         }
@@ -920,7 +981,9 @@
               "    pm.expect(est && est.offer, 'estimate.offer').to.be.an('object');",
               "    pm.expect(est.offer.offerIds, 'offer.offerIds').to.be.an('array').that.is.not.empty;",
               "});",
-              "var selectedId = est && est.offer && est.offer.offerIds ? est.offer.offerIds[0] : null;",
+              "var cappedId = pm.collectionVariables.get('_test_capped_offer_id');",
+              "var estimateOfferIds = (est && est.offer && est.offer.offerIds) || [];",
+              "var selectedId = estimateOfferIds.indexOf(cappedId) >= 0 ? cappedId : (estimateOfferIds[0] || null);",
               "if (selectedId) {",
               "    pm.collectionVariables.set('selected_offer_id', selectedId);",
               "    console.log('Selected offer:', est.offer.offerTitle, selectedId);",
@@ -955,6 +1018,14 @@
               "        pm.expect(card.lottieUrl == null, 'lottieUrl absent').to.be.true;",
               "    }",
               "    expectCard(est.offer.promoCard);",
+              "});",
+              "pm.test('Estimate offers carry a zero usage counter, and the capped offer its own cap', function () {",
+              "    (est.offer.offerListResp || []).forEach(function (o) {",
+              "        pm.expect(o.appliedCount, 'appliedCount of ' + o.offerId).to.equal(0);",
+              "    });",
+              "    var capped = (est.offer.offerListResp || []).find(function (o) { return o.offerId === pm.collectionVariables.get('_test_capped_offer_id'); });",
+              "    pm.expect(capped, 'capped offer on the estimate').to.be.an('object');",
+              "    pm.expect(capped.maxApplyCount).to.equal(1);",
               "});"
             ]
           }
@@ -1439,6 +1510,100 @@
       ]
     },
     {
+      "name": "Verify Usage Counters on Completed Ride (Rider)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var ride = d.rideList && d.rideList[0];",
+              "var offer = ride && ride.selectedOffers && ride.selectedOffers.offers && ride.selectedOffers.offers[0];",
+              "var counted = !!(offer && offer.appliedCount === 1);",
+              "var attempt = parseInt(pm.collectionVariables.get('_counters_attempt') || '0');",
+              "if (!counted && attempt < 8) {",
+              "    console.log('Usage counter not settled yet (attempt', attempt + 1, ') appliedCount:', offer && offer.appliedCount);",
+              "    var t0 = Date.now(); while (Date.now() - t0 < 3000) {}",
+              "    pm.collectionVariables.set('_counters_attempt', String(attempt + 1));",
+              "    pm.execution.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "    pm.collectionVariables.set('_counters_attempt', '0');",
+              "    pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "    pm.test('Applied offer on the receipt counts 1 in its DAILY period after one ride', function () {",
+              "        pm.expect(offer, 'selectedOffers.offers[0]').to.be.an('object');",
+              "        pm.expect(offer.frequencyType, 'frequencyType').to.equal('DAILY');",
+              "        pm.expect(offer.appliedCount, 'appliedCount').to.equal(1);",
+              "    });",
+              "    pm.test('Receipt shows the offer\\'s own cap of 1', function () {",
+              "        pm.expect(offer.maxApplyCount, 'maxApplyCount').to.equal(1);",
+              "    });",
+              "    pm.collectionVariables.set('_counters_first_read', JSON.stringify([offer.frequencyType, offer.appliedCount, offer.maxApplyCount]));",
+              "    console.log('usage counter (first read):', JSON.stringify(offer));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify Usage Counters Stable on Second Read (Rider)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}"
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var ride = d.rideList && d.rideList[0];",
+              "var offer = ride && ride.selectedOffers && ride.selectedOffers.offers && ride.selectedOffers.offers[0];",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Counter is identical on a second read (no double counting, no reset)', function () {",
+              "    pm.expect(offer, 'selectedOffers.offers[0]').to.be.an('object');",
+              "    var first = JSON.parse(pm.collectionVariables.get('_counters_first_read') || '[\"DAILY\",1,1]');",
+              "    pm.expect([offer.frequencyType, offer.appliedCount, offer.maxApplyCount]).to.eql(first);",
+              "    pm.expect(offer.appliedCount).to.equal(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Get Offers List V2 (Rider) — no promo card once the first-ride offer is used",
       "event": [
         {
@@ -1472,6 +1637,10 @@
               "        pm.expect(d, 'body').to.be.an('object');",
               "        pm.expect(d.offerListResp, 'offerListResp').to.be.an('array');",
               "    });",
+              "        pm.test('The capped offer is gone: one ride used up its maxApplyCount of 1', function () {",
+              "            var cappedId = pm.collectionVariables.get('_test_capped_offer_id');",
+              "            pm.expect((d.offerListResp || []).map(function (o) { return o.offerId; })).to.not.include(cappedId);",
+              "        });",
               "    pm.test('First-ride offer is no longer listed after the ride', function () {",
               "        pm.expect(d.offerListResp.length).to.equal(0);",
               "    });",
@@ -1585,6 +1754,14 @@
     },
     {
       "key": "_test_rule_desc",
+      "value": ""
+    },
+    {
+      "key": "_counters_attempt",
+      "value": ""
+    },
+    {
+      "key": "_counters_first_read",
       "value": ""
     }
   ]
