@@ -35,7 +35,7 @@ findByMerchantOpCityId merchantOpCityId identifier =
 --------- Caching logic -------------------
 
 clearIssueConfigCache :: CacheFlow m r => Id MerchantOperatingCity -> Identifier -> m ()
-clearIssueConfigCache merchantOpCityId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier
+clearIssueConfigCache merchantOpCityId identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier
 
 updateByPrimaryKey :: BeamFlow m r => IssueConfig -> m ()
 updateByPrimaryKey = Queries.updateByPrimaryKey
