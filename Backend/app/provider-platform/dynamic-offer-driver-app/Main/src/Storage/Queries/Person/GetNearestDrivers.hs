@@ -215,14 +215,15 @@ getNearestDrivers req fetchPoolData = do
 -- `selectedServiceTiers` alone for a cohort-gated tier. The cohort tag itself is always
 -- ops-assigned (via the dashboard); no tier-selection change ever writes it.
 --
--- The cohort tag's value is always "Cohort#<tier>" -- the same string as the tier itself, not a
--- separately configured short code -- so no Redis-backed short-code-to-tier mapping is needed
--- anywhere (Haskell or location-tracking-service) to answer "which tier does this cohort gate."
+-- The cohort tag's value is the tier name itself -- "Cohort#<tier>", or "Cohort#<tierA>&<tierB>"
+-- for a driver in several cohorts -- not a separately configured short code, so no Redis-backed
+-- short-code-to-tier mapping is needed anywhere (Haskell or location-tracking-service) to answer
+-- "which tier does this cohort gate." elemTagValue matches the tier within that "&"-separated set.
 isTierEligibleForDriver :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> HashMap.HashMap ServiceTierType DVST.VehicleServiceTier -> ServiceTierType -> Bool
 isTierEligibleForDriver now driverTag tierConfigs tier =
   case HashMap.lookup tier tierConfigs >>= (.availabilityCheckConfig) of
     Nothing -> True
-    Just _ -> Yudhishthira.elemTagNameValue (LYT.TagNameValue ("Cohort#" <> show tier)) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
+    Just _ -> Yudhishthira.elemTagValue (LYT.TagName "Cohort") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
 
 -- | Whether the driver is eligible for a scheduled booking of the given tier: not a scheduled ride
 -- at all, within the R4 open-to-all threshold, or the tier's configured eligibility tags intersect
