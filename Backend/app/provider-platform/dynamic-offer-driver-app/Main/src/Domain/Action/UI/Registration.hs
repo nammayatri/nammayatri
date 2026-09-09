@@ -1025,7 +1025,7 @@ operatorLinkTempAppCodeCfg =
   driverTempAppCodeCfg
     { codeStrategy = Guid,
       ttlSeconds = operatorLinkTempCodeTtl,
-      consumeOnRead = True,
+      consumeOnRead = False,
       maxAttempts = 3,
       attemptWindowSeconds = 300
     }
