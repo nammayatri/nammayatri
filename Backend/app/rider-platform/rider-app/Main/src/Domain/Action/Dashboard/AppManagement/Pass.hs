@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.AppManagement.Pass
     updatePassType,
     getPassOverrideConfig,
     updatePassOverrideConfig,
+    postPassTripsAdjust,
   )
 where
 
@@ -150,3 +151,6 @@ getPassOverrideConfig merchantShortId opCity passId = DPass.getPassOverrideConfi
 
 updatePassOverrideConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassOverrideUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 updatePassOverrideConfig merchantShortId opCity passId req = DPass.updatePassOverrideConfig merchantShortId opCity passId req
+
+postPassTripsAdjust :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> API.Types.Dashboard.AppManagement.Pass.PassTripAdjustReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassTripAdjustResp)
+postPassTripsAdjust merchantShortId opCity personId purchasedPassId req = DPass.postPassTripsAdjust merchantShortId opCity personId purchasedPassId req

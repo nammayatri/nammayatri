@@ -165,6 +165,25 @@ data PassOverrideUpdateReq = PassOverrideUpdateReq
 instance Kernel.Types.HideSecrets.HideSecrets PassOverrideUpdateReq where
   hideSecrets = Kernel.Prelude.identity
 
+data PassTripAdjustReq = PassTripAdjustReq
+  { operation :: TripAdjustOperation,
+    purchasedPassPaymentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
+    value :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PassTripAdjustReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data PassTripAdjustResp = PassTripAdjustResp
+  { previousTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
+    remainingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassTypeCreateReq = PassTypeCreateReq
   { catchline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -260,7 +279,13 @@ data PurchasedPassSelectReq = PurchasedPassSelectReq {startDay :: Kernel.Prelude
 instance Kernel.Types.HideSecrets.HideSecrets PurchasedPassSelectReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelectHelper :<|> GetPassCustomerPaymentStatusHelper :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass :<|> ListPassCategories :<|> CreatePassCategory :<|> UpdatePassCategory :<|> ListPassTypes :<|> CreatePassType :<|> UpdatePassType :<|> GetPassOverrideConfig :<|> UpdatePassOverrideConfig))
+data TripAdjustOperation
+  = IncrementBy
+  | DecrementBy
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelectHelper :<|> GetPassCustomerPaymentStatusHelper :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass :<|> ListPassCategories :<|> CreatePassCategory :<|> UpdatePassCategory :<|> ListPassTypes :<|> CreatePassType :<|> UpdatePassType :<|> GetPassOverrideConfig :<|> UpdatePassOverrideConfig :<|> PostPassTripsAdjust))
 
 type GetPassCustomerAvailablePasses =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "availablePasses"
@@ -432,6 +457,17 @@ type UpdatePassOverrideConfig =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type PostPassTripsAdjust =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "pass"
+      :> Capture
+           "purchasedPassId"
+           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+      :> "trips"
+      :> "adjust"
+      :> ReqBody '[JSON] PassTripAdjustReq
+      :> Post '[JSON] PassTripAdjustResp
+  )
+
 data PassAPIs = PassAPIs
   { getPassCustomerAvailablePasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PassInfoAPIEntity],
     getPassCustomerPurchasedPasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PurchasedPassAPIEntity],
@@ -460,13 +496,14 @@ data PassAPIs = PassAPIs
     createPassType :: PassTypeCreateReq -> EulerHS.Types.EulerClient PassTypeCreateResp,
     updatePassType :: Kernel.Types.Id.Id Domain.Types.PassType.PassType -> PassTypeUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getPassOverrideConfig :: Kernel.Types.Id.Id Domain.Types.Pass.Pass -> EulerHS.Types.EulerClient PassOverrideConfig,
-    updatePassOverrideConfig :: Kernel.Types.Id.Id Domain.Types.Pass.Pass -> PassOverrideUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    updatePassOverrideConfig :: Kernel.Types.Id.Id Domain.Types.Pass.Pass -> PassOverrideUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPassTripsAdjust :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> PassTripAdjustReq -> EulerHS.Types.EulerClient PassTripAdjustResp
   }
 
 mkPassAPIs :: (Client EulerHS.Types.EulerClient API -> PassAPIs)
 mkPassAPIs passClient = (PassAPIs {..})
   where
-    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> getPassCustomerPassPhoto :<|> postPassCustomerPassRestore :<|> listPassCatalog :<|> createPass :<|> updatePass :<|> deletePass :<|> listPassCategories :<|> createPassCategory :<|> updatePassCategory :<|> listPassTypes :<|> createPassType :<|> updatePassType :<|> getPassOverrideConfig :<|> updatePassOverrideConfig = passClient
+    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> getPassCustomerPassPhoto :<|> postPassCustomerPassRestore :<|> listPassCatalog :<|> createPass :<|> updatePass :<|> deletePass :<|> listPassCategories :<|> createPassCategory :<|> updatePassCategory :<|> listPassTypes :<|> createPassType :<|> updatePassType :<|> getPassOverrideConfig :<|> updatePassOverrideConfig :<|> postPassTripsAdjust = passClient
 
 data PassUserActionType
   = GET_PASS_CUSTOMER_AVAILABLE_PASSES
@@ -491,6 +528,7 @@ data PassUserActionType
   | UPDATE_PASS_TYPE
   | GET_PASS_OVERRIDE_CONFIG
   | UPDATE_PASS_OVERRIDE_CONFIG
+  | POST_PASS_TRIPS_ADJUST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

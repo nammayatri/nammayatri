@@ -250,6 +250,28 @@ types:
     benefit: Maybe OverrideBenefitAPIEntity
     derive: "'HideSecrets"
 
+  # ---- Trip allowance adjustment (customer support) ----
+  # The live counter is a Redis key (FRFSPassOverride:availableTripCount-<id>),
+  # seeded once per term; purchased_pass_payment.available_trip_count is only a
+  # mirror. An adjustment therefore has to move both, which is why this is an
+  # operation rather than a plain column patch.
+
+  TripAdjustOperation:
+    enum: "IncrementBy, DecrementBy"
+
+  PassTripAdjustReq:
+    operation: TripAdjustOperation
+    # Always positive; the operation carries the direction.
+    value: Int
+    # Absent targets the pass's active term.
+    purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    derive: "'HideSecrets"
+
+  PassTripAdjustResp:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    remainingTrips: Maybe Int
+    previousTrips: Maybe Int
+
   PassCreateResp:
     passId: Id Pass
 
@@ -528,3 +550,20 @@ apis:
         type: PassOverrideUpdateReq
       response:
         type: APISuccess
+
+  # ---- Trip allowance adjustment ----
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/{purchasedPassId}/trips/adjust
+      name: PostPassTripsAdjust
+      auth: ApiAuthV2
+      migrate:
+        # Operating a customer's pass, not authoring the catalog.
+        capability: city-operations.pass.execute
+      params:
+        customerId: Id Person
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassTripAdjustReq
+      response:
+        type: PassTripAdjustResp
