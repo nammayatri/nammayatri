@@ -1,0 +1,22 @@
+imports:
+  Minutes: Kernel.Types.Common
+
+module: AvailableForRides
+
+types:
+  # Snapshot of the boost after the activation that produced it. `validTill` and
+  # `requestsRemaining` are the two independent ways the tag can go away, so both
+  # are surfaced rather than a single opaque "active" flag.
+  AvailableForRidesRes:
+    validTill: UTCTime
+    validityMinutes: Minutes
+    activationsUsedToday: Int
+    activationsAllowedPerDay: Int
+    requestsAllowed: Int
+
+apis:
+  - POST:
+      endpoint: /driver/availableForRides/activate
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.AvailableForRides.AvailableForRidesRes

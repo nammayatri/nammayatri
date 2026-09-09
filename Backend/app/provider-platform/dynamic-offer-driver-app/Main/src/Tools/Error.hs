@@ -239,6 +239,8 @@ data DriverError
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
   | DriverNotEnabledForAirport
   | DriverAirportAlreadyBlocked
+  | AvailableForRidesNotEnabled
+  | AvailableForRidesDailyLimitExceeded Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -263,6 +265,8 @@ instance IsBaseError DriverError where
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
   toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
   toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
+  toMessage AvailableForRidesNotEnabled = Just "Available for rides is not enabled for this city."
+  toMessage (AvailableForRidesDailyLimitExceeded dailyLimit) = Just $ "Available for rides can be used at most " <> show dailyLimit <> " times a day."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -285,6 +289,8 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
     DriverNotEnabledForAirport -> "DRIVER_NOT_ENABLED_FOR_AIRPORT"
     DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
+    AvailableForRidesNotEnabled -> "AVAILABLE_FOR_RIDES_NOT_ENABLED"
+    AvailableForRidesDailyLimitExceeded _ -> "AVAILABLE_FOR_RIDES_DAILY_LIMIT_EXCEEDED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -305,6 +311,8 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> E402
     DriverNotEnabledForAirport -> E403
     DriverAirportAlreadyBlocked -> E403
+    AvailableForRidesNotEnabled -> E400
+    AvailableForRidesDailyLimitExceeded _ -> E429
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload

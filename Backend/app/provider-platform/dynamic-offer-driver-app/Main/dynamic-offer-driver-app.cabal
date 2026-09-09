@@ -306,6 +306,7 @@ library
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
+      Domain.Action.UI.AvailableForRides
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -597,6 +598,7 @@ library
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool
       SharedLogic.DriverPool.AreaPreference
+      SharedLogic.DriverPool.AvailableForRides
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
@@ -1157,6 +1159,7 @@ library
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
+      API.Action.UI.AvailableForRides
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
@@ -1244,6 +1247,7 @@ library
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
+      API.Types.UI.AvailableForRides
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots

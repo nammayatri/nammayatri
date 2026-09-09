@@ -168,7 +168,8 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         clientDevice = Nothing,
         reactBundleVersion = Nothing,
         driverCancellationNotAllowed = Nothing,
-        isAutoAccepted = Nothing
+        isAutoAccepted = Nothing,
+        hasAvailableForRidesTag = Nothing
       }
 
 type SendSearchRequestJobFlow m r c =

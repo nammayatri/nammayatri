@@ -101,8 +101,30 @@ mkTagNameValueExpiry ::
   Maybe Hours ->
   UTCTime ->
   LYT.TagNameValueExpiry
-mkTagNameValueExpiry (LYT.TagName tagName) tagValue mbValidity now = do
-  let mbExpiredAt = mbValidity <&> (\validity -> addUTCTime (3600 * fromIntegral validity) now)
+mkTagNameValueExpiry tagName tagValue mbValidity now =
+  mkTagNameValueExpiryAt tagName tagValue $
+    mbValidity <&> \validity -> addUTCTime (3600 * fromIntegral validity) now
+
+-- | Minute-granularity sibling of 'mkTagNameValueExpiry', for tags whose lifetime is
+-- shorter than the 'Hours' the NammaTag validity column carries (the stored expiry is
+-- an ISO timestamp, so the wire format is unchanged).
+mkTagNameValueExpiryInMinutes ::
+  LYT.TagName ->
+  LYT.TagValue ->
+  Maybe Minutes ->
+  UTCTime ->
+  LYT.TagNameValueExpiry
+mkTagNameValueExpiryInMinutes tagName tagValue mbValidity now =
+  mkTagNameValueExpiryAt tagName tagValue $
+    mbValidity <&> \validity -> addUTCTime (60 * fromIntegral validity.getMinutes) now
+
+-- | Shared builder: 'Nothing' expiry means the tag never expires on its own.
+mkTagNameValueExpiryAt ::
+  LYT.TagName ->
+  LYT.TagValue ->
+  Maybe UTCTime ->
+  LYT.TagNameValueExpiry
+mkTagNameValueExpiryAt (LYT.TagName tagName) tagValue mbExpiredAt = do
   let showTagValue = case tagValue of
         LYT.TextValue tagValueText -> tagValueText
         LYT.NumberValue tagValueDouble -> show tagValueDouble

@@ -60,6 +60,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     fleetOwnerId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
+    hasAvailableForRidesTag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
     isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFavourite :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -106,12 +107,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationSource))
