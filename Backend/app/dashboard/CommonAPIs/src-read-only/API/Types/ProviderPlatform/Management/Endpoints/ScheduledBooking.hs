@@ -125,6 +125,8 @@ data ScheduledBookingInfoRes = ScheduledBookingInfoRes
     bookingId :: Kernel.Prelude.Text,
     tripCategory :: Domain.Types.TripCategory,
     scheduledAt :: Kernel.Prelude.UTCTime,
+    roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromLocation :: LocationAPIEntity,
     toLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
