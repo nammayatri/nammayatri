@@ -29,6 +29,9 @@ module SharedLogic.BetterRoutePointSearch
   ( SuggestedSearchBuild (..),
     buildSuggestedSearchRes,
     buildShadowSearchRes,
+    offeredAlternateFor,
+    isShadowForShape,
+    withChosenAddresses,
     resolveBetterRoute,
     betterPointConfig,
   )
@@ -204,6 +207,81 @@ buildShadowSearchRes parentRes betterRoute mbPickupAddress mbDropAddress = do
     relocate loc mbAddress latLong = do
       locId <- generateGUID
       pure (loc {DL.id = locId, DL.lat = latLong.lat, DL.lon = latLong.lon, DL.address = fromMaybe loc.address mbAddress} :: DL.Location)
+
+-- | The alternate a fare request is asking about, when it is asking about one of them.
+--
+-- A shape is a moved pickup, a moved drop, or both, and a search offers at most one of
+-- each, so which ends move already picks the alternate out. The positions still have to
+-- agree: a customer who dragged a marker off the point they were offered is asking about a
+-- different ride, and handing them this one's fare would quote a ride they did not ask for
+-- and send a driver to a pickup they did not choose. The tolerance is there because the
+-- app echoes coordinates it was given, so only dropped decimals have to be absorbed.
+offeredAlternateFor ::
+  [BRPC.AlternateShadow] ->
+  -- | Chosen pickup, when that end moves
+  Maybe LatLong ->
+  -- | Chosen drop, when that end moves
+  Maybe LatLong ->
+  Maybe BRPC.AlternateShadow
+offeredAlternateFor alternates mbPickup mbDrop = find (sameShape . (.route)) alternates
+  where
+    sameShape route =
+      samePoint ((.point) <$> route.betterPickup) mbPickup
+        && samePoint ((.point) <$> route.betterDrop) mbDrop
+
+-- | The same question of 'offeredAlternateFor', asked of a shadow that was persisted rather
+-- than of a shape held in the search's context. That is what the shape priced inline needs:
+-- the context names its search but does not carry its route, and the row it wrote does --
+-- a walk distance is set for exactly the end that moved, and that end's location is where
+-- it moved to.
+isShadowForShape ::
+  -- | Chosen pickup, when that end moves
+  Maybe LatLong ->
+  -- | Chosen drop, when that end moves
+  Maybe LatLong ->
+  DSearchReq.SearchRequest ->
+  Bool
+isShadowForShape mbPickup mbDrop shadow =
+  samePoint movedPickup mbPickup && samePoint movedDrop mbDrop
+  where
+    movedPickup = shadow.betterPointWalkToPickup $> LatLong shadow.fromLocation.lat shadow.fromLocation.lon
+    movedDrop = shadow.betterPointWalkFromDrop >> (toLatLong <$> shadow.toLocation)
+    toLatLong toLoc = LatLong toLoc.lat toLoc.lon
+
+-- | Whether an end the customer moved is the end we offered to move, with 'Nothing' on
+-- either side standing for an end that stays where it is. Both have to agree for the shapes
+-- to be the same one.
+samePoint :: Maybe LatLong -> Maybe LatLong -> Bool
+samePoint Nothing Nothing = True
+samePoint (Just offeredPoint) (Just chosen) =
+  highPrecMetersToMeters (distanceBetweenInMeters offeredPoint chosen) <= Meters 10
+samePoint _ _ = False
+
+-- | Names an alternate's moved endpoints the way the customer's app names them, for the
+-- answer to a fare request that asked for that alternate.
+--
+-- A shadow built during /rideSearch carries the parent's address, since naming a point the
+-- customer may never choose would put a reverse-geocode on the search path. When they ask
+-- for its fare the app usually sends the name it drew on the marker, so answer with that:
+-- it is the name a shadow built for this request would have carried.
+--
+-- In memory only. 'Domain.Action.UI.Select.updateSuggestedLocationAddresses' is what
+-- writes the name of a chosen point, for the one point they choose rather than every shape
+-- on offer, and it runs for an alternate exactly as it does for a freshly built shadow.
+withChosenAddresses ::
+  -- | Address for the moved pickup, when the app sent one
+  Maybe LocationAddress ->
+  -- | Address for the moved drop, when the app sent one
+  Maybe LocationAddress ->
+  DSearchReq.SearchRequest ->
+  DSearchReq.SearchRequest
+withChosenAddresses mbPickupAddress mbDropAddress shadow =
+  shadow
+    { DSearchReq.fromLocation = maybe shadow.fromLocation (rename shadow.fromLocation) mbPickupAddress,
+      DSearchReq.toLocation = (\toLoc -> maybe toLoc (rename toLoc) mbDropAddress) <$> shadow.toLocation
+    }
+  where
+    rename loc chosenAddress = (loc {DL.address = chosenAddress} :: DL.Location)
 
 -- | The better-route shape for endpoints the customer picked -- an alternative they
 -- tapped, or a marker they nudged off the ones offered.
