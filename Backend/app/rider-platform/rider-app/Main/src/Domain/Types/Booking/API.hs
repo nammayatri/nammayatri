@@ -169,7 +169,10 @@ data BookingAPIEntity = BookingAPIEntity
     commissionCharge :: Maybe HighPrecMoney,
     refunds :: [RideRefundInfo],
     fareSettlementType :: Maybe SL.FareSettlementType,
-    cardInfo :: Maybe RideCardInfo
+    cardInfo :: Maybe RideCardInfo,
+    -- | True while the rider is inside a silent reallocation window: the driver cancelled
+    -- and a new one is being found, but the app should keep showing the trip as assigned.
+    isSilentReallocation :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -438,7 +441,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         commissionCharge = booking.commission,
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
-        cardInfo = cardInfo
+        cardInfo = cardInfo,
+        isSilentReallocation = Nothing
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
+import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -103,7 +104,17 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
       case personStatus' of
         Just personStatus -> do
           case personStatus of
-            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId now
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> do
+              -- inside a silent reallocation window the app must keep its tracking screen,
+              -- so report the reallocated booking as active instead of the pooling status
+              mbSilentCtx <- SilentRealloc.getSilentReallocation personId
+              case mbSilentCtx of
+                Just _ -> do
+                  activeBookings <- bookingList (Just personId, merchantId) Nothing False Nothing Nothing (Just True) Nothing Nothing Nothing Nothing [] Nothing Nothing
+                  if null activeBookings.list
+                    then findValueAddNP personStatus providerId now
+                    else return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
+                Nothing -> findValueAddNP personStatus providerId now
             DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing now
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking

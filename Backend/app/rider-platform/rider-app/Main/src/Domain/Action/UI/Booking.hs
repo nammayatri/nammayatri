@@ -72,6 +72,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Serviceability as Serviceability
+import qualified SharedLogic.SilentReallocation as SilentRealloc
 import SharedLogic.Type as SLT
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQMerchant
@@ -240,13 +241,19 @@ bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text ->
 bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup = do
   (rbList, allbookings) <- getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
   case mbPersonId of
-    Just personId -> returnResonseAndClearStuckRides allbookings rbList personId
+    Just personId -> do
+      -- silent reallocation window: keep the reallocated booking in the active list, flagged
+      (rbListWithSilent, mbSilentCtx) <-
+        if mbOnlyActive == Just True
+          then SilentRealloc.includeSilentReallocationBooking personId rbList
+          else pure (rbList, Nothing)
+      returnResonseAndClearStuckRides allbookings rbListWithSilent personId mbSilentCtx
     Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)) rbList
   where
-    returnResonseAndClearStuckRides allbookings rbList personId = do
+    returnResonseAndClearStuckRides allbookings rbList personId mbSilentCtx = do
       fork "booking list status update" $ checkBookingsForStatus allbookings
       logInfo $ "rbList: test " <> show rbList
-      BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking personId (fromMaybe False mbDontNeedFareBreakup)) rbList
+      BookingListRes <$> traverse (\booking -> SilentRealloc.maskSilentReallocationBooking mbSilentCtx <$> SRB.buildBookingAPIEntity booking personId (fromMaybe False mbDontNeedFareBreakup)) rbList
 
 getPassList :: Id Merchant.Merchant -> Id Person.Person -> Maybe Int -> Maybe Int -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow [DPurchasedPass.PurchasedPass]
 getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes = do
