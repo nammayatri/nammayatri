@@ -26,6 +26,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     deactivateCurrentRC,
     linkRCStatus,
     removeVehicle,
+    endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
     getAllLinkedRCs,
     LinkedRC (..),
@@ -785,6 +786,13 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
+
+endAllRCAssociationsAndRemoveVehicle :: OnboardingFlow m r => Id Person.Person -> m ()
+endAllRCAssociationsAndRemoveVehicle driverId = do
+  removeVehicle False driverId -- throws RCVehicleOnRide rather than unlinking under a live ride
+  DAQuery.endAllRCAssociationsForDriver driverId
+  now <- getCurrentTime
+  DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
 
 removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
 removeVehicle isTaxiBoothRequest driverId = do
