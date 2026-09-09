@@ -13,16 +13,21 @@ import qualified Kernel.Types.Common
 import qualified Lib.Payment.Domain.Types.Offer
 
 data OfferT f = OfferT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { autoApply :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f Kernel.Types.Common.Currency,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discountType :: B.C f Lib.Payment.Domain.Types.Offer.DiscountType,
     discountValue :: B.C f Kernel.Types.Common.HighPrecMoney,
+    frequencyType :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency),
     id :: B.C f Kernel.Prelude.Text,
     isActive :: B.C f Kernel.Prelude.Bool,
+    isHidden :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maxApplyCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minimumAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     offerCode :: B.C f Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     offerType :: B.C f Lib.Payment.Domain.Types.Offer.OfferType,

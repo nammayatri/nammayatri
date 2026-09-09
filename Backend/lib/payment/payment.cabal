@@ -33,6 +33,8 @@ library
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Offer.Counters
+      Lib.Payment.Offer.Frequency
       Lib.Payment.Payment.History
       Lib.Payment.Payout.History
       Lib.Payment.Payout.Order
@@ -57,6 +59,7 @@ library
       Lib.Payment.Wallet.Types
       Tools.Beam.UtilsTH
       Lib.Payment.Domain.Types.Offer
+      Lib.Payment.Domain.Types.OfferFrequencyStatsHistory
       Lib.Payment.Domain.Types.OfferStats
       Lib.Payment.Domain.Types.OfflineOffer
       Lib.Payment.Domain.Types.PaymentOrderOffer
@@ -65,6 +68,7 @@ library
       Lib.Payment.Domain.Types.PayoutRequest
       Lib.Payment.Domain.Types.PayoutTransaction
       Lib.Payment.Domain.Types.PersonDailyOfferStats
+      Lib.Payment.Domain.Types.PersonOfferFrequencyStats
       Lib.Payment.Domain.Types.PersonWallet
       Lib.Payment.Domain.Types.Refunds
       Lib.Payment.Domain.Types.Wallet
@@ -72,6 +76,7 @@ library
       Lib.Payment.Domain.Types.WalletPayments
       Lib.Payment.Domain.Types.WalletRewardPosting
       Lib.Payment.Storage.Beam.Offer
+      Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory
       Lib.Payment.Storage.Beam.OfferStats
       Lib.Payment.Storage.Beam.OfflineOffer
       Lib.Payment.Storage.Beam.PaymentOrderOffer
@@ -80,6 +85,7 @@ library
       Lib.Payment.Storage.Beam.PayoutRequest
       Lib.Payment.Storage.Beam.PayoutTransaction
       Lib.Payment.Storage.Beam.PersonDailyOfferStats
+      Lib.Payment.Storage.Beam.PersonOfferFrequencyStats
       Lib.Payment.Storage.Beam.PersonWallet
       Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Beam.Wallet
@@ -87,6 +93,7 @@ library
       Lib.Payment.Storage.Beam.WalletPayments
       Lib.Payment.Storage.Beam.WalletRewardPosting
       Lib.Payment.Storage.Queries.Offer
+      Lib.Payment.Storage.Queries.OfferFrequencyStatsHistory
       Lib.Payment.Storage.Queries.OfferStats
       Lib.Payment.Storage.Queries.OfflineOffer
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
@@ -97,6 +104,7 @@ library
       Lib.Payment.Storage.Queries.PayoutRequest
       Lib.Payment.Storage.Queries.PayoutTransaction
       Lib.Payment.Storage.Queries.PersonDailyOfferStats
+      Lib.Payment.Storage.Queries.PersonOfferFrequencyStats
       Lib.Payment.Storage.Queries.PersonWallet
       Lib.Payment.Storage.Queries.Refunds
       Lib.Payment.Storage.Queries.Wallet
@@ -182,3 +190,87 @@ library
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite payment-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      OfferCountersTests
+      OfferFrequencyTests
+      Paths_payment
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      DerivingStrategies
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , base16-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , bytestring
+    , cereal
+    , containers
+    , cryptohash
+    , euler-hs
+    , exceptions
+    , finance-kernel
+    , http-client
+    , http-types
+    , mobility-core
+    , mtl
+    , openapi3
+    , payment
+    , postgresql-simple
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant
+    , servant-client
+    , servant-server
+    , tasty
+    , tasty-hunit
+    , text
+    , time
+    , unordered-containers
+    , uri-encode
+    , yudhishthira
+  default-language: Haskell2010

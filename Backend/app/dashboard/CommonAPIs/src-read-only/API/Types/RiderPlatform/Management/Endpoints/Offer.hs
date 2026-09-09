@@ -30,7 +30,12 @@ data CreateOfferReq = CreateOfferReq
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    currency :: Kernel.Types.Common.Currency
+    currency :: Kernel.Types.Common.Currency,
+    minimumAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
+    maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -57,6 +62,11 @@ data OfferResp = OfferResp
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     isActive :: Kernel.Prelude.Bool,
+    minimumAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
+    maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -72,7 +82,12 @@ data UpdateOfferReq = UpdateOfferReq
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    minimumAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isHidden :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    frequencyType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Offer.OfferFrequency,
+    maxApplyCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -93,30 +108,30 @@ data ValidateOfferEligibilityResp = ValidateOfferEligibilityResp {eligible :: Ke
 
 type API = ("offer" :> (PostOfferCreate :<|> PostOfferUpdate :<|> GetOfferList :<|> PostOfferToggle :<|> PostOfferValidateEligibility :<|> GetOfferEligibilitySchema))
 
-type PostOfferCreate = ("create" :> ReqBody ('[JSON]) CreateOfferReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostOfferCreate = ("create" :> ReqBody '[JSON] CreateOfferReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostOfferUpdate =
-  ( Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "update" :> ReqBody ('[JSON]) UpdateOfferReq
+  ( Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "update" :> ReqBody '[JSON] UpdateOfferReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetOfferList = ("list" :> Get ('[JSON]) [OfferResp])
+type GetOfferList = ("list" :> Get '[JSON] [OfferResp])
 
-type PostOfferToggle = (Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "toggle" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostOfferToggle = (Capture "offerId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer) :> "toggle" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostOfferValidateEligibility = ("validateEligibility" :> ReqBody ('[JSON]) ValidateOfferEligibilityReq :> Post ('[JSON]) ValidateOfferEligibilityResp)
+type PostOfferValidateEligibility = ("validateEligibility" :> ReqBody '[JSON] ValidateOfferEligibilityReq :> Post '[JSON] ValidateOfferEligibilityResp)
 
-type GetOfferEligibilitySchema = ("eligibilitySchema" :> Get ('[JSON]) OfferEligibilitySchemaResp)
+type GetOfferEligibilitySchema = ("eligibilitySchema" :> Get '[JSON] OfferEligibilitySchemaResp)
 
 data OfferAPIs = OfferAPIs
-  { postOfferCreate :: (CreateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postOfferUpdate :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> UpdateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getOfferList :: (EulerHS.Types.EulerClient [OfferResp]),
-    postOfferToggle :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postOfferValidateEligibility :: (ValidateOfferEligibilityReq -> EulerHS.Types.EulerClient ValidateOfferEligibilityResp),
-    getOfferEligibilitySchema :: (EulerHS.Types.EulerClient OfferEligibilitySchemaResp)
+  { postOfferCreate :: CreateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postOfferUpdate :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> UpdateOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getOfferList :: EulerHS.Types.EulerClient [OfferResp],
+    postOfferToggle :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postOfferValidateEligibility :: ValidateOfferEligibilityReq -> EulerHS.Types.EulerClient ValidateOfferEligibilityResp,
+    getOfferEligibilitySchema :: EulerHS.Types.EulerClient OfferEligibilitySchemaResp
   }
 
 mkOfferAPIs :: (Client EulerHS.Types.EulerClient API -> OfferAPIs)
@@ -134,4 +149,4 @@ data OfferUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''OfferUserActionType)])
+$(Data.Singletons.TH.genSingletons [''OfferUserActionType])

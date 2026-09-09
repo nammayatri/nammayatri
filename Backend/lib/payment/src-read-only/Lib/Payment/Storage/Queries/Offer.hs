@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.Offer.Offer] -> m ())
 createMany = traverse_ create
 
-findAllActiveByMerchant :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Lib.Payment.Domain.Types.Offer.Offer]))
+findAllActiveByMerchant :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m [Lib.Payment.Domain.Types.Offer.Offer])
 findAllActiveByMerchant merchantId merchantOperatingCityId isActive = do
   findAllWithKV
     [ Se.And
@@ -45,14 +45,19 @@ updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.P
 updateByPrimaryKey (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency currency,
+    [ Se.Set Beam.autoApply autoApply,
+      Se.Set Beam.currency currency,
       Se.Set Beam.description description,
       Se.Set Beam.discountType discountType,
       Se.Set Beam.discountValue discountValue,
+      Se.Set Beam.frequencyType frequencyType,
       Se.Set Beam.isActive isActive,
+      Se.Set Beam.isHidden isHidden,
+      Se.Set Beam.maxApplyCount maxApplyCount,
       Se.Set Beam.maxDiscount maxDiscount,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.minimumAmount minimumAmount,
       Se.Set Beam.offerCode offerCode,
       Se.Set Beam.offerEligibilityJsonLogic offerEligibilityJsonLogic,
       Se.Set Beam.offerType offerType,
@@ -69,16 +74,21 @@ instance FromTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
     pure $
       Just
         Lib.Payment.Domain.Types.Offer.Offer
-          { createdAt = createdAt,
+          { autoApply = autoApply,
+            createdAt = createdAt,
             currency = currency,
             description = description,
             discountType = discountType,
             discountValue = discountValue,
+            frequencyType = frequencyType,
             id = Kernel.Types.Id.Id id,
             isActive = isActive,
+            isHidden = isHidden,
+            maxApplyCount = maxApplyCount,
             maxDiscount = maxDiscount,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
+            minimumAmount = minimumAmount,
             offerCode = offerCode,
             offerEligibilityJsonLogic = offerEligibilityJsonLogic,
             offerType = offerType,
@@ -92,16 +102,21 @@ instance FromTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
 instance ToTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
   toTType' (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
     Beam.OfferT
-      { Beam.createdAt = createdAt,
+      { Beam.autoApply = autoApply,
+        Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.description = description,
         Beam.discountType = discountType,
         Beam.discountValue = discountValue,
+        Beam.frequencyType = frequencyType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActive = isActive,
+        Beam.isHidden = isHidden,
+        Beam.maxApplyCount = maxApplyCount,
         Beam.maxDiscount = maxDiscount,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
+        Beam.minimumAmount = minimumAmount,
         Beam.offerCode = offerCode,
         Beam.offerEligibilityJsonLogic = offerEligibilityJsonLogic,
         Beam.offerType = offerType,
