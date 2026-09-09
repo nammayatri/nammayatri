@@ -14,10 +14,12 @@ module Beckn.OnDemand.Utils.OndcScheduledRide.Common
     patchCatalogTags,
     dropNonConformingOrderTags,
     patchOrderVehicleEnergyType,
+    patchOrderAddOns,
     applyOrderCategoryAndFulfillmentStateOverrides,
     applyOnConfirmOrderOverrides,
     applyOnInitOrderOverrides,
     applyOnSelectOrderOverrides,
+    applyDynamicOfferOnSelectOverrides,
     applyOnStatusOrderOverrides,
     remapBreakupTitle,
     overrideOrderBreakupTitles,
@@ -39,6 +41,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text (isInfixOf)
 import qualified Domain.Action.Beckn.Search as DSearch
+import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -50,6 +53,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Ride (searchRequestKey)
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -245,6 +249,17 @@ patchOrderVehicleEnergyType order =
     patchFulfillment fulfillment = fulfillment {Spec.fulfillmentVehicle = patchVehicle <$> fulfillment.fulfillmentVehicle}
     patchVehicle vehicle = vehicle {Spec.vehicleEnergyType = overrideVehicleEnergyType <$> vehicle.vehicleEnergyType}
 
+-- AddOns --------------------------------------------------------
+
+-- Echoes back what the BAP actually selected earlier (the AddOnData persisted on Quote/SearchTry/Booking at /select or /init) on every item in the order; a no-op when nothing was ever selected.
+patchOrderAddOns :: (EsqDBFlow m r, CacheFlow m r) => [DAddOnConfig.AddOnData] -> Spec.Order -> m Spec.Order
+patchOrderAddOns [] order = pure order
+patchOrderAddOns addOnData order = do
+  selectedAddOns <- SAddOn.buildSelectedSpecAddOns addOnData
+  pure $ order {Spec.orderItems = map (patchItem selectedAddOns) <$> order.orderItems}
+  where
+    patchItem selectedAddOns item = item {Spec.itemAddOns = Just selectedAddOns}
+
 -- Per-API composed overrides ----------------------------------------------
 
 -- | overrideOrderCategoryIds + overrideOrderFulfillmentState, applied
@@ -256,31 +271,45 @@ applyOrderCategoryAndFulfillmentStateOverrides isScheduled =
 
 -- | The full ONDC-scheduled-ride on_confirm order patch: category ids and
 -- fulfillment-state codes, BAP_TERMS + BPP_TERMS, fulfillment.type,
--- vehicle.energy_type, then ROUTE_INFO.
-applyOnConfirmOrderOverrides :: (CacheFlow m r, MonadFlow m) => Bool -> Text -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
-applyOnConfirmOrderOverrides isScheduled transactionId mbBapMetadata bppConfig =
-  patchOrderRouteInfo transactionId
+-- vehicle.energy_type, ROUTE_INFO, then the selected add-ons.
+applyOnConfirmOrderOverrides :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Bool -> Text -> [DAddOnConfig.AddOnData] -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
+applyOnConfirmOrderOverrides isScheduled transactionId addOnData mbBapMetadata bppConfig =
+  join
+    . fmap (patchOrderAddOns addOnData)
+    . patchOrderRouteInfo transactionId
     . patchOrderVehicleEnergyType
     . patchOrderFulfillmentTypes
     . patchOrderTags True mbBapMetadata bppConfig
     . applyOrderCategoryAndFulfillmentStateOverrides isScheduled
 
 -- | The full ONDC-scheduled-ride on_init order patch: BPP_TERMS only,
--- fulfillment.type, vehicle.energy_type, then ROUTE_INFO.
-applyOnInitOrderOverrides :: (CacheFlow m r, MonadFlow m) => Text -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
-applyOnInitOrderOverrides transactionId mbBapMetadata bppConfig =
-  patchOrderRouteInfo transactionId
+-- fulfillment.type, vehicle.energy_type, ROUTE_INFO, then the selected add-ons.
+applyOnInitOrderOverrides :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Text -> [DAddOnConfig.AddOnData] -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
+applyOnInitOrderOverrides transactionId addOnData mbBapMetadata bppConfig =
+  join
+    . fmap (patchOrderAddOns addOnData)
+    . patchOrderRouteInfo transactionId
     . patchOrderVehicleEnergyType
     . patchOrderFulfillmentTypes
     . patchOrderTags False mbBapMetadata bppConfig
 
 -- | The ONDC-scheduled-ride on_select order patch: fulfillment.type,
--- vehicle.energy_type, then ROUTE_INFO.
-applyOnSelectOrderOverrides :: (CacheFlow m r, MonadFlow m) => Text -> Spec.Order -> m Spec.Order
-applyOnSelectOrderOverrides transactionId =
-  patchOrderRouteInfo transactionId
+-- vehicle.energy_type, ROUTE_INFO, then the selected add-ons.
+applyOnSelectOrderOverrides :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Text -> [DAddOnConfig.AddOnData] -> Spec.Order -> m Spec.Order
+applyOnSelectOrderOverrides transactionId addOnData =
+  join
+    . fmap (patchOrderAddOns addOnData)
+    . patchOrderRouteInfo transactionId
     . patchOrderVehicleEnergyType
     . patchOrderFulfillmentTypes
+
+-- | The dynamic-offer/bidding on_select flow's order patch (SharedLogic.CallBAP.sendDriverOffer): item compliance + breakup titles on an already-built Layer 1 message, then the selected add-ons. No ROUTE_INFO/fulfillment-type/vehicle-energy-type step -- this flow never applied those overrides in the first place.
+applyDynamicOfferOnSelectOverrides :: (EsqDBFlow m r, CacheFlow m r) => [DAddOnConfig.AddOnData] -> Spec.OnSelectReqMessage -> m Spec.OnSelectReqMessage
+applyDynamicOfferOnSelectOverrides addOnData msg = do
+  orderWithAddOns <- traverse (patchOrderAddOns addOnData) fixedOrder
+  pure msg {Spec.onSelectReqMessageOrder = orderWithAddOns}
+  where
+    fixedOrder = (overrideOrderItemCompliance . overrideOrderBreakupTitles) <$> msg.onSelectReqMessageOrder
 
 -- | The ONDC-scheduled-ride on_status order patch: fulfillment.type then
 -- vehicle.energy_type only.
@@ -383,10 +412,11 @@ overrideOrderStopAuthorizationStatus isRideStarted order
 
 -- RideAssigned (on_confirm / on_update / on_status pushes) ----------------
 
--- Applies fulfillment-state, category-id, breakup, tag, fulfillment-type, fulfillment-id and stop-authorization overrides together, since the on_confirm and on_update ride-assigned pushes both build through the same Layer 1 path and need the identical ONDC fix.
-applyOndcScheduledRideAssignedOrderOverrides :: Bool -> Text -> Bool -> Spec.Order -> Spec.Order
-applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted =
-  dropNonConformingOrderTags
+-- Applies fulfillment-state, category-id, breakup, tag, fulfillment-type, fulfillment-id and stop-authorization overrides together, plus the selected add-ons, since the on_confirm and on_update ride-assigned pushes both build through the same Layer 1 path and need the identical ONDC fix.
+applyOndcScheduledRideAssignedOrderOverrides :: (EsqDBFlow m r, CacheFlow m r) => Bool -> Text -> Bool -> [DAddOnConfig.AddOnData] -> Spec.Order -> m Spec.Order
+applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted addOnData =
+  patchOrderAddOns addOnData
+    . dropNonConformingOrderTags
     . patchOrderFulfillmentTypes
     . overrideOrderCategoryIds isScheduled
     . overrideOrderFulfillmentState
@@ -401,12 +431,16 @@ applyOndcScheduledRideOrderOverridesIfEnabled ::
   Bool ->
   Text ->
   Bool ->
+  [DAddOnConfig.AddOnData] ->
   Maybe Spec.ConfirmReqMessage ->
   m (Maybe Spec.ConfirmReqMessage)
-applyOndcScheduledRideOrderOverridesIfEnabled merchantOperatingCityId isScheduled quoteId isRideStarted mbMsg = do
+applyOndcScheduledRideOrderOverridesIfEnabled merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-  pure $
-    if isOndcScheduledRideSupportEnabled
-      then (\msg -> msg {Spec.confirmReqMessageOrder = applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted msg.confirmReqMessageOrder}) <$> mbMsg
-      else mbMsg
+  if isOndcScheduledRideSupportEnabled
+    then traverse patchMsg mbMsg
+    else pure mbMsg
+  where
+    patchMsg msg = do
+      orderWithOverrides <- applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted addOnData msg.confirmReqMessageOrder
+      pure msg {Spec.confirmReqMessageOrder = orderWithOverrides}

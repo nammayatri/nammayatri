@@ -155,6 +155,7 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Confirm
       Beckn.OnDemand.Transformer.OndcScheduledRide.Init
       Beckn.OnDemand.Transformer.OndcScheduledRide.OnConfirm
       Beckn.OnDemand.Transformer.OndcScheduledRide.OnInit
@@ -492,6 +493,7 @@ library
       Lib.LocationUpdates
       Lib.Schema
       SharedLogic.ActiveDriversList
+      SharedLogic.AddOn
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
@@ -1292,6 +1294,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
+      Domain.Types.AddOnConfig
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -1487,6 +1490,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AddOnConfig
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -1687,6 +1691,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AddOnConfig
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig

@@ -1,0 +1,71 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceTierType: Domain.Types.Common
+  Value: Data.Aeson
+
+AddOnConfig:
+  tableName: add_on_config
+
+  types:
+    AddOnType:
+      enum: "RIDER_INSURANCE"
+      derive: HttpInstance
+
+    AddOnMetadata:
+      title: Text
+      value: Text
+      derive: Eq
+
+    AddOnData:
+      configId: Id AddOnConfig
+      selectedQuantity: Int
+      derive: Eq
+
+  fields:
+    id: Id AddOnConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleServiceTier: "[ServiceTierType]"
+    addOnType: AddOnType
+    descriptorName: Text
+    descriptorShortDesc: Maybe Text
+    maxQuantity: Int
+    pricePerQuantity: Maybe HighPrecMoney
+    metadata: Maybe [AddOnMetadata]
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    vehicleServiceTier: text[]
+    metadata: jsonb
+    addOnType: character varying(255)
+
+  default:
+    vehicleServiceTier: "'{}'"
+    enabled: "true"
+
+  beamType:
+    metadata: Maybe Value
+
+  toTType:
+    metadata: Data.Aeson.toJSON <$> metadata|E
+
+  fromTType:
+    metadata: Kernel.Utils.JSON.valueToMaybe =<< metadata|E
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOpCityIdAndEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+        in:
+          - id: ids

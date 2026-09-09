@@ -4,6 +4,7 @@
 module Domain.Types.Booking where
 
 import Data.Aeson
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Common
 import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
@@ -30,7 +31,8 @@ import qualified Tools.Beam.UtilsTH
 import qualified Tools.Maps
 
 data Booking = Booking
-  { area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
+  { addOnData :: [Domain.Types.AddOnConfig.AddOnData],
+    area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
     bapCity :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City,
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
@@ -129,8 +131,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
-$(mkHttpInstancesForEnum (''BookingStatus))
+$(mkHttpInstancesForEnum ''BookingStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)

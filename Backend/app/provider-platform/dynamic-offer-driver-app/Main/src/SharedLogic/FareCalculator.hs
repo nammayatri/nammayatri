@@ -153,6 +153,10 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       baseFareCaption = show Enums.BASE_FARE
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinal)
 
+      -- Its own breakup line, since the breakup total otherwise diverges from the negotiated price.
+      negotiatedFareDeltaCaption = show Enums.NEGOTIATED_FARE_DELTA
+      mbNegotiatedFareDeltaItem = mkBreakupItem negotiatedFareDeltaCaption . mkPrice <$> fareParams.negotiatedFareDelta
+
       serviceChargeCaption = show Enums.SERVICE_CHARGE
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
 
@@ -267,6 +271,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
     [ Just baseFareItem,
+      mbNegotiatedFareDeltaItem,
       mbCongestionChargeItem,
       mbNightShiftChargeItem,
       mbNightChargesItem,
