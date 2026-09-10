@@ -61,6 +61,8 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigVendorSplitDetailsList,
     getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
+    postMerchantConfigAllowedDestinationStates,
+    getMerchantConfigAllowedDestinationStates,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
     getMerchantConfigVehicleServiceTierList,
@@ -136,6 +138,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.MerchantState as DMerchantState
 import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as Plan
@@ -227,6 +230,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantState as CQMerchantState
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -262,6 +266,7 @@ import qualified Storage.Queries.MerchantPaymentMethod as QMPM
 import qualified Storage.Queries.MerchantPushNotification as QMPN
 import qualified Storage.Queries.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.Queries.MerchantState as QMerchantState
 import qualified Storage.Queries.Overlay as QMO
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
@@ -3662,6 +3667,42 @@ deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationI
 normalizeName :: Text -> Text
 normalizeName = T.strip . T.toLower
 
+upsertMerchantAllowedDestinationStates :: Id DM.Merchant -> Context.IndianState -> [Context.IndianState] -> UTCTime -> Flow ()
+upsertMerchantAllowedDestinationStates merchantId state allowedDestinationStates' now = do
+  let allowedDestinationStates = DL.nub (state : allowedDestinationStates')
+  QMerchantState.findByPrimaryKey merchantId state >>= \case
+    Just merchantState -> QMerchantState.updateByPrimaryKey merchantState {DMerchantState.allowedDestinationStates = allowedDestinationStates}
+    Nothing ->
+      QMerchantState.create
+        DMerchantState.MerchantState
+          { merchantId = merchantId,
+            state = state,
+            allowedDestinationStates = allowedDestinationStates,
+            createdAt = now,
+            updatedAt = now
+          }
+
+syncMerchantStateMesh :: Id DM.Merchant -> Context.IndianState -> UTCTime -> Flow ()
+syncMerchantStateMesh merchantId newState now =
+  -- If the state already has a row it is already part of the mesh (and any manual override via the
+  -- upsert API must be respected), so there is nothing to do and we skip the findAll entirely.
+  QMerchantState.findByPrimaryKey merchantId newState >>= \case
+    Just _ -> pure ()
+    Nothing -> do
+      existingRows <- QMerchantState.findAllByMerchantId merchantId
+      let siblingStates = DL.nub $ map (.state) existingRows
+      QMerchantState.create
+        DMerchantState.MerchantState
+          { merchantId = merchantId,
+            state = newState,
+            allowedDestinationStates = DL.nub (newState : siblingStates),
+            createdAt = now,
+            updatedAt = now
+          }
+      forM_ existingRows $ \row ->
+        QMerchantState.updateByPrimaryKey row {DMerchantState.allowedDestinationStates = DL.nub (row.allowedDestinationStates <> [newState])}
+      forM_ (newState : siblingStates) $ CQMerchantState.clearCache merchantId
+
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
   logDebug $ "postMerchantConfigOperatingCityCreate: merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show city <> ", req: " <> show req
@@ -4122,6 +4163,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
             CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
             CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
+
+        logDebug $ "createOperatingCity: syncing MerchantState mesh for state " <> show req.state
+        syncMerchantStateMesh newMerchantId req.state now
 
         whenJust mbAddCityReq $ \addCityReq ->
           void $ RegistryIF.updateSubscriber addCityReq
@@ -4927,6 +4971,32 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate
+
+postMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.City -> Common.UpsertAllowedDestinationStatesReq -> Flow APISuccess
+postMerchantConfigAllowedDestinationStates merchantShortId _ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
+  let invalidStates = filter (`notElem` merchantStates) (DL.nub (req.state : req.allowedDestinationStates))
+  unless (null invalidStates) $
+    throwError $ InvalidRequest $ "States not operated by this merchant: " <> T.intercalate ", " (map show invalidStates)
+  upsertMerchantAllowedDestinationStates merchant.id req.state req.allowedDestinationStates now
+  CQMerchantState.clearCache merchant.id req.state
+  pure Success
+
+getMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AllowedDestinationStatesResp
+getMerchantConfigAllowedDestinationStates merchantShortId _ stateText = do
+  merchant <- findMerchantByShortId merchantShortId
+  state <- readMaybe (T.unpack stateText) & fromMaybeM (InvalidRequest $ "Invalid IndianState: " <> stateText)
+  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
+  unless (state `elem` merchantStates) $
+    throwError $ InvalidRequest $ "State not operated by this merchant: " <> show state
+  mbMerchantState <- QMerchantState.findByMerchantIdAndState merchant.id state
+  pure
+    Common.AllowedDestinationStatesResp
+      { state = state,
+        allowedDestinationStates = maybe [state] (.allowedDestinationStates) mbMerchantState
+      }
 
 ---------------------------------------------------------------------
 -- VehicleServiceTier APIs

@@ -24,9 +24,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity] -> m ())
 createMany = traverse_ create
 
+findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
+findAllByMerchantId merchantId = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]
+
 findAllByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
 findAllByMerchantIdAndState merchantId state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 findById ::
@@ -54,8 +57,8 @@ updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.city city,
-      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl cloudBaseUrl),
-      Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
+      Se.Set Beam.cloudBaseUrl ((Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl) cloudBaseUrl),
+      Se.Set Beam.cloudType ((Kernel.Prelude.fmap Kernel.Prelude.show) cloudType),
       Se.Set Beam.country country,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverOfferMerchantOperatingCityId driverOfferMerchantOperatingCityId,

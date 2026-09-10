@@ -31,5 +31,8 @@ cacheMerchantIdAndState merchantId state merchantState = do
   let merchantIdAndStateKey = makeMerchantIdAndStateKey merchantId state
   Hedis.setExp merchantIdAndStateKey merchantState expTime
 
+clearCache :: CacheFlow m r => Id Merchant -> Context.IndianState -> m ()
+clearCache merchantId state = Hedis.del (makeMerchantIdAndStateKey merchantId state)
+
 makeMerchantIdAndStateKey :: Id Merchant -> Context.IndianState -> Text
 makeMerchantIdAndStateKey merchantId state = "CachedQueries:MerchantState:MerchantId-" <> merchantId.getId <> ":State-" <> show state
