@@ -972,7 +972,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Nothing -> Nothing
 
   liveTerms <-
-    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
+    sortOn (\p -> (p.startDate, Down (fromMaybe maxBound p.availableTripCount)))
       <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
         Nothing
         Nothing
@@ -1217,7 +1217,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
   mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
 
   latestPayments <-
-    sortOn (\p -> (p.startDate, Down (fromMaybe 0 p.availableTripCount)))
+    sortOn (\p -> (p.startDate, Down (fromMaybe maxBound p.availableTripCount)))
       <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
         Nothing
         Nothing
