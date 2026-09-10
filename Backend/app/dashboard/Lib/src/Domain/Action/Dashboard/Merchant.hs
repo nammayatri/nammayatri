@@ -20,7 +20,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
@@ -86,7 +85,7 @@ createMerchantWithAdmin ::
   (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   CreateMerchantWithAdminReq ->
-  m DP.PersonAPIEntity
+  m AP.PersonAPIEntity
 createMerchantWithAdmin tokenInfo req = do
   let shortId = ShortId req.shortId :: ShortId DMerchant.Merchant
   mbExistingMerchant <- QMerchant.findByShortId shortId
@@ -109,7 +108,7 @@ createMerchantWithAdmin tokenInfo req = do
   QP.create person
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
-  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) Nothing Nothing
+  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [AP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) [] Nothing
 
 createMerchant ::
   (BeamFlow m r, EncFlow m r) =>
@@ -246,6 +245,6 @@ buildPersonCreateReq req role merchantId = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        vpa = Nothing
       }

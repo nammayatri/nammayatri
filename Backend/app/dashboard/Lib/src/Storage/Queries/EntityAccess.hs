@@ -50,18 +50,18 @@ findAllByPersonIdsAndMerchantId personIds merchantId =
 
 -- Scoped to one merchant so a revoke can never reach a grant the caller does not own, even if
 -- the same person holds entities under another merchant.
+-- One delete per person rather than an Or over all of them: personId is the KV secondary key, and
+-- nesting it under Se.Or leaves the cached rows for those persons un-invalidated.
 deleteManyByPersonIdAndEntityIds :: BeamFlow m r => Id DMerchant.Merchant -> [(Id DP.Person, [Id DEntity.Entity])] -> m ()
-deleteManyByPersonIdAndEntityIds merchantId revocations = do
-  let clauses =
-        [ Se.And
-            [ Se.Is BeamEA.personId $ Se.Eq $ getId personId,
-              Se.Is BeamEA.entityId $ Se.In $ getId <$> entityIds
-            ]
-          | (personId, entityIds) <- revocations,
-            not (null entityIds)
-        ]
-  unless (null clauses) $
-    deleteWithKV [Se.And [Se.Is BeamEA.merchantId $ Se.Eq $ getId merchantId, Se.Or clauses]]
+deleteManyByPersonIdAndEntityIds merchantId revocations =
+  forM_ [r | r@(_, entityIds) <- revocations, not (null entityIds)] $ \(personId, entityIds) ->
+    deleteWithKV
+      [ Se.And
+          [ Se.Is BeamEA.personId $ Se.Eq $ getId personId,
+            Se.Is BeamEA.merchantId $ Se.Eq $ getId merchantId,
+            Se.Is BeamEA.entityId $ Se.In $ getId <$> entityIds
+          ]
+      ]
 
 deleteAllByPersonId :: BeamFlow m r => Id DP.Person -> m ()
 deleteAllByPersonId personId = deleteWithKV [Se.Is BeamEA.personId $ Se.Eq $ getId personId]

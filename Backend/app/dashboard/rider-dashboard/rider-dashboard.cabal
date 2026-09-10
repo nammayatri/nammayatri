@@ -33,7 +33,6 @@ library
       API.RiderPlatform
       App
       Domain.Action.Entity
-      Domain.Action.Person
       Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement

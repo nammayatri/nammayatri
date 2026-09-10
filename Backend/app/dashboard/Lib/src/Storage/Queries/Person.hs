@@ -391,6 +391,11 @@ escapeLikeLiteral = T.concatMap $ \c -> case c of
   '_' -> "\\_"
   _ -> T.singleton c
 
+-- Not KV: Sequelize's Clause is single-table (Is binds one Column table value) with no join,
+-- subquery or aggregate constructor. This needs person x role, a correlated EXISTS on
+-- merchant_access (tenancy) and on entity_access (depot filter), concat_ [firstName, lastName]
+-- LIKE, and COUNT(*) for totalCount. Decomposing into ID-set lookups would move the tenancy
+-- filter out of SQL and pull every merchant_access row for the merchant on each page.
 -- Filter is duplicated, not shared: aggregate_ nests at a different Beam scope than the paged select, so one local binding cannot serve both. Keep the copies in sync.
 findAllPTWithLimitOffset ::
   BeamFlow m r =>

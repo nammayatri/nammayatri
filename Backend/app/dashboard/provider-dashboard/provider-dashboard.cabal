@@ -40,7 +40,6 @@ library
       API.SpecialZone
       App
       Domain.Action.Entity
-      Domain.Action.Person
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.DriverWallet
