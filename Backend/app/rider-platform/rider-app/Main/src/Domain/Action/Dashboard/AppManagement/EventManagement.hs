@@ -15,7 +15,6 @@ module Domain.Action.Dashboard.AppManagement.EventManagement
     postEventManagementTicketdashboardTicketplaceCancelSubmitDraft,
     postEventManagementTicketdashboardTicketplaceRecommend,
     getTicketDef,
-    checkAccess,
     invalidateTicketPlaceAvailabilityCache,
   )
 where
@@ -36,7 +35,6 @@ import qualified Domain.Types.EventManagement as DEM
 import qualified "this" Domain.Types.EventManagement
 import qualified Domain.Types.EventManagement.Permissions as Permissions
 import qualified Domain.Types.Merchant
-import qualified "this" Domain.Types.MerchantOnboarding
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServiceCategory as DServiceCategory
@@ -69,20 +67,17 @@ import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
 import Tools.Error
 
-getEventManagementTicketdashboardTicketplaceDef :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-getEventManagementTicketdashboardTicketplaceDef _merchantShortId _opCity ticketPlaceId requestorId _requestorRole = do
-  checkAccess ticketPlaceId requestorId _requestorRole
+getEventManagementTicketdashboardTicketplaceDef :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+getEventManagementTicketdashboardTicketplaceDef _merchantShortId _opCity ticketPlaceId = do
   getTicketDef ticketPlaceId
 
-postEventManagementTicketdashboardTicketplaceCleardraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postEventManagementTicketdashboardTicketplaceCleardraft _merchantShortId _opCity ticketPlaceId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceCleardraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceCleardraft _merchantShortId _opCity ticketPlaceId = do
   QDTC.deleteDraftById ticketPlaceId
   return Kernel.Types.APISuccess.Success
 
-postEventManagementTicketdashboardTicketplaceSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCity ticketPlaceId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCity ticketPlaceId = do
   mbTicketPlace <- QTicketPlace.findById ticketPlaceId
   case mbTicketPlace of
     Just _ -> do
@@ -109,87 +104,70 @@ postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCit
       QDTC.updateMessage Nothing ticketPlaceId
   return Kernel.Types.APISuccess.Success
 
-postEventManagementTicketdashboardTicketplaceReviewDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> API.Types.Dashboard.AppManagement.EventManagement.ReviewDraftReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postEventManagementTicketdashboardTicketplaceReviewDraft _merchantShortId _opCity ticketPlaceId requestorId requestorRole req = do
-  _reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
-  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Requestor does not have this access"
+postEventManagementTicketdashboardTicketplaceReviewDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.Dashboard.AppManagement.EventManagement.ReviewDraftReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceReviewDraft _merchantShortId _opCity ticketPlaceId req = do
   draftChange <- QDTC.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "No draft found")
   unless (draftChange.status == DDTC.APPROVAL_PENDING) $ throwError $ InvalidRequest "Ticket is not in approval pending state"
   if req.status == Review.APPROVE
     then do
       applyDraftChanges draftChange
-      moveDraftToHistory draftChange DDTC.ACCEPTED requestorId
+      moveDraftToHistory draftChange DDTC.ACCEPTED Nothing
       QDTC.deleteDraftById ticketPlaceId
     else do
-      moveDraftToHistory draftChange DDTC.REJECTED requestorId
+      moveDraftToHistory draftChange DDTC.REJECTED Nothing
       QDTC.updateStatus DDTC.REJECTED ticketPlaceId
       QDTC.updateMessage req.message ticketPlaceId
   return Kernel.Types.APISuccess.Success
 
-postEventManagementTicketdashboardTicketplaceCancelSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postEventManagementTicketdashboardTicketplaceCancelSubmitDraft _merchantShortId _opCity ticketPlaceId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceCancelSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceCancelSubmitDraft _merchantShortId _opCity ticketPlaceId = do
   draftChange <- QDTC.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "No draft found")
   unless (draftChange.status == DDTC.APPROVAL_PENDING) $ throwError $ InvalidRequest "Ticket is not in approval pending state"
   QDTC.updateStatus DDTC.OPEN ticketPlaceId
   return Kernel.Types.APISuccess.Success
 
-postEventManagementTicketdashboardTicketplaceCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.BasicInformation -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceCreate _merchantShortId _opCity requestorId requestorRole req = do
+postEventManagementTicketdashboardTicketplaceCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Domain.Types.EventManagement.BasicInformation -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceCreate _merchantShortId _opCity req = do
   m <- findMerchantByShortId _merchantShortId
   moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-  ticketPlaceDef <- newTicketPlaceDef requestorId requestorRole req m.id moCity.id
+  ticketPlaceDef <- newTicketPlaceDef req m.id moCity.id
   return ticketPlaceDef
 
-postEventManagementTicketdashboardTicketplaceUpdateBasicInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.BasicInformation -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceUpdateBasicInfo _merchantShortId _opCity ticketPlaceId requestorId requestorRole req = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceUpdateBasicInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.EventManagement.BasicInformation -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceUpdateBasicInfo _merchantShortId _opCity ticketPlaceId req = do
   updateBasicInfo ticketPlaceId req
 
-postEventManagementTicketdashboardTicketplaceUpdateService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.TicketServiceDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceUpdateService _merchantShortId _opCity ticketPlaceId requestorId requestorRole req = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceUpdateService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.EventManagement.TicketServiceDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceUpdateService _merchantShortId _opCity ticketPlaceId req = do
   upsertServiceDef ticketPlaceId req
 
-postEventManagementTicketdashboardTicketplaceDelService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceDelService _merchantShortId _opCity ticketPlaceId serviceId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceDelService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceDelService _merchantShortId _opCity ticketPlaceId serviceId = do
   delServiceDef ticketPlaceId serviceId
 
-postEventManagementTicketdashboardTicketplaceServiceUpdateCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.ServiceCategoryDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceServiceUpdateCategory _merchantShortId _opCity ticketPlaceId serviceId requestorId requestorRole req = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceServiceUpdateCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Domain.Types.EventManagement.ServiceCategoryDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceServiceUpdateCategory _merchantShortId _opCity ticketPlaceId serviceId req = do
   upsertServiceCategoryDef ticketPlaceId serviceId req
 
-postEventManagementTicketdashboardTicketplaceServiceDelCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketplaceServiceDelCategory _merchantShortId _opCity ticketPlaceId serviceId categoryId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketplaceServiceDelCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketplaceServiceDelCategory _merchantShortId _opCity ticketPlaceId serviceId categoryId = do
   delServiceCategoryDef ticketPlaceId serviceId categoryId
 
-postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.ServicePeopleCategoryDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople _merchantShortId _opCity ticketPlaceId categoryId requestorId requestorRole req = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Domain.Types.EventManagement.ServicePeopleCategoryDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople _merchantShortId _opCity ticketPlaceId categoryId req = do
   upsertServicePeopleCategoryDef ticketPlaceId categoryId req
 
-postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
-postEventManagementTicketdashboardTicketPlaceCategoryDelPeople _merchantShortId _opCity ticketPlaceId categoryId peopleId requestorId requestorRole = do
-  checkAccess ticketPlaceId requestorId requestorRole
+postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
+postEventManagementTicketdashboardTicketPlaceCategoryDelPeople _merchantShortId _opCity ticketPlaceId categoryId peopleId = do
   delServicePeopleCategoryDef ticketPlaceId categoryId peopleId
 
-getEventManagementTicketdashboardTicketplaceDrafts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Domain.Types.DraftTicketChange.DraftStatus -> Environment.Flow [Domain.Types.EventManagement.TicketPlaceDef])
-getEventManagementTicketdashboardTicketplaceDrafts _merchantShortId _opCity requestorId requestorRole limit offset status = do
-  _reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
-  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Requestor does not have this access"
+getEventManagementTicketdashboardTicketplaceDrafts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Domain.Types.DraftTicketChange.DraftStatus -> Environment.Flow [Domain.Types.EventManagement.TicketPlaceDef])
+getEventManagementTicketdashboardTicketplaceDrafts _merchantShortId _opCity limit offset status = do
   drafts <- QDTC.findAllByStatus (pure limit) (pure offset) status
   return $ catMaybes $ map (.draftPayload) drafts
 
-postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postEventManagementTicketdashboardTicketplaceRecommend _merchantShortId _opCity requestorId requestorRole req = do
-  _reqId <- requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
-  reqRole <- requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  unless (reqRole == Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Requestor does not have this access"
+postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postEventManagementTicketdashboardTicketplaceRecommend _merchantShortId _opCity req = do
   forM_ req $ \r -> QTicketPlace.updateRecommendById r.recommend r.placeId
   m <- findMerchantByShortId _merchantShortId
   let redisKey = makeRecommendedTicketPlacesKey m.id
@@ -199,10 +177,8 @@ postEventManagementTicketdashboardTicketplaceRecommend _merchantShortId _opCity 
     makeRecommendedTicketPlacesKey :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Text
     makeRecommendedTicketPlacesKey merchantId = "AttractionRecommend:mid-" <> merchantId.getId
 
-newTicketPlaceDef :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.EventManagement.BasicInformation -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow DEM.TicketPlaceDef
-newTicketPlaceDef requestorId requestorRole basicInfo merchantId merchantOperatingCityId = do
-  reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
-  reqRole <- fromMaybeM (InvalidRequest "RequestorRole is required") requestorRole
+newTicketPlaceDef :: Domain.Types.EventManagement.BasicInformation -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow DEM.TicketPlaceDef
+newTicketPlaceDef basicInfo merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   ticketPlaceId <- generateGUID
   let ticketDef =
@@ -220,9 +196,9 @@ newTicketPlaceDef requestorId requestorRole basicInfo merchantId merchantOperati
             draftPayload = Just ticketDef,
             isApprovalRequired = True,
             status = DDTC.OPEN,
-            ticketMerchantId = case reqRole of
-              Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT -> Just reqId
-              _ -> Nothing,
+            -- Ownership is enforced by the dashboard capability ResourceScope layer,
+            -- not a requestor role here.
+            ticketMerchantId = Nothing,
             message = Nothing,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOperatingCityId,
@@ -527,26 +503,8 @@ checkTicketDraftEquality ticketPlaceId = do
         && old.serviceCategories == new.serviceCategories
         && old.servicePeopleCategories == new.servicePeopleCategories
 
-checkAccess :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow ()
-checkAccess ticketPlaceId requestorId _requestorRole = do
-  _reqId <- fromMaybeM (InvalidRequest "RequestorId is required") requestorId
-  reqRole <- _requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
-  case reqRole of
-    Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_ADMIN -> pure ()
-    Domain.Types.MerchantOnboarding.TICKET_DASHBOARD_MERCHANT -> do
-      ticketMid <- getTicketPlaceMid ticketPlaceId
-      unless (ticketMid == requestorId) $ throwError $ InvalidRequest "Requestor does not have this access"
-    _ -> throwError $ InvalidRequest "Requestor does not have this access"
-
-getTicketPlaceMid :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow (Maybe Text)
-getTicketPlaceMid ticketPlaceId = do
-  mbTicketPlace <- QTicketPlace.findById ticketPlaceId
-  case mbTicketPlace of
-    Just tp -> return tp.ticketMerchantId
-    Nothing -> do
-      mbDraftChange <- QDTC.findById ticketPlaceId
-      return $ mbDraftChange >>= (.ticketMerchantId)
-
+-- Access for ticket-place management is enforced at the dashboard capability
+-- layer (city-operations.ticket_place.*), not by a requestor role here.
 moveDraftToHistory :: Domain.Types.DraftTicketChange.DraftTicketChange -> Domain.Types.DraftTicketChange.DraftStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow ()
 moveDraftToHistory (Domain.Types.DraftTicketChange.DraftTicketChange {..}) status' requestorId = do
   uuid <- generateGUID
