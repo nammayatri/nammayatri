@@ -45,6 +45,7 @@ data TripCategory
   | Ambulance OneWayMode
   | Delivery OneWayMode
   | EasyBooking EasyBookingMode -- destination-less booking, regular (Progressive) fare policy; end-OTP requirement is hardcoded below, not configurable
+  | IntercityRental RentalMode (Maybe Text) -- rental whose drop is in a different operating city; priced from a dedicated FareProduct row (not the same-city Rental one)
   deriving stock (Eq, Ord, Generic)
 
 -- deriving anyclass (ToSchema)
@@ -146,6 +147,12 @@ instance ToJSON TripCategory where
       [ "tag" .= ("EasyBooking" :: Text),
         "contents" .= mode
       ]
+  toJSON (IntercityRental mode text) =
+    object
+      [ "tag" .= ("IntercityRental" :: Text),
+        "contents" .= mode,
+        "city" .= text
+      ]
 
 instance FromJSON TripCategory where
   -- dashboards and older fixtures may still send the Show-format string
@@ -163,6 +170,7 @@ instance FromJSON TripCategory where
       "Ambulance" -> Ambulance <$> v .: "contents"
       "Delivery" -> Delivery <$> v .: "contents"
       "EasyBooking" -> EasyBooking <$> v .: "contents"
+      "IntercityRental" -> IntercityRental <$> v .: "contents" <*> v .:? "city"
       _ -> fail $ "Unknown tag: " ++ tag
 
 instance ToSchema TripCategory where
@@ -185,7 +193,8 @@ instance ToSchema TripCategory where
                  tripCategorySchema oneWayModeSchema [("city", textSchema)] ["CrossCity"],
                  tripCategorySchema oneWayModeSchema [] ["Ambulance"],
                  tripCategorySchema oneWayModeSchema [] ["Delivery"],
-                 tripCategorySchema easyBookingModeSchema [] ["EasyBooking"]
+                 tripCategorySchema easyBookingModeSchema [] ["EasyBooking"],
+                 tripCategorySchema rentalModeSchema [("city", textSchema)] ["IntercityRental"]
                ]
     where
       tripCategorySchema contentSchema otherSchemas enums =
@@ -261,6 +270,8 @@ instance Show TripCategory where
   show (Ambulance s) = "Ambulance_" <> show s
   show (Delivery s) = "Delivery_" <> show s
   show (EasyBooking s) = "EasyBooking_" <> show s
+  show (IntercityRental s Nothing) = "IntercityRental_" <> show s
+  show (IntercityRental s (Just city)) = "IntercityRental_" <> show s <> "_" <> T.unpack city
 
 generateTripCategoryShowInstances :: [String]
 generateTripCategoryShowInstances =
@@ -272,6 +283,7 @@ generateTripCategoryShowInstances =
     ++ [show (Ambulance mode) | mode <- oneWayModes]
     ++ [show (Delivery mode) | mode <- oneWayModes]
     ++ [show (EasyBooking mode) | mode <- tripModes]
+    ++ [show (IntercityRental mode Nothing) | mode <- tripModes]
   where
     oneWayModes = [OneWayRideOtp, OneWayOnDemandStaticOffer, OneWayOnDemandDynamicOffer]
     tripModes = [RideOtp, OnDemandStaticOffer]
@@ -347,6 +359,19 @@ instance Read TripCategory where
                  | r1 <- stripPrefix "EasyBooking_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (IntercityRental v1 Nothing, r3)
+                 | r1 <- stripPrefix "IntercityRental_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1,
+                   r3 <- [r2]
+               ]
+            ++ [ (IntercityRental RideOtp (Just v1), [])
+                 | r1 <- stripPrefix "IntercityRental_RideOtp_" r,
+                   let v1 = T.pack r1
+               ]
+            ++ [ (IntercityRental OnDemandStaticOffer (Just v1), [])
+                 | r1 <- stripPrefix "IntercityRental_OnDemandStaticOffer_" r,
+                   let v1 = T.pack r1
+               ]
       )
     where
       app_prec = 10
@@ -371,6 +396,7 @@ tripCategoryToPricingPolicy (InterCity OneWayOnDemandDynamicOffer _) = EstimateB
 tripCategoryToPricingPolicy (Ambulance OneWayOnDemandDynamicOffer) = EstimateBased True
 tripCategoryToPricingPolicy (Delivery OneWayOnDemandDynamicOffer) = EstimateBased False
 tripCategoryToPricingPolicy (Rental _) = QuoteBased True
+tripCategoryToPricingPolicy (IntercityRental _ _) = QuoteBased True
 tripCategoryToPricingPolicy (EasyBooking _) = QuoteBased True
 tripCategoryToPricingPolicy _ = QuoteBased False
 
@@ -384,6 +410,7 @@ skipDriverPoolCheck _ = True
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
+isEndOtpRequired (IntercityRental _ _) = True
 isEndOtpRequired (InterCity _ _) = True
 isEndOtpRequired (Delivery _) = True
 isEndOtpRequired (EasyBooking _) = False -- hardcoded (not config-driven); flip this one word + redeploy if you want it True instead
@@ -396,6 +423,7 @@ isRideOtpTrip (InterCity OneWayRideOtp _) = True
 isRideOtpTrip (Delivery OneWayRideOtp) = True
 isRideOtpTrip (RideShare RideOtp) = True
 isRideOtpTrip (Rental RideOtp) = True
+isRideOtpTrip (IntercityRental RideOtp _) = True
 isRideOtpTrip _ = False
 
 -- Move it to configs later if required
@@ -412,6 +440,7 @@ isGoHomeAvailable _ = False
 shouldRectifyDistantPointsSnapToRoadFailure :: TripCategory -> Bool
 shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
   Rental _ -> True
+  IntercityRental _ _ -> True
   InterCity _ _ -> True
   OneWay MeterRide -> True
   EasyBooking _ -> True
@@ -420,6 +449,12 @@ shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
 isRentalTrip :: TripCategory -> Bool
 isRentalTrip tripCategory = case tripCategory of
   Rental _ -> True
+  IntercityRental _ _ -> True
+  _ -> False
+
+isIntercityRentalTrip :: TripCategory -> Bool
+isIntercityRentalTrip tripCategory = case tripCategory of
+  IntercityRental _ _ -> True
   _ -> False
 
 isAmbulanceTrip :: TripCategory -> Bool
