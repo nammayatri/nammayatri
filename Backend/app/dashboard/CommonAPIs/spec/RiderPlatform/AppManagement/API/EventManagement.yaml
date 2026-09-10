@@ -50,9 +50,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: TicketPlaceDef
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
   - POST:
@@ -60,9 +57,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
   - POST:
@@ -70,9 +64,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
   - POST:
@@ -80,9 +71,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
   - POST:
@@ -92,9 +80,6 @@ apis:
         type: ReviewDraftReq
       response:
         type: APISuccess
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         ticketPlaceId: Id TicketPlace
   - POST:
@@ -104,9 +89,6 @@ apis:
         type: BasicInformation
       response:
         type: TicketPlaceDef
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/update/basicInfo
       auth: ApiAuthV2
@@ -116,9 +98,6 @@ apis:
         type: TicketPlaceDef
       params:
         ticketPlaceId: Id TicketPlace
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/updateService
       auth: ApiAuthV2
@@ -128,9 +107,6 @@ apis:
         type: TicketPlaceDef
       params:
         ticketPlaceId: Id TicketPlace
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/delService/{serviceId}
       auth: ApiAuthV2
@@ -139,9 +115,6 @@ apis:
       params:
         ticketPlaceId: Id TicketPlace
         serviceId: Id TicketService
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/service/{serviceId}/updateCategory
       auth: ApiAuthV2
@@ -152,9 +125,6 @@ apis:
       params:
         ticketPlaceId: Id TicketPlace
         serviceId: Id TicketService
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/service/{serviceId}/delCategory/{categoryId}
       auth: ApiAuthV2
@@ -164,9 +134,6 @@ apis:
         ticketPlaceId: Id TicketPlace
         serviceId: Id TicketService
         categoryId: Id ServiceCategory
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketPlace/{ticketPlaceId}/category/{categoryId}/updatePeople
       auth: ApiAuthV2
@@ -178,9 +145,6 @@ apis:
         ticketPlaceId: Id TicketPlace
         serviceId: Id TicketService
         categoryId: Id ServiceCategory
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - POST:
       endpoint: /ticketdashboard/ticketPlace/{ticketPlaceId}/category/{categoryId}/delPeople/{peopleId}
       auth: ApiAuthV2
@@ -191,17 +155,11 @@ apis:
         serviceId: Id TicketService
         categoryId: Id ServiceCategory
         peopleId: Id ServicePeopleCategory
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
   - GET:
       endpoint: /ticketdashboard/ticketplace/drafts
       auth: ApiAuthV2
       response:
         type: "[TicketPlaceDef]"
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       mandatoryQuery:
         - limit: Int
         - offset: Int
@@ -213,9 +171,6 @@ apis:
         type: "[RecommendToggleReq]"
       response:
         type: APISuccess
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
 types:
   RecommendToggleReq:
     - placeId: Id TicketPlace
