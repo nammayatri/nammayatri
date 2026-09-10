@@ -47,6 +47,7 @@ mkPersist
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
+      enableTollConfirmation Bool Maybe
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe
       supportNumber Text Maybe

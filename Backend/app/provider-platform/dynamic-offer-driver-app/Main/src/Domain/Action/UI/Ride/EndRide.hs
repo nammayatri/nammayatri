@@ -38,7 +38,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
-import Data.Time (utctDay)
+import Data.Time (NominalDiffTime, utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
@@ -95,6 +95,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -124,6 +125,7 @@ import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as DPQuery
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -131,6 +133,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.RiderDriverCorrelation as QRiderDriverCorrelation
 import qualified Storage.Queries.StopInformation as QSI
+import qualified Storage.Queries.Vehicle as QVeh
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
 import qualified Tools.Maps as TM
@@ -150,6 +153,7 @@ data EndRideResp = EndRideResp
 
 data DriverEndRideReq = DriverEndRideReq
   { endRideOtp :: Maybe Text,
+    endWithoutToll :: Maybe Bool,
     point :: LatLong,
     requestor :: DP.Person,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
@@ -180,12 +184,40 @@ newtype CallBasedEndRideReq = CallBasedEndRideReq
   { requestor :: DP.Person
   }
 
+-- Bridges the two end-ride calls of the special-location toll confirmation flow. LTS cleans the ride up on the first call, so these cannot be recomputed on the second.
+data PendingTollConfirmation = PendingTollConfirmation
+  { pendingDistanceCalculationFailed :: Bool,
+    pendingPickupDropOutsideOfThreshold :: Bool,
+    pendingAttempts :: Int,
+    pendingLastNotifiedAt :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+pendingTollConfirmationKey :: Id DRide.Ride -> Text
+pendingTollConfirmationKey rideId = "EndRide:PendingTollConfirmation:RID-" <> rideId.getId
+
+getPendingTollConfirmation :: CacheFlow m r => Id DRide.Ride -> m (Maybe PendingTollConfirmation)
+getPendingTollConfirmation = Redis.safeGet . pendingTollConfirmationKey
+
+pendingTollConfirmationExpiry :: Int
+pendingTollConfirmationExpiry = 6 * 60 * 60
+
+-- Escape hatch for driver apps that cannot answer the prompt: after this many OTP-less attempts the ride ends with today's default toll behaviour
+maxTollConfirmationAttempts :: Int
+maxTollConfirmationAttempts = 3
+
+-- Re-prompting the rider on every End Ride tap would spam them
+tollConfirmationRenotifyInterval :: NominalDiffTime
+tollConfirmationRenotifyInterval = 60
+
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
+    notifyTollConfirmationRequiredToBAP :: SRB.Booking -> DRide.Ride -> m (),
+    findSpecialLocationById :: Id SL.SpecialLocation -> m (Maybe SL.SpecialLocation),
     getFarePolicyByEstOrQuoteId :: Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
     getFarePolicyOnEndRide :: Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
@@ -218,6 +250,12 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         findRideById = QRide.findById,
         getMerchant = MerchantS.findById,
         notifyCompleteToBAP = \b r fp pm pu loc -> CallBAP.sendRideCompletedUpdateToBAP b r fp pm pu loc allowSnapshotVehicleFallback,
+        notifyTollConfirmationRequiredToBAP = \booking ride -> do
+          driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+          driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+          vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
+          CallBAP.sendTollConfirmationRequiredUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle,
+        findSpecialLocationById = QSpecialLocation.findById,
         endRideTransaction = RideEndInt.endRideTransaction,
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         getFarePolicyOnEndRide = FarePolicy.getFarePolicyOnEndRide,
@@ -443,13 +481,17 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         estimatedTollIds = rideOld.estimatedTollIds
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
     advanceRide <- runInMasterDbAndRedis $ QRide.getActiveAdvancedRideByDriverId driverId
-    (allTripEndPoints, accTripEndPoints) <- do
-      let mbAdvanceRideId = (.id) <$> advanceRide
-      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing (Just $ floor $ utcTimeToPOSIXSeconds now)
-      let nowTs = floor $ utcTimeToPOSIXSeconds now
-          mkPoint locUpd = (LatLong locUpd.lat locUpd.lon, fromMaybe nowTs locUpd.ts)
-          accLoc = NE.filter (\locUpd -> maybe True (< 50) locUpd.acc) res.loc
-      pure (toList $ fmap mkPoint res.loc, map mkPoint accLoc)
+    mbPendingTollConfirmation <- getPendingTollConfirmation rideId
+    (allTripEndPoints, accTripEndPoints) <- case mbPendingTollConfirmation of
+      -- Second call of the toll confirmation flow: LTS already cleaned the ride up on the first call
+      Just _ -> pure ([], [])
+      Nothing -> do
+        let mbAdvanceRideId = (.id) <$> advanceRide
+        res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing (Just $ floor $ utcTimeToPOSIXSeconds now)
+        let nowTs = floor $ utcTimeToPOSIXSeconds now
+            mkPoint locUpd = (LatLong locUpd.lat locUpd.lon, fromMaybe nowTs locUpd.ts)
+            accLoc = NE.filter (\locUpd -> maybe True (< 50) locUpd.acc) res.loc
+        pure (toList $ fmap mkPoint res.loc, map mkPoint accLoc)
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
         CronJobReq _ -> do
@@ -475,94 +517,110 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                     pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
                   Nothing -> throwError $ OdometerReadingRequired (show booking.tripCategory)
               else do
-                -- here we update the current ride, so below we fetch the updated version
-                pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-                whenJust (nonEmpty allTripEndPoints) \allTripEndPoints' -> do
-                  rectificationMapsConfig <-
-                    if shouldRectifyDistantPointsSnapToRoadFailure
-                      then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
-                      else pure Nothing
-                  let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig . fst) accTripEndPoints
-                  logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show accTripEndPoints
-                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId accTripEndPoints allTripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
+                (updRide, pickupDropOutsideOfThreshold, distanceCalculationFailed, (tollCharges, tollNames, tollIds, tollConfidence)) <-
+                  case mbPendingTollConfirmation of
+                    Just pending -> resolvePendingTollConfirmation booking rideOld thresholdConfig pending
+                    Nothing -> do
+                      -- here we update the current ride, so below we fetch the updated version
+                      pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
+                      whenJust (nonEmpty allTripEndPoints) \allTripEndPoints' -> do
+                        rectificationMapsConfig <-
+                          if shouldRectifyDistantPointsSnapToRoadFailure
+                            then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
+                            else pure Nothing
+                        let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig . fst) accTripEndPoints
+                        logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show accTripEndPoints
+                        withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId accTripEndPoints allTripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
-                updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+                      updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
-                distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
+                      distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
 
-                when distanceCalculationFailed $ do
-                  logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
+                      when distanceCalculationFailed $ do
+                        logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
 
-                -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
-                mbValidatedPendingToll <-
-                  TollsDetector.checkAndValidatePendingTolls
-                    TollsDetector.TollTrackingSnapToRoad
-                    updRide.driverId.getId
-                    updRide.estimatedTollCharges
-                    updRide.estimatedTollNames
-                    updRide.estimatedTollIds
-                    updRide.tollCharges
-                    updRide.tollIds
+                      -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
+                      mbValidatedPendingToll <-
+                        TollsDetector.checkAndValidatePendingTolls
+                          TollsDetector.TollTrackingSnapToRoad
+                          updRide.driverId.getId
+                          updRide.estimatedTollCharges
+                          updRide.estimatedTollNames
+                          updRide.estimatedTollIds
+                          updRide.tollCharges
+                          updRide.tollIds
 
-                -- Log if we have validated toll but can't apply due to route deviation
-                when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
-                  logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
+                      -- Log if we have validated toll but can't apply due to route deviation
+                      when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
+                        logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
 
-                let (tollCharges, tollNames, tollIds, tollConfidence) = do
-                      let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                          -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
-                          canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
-                      if distanceCalculationFailure
-                        then
-                          if isJust updRide.estimatedTollCharges
-                            then
-                              if updRide.estimatedTollCharges == Just 0
-                                then (Nothing, Nothing, Nothing, Nothing)
-                                else
-                                  if isJust updRide.tollCharges
-                                    then case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                      (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                        -- Some detected + some pending (same as distance calc success case)
-                                        let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                            combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                            combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                         in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                      _ ->
-                                        -- No pending tolls or route deviated
-                                        (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Neutral)
-                                    else
-                                      if updRide.driverDeviatedToTollRoute == Just True
-                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Neutral)
-                                        else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                          (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                            -- Combine detected + pending tolls
-                                            let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                          _ ->
-                                            -- Nothing detected and nothing pending: GPS was dark around the gates, so
-                                            -- neither the billing walk nor the deviation walk has any signal
-                                            if thresholdConfig.enableEstimatedTollFallback && canApplyValidatedPendingToll
-                                              then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Unsure)
-                                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
-                            else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                              (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)
-                              _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
-                        else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                          (Just charges, _, Nothing) ->
-                            (Just charges, updRide.tollNames, updRide.tollIds, Just Sure)
-                          (Just charges, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            -- Some detected + some pending
-                            let combinedCharges = charges + pendingCharges
-                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                          (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
-                          _ ->
-                            (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+                      let (tollCharges, tollNames, tollIds, tollConfidence) = do
+                            let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
+                                -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
+                                canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
+                            if distanceCalculationFailure
+                              then
+                                if isJust updRide.estimatedTollCharges
+                                  then
+                                    if updRide.estimatedTollCharges == Just 0
+                                      then (Nothing, Nothing, Nothing, Nothing)
+                                      else
+                                        if isJust updRide.tollCharges
+                                          then case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                            (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                              -- Some detected + some pending (same as distance calc success case)
+                                              let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
+                                                  combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                                  combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                                               in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                                            _ ->
+                                              -- No pending tolls or route deviated
+                                              (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Neutral)
+                                          else
+                                            if updRide.driverDeviatedToTollRoute == Just True
+                                              then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Neutral)
+                                              else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                                (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                                  -- Combine detected + pending tolls
+                                                  let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
+                                                      combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                                      combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                                                   in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                                                _ ->
+                                                  -- Nothing detected and nothing pending: GPS was dark around the gates, so
+                                                  -- neither the billing walk nor the deviation walk has any signal
+                                                  if thresholdConfig.enableEstimatedTollFallback && canApplyValidatedPendingToll
+                                                    then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Unsure)
+                                                    else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
+                                  else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                    (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                      (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)
+                                    _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+                              else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                (Just charges, _, Nothing) ->
+                                  (Just charges, updRide.tollNames, updRide.tollIds, Just Sure)
+                                (Just charges, True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                  -- Some detected + some pending
+                                  let combinedCharges = charges + pendingCharges
+                                      combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                      combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                                   in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                                (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                  (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
+                                _ ->
+                                  (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+
+                      needsTollConfirmation <- shouldRequestTollConfirmation booking advanceRide updRide tollConfidence
+                      tollOutcome <-
+                        if not needsTollConfirmation
+                          then pure (tollCharges, tollNames, tollIds, tollConfidence)
+                          else
+                            if endWithoutTollRequested
+                              then do
+                                logInfo $ "Driver ended the ride without the unconfirmed toll upfront: " <> rideId.getId
+                                pure (Nothing, Nothing, Nothing, Just Unsure)
+                              else requestTollConfirmation booking updRide pickupDropOutsideOfThreshold distanceCalculationFailed
+                      pure (updRide, pickupDropOutsideOfThreshold, distanceCalculationFailed, tollOutcome)
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
@@ -778,6 +836,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         _ -> pure ()
 
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
+    whenJust mbPendingTollConfirmation $ \_ -> Redis.del $ pendingTollConfirmationKey rideId
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 
@@ -874,13 +933,92 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           calcPoints = True
         }
 
+    endWithoutTollRequested = case req of
+      DriverReq driverReq -> fromMaybe False driverReq.endWithoutToll
+      _ -> False
+
+    -- Toll confirmation only intercepts the Unsure outcome, where GPS was dark around the gates and the estimate is the only signal
+    shouldRequestTollConfirmation booking advanceRide updRide tollConfidence = do
+      let isDriverReq = case req of
+            DriverReq _ -> True
+            _ -> False
+          hasEstimatedToll = maybe False (> 0) updRide.estimatedTollCharges
+          -- trip categories with their own end OTP (rental, intercity, delivery) keep that flow untouched
+          ownsEndOtpAlready = DTC.isEndOtpRequired booking.tripCategory
+          -- LTS promotes the advance ride on the first call, so never leave this ride open behind it
+          hasAdvanceRide = isJust advanceRide
+      if isDriverReq && SL.isSpecialLocationArea booking.area && tollConfidence == Just Unsure && hasEstimatedToll && not ownsEndOtpAlready && not hasAdvanceRide
+        then do
+          -- only special locations that opted in (e.g. airports) pause the ride; the lookup runs solely on this rare path
+          let specialLocationIds = mapMaybe (booking.area >>=) [SL.pickupSpecialZoneIdFromArea, SL.dropSpecialZoneIdFromArea]
+          specialLocations <- catMaybes <$> mapM (findSpecialLocationById . Id) specialLocationIds
+          if any ((== Just True) . (.enableTollConfirmation)) specialLocations
+            then CQVAN.isValueAddNP booking.bapId -- only our own rider app can show the OTP to the rider
+            else pure False
+        else pure False
+
+    -- Forked so a notification failure can never turn the expected OTP-required response into a 500
+    notifyRiderForTollConfirmation booking ride =
+      fork "endRide->notifyTollConfirmationRequired" $ notifyTollConfirmationRequiredToBAP booking ride
+
+    -- First call: hand the decision to the rider and stop before any fare or transaction work
+    requestTollConfirmation booking updRide pickupDropOutsideOfThreshold distanceCalculationFailed = do
+      now <- getCurrentTime
+      endOtp <- generateOTPCode
+      QRide.updateEndRideOtp updRide.id (Just endOtp)
+      let pending =
+            PendingTollConfirmation
+              { pendingDistanceCalculationFailed = distanceCalculationFailed,
+                pendingPickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+                pendingAttempts = 1,
+                pendingLastNotifiedAt = now
+              }
+      Redis.setExp (pendingTollConfirmationKey rideId) pending pendingTollConfirmationExpiry
+      notifyRiderForTollConfirmation booking updRide{endOtp = Just endOtp}
+      logInfo $ "Toll confirmation requested from rider for ride: " <> rideId.getId
+      throwError TollConfirmationOtpRequired
+
+    -- Second call: the ride row already holds what the first call computed, so only the toll decision is left
+    resolvePendingTollConfirmation booking ride thresholdConfig pending = do
+      let (mbEndRideOtp, endWithoutToll) = case req of
+            DriverReq driverReq -> (driverReq.endRideOtp, fromMaybe False driverReq.endWithoutToll)
+            _ -> (Nothing, True) -- dashboard and call based end ride never wait on the rider
+          estimatedToll = (ride.estimatedTollCharges, ride.estimatedTollNames, ride.estimatedTollIds, Just Unsure)
+          noToll = (Nothing, Nothing, Nothing, Just Unsure)
+      tollOutcome <- case mbEndRideOtp of
+        Just endRideOtp -> do
+          unless (Just endRideOtp == ride.endOtp) $ throwError IncorrectOTP
+          logInfo $ "Rider consented to the estimated toll via end OTP for ride: " <> rideId.getId
+          pure estimatedToll
+        Nothing
+          | endWithoutToll -> do
+            logInfo $ "Ending ride without the unconfirmed toll for ride: " <> rideId.getId
+            pure noToll
+          | pending.pendingAttempts >= maxTollConfirmationAttempts -> do
+            -- same decision the Unsure branch makes when this feature is off
+            logWarning $ "Toll confirmation attempts exhausted, applying default toll behaviour for ride: " <> rideId.getId
+            pure $ if thresholdConfig.enableEstimatedTollFallback && not pending.pendingPickupDropOutsideOfThreshold then estimatedToll else noToll
+          | otherwise -> do
+            now <- getCurrentTime
+            let shouldRenotify = diffUTCTime now pending.pendingLastNotifiedAt >= tollConfirmationRenotifyInterval
+            when shouldRenotify $ notifyRiderForTollConfirmation booking ride -- the rider may have missed the first prompt
+            Redis.setExp (pendingTollConfirmationKey rideId) pending{pendingAttempts = pending.pendingAttempts + 1, pendingLastNotifiedAt = if shouldRenotify then now else pending.pendingLastNotifiedAt} pendingTollConfirmationExpiry
+            throwError TollConfirmationOtpRequired
+      -- the end OTP has served its purpose; leaving it set would replace the pickup OTP in later Beckn payloads
+      QRide.updateEndRideOtp ride.id Nothing
+      pure (ride{endOtp = Nothing}, pending.pendingPickupDropOutsideOfThreshold, pending.pendingDistanceCalculationFailed, tollOutcome)
+
     withFallback defaultVal action = do
       res <- withTryCatch "withFallback:endRideHandler" action
       case res of
         Left someException ->
           case fromException someException of
             Just NoFareProduct -> return defaultVal
-            _ -> throwError $ InternalError (Text.pack $ displayException someException)
+            _
+              -- toll confirmation flow errors must reach the driver app with their own codes
+              | Just TollConfirmationOtpRequired <- fromException someException -> throwError TollConfirmationOtpRequired
+              | Just IncorrectOTP <- fromException someException -> throwError IncorrectOTP
+              | otherwise -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
 
 determineMetroRideType :: Maybe Text -> Text -> Text -> DCT.MetroRideType
