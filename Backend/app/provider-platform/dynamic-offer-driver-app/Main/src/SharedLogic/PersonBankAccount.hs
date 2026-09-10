@@ -256,6 +256,7 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
                   DDBA.requirements = resp.requirements,
                   DDBA.futureRequirements = resp.futureRequirements
                 }
+  stripeLegalEntityName <- TPayment.fetchLegalEntityName merchantOpCityId (Just paymentMode)
   pure $
     API.Types.UI.DriverOnboardingV2.BankAccountResp
       { chargesEnabled = bankAccount'.chargesEnabled,
@@ -263,6 +264,7 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
         detailsSubmitted = bankAccount'.detailsSubmitted,
         requirements = bankAccount'.requirements,
         futureRequirements = bankAccount'.futureRequirements,
+        stripeLegalEntityName,
         paymentMode
       }
   where

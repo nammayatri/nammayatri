@@ -193,6 +193,7 @@ types:
     paymentMode: PaymentMode
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
+    stripeLegalEntityName: Maybe Text
   FleetInfo:
     id: Text
     ownerName: Text

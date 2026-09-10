@@ -344,6 +344,7 @@ import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
@@ -1776,7 +1777,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
     if merchant.onlinePayment
       then do
         mbDriverBankAccount <- QDBA.findByPrimaryKey id
-        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, ..})
+        forM mbDriverBankAccount $ \DOBA.DriverBankAccount {..} -> do
+          stripeLegalEntityName <- TPayment.fetchLegalEntityName merchantOpCityId paymentMode
+          pure $ DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, stripeLegalEntityName, ..}
       else return Nothing
   (refCode, dynamicReferralCode) <-
     case referralCode of

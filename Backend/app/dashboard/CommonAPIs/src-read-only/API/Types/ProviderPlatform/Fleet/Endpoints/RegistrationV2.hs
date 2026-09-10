@@ -41,7 +41,8 @@ data FleetBankAccountResp = FleetBankAccountResp
     detailsSubmitted :: Kernel.Prelude.Bool,
     paymentMode :: Domain.Types.PaymentMode.PaymentMode,
     requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
-    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
+    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    stripeLegalEntityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

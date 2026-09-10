@@ -154,6 +154,13 @@ getAccount ::
   m Payment.ConnectAccountStatusResp
 getAccount = runWithServiceConfig Payment.getAccount (.getBankAccount)
 
+fetchLegalEntityName ::
+  ServiceFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
+  m (Maybe Text)
+fetchLegalEntityName merchantOpCityId paymentMode = runWithServiceConfig (\cfg _ -> pure $ Payment.legalEntityName cfg) (.getBankAccount) merchantOpCityId paymentMode ()
+
 modifyPaymentServiceByMode :: Payment.PaymentService -> DMPM.PaymentMode -> Payment.PaymentService
 modifyPaymentServiceByMode Payment.Stripe DMPM.LIVE = Payment.Stripe
 modifyPaymentServiceByMode Payment.Stripe DMPM.TEST = Payment.StripeTest
