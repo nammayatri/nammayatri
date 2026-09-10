@@ -106,6 +106,7 @@ data CustomerListItem = CustomerListItem
     middleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    countryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode

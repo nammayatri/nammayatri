@@ -158,6 +158,7 @@ types:
     - middleName: Maybe Text
     - lastName: Maybe Text
     - phoneNo: Maybe Text
+    - countryCode: Maybe Text
     - enabled: Bool
     - blocked: Bool
     - paymentMode: Maybe PaymentMode
