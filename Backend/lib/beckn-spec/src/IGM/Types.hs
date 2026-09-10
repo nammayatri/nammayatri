@@ -298,7 +298,9 @@ data Context = Context
     -- | The encryption public key of the sender
     contextKey :: Maybe Text,
     -- |
-    contextLocation :: Maybe Location,
+    contextCity :: Maybe Text,
+    -- |
+    contextCountry :: Maybe Text,
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
     contextMessageId :: Maybe Text,
     -- | Time of request generation in RFC3339 format
@@ -307,8 +309,8 @@ data Context = Context
     contextTransactionId :: Maybe Text,
     -- | The duration in ISO8601 format after timestamp for which this message holds valid
     contextTtl :: Maybe Text,
-    -- | Version of transaction protocol being used by the sender.
-    contextVersion :: Maybe Text
+    -- | Version of Beckn core API specification being used.
+    contextCoreVersion :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -333,12 +335,13 @@ optionsContext =
         ("contextBppUri", "bpp_uri"),
         ("contextDomain", "domain"),
         ("contextKey", "key"),
-        ("contextLocation", "location"),
+        ("contextCity", "city"),
+        ("contextCountry", "country"),
         ("contextMessageId", "message_id"),
         ("contextTimestamp", "timestamp"),
         ("contextTransactionId", "transaction_id"),
         ("contextTtl", "ttl"),
-        ("contextVersion", "version")
+        ("contextCoreVersion", "core_version")
       ]
 
 -- | Describes a country
@@ -885,6 +888,8 @@ data IssueResolution = IssueResolution
     issueResolutionGroRemarks :: Maybe Text,
     -- | remarks of the resolution of the issue by the respondent
     issueResolutionLongDesc :: Maybe Text,
+    -- | refund amount if applicable
+    issueResolutionRefundAmount :: Maybe Text,
     -- | resolution
     issueResolutionShortDesc :: Text
   }
@@ -908,6 +913,7 @@ optionsIssueResolution =
         ("issueResolutionActionTriggered", "action_triggered"),
         ("issueResolutionGroRemarks", "gro_remarks"),
         ("issueResolutionLongDesc", "long_desc"),
+        ("issueResolutionRefundAmount", "refund_amount"),
         ("issueResolutionShortDesc", "short_desc")
       ]
 
@@ -1332,6 +1338,8 @@ optionsResolutionSupport =
 -- |
 data RespondentAction = RespondentAction
   { -- |
+    respondentActionCascadedLevel :: Maybe Int,
+    -- |
     respondentActionRespondentAction :: Maybe Text,
     -- | details of the remarks when the issue status is changed, can be captured when the respondent triggers an action
     respondentActionShortDesc :: Maybe Text,
@@ -1356,7 +1364,8 @@ optionsRespondentAction =
     }
   where
     table =
-      [ ("respondentActionRespondentAction", "respondent_action"),
+      [ ("respondentActionCascadedLevel", "cascaded_level"),
+        ("respondentActionRespondentAction", "respondent_action"),
         ("respondentActionShortDesc", "short_desc"),
         ("respondentActionUpdatedAt", "updated_at"),
         ("respondentActionUpdatedBy", "updated_by")

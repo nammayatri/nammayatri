@@ -89,3 +89,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"GetIssueFlowSimulate","migration":"capability","param":"system-config.customer_issue_config.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_FLOW_SIMULATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetIGMIssueTrail","migration":"capability","param":"city-operations.driver_issue.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_IGM_ISSUE_TRAIL' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostIGMIssueTriggerActionUpdate","migration":"capability","param":"city-operations.driver_issue.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_IGM_ISSUE_TRIGGER_ACTION_UPDATE' ) ON CONFLICT DO NOTHING;

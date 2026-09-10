@@ -64,6 +64,7 @@ library
       IssueManagement.Domain.Types.Issue.Comment
       IssueManagement.Domain.Types.Issue.IGMConfig
       IssueManagement.Domain.Types.Issue.IGMIssue
+      IssueManagement.Domain.Types.Issue.IGMIssueAction
       IssueManagement.Domain.Types.Issue.IssueApiIntegration
       IssueManagement.Domain.Types.Issue.IssueCategory
       IssueManagement.Domain.Types.Issue.IssueChat
@@ -74,10 +75,12 @@ library
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
       IssueManagement.SharedLogic.CallAPI
+      IssueManagement.SharedLogic.IGM
       IssueManagement.Storage.Beam.Issue.ChatMessage
       IssueManagement.Storage.Beam.Issue.Comment
       IssueManagement.Storage.Beam.Issue.IGMConfig
       IssueManagement.Storage.Beam.Issue.IGMIssue
+      IssueManagement.Storage.Beam.Issue.IGMIssueAction
       IssueManagement.Storage.Beam.Issue.IssueApiIntegration
       IssueManagement.Storage.Beam.Issue.IssueCategory
       IssueManagement.Storage.Beam.Issue.IssueChat
@@ -97,6 +100,7 @@ library
       IssueManagement.Storage.Queries.Issue.Comment
       IssueManagement.Storage.Queries.Issue.IGMConfig
       IssueManagement.Storage.Queries.Issue.IGMIssue
+      IssueManagement.Storage.Queries.Issue.IGMIssueAction
       IssueManagement.Storage.Queries.Issue.IssueApiIntegration
       IssueManagement.Storage.Queries.Issue.IssueCategory
       IssueManagement.Storage.Queries.Issue.IssueChat
