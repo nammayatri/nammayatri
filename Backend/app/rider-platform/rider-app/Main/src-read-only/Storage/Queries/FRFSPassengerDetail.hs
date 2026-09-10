@@ -21,9 +21,6 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail] -> m ())
 createMany = traverse_ create
 
-deleteAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
-deleteAllByQuoteId quoteId = do deleteWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
-
 findAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail])
 findAllByQuoteId quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
 
@@ -40,12 +37,13 @@ updateByPrimaryKey (Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail {..}) =
       Se.Set Beam.dropOffPointPlaceId dropOffPointPlaceId,
       Se.Set Beam.gender gender,
       Se.Set Beam.idProofLookupId idProofLookupId,
-      Se.Set Beam.idProofNumberEncrypted (idProofNumber <&> unEncrypted . encrypted),
-      Se.Set Beam.idProofNumberHash (idProofNumber <&> hash),
+      Se.Set Beam.idProofNumberEncrypted (idProofNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.idProofNumberHash (idProofNumber <&> (.hash)),
       Se.Set Beam.isChild isChild,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.passengerId (Kernel.Types.Id.getId passengerId),
       Se.Set Beam.pickupPointPlaceId pickupPointPlaceId,
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.seatId (Kernel.Types.Id.getId seatId),
@@ -69,6 +67,7 @@ instance FromTType' Beam.FRFSPassengerDetail Domain.Types.FRFSPassengerDetail.FR
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            passengerId = Kernel.Types.Id.Id passengerId,
             pickupPointPlaceId = pickupPointPlaceId,
             quoteId = Kernel.Types.Id.Id quoteId,
             seatId = Kernel.Types.Id.Id seatId,
@@ -85,12 +84,13 @@ instance ToTType' Beam.FRFSPassengerDetail Domain.Types.FRFSPassengerDetail.FRFS
         Beam.gender = gender,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.idProofLookupId = idProofLookupId,
-        Beam.idProofNumberEncrypted = idProofNumber <&> unEncrypted . encrypted,
-        Beam.idProofNumberHash = idProofNumber <&> hash,
+        Beam.idProofNumberEncrypted = idProofNumber <&> unEncrypted . (.encrypted),
+        Beam.idProofNumberHash = idProofNumber <&> (.hash),
         Beam.isChild = isChild,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.passengerId = Kernel.Types.Id.getId passengerId,
         Beam.pickupPointPlaceId = pickupPointPlaceId,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.seatId = Kernel.Types.Id.getId seatId,

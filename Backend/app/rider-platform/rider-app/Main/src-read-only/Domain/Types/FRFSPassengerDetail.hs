@@ -5,6 +5,7 @@ module Domain.Types.FRFSPassengerDetail where
 
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSSavedPassenger
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -25,6 +26,7 @@ data FRFSPassengerDetailE e = FRFSPassengerDetail
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passengerId :: Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger,
     pickupPointPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat,
@@ -54,6 +56,7 @@ instance EncryptedItem FRFSPassengerDetail where
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           name = name entity,
+          passengerId = passengerId entity,
           pickupPointPlaceId = pickupPointPlaceId entity,
           quoteId = quoteId entity,
           seatId = seatId entity,
@@ -75,6 +78,7 @@ instance EncryptedItem FRFSPassengerDetail where
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             name = name entity,
+            passengerId = passengerId entity,
             pickupPointPlaceId = pickupPointPlaceId entity,
             quoteId = quoteId entity,
             seatId = seatId entity,

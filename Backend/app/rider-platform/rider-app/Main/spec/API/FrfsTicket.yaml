@@ -8,6 +8,7 @@ imports:
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSTripCategory: Domain.Types.FRFSQuote
   FRFSTravellerGroup: Domain.Types.FRFSSearch
+  FRFSSavedPassenger: Domain.Types.FRFSSavedPassenger
   FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
@@ -451,16 +452,27 @@ types:
     seat: Seat
     status: SeatStatus
 
-  FRFSPassengerDetail:
-    seatId: Id Seat
-    name: Maybe Text
-    age: Maybe Int
+  FRFSSavedPassengerAPI:
+    passengerId: Id FRFSSavedPassenger
+    name: Text
+    age: Int
     gender: Gender
-    isChild: Bool
+    derive: "Show"
+
+  FRFSAddPassengerReq:
+    passengerId: Maybe (Id FRFSSavedPassenger)
+    name: Text
+    age: Int
+    gender: Gender
+    derive: "Show"
+
+  FRFSSelectPassenger:
+    passengerId: Id FRFSSavedPassenger
+    seatId: Id Seat
     derive: "Show"
 
   FRFSSelectReq:
-    passengers: "[FRFSPassengerDetail]"
+    passengers: "[FRFSSelectPassenger]"
     concessionTypeId: Text
     idProofLookupId: Maybe Text
     idProofNumber: Maybe Text
@@ -857,6 +869,29 @@ apis:
         seatNumbers: "[Text]"
       response:
         type: SeatLayoutResp
+
+  # Saved travellers for the passenger-selection step, scoped to the authenticated rider.
+  - GET:
+      endpoint: /frfs/passengers
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSSavedPassengerAPI]"
+
+  - POST:
+      endpoint: /frfs/passengers
+      auth: TokenAuth
+      request:
+        type: FRFSAddPassengerReq
+      response:
+        type: FRFSSavedPassengerAPI
+
+  - DELETE:
+      endpoint: /frfs/passengers/{passengerId}
+      auth: TokenAuth
+      params:
+        passengerId: Id FRFSSavedPassenger
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
       endpoint: /frfs/quote/{quoteId}/select
