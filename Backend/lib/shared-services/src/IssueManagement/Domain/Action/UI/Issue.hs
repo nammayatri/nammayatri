@@ -1286,7 +1286,7 @@ updateIssueStatus ::
   Identifier ->
   m Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
-  Redis.withLockRedisAndReturnValue (makeIssueReportKey issueReportId) 60 $ do
+  Redis.withWaitAndLockRedis (makeIssueReportKey issueReportId) 60 50000 $ do
     language <- getLanguage personId mbLanguage issueHandle
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId

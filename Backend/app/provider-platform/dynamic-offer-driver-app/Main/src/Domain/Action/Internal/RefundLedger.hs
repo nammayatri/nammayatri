@@ -85,7 +85,7 @@ refundLedger rideId req apiKey = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  Redis.withLockRedis (refundLedgerLockKey req.refundRequestId) 60 $ do
+  Redis.withWaitAndLockRedis (refundLedgerLockKey req.refundRequestId) 60 50000 $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)

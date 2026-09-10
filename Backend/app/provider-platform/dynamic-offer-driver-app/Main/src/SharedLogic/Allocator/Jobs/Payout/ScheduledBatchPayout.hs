@@ -262,7 +262,7 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
               transporterConfig = transporterConfig
             }
 
-    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
+    Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey personId.getId) 10 50000 $ do
       now <- getCurrentTime
       mbAccount <- getWalletAccountByOwner counterparty personId.getId
       let mbAccountId = (.id) <$> mbAccount

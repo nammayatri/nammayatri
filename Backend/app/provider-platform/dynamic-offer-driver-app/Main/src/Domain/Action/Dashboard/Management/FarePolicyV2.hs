@@ -260,7 +260,7 @@ postFarePolicyV2BulkReplace merchantShortId opCity mbDryRun req = do
     then pure Common.FPV2BulkReplaceRes {applied = False, results}
     else do
       -- serialize writes for the city so concurrent bulk saves cannot interleave
-      Redis.withWaitOnLockRedisWithExpiry (farePolicyV2CityLockKey merchantOpCity.id) 10 60 $
+      Redis.withWaitAndLockRedis (farePolicyV2CityLockKey merchantOpCity.id) 10 50000 $
         mapM_ (\(_, _, _, apply) -> apply) prepared
       pure Common.FPV2BulkReplaceRes {applied = True, results}
 

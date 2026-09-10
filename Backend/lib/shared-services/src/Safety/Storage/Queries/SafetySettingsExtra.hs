@@ -149,7 +149,7 @@ findSafetySettingsWithFallback ::
   m DSafety.SafetySettings ->
   m DSafety.SafetySettings
 findSafetySettingsWithFallback personId getDefaultSettings =
-  Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey $ getId personId) 1 $ do
+  Hedis.withWaitAndLockRedis (mkSafetySettingsByPersonIdKey $ getId personId) 1 50000 $ do
     res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq $ getId personId]]
     case res of
       Just safetySettings -> return safetySettings
@@ -167,7 +167,7 @@ upsert ::
   m DSafety.SafetySettings ->
   m ()
 upsert personId UpdateEmergencyInfo {..} getDefaultSettings =
-  Hedis.withLockRedis (mkSafetySettingsByPersonIdKey $ getId personId) 1 $ do
+  Hedis.withWaitAndLockRedis (mkSafetySettingsByPersonIdKey $ getId personId) 1 50000 $ do
     now <- getCurrentTime
     res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq $ getId personId]]
     if isJust res

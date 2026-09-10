@@ -125,7 +125,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
       merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
       case booking.payerVpa of
         Just payoutVpa -> do
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (DAP.payoutProcessingLockKey booking.id.getId) 3 50000 $ do
             QFTB.updatePayoutStatusById (Just PROCESSING) booking.id
             QFTB.updatePayoutOrderId (Just uid) booking.id
             phoneNo <- mapM decrypt person.mobileNumber
@@ -141,7 +141,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()
         Nothing -> do
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey booking.id.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (DAP.payoutProcessingLockKey booking.id.getId) 3 50000 $ do
             QFTB.updatePayoutStatusById (Just MANUAL_VERIFICATION) booking.id
           pure ()
     Nothing -> pure ()
@@ -162,11 +162,11 @@ errorCatchAndHandle bookingId riderId orderId resp' payoutConfig statusForRetry 
       logDebug $ "Error in calling create payout riderId: " <> riderId <> " | orderId: " <> orderId
       eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkMetroCashbackManualTrackingKey bookingId.getId) payoutConfig.maxRetryCount
       if eligibleForRetryInNextBatch
-        then Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey bookingId.getId) 3 3 $ do
+        then Redis.withWaitAndLockRedis (DAP.payoutProcessingLockKey bookingId.getId) 3 50000 $ do
           QFTB.updatePayoutStatusById (Just statusForRetry) bookingId
         else do
           let status = if statusForRetry == MANUAL_VERIFICATION then PROCESSING else MANUAL_VERIFICATION
-          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey bookingId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (DAP.payoutProcessingLockKey bookingId.getId) 3 50000 $ do
             QFTB.updatePayoutStatusById (Just status) bookingId
     Right resp -> function resp
 

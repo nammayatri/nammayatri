@@ -244,7 +244,7 @@ selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> dri
 --   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
 checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 checkAndAutoDisableWalletGatedTiers driverId merchantOpCityId =
-  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+  Redis.withWaitAndLockRedis (selectedServiceTiersLockKey driverId) 5 50000 $ do
     mbVehicle <- QVehicle.findById driverId
     whenJust mbVehicle $ \vehicle -> do
       let selectedAutoAcceptTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers

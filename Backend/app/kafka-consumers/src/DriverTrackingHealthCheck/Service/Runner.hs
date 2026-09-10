@@ -88,7 +88,7 @@ driverDevicePingService driverId fcmNofificationSendCount = do
 
 withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
 withLock serviceName func =
-  Redis.withLockRedis key 10 (func `catch` (logError . makeLogSomeException))
+  Redis.withWaitAndLockRedis key 10 50000 (func `catch` (logError . makeLogSomeException))
   where
     key = "beckn:" <> serviceName <> ":lock"
 

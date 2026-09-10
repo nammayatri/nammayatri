@@ -61,6 +61,7 @@ import Kernel.Types.Id
 import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance (getEntriesByReference)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -384,7 +385,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
     Just DPayment.DRIVER_DAILY_STATS -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedis (payoutProcessingLockKey dailyStats.driverId.getId) 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ do
             QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
@@ -413,7 +414,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
     Just DPayment.DAILY_STATS_VIA_DASHBOARD -> do
       forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
         dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+        Redis.withWaitAndLockRedis (payoutProcessingLockKey dailyStats.driverId.getId) 3 50000 $ do
           let dPayoutStatus = castPayoutOrderStatus payoutStatus
           when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
         fork "Update Payout Status For DailyStats Via Dashboard" $ do
@@ -423,7 +424,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
       driverIdsWithServiceName <- do
         forM (fromMaybe [] payoutOrder.entityIds) $ \driverFeeId -> do
           driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey driverFee.driverId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey driverFee.driverId.getId) 3 50000 $ do
             let refundData =
                   DDF.RefundInfo
                     { status = Just dPayoutStatus,
@@ -448,44 +449,47 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
         Nothing -> pure Nothing
         Just prId -> QPR.findById (Id prId)
 
-      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+      Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey driverId.getId) 10 50000 $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let counterparty = counterpartyFromRole person.role
         when (isPayoutOrderSuccess updPayoutStatus) $ do
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-          let metadata =
-                LedgerEntryMetadata
-                  { driverPayable = Just (-1 * amount),
-                    payoutOrderId = Just payoutOrder.id.getId,
-                    reason = Nothing,
-                    subscriptionAllocations = Nothing,
-                    d2cReferralEarnings = Nothing,
-                    d2dReferralEarnings = Nothing,
-                    dailyStatsId = Nothing
-                  }
-          void $
-            createWalletEntryDelta
-              counterparty
-              driverId.getId
-              (negate amount)
-              transporterConfig.currency
-              payoutOrder.merchantId
-              merchantOperatingCityId.getId
-              walletReferencePayout
-              payoutOrder.id.getId
-              (Just metadata)
-              >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
+          -- Skip if this payout was already debited, so retries don't double-charge the wallet.
+          existingPayoutEntries <- getEntriesByReference walletReferencePayout payoutOrder.id.getId
+          when (null existingPayoutEntries) $ do
+            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+            let metadata =
+                  LedgerEntryMetadata
+                    { driverPayable = Just (-1 * amount),
+                      payoutOrderId = Just payoutOrder.id.getId,
+                      reason = Nothing,
+                      subscriptionAllocations = Nothing,
+                      d2cReferralEarnings = Nothing,
+                      d2dReferralEarnings = Nothing,
+                      dailyStatsId = Nothing
+                    }
+            void $
+              createWalletEntryDelta
+                counterparty
+                driverId.getId
+                (negate amount)
+                transporterConfig.currency
+                payoutOrder.merchantId
+                merchantOperatingCityId.getId
+                walletReferencePayout
+                payoutOrder.id.getId
+                (Just metadata)
+                >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
 
-          -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
-          -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
-          -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-          whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
-            whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
-              let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
-                  chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-              recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
-                >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
+            -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
+            -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
+            -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
+            whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
+              whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
+                let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
+                    chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+                recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
+                  >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
 
           whenJust mbPayoutReq $ \payoutReq -> do
             mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
@@ -521,7 +525,7 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
     updateStatsWithLock payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
-      Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+      Redis.withWaitAndLockRedis (payoutProcessingLockKey dailyStats.driverId.getId) 3 50000 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrder.orderId dailyStats.driverId payoutConfig
 
@@ -599,7 +603,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey personId.getId) 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
@@ -610,7 +614,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
           void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
         (_, False) -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey personId.getId) 3 50000 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
         _ -> pure ()
   where

@@ -210,7 +210,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
       ds <-
         case mbDailyStats of
           Just dailyStats -> do
-            Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+            Redis.withWaitAndLockRedis (DAP.payoutProcessingLockKey driverId.getId) 3 50000 $ do
               QDailyStats.updateReferralStatsByDriverId dailyStats.activatedValidRides dailyStats.referralEarnings DDS.Initialized driverId (utctDay localTime)
               QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverId (utctDay localTime)
             pure $ dailyStats {DDS.referralCounts = dailyStats.referralCounts + 1}

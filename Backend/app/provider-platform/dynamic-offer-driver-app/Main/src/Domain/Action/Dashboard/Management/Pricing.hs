@@ -152,7 +152,7 @@ postPricingSurgeStatus merchantShortId opCity reqConfigId req = do
   -- serialize status transitions per (city, tier): concurrent activations could
   -- otherwise interleave the sibling scan and the two status writes and leave
   -- two ACTIVE configs for the same window
-  Redis.withWaitOnLockRedisWithExpiry (surgeStatusLockKey merchantOpCity.id scoped.vehicleServiceTier) 10 60 $ do
+  Redis.withWaitAndLockRedis (surgeStatusLockKey merchantOpCity.id scoped.vehicleServiceTier) 10 50000 $ do
     -- re-read inside the lock: a concurrent transition may have already moved it
     config <- findScopedConfig merchantOpCity (cast reqConfigId)
     let newStatus = fromApiStatus req.status

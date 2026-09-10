@@ -87,6 +87,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPRE
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
@@ -609,23 +610,29 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
   ensurePayoutsEnabled ctx
   let counterparty = counterpartyFromRole ctx.person.role
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 50000 $ do
     now <- getCurrentTime
-    mbAccount <- getWalletAccountByOwner counterparty ctx.driverId.getId
-    let mbAccountId = (.id) <$> mbAccount
-    walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
-    ensurePayoutLimitNotReached ctx mbAccountId now
-    -- Single query: get both non-redeemable balance and redeemable entry IDs
-    let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-        cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-        cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-    (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
-      Nothing -> pure (0, [], 0)
-      Just accountId -> getPayoutEligibilityData accountId cutoff now
-    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
-    let payoutableBalance = walletBalance - nonRedeemable
-    ensureMinimumPayoutAmount ctx payoutableBalance
-    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
+    -- Idempotency guard: skip if a payout is already in flight for this driver (24h look-back) so concurrent withdraw taps don't re-read the same unsettled balance and create duplicate payouts.
+    let inFlightWindowStart = Data.Time.addUTCTime (negate 86400) now
+    inFlightPayouts <- QPRE.findByBeneficiaryWithFilters ctx.driverId.getId (Just inFlightWindowStart) Nothing [PR.INITIATED, PR.PROCESSING, PR.RETRYING] (Just 1) Nothing
+    if not (null inFlightPayouts)
+      then logInfo $ "Wallet payout already in flight for driver " <> ctx.driverId.getId <> ", skipping duplicate withdraw"
+      else do
+        mbAccount <- getWalletAccountByOwner counterparty ctx.driverId.getId
+        let mbAccountId = (.id) <$> mbAccount
+        walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
+        ensurePayoutLimitNotReached ctx mbAccountId now
+        -- Single query: get both non-redeemable balance and redeemable entry IDs
+        let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
+            cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
+            cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
+        (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
+          Nothing -> pure (0, [], 0)
+          Just accountId -> getPayoutEligibilityData accountId cutoff now
+        logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
+        let payoutableBalance = walletBalance - nonRedeemable
+        ensureMinimumPayoutAmount ctx payoutableBalance
+        initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.

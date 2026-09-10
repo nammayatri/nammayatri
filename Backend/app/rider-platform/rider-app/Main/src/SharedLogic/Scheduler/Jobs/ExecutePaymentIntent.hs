@@ -64,7 +64,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       rideId = jobData.rideId
       fare = jobData.fare
       applicationFeeAmount = jobData.applicationFeeAmount
-  Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedis (SPayment.paymentJobExecLockKey rideId.getId) 10 50000 $ do
     logDebug "Executing payment intent"
     -- Check if payment is already completed (idempotent check using invoice status)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)

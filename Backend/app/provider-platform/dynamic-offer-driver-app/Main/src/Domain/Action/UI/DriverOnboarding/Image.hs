@@ -454,7 +454,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension enforceFileTypeCheck mbUploadedFileType fileExtension)
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
-          Redis.withLockRedis (imageS3Lock imagePath) 5 $
+          Redis.withWaitAndLockRedis (imageS3Lock imagePath) 5 50000 $
             S3.put (T.unpack imagePath) image
       case s3Result of
         Left err -> do

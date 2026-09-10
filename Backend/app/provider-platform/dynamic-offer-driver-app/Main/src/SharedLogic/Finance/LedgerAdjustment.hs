@@ -845,7 +845,7 @@ ledgerAdjustmentPostAction ::
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
 ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
-  Redis.withLockRedisAndReturnValue (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 $ do
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 50000 $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId

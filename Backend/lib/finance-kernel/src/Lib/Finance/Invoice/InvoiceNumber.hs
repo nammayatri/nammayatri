@@ -92,7 +92,7 @@ getNextSequenceForDate dateStr mbKeySuffix createdAt dbFallback = do
     Just _ -> pure () -- Key exists, no initialization needed
     Nothing -> do
       -- Key doesn't exist - use lock to initialize from DB
-      Redis.withWaitOnLockRedisWithExpiry lockKey 5 10 $ do
+      Redis.withWaitAndLockRedis lockKey 5 50000 $ do
         -- Double-check if key was created while waiting for lock
         mbCounter' <- Hedis.safeGet redisKey
         case (mbCounter' :: Maybe Integer) of

@@ -166,7 +166,7 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
 
       case mbDailyStats of
         Just stats -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey referredDriverId.getId) 3 50000 $ do
             QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + deltaReferralEarnings) newPayoutStatus referredDriverId (utctDay localTime)
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
             creditReferralWallet deltaReferralEarnings referredDriverId stats.id D2CReferralEarnings ride.currency referredDriver.merchantId.getId referredDriver.merchantOperatingCityId.getId
@@ -308,7 +308,7 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
 
       case mbDailyStats of
         Just stats -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referringDriverId.getId) 3 3 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey referringDriverId.getId) 3 50000 $ do
             QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + deltaD2dEarnings) (stats.d2dActivatedValidRides + 1) newPayoutStatus referringDriverId (utctDay localTime)
             QDailyStats.updateD2dReferralCount (stats.d2dReferralCounts + 1) referringDriverId (utctDay localTime)
 
@@ -414,7 +414,7 @@ creditReferralWallet amount driverId_ dailyStatsId earningKey currency merchantI
     case resp of
       Left err -> do
         logError $ "Failed to create referral wallet entry for driverId: " <> driverId_.getId <> " dailyStatsId: " <> dailyStatsId <> " err: " <> show err
-        Redis.withWaitOnLockRedisWithExpiry ("Payout:Processing:DriverId" <> driverId_.getId) 3 3 $
+        Redis.withWaitAndLockRedis ("Payout:Processing:DriverId" <> driverId_.getId) 3 50000 $
           QDailyStats.updatePayoutStatusById DDS.Failed dailyStatsId
       Right _ ->
         pure ()
