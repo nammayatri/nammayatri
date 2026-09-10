@@ -44,6 +44,7 @@ import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.SvpJourney as QSvpJourney
 import Tools.Error
 import qualified Tools.LoyaltyWallet as LoyaltyWallet
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 -- ── Redis keys ────────────────────────────────────────────
 
@@ -257,6 +258,7 @@ postSvpGate ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
     MonadFlow m,
     MonadTime m,
     EncFlow m r,
@@ -368,6 +370,7 @@ handleExit ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    Metrics.HasBAPMetrics m r,
     MonadFlow m,
     MonadTime m,
     EncFlow m r,
