@@ -993,7 +993,8 @@ validateRequest merchant sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sReq.toSpecialLocationId sourceCity merchant
+  let stopsForIntercityCheck = if sReq.riderPreferredOption == DRPO.Rental then map (.gps) sReq.stops else []
+  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation stopsForIntercityCheck sReq.toSpecialLocationId sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
       isMeterRideSearch = sReq.isMeterRideSearch
@@ -1033,16 +1034,19 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong Nothing sourceCity merchant
+  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
-checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocationId sourceCity merchant = do
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> [LatLong] -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity transporterConfig mbDropLocation stops mbToSpecialLocationId sourceCity merchant = do
   case (mbDropLocation, mbToSpecialLocationId) of
     (Just dropLoc, Nothing) -> do
       (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
       if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.City "AnyCity"
-        then return (False, False, Nothing)
+        then
+          findFirstCrossCityStop stops >>= \case
+            Just city -> pure (True, False, Just city)
+            Nothing -> pure (False, False, Nothing)
         else do
           mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
           let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
@@ -1054,6 +1058,13 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
                 else return (True, False, mbDestinationTravelCityName)
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
     _ -> pure (False, False, Nothing)
+  where
+    findFirstCrossCityStop [] = pure Nothing
+    findFirstCrossCityStop (s : rest) = do
+      (stopCityState, mbStopCityName) <- getDestinationCity merchant s
+      if stopCityState.city /= sourceCity.city && stopCityState.city /= Context.City "AnyCity"
+        then pure (mbStopCityName <|> Just (show stopCityState.city))
+        else findFirstCrossCityStop rest
 
 isScheduledForSearch :: DTMT.TransporterConfig -> UTCTime -> DSearchReq -> Bool
 isScheduledForSearch tConf now dsReq =
@@ -1098,17 +1109,22 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then [OneWay MeterRide]
           else do
             case dsReq.dropLocation of
-              Just _ -> do
-                if isInterCity
-                  then do
-                    if isCrossCity
-                      then do
-                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                      else do
-                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                  else localBundleForPreference
+              Just _ -> case dsReq.riderPreferredOption of
+                DRPO.Rental
+                  | isInterCity ->
+                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
+                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+                _ ->
+                  if isInterCity
+                    then
+                      if isCrossCity
+                        then
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                        else
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
               -- back to OneWay in several places (no tag, unparseable tag, unrecognized

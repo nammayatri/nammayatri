@@ -215,19 +215,8 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
   let otpTxt = otp
       amountTxt = show booking.estimatedTotalFare.amountInt
   case booking.tripCategory of
-    Just (DTC.Rental _) -> do
-      appUrl <- getAppUrl merchantOperatingCityId
-      let durationHours = show (fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration) `div` 3600)
-          distanceKms = show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
-      buildSendBookingOTPRentalMessage merchantOperatingCityId $
-        BuildSendBookingOTPRentalMessageReq
-          { otp = otpTxt,
-            amount = amountTxt,
-            durationHours = durationHours,
-            distanceKms = distanceKms,
-            appUrl = appUrl,
-            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
-          }
+    Just (DTC.Rental _) -> rentalOtpSms
+    Just (DTC.IntercityRental _ _) -> rentalOtpSms
     Just (DTC.InterCity _ mbCity) -> do
       appUrl <- getAppUrl merchantOperatingCityId
       let (destination, distanceKms) = case booking.bookingDetails of
@@ -256,6 +245,19 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
             serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
           }
   where
+    rentalOtpSms = do
+      appUrl <- getAppUrl merchantOperatingCityId
+      let durationHours = show (fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration) `div` 3600)
+          distanceKms = show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
+      buildSendBookingOTPRentalMessage merchantOperatingCityId $
+        BuildSendBookingOTPRentalMessageReq
+          { otp = otp,
+            amount = show booking.estimatedTotalFare.amountInt,
+            durationHours = durationHours,
+            distanceKms = distanceKms,
+            appUrl = appUrl,
+            serviceTier = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
+          }
     getAppUrl mocId = do
       riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
       pure riderCfg.appUrl

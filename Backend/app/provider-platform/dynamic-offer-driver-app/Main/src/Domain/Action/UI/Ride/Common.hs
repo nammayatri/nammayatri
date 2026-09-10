@@ -515,6 +515,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
 

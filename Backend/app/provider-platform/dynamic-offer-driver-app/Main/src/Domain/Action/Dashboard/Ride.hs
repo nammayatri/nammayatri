@@ -542,6 +542,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
   let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
@@ -774,6 +775,7 @@ mkStopInformation stopInfo =
 castTripCategory :: DTC.TripCategory -> Common.DeprecatedTripCategory
 castTripCategory = \case
   DTC.Rental _ -> Common.Rental
+  DTC.IntercityRental _ _ -> Common.Rental
   DTC.RideShare _ -> Common.RideShare
   DTC.InterCity _ _ -> Common.InterCity
   DTC.CrossCity _ _ -> Common.CrossCity

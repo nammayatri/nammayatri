@@ -481,6 +481,7 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
   -- (city = Nothing) fallback.
   let allowedVariants = case req.tripCategory of
         Rental _ -> [FarePolicyD.Rental]
+        IntercityRental _ _ -> [FarePolicyD.Rental]
         InterCity _ _ -> [FarePolicyD.InterCity, FarePolicyD.Progressive, FarePolicyD.Slabs]
         CrossCity _ _ -> [FarePolicyD.InterCity, FarePolicyD.Progressive, FarePolicyD.Slabs]
         Ambulance _ -> [FarePolicyD.Ambulance]
