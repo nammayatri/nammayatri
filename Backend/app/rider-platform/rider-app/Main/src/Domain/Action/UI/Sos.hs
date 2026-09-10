@@ -362,6 +362,10 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
       void $ callUpdateTicket person result.sosDetails $ Just "SOS Re-Activated"
       return (cast result.sosId, existingSos.ticketId)
     Nothing -> do
+      -- Create the SOS first (ticketId = Nothing) so the dashboard link can use sos/<sosId>,
+      -- then create the ticket and write the ticketId back (mirrors the non-ride flow).
+      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing Nothing mbExternalReferenceId
+      QRide.updateSosId (Just $ cast result.sosId) ride.id
       (mbTicketId, mbTicketRequesterId) <- do
         if riderConfig.enableSupportForSafety && shouldCreateKaptureTicket
           then do
@@ -373,8 +377,8 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
                 mediaLinks =
                   buildDashboardMediaUrls
                     riderConfig.dashboardMediaFileUrlPattern
-                    (Just ride.id.getId)
                     Nothing
+                    (Just result.sosId.getId)
                     merchantShortId
                     rideCityCode
             ticketResponse <- withTryCatch "createTicket:sosTrigger" (createSosTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
@@ -383,9 +387,8 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
               Left _ -> return (Nothing, Nothing)
           else return (Nothing, Nothing)
 
-      -- Create new SOS using shared-services function
-      result <- SafetySos.createRideBasedSos (cast person.id) (cast ride.id) (cast merchantOperatingCityId) (cast merchantId) req.flow Nothing mbTicketId mbExternalReferenceId
-      QRide.updateSosId (Just $ cast result.sosId) ride.id
+      whenJust mbTicketId $ \tId ->
+        SafetySos.updateSosTicketId result.sosDetails (Just tId)
       whenJust mbTicketRequesterId $ \rid ->
         SafetyQSos.updateRequesterId (Just rid) (cast result.sosId)
       return (cast result.sosId, mbTicketId)
@@ -1224,23 +1227,25 @@ resolveLocation mbCustomerLoc person mbRide =
 
 buildDashboardMediaUrls :: Maybe Text -> Maybe Text -> Maybe Text -> Text -> Text -> [Text]
 buildDashboardMediaUrls mbPattern mbRideId mbSosId merchantShortId cityCode =
-  case (mbPattern, mbRideId, mbSosId) of
-    (Just patternS, Just rideId, _) ->
-      maybeToList $
-        mkValidatedDashboardMediaUrl $
-          patternS
-            & T.replace "<RIDES_OR_SOS>" "rides"
-            & T.replace "<ID>" rideId
-            & T.replace "<RIDE_ID>" rideId
-            & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
-            & T.replace "<CITY_CODE>" cityCode
-    (Just patternS, Nothing, Just sosId) ->
+  -- Prefer the sos/<sosId> link whenever a sosId is available (ride and non-ride alike);
+  -- fall back to rides/<rideId> only for legacy callers that have no sosId.
+  case (mbPattern, mbSosId, mbRideId) of
+    (Just patternS, Just sosId, _) ->
       maybeToList $
         mkValidatedDashboardMediaUrl $
           patternS
             & T.replace "<RIDES_OR_SOS>" "sos"
             & T.replace "<ID>" sosId
             & T.replace "<RIDE_ID>" sosId
+            & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
+            & T.replace "<CITY_CODE>" cityCode
+    (Just patternS, Nothing, Just rideId) ->
+      maybeToList $
+        mkValidatedDashboardMediaUrl $
+          patternS
+            & T.replace "<RIDES_OR_SOS>" "rides"
+            & T.replace "<ID>" rideId
+            & T.replace "<RIDE_ID>" rideId
             & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
             & T.replace "<CITY_CODE>" cityCode
     _ -> []
