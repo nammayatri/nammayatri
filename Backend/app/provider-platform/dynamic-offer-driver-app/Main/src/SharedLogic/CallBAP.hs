@@ -25,6 +25,7 @@ module SharedLogic.CallBAP
     sendRideEstimatedEndTimeRangeUpdateToBAP,
     sendQuoteRepetitionUpdateToBAP,
     sendTollCrossedUpdateToBAP,
+    sendTollConfirmationRequiredUpdateToBAP,
     sendUpdateEditDestToBAP,
     sendUpdateEditDestErrToBAP,
     sendNewMessageToBAP,
@@ -1523,7 +1524,15 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
     quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
     void $ callOnUpdateV2 quoteRepMsgV2 retryConfig merchant.id
 
-sendTollCrossedUpdateToBAP ::
+type SendTollEventUpdateToBAP m =
+  Maybe DRB.Booking ->
+  Maybe SRide.Ride ->
+  DP.Person ->
+  DDriverStats.DriverStats ->
+  DVeh.Vehicle ->
+  m ()
+
+type TollEventFlow m r c =
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -1534,14 +1543,17 @@ sendTollCrossedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
-  ) =>
-  Maybe DRB.Booking ->
-  Maybe SRide.Ride ->
-  DP.Person ->
-  DDriverStats.DriverStats ->
-  DVeh.Vehicle ->
-  m ()
-sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle = do
+  )
+
+sendTollCrossedUpdateToBAP :: TollEventFlow m r c => SendTollEventUpdateToBAP m
+sendTollCrossedUpdateToBAP = sendTollEventUpdateToBAP ACL.TollCrossedBuildReq
+
+-- Asks the rider to consent to the estimated toll; the ride must already carry the end OTP.
+sendTollConfirmationRequiredUpdateToBAP :: TollEventFlow m r c => SendTollEventUpdateToBAP m
+sendTollConfirmationRequiredUpdateToBAP = sendTollEventUpdateToBAP ACL.TollConfirmationRequiredBuildReq
+
+sendTollEventUpdateToBAP :: TollEventFlow m r c => (ACL.DTollEventBuildReq -> ACL.OnUpdateBuildReq) -> SendTollEventUpdateToBAP m
+sendTollEventUpdateToBAP mkBuildReq (Just booking) (Just ride) driver driverStats vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
@@ -1555,12 +1567,12 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
         riderPhone = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
-        tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
-    tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
+        tollEventUpdateBuildReq = mkBuildReq ACL.DTollEventBuildReq {..}
+    tollEventMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollEventUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
-    void $ callOnUpdateV2 tollCrossedMsg retryConfig merchant.id
-sendTollCrossedUpdateToBAP _ _ _ _ _ = do
-  logTagError "on_update_req" "on_update_err - Could not send toll crossed update to BPP : booking or ride not found"
+    void $ callOnUpdateV2 tollEventMsg retryConfig merchant.id
+sendTollEventUpdateToBAP _ _ _ _ _ _ = do
+  logTagError "on_update_req" "on_update_err - Could not send toll event update to BAP : booking or ride not found"
   pure ()
 
 sendDestinationArrivalUpdateToBAP ::

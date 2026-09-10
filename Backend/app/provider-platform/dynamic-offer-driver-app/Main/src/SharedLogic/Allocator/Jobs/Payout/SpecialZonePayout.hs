@@ -136,6 +136,7 @@ executeSpecialZonePayout payoutRequest = do
       let driverReq =
             RideEnd.DriverEndRideReq
               { endRideOtp = Nothing,
+                endWithoutToll = Just True, -- background job, nobody can answer a toll confirmation prompt
                 point = LatLong {lat = 0.0, lon = 0.0},
                 requestor = person,
                 uiDistanceCalculationWithAccuracy = Nothing,
@@ -254,6 +255,7 @@ executeOldSpecialZonePayout scheduledPayout = do
         let driverReq =
               RideEnd.DriverEndRideReq
                 { endRideOtp = Nothing,
+                  endWithoutToll = Just True, -- background job, nobody can answer a toll confirmation prompt
                   point = LatLong {lat = 0.0, lon = 0.0},
                   requestor = person,
                   uiDistanceCalculationWithAccuracy = Nothing,

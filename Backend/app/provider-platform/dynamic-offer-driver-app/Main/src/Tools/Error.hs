@@ -1227,6 +1227,25 @@ instance IsHTTPError RentalError where
 
 instance IsAPIError RentalError
 
+-- Distinct from END_RIDE_OTP_REQUIRED so the driver app can show the toll confirmation screen rather than the rental end-OTP screen
+data TollConfirmationError
+  = TollConfirmationOtpRequired
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TollConfirmationError
+
+instance IsBaseError TollConfirmationError where
+  toMessage = \case
+    TollConfirmationOtpRequired -> Just "Rider's end ride OTP is required to confirm the toll, or end the ride without the toll."
+
+instance IsHTTPError TollConfirmationError where
+  toErrorCode = \case
+    TollConfirmationOtpRequired -> "TOLL_CONFIRMATION_OTP_REQUIRED"
+
+  toHttpCode _ = E400
+
+instance IsAPIError TollConfirmationError
+
 data LocationMappingError
   = FromLocationMappingNotFound Text
   | FromLocationNotFound Text

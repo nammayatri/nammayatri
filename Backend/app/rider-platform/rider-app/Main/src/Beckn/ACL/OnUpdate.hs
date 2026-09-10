@@ -119,12 +119,19 @@ parseEventV2 transactionId messageId bppUri order = do
         "PHONE_CALL_COMPLETED" -> return $ DOnUpdate.OUPhoneCallCompletedEventReq $ DOnUpdate.PhoneCallCompletedEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
+        "TOLL_CONFIRMATION_REQUIRED" -> parseTollConfirmationRequiredEvent transactionId order
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent transactionId order
         "ADD_BAGGAGE" -> parseAddBaggageEvent transactionId order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+
+parseTollConfirmationRequiredEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseTollConfirmationRequiredEvent transactionId order = do
+  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in TollConfirmationRequired Event.")
+  endOtp <- Common.getEndStopOtp stops & fromMaybeM (InvalidRequest "end otp is not present in TollConfirmationRequired Event.")
+  return $ DOnUpdate.OUTollConfirmationRequiredEventReq $ DOnUpdate.TollConfirmationRequiredEventReq {..}
 
 parseNewMessageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseNewMessageEvent transactionId order = do

@@ -102,6 +102,7 @@ data SpecialLocation = SpecialLocation
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
+    enableTollConfirmation :: Maybe Bool, -- pause end ride for the rider's OTP when the toll outcome is Unsure
     render :: Maybe RenderType,
     fetchAllGateFareProduct :: Maybe Bool,
     priority :: Int,
@@ -267,3 +268,6 @@ dropSpecialZoneIdFromArea (Pickup _ _) = Nothing
 dropSpecialZoneIdFromArea (Drop slId) = Just slId.getId
 dropSpecialZoneIdFromArea (PickupDrop _ slId _) = Just slId.getId
 dropSpecialZoneIdFromArea Default = Nothing
+
+isSpecialLocationArea :: Maybe Area -> Bool
+isSpecialLocationArea mbArea = isJust (mbArea >>= pickupSpecialZoneIdFromArea) || isJust (mbArea >>= dropSpecialZoneIdFromArea)

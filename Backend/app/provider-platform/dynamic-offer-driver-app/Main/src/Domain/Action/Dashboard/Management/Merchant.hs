@@ -3574,6 +3574,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
+            enableTollConfirmation = mbExistingSpLoc >>= (.enableTollConfirmation),
             render = request.render <|> (mbExistingSpLoc >>= (.render)),
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,

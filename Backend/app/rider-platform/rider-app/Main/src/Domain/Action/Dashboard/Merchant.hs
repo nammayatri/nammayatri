@@ -428,6 +428,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
+            enableTollConfirmation = mbExistingSpLoc >>= (.enableTollConfirmation),
             render = request.render,
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
@@ -1675,6 +1676,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
+    enableTollConfirmation :: Maybe Text,
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
@@ -1726,6 +1728,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     gateInfoId <- optional (r .: "gate_info_id")
     gateInfoNotificationActiveTillInSec <- optional (r .: "gate_info_notification_active_till_in_sec")
     enforceTollRoute <- optional (r .: "enforce_toll_route")
+    enableTollConfirmation <- optional (r .: "enable_toll_confirmation")
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
@@ -1803,6 +1806,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
       gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
       let mbEnforceTollRoute :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enforceTollRoute) "Enforce Toll Route"
+          mbEnableTollConfirmation :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enableTollConfirmation) "Enable Toll Confirmation"
       gateInfoGeom <- do
         if gateInfoHasGeom
           then do
@@ -1830,6 +1834,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 updatedAt = now,
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
+                enableTollConfirmation = mbEnableTollConfirmation,
                 render = mbRender,
                 fetchAllGateFareProduct = mbFetchAllGateFareProduct,
                 supportNumber = supportNumber,
