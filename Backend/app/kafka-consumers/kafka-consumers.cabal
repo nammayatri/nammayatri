@@ -28,6 +28,7 @@ library
   exposed-modules:
       App
       DriverTrackingHealthCheck.API
+      DriverTrackingHealthCheck.Event
       DriverTrackingHealthCheck.Service.Runner
       Environment
       Processor.BroadcastMessage.Processor
