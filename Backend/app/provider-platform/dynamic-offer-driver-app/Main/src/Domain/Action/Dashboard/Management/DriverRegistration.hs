@@ -1411,7 +1411,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                           then Just DDVS.ADMIN_APPROVED
                           else Nothing,
                       DRC.pendingChallan = Nothing,
-                      DRC.initiatedBy = Nothing
+                      DRC.initiatedBy = Nothing,
+                      DRC.exemptParkingFee = Nothing
                     }
             QRC.create newRC
             -- Create driver RC association so the RC is linked to the driver
