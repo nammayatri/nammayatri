@@ -39,6 +39,7 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -1688,6 +1689,9 @@ getPaymentType isMultiModalBooking = \case
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
 
+-- | The alighting time only. A thin projection of getScheduledTripWindow rather than a second copy of
+-- it: both used the same schedule fetch, the same stop matching and the same trip-id parsing, so any
+-- change to what counts as a valid window had to be made twice or the two would disagree.
 getScheduledTripEndTime ::
   (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   Text -> -- tripId, "<waybillNo>-<tripNumber>"
@@ -1695,22 +1699,40 @@ getScheduledTripEndTime ::
   Text -> -- alighting stop code
   DIBC.IntegratedBPPConfig ->
   m (Maybe UTCTime)
-getScheduledTripEndTime tripId routeCode alightingStopCode integratedBPPConfig = do
+getScheduledTripEndTime tripId routeCode alightingStopCode integratedBPPConfig =
+  -- The boarding code is passed twice on purpose: the caller wants only the alighting bound, and
+  -- resolving the same stop for both is cheaper than a second schedule call.
+  snd <$> getScheduledTripWindow tripId routeCode alightingStopCode alightingStopCode integratedBPPConfig
+
+-- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
+getScheduledTripWindow ::
+  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text -> -- tripId, "<waybillNo>-<tripNumber>"
+  Text -> -- routeCode
+  Text -> -- boarding stop code
+  Text -> -- alighting stop code
+  DIBC.IntegratedBPPConfig ->
+  m (Maybe UTCTime, Maybe UTCTime)
+getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
   let (waybillNo, tripNo) = case T.splitOn "-" tripId of
         [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
         _ -> (tripId, 0 :: Int)
-  withTryCatch "getScheduledTripEndTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
+  withTryCatch "getScheduledTripWindow:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
     Left err -> do
-      logWarning $ "getScheduledTripEndTime: no schedule for tripId=" <> tripId <> ": " <> show err
-      pure Nothing
+      logWarning $ "getScheduledTripWindow: no schedule for tripId=" <> tripId <> ": " <> show err
+      pure (Nothing, Nothing)
     Right schedule -> case concatMap (.eta) schedule of
       [] -> do
-        logWarning $ "getScheduledTripEndTime: empty schedule for tripId=" <> tripId
-        pure Nothing
+        logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
+        pure (Nothing, Nothing)
       allEtas -> do
-        let mbAlighting = listToMaybe (filter (\e -> e.stopCode == alightingStopCode) allEtas)
-            chosen = fromMaybe (minimumBy (flip (comparing (.arrivalTimeUnix))) allEtas) mbAlighting
-        pure $ Just (unixToUTC chosen.arrivalTimeUnix)
+        let atStop stopCode = find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode stopCode) allEtas
+            bound name stopCode = case atStop stopCode of
+              Just eta -> pure $ Just (unixToUTC eta.arrivalTimeUnix)
+              Nothing -> do
+                logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
+                pure Nothing
+        (,) <$> bound "boarding" boardingStopCode <*> bound "alighting" alightingStopCode
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do
