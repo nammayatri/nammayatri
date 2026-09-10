@@ -37,19 +37,19 @@ packages:
   lib/consequence-engine
   lib/communication-engine
   lib/behavior-engine
--- ## 6 parallel jobs by default.
+-- ## 8 parallel jobs.
 --
 -- # since we now use "-j4" in "ghc-options" for all packages,
 -- # allowing them to use up-to 4 cores each to build.
--- # A number like 6 here means we can have 6 packages building parallel, with each allowed to use up-to 4 cores.
--- # which means a maximum of 6 * 4 = 24 cores, which should be manageable in most cases.
+-- # A number like 8 here means we can have 8 packages building parallel, with each allowed to use up-to 4 cores.
+-- # which means a maximum of 8 * 4 = 32 cores.
 -- # A higher number of parallel jobs here could saturate the system easily.
 -- # This Upper-limits the max resources required while still giving us the maximum benefits of parallel builds,
 -- # without saturating the system completely.
--- # This number should work for both laptops and desktops.
 --
+-- # EXPERIMENT (exp/parallel-build): bumped from 6 to 8 to use the 32-core CI runner more fully.
 -- # you can increase this number if on a more powerful machine.
-jobs: 6
+jobs: 8
 
 -- ### DEVELOPMENT FLAGS ###
 -- Note: you may comment/un-comment these while doing local development for faster compile & build times
