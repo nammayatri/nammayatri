@@ -20,7 +20,9 @@ type FRFSSearchFlow m r =
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
     EncFlow m r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   )
 
 type FRFSConfirmFlow m r c =

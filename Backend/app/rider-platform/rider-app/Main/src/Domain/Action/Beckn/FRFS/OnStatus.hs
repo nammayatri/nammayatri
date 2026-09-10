@@ -37,6 +37,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
@@ -44,6 +45,7 @@ import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import Tools.Error
+import qualified Tools.Metrics as Metrics
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
 
@@ -83,6 +85,7 @@ onStatus ::
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     SchedulerFlow r,
+    Metrics.HasBAPMetrics m r,
     HasFlowEnv m r '["googleSAPrivateKey" ::: String]
   ) =>
   Merchant ->
@@ -103,11 +106,11 @@ onStatus _merchant booking (Booking dOrder) = do
     case dOrder.orderStatus of
       Just Spec.COMPLETE
         | booking.status == Booking.CANCEL_INITIATED -> do
-          QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
+          FRFSUtils.markFRFSBookingStatus Booking.TECHNICAL_CANCEL_REJECTED "technical_cancel_rejected" booking
           pure statuses
         | otherwise -> pure $ updateTicketStatuses statuses
       Just Spec.CANCELLED | not booking.customerCancelled -> do
-        QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+        FRFSUtils.markFRFSBookingStatus Booking.COUNTER_CANCELLED "counter_cancelled_on_status" booking
         pure statuses
       _ -> pure statuses
   let googleWalletStates = map (\ticketStatus -> (ticketStatus.ticketNumber, GWSA.mapToGoogleTicketStatus ticketStatus.status)) statuses'

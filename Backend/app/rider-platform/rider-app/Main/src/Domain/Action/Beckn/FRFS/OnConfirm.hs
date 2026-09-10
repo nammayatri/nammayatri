@@ -34,7 +34,6 @@ import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
@@ -81,7 +80,6 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
-import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
@@ -142,6 +140,10 @@ validateRequest DOrder {..} = do
       -- lands here once validTill has passed and gets marked FAILED. The release is guarded on
       -- CONFIRMED internally, so it is a no-op on the ordinary pre-confirm expiry.
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
+      -- Guarded like markFRFSBookingStatus: this path has no status guard, so a replayed on_confirm
+      -- on an already-FAILED booking re-runs it and would count the same failure twice.
+      unless (booking.status == Booking.FAILED) $
+        Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show Booking.FAILED) "expired_on_confirm_validate"
       void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
       whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
@@ -179,7 +181,7 @@ onConfirmFailure bapConfig ticketBooking = do
   mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking
   unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered ticketBooking.overriddenAmount) $
     throwError (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
-  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
+  void $ FRFSUtils.markFRFSBookingStatus Booking.FAILED "on_confirm_failure" ticketBooking
   -- The only release left in the codebase, and it is guarded on CONFIRMED for a reason: this is
   -- the one path where a failure can arrive AFTER a successful on_confirm already debited the
   -- pass. Everywhere else is pre-CONFIRMED, where nothing has been spent. ticketBooking still
@@ -248,6 +250,11 @@ onConfirm merchant booking' quoteCategories dOrder = do
     Right () -> pure ()
     Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  -- Count the transition, not the callback. validateRequest has no status guard, so a replayed
+  -- on_confirm re-runs this handler; booking.status is still the pre-update status here, which is
+  -- the same reason the pass debit below is guarded on it.
+  unless (booking.status == Booking.CONFIRMED) $
+    Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show Booking.CONFIRMED) ""
   -- Debit the pass here, once the ticket exists. Everything between a debit and the ticket -- a
   -- thrown BPP call, a pod restart, a journey the rider abandons -- used to strand the trip with
   -- nothing left to release it. Swallowed so a metering failure can never undo a confirmed ticket.

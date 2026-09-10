@@ -47,7 +47,13 @@ data BAPMetricsContainer = BAPMetricsContainer
     emptyVehiclesCounter :: EmptyVehiclesCounterMetric,
     vehicleHistoricCounter :: VehicleHistoricCounterMetric,
     vehicleScheduleBasedActiveTripCounter :: VehicleScheduleBasedActiveTripCounterMetric,
-    vehicleWaybillStatusCounter :: VehicleWaybillStatusCounterMetric
+    vehicleWaybillStatusCounter :: VehicleWaybillStatusCounterMetric,
+    frfsSearchCounter :: FRFSSearchCounterMetric,
+    frfsBookingCounter :: FRFSBookingCounterMetric,
+    frfsPassPaymentCounter :: FRFSPassPaymentCounterMetric,
+    frfsBookingPaymentCounter :: FRFSBookingPaymentCounterMetric,
+    frfsExternalBppCounter :: FRFSExternalBppCounterMetric,
+    externalBppApiCallCounter :: ExternalBppApiCallCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -74,6 +80,19 @@ type VehicleScheduleBasedActiveTripCounterMetric = P.Vector P.Label3 P.Counter
 
 type VehicleWaybillStatusCounterMetric = P.Vector P.Label4 P.Counter
 
+type FRFSSearchCounterMetric = P.Vector P.Label4 P.Counter
+
+type FRFSBookingCounterMetric = P.Vector P.Label6 P.Counter
+
+-- merchant_id, version, merchantOperatingCityId, pass_type, status
+type FRFSPassPaymentCounterMetric = P.Vector P.Label5 P.Counter
+
+type FRFSBookingPaymentCounterMetric = P.Vector P.Label6 P.Counter
+
+type FRFSExternalBppCounterMetric = P.Vector P.Label7 P.Counter
+
+type ExternalBppApiCallCounterMetric = P.Vector P.Label4 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -86,6 +105,12 @@ registerBAPMetricsContainer searchDurationTimeout = do
   vehicleHistoricCounter <- registerVehicleHistoricCounterMetric
   vehicleScheduleBasedActiveTripCounter <- registerVehicleScheduleBasedActiveTripCounterMetric
   vehicleWaybillStatusCounter <- registerVehicleWaybillStatusCounterMetric
+  frfsSearchCounter <- registerFRFSSearchCounterMetric
+  frfsBookingCounter <- registerFRFSBookingCounterMetric
+  frfsPassPaymentCounter <- registerFRFSPassPaymentCounterMetric
+  frfsBookingPaymentCounter <- registerFRFSBookingPaymentCounterMetric
+  frfsExternalBppCounter <- registerFRFSExternalBppCounterMetric
+  externalBppApiCallCounter <- registerExternalBppApiCallCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -126,6 +151,24 @@ registerVehicleScheduleBasedActiveTripCounterMetric = P.register $ P.vector ("me
 
 registerVehicleWaybillStatusCounterMetric :: IO VehicleWaybillStatusCounterMetric
 registerVehicleWaybillStatusCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "waybill_status") $ P.counter $ P.Info "vehicle_waybill_status_count" ""
+
+registerFRFSSearchCounterMetric :: IO FRFSSearchCounterMetric
+registerFRFSSearchCounterMetric = P.register $ P.vector ("merchant_id", "version", "merchantOperatingCityId", "vehicle_category") $ P.counter $ P.Info "frfs_search_count" ""
+
+registerFRFSBookingCounterMetric :: IO FRFSBookingCounterMetric
+registerFRFSBookingCounterMetric = P.register $ P.vector ("merchant_id", "version", "merchantOperatingCityId", "vehicle_category", "status", "reason") $ P.counter $ P.Info "frfs_booking_count" ""
+
+registerFRFSPassPaymentCounterMetric :: IO FRFSPassPaymentCounterMetric
+registerFRFSPassPaymentCounterMetric = P.register $ P.vector ("merchant_id", "version", "merchantOperatingCityId", "pass_type", "status") $ P.counter $ P.Info "frfs_pass_payment_count" ""
+
+registerExternalBppApiCallCounterMetric :: IO ExternalBppApiCallCounterMetric
+registerExternalBppApiCallCounterMetric = P.register $ P.vector ("version", "provider", "api", "outcome") $ P.counter $ P.Info "external_bpp_api_call_count" ""
+
+registerFRFSExternalBppCounterMetric :: IO FRFSExternalBppCounterMetric
+registerFRFSExternalBppCounterMetric = P.register $ P.vector ("merchant_id", "version", "merchantOperatingCityId", "vehicle_category", "provider", "api", "outcome") $ P.counter $ P.Info "frfs_external_bpp_count" ""
+
+registerFRFSBookingPaymentCounterMetric :: IO FRFSBookingPaymentCounterMetric
+registerFRFSBookingPaymentCounterMetric = P.register $ P.vector ("merchant_id", "version", "merchantOperatingCityId", "vehicle_category", "status", "reason") $ P.counter $ P.Info "frfs_booking_payment_count" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
