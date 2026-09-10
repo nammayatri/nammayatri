@@ -1287,6 +1287,7 @@ library
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
       Domain.Types.FRFSRouteStopStageFare
+      Domain.Types.FRFSSavedPassenger
       Domain.Types.FRFSSearch
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
@@ -1463,6 +1464,7 @@ library
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
       Storage.Beam.FRFSRouteStopStageFare
+      Storage.Beam.FRFSSavedPassenger
       Storage.Beam.FRFSSearch
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
@@ -1644,6 +1646,7 @@ library
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
       Storage.Queries.FRFSRouteStopStageFare
+      Storage.Queries.FRFSSavedPassenger
       Storage.Queries.FRFSSearch
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket

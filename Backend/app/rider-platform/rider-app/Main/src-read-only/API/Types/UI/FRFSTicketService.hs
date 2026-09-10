@@ -11,6 +11,7 @@ import qualified Data.Time.Calendar
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSSavedPassenger
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -69,6 +70,15 @@ data CategoryInfoResponse = CategoryInfoResponse
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Data.Text.Text, latency :: Data.Maybe.Maybe Kernel.Prelude.Int, osBuildVersion :: Data.Text.Text, osType :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSAddPassengerReq = FRFSAddPassengerReq
+  { age :: Kernel.Prelude.Int,
+    gender :: Domain.Types.Person.Gender,
+    name :: Data.Text.Text,
+    passengerId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger)
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -210,16 +220,6 @@ data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
     passName :: Data.Maybe.Maybe Data.Text.Text,
     purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     unlimitedTripCount :: Kernel.Prelude.Bool
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FRFSPassengerDetail = FRFSPassengerDetail
-  { age :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    gender :: Domain.Types.Person.Gender,
-    isChild :: Kernel.Prelude.Bool,
-    name :: Data.Maybe.Maybe Data.Text.Text,
-    seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -380,6 +380,10 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSSavedPassengerAPI = FRFSSavedPassengerAPI {age :: Kernel.Prelude.Int, gender :: Domain.Types.Person.Gender, name :: Data.Text.Text, passengerId :: Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
@@ -403,12 +407,16 @@ data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSSelectPassenger = FRFSSelectPassenger {passengerId :: Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger, seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSSelectReq = FRFSSelectReq
   { concessionTypeId :: Data.Text.Text,
     dropOffPointPlaceId :: Data.Text.Text,
     idProofLookupId :: Data.Maybe.Maybe Data.Text.Text,
     idProofNumber :: Data.Maybe.Maybe Data.Text.Text,
-    passengers :: [FRFSPassengerDetail],
+    passengers :: [FRFSSelectPassenger],
     pickupPointPlaceId :: Data.Text.Text
   }
   deriving stock (Generic, Show)
