@@ -39,6 +39,7 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -1707,10 +1708,41 @@ getScheduledTripEndTime tripId routeCode alightingStopCode integratedBPPConfig =
       [] -> do
         logWarning $ "getScheduledTripEndTime: empty schedule for tripId=" <> tripId
         pure Nothing
+      allEtas -> case find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode alightingStopCode) allEtas of
+        Just alighting -> pure $ Just (unixToUTC alighting.arrivalTimeUnix)
+        Nothing -> do
+          logWarning $ "getScheduledTripEndTime: alighting stop " <> alightingStopCode <> " not in schedule for tripId=" <> tripId <> ", no window"
+          pure Nothing
+
+-- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
+getScheduledTripWindow ::
+  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text -> -- tripId, "<waybillNo>-<tripNumber>"
+  Text -> -- routeCode
+  Text -> -- boarding stop code
+  Text -> -- alighting stop code
+  DIBC.IntegratedBPPConfig ->
+  m (Maybe UTCTime, Maybe UTCTime)
+getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
+  let (waybillNo, tripNo) = case T.splitOn "-" tripId of
+        [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
+        _ -> (tripId, 0 :: Int)
+  withTryCatch "getScheduledTripWindow:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
+    Left err -> do
+      logWarning $ "getScheduledTripWindow: no schedule for tripId=" <> tripId <> ": " <> show err
+      pure (Nothing, Nothing)
+    Right schedule -> case concatMap (.eta) schedule of
+      [] -> do
+        logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
+        pure (Nothing, Nothing)
       allEtas -> do
-        let mbAlighting = listToMaybe (filter (\e -> e.stopCode == alightingStopCode) allEtas)
-            chosen = fromMaybe (minimumBy (flip (comparing (.arrivalTimeUnix))) allEtas) mbAlighting
-        pure $ Just (unixToUTC chosen.arrivalTimeUnix)
+        let atStop stopCode = find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode stopCode) allEtas
+            bound name stopCode = case atStop stopCode of
+              Just eta -> pure $ Just (unixToUTC eta.arrivalTimeUnix)
+              Nothing -> do
+                logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
+                pure Nothing
+        (,) <$> bound "boarding" boardingStopCode <*> bound "alighting" alightingStopCode
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do

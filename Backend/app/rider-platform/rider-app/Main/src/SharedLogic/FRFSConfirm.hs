@@ -329,6 +329,22 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                         Just startTime | startTime > now -> startTime
                         _ -> now
                   mbResolved <- resolvePassForFare rider quote.vehicleType passResolutionTime mbNewServiceTierType fareParameters mbPurchasedPassPaymentId
+                  -- Must run before the updates below: a throw after them leaves totalPrice at the
+                  -- discounted fare on a booking that never received the pass.
+                  whenJust (snd <$> mbResolved) $ \newPassOption -> do
+                    let newEntityId = newPassOption.purchasedPassPaymentId.getId
+                    when (Just newEntityId /= booking.overrideAppliedEntityId) $ do
+                      mbWindowEnd <- case (booking.tripId, booking.routeCode) of
+                        (Just tripId, Just routeCode) ->
+                          snd <$> FRFSUtils.getScheduledTripWindow tripId routeCode booking.fromStationCode booking.toStationCode integratedBppConfig
+                        _ -> pure Nothing
+                      case ((,) <$> booking.startTime <*> mbWindowEnd) of
+                        Nothing -> logInfo $ "FRFSConfirm: no resolvable trip window on reconfirm, overlapping-booking cap not checked bookingId=" <> booking.id.getId
+                        Just tripWindow ->
+                          FRFSPassOverride.passForOverrideAppliedEntity (Just newEntityId) >>= \case
+                            Nothing -> logWarning $ "FRFSConfirm: could not resolve pass for overrideAppliedEntityId=" <> newEntityId <> " on reconfirm, skipping overlapping-booking cap"
+                            Just (_, appliedPass) ->
+                              FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass (Id newEntityId) (maybe booking.id.getId (.getId) booking.parentBookingId) tripWindow
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
                   void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
@@ -434,29 +450,28 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             if isJust mbPurchasedPassPaymentId'
               then mfilter (> now) (mbJourneyLeg >>= (.fromDepartureTime))
               else Nothing
-      bookingStartTime <-
+      -- One fetch for both bounds; the single-bound helpers issue the same schedule call.
+      (mbScheduledStartTime, mbScheduledEndTime) <-
         case (firstTripId, mbRouteCode) of
-          (Just tripId, Just routeCode) -> do
-            mbScheduledStartTime <- getScheduledTripStartTime tripId routeCode quote'.fromStationCode integratedBppConfig
-            case mbScheduledStartTime of
-              Just scheduledStartTime -> pure scheduledStartTime
-              Nothing -> do
-                logWarning $ "buildAndCreateBooking: no scheduled departure resolved for tripId=" <> tripId <> ", falling back to leg departure or booking time for startTime"
-                pure (fromMaybe now mbLegDepartureTime)
-          _ -> pure (fromMaybe now mbLegDepartureTime)
+          (Just tripId, Just routeCode) ->
+            FRFSUtils.getScheduledTripWindow tripId routeCode quote'.fromStationCode quote'.toStationCode integratedBppConfig
+          _ -> pure (Nothing, Nothing)
+
+      bookingStartTime <- case (firstTripId, mbScheduledStartTime) of
+        (_, Just scheduledStartTime) -> pure scheduledStartTime
+        (Just tripId, Nothing) -> do
+          logWarning $ "buildAndCreateBooking: no scheduled departure resolved for tripId=" <> tripId <> ", falling back to leg departure or booking time for startTime"
+          pure (fromMaybe now mbLegDepartureTime)
+        _ -> pure (fromMaybe now mbLegDepartureTime)
 
       mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId'
 
-      mbTripWindow <-
-        case (firstTripId, mbRouteCode) of
-          (Just tripId, Just routeCode) -> do
-            mbEnd <- FRFSUtils.getScheduledTripEndTime tripId routeCode quote'.toStationCode integratedBppConfig
-            case mbEnd of
-              Nothing -> do
-                logWarning $ "FRFSConfirm: no scheduled arrival resolved for tripId=" <> tripId <> ", skipping pass overlapping-booking check"
-                pure Nothing
-              Just endTime -> pure $ Just (bookingStartTime, endTime)
-          _ -> pure Nothing
+      mbTripWindow <- case mbScheduledEndTime of
+        Just endTime -> pure $ Just (bookingStartTime, endTime)
+        Nothing -> do
+          whenJust firstTripId $ \tripId ->
+            logWarning $ "FRFSConfirm: no scheduled arrival resolved for tripId=" <> tripId <> ", skipping pass overlapping-booking check"
+          pure Nothing
 
       -- Stamped on the insert, not patched in afterwards: a status read hitting the replica in
       -- between would see a booking that is neither payable nor pass-covered and reject it.
@@ -601,38 +616,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 bufferTime + max 0 timeUntilTripSec
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
-
-    -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
-    -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
-    -- earliest stop when the boarding stop is not present. Returns Nothing when the schedule
-    -- is unavailable or empty so callers can fall back safely.
-    getScheduledTripStartTime ::
-      ( MonadFlow m,
-        ServiceFlow m r,
-        HasShortDurationRetryCfg r c,
-        HasBAPMetrics m r
-      ) =>
-      Text -> -- tripId (format: waybillNo-tripNumber)
-      Text -> -- routeCode
-      Text -> -- boarding stop code
-      DIBC.IntegratedBPPConfig ->
-      m (Maybe UTCTime)
-    getScheduledTripStartTime tripId routeCode boardingStopCode integratedBPPConfig = do
-      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-      mbSchedule <- withTryCatch "getScheduledTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
-      case mbSchedule of
-        Left err -> do
-          logWarning $ "getScheduledTripStartTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
-          pure Nothing
-        Right schedule ->
-          case concatMap (.eta) schedule of
-            [] -> do
-              logWarning $ "getScheduledTripStartTime: empty schedule for tripId=" <> tripId
-              pure Nothing
-            allEtas -> do
-              let mbBoardingEta = listToMaybe (filter (\e -> e.stopCode == boardingStopCode) allEtas)
-                  chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
-              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
