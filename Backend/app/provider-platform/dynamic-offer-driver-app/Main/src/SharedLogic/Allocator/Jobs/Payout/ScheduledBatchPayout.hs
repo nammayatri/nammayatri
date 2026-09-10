@@ -52,6 +52,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -109,6 +110,7 @@ sendScheduledBatchPayout ::
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
@@ -148,6 +150,7 @@ processCategory ::
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
@@ -184,6 +187,7 @@ processWalletPayouts ::
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
@@ -590,7 +594,7 @@ recordExclusion merchantId runId personId beneficiaryType reason mbBalance = do
 --   (excluded orders never make it into a batch, so no poll job would ever see them either).
 --   Returns Left with the real reason on exclusion, Right with the item to submit otherwise.
 buildBulkItem ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   Id DM.Merchant ->
   Text -> -- payout_run id
   Map Text Domain.Types.DriverBankAccount.DriverBankAccount ->
@@ -636,6 +640,7 @@ submitBulkBatch ::
     CacheFlow m r,
     Finance.HasActorInfo m r,
     PaymentBeamFlow.BeamFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->
@@ -708,7 +713,7 @@ markSubmittedAndScheduleInquiry batchId mbPartnerRef = do
 --   previous batch id when resubmitting the same items -- a batch retries at most once; a second
 --   BulkRejected fails the items for real instead of looping.
 submitOneChunk ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r, PaymentBeamFlow.BeamFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   Payout.PayoutServiceConfig ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -794,7 +799,7 @@ submitOneChunk vsc merchantId merchantOpCityId runId origin rail retryOf itemPai
 --   sets it on a successful re-verification, so a driver who fixes their account becomes payable
 --   again automatically, no separate reset path needed here.
 failClaimedOrder ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   DPayoutOrder.PayoutOrder ->
   Payout.BulkFailureReason ->
   Text ->
@@ -818,7 +823,7 @@ failClaimedOrder po reason detail = do
 -- | Settle a claimed order HDFC CBX reports as processed: mark it paid and release the ledger
 --   entries into PAID_OUT.
 settleClaimedOrder ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   DPayoutOrder.PayoutOrder ->
   Text -> -- settlementRef (UTR / FT number / RRN, per refType)
   Payout.SettlementRefType ->
@@ -840,27 +845,62 @@ settleClaimedOrder po settlementRef refType = do
   -- Forked for the same reason as failClaimedOrder's notify call -- see comment there.
   fork ("BulkPayoutNotify:" <> po.orderId) $ notifyBulkPayoutOutcome po Nothing
 
+-- | Entity payload attached to a fleet-owner payout notification so the fleet web dashboard can
+--   render the specifics rather than just the title/body text.
+data PayoutOutcomeNotificationEntity = PayoutOutcomeNotificationEntity
+  { orderId :: Text,
+    amount :: HighPrecMoney,
+    currency :: Currency,
+    status :: Text,
+    reason :: Maybe Text
+  }
+  deriving (Generic, ToJSON)
+
 -- | Notify the beneficiary of a terminal bulk-payout outcome. On failure, the message names the
 --   actual reason HDFC CBX gave instead of a generic "failed".
---   Drivers only for now -- FCM is the only notification channel wired up; fleet owners have no
---   channel decided yet, so they're skipped rather than silently sent to a driver-shaped push.
+--   Drivers are notified over FCM; fleet owners operate the fleet web dashboard and are notified
+--   over the realtime gRPC channel (Tools.Notifications.notifyWithGRPCProvider). A merchant with no
+--   NotificationService GRPC config just means the fleet owner gets nothing -- the driver flow and
+--   the payout job itself are unaffected (the gRPC call is wrapped in 'try').
 notifyBulkPayoutOutcome ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  ( EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisLTSFlowEnv r
+  ) =>
   DPayoutOrder.PayoutOrder ->
   Maybe Payout.BulkFailureReason -> -- Nothing on success
   m ()
 notifyBulkPayoutOutcome po mbFailureReason = do
   mbPerson <- QPerson.findById (Id po.customerId)
-  whenJust mbPerson $ \person -> when (beneficiaryTypeFromRole person.role == DPayoutBatchExclusion.DRIVER) $ do
+  whenJust mbPerson $ \person -> do
     let amount = po.amount.amount
-        (notificationTitle, notificationMessage, notificationType) = case mbFailureReason of
-          Nothing -> ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+        (notificationTitle, notificationMessage) = case mbFailureReason of
+          Nothing -> ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.")
           Just reason ->
             ( "Payout Failed",
-              "Your payout of Rs." <> show amount <> " has failed: " <> bulkFailureReasonMessage reason <> ". Please retry or contact support.",
-              FCM.PAYOUT_FAILED
+              "Your payout of Rs." <> show amount <> " has failed: " <> bulkFailureReasonMessage reason <> ". Please retry or contact support."
             )
-    Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+    case beneficiaryTypeFromRole person.role of
+      DPayoutBatchExclusion.DRIVER -> do
+        let notificationType = maybe FCM.PAYOUT_COMPLETED (const FCM.PAYOUT_FAILED) mbFailureReason
+        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+      DPayoutBatchExclusion.FLEET_OWNER -> do
+        let grpcCategory = maybe Notification.PAYOUT_COMPLETED (const Notification.PAYOUT_FAILED) mbFailureReason
+            entityData =
+              PayoutOutcomeNotificationEntity
+                { orderId = po.orderId,
+                  amount = amount,
+                  currency = po.amount.currency,
+                  status = maybe "SUCCESS" (const "FAILED") mbFailureReason,
+                  reason = bulkFailureReasonMessage <$> mbFailureReason
+                }
+        result <- try $ Notify.notifyWithGRPCProvider person.merchantOperatingCityId grpcCategory notificationTitle notificationMessage person.id Nothing entityData
+        case result of
+          Left (e :: SomeException) -> logError $ "notifyBulkPayoutOutcome: GRPC notify failed for fleet owner " <> person.id.getId <> ": " <> show e
+          Right () -> pure ()
 
 bulkFailureReasonMessage :: Payout.BulkFailureReason -> Text
 bulkFailureReasonMessage = \case
@@ -871,7 +911,7 @@ bulkFailureReasonMessage = \case
   Payout.UNRESOLVED -> "the payout status could not be confirmed in time"
 
 recoverOneBatch ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, Finance.HasActorInfo m r, PaymentBeamFlow.BeamFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   Payout.PayoutServiceConfig ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -913,6 +953,7 @@ reconcileBulkBatches ::
     CacheFlow m r,
     Finance.HasActorInfo m r,
     PaymentBeamFlow.BeamFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r
   ) =>
   DEMSC.ServiceName ->
@@ -945,6 +986,7 @@ pollOneBatch ::
     CacheFlow m r,
     Finance.HasActorInfo m r,
     PaymentBeamFlow.BeamFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r
   ) =>
   Payout.PayoutServiceConfig ->
@@ -1017,7 +1059,7 @@ data BulkItemResult = ItemOutcomeProcessed | ItemOutcomeRejected | ItemOutcomePe
 
 -- | Apply one (itemRef, outcome) row from an inquiry to its payout_order.
 applyBulkOutcome ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Finance.HasActorInfo m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r) =>
   Text ->
   Payout.BulkItemOutcome ->
   m BulkItemResult
@@ -1063,6 +1105,7 @@ processOneWalletPayout ::
     EsqDBReplicaFlow m r,
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r
   ) =>

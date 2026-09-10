@@ -44,6 +44,7 @@ sendBulkBatchPayoutPoll ::
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     HasKafkaProducer r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r
   ) =>
   Job 'BulkBatchPayoutPoll ->
