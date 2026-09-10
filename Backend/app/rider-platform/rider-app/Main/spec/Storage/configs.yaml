@@ -64,6 +64,10 @@ MerchantOperatingCity:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, state]
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -90,6 +94,10 @@ MerchantState:
       kvFunction: findOneWithKV
       where:
         and: [merchantId, state]
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
 
 ValueAddNP:
   tableName: value_add_np
