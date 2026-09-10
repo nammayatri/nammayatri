@@ -119,13 +119,13 @@ library:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -j4
+          - -j8
       else:
         ghc-options:
           - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
-          - -j4
+          - -j8
   dependencies:
     - mobility-core

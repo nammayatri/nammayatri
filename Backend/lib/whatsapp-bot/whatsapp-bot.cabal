@@ -118,9 +118,9 @@ library
     , unordered-containers
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j8
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j8
 
 test-suite whatsapp-bot-tests
   type: exitcode-stdio-1.0
@@ -186,6 +186,6 @@ test-suite whatsapp-bot-tests
     , whatsapp-bot
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -j4
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -j8
   else
-    ghc-options: -O2 -j4
+    ghc-options: -O2 -j8
