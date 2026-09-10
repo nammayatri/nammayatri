@@ -85,10 +85,10 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       let isPaymentInTerminalState = paymentBooking.status == DFRFSTicketBookingPayment.SUCCESS || paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
           isFulfillmentStale = paymentBooking.status == DFRFSTicketBookingPayment.PENDING || paymentOrder.paymentFulfillmentStatus `elem` [Nothing, Just DPayment.FulfillmentPending]
       if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
-        then void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        then void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId Nothing
         else when isFulfillmentStale $ do
           let fulfillmentHandler resp = FRFSTicketService.frfsOrderStatusHandler booking.merchantId resp JMU.switchFRFSQuoteTierUtil
-          result <- withTryCatch "checkMultimodalConfirmFailJob:syncOrderStatus" $ SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
+          result <- withTryCatch "checkMultimodalConfirmFailJob:syncOrderStatus" $ SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder Nothing
           case result of
             Left err -> logError $ "order status sync failed for booking: " <> bookingId.getId <> ", error: " <> show err
             Right _ -> logInfo $ "order status re-driven for booking: " <> bookingId.getId

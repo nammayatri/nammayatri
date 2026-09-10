@@ -100,7 +100,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
         whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId (Just (abs refundAmount))
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical

@@ -341,7 +341,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
-                      void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+                      void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall Nothing
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode (Just booking.quoteId)
                       return (createOrderResp, Just paymentBooking.status, paymentOrder.isExternalOrder == Just True)
                     Nothing -> return (Nothing, Nothing, False)
