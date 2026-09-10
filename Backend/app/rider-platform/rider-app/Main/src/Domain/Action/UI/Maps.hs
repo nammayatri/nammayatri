@@ -37,6 +37,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.PlaceNameCache as DTM
+import qualified Domain.Types.SearchDestinationsCache as DSDC
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
@@ -52,6 +53,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.SearchDestinationsCache as QSDC
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -98,10 +100,50 @@ getPlaceDetails (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   Maps.getPlaceDetails merchantId merchantOperatingCityId entityId req
 
+searchDestinationsGeoHashPrecision :: Int
+searchDestinationsGeoHashPrecision = 9
+
 searchDestinations :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.SearchDestinationsReq -> m Maps.SearchDestinationsResp
 searchDestinations (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
-  Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+  case req.searchBy of
+    MIT.SearchByLatLong (LatLong lat lon) ->
+      case DG.encode searchDestinationsGeoHashPrecision (lat, lon) of
+        Just geoHash -> do
+          let geoHashText = pack geoHash
+          cache <- QSDC.findByGeoHash geoHashText
+          fork "Search Destinations Cache Expiry" $ expireSearchDestinationsCache cache merchantOperatingCityId
+          case listToMaybe cache >>= (decodeFromText . (.response)) of
+            Just resp -> pure resp
+            Nothing -> callAndCacheSearchDestinations merchantId merchantOperatingCityId entityId req geoHashText lat lon
+        Nothing -> Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+    _ -> Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+
+callAndCacheSearchDestinations :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.SearchDestinationsReq -> Text -> Double -> Double -> m Maps.SearchDestinationsResp
+callAndCacheSearchDestinations merchantId merchantOperatingCityId entityId req geoHash lat lon = do
+  resp <- Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+  id_ <- generateGUID
+  now <- getCurrentTime
+  let cacheEntry =
+        DSDC.SearchDestinationsCache
+          { id = id_,
+            geoHash = geoHash,
+            lat = lat,
+            lon = lon,
+            response = encodeToText resp,
+            createdAt = now
+          }
+  _ <- QSDC.create cacheEntry
+  pure resp
+
+expireSearchDestinationsCache :: ServiceFlow m r => [DSDC.SearchDestinationsCache] -> Id DMOC.MerchantOperatingCity -> m ()
+expireSearchDestinationsCache searchDestinationsCache merchantOperatingCityId = do
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  whenJust riderConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
+    currentTime <- liftIO DT.getCurrentTime
+    let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime
+    let toBeDeleted = filter (\obj -> obj.createdAt < expiryDate) searchDestinationsCache
+    mapM_ (QSDC.deleteById . (.id)) toBeDeleted
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do

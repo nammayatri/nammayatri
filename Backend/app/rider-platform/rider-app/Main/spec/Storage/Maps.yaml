@@ -51,3 +51,33 @@ PlaceNameCache:
 
   extraOperation:
     - EXTRA_DOMAIN_TYPE_FILE
+
+SearchDestinationsCache:
+  tableName: search_destinations_cache
+
+  fields:
+    id: Id SearchDestinationsCache
+    geoHash: Text
+    lat: Double
+    lon: Double
+    response: Text
+
+  constraints:
+    geoHash: SecondaryKey
+
+  queries:
+    findByGeoHash:
+      kvFunction: findAllWithKV
+      where: geoHash
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - updatedAt
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey

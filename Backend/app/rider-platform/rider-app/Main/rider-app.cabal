@@ -1245,6 +1245,7 @@ library
       Domain.Types.RouteStopCalender
       Domain.Types.RouteTripMapping
       Domain.Types.SavedReqLocation
+      Domain.Types.SearchDestinationsCache
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestPartiesLink
@@ -1417,6 +1418,7 @@ library
       Storage.Beam.RouteStopCalender
       Storage.Beam.RouteTripMapping
       Storage.Beam.SavedReqLocation
+      Storage.Beam.SearchDestinationsCache
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestPartiesLink
@@ -1673,6 +1675,7 @@ library
       Storage.Queries.RouteStopCalender
       Storage.Queries.RouteTripMapping
       Storage.Queries.SavedReqLocation
+      Storage.Queries.SearchDestinationsCache
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestPartiesLink
