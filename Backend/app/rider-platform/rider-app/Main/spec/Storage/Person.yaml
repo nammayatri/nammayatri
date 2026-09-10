@@ -115,6 +115,7 @@ Person:
     deviceId : Maybe Text
     informPoliceSos : Bool
     androidId: Maybe Text
+    firebaseAppInstanceId : Maybe Text
     customerNammaTags: "Maybe [TagNameValueExpiry]"
     payoutVpa: Maybe Text
     frequentLocGeohashes: "Maybe [Text]"
@@ -295,6 +296,11 @@ Person:
     updateDeviceToken:
       kvFunction: updateWithKV
       params: [deviceToken, updatedAt]
+      where: id
+
+    updateFirebaseAppInstanceId:
+      kvFunction: updateWithKV
+      params: [firebaseAppInstanceId, updatedAt]
       where: id
 
     updateWhatsappNotificationEnrollStatus:

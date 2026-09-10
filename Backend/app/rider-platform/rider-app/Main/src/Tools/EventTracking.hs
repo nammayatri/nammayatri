@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import qualified Storage.Queries.Person as QPerson
 
 data TrackingEvent
   = FirstRideCompleted Text
@@ -50,13 +51,6 @@ trackEvent merchantId merchantOperatingCityId event = do
         else do
           now <- getCurrentTime
           let (customerId, actionName, attrs) = eventToAction event
-              req =
-                EventTracking.EventTrackingReq
-                  { EventTracking.customerId = customerId,
-                    EventTracking.eventName = actionName,
-                    EventTracking.attributes = attrs,
-                    EventTracking.timestamp = Just now
-                  }
               -- An event absent from the overrides map goes to every provider
               -- live in this city. When present, the override can only narrow
               -- that list -- never activate a provider that has no service
@@ -71,6 +65,28 @@ trackEvent merchantId merchantOperatingCityId event = do
               -- eventTrackingProviders produces no log line at all, and its
               -- silence is indistinguishable from a delivery failure.
               notEnabled = filter (`notElem` providers) EventTracking.availableEventTrackingServices
+          -- Only Firebase needs the rider row (installation id + platform).
+          (appInstanceId, platform) <-
+            if EventTracking.FirebaseAnalytics `elem` targetProviders
+              then do
+                -- A failed lookup must not stop the other providers.
+                mbPerson <-
+                  try @_ @SomeException (QPerson.findById (Id customerId)) >>= \case
+                    Right person -> pure person
+                    Left err -> do
+                      logWarning $ "EventTracking: rider lookup failed for " <> customerId <> ": " <> show err
+                      pure Nothing
+                pure (mbPerson >>= (.firebaseAppInstanceId), (.deviceType) <$> (mbPerson >>= (.clientDevice)))
+              else pure (Nothing, Nothing)
+          let req =
+                EventTracking.EventTrackingReq
+                  { EventTracking.customerId = customerId,
+                    EventTracking.eventName = actionName,
+                    EventTracking.attributes = attrs,
+                    EventTracking.timestamp = Just now,
+                    EventTracking.appInstanceId = appInstanceId,
+                    EventTracking.platform = platform
+                  }
           unless (null notEnabled) $
             logDebug $ "EventTracking: providers not enabled for this merchantOperatingCity: " <> show notEnabled
           forM_ skipped $ \provider ->

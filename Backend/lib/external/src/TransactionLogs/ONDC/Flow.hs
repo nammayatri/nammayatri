@@ -11,14 +11,11 @@
 
   General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module TransactionLogs.ONDC.Flow
   ( pushTxnLogsAPI,
   )
 where
 
-import qualified Data.Aeson as A
 import EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -48,6 +45,3 @@ pushTxnLogsAPI config req = do
           url = config.url
       logDebug $ "Pushing txn logs to ONDC: " <> show req
       void $ callAPI url (eulerClient (Just npToken) req) "pushTxnLogsAPI" (Proxy @ONDCPushLogAPI) >>= fromEitherM (\err -> InternalError $ "Failed to push txn logs: " <> show err)
-
-instance ToJSON NoContent where
-  toJSON _ = A.Null

@@ -1,8 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Action.Beckn.FRFS.GWLink where
 
-import Data.Aeson as J
+import Data.Aeson (Value (String))
 import Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX
@@ -75,9 +73,6 @@ type PatchWalletAPI =
     :> Header "Authorization" Text
     :> ReqBody '[JSON] TC.TransitObjectPatch
     :> Patch '[JSON] NoContent
-
-instance ToJSON NoContent where
-  toJSON _ = J.Null
 
 type GetWalletAPI =
   "walletobjects"
