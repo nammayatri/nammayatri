@@ -10,6 +10,7 @@ module SharedLogic.FRFSPassOverride
     resolvePassOverride,
     refundPassOverrideTrip,
     hasPendingTripRefund,
+    hasUnreleasedDebit,
     releasePassOverrideTripOnFailure,
     maxTripCountFromPass,
     isUnlimitedPass,
@@ -39,6 +40,7 @@ module SharedLogic.FRFSPassOverride
     BookedTripWindow (..),
     checkOverlappingBookingLimit,
     recordBookedTrip,
+    recordAndDetectOverLimit,
     releaseBookedTrip,
   )
 where
@@ -66,6 +68,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
@@ -466,7 +469,12 @@ releaseBookedTrip ::
   m ()
 releaseBookedTrip person paymentId ownerId claimedAround = do
   day <- localTripDay person claimedAround
-  dropWindowsFor paymentId [day, T.addDays 1 day] ownerId
+  let startKey = makeOverlappingBookingsKey paymentId day
+  recorded :: [BookedTripWindow] <- Redis.sMembers startKey
+  days <- case find (\w -> w.bookingId == ownerId) recorded of
+    Just w -> bookingWindowDays person (w.startTime, w.endTime)
+    Nothing -> pure [day, T.addDays 1 day]
+  dropWindowsFor paymentId days ownerId
 
 overlappingBookedTrips ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -479,6 +487,107 @@ overlappingBookedTrips person paymentId window = do
   recorded <- concat <$> mapM (Redis.sMembers . makeOverlappingBookingsKey paymentId) days
   let clashing = filter (\w -> windowsOverlap (w.startTime, w.endTime) window) recorded
   pure $ nubBy (\a b -> a.bookingId == b.bookingId) clashing
+
+-- | Record the window, then report whether THIS booking took the pass past its cap.
+--
+-- The entrance check runs before the booking exists, so anything that acquires a pass afterwards --
+-- a reconfirm, a payment that lands after the booking expired, two confirms racing on different
+-- searches -- is recorded but was never checked. Everything reaching a live ticket passes through
+-- here, so this is the one place a breach can be detected for certain.
+--
+-- Records first: sAdd is atomic, so concurrent writers each see their own entry plus everyone
+-- else's, and only the one that actually crossed the line reports True.
+recordAndDetectOverLimit ::
+  (CacheFlow m r, EsqDBFlow m r, MonadMask m) =>
+  DP.Person ->
+  DPass.Pass ->
+  Id DPPP.PurchasedPassPayment ->
+  Text ->
+  Maybe Text ->
+  (UTCTime, UTCTime) ->
+  m Bool
+recordAndDetectOverLimit person pass paymentId ownerId mbParentId window =
+  -- The limit gate sits OUTSIDE the lock deliberately. recordBookedTrip is itself a no-op when no
+  -- limit is configured, so for such a pass -- every pass in the catalog today -- the locked block
+  -- did nothing at all, while still costing a Redis round trip and the retry sleep on the
+  -- on_confirm path of every pass-covered booking.
+  case mfilter (> 0) pass.timeOverlappingFrfsBookingsLimit of
+    Nothing -> pure False
+    Just limit -> do
+      (lockHeld, overLimit) <- withOverlapRecordLock paymentId $ do
+        recordBookedTrip person pass paymentId ownerId window
+        let ignored = ownerId : maybeToList mbParentId
+        others <- filter (\w -> w.bookingId `notElem` ignored) <$> overlappingBookedTrips person paymentId window
+        let overLimit = length others >= limit
+        when overLimit $
+          logWarning $
+            "FRFSPassOverride: OVER LIMIT at record, " <> show (length others) <> " other overlapping trip(s) against limit "
+              <> show limit
+              <> " paymentId="
+              <> paymentId.getId
+              <> " bookingId="
+              <> ownerId
+              <> " clashingBookingIds="
+              <> show (map (.bookingId) others)
+        pure overLimit
+      -- The verdict is only trustworthy if the read-modify-write was serialised. Unlocked, two
+      -- racers each record first and then each see the other's window, so BOTH conclude they are
+      -- over cap and BOTH get torn down -- at a limit of 1 the rider ends up with no booking at all,
+      -- which is a worse outcome than the extra overlapping trip the cap exists to prevent. So an
+      -- unlocked run still records the window (later bookings must be able to see it) but never
+      -- convicts on it.
+      if lockHeld
+        then pure overLimit
+        else do
+          when overLimit $
+            logWarning $
+              "FRFSPassOverride: over-cap seen on an UNLOCKED record, not enforcing it -- a concurrent "
+                <> "booking would reach the same verdict and both would be torn down. paymentId="
+                <> paymentId.getId
+                <> " bookingId="
+                <> ownerId
+          pure False
+
+overlapRecordLockTtlSec :: Int
+overlapRecordLockTtlSec = 10
+
+overlapRecordLockRetries :: Int
+overlapRecordLockRetries = 5
+
+overlapRecordLockRetryDelayMicros :: Int
+overlapRecordLockRetryDelayMicros = 100000
+
+-- | Serialise the read-modify-write of one term's window set, for a bounded time.
+--
+-- Deliberately not Redis.withWaitAndLockRedis. That helper retries forever -- its Int argument is
+-- the lock's expiry, not a retry count -- and it sleeps after EVERY attempt, including one that
+-- took the lock uncontended. Both matter here: this runs on on_confirm, where an unbounded wait
+-- holds open a booking the rider has already paid for, and the unconditional sleep was a flat
+-- delay on every booking that reached this point.
+--
+-- Giving up FAILS OPEN, running the action unlocked, and reports which happened: the caller needs
+-- to know, because a verdict reached without serialisation is not safe to act on. Refusing a paid
+-- booking because a lock was busy would be the wrong trade, but so is trusting an unlocked read --
+-- see recordAndDetectOverLimit, which records either way and only convicts on a locked run.
+withOverlapRecordLock :: (CacheFlow m r, EsqDBFlow m r, MonadMask m) => Id DPPP.PurchasedPassPayment -> m a -> m (Bool, a)
+withOverlapRecordLock paymentId act = go overlapRecordLockRetries
+  where
+    key = "FRFSPassOverride:OverlapRecordLock-" <> paymentId.getId
+    go retriesLeft = do
+      lockAcquired <- Redis.tryLockRedis key overlapRecordLockTtlSec
+      if lockAcquired
+        then (True,) <$> (act `finally` Redis.unlockRedis key)
+        else
+          if retriesLeft <= 0
+            then do
+              logWarning $
+                "FRFSPassOverride: overlap record lock still held after " <> show overlapRecordLockRetries
+                  <> " attempts, recording without it paymentId="
+                  <> paymentId.getId
+              (False,) <$> act
+            else do
+              threadDelay overlapRecordLockRetryDelayMicros
+              go (retriesLeft - 1)
 
 checkOverlappingBookingLimit ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -563,6 +672,11 @@ clearTripMarker phase searchId = Redis.del (tripMarkerKey phase searchId)
 -- The retry gate for callers on a replay path. A replayed cancel must not simply attempt the refund
 -- again: the release marker is TTL-bounded, so its absence is ambiguous -- it means either "never
 -- refunded" or "refunded long ago". Only this marker distinguishes the two.
+hasUnreleasedDebit :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
+hasUnreleasedDebit searchId = do
+  mbConsumed :: Maybe Bool <- Redis.get (tripMarkerKey "TripConsumed" searchId)
+  pure (isJust mbConsumed)
+
 hasPendingTripRefund :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
 hasPendingTripRefund searchId = do
   -- Annotated on the binding, not the expression: the marker's value is never read, so nothing else
@@ -783,12 +897,19 @@ refundPassOverrideTrip searchId paymentId quantity = do
 releasePassOverrideTripOnFailure :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
 releasePassOverrideTripOnFailure booking =
   whenJust booking.overrideAppliedEntityId $ \entityId ->
-    if booking.status == DFRFSTicketBooking.CONFIRMED
-      then do
-        quantity <- ticketQuantityForBooking booking
-        logInfo $ "FRFSPassOverride: releasing " <> show quantity <> " trip(s) for failed booking searchId=" <> booking.searchId.getId <> " paymentId=" <> entityId
-        refundPassOverrideTrip booking.searchId (Id entityId) quantity
-      else logInfo $ "FRFSPassOverride: booking never confirmed (status=" <> show booking.status <> "), no trip to give back searchId=" <> booking.searchId.getId
+    if booking.status /= DFRFSTicketBooking.CONFIRMED
+      then logInfo $ "FRFSPassOverride: booking never confirmed (status=" <> show booking.status <> "), no trip to give back searchId=" <> booking.searchId.getId
+      else do
+        debited <- hasUnreleasedDebit booking.searchId
+        if not debited
+          then logInfo $ "FRFSPassOverride: no unreleased debit on this search, nothing to give back searchId=" <> booking.searchId.getId
+          else do
+            quantity <- ticketQuantityForBooking booking
+            logInfo $ "FRFSPassOverride: releasing " <> show quantity <> " trip(s) for failed booking searchId=" <> booking.searchId.getId <> " paymentId=" <> entityId
+            refundPassOverrideTrip booking.searchId (Id entityId) quantity
+        whenJust booking.startTime $ \startTime -> do
+          mbPerson <- QPerson.findById booking.riderId
+          whenJust mbPerson $ \person -> releaseBookedTrip person (Id entityId) booking.id.getId startTime
 
 -- | Debit the pass, once, when the booking becomes CONFIRMED.
 --
