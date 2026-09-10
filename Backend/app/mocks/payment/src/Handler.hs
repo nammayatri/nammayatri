@@ -305,7 +305,8 @@ buildJuspayWebhookPayload
             { order =
                 Just
                   Juspay.OrderData
-                    { order_id = getShortId orderShortId,
+                    { id = Nothing,
+                      order_id = getShortId orderShortId,
                       txn_uuid = txnUUID,
                       txn_id = txnId,
                       status_id = Just $ statusToId transactionStatus,
@@ -392,7 +393,8 @@ buildJuspayOrderData order mTxn refunds offers = do
 
   pure $
     Juspay.OrderData
-      { order_id =
+      { id = Nothing,
+        order_id =
           getShortId orderShortIdVal,
         txn_uuid = txnUUID,
         txn_id = txnId,
