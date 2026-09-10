@@ -37,6 +37,7 @@ getFareProductType tripCategory =
     OneWay OneWayRideOtp -> ONE_WAY_SPECIAL_ZONE
     CrossCity OneWayRideOtp _ -> ONE_WAY_SPECIAL_ZONE
     Rental _ -> RENTAL
+    IntercityRental _ _ -> RENTAL
     InterCity _ _ -> INTER_CITY
     Ambulance _ -> AMBULANCE
     EasyBooking _ -> EASY_BOOKING

@@ -180,6 +180,9 @@ tfQuotesInfo provider fulfillments validTill item = do
           Rental _ -> do
             quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
             pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
+          IntercityRental _ _ -> do
+            quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
+            pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
           OneWay OneWayRideOtp -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
           OneWay OneWayOnDemandStaticOffer -> pure $ Domain.Action.Beckn.OnSearch.OneWayDetails (Domain.Action.Beckn.OnSearch.OneWayQuoteDetails {distanceToNearestDriver = HighPrecMeters 0, quoteId = quoteOrEstId_}) -- TODO: Calculate actual distance from driver pool instead of using default
           CrossCity OneWayRideOtp _ -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})

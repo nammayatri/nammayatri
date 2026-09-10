@@ -186,7 +186,11 @@ mkFeatureListTags mIsAC =
 mkRentalAddOns :: CUtils.Pricing -> Maybe [Spec.AddOn]
 mkRentalAddOns pricing = do
   case pricing.tripCategory of
-    Rental _ -> do
+    Rental _ -> buildAddOns
+    IntercityRental _ _ -> buildAddOns
+    _ -> Nothing
+  where
+    buildAddOns = do
       fp <- pricing.farePolicy
       case fp.farePolicyDetails of
         FarePolicyD.RentalDetails det ->
@@ -236,4 +240,3 @@ mkRentalAddOns pricing = do
                     }
                 ]
         _ -> Nothing
-    _ -> Nothing
