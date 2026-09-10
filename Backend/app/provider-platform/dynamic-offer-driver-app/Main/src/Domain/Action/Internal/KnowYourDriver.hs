@@ -133,7 +133,7 @@ getDriverProfile withImages person = do
   pure $
     DriverProfileRes
       { certificates = map show $ mapMaybe (fmap (.category)) modules,
-        homeTown = Nothing,
+        homeTown = (.hometown) =<< driverProfile,
         driverName = person.firstName,
         onboardedAt = person.createdAt,
         pledges = maybe [] (.pledges) driverProfile,
