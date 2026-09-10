@@ -219,6 +219,7 @@ buildCustomerListItem person = do
         middleName = person.middleName,
         lastName = person.lastName,
         phoneNo,
+        countryCode = person.mobileCountryCode,
         enabled = person.enabled,
         blocked = person.blocked,
         paymentMode = person.paymentMode
