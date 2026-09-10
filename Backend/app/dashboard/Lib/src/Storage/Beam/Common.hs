@@ -19,6 +19,7 @@ import Kernel.Prelude (Generic)
 import Storage.Beam.AccessMatrix as BeamAM
 import Storage.Beam.BeamFlow
 import Storage.Beam.CapabilityEndpoint as BeamCE
+import Storage.Beam.EntityAccess as BeamEA
 import Storage.Beam.Merchant as BeamM
 import Storage.Beam.MerchantAccess as BeamMA
 import Storage.Beam.Person as BeamP
@@ -34,6 +35,7 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { accessMatrix = accessMatrixTable,
         capabilityEndpoint = capabilityEndpointTable,
+        entityAccess = entityAccessTable,
         merchant = merchantTable,
         merchantAccess = merchantAccessTable,
         person = personTable,
@@ -47,6 +49,7 @@ atlasDB =
 data AtlasDB f = AtlasDB
   { accessMatrix :: f (B.TableEntity BeamAM.AccessMatrixT),
     capabilityEndpoint :: f (B.TableEntity BeamCE.CapabilityEndpointT),
+    entityAccess :: f (B.TableEntity BeamEA.EntityAccessT),
     merchant :: f (B.TableEntity BeamM.MerchantT),
     merchantAccess :: f (B.TableEntity BeamMA.MerchantAccessT),
     person :: f (B.TableEntity BeamP.PersonT),
