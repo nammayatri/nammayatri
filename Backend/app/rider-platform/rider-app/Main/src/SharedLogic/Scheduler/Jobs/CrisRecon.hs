@@ -27,6 +27,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 crisReconJob ::
   ( EncFlow m r,
@@ -36,6 +37,7 @@ crisReconJob ::
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
+    Metrics.HasBAPMetrics m r,
     HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CrisRecon ->
