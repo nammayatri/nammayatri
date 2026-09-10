@@ -24,6 +24,7 @@ data FRFSPassengerDetailT f = FRFSPassengerDetailT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    passengerId :: B.C f Kernel.Prelude.Text,
     pickupPointPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     quoteId :: B.C f Kernel.Prelude.Text,
     seatId :: B.C f Kernel.Prelude.Text,

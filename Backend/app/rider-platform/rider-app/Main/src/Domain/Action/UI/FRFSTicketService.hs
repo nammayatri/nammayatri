@@ -32,6 +32,7 @@ import qualified Domain.Types.FRFSPassengerDetail
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.FRFSSavedPassenger as DFRFSSavedPassenger
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -139,6 +140,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSPassengerDetail as QFRFSPassengerDetail
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
+import qualified Storage.Queries.FRFSSavedPassenger as QFRFSSavedPassenger
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -2284,7 +2286,7 @@ getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
                 rqssServiceClass = classId,
                 rqssServiceId = serviceId,
                 rqssStartPlaceId = search.fromStationCode,
-                rqssPassengerCounts = travellerGroupCounts search.travellerGroup,
+                rqssSingleLady = search.travellerGroup == Just DFRFSSearch.SINGLE_LADY,
                 rqssUserName = tnstcConfig.username
               }
       seatSets <- case seatSetsResult of
@@ -2385,36 +2387,36 @@ storeSelectPassengers ::
   Text ->
   Maybe Text ->
   Maybe Text ->
-  [(FRFSTicketService.FRFSPassengerDetail, Domain.Types.Seat.Seat)] ->
+  [(SelectPax, Domain.Types.Seat.Seat)] ->
   m ()
 storeSelectPassengers integratedBPPConfig quoteId pickupPlaceId dropOffPlaceId mbIdProofLookupId mbIdProofNumber passengerRows = do
   now <- getCurrentTime
   encIdProofNumber <- mapM encrypt mbIdProofNumber
-  -- select can be repeated on the same quote; the previous attempt's rows are stale.
-  QFRFSPassengerDetail.deleteAllByQuoteId quoteId
-  rows <- forM passengerRows $ \(pax, st) -> do
-    passengerId <- generateGUID
-    return
-      Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail
-        { id = Kernel.Types.Id.Id passengerId,
-          quoteId = quoteId,
-          seatId = pax.seatId,
-          seatLabel = st.seatLabel,
-          name = pax.name,
-          age = pax.age,
-          gender = pax.gender,
-          isChild = pax.isChild,
-          pickupPointPlaceId = Just pickupPlaceId,
-          dropOffPointPlaceId = Just dropOffPlaceId,
-          idProofLookupId = mbIdProofLookupId,
-          idProofNumber = encIdProofNumber,
-          merchantId = integratedBPPConfig.merchantId,
-          merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
-          createdAt = now,
-          updatedAt = now
-        }
+  let mkRow isLead (pax, st) = do
+        rowId <- generateGUID
+        return $
+          Domain.Types.FRFSPassengerDetail.FRFSPassengerDetail
+            { id = Kernel.Types.Id.Id rowId,
+              quoteId = quoteId,
+              passengerId = pax.passengerId,
+              seatId = pax.seatId,
+              seatLabel = st.seatLabel,
+              name = Just pax.name,
+              age = Just pax.age,
+              gender = pax.gender,
+              isChild = pax.isChild,
+              pickupPointPlaceId = if isLead then Just pickupPlaceId else Nothing,
+              dropOffPointPlaceId = if isLead then Just dropOffPlaceId else Nothing,
+              idProofLookupId = if isLead then mbIdProofLookupId else Nothing,
+              idProofNumber = if isLead then encIdProofNumber else Nothing,
+              merchantId = integratedBPPConfig.merchantId,
+              merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+  -- True for the lead passenger, False for everyone after them.
+  rows <- zipWithM mkRow (True : repeat False) passengerRows
   QFRFSPassengerDetail.createMany rows
-  logInfo $ "FRFSTicketService:storeSelectPassengers quoteId=" <> quoteId.getId <> " count=" <> show (length rows)
 
 mkIdProofType :: TNSTCTypes.TnstcLookupValue -> FRFSTicketService.FRFSIdProofType
 mkIdProofType v = FRFSTicketService.FRFSIdProofType {lookupId = v.tlvId, name = v.tlvValue}
@@ -2439,14 +2441,107 @@ tnstcSeatStatus sets seatNo
   | seatNo `elem` sets.tssSet4 = Just FRFSTicketService.BOOKED
   | otherwise = Nothing
 
+defaultChildMaxAge :: Int
+defaultChildMaxAge = 11
+
+data SelectPax = SelectPax
+  { passengerId :: Kernel.Types.Id.Id DFRFSSavedPassenger.FRFSSavedPassenger,
+    name :: Text,
+    age :: Int,
+    gender :: Domain.Types.Person.Gender,
+    isChild :: Bool,
+    seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat
+  }
+
+mkSavedPassengerAPI :: DFRFSSavedPassenger.FRFSSavedPassenger -> FRFSTicketService.FRFSSavedPassengerAPI
+mkSavedPassengerAPI p =
+  FRFSTicketService.FRFSSavedPassengerAPI
+    { passengerId = p.id,
+      name = p.name,
+      age = p.age,
+      gender = p.gender
+    }
+
+getFrfsPassengers ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Environment.Flow [FRFSTicketService.FRFSSavedPassengerAPI]
+getFrfsPassengers (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  map mkSavedPassengerAPI <$> QFRFSSavedPassenger.findAllByRiderId personId
+
+postFrfsPassengers ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  FRFSTicketService.FRFSAddPassengerReq ->
+  Environment.Flow FRFSTicketService.FRFSSavedPassengerAPI
+postFrfsPassengers (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  when (Data.Text.null (Data.Text.strip req.name)) $ throwError (InvalidRequest "Passenger name is required")
+  when (req.age < 0) $ throwError (InvalidRequest "Passenger age must not be negative")
+  now <- getCurrentTime
+  case req.passengerId of
+    Just passengerId -> do
+      existing <- findOwnedPassenger personId passengerId
+      let updated =
+            DFRFSSavedPassenger.FRFSSavedPassenger
+              { id = existing.id,
+                riderId = existing.riderId,
+                name = req.name,
+                age = req.age,
+                gender = req.gender,
+                merchantId = existing.merchantId,
+                merchantOperatingCityId = existing.merchantOperatingCityId,
+                createdAt = existing.createdAt,
+                updatedAt = now
+              }
+      QFRFSSavedPassenger.updateByPrimaryKey updated
+      return $ mkSavedPassengerAPI updated
+    Nothing -> do
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      newId <- generateGUID
+      let newPax =
+            DFRFSSavedPassenger.FRFSSavedPassenger
+              { id = Kernel.Types.Id.Id newId,
+                riderId = personId,
+                name = req.name,
+                age = req.age,
+                gender = req.gender,
+                merchantId = merchantId,
+                merchantOperatingCityId = person.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QFRFSSavedPassenger.create newPax
+      return $ mkSavedPassengerAPI newPax
+
+deleteFrfsPassengers ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id DFRFSSavedPassenger.FRFSSavedPassenger ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteFrfsPassengers (mbPersonId, _merchantId) passengerId = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  void $ findOwnedPassenger personId passengerId
+  QFRFSSavedPassenger.deleteById passengerId
+  return Kernel.Types.APISuccess.Success
+
+findOwnedPassenger ::
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id DFRFSSavedPassenger.FRFSSavedPassenger ->
+  Environment.Flow DFRFSSavedPassenger.FRFSSavedPassenger
+findOwnedPassenger personId passengerId = do
+  passenger <-
+    QFRFSSavedPassenger.findByPrimaryKey passengerId
+      >>= fromMaybeM (InvalidRequest $ "Passenger not found: " <> passengerId.getId)
+  unless (passenger.riderId == personId) $ throwError AccessDenied
+  return passenger
+
 tnstcHoldSeconds :: Int
 tnstcHoldSeconds = 420
-
--- | TNSTC's seat-availability call takes passenger gender counts (totFemales/totMales), not a
--- flag. Map the traveller group onto the composition it stands for; GENERAL sends no counts.
-travellerGroupCounts :: Maybe DFRFSSearch.FRFSTravellerGroup -> Maybe (Int, Int)
-travellerGroupCounts (Just DFRFSSearch.SINGLE_LADY) = Just (1, 0)
-travellerGroupCounts _ = Nothing
 
 postFrfsQuoteSelect ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -2512,13 +2607,28 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = TNSTCError.surfaceTn
   unless (bookingConcessionId `elem` map (.tctConcessionId) allowedConcessions) $
     throwError (InvalidRequest $ "concessionTypeId " <> bookingConcessionId <> " is not offered for this service")
 
+  savedPassengers <- QFRFSSavedPassenger.findAllByIds (map (.passengerId) passengers)
+  let childMaxAge = fromMaybe defaultChildMaxAge tnstcConfig.childMaxAge
   passengerRows <- forM passengers $ \pax -> do
     st <- seatById pax.seatId & fromMaybeM (InvalidRequest "Selected seat not found")
-    when (isNothing pax.name) $
-      throwError (InvalidRequest $ "Passenger name is required for seat " <> st.seatLabel)
-    when (isNothing pax.age) $
-      throwError (InvalidRequest $ "Passenger age is required for seat " <> st.seatLabel)
-    return (pax, st)
+    saved <-
+      find (\sp -> sp.id == pax.passengerId) savedPassengers
+        & fromMaybeM (InvalidRequest $ "Passenger not found: " <> pax.passengerId.getId)
+    unless (saved.riderId == personId) $ throwError AccessDenied
+    return
+      ( SelectPax
+          { passengerId = saved.id,
+            name = saved.name,
+            age = saved.age,
+            gender = saved.gender,
+            isChild = saved.age <= childMaxAge,
+            seatId = pax.seatId
+          },
+        st
+      )
+
+  when (not (null passengerRows) && all (\(pax, _) -> pax.isChild) passengerRows) $
+    throwError (InvalidRequest $ "A child under " <> show (childMaxAge + 1) <> " cannot travel alone, please add an accompanying adult passenger")
 
   let isSleeperSeat st = st.seatType `elem` [Just Domain.Types.Seat.SLEEPER_UPPER, Just Domain.Types.Seat.SLEEPER_LOWER]
       catFor (pax, st)

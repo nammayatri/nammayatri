@@ -11,6 +11,7 @@ ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN is_child boolean NOT NULL
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN name text ;
+ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN passenger_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN pickup_point_place_id text ;
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN quote_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_passenger_detail ADD COLUMN seat_id character varying(36) NOT NULL;

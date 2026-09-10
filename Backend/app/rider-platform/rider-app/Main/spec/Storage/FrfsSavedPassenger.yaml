@@ -1,0 +1,47 @@
+imports:
+  Person: Domain.Types.Person
+  Gender: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+# A traveller the rider has saved for reuse across bookings (redBus-style). Durable and
+# rider-owned: unlike FRFSPassengerDetail, which is per-quote and rebuilt on every select,
+# a row here outlives any one booking.
+#
+# Identity is snapshotted onto FRFSPassengerDetail at select time, so editing a saved
+# passenger can never retroactively change the name on an issued ticket.
+FRFSSavedPassenger:
+  tableName: frfs_saved_passenger
+  derives: "Generic"
+
+  fields:
+    id: Id FRFSSavedPassenger
+    riderId: Id Person
+    name: Text
+    age: Int
+    gender: Gender|NoRelation
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+
+  queries:
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+         in: [id]
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+
+  extraOperations:
+    - GENERATE_INDEXES

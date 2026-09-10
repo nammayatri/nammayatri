@@ -1,6 +1,7 @@
 imports:
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
   Gender: Domain.Types.Person
   TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
@@ -23,6 +24,7 @@ imports:
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSTripCategory: Domain.Types.FRFSQuote
+  FRFSSavedPassenger: Domain.Types.FRFSSavedPassenger
   FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   OverrideType: Domain.Types.FRFSTicketBooking
@@ -311,6 +313,7 @@ FRFSPassengerDetail:
   fields:
     id: Id FRFSPassengerDetail
     quoteId: Id FRFSQuote
+    passengerId: Id FRFSSavedPassenger
     seatId: Id Seat
     seatLabel: Text
     name: Maybe Text
@@ -323,17 +326,24 @@ FRFSPassengerDetail:
     idProofNumber: Maybe (EncryptedHashedField e Text)
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+  beamFields:
+    idProofNumber:
+      idProofNumberEncrypted: Maybe Text
+      idProofNumberHash: Maybe DbHash
   fromTType:
     idProofNumber: EncryptedHashed <$> (Encrypted <$> idProofNumberEncrypted) <*> idProofNumberHash|E
+  toTType:
+    idProofNumberEncrypted: (idProofNumber <&> unEncrypted . (.encrypted))|E
+    idProofNumberHash: (idProofNumber <&> (.hash))|E
+  sqlType:
+    idProofNumberEncrypted: character varying(255)
+    idProofNumberHash: bytea
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
   queries:
     findAllByQuoteId:
       kvFunction: findAllWithKV
-      where: quoteId
-    deleteAllByQuoteId:
-      kvFunction: deleteWithKV
       where: quoteId
 
   excludedFields: [merchantOperatingCityId, merchantId]
