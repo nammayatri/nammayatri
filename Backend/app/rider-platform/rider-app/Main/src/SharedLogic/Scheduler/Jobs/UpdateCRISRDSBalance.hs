@@ -30,6 +30,7 @@ import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.CrisRdsBalanceHistory as QCrisRdsBalanceHistory
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 updateCRISRDSBalanceJob ::
   ( EncFlow m r,
@@ -37,6 +38,7 @@ updateCRISRDSBalanceJob ::
     MonadFlow m,
     EsqDBFlow m r,
     SchedulerFlow r,
+    Metrics.HasBAPMetrics m r,
     HasField "blackListedJobs" r [Text]
   ) =>
   Job 'UpdateCRISRDSBalance ->

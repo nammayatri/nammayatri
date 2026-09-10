@@ -13,6 +13,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant.API
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 -- Encrypted request/response types for API
 data EncryptedRequest = EncryptedRequest
@@ -58,6 +59,7 @@ data CRISChangeDeviceRequest = CRISChangeDeviceRequest
 -- Main function that handles business logic
 changeDevice ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,

@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
 import qualified Storage.Queries.Person as QPerson
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 data EncryptedRequest = EncryptedRequest
   { app :: Text,
@@ -48,6 +49,7 @@ mkGetSDKDataReq personId = do
 
 getSDKData ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
