@@ -295,7 +295,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_a_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_a_order_short_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/override",
@@ -332,13 +332,13 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl_app}}/payment/{{_pass_a_order_id}}/status",
+          "raw": "{{baseUrl_app}}/payment/{{_pass_a_order_short_id}}/status",
           "host": [
             "{{baseUrl_app}}"
           ],
           "path": [
             "payment",
-            "{{_pass_a_order_id}}",
+            "{{_pass_a_order_short_id}}",
             "status"
           ]
         }
@@ -430,7 +430,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_b_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_b_order_short_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
         },
         "url": {
           "raw": "{{mockServerUrl}}/mock/override",
@@ -467,13 +467,13 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl_app}}/payment/{{_pass_b_order_id}}/status",
+          "raw": "{{baseUrl_app}}/payment/{{_pass_b_order_short_id}}/status",
           "host": [
             "{{baseUrl_app}}"
           ],
           "path": [
             "payment",
-            "{{_pass_b_order_id}}",
+            "{{_pass_b_order_short_id}}",
             "status"
           ]
         }
