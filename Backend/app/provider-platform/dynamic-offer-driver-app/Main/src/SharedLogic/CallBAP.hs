@@ -63,6 +63,7 @@ import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentTyp
 import qualified Beckn.OnDemand.Utils.MSIL.ItemCompliance as MSILItemCompliance
 import qualified Beckn.OnDemand.Utils.MSIL.StopAuthorization as MSILStopAuthorization
 import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.VehicleEnergyType as MSILVehicleEnergyType
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
@@ -646,10 +647,16 @@ rideAssignedCommon booking ride driver veh = do
 -- ONDC Workbench's "fulfillment.id must match selection" check. See
 -- Beckn.OnDemand.Utils.MSIL.FulfillmentId. Also flips the START stop's OTP
 -- authorization.status to "CLAIMED" once the ride has started -- see
--- Beckn.OnDemand.Utils.MSIL.StopAuthorization.
+-- Beckn.OnDemand.Utils.MSIL.StopAuthorization. Also overrides
+-- vehicle.energy_type to a valid ONDC v2.1.0 code -- see
+-- Beckn.OnDemand.Utils.MSIL.VehicleEnergyType; this is the one push family
+-- that has a real driver+vehicle attached (vehicle.energyType is free text
+-- from onboarding, never validated against ONDC's vocabulary), so it's the
+-- one place this override was previously missing.
 applyMsilRideAssignedOrderOverrides :: Bool -> Text -> Bool -> Spec.Order -> Spec.Order
 applyMsilRideAssignedOrderOverrides isScheduled quoteId isRideStarted =
-  MSILTerms.dropNonConformingOrderTags
+  MSILVehicleEnergyType.patchOrderVehicleEnergyType
+    . MSILTerms.dropNonConformingOrderTags
     . MSILFulfillmentType.patchOrderFulfillmentTypes
     . MSILCategory.overrideOrderCategoryIds isScheduled
     . MSILFulfillmentState.overrideOrderFulfillmentState
