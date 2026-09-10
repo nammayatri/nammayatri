@@ -193,7 +193,7 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
   poolDataList <- fetchPoolData onlinePayment isPrepaidEnabled chunkDriverIds
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-      results = concat $ mapMaybe (buildDriverResult req poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
+      results = concat $ mapMaybe (buildDriverResult req isPrepaidEnabled poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
   filterByWalletBalance req isPrepaidEnabled results
 
 -- | Wrapper for non-chunked callers (Estimate stage): fetch then process all as one chunk.
@@ -238,16 +238,24 @@ scheduledTierEligibleForDriver isScheduled scheduledOpenToAll driverTagTexts cit
 
 buildDriverResult ::
   NearestDriversReq ->
+  Bool ->
   HashMap.HashMap (Id Person.Driver) DPD.DriverPoolData ->
   HashMap.HashMap ServiceTierType DVST.VehicleServiceTier ->
   DriverLocation ->
   Maybe [NearestDriversResult]
-buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap location = do
+buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServiceTiersHashMap location = do
   dpd <- HashMap.lookup location.driverId poolDataMap
   guard $ not dpd.blocked
   guard $ dpd.enabled
   guard $ not (fromMaybe False dpd.isDisabledReasonFlag)
-  guard $ dpd.subscribed
+  -- Fleet drivers under prepaid billing are settled at the fleet-owner level (the wallet
+  -- filter below redirects dues to `fleetOwnerId` via `resolveOwnerAndThreshold`), so the
+  -- per-driver `subscribed` flag is not the authority on their eligibility -- nothing in the
+  -- fleet flow ever sets it. `fleetOwnerId` is only populated from an association that is
+  -- already `isActive = True` and unexpired (`associatedTill > now`, see
+  -- FleetDriverAssociationExtra.findAllByDriverIds), so its presence IS the active-association
+  -- check. Solo drivers, and fleet drivers on non-prepaid merchants, still gate on `subscribed`.
+  guard $ dpd.subscribed || (isPrepaidEnabled && isJust dpd.fleetOwnerId)
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED

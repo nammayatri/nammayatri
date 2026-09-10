@@ -629,8 +629,14 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- treated as the standing guarantee of eligibility. A stale selection in the ms
             -- window between debit commit and revoke strip is the accepted trade-off, chosen
             -- over one wallet DB read per candidate in the dispatch hot loop.
-            let isStillLive =
-                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && d.subscribed && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+            -- Mirrors the pool-time guard in GetNearestDrivers.buildDriverResult: a fleet
+            -- driver on a prepaid merchant is settled at the fleet-owner level and never
+            -- carries its own `subscribed` flag, so re-checking it here would reject at
+            -- dispatch every driver that pooling just admitted.
+            let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+                isSubscribedOrFleetPrepaid d = d.subscribed || (isPrepaidEnabled && isJust d.fleetOwnerId)
+                isStillLive =
+                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isSubscribedOrFleetPrepaid d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
