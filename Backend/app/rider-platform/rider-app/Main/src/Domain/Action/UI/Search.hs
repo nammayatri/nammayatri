@@ -626,7 +626,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       OneWaySearch oneWayReq -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute oneWayReq.shouldCacheRoute
       AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
       InterCitySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
-      RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
+      RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong
       EasyBookingSearch easyBookingReq -> processEasyBookingSearch person easyBookingReq originCity
       DeliverySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
       PTSearch _ -> do
@@ -690,13 +690,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         Nothing -> pure Nothing
       pure (routeDetails, mbDiscoveredSpecialLocId, mbDiscoveredDropSpecialLocId)
 
-    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text, Maybe Text)
-    processRentalSearch person rentalReq stopsLatLong originCity = do
+    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> m (RouteDetails, Maybe Text, Maybe Text)
+    processRentalSearch person rentalReq stopsLatLong = do
       case stopsLatLong of
         [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing, Nothing)
         (stop : _) -> do
-          stopCity <- Serviceability.validateServiceability stop [] person
-          unless (stopCity == originCity) $ throwError RideNotServiceable
+          void $ Serviceability.validateServiceability stop [] person
           return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing, Nothing)
 
     -- No destination, no rider-given distance/duration estimate at all — the quote shown

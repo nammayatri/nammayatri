@@ -47,6 +47,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         InterCity _ _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         RideShare _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         Rental _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
+        IntercityRental _ _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
         EasyBooking _ -> getEasyBookingDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
         Ambulance _ -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         Delivery _ -> getDeliveryDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
