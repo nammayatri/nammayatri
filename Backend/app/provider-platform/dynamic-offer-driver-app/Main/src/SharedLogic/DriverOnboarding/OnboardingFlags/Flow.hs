@@ -214,17 +214,15 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
                 other -> other
             )
           else if allMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
-      holdEnabledWithoutDocsVerifiedEnabledOrApproved =
-        useUnifiedOnboardingFlagsRecompute
-          && not approvalSupported
-          && driverInfo.enabled
-          && driverInfo.verified
-          && not (allMandatoryDocsValid && allEnablingDocsValid && newApproved == Just True)
+      holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (driverInfo.verified || driverInfo.enabled)
       verifiedToWrite =
         if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed)
           then driverInfo.verified
           else allMandatoryDocsValid
-      approvedToWrite = if driverInfo.approved == Just True && newApproved /= Just True && not mutationAllowed then driverInfo.approved else newApproved
+      approvedToWrite =
+        if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.approved == Just True && newApproved /= Just True && not mutationAllowed)
+          then driverInfo.approved
+          else newApproved
   when (verifiedToWrite /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= driverInfo.approved)) $
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) verifiedToWrite approvedToWrite
   consentGateOk <-
@@ -339,16 +337,12 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
             Just True | not allFleetMandatoryDocsValid -> Nothing
             other -> other
           else if allFleetMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
-      holdEnabledWithoutDocsVerifiedEnabledOrApproved =
-        useUnifiedOnboardingFlagsRecompute
-          && not approvalSupported
-          && fleetOwnerInfo.enabled
-          && fleetOwnerInfo.verified
-          && not (allFleetMandatoryDocsValid && allFleetEnablingDocsValid && newApproved == Just True)
+      holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (fleetOwnerInfo.verified || fleetOwnerInfo.enabled)
       verifiedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.verified else allFleetMandatoryDocsValid
-  when (verifiedToWrite /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= fleetOwnerInfo.approved)) $
-    QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite newApproved person.id
-  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else True
+      approvedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.approved else newApproved
+  when (verifiedToWrite /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= fleetOwnerInfo.approved)) $
+    QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite approvedToWrite person.id
+  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else True
       newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
@@ -366,7 +360,7 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
     person.merchantOperatingCityId
     (Just person.id.getId)
     (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
-    (bucketsOfFlags' verifiedToWrite newApproved newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
+    (bucketsOfFlags' verifiedToWrite approvedToWrite newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
   pure newEnabled
 
 recomputeVehicleFlagsArm ::
@@ -390,12 +384,16 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
     then do
       mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
       let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
+          approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
       whenJust mbRc $ \rc -> do
-        let newVerified = Just allVehicleMandatoryDocsValid
+        let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && rc.verified == Just True
+            newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
             newApproved =
-              case derivedApproved of
-                Just True | not allVehicleMandatoryDocsValid -> Nothing
-                other -> other
+              if holdEnabledWithoutDocsVerifiedEnabledOrApproved
+                then rc.approved
+                else case derivedApproved of
+                  Just True | not allVehicleMandatoryDocsValid -> Nothing
+                  other -> other
         when (newVerified /= rc.verified || newApproved /= rc.approved) $
           VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
         -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
@@ -407,7 +405,7 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
             rcMerchantOpCityId
             rc.fleetOwnerId
             (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
-            (bucketsOfFlags allVehicleMandatoryDocsValid newApproved False)
+            (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
     else RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
 
 -- | Which entity's onboarding counters a write belongs to.
