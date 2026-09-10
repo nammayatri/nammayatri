@@ -71,7 +71,7 @@ data GetServiceSeatDetailsReq = GetServiceSeatDetailsReq
     rqssServiceClass :: Text,
     rqssServiceId :: Text,
     rqssStartPlaceId :: Text,
-    rqssPassengerCounts :: Maybe (Int, Int),
+    rqssSingleLady :: Bool,
     rqssUserName :: Text
   }
 
@@ -85,9 +85,9 @@ instance ToXML GetServiceSeatDetailsReq where
         el "serviceClass" req.rqssServiceClass
         el "serviceID" req.rqssServiceId
         el "startPlaceID" req.rqssStartPlaceId
-        whenJust req.rqssPassengerCounts $ \(females, males) -> do
-          el "totFemales" (show females)
-          el "totMales" (show males)
+        when req.rqssSingleLady $ do
+          el "totFemales" "1"
+          el "totMales" "0"
         el "userName" req.rqssUserName
 
 -- | The whole place master (569 rows). Takes no arg0 at all -- sending one is an
