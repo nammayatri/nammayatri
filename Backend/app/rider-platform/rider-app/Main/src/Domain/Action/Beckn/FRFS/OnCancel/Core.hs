@@ -57,7 +57,7 @@ onCancelCore merchant booking' dOnCancel = do
       sideEffectData <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId (isCounterCancellation dOnCancel)
       return (Just sideEffectData)
     Spec.CANCEL_INITIATED -> do
-      void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
+      void $ FRFSUtils.markFRFSBookingStatus FTBooking.CANCEL_INITIATED "cancel_initiated" booking
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
       return Nothing
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

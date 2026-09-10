@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Tools.Metrics as Metrics
 
 status ::
   ( CacheFlow m r,
@@ -29,6 +30,7 @@ status ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     CallFRFSBPP.BecknAPICallFlow m r,
+    Metrics.HasBAPMetrics m r,
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasMasterCloudForwarder r
   ) =>
@@ -58,6 +60,7 @@ status merchantId merchantOperatingCity bapConfig booking = do
         HasLongDurationRetryCfg r c,
         HasShortDurationRetryCfg r c,
         CallFRFSBPP.BecknAPICallFlow m r,
+        Metrics.HasBAPMetrics m r,
         HasFlowEnv m r '["googleSAPrivateKey" ::: String]
       ) =>
       DOrder ->

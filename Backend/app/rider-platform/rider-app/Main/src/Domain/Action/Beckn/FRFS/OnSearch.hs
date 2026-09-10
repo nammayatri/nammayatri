@@ -48,10 +48,12 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
@@ -95,6 +97,9 @@ onSearch ::
     CacheFlow m r,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
+    CoreMetrics m,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     Metrics.HasBAPMetrics m r
   ) =>
   DOnSearch ->
@@ -117,11 +122,11 @@ onSearch onSearchReq validatedReq = do
           return $ station {stationCode = fromMaybe station.stationCode stationCode}
       return $ quote {stations = stations}
 
-onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
+onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, CoreMetrics m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
 onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just onSearchReq.transactionId)
-  quotesWithCategories <- traverse (mkQuotes onSearchReq validatedReq) onSearchReq.quotes
+  quotesWithCategories <- traverse (withTimeAPI "frfsOnSearch" "mkQuotes" . mkQuotes onSearchReq validatedReq) onSearchReq.quotes
   let quotes = map fst quotesWithCategories
       quoteCategories = concatMap snd quotesWithCategories
   traverse_ cacheQuote quotesWithCategories
@@ -168,6 +173,9 @@ upsertFareCache ::
     CacheFlow m r,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
+    CoreMetrics m,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     Metrics.HasBAPMetrics m r
   ) =>
   DOnSearch ->
@@ -185,7 +193,7 @@ upsertFareCache onSearchReq validatedReq = do
 
   -- Find existing quotes created for this search
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
-  quotesWithCategories <- traverse (mkQuotes updatedOnSearchReq validatedReq) updatedOnSearchReq.quotes
+  quotesWithCategories <- traverse (withTimeAPI "frfsOnSearch" "mkQuotes" . mkQuotes updatedOnSearchReq validatedReq) updatedOnSearchReq.quotes
 
   let quoteCategories = concatMap snd quotesWithCategories
 
@@ -351,7 +359,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
               ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (listToMaybe journeyLeg.routeDetails))
         _ -> True
 
-mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m (Quote.FRFSQuote, [FRFSQuoteCategory])
+mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, CoreMetrics m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m (Quote.FRFSQuote, [FRFSQuoteCategory])
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")

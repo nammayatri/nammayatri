@@ -51,6 +51,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import SharedLogic.IntegratedBPPConfig (getProviderTag)
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -89,7 +90,7 @@ data SubwayFareDetail = SubwayFareDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
 getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   case integrationBPPConfig.providerConfig of
@@ -211,16 +212,24 @@ extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
   Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
-  resp <-
-    case integrationBPPConfig.providerConfig of
-      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
-      CMRLV2 config' -> CMRLV2Order.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
-      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
-      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
-      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
-      _ -> throwError $ InternalError "Unimplemented!"
-  Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
-  return resp
+  eResp <-
+    withTryCatch "CallAPI:createOrder" $
+      case integrationBPPConfig.providerConfig of
+        CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+        CMRLV2 config' -> CMRLV2Order.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+        EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+        DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+        CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
+        _ -> throwError $ InternalError "Unimplemented!"
+  let countOrder = Metrics.incrementFRFSExternalBppCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (getProviderTag integrationBPPConfig) Metrics.FRFSBppOrder
+  case eResp of
+    Left err -> do
+      countOrder Metrics.FRFSBppFailed
+      throwM err
+    Right resp -> do
+      countOrder Metrics.FRFSBppSucceeded
+      Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
+      return resp
 
 getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
 getBppOrderId integratedBPPConfig booking = do

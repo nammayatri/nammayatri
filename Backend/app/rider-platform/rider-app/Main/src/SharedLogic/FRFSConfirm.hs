@@ -82,6 +82,7 @@ import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 data SeatHoldParams = SeatHoldParams
   { shpFromIdx :: Int,
@@ -532,6 +533,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 ..
               }
       QFRFSTicketBooking.create booking
+      Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show booking.status) "created"
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
@@ -659,14 +661,14 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
             case confirmResp of
               Left err -> do
                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) claimedBooking.id
-                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED claimedBooking.id
+                void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "pass_covered_bpp_confirm_failed" claimedBooking
               Right _ -> pure ()
           case afterClaim of
             Right () -> pure ()
             Left err -> do
               logError $ "FRFSConfirm: pass-covered confirm failed after the claim bookingId=" <> claimedBooking.id.getId <> " err=" <> show err
               void $ QFRFSTicketBooking.updateFailureReasonById (Just ("Pass confirm failed: " <> show err)) claimedBooking.id
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED claimedBooking.id
+              void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "pass_covered_confirm_failed_after_claim" claimedBooking
           FRFSUtils.releasePaymentSuccessLock claimedBooking.id
     else do
       mbCoveredJourneyBookings <-
@@ -688,7 +690,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
             Just ctx -> do
               whenJust ctx.oldFrfsPaymentId $ \oldFrfsPaymentId ->
                 FRFSReschedule.syncPaymentCategories oldFrfsPaymentId updatedQuoteCategories
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED dConfirmRes.id
+              void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.APPROVED "reschedule_reused_payment" dConfirmRes
             Nothing -> do
               bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
               let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
@@ -697,7 +699,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
               void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
               let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
               when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
-                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
+                void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.NEW "reset_before_init" dConfirmRes
               CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' updatedQuoteCategories mbEnableOffer
   latestConfirmRes <- QFRFSTicketBooking.findById dConfirmRes.id >>= fromMaybeM (InvalidRequest $ "Invalid booking id " <> dConfirmRes.id.getId)
   frfsBookingStatus (latestConfirmRes.riderId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler latestConfirmRes updatedQuoteCategories fareParameters routeStations stations merchantOperatingCity) latestConfirmRes rider (\_ _ -> pure ())

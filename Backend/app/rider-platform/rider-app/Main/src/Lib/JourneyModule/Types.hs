@@ -176,6 +176,7 @@ type GetFareFlow m r =
     EsqDBFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
+    HasBAPMetrics m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "ltsHedisEnv" r Hedis.HedisEnv,

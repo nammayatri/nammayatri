@@ -19,6 +19,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
 import qualified Storage.Queries.Person as QPerson
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 -- API type for recon ticket enquiry
 type ReconTicketEnquiryAPI =
@@ -65,6 +66,7 @@ data ReconTicketEnquiryDecryptedResponse = ReconTicketEnquiryDecryptedResponse
 -- Main function
 getReconTicketEnquiry ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,

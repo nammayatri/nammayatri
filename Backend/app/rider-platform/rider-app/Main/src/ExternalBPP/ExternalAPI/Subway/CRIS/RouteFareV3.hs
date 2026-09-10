@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import Servant.API
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 -- API type with updated endpoint
 type RouteFareAPI =
@@ -35,6 +36,7 @@ type RouteFareAPI =
 
 getRouteFare ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
