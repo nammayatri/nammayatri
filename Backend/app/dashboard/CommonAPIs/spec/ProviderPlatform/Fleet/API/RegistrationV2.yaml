@@ -205,6 +205,7 @@ types:
     - paymentMode: PaymentMode
     - requirements: Maybe RequirementsInfo
     - futureRequirements: Maybe RequirementsInfo
+    - stripeLegalEntityName: Maybe Text
   FleetOwnerUpdateLanguageReq:
     - language: Language
     - derive: "'HideSecrets"

@@ -77,7 +77,8 @@ data BankAccountResp = BankAccountResp
     futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    stripeLegalEntityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
