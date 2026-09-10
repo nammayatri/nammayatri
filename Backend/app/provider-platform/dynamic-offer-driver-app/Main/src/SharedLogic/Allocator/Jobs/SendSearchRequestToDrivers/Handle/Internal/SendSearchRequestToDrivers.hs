@@ -355,7 +355,8 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           numberOfLuggages = searchReq.numberOfLuggages,
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
-          fareSettlementType = farePolicy'.fareSettlementType
+          fareSettlementType = farePolicy'.fareSettlementType,
+          isParkingFeeExempt = False
         }
   pure $ Fare.fareSum fareParams $ Just []
 

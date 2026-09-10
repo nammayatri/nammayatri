@@ -433,6 +433,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            parkingFeeExemptionEnabled = request.parkingFeeExemptionEnabled <|> (mbExistingSpLoc >>= (.parkingFeeExemptionEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
@@ -1733,6 +1734,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
+    parkingFeeExemptionEnabled :: Maybe Text,
     supportNumber :: Maybe Text,
     gateInfoEntryFeeAmount :: Maybe Text,
     gateInfoMinDriverThreshold :: Maybe Text,
@@ -1785,6 +1787,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     dropPriority <- r .: "drop_priority"
     specialLocationId <- r .: "special_location_id"
     isQueueEnabled <- optional (r .: "is_queue_enabled")
+    parkingFeeExemptionEnabled <- optional (r .: "parking_fee_exemption_enabled")
     supportNumber <- optional (r .: "support_number")
     gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
     gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
@@ -1860,6 +1863,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+          mbParkingFeeExemptionEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.parkingFeeExemptionEnabled) "Parking Fee Exemption Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
           mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
@@ -1905,6 +1909,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now,
                 isQueueEnabled = mbIsQueueEnabled,
+                parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
                 fetchAllGateFareProduct = mbFetchAllGateFareProduct,
@@ -2009,6 +2014,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
     mergeSpecialLocationWithExisting new (Just old) =
       new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+          DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
           DSL.paymentModes = new.paymentModes <|> old.paymentModes
          }
 

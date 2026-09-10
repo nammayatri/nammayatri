@@ -1,4 +1,4 @@
-module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, mkAssociationInfo) where
+module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, postVehicleParkingFeeExemption, mkAssociationInfo) where
 
 import qualified API.Types.ProviderPlatform.Management.Vehicle as VehicleAPI
 import qualified Dashboard.Common as Common
@@ -11,15 +11,19 @@ import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.FleetRCAssociation as DFRCA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runTransaction)
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSL
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -29,7 +33,11 @@ import qualified Storage.Queries.FleetRCAssociationExtra as QFRCA
 import qualified Storage.Queries.OnboardingList.VehicleList as QVehicleList
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleExtra as QVehicleExtra
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QRCExtra
 import Tools.Auth ()
+import Tools.Error
 
 getVehicleList ::
   ShortId DM.Merchant ->
@@ -67,9 +75,11 @@ getVehicleList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbVehicleN
       driverIds = nub $ map (.driverId) driverAssocs
   persons <- B.runInReplica $ QPersonExtra.findAllByPersonIds (map getId (fleetOwnerIds <> driverIds))
   fleetOwnerInfos <- B.runInReplica $ QFOI.findAllByPrimaryKeys fleetOwnerIds
+  linkedVehicles <- B.runInReplica $ QVehicleExtra.findAllByDriverIds driverIds
   let personById = HM.fromList $ map (\p -> (p.id, p)) persons
       fleetOwnerInfoById = HM.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi)) fleetOwnerInfos
-  vehicles <- mapM (buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById) rcs
+      vehicleByDriver = HM.fromList $ map (\v -> (v.driverId, v)) linkedVehicles
+  vehicles <- mapM (buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById vehicleByDriver) rcs
   let count = length vehicles
   let summary = Common.Summary {totalCount = 10000, count}
   pure VehicleAPI.VehicleListRes {totalItems = count, summary, vehicles}
@@ -87,9 +97,10 @@ buildVehicleListItem ::
   HM.HashMap (Id DVRC.VehicleRegistrationCertificate) DDRCA.DriverRCAssociation ->
   HM.HashMap (Id DP.Person) DP.Person ->
   HM.HashMap (Id DP.Person) DFOI.FleetOwnerInformation ->
+  HM.HashMap (Id DP.Person) DVeh.Vehicle ->
   DVRC.VehicleRegistrationCertificate ->
   Flow VehicleAPI.VehicleListItem
-buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById rc = do
+buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoById vehicleByDriver rc = do
   vehicleNumber <- decrypt rc.certificateNumber
   recentFleetInfo <- case HM.lookup rc.id fleetAssocByRc of
     Nothing -> pure Nothing
@@ -97,6 +108,12 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
   linkedDriverInfo <- case HM.lookup rc.id driverAssocByRc of
     Nothing -> pure Nothing
     Just dra -> mkAssociationInfo (HM.lookup dra.driverId personById) Nothing dra.associatedTill dra.isRcActive
+  -- The flag lives on the vehicle row, which only exists while the RC is linked to a driver.
+  let mbLinkedVehicle = do
+        dra <- HM.lookup rc.id driverAssocByRc
+        vehicle <- HM.lookup dra.driverId vehicleByDriver
+        guard $ vehicle.registrationNo == vehicleNumber
+        pure vehicle
   pure
     VehicleAPI.VehicleListItem
       { rcId = rc.id.getId,
@@ -110,8 +127,55 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         approved = rc.approved,
         createdAt = rc.createdAt,
         recentFleetInfo,
-        linkedDriverInfo
+        linkedDriverInfo,
+        exemptParkingFee = mbLinkedVehicle >>= (.exemptParkingFee)
       }
+
+-- | Ops toggle for the parking fee exemption, keyed on the vehicle number ops types in.
+--   Sets the flag on the vehicle attached to that RC and, when the caller passes the special
+--   location it is toggling from, the matching zone flag. Both must be true for the fare to
+--   drop the parking charge, so they are written together.
+postVehicleParkingFeeExemption ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  VehicleAPI.ParkingFeeExemptionReq ->
+  Flow APISuccess
+postVehicleParkingFeeExemption merchantShortId opCity vehicleNumber req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  certificateNumberHash <- getDbHash vehicleNumber
+  rc <- B.runInReplica (QRCExtra.findLastVehicleRC certificateNumberHash) >>= fromMaybeM (RCNotFound vehicleNumber)
+  whenJust rc.merchantOperatingCityId $ \rcCityId ->
+    unless (rcCityId == merchantOpCity.id) $
+      throwError (InvalidRequest $ "Vehicle " <> vehicleNumber <> " does not belong to city " <> show opCity)
+  -- The flag lives on the vehicle attached to this RC, which exists only while the RC is
+  -- linked to a driver.
+  void $ QVehicle.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleNotFound $ "registrationNo:-" <> vehicleNumber)
+  mbSpecialLocation <- forM req.specialLocationId $ \specialLocationId -> do
+    specialLocation <-
+      QSL.findById (Id specialLocationId)
+        >>= fromMaybeM (InvalidRequest $ "Special location not found: " <> specialLocationId)
+    whenJust specialLocation.merchantOperatingCityId $ \slCityId ->
+      unless (slCityId.getId == merchantOpCity.id.getId) $
+        throwError (InvalidRequest $ "Special location " <> specialLocationId <> " does not belong to city " <> show opCity)
+    pure specialLocation
+  QVehicle.updateExemptParkingFeeByRegistrationNo (Just req.exempt) vehicleNumber
+  whenJust mbSpecialLocation $ \specialLocation -> do
+    now <- getCurrentTime
+    void $ runTransaction $ QSL.updateParkingFeeExemptionEnabled (Just req.exempt) now specialLocation.id
+    QSL.clearSpecialZoneInMemCache
+  logInfo $
+    "Parking fee exemption set to " <> show req.exempt <> " for vehicleNumber: " <> vehicleNumber
+      <> ", rcId: "
+      <> rc.id.getId
+      <> ", specialLocationId: "
+      <> fromMaybe "NA" req.specialLocationId
+      <> ", reason: "
+      <> fromMaybe "NA" req.reason
+  pure Success
 
 mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Bool -> Flow (Maybe Common.DriverAssociationInfo)
 mkAssociationInfo Nothing _ _ _ = pure Nothing

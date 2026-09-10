@@ -736,6 +736,7 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     category :: Maybe Text,
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
+    parkingFeeExemptionEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],
@@ -754,6 +755,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "category" form
       <*> parseMaybeInput "city" form
       <*> parseMaybeInput "isQueueEnabled" form
+      <*> parseMaybeInput "parkingFeeExemptionEnabled" form
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "render" form
       <*> parseMaybeInput "paymentModes" form
@@ -777,6 +779,7 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     category :: Maybe Text,
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
+    parkingFeeExemptionEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
     render :: Maybe SLT.RenderType,
     paymentModes :: Maybe [SLT.PaymentMode],

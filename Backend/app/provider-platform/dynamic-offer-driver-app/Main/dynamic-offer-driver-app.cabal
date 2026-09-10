@@ -722,6 +722,7 @@ library
       SharedLogic.OndcCancellationReason
       SharedLogic.OneShotAssign
       SharedLogic.OTP
+      SharedLogic.ParkingFeeExemption
       SharedLogic.Payment
       SharedLogic.PayoutStatusCheck
       SharedLogic.Person

@@ -108,6 +108,7 @@ import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
@@ -976,6 +977,12 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
                 DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
               } ::
               DFP.FullFarePolicy
+      rcParkingFeeExempt <-
+        if fromMaybe False farePolicy'.parkingFeeExemptionEnabled
+          then do
+            mbRideDetails <- QRD.findById ride.id
+            SPFE.isParkingFeeExemptByVehicleNumber ((.vehicleNumber) <$> mbRideDetails)
+          else pure False
       fareParams <-
         calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -1012,7 +1019,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               numberOfLuggages = booking.numberOfLuggages,
               govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
               pickupGateId = booking.pickupGateId,
-              fareSettlementType = booking.fareSettlementType
+              fareSettlementType = booking.fareSettlementType,
+              isParkingFeeExempt = rcParkingFeeExempt
             }
       let finalFare = Fare.fareSum fareParams Nothing
           distanceDiff = recalcDistance - oldDistance

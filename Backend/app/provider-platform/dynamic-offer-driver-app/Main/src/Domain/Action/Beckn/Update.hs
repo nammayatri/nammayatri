@@ -63,6 +63,7 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.Ride
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
@@ -82,6 +83,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as SQSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRD
 import Toll.SharedLogic.TollsDetector
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -278,7 +280,8 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             numberOfLuggages = Just numberOfLuggages,
             govtChargesRate = Just transporterCfg.taxConfig.rideGst,
             pickupGateId = booking.pickupGateId,
-            fareSettlementType = booking.fareSettlementType
+            fareSettlementType = booking.fareSettlementType,
+            isParkingFeeExempt = False
           }
 
   newFareParams <- FC.calculateFareParameters params
@@ -445,6 +448,12 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                       DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
                     } ::
                     DFP.FullFarePolicy
+            rcParkingFeeExempt <-
+              if fromMaybe False farePolicy'.parkingFeeExemptionEnabled
+                then case mbRide of
+                  Just r -> QRD.findById r.id >>= \mbRideDetails -> SPFE.isParkingFeeExemptByVehicleNumber ((.vehicleNumber) <$> mbRideDetails)
+                  Nothing -> pure False
+                else pure False
             fareParameters <-
               FC.calculateFareParameters
                 CalculateFareParametersParams
@@ -481,7 +490,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     numberOfLuggages = booking.numberOfLuggages,
                     govtChargesRate = Just transporterConfig.taxConfig.rideGst,
                     pickupGateId = booking.pickupGateId,
-                    fareSettlementType = booking.fareSettlementType
+                    fareSettlementType = booking.fareSettlementType,
+                    isParkingFeeExempt = rcParkingFeeExempt
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now

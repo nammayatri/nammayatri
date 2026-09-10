@@ -24,6 +24,7 @@ data VehicleT f = VehicleT
     downgradeReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
     energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    exemptParkingFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     make :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
