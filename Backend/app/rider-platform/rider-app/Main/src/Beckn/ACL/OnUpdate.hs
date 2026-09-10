@@ -113,6 +113,7 @@ parseEventV2 transactionId messageId bppUri order = do
           return $ DOnUpdate.OUBookingCancelledReq cancelledReq
         "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
         "QUOTE_REPETITION" -> parseQuoteRepetitionEvent transactionId order
+        "AWAITING_REALLOCATION" -> parseBookingReallocationEvent transactionId order
         "NEW_MESSAGE" -> parseNewMessageEvent transactionId order
         "SAFETY_ALERT" -> parseSafetyAlertEvent transactionId order
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
@@ -173,6 +174,21 @@ parseQuoteRepetitionEvent transactionId order = do
           bppBookingId = Id bppBookingId,
           bppRideId = Id bppRideId,
           cancellationSource = Utils.castCancellationSourceV2 cancellationSource
+        }
+
+parseBookingReallocationEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseBookingReallocationEvent transactionId order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingReallocation Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in BookingReallocation Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in BookingReallocation Event.")
+  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in BookingReallocation Event.")
+  return $
+    DOnUpdate.OUBookingReallocationReq
+      DOnUpdate.BookingReallocationReq
+        { bppBookingId = Id bppBookingId,
+          bppRideId = Id bppRideId,
+          reallocationSource = Utils.castCancellationSourceV2 cancellationSource,
+          transactionId = transactionId
         }
 
 parseSafetyAlertEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq

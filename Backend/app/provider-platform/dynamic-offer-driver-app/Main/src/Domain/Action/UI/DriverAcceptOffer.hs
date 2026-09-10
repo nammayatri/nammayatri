@@ -22,6 +22,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types as DTC
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
 import qualified Domain.Types.FareParameters as Fare
@@ -70,6 +71,7 @@ import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -116,6 +118,8 @@ type AcceptDynamicOfferFlow m r c =
 -- | Extracted from respondQuote's Accept branch so DriverPoolUnified can replay it server-side for a silently-assigned driver.
 acceptDynamicOfferDriverRequest ::
   AcceptDynamicOfferFlow m r c =>
+  -- A reused-booking assign is Flow-only (initializeRide etc.); the polymorphic offer path can't run it, so the Flow caller injects it. Nothing on the allocator path, which never reaches a reused (NEW) booking.
+  Maybe (DDrQuote.DriverQuote -> DRB.Booking -> m [SearchRequestForDriver]) ->
   Maybe Text ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -133,7 +137,7 @@ acceptDynamicOfferDriverRequest ::
   DStats.DriverStats ->
   TransporterConfig ->
   m [SearchRequestForDriver]
-acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig = do
+acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig = do
   let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
   logDebug $ "offered fare: " <> show reqOfferedValue
   quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -197,13 +201,22 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
   void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
   triggerQuoteEvent QuoteEventData {quote = driverQuote}
   void $ QDrQt.create driverQuote
-  driverFCMPulledList <-
-    if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-      then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
-      else pure []
-  pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
-  sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
-  return driverFCMPulledList
+  mbReusedBooking <-
+    if transporterConfig.enableBppReallocation == Just True
+      then QBooking.findById (Id searchTry.messageId)
+      else pure Nothing
+  case (mbReusedBooking, mbReusedAssign) of
+    (Just reusedBooking, Just assignReused)
+      | reusedBooking.status == DRB.NEW && reusedBooking.transactionId == searchReq.transactionId ->
+        assignReused driverQuote reusedBooking
+    _ -> do
+      driverFCMPulledList <-
+        if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
+          then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
+          else pure []
+      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
+      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
+      return driverFCMPulledList
   where
     getQuoteLimit dist vehicleServiceTier tripCategory sr area searchRepeatType searchRepeatCounter = do
       L.setOptionLocal TxnIdKey sr.transactionId

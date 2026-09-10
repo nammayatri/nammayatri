@@ -103,7 +103,7 @@ cancel ::
   Maybe ST.SearchTry ->
   Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
 cancel req merchant booking mbActiveSearchTry = do
-  CS.whenBookingCancellable booking.id $ do
+  CS.whenBookingCancellable booking.id (fromMaybe False req.userReallocationEnabled) $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     let prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled

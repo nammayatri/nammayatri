@@ -336,7 +336,15 @@ getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDr
         then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount effectiveFleetOwnerId
         else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount effectiveFleetOwnerId
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-    rideListItems <- traverse buildRideListItemV2 rideItems
+    -- Ride-level cancellation attribution: batch the ride rows + BCRs for cancelled rides only (by rideId).
+    let cancelledRideIds = map (.rideId) (filter (\i -> i.rideStatus == DRide.CANCELLED) rideItems)
+    (cancelledRides, bcrs) <-
+      if null cancelledRideIds
+        then pure ([], [])
+        else (,) <$> runInReplica (QRide.findByIds cancelledRideIds) <*> runInReplica (QBCReason.findAllByRideIds cancelledRideIds)
+    let rideById = map (\r -> (r.id, r)) cancelledRides
+        bcrByRideId = [(rid, bcr) | bcr <- bcrs, Just rid <- [bcr.rideId]]
+    rideListItems <- traverse (buildRideListItemV2 rideById bcrByRideId) rideItems
     let count = length rideListItems
     let summary = Common.Summary {totalCount = 10000, count}
     pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
@@ -383,9 +391,15 @@ buildRideListItem QRide.RideItem {..} = do
         rideTags = rideTags
       }
 
-buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
-buildRideListItemV2 QRide.RideItemV2 {..} = do
+buildRideListItemV2 :: EncFlow m r => [(Id DRide.Ride, DRide.Ride)] -> [(Id DRide.Ride, DBCReason.BookingCancellationReason)] -> QRide.RideItemV2 -> m Common.RideListItemV2
+buildRideListItemV2 rideById bcrByRideId QRide.RideItemV2 {..} = do
   driverPhoneNumber <- mapM decrypt driverPhoneNo
+  -- per-ride columns preferred (correct under reallocation), BCR by rideId as fallback; mirrors the rideInfo detail view
+  let mbRide = lookup rideId rideById
+      mbBCReason = lookup rideId bcrByRideId
+      cancellationReasonCode =
+        (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) $ maybe (join $ mbBCReason <&> (.reasonCode)) Just (mbRide >>= (.cancellationReasonCode))
+      cancelledBy = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just ((mbRide >>= (.cancelledBy)) >>= (readMaybe . T.unpack))
   pure
     Common.RideListItemV2
       { rideId = cast @DRide.Ride @Common.Ride rideId,
@@ -393,7 +407,9 @@ buildRideListItemV2 QRide.RideItemV2 {..} = do
         rideCreatedAt = rideCreatedAt,
         rideStatus = castRideStatus' rideStatus,
         driverName = driverName,
-        driverPhoneNo = driverPhoneNumber
+        driverPhoneNo = driverPhoneNumber,
+        cancelledBy = cancelledBy,
+        cancellationReasonCode = cancellationReasonCode
       }
 
 castRideStatus' :: DRide.RideStatus -> Common.RideStatus
@@ -536,9 +552,10 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
     if ride.status == DRide.CANCELLED
       then runInReplica $ QBCReason.findByRideId (Just rideId) -- it can be Nothing if cancelled by user
       else pure Nothing
+  -- per-ride columns preferred (correct under reallocation), BCR as fallback for old rides
   let cancellationReason =
-        (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
-  let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+        (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) $ maybe (join $ mbBCReason <&> (.reasonCode)) Just ride.cancellationReasonCode
+  let cancelledBy = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just (ride.cancelledBy >>= (readMaybe . T.unpack))
   let cancelledTime = case ride.status of
         DRide.CANCELLED -> Just ride.updatedAt
         _ -> Nothing

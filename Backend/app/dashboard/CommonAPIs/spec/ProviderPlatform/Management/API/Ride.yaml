@@ -338,6 +338,8 @@ types:
     - driverPhoneNo: Maybe Text
     - rideStatus: RideStatus
     - rideCreatedAt: UTCTime
+    - cancelledBy: Maybe CancellationSource
+    - cancellationReasonCode: Maybe CancellationReasonCode
   WaiverRideCancellationPenaltyReq:
     - reason: Text
   NearbyResp:
