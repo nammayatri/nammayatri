@@ -131,7 +131,7 @@ confirmOne booking = do
         case confirmResp of
           Left err -> do
             void $ QFRFSTicketBooking.updateFailureReasonById (Just err) latest.id
-            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED latest.id
+            void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "pass_leg_bpp_confirm_failed" latest
           Right _ -> pure ()
 
       case afterClaim of
@@ -139,5 +139,5 @@ confirmOne booking = do
         Left err -> do
           logError $ "FRFSPassConfirm: leg failed after the claim bookingId=" <> latest.id.getId <> " err=" <> show err
           void $ QFRFSTicketBooking.updateFailureReasonById (Just ("Pass leg confirm failed: " <> show err)) latest.id
-          void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED latest.id
+          void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "pass_leg_confirm_failed_after_claim" latest
       FRFSUtils.releasePaymentSuccessLock latest.id

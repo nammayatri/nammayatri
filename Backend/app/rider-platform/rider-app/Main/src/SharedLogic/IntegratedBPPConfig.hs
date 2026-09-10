@@ -194,6 +194,19 @@ findAllIntegratedBPPConfigAcrossCities ::
 findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType = do
   getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Nothing, domain = Just (show Spec.FRFS), vehicleCategory = Just vehicleCategory, platformType = Just platformType}) (Just (CQIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType))
 
+-- | Stable label for provider metrics. Deliberately the config constructor rather than the
+-- human-readable provider name, which is overridable per config row and so would let a config edit
+-- silently rename a metric series.
+getProviderTag :: IntegratedBPPConfig -> Text
+getProviderTag IntegratedBPPConfig {providerConfig} =
+  case providerConfig of
+    CMRL _ -> "CMRL"
+    CMRLV2 _ -> "CMRLV2"
+    EBIX _ -> "EBIX"
+    DIRECT _ -> "DIRECT"
+    ONDC _ -> "ONDC"
+    CRIS _ -> "CRIS"
+
 resolveOndcCity :: IntegratedBPPConfig -> Context.City -> Context.City
 resolveOndcCity IntegratedBPPConfig {providerConfig} city =
   case providerConfig of

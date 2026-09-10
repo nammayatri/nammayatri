@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -81,7 +82,7 @@ processOnInit req = do
                 whenJust onInitReq.bppOrderId $ \bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking.id
               else do
                 logError $ "Price mismatch for booking: " <> booking.id.getId <> ". Expected: " <> show booking.totalPrice <> ", Received: " <> show onInitReq.totalPrice <> ". Marking booking as failed."
-                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.FAILED booking.id
+                void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBookingStatus.FAILED "on_init_fare_mismatch" booking
         else do
           fork "FRFS on_init processing" $ do
             Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $

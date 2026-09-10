@@ -116,6 +116,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Kernel.Utils.TH
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
@@ -212,7 +213,7 @@ postMultimodalInitiate ::
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = do
+postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = withTimeAPI "multimodalInitiate" "total" $ do
   runAction journeyId $ do
     journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
     journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
@@ -252,48 +253,49 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
-  journey <- JM.getJourney journeyId
-  legs <- QJourneyLeg.getJourneyLegs journey.id
-  let confirmElements = journeyConfirmReq.journeyConfirmReqElements
-      isMockPayment = fromMaybe False mbIsMockPayment
-      skipCreateOrderCall = fromMaybe False mbSkipCreateOrderCall
-  when (journey.skipCreateOrderCall /= Just skipCreateOrderCall) $
-    QJourney.updateSkipCreateOrderCall (Just skipCreateOrderCall) journeyId
+postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq = withTimeAPI "multimodalConfirm" "total" $
+  ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+    journey <- JM.getJourney journeyId
+    legs <- QJourneyLeg.getJourneyLegs journey.id
+    let confirmElements = journeyConfirmReq.journeyConfirmReqElements
+        isMockPayment = fromMaybe False mbIsMockPayment
+        skipCreateOrderCall = fromMaybe False mbSkipCreateOrderCall
+    when (journey.skipCreateOrderCall /= Just skipCreateOrderCall) $
+      QJourney.updateSkipCreateOrderCall (Just skipCreateOrderCall) journeyId
 
-  void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
-  -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
-  -- Note: INPROGRESS journey status indicates that the tracking has started.
-  if isAllFRFSLegSkipped legs confirmElements
-    then do
-      JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
-      fork "Analytics - Journey Skip Without Booking Update" $ QJourney.updateHasStartedTrackingWithoutBooking (Just True) journeyId
-    else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
-  fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
-  updatedJourney <- JM.getJourney journeyId
-  paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  (sdkPayload, orderCreationReq) <-
-    case updatedJourney.paymentOrderShortId of
-      Just paymentOrderShortId -> do
-        QOrder.findByShortId paymentOrderShortId
-          >>= \case
-            Just paymentOrder -> do
-              person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
-              let isSingleMode = fromMaybe False journey.isSingleMode
-              let mbQuoteId = case legs of
-                    [leg] -> Id <$> leg.legPricingId
-                    _ -> Nothing
-              if paymentOrder.isExternalOrder == Just True
-                then do
-                  bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-                  orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder bookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
-                  return (Nothing, Just orderCreationReq')
-                else do
-                  mbSdkPayload <- buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
-                  return (mbSdkPayload, Nothing)
-            Nothing -> return (Nothing, Nothing)
-      Nothing -> return (Nothing, Nothing)
-  pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, ApiTypes.orderCreationReq = orderCreationReq, result = "Success"}
+    void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey journeyConfirmReq.enableOffer (Just isMockPayment)
+    -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
+    -- Note: INPROGRESS journey status indicates that the tracking has started.
+    if isAllFRFSLegSkipped legs confirmElements
+      then do
+        JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
+        fork "Analytics - Journey Skip Without Booking Update" $ QJourney.updateHasStartedTrackingWithoutBooking (Just True) journeyId
+      else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
+    fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
+    updatedJourney <- JM.getJourney journeyId
+    paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    (sdkPayload, orderCreationReq) <-
+      case updatedJourney.paymentOrderShortId of
+        Just paymentOrderShortId -> do
+          QOrder.findByShortId paymentOrderShortId
+            >>= \case
+              Just paymentOrder -> do
+                person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
+                let isSingleMode = fromMaybe False journey.isSingleMode
+                let mbQuoteId = case legs of
+                      [leg] -> Id <$> leg.legPricingId
+                      _ -> Nothing
+                if paymentOrder.isExternalOrder == Just True
+                  then do
+                    bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+                    orderCreationReq' <- JMU.buildExternalOrderCreationReq paymentOrder bookings person Payment.FRFSMultiModalBooking journeyConfirmReq.enableOffer
+                    return (Nothing, Just orderCreationReq')
+                  else do
+                    mbSdkPayload <- buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
+                    return (mbSdkPayload, Nothing)
+              Nothing -> return (Nothing, Nothing)
+        Nothing -> return (Nothing, Nothing)
+    pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, ApiTypes.orderCreationReq = orderCreationReq, result = "Success"}
   where
     isAllFRFSLegSkipped legs journeyConfirmReqElements =
       all

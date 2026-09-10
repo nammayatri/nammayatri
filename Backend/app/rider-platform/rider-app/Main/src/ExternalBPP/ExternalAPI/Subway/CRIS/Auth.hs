@@ -15,7 +15,7 @@ import Kernel.Utils.Monitoring.Prometheus.Servant
 import Servant hiding (throwError)
 import Tools.Error
 import Tools.HTTPManager (crisHttpManagerKey)
-import Tools.Metrics (CoreMetrics)
+import Tools.Metrics (CoreMetrics, HasBAPMetrics, incrementExternalBppApiCallCount)
 
 type AuthAPI =
   "token"
@@ -100,6 +100,7 @@ callCRISAPI ::
     CacheFlow m r,
     EncFlow m r,
     FromResponse CRISErrorUnhandled,
+    HasBAPMetrics m r,
     HasRequestId r,
     MonadReader r m
   ) =>
@@ -141,12 +142,25 @@ callCRISAPI config proxy clientFn description = do
           case eitherRetryResp of
             Left retryErr ->
               if is401Error retryErr
-                then throwError $ CRISErrorUnhandled $ "Authentication failed even after token refresh: " <> T.pack (show retryErr)
-                else throwError $ CRISErrorUnhandled $ "Error while calling CRIS API after retry: " <> T.pack (show retryErr)
-            Right res -> return res
-        else throwError $ CRISErrorUnhandled $ "Error while calling CRIS API : " <> T.pack (show err)
-    Right res -> return res
+                then do
+                  countCrisCall "auth_failed"
+                  throwError $ CRISErrorUnhandled $ "Authentication failed even after token refresh: " <> T.pack (show retryErr)
+                else do
+                  countCrisCall "failed_after_retry"
+                  throwError $ CRISErrorUnhandled $ "Error while calling CRIS API after retry: " <> T.pack (show retryErr)
+            Right res -> do
+              countCrisCall "success_after_token_refresh"
+              return res
+        else do
+          countCrisCall "failed"
+          throwError $ CRISErrorUnhandled $ "Error while calling CRIS API : " <> T.pack (show err)
+    Right res -> do
+      countCrisCall "success"
+      return res
   where
+    countCrisCall :: HasBAPMetrics m r => Text -> m ()
+    countCrisCall = incrementExternalBppApiCallCount "CRIS" description
+
     -- Helper function to check if error is 401
     is401Error :: SomeException -> Bool
     is401Error err =

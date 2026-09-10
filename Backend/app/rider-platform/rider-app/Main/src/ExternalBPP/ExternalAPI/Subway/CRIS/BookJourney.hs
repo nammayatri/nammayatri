@@ -33,6 +33,7 @@ import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.Person as QPerson
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 -- Encrypted request/response types for API
 data EncryptedRequest = EncryptedRequest
@@ -158,6 +159,7 @@ data CRISTicketData = CRISTicketData
 -- Main function that handles business logic
 getBookJourney ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -245,7 +247,7 @@ convertToBookingResponse ticketData encrypted =
       showTicketValidity = ticketData.showTicketValidity
     }
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBAPMetrics m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder config integratedBPPConfig booking quoteCategories = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber

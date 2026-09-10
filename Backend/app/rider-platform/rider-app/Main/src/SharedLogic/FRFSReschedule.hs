@@ -492,7 +492,7 @@ syncPaymentCategories paymentId updatedQuoteCategories = do
       Nothing -> pure ()
 
 completeReschedule ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   m ()
@@ -543,11 +543,11 @@ completeReschedule oldBookingId stagingBookingId = do
     -- migration and seat release above have all succeeded. The guard at the top keys on this RESCHEDULED
     -- status, so a retry after any partial failure re-runs every idempotent step above and lands here once.
     void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.RESCHEDULED oldBookingId
-    void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.RESCHEDULED oldBookingId
+    void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBookingStatus.RESCHEDULED "reschedule_completed" oldBooking
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
 
 rollbackFailedReschedule ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   m ()
 rollbackFailedReschedule stagingBookingId = do
@@ -572,5 +572,5 @@ rollbackFailedReschedule stagingBookingId = do
       whenJust mbOldPayment $ \oldPayment -> do
         oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
         syncPaymentCategories oldPayment.id oldQuoteCategories
-  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.FAILED stagingBookingId
+  void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBookingStatus.FAILED "reschedule_rollback" stagingBooking
   logInfo $ "FRFSReschedule:rollbackFailedReschedule stagingBookingId=" <> stagingBookingId.getId
