@@ -50,8 +50,10 @@ data PersonT f = PersonT
     language :: B.C f (Maybe KET.Language),
     secretKey :: B.C f (Maybe Text),
     is2faEnabled :: B.C f Bool,
+    tokenNoEncrypted :: B.C f (Maybe Text),
     tokenNoHash :: B.C f (Maybe DbHash),
-    entityId :: B.C f (Maybe Text)
+    vpaEncrypted :: B.C f (Maybe Text),
+    vpaHash :: B.C f (Maybe DbHash)
   }
   deriving (Generic, B.Beamable)
 
