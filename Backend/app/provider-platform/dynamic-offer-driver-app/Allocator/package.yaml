@@ -122,14 +122,14 @@ library:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -j8
+          - -j12
       else:
         ghc-options:
           - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
-          - -j8
+          - -j12
   dependencies:
     - dynamic-offer-driver-app
     - sessionizer-metrics
@@ -160,14 +160,14 @@ executables:
             - -fno-cse
             - -fmax-simplifier-iterations1
             - -fno-specialise-aggressively
-            - -j8
+            - -j12
         else:
           ghc-options:
             - -Wno-ambiguous-fields
             - -Wno-incomplete-uni-patterns
             - -Wno-incomplete-record-updates
             - -O2
-            - -j8
+            - -j12
     dependencies:
       - driver-offer-allocator
       - mobility-core

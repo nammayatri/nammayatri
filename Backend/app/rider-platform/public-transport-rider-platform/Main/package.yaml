@@ -114,14 +114,14 @@ library:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -j8
+          - -j12
       else:
         ghc-options:
           - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
-          - -j8
+          - -j12
 
 executables:
   public-transport-rider-platform-exe:
@@ -144,14 +144,14 @@ executables:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -j8
+          - -j12
       else:
         ghc-options:
           - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
-          - -j8
+          - -j12
     dependencies:
       - public-transport-rider-platform
       - mobility-core

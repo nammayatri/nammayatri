@@ -44,14 +44,14 @@ library:
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
-          - -j8
+          - -j12
       else:
         ghc-options:
           - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
-          - -j8
+          - -j12
   dependencies:
     - aeson
     - base64-bytestring

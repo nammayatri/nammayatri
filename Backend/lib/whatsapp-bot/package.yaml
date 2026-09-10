@@ -105,11 +105,11 @@ library:
           - -fno-cse
           - -fmax-simplifier-iterations1
           - -fno-specialise-aggressively
-          - -j8
+          - -j12
       else:
         ghc-options:
           - -O2
-          - -j8
+          - -j12
 
 tests:
   whatsapp-bot-tests:
@@ -135,8 +135,8 @@ tests:
             - -Wno-incomplete-uni-patterns
             - -Wno-incomplete-record-updates
             - -O0
-            - -j8
+            - -j12
         else:
           ghc-options:
             - -O2
-            - -j8
+            - -j12
