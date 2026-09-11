@@ -808,6 +808,7 @@ createIssueMessages merchantShortId city merchantOperatingCity issueCategoryId m
         DIM.IssueMessage
           { categoryId = maybe (Just issueCategoryId) (const Nothing) mbIssueOptionId,
             apiAction = Nothing,
+            onSubmitReplyMsgs = Nothing,
             isActive = fromMaybe True isActive,
             optionId = mbIssueOptionId,
             messageType = issueMessageType,
@@ -971,13 +972,15 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
 
 upsertIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => ShortId Merchant -> Context.City -> Common.UpsertIssueMessageReq -> ServiceHandle m -> Identifier -> m Common.UpsertIssueMessageRes
 upsertIssueMessage merchantShortId city req issueHandle identifier = do
+  let isStandalone = req.standalone == Just True
   existingIssueMessage <-
     traverse
       ( \issueMessageId ->
           CQIM.findById issueMessageId identifier
-            >>= fromMaybeM (IssueMessageDoesNotExist issueMessageId.getId)
+            >>= (if isStandalone then pure else fmap Just . fromMaybeM (IssueMessageDoesNotExist issueMessageId.getId))
       )
       req.issueMessageId
+      <&> join
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
@@ -999,10 +1002,14 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     then do
       QIM.updateByPrimaryKey updatedIssueMessage
       clearIssueMessageIdCaches updatedIssueMessage
-      whenJust existingIssueMessage $ \extIM -> clearOptionAndCategoryCache extIM
+      whenJust existingIssueMessage $ \extIM -> do
+        clearOptionAndCategoryCache extIM
+        retireDroppedReplies extIM updatedIssueMessage
       clearOptionAndCategoryCache updatedIssueMessage
     else do
       QIM.create updatedIssueMessage
+      -- drop any cached "not found" for a caller-supplied id
+      clearIssueMessageIdCaches updatedIssueMessage
       clearOptionAndCategoryCache updatedIssueMessage
   return $
     Common.UpsertIssueMessageRes
@@ -1012,11 +1019,16 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     mkIssueMessage :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
     mkIssueMessage mbIssueMessage merchantOperatingCity iHandle = do
       (mbOptionId, mbCategoryId) <- getAndValidateOptionAndCategoryId mbIssueMessage
-      mbParentCategory <- findIssueCategory mbOptionId mbCategoryId
+      let allowOrphan = isJust mbIssueMessage || req.standalone == Just True
+      mbParentCategory <- findIssueCategory allowOrphan mbOptionId mbCategoryId
+      -- reply ids must belong to this city
+      forM_ (fromMaybe [] req.onSubmitReplyMsgs) $ \replyId -> do
+        reply <- CQIM.findById (cast replyId) identifier >>= fromMaybeM (IssueMessageDoesNotExist replyId.getId)
+        when (reply.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
       whenJust mbParentCategory $ \parentCategory ->
         when (parentCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
       (referenceOptionId, referenceCategoryId) <- getAndValidateReferenceOptionAnCategoryId mbIssueMessage ((.categoryType) <$> mbParentCategory)
-      id <- maybe generateGUID (return . (.id)) mbIssueMessage
+      id <- maybe (maybe generateGUID pure req.issueMessageId) (return . (.id)) mbIssueMessage
       now <- getCurrentTime
       message <- fromMaybeM (InvalidRequest "Message is required field for creating a new issue message") $ req.message <|> ((.message) <$> mbIssueMessage)
       priority <- fromMaybeM (InvalidRequest "Priority is required field for creating a new issue message") $ req.priority <|> ((.priority) <$> mbIssueMessage)
@@ -1040,6 +1052,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
             messageTitle = req.messageTitle <|> ((.messageTitle) =<< mbIssueMessage),
             messageAction = req.messageAction <|> ((.messageAction) =<< mbIssueMessage),
             apiAction = mbApiAction,
+            onSubmitReplyMsgs = (map cast <$> req.onSubmitReplyMsgs) <|> (mbIssueMessage >>= (.onSubmitReplyMsgs)),
             isActive = fromMaybe True (req.isActive <|> (mbIssueMessage <&> (.isActive))),
             ..
           }
@@ -1065,6 +1078,18 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
         unless (option.issueMessageId == Just editedMessageId.getId) $
           throwError $ InvalidRequest $ "apiAction branch option " <> targetOptionId <> " is not a child option of this message"
 
+    -- deactivate parentless reply messages dropped from onSubmitReplyMsgs
+    retireDroppedReplies :: BeamFlow m r => DIM.IssueMessage -> DIM.IssueMessage -> m ()
+    retireDroppedReplies oldMsg newMsg = do
+      let dropped = filter (`notElem` fromMaybe [] newMsg.onSubmitReplyMsgs) (fromMaybe [] oldMsg.onSubmitReplyMsgs)
+      forM_ dropped $ \replyId -> do
+        mbReply <- CQIM.findById replyId identifier
+        whenJust mbReply $ \reply ->
+          when (reply.merchantOperatingCityId == oldMsg.merchantOperatingCityId && isNothing reply.categoryId && isNothing reply.optionId && reply.isActive) $ do
+            QIM.updateIsActive replyId False
+            CQIM.clearAllIssueMessageByIdAndLanguageCache replyId identifier
+            CQIM.clearIssueMessageByIdCache replyId identifier
+
     clearIssueMessageIdCaches :: BeamFlow m r => DIM.IssueMessage -> m ()
     clearIssueMessageIdCaches im = do
       CQIM.clearAllIssueMessageByIdAndLanguageCache im.id identifier
@@ -1086,20 +1111,19 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
         (_, Just categoryId, _) -> do
           void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
           return (Nothing, Just categoryId)
-        _ -> throwError $ InvalidRequest "Either categoryId or optionId required to create a message."
+        _
+          | req.standalone == Just True -> return (Nothing, Nothing)
+          | otherwise -> throwError $ InvalidRequest "Either categoryId or optionId required to create a message."
 
-    findIssueCategory :: BeamFlow m r => Maybe (Id DIO.IssueOption) -> Maybe (Id DIC.IssueCategory) -> m (Maybe DIC.IssueCategory)
-    findIssueCategory mbOptionId mbCategoryId = do
-      categoryId <- case mbCategoryId of
-        Just cId -> return (Just cId)
-        Nothing -> (.issueCategoryId) <$> findIssueOption
+    findIssueCategory :: BeamFlow m r => Bool -> Maybe (Id DIO.IssueOption) -> Maybe (Id DIC.IssueCategory) -> m (Maybe DIC.IssueCategory)
+    findIssueCategory allowOrphan mbOptionId mbCategoryId = do
+      categoryId <- case (mbCategoryId, mbOptionId) of
+        (Just cId, _) -> return (Just cId)
+        (Nothing, Just optionId) -> (.issueCategoryId) <$> (CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId))
+        (Nothing, Nothing)
+          | allowOrphan -> return Nothing
+          | otherwise -> throwError $ InvalidRequest "Either categoryId or optionId is required"
       maybe (return Nothing) (\(catId :: Id DIC.IssueCategory) -> CQIC.findById catId identifier) categoryId
-      where
-        findIssueOption =
-          maybe
-            (throwError $ InvalidRequest "Either categoryId or optionId is required")
-            (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId))
-            mbOptionId
 
     getAndValidateReferenceOptionAnCategoryId :: BeamFlow m r => Maybe DIM.IssueMessage -> Maybe DIC.CategoryType -> m (Maybe (Id DIO.IssueOption), Maybe (Id DIC.IssueCategory))
     getAndValidateReferenceOptionAnCategoryId mbIm mbCategoryType = do
@@ -1911,6 +1935,7 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
             priority = msg.priority,
             messageType = msg.messageType,
             apiAction = Nothing,
+            onSubmitReplyMsgs = Nothing, -- reply ids are city-scoped; configure in the target city
             isActive = msg.isActive,
             mediaFiles = msg.mediaFiles,
             referenceCategoryId = msg.referenceCategoryId,
@@ -1957,6 +1982,7 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
             priority = msg.priority,
             messageType = msg.messageType,
             apiAction = Nothing,
+            onSubmitReplyMsgs = Nothing, -- reply ids are city-scoped; configure in the target city
             isActive = msg.isActive,
             mediaFiles = msg.mediaFiles,
             referenceCategoryId = msg.referenceCategoryId,
@@ -2101,6 +2127,7 @@ mkMessageDetailRes language identifier (msg, translation, _mediaFileUrls) = do
         priority = msg.priority,
         messageType = msg.messageType,
         apiAction = decodeFromText =<< msg.apiAction,
+        onSubmitReplyMsgs = map cast <$> msg.onSubmitReplyMsgs,
         isActive = msg.isActive,
         mediaFiles = mediaFiles,
         translations =

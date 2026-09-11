@@ -166,7 +166,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
       description = maybe "No description provided" (.option) mbOption
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing -- insert ticketbookingId, which is given by UI
+  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing Nothing -- insert ticketbookingId, which is given by UI
   driverId <- fromMaybeM (RideFieldNotPresent "Driver not found") $ ride.driverId
   void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   pure $

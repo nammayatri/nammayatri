@@ -532,6 +532,7 @@ getOrCreateScheduledBookingIssueReport booking =
               description = "Scheduled booking operations notes",
               chats = Nothing,
               createTicket = Just False,
+              isFeedback = Nothing,
               ticketBookingId = Nothing
             }
           AUI.driverIssueHandle
