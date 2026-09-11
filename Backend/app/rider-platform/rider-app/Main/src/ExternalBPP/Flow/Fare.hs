@@ -20,9 +20,10 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Prelude as P
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
 getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRoute vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
   subwayFareDetail <-
     case integratedBPPConfig.providerConfig of

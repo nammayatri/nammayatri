@@ -31,6 +31,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant.API
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 
 data CRISBalanceResponse = CRISBalanceResponse
   { currentBal :: Text
@@ -55,6 +56,7 @@ getRDSBalanceAPI = Proxy
 
 getRDSBalance ::
   ( CoreMetrics m,
+    HasBAPMetrics m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,

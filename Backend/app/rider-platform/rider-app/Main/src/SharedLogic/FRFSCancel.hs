@@ -83,7 +83,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   unless (booking.status `elem` [DFRFSTicketBooking.CANCELLED, DFRFSTicketBooking.COUNTER_CANCELLED]) $ do
     if isCounterCancellation
       then do
-        void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
+        void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.COUNTER_CANCELLED "counter_cancelled" booking
         void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
         void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
         void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just False) booking.id
@@ -93,7 +93,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
           void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
       else do
         void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
-        void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
+        void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.CANCELLED "cancelled" booking
         void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
         void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
         void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id

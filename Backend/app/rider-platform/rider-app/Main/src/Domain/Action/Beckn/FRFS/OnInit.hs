@@ -35,6 +35,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
@@ -155,10 +156,12 @@ dropPassOverrideOnFareChange booking = case booking.overrideAppliedEntityId of
     pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
 
 createPayments ::
+  forall m r.
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
     ServiceFlow m r,
+    Metrics.HasBAPMetrics m r,
     HasField "isMetroTestTransaction" r Bool,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     Finance.HasActorInfo m r
@@ -195,16 +198,22 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
       markBookingFailed `mapM_` bookings
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
+    -- Signatures pin these to the enclosing m: without one GHC generalizes r, and HasBAPMetrics
+    -- expands to generic-lens HasField' constraints whose instances then overlap.
+    markBookingApproved :: DOrder.PaymentOrder -> FTBooking.FRFSTicketBooking -> m ()
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
+      unless (booking.status == FTBooking.APPROVED) $
+        Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show FTBooking.APPROVED) "on_init_order_created"
       whenJust mbJourneyId $ \journeyId -> do
         isTestTransaction <- asks (.isMetroTestTransaction)
         let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
+    markBookingFailed :: FTBooking.FRFSTicketBooking -> m ()
     markBookingFailed booking = do
       -- on_init normally precedes the confirm, so nothing has been debited and the release below
       -- is a no-op -- it guards on CONFIRMED internally. Kept anyway rather than reasoned away:
       -- nothing here checks the booking's status, so it rests on callback ordering, and a replayed
       -- on_init on an already-confirmed booking would otherwise strand the trip.
-      void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
+      void $ markFRFSBookingStatus FTBooking.FAILED "on_init_order_creation_failed" booking
       void $ withTryCatch "onInit:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)

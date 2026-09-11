@@ -26,6 +26,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.IntegratedBPPConfig as QIntegratedBPPConfig
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 updateCrisUtsDataJob ::
   ( EncFlow m r,
@@ -33,6 +34,7 @@ updateCrisUtsDataJob ::
     MonadFlow m,
     EsqDBFlow m r,
     SchedulerFlow r,
+    Metrics.HasBAPMetrics m r,
     HasField "blackListedJobs" r [Text]
   ) =>
   Job 'UpdateCrisUtsData ->

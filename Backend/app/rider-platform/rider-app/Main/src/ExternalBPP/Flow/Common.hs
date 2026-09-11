@@ -55,7 +55,7 @@ import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 search = searchImpl False
 
 -- | Same as 'search', but builds quotes by discovering the transit route
@@ -63,10 +63,10 @@ search = searchImpl False
 -- planner, instead of the route-stop mappings. Used as a fallback when
 -- 'search' yields no quotes, e.g. metro journeys that need an interchange
 -- where no single route serves both stations.
-multimodalDiscoverySearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+multimodalDiscoverySearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 multimodalDiscoverySearch = searchImpl True
 
-searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
   quotes <- bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
@@ -215,7 +215,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
               routesDetails
           mkQuote Nothing searchReq.vehicleType routesInfo
 
-    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
+    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
     mkQuote _serviceTier _vehicleType [] = return []
     mkQuote serviceTier vehicleType routesInfo = do
       logDebug $ "Routes Info Debug: " <> show routesInfo
