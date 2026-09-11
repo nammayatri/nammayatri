@@ -68,7 +68,13 @@ import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.DynamicLogic as DynamicLogic
 
 dashboardIssueHandle :: DAI.ServiceHandle Environment.Flow
 dashboardIssueHandle = AUI.customerIssueHandle
@@ -355,8 +361,15 @@ postIssueConfigUpdate ::
   Kernel.Types.Beckn.Context.City ->
   IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postIssueConfigUpdate (Kernel.Types.Id.ShortId merchantShortId) city req =
-  DIssue.updateIssueConfig (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+postIssueConfigUpdate (Kernel.Types.Id.ShortId merchantShortId) city req = do
+  res <- DIssue.updateIssueConfig (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
+  -- also clear the config-pilot caches the app reads IssueConfig through
+  merchantOpCity <-
+    CQMOC.findByMerchantShortIdAndCity (Kernel.Types.Id.ShortId merchantShortId) city
+      >>= Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId <> "-city-" <> show city)
+  DynamicLogic.deleteConfigHashKey (Kernel.Types.Id.cast merchantOpCity.id) (LYT.RIDER_CONFIG LYT.IssueConfig)
+  invalidateConfigInMem LYT.IssueConfigRider
+  pure res
 
 postIssueCategoryReorder ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -30,13 +30,20 @@ findAllByCategoryAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> 
 findAllByCategoryAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier /=<< Queries.findAllByCategoryAndLanguage issueCategoryId language
+    Nothing -> do
+      -- never cache an empty list
+      result <- Queries.findAllByCategoryAndLanguage issueCategoryId language
+      unless (null result) $ cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier result
+      pure result
 
 findAllActiveByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m [(IssueOption, Maybe IssueTranslation)]
 findAllActiveByMessageAndLanguage issueMessageId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier /=<< Queries.findAllActiveByMessageAndLanguage issueMessageId language
+    Nothing -> do
+      result <- Queries.findAllActiveByMessageAndLanguage issueMessageId language
+      unless (null result) $ cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier result
+      pure result
 
 findById :: BeamFlow m r => Id IssueOption -> Identifier -> m (Maybe IssueOption)
 findById issueOptionId identifier =

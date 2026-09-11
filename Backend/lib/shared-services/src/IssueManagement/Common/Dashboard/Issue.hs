@@ -370,6 +370,10 @@ data UpsertIssueMessageReq = UpsertIssueMessageReq
     -- string field in the multipart form. Omitting the field on an edit
     -- preserves the message's existing lookup config.
     apiAction :: Maybe IssueMessage.ApiCallAction,
+    -- | Create a parentless message; with an unknown 'issueMessageId', creates it under that id.
+    standalone :: Maybe Bool,
+    -- | Reply message ids posted after submit; [] clears, omitted keeps.
+    onSubmitReplyMsgs :: Maybe [Id IssueMessage],
     mediaFiles :: Maybe [IssueMessageMediaFileUploadReq]
   }
   deriving stock (Eq, Show, Generic)
@@ -409,6 +413,8 @@ instance FromMultipart Tmp UpsertIssueMessageReq where
       <*> parseMaybeInput "deleteExistingFiles"
       <*> parseMaybeInput "messageType"
       <*> parseMaybeJsonInput "apiAction"
+      <*> parseMaybeInput "standalone"
+      <*> parseMaybeJsonInput "onSubmitReplyMsgs"
       <*> pure (Just mediaFiles)
     where
       extractFile f = pure $ IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f)
@@ -451,7 +457,9 @@ instance ToMultipart Tmp UpsertIssueMessageReq where
             fmap (Input "isActive" . T.pack . show) req.isActive,
             fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles,
             fmap (Input "messageType" . T.pack . show) req.messageType,
-            fmap (Input "apiAction" . encodeJson) req.apiAction
+            fmap (Input "apiAction" . encodeJson) req.apiAction,
+            fmap (Input "standalone" . T.pack . show) req.standalone,
+            fmap (Input "onSubmitReplyMsgs" . encodeJson) req.onSubmitReplyMsgs
           ]
       files = maybe [] (map mkFileData) req.mediaFiles
       mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
@@ -503,6 +511,7 @@ data IssueMessageDetailRes = IssueMessageDetailRes
     priority :: Int,
     messageType :: IssueMessage.IssueMessageType,
     apiAction :: Maybe IssueMessage.ApiCallAction,
+    onSubmitReplyMsgs :: Maybe [Id IssueMessage],
     isActive :: Bool,
     mediaFiles :: [MediaFile],
     translations :: DetailedTranslationRes,

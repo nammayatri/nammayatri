@@ -47,21 +47,21 @@ findAllActiveByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Lang
 findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) >>= \case
     Just a -> pure a
-    Nothing ->
-      cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier
-        /=<< ( appendMediaFiles identifier
-                 =<< Queries.findAllActiveByCategoryIdAndLanguage issueCategoryId language
-             )
+    Nothing -> do
+      -- never cache an empty list (KV drainer lag after a dashboard write)
+      result <- appendMediaFiles identifier =<< Queries.findAllActiveByCategoryIdAndLanguage issueCategoryId language
+      unless (null result) $ cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier result
+      pure result
 
 findAllActiveByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation, [Text])]
 findAllActiveByOptionIdAndLanguage issueOptionId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndOption issueOptionId language identifier) >>= \case
     Just a -> pure a
-    Nothing ->
-      cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier
-        /=<< ( appendMediaFiles identifier
-                 =<< Queries.findAllActiveByOptionIdAndLanguage issueOptionId language
-             )
+    Nothing -> do
+      -- never cache an empty list
+      result <- appendMediaFiles identifier =<< Queries.findAllActiveByOptionIdAndLanguage issueOptionId language
+      unless (null result) $ cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier result
+      pure result
 
 appendMediaFiles :: BeamFlow m r => Identifier -> [(IssueMessage, DetailedTranslation)] -> m [(IssueMessage, DetailedTranslation, [Text])]
 appendMediaFiles identifier =
