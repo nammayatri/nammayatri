@@ -35,6 +35,7 @@ import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
@@ -60,6 +61,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -205,7 +207,13 @@ onConfirm ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "cloudType" r (Maybe CloudType)
+    HasField "cloudType" r (Maybe CloudType),
+    Finance.HasActorInfo m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r,
+    MonadMask m
   ) =>
   Merchant ->
   Booking.FRFSTicketBooking ->
@@ -226,27 +234,8 @@ onConfirm merchant booking' quoteCategories dOrder = do
       SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
   void $ QTicket.createMany tickets
   mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
-  -- Update journey expiry time based on maximum ticket validity using the created tickets
-  whenJust mbJourneyId $ \journeyId -> do
-    QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
-  recordStatsResult <-
-    withTryCatch "onConfirm:recordPersonPTStats" $ do
-      purchaseEvent <-
-        SPUS.mkPurchaseEvent
-          person
-          (Just booking.vehicleType)
-          booking.serviceTierType
-          DPUS.TICKET
-          Nothing
-          (Just fareParameters.totalQuantity)
-          booking.merchantId
-          booking.merchantOperatingCityId
-      SPUS.recordPurchase purchaseEvent
-  case recordStatsResult of
-    Right () -> pure ()
-    Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   -- Debit the pass here, once the ticket exists. Everything between a debit and the ticket -- a
   -- thrown BPP call, a pod restart, a journey the rider abandons -- used to strand the trip with
@@ -256,44 +245,168 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- booking, so a replayed on_confirm re-runs this handler, and the TripConsumed marker only
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
   -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
-  -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
-  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId || isJust booking.frfsTicketBookingPaymentIdForTicketGeneration) $
-    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
-  mRiderNumber <- mapM ENC.decrypt person.mobileNumber
+  -- the debit here. NOTE: the parent's TripConsumed marker is NOT migrated onto the staging search -- nothing
+  -- does that today -- so a staging booking that later fails through a replayed on_confirm gets no trip credit.
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
-  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
-  unless (isJust booking.parentBookingId) $
-    void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
-  void $ CQP.clearPSCache booking.riderId
-  whenJust booking.partnerOrgId $ \pOrgId -> do
-    walletPOCfg <- do
-      pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
-      DPOC.getWalletClassNameConfig pOrgCfg.config
-    let mbClassName = lookup booking.providerId walletPOCfg.className
-    whenJust mbClassName $ \className -> do
-      fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
-        let serviceName = DEMSC.WalletService GW.GoogleWallet
-        let mId = booking'.merchantId
-        let mocId' = booking'.merchantOperatingCityId
-        serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
-        transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
-        url <- mkGoogleWalletLink serviceAccount transitObjects'
-        void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
-  -- Last, after everything that can throw: a throw above returns Left to the direct confirm flow,
-  -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
-  when (FRFSPassOverride.fullyCoveredByPass booking) $
-    whenJust mbJourneyId $ \journeyId ->
-      void $
-        withTryCatch "onConfirm:markJourneyPaid" $ do
-          (_, _, allCovered) <- FRFSUtils.journeyFullyPassCovered booking
-          when allCovered $ do
-            QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing
-            mbJourney <- QJourney.findByPrimaryKey journeyId
-            whenJust mbJourney $ \journey ->
-              when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $
-                QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
-  return ()
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
+    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
+  overCap <-
+    if booking.status == Booking.CONFIRMED
+      then pure False
+      else
+        withTryCatch
+          "onConfirm:recordBookedTrip"
+          ( do
+              mbApplied <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+              case (,) <$> booking.overrideAppliedEntityId <*> mbApplied of
+                Nothing -> pure False
+                Just (entityId, (_, appliedPass)) -> do
+                  mbEnd <- case (booking.tripId, booking.routeCode) of
+                    (Just tripId, Just routeCode) -> FRFSUtils.getScheduledTripEndTime tripId routeCode booking.toStationCode integratedBPPConfig
+                    _ -> pure Nothing
+                  case ((,) <$> booking.startTime <*> mbEnd) of
+                    Nothing -> do
+                      logInfo $ "FRFSPassOverride: no resolvable trip window, overlapping-booking cap not claimed bookingId=" <> booking.id.getId
+                      pure False
+                    Just tripWindow ->
+                      FRFSPassOverride.recordAndDetectOverLimit person appliedPass (Id entityId) booking.id.getId ((.getId) <$> booking.parentBookingId) tripWindow
+          )
+          >>= \case
+            Right over -> pure over
+            Left err -> do
+              logError $ "FRFSPassOverride: could not record the booked window, cap not enforced for this booking bookingId=" <> booking.id.getId <> " error=" <> show err
+              pure False
+  if overCap
+    then do
+      logError $ "FRFSPassOverride: over-cap at on_confirm, failing booking bookingId=" <> booking.id.getId
+      -- The whole teardown is wrapped, lookups included. The window this booking just claimed is
+      -- released only as a side effect of the BPP cancel inside onConfirmFailure (cancel ->
+      -- handleCancelledStatus -> releaseBookedTrip); nothing here releases it directly. So a throw in
+      -- the merchant-city or Beckn-config lookup below would skip the cancel and strand the claim,
+      -- blocking the rider until trip end + 6h over a booking that was itself refused.
+      teardownResult <-
+        withTryCatch
+          "onConfirm:overCapTeardown"
+          ( do
+              merchantOperatingCity <-
+                QMerchOpCity.findById booking.merchantOperatingCityId
+                  >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+              -- Bound to a name rather than written inline: nested one level deeper inside the teardown's
+              -- `do`, GHC parsed the inline `BecknConfigDimensions {...}` as a pattern and rejected the
+              -- record-dot fields in it ("Parse error in pattern: merchantOperatingCity.id.getId").
+              let becknDimensions =
+                    BecknConfigDimensions
+                      { merchantOperatingCityId = merchantOperatingCity.id.getId,
+                        merchantId = merchant.id.getId,
+                        domain = Just (show Spec.FRFS),
+                        vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType),
+                        becknProtocol = Nothing
+                      }
+              bapConfig <-
+                getOneConfig
+                  becknDimensions
+                  (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
+                  >>= fromMaybeM (InternalError "Beckn Config not found")
+              void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.CANCELLED booking.id
+              void $ withTryCatch "onConfirm:overCapReleaseSeats" (FRFSCancel.releaseSeatsIfHeld booking quoteCategories)
+              -- Bound with `let` rather than written inline, matching the form used elsewhere in this
+              -- module: as a statement of this `do` the record update parses as a construction applied to
+              -- `booking` ("Not a record constructor: booking").
+              let confirmedBooking = booking {Booking.status = Booking.CONFIRMED}
+              onConfirmFailure bapConfig confirmedBooking
+          )
+      case teardownResult of
+        Right () -> pure ()
+        Left err -> do
+          -- The cancel never ran, so nothing gave the window back. Do it here.
+          whenJust booking.overrideAppliedEntityId $ \entityId ->
+            void . withTryCatch "onConfirm:overCapReleaseWindow" $
+              FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
+                (fromMaybe booking.createdAt booking.startTime)
+          logError $ "FRFSPassOverride: over-cap teardown did not complete bookingId=" <> booking.id.getId <> " error=" <> show err
+    else do
+      -- Everything below can throw (buildReconTable's station and config lookups, the wallet block's
+      -- PartnerOrgConfigNotFound). A throw here returns Left to the direct confirm flow, which marks the
+      -- booking FAILED -- but the overlapping-booking window was already claimed above, and no failure
+      -- path calls releaseBookedTrip: its only callers are cancel and reschedule. So the claim would
+      -- outlive the booking and block the rider until trip end + 6h, with no ticket to point at.
+      --
+      -- Releasing and rethrowing rather than reordering the claim: the over-cap branch has to run before
+      -- any of this work, so the claim cannot simply move below it.
+      --
+      -- Bound to a name and run UNWRAPPED when no pass applied. A booking with no override has no window
+      -- to leak, so there is nothing for the handler to do -- and every booking on the platform runs this
+      -- block, pass or not. Wrapping it unconditionally would put a catch/rethrow in the path of traffic
+      -- this feature is not supposed to touch at all. Same instructions either way; only the pass case
+      -- gets the handler.
+      let postRecordWork = do
+            -- Update journey expiry time based on maximum ticket validity using the created tickets
+            whenJust mbJourneyId $ \journeyId -> do
+              QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
+            recordStatsResult <-
+              withTryCatch "onConfirm:recordPersonPTStats" $ do
+                purchaseEvent <-
+                  SPUS.mkPurchaseEvent
+                    person
+                    (Just booking.vehicleType)
+                    booking.serviceTierType
+                    DPUS.TICKET
+                    Nothing
+                    (Just fareParameters.totalQuantity)
+                    booking.merchantId
+                    booking.merchantOperatingCityId
+                SPUS.recordPurchase purchaseEvent
+            case recordStatsResult of
+              Right () -> pure ()
+              Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
+            mRiderNumber <- mapM ENC.decrypt person.mobileNumber
+            buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
+            void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
+            unless (isJust booking.parentBookingId) $
+              void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
+            void $ CQP.clearPSCache booking.riderId
+            whenJust booking.partnerOrgId $ \pOrgId -> do
+              walletPOCfg <- do
+                pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
+                DPOC.getWalletClassNameConfig pOrgCfg.config
+              let mbClassName = lookup booking.providerId walletPOCfg.className
+              whenJust mbClassName $ \className -> do
+                fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
+                  let serviceName = DEMSC.WalletService GW.GoogleWallet
+                  let mId = booking'.merchantId
+                  let mocId' = booking'.merchantOperatingCityId
+                  serviceAccount <- GWSA.getserviceAccount mId mocId' serviceName
+                  transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
+                  url <- mkGoogleWalletLink serviceAccount transitObjects'
+                  void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+            -- Last, after everything that can throw: a throw above returns Left to the direct confirm flow,
+            -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
+            when (FRFSPassOverride.fullyCoveredByPass booking) $
+              whenJust mbJourneyId $ \journeyId ->
+                void $
+                  withTryCatch "onConfirm:markJourneyPaid" $ do
+                    (_, _, allCovered) <- FRFSUtils.journeyFullyPassCovered booking
+                    when allCovered $ do
+                      QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing
+                      mbJourney <- QJourney.findByPrimaryKey journeyId
+                      whenJust mbJourney $ \journey ->
+                        when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $
+                          QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
+            return ()
+      case booking.overrideAppliedEntityId of
+        -- No pass, no window, nothing to release: run exactly the instructions this path ran before.
+        Nothing -> postRecordWork
+        Just entityId ->
+          withTryCatch "onConfirm:postRecordWork" postRecordWork >>= \case
+            Right () -> pure ()
+            Left err -> do
+              -- Give the window back before the caller writes FAILED, then rethrow so the booking still
+              -- fails exactly as it did: this changes what is left behind, not the outcome.
+              void . withTryCatch "onConfirm:releaseWindowOnPostRecordFailure" $
+                FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
+                  (fromMaybe booking.createdAt booking.startTime)
+              logError $ "FRFSPassOverride: released the booked window after a post-record failure bookingId=" <> booking.id.getId <> " error=" <> show err
+              throwM err
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
       whenJust booking'.partnerOrgId $ \pOrgId -> do
