@@ -30,6 +30,3 @@ apis:
         type: NotifyRideInfoRequest
       response:
         type: APISuccess
-      migrate:
-        endpoint: NotifyRideInfo NotifyRideInfoEndpoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS NOTIFYRIDEINFO

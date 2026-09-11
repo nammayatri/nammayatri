@@ -24,8 +24,5 @@ apis:
         type: CancelReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: CancelAPI RideBookingCancelEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS CANCEL_BOOKING
 
 types: {}

@@ -16,7 +16,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: CreateCommunicationResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION CREATE_COMMUNICATION
   - GET:
       endpoint: /list
       mandatoryQuery:
@@ -33,7 +32,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: CommunicationListResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION LIST_COMMUNICATION
   - GET:
       endpoint: /{communicationId}/info
       params:
@@ -41,7 +39,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: CommunicationInfoResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION INFO_COMMUNICATION
   - POST:
       endpoint: /{communicationId}/send
       params:
@@ -51,7 +48,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION SEND_COMMUNICATION
   - PUT:
       endpoint: /{communicationId}/edit
       params:
@@ -61,7 +57,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION EDIT_COMMUNICATION
   - DELETE:
       endpoint: /{communicationId}/delete
       params:
@@ -69,7 +64,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION DELETE_COMMUNICATION
   - GET:
       endpoint: /{communicationId}/deliveryStatus
       params:
@@ -82,7 +76,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: DeliveryStatusResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION DELIVERY_STATUS_COMMUNICATION
   - GET:
       endpoint: /recipients
       query:
@@ -96,7 +89,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: RecipientsResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION RECIPIENTS_COMMUNICATION
   - GET:
       endpoint: /template
       mandatoryQuery:
@@ -105,7 +97,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: CommunicationTemplateResponse
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION GET_COMMUNICATION_TEMPLATE
 
 types:
   CommunicationMessageStatus:

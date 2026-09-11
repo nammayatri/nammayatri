@@ -16,10 +16,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: UploadFileResponse
-      migrate:
-        endpoint: MessageAPI UploadFileEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
   - POST:
       endpoint: /addLink
       request:
@@ -27,10 +23,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: UploadFileResponse
-      migrate:
-        endpoint: MessageAPI AddLinkEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
   - POST:
       endpoint: /add
       request:
@@ -38,10 +30,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: AddMessageResponse
-      migrate:
-        endpoint: MessageAPI AddMessageEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
   - POST:
       endpoint: /send
       multipart:
@@ -49,10 +37,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      migrate:
-        endpoint: MessageAPI SendMessageEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
   - POST:
       endpoint: /edit
       request:
@@ -68,8 +52,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: MessageListResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
   - GET:
       endpoint: /{messageId}/info
       params:
@@ -77,8 +59,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: MessageInfoResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
   - GET:
       endpoint: /{messageId}/deliveryInfo
       params:
@@ -86,8 +66,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: MessageDeliveryInfoResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
   - GET:
       endpoint: /{messageId}/receiverList
       params:
@@ -100,8 +78,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: MessageReceiverListResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
 types:
   AddLinkAsMedia:
     - url: Text

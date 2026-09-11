@@ -63,8 +63,6 @@ apis:
         - offset: Int
       response:
         type: SearchRequestsRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SEARCH_REQUESTS LIST_SEARCH_REQUESTS
   - GET:
       endpoint: /info
       auth: ApiAuthV2

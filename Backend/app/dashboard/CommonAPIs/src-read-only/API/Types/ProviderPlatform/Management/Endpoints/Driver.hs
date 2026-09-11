@@ -958,7 +958,7 @@ type PostDriverAssociationChangeHelper =
   )
 
 data DriverAPIs = DriverAPIs
-  { getDriverDocumentsInfo :: (EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes),
+  { getDriverDocumentsInfo :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes,
     postDriverPersonNumbers :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonIdsReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     postDriverUpdateTagBulk :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.UpdateTagBulkReq) -> EulerHS.Types.EulerClient [Dashboard.Common.UpdateTagBulkRes],
     postDriverDriverDataDecryption :: [DriverEncDataReq] -> EulerHS.Types.EulerClient [DriverDecDataResp],
@@ -999,11 +999,10 @@ data DriverAPIs = DriverAPIs
     postDriverUpdateVehicleManufacturing :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateVehicleManufacturingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverVehicleAppendSelectedServiceTiers :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AppendSelectedServiceTiersReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverVehicleUpsertSelectedServiceTiers ::
-      ( ( Data.ByteString.Lazy.ByteString,
-          Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
-        ) ->
-        EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
-      ),
+      ( Data.ByteString.Lazy.ByteString,
+        Dashboard.Common.Driver.UpsertDriverServiceTiersCsvReq
+      ) ->
+      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [SecurityDepositDfStatusRes],
     getDriverPanAadharSelfieDetailsList :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [PanAadharSelfieDetailsListResp],

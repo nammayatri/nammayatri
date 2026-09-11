@@ -18,8 +18,6 @@ apis:
         customerId: Id Person
       response:
         type: ProfileRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PERSONDETAIL
   - POST:  # CustomerUpdateProfileAPI
       endpoint:  /update/{customerId}
       auth: ApiAuthV2
@@ -29,8 +27,5 @@ apis:
         type: UpdateProfileReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS UPDATEPERSON
-        endpoint: ProfileAPI UpdatePersonEndPoint
 
 types: {}

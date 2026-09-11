@@ -21,8 +21,6 @@ apis:
         - to: UTCTime
       response:
         type: IssueListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS LIST_ISSUE
   - POST:  # TicketStatusCallBackAPI
       endpoint: /kapture/ticketStatus
       name: PostIssueListTicketStatusCallBack
@@ -31,8 +29,6 @@ apis:
         type: Value
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
 
 types:
   IssueListRes:

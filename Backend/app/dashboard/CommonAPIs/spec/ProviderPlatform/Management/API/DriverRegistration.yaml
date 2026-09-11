@@ -37,8 +37,6 @@ apis:
         docType: DocumentType
       response:
         type: DocumentsListResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
   - GET: # GetDocumentAPI
       endpoint: /getDocument/{entityId}
       auth: ApiAuthV2
@@ -49,8 +47,6 @@ apis:
         entityType: EntityType
       response:
         type: GetDocumentResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
   - POST: # GenerateTempAppCodeAPI
       endpoint: /{driverId}/generateTempAppCode
       auth: ApiAuthV2
@@ -79,10 +75,6 @@ apis:
         type: UploadDocumentReq
       response:
         type: UploadDocumentResp
-      migrate:
-        endpoint: DriverRegistrationAPI UploadDocumentEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
   - POST: # RegisterDLAPI
       endpoint: /{driverId}/register/dl
       auth: ApiAuthV2
@@ -92,10 +84,6 @@ apis:
         type: RegisterDLReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverRegistrationAPI RegisterDLEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
   - POST:
       endpoint: /{driverId}/verify/bankAccount
       auth: ApiAuthV2
@@ -155,10 +143,6 @@ apis:
         type: RegisterRCReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverRegistrationAPI RegisterRCEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
   - POST: # RegisterAadhaarAPI
       endpoint: /{driverId}/register/aadhaar
       auth: ApiAuthV2
@@ -177,10 +161,6 @@ apis:
         type: GenerateAadhaarOtpReq
       response:
         type: GenerateAadhaarOtpRes
-      migrate:
-        endpoint: DriverRegistrationAPI GenerateAadhaarOtpEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GENERATE_AADHAAR_OTP
   - POST: # VerifyAadhaarOtpAPI
       endpoint: /{driverId}/register/verifyAadhaarOtp
       auth: ApiAuthV2
@@ -190,10 +170,6 @@ apis:
         type: VerifyAadhaarOtpReq
       response:
         type: VerifyAadhaarOtpRes
-      migrate:
-        endpoint: DriverRegistrationAPI VerifyAadhaarOtpEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS VERIFY_AADHAAR_OTP
   - GET: # UnderReviewDriversListAPI
       endpoint: /underReviewDrivers
       auth: ApiAuthV2
@@ -204,8 +180,6 @@ apis:
         - offset: Int
       response:
         type: UnderReviewDriversListResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNDER_REVIEW_DRIVERS_LIST
   - GET: # DriverDocumentInfoAPI
       endpoint: /{driverId}/documents/info
       auth: ApiAuthV2
@@ -213,8 +187,6 @@ apis:
         driverId: Id Driver
       response:
         type: StatusRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
   - GET: # VerificationStatusAPI
       endpoint: /verificationStatus
       auth: ApiAuthV2
@@ -252,10 +224,6 @@ apis:
         type: UpdateDocumentRequest
       response:
         type: UpdateDocumentResp
-      migrate:
-        endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
   - POST: # CreateCommonDocumentAPI
       endpoint: /{driverId}/documents/common
       auth: ApiAuthV2
