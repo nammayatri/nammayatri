@@ -12,6 +12,7 @@ import Tools.Beam.UtilsTH
 -- mkHttpInstancesForEnum generates the Servant query-param / path-param instances.
 data PreferenceType
   = LOCATION_PICKUP
+  | NOTIFICATION_PREFERENCE
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 instance ToJSON PreferenceType where
@@ -32,6 +33,7 @@ $(mkHttpInstancesForEnum ''PreferenceType)
 -- lets us decode the right constructor without a separate type column.
 data PreferenceData
   = LocationPickupPreference LocationPickupData
+  | NotificationPreference NotificationPreferenceData
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- Holds everything needed to auto-fill a pickup point for a given source location.
@@ -48,3 +50,28 @@ data LocationPickupData = LocationPickupData
     pickupAddressSubtitle :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- osPermissionGranted reflects the client's last-reported OS-level push permission
+-- state. It is informational only — the send-path gate in Tools.Notifications checks
+-- only enabledCategories, since a denied OS permission already blocks delivery at the
+-- FCM/APNs layer and doesn't need a second enforcement point here.
+data NotificationPreferenceData = NotificationPreferenceData
+  { osPermissionGranted :: Bool,
+    enabledCategories :: [NotificationCategory]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- User-facing grouping shown in the notification-permission popup. Deliberately kept
+-- separate from Kernel.External.Notification.Interface.Types.Category (an external,
+-- FCM-level enum we don't own) — every MerchantPushNotification.key is mapped to one
+-- of these via MerchantPushNotification.notificationCategory.
+data NotificationCategory
+  = RIDE_RELATED
+  | PROMOTIONAL
+  | OFFERS
+  | PAYMENTS
+  | SAFETY
+  | ACCOUNT
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''NotificationCategory)

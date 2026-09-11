@@ -27,6 +27,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.Extra.RiderPreferences as RP
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
@@ -80,6 +81,7 @@ import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.RiderPreferences as CQRP
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -196,28 +198,57 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
   when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
   whenJust mbMerchantPN \merchantPN -> do
     when (merchantPN.shouldTrigger) $ do
-      let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
-      notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
-      notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
-      let title = buildTemplate dynamicTemplateParams merchantPN.title
-          body = buildTemplate dynamicTemplateParams merchantPN.body
-          notificationData =
-            Notification.NotificationReq
-              { category = merchantPN.fcmNotificationType,
-                subCategory = notiData.subCategory,
-                showNotification = notiData.showType,
-                messagePriority = notiData.priority,
-                entity = entity,
-                body = body,
-                title = title,
-                auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
-                sound = notificationSound,
-                ttl = notiData.ttl,
-                dynamicParams = dynamicParams,
-                overlayNotificationData = Nothing
-              }
-      --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
+      isCategoryAllowed <- isNotificationCategoryAllowed person.id merchantOperatingCityId merchantPN.notificationCategory
+      if not isCategoryAllowed
+        then logInfo $ "NOTIF_SUPPRESSED_BY_PREFERENCE - " <> notiData.notificationKey
+        else do
+          let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
+          notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
+          notificationSound <- getNotificationSound notiData.soundTag notificationSoundFromConfig
+          let title = buildTemplate dynamicTemplateParams merchantPN.title
+              body = buildTemplate dynamicTemplateParams merchantPN.body
+              notificationData =
+                Notification.NotificationReq
+                  { category = merchantPN.fcmNotificationType,
+                    subCategory = notiData.subCategory,
+                    showNotification = notiData.showType,
+                    messagePriority = notiData.priority,
+                    entity = entity,
+                    body = body,
+                    title = title,
+                    auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
+                    sound = notificationSound,
+                    ttl = notiData.ttl,
+                    dynamicParams = dynamicParams,
+                    overlayNotificationData = Nothing
+                  }
+          --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
+          notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
+
+-- Rider-level opt-out gate. A rider with no NOTIFICATION_PREFERENCE row has never
+-- responded to the in-app permission popup (legacy rider, or opted-in-by-default),
+-- so every category is allowed — this keeps existing riders unaffected.
+--
+-- A category listed in RiderConfig.alwaysAllowedNotificationCategories (default
+-- RIDE_RELATED, SAFETY) is sent regardless of what the rider chose — for
+-- notifications that drive in-app behaviour (state sync, live tracking, etc.) rather
+-- than being purely informational, where suppressing the send would break the app,
+-- not just annoy the rider. Checked before the rider's own preference, and a missing
+-- RiderConfig row (lookup failure) is treated as "no override", not as an error —
+-- this gate must never throw and block a send outright over a config-fetch hiccup.
+isNotificationCategoryAllowed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> RP.NotificationCategory -> m Bool
+isNotificationCategoryAllowed personId merchantOperatingCityId category = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  let alwaysAllowed = maybe False ((category `elem`) . (.alwaysAllowedNotificationCategories)) mbRiderConfig
+  if alwaysAllowed
+    then pure True
+    else do
+      mbPref <- CQRP.findNotificationPreferenceByRiderId personId
+      pure $ case mbPref of
+        Nothing -> True
+        Just pref -> case pref.preferenceData of
+          RP.NotificationPreference d -> category `elem` d.enabledCategories
+          RP.LocationPickupPreference _ -> True
 
 --------------------------------------------------------------------------------------------------
 
