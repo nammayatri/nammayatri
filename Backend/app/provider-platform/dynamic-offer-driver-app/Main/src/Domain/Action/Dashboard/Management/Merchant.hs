@@ -3448,6 +3448,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
       Rental _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
+      IntercityRental _ _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
       Ambulance _ -> unless (farePolicyType == FarePolicy.Ambulance) $ throwError $ InvalidRequest "Fare Policy Type not supported for ambulance"
       _ -> pure ()
 

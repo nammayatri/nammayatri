@@ -5130,7 +5130,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
           let scheduledBookingListLimit = 10
               limit = min scheduledBookingListLimit $ fromMaybe scheduledBookingListLimit mbLimit
               offset = fromMaybe 0 mbOffset
-              possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+              possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
           cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
           let allServiceTiers = nub $ (.serviceTierType) <$> cityServiceTiers

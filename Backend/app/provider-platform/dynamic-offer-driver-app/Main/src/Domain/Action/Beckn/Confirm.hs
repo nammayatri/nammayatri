@@ -327,9 +327,11 @@ validateRequest subscriber transporterId req now = do
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     Rental RideOtp -> getRideOtpQuoteDetails booking transporter
+    IntercityRental RideOtp _ -> getRideOtpQuoteDetails booking transporter
     RideShare RideOtp -> getRideOtpQuoteDetails booking transporter
     OneWay OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Rental OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    IntercityRental OnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
     RideShare OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     InterCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
     InterCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter

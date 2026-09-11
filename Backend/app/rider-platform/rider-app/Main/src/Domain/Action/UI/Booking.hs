@@ -49,6 +49,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.RideStatus as SRide
+import qualified Domain.Types.Trip as DTC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
@@ -769,8 +770,11 @@ validateStopReq booking isEdit loc merchant = do
 
   nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
   fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+  let isIntercityRental = maybe False DTC.isIntercityRentalTrip booking.tripCategory
   case (nearestCity, fromLocCity) of
-    (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
+    (Just nearest, Just source) ->
+      unless (isIntercityRental || nearest.currentCity.city == source.currentCity.city) $
+        throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
     _ -> throwError (InvalidRequest "Ride Unserviceable")
 
 buildLocation ::

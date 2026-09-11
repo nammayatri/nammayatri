@@ -188,6 +188,7 @@ createTripType (CrossCity _ _) = "CrossCity"
 createTripType (Ambulance _) = "Ambulance"
 createTripType (Delivery _) = "Delivery"
 createTripType (EasyBooking _) = "EasyBooking"
+createTripType (IntercityRental _ _) = "IntercityRental"
 
 -- Generates Redis key for hash set storage of scheduled bookings.
 -- Format: "ScheduledBookings:cityId:YYYY-MM-DD"

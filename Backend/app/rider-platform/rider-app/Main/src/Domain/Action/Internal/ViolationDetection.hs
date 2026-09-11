@@ -53,6 +53,7 @@ violationDetection ViolationDetectionReq {..} = do
             then do
               case booking.tripCategory of
                 Just (DTC.Rental _) -> logDebug $ "Skipping safety alert for rental ride with id" <> rideId.getId
+                Just (DTC.IntercityRental _ _) -> logDebug $ "Skipping safety alert for rental ride with id" <> rideId.getId
                 Just (DTC.InterCity _ _) -> logDebug $ "Skipping safety alert for intercity ride with id" <> rideId.getId
                 _ -> Notify.notifySafetyAlert booking (show $ Enums.RIDE_STOPPAGE)
             else do

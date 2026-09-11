@@ -98,6 +98,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
     formatMessageTransformer booking merchantShortId (title, body) = do
       let isRentalOrIntercity = case booking.tripCategory of
             DTC.Rental _ -> "Rental"
+            DTC.IntercityRental _ _ -> "Rental"
             DTC.InterCity _ _ -> "InterCity"
             _ -> ""
           driverPartnerName = case merchantShortId.getShortId of
