@@ -107,6 +107,9 @@ withDashboardType _ f = f (Proxy @'DefaultDashboard)
 isFleetOwner :: Person -> Bool
 isFleetOwner person = person.dashboardAccessType `elem` [Just DRole.FLEET_OWNER, Just DRole.RENTAL_FLEET_OWNER]
 
+isOperator :: Person -> Bool
+isOperator person = person.dashboardAccessType == Just DRole.DASHBOARD_OPERATOR
+
 isAdmin :: Person -> Bool
 isAdmin person = person.dashboardAccessType == Just DRole.DASHBOARD_ADMIN
 
