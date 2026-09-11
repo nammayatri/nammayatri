@@ -35,6 +35,7 @@ data OfferT f = OfferT
     title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validFrom :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

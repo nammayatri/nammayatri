@@ -39,6 +39,7 @@ postOfferCreate merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
+  validateValidityWindow req.validFrom req.validTill
   now <- getCurrentTime
   offerId <- generateGUID
   let offer =
@@ -54,6 +55,7 @@ postOfferCreate merchantShortId opCity req = do
             sponsoredBy = req.sponsoredBy,
             tnc = req.tnc,
             offerEligibilityJsonLogic = req.offerEligibilityJsonLogic,
+            validFrom = req.validFrom,
             validTill = req.validTill,
             currency = req.currency,
             isActive = True,
@@ -92,6 +94,7 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.sponsoredBy = req.sponsoredBy <|> offer.sponsoredBy,
             DOffer.tnc = req.tnc <|> offer.tnc,
             DOffer.offerEligibilityJsonLogic = req.offerEligibilityJsonLogic <|> offer.offerEligibilityJsonLogic,
+            DOffer.validFrom = req.validFrom <|> offer.validFrom,
             DOffer.validTill = req.validTill <|> offer.validTill,
             DOffer.isActive = fromMaybe offer.isActive req.isActive,
             DOffer.minimumAmount = req.minimumAmount <|> offer.minimumAmount,
@@ -101,6 +104,7 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.maxApplyCount = req.maxApplyCount <|> offer.maxApplyCount,
             DOffer.updatedAt = now
           }
+  validateValidityWindow updatedOffer.validFrom updatedOffer.validTill
   QOffer.updateByPrimaryKey updatedOffer
   pure Success
 
@@ -113,6 +117,11 @@ validateMaxApplyCount :: Maybe Int -> Flow ()
 validateMaxApplyCount mbMaxApplyCount =
   whenJust mbMaxApplyCount $ \maxApplyCount ->
     when (maxApplyCount < 1) $ throwError (InvalidRequest "maxApplyCount must be at least 1")
+
+validateValidityWindow :: Maybe UTCTime -> Maybe UTCTime -> Flow ()
+validateValidityWindow mbValidFrom mbValidTill =
+  when (fromMaybe False ((>=) <$> mbValidFrom <*> mbValidTill)) $
+    throwError (InvalidRequest "validFrom must be before validTill")
 
 getOfferList ::
   ShortId DM.Merchant ->
@@ -139,6 +148,7 @@ mkOfferResp offer =
       sponsoredBy = offer.sponsoredBy,
       tnc = offer.tnc,
       offerEligibilityJsonLogic = offer.offerEligibilityJsonLogic,
+      validFrom = offer.validFrom,
       validTill = offer.validTill,
       currency = offer.currency,
       isActive = offer.isActive,

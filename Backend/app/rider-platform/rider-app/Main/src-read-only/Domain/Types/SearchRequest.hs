@@ -51,6 +51,7 @@ data SearchRequest = SearchRequest
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    discoveredDropSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discoveredSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

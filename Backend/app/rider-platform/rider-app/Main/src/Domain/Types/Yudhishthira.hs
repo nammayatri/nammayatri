@@ -163,7 +163,9 @@ data SearchRequestData = SearchRequestData
     isMultimodalSearch :: Maybe Bool,
     multimodalSearchRequestId :: Maybe Text,
     fromSpecialLocationId :: Maybe Text,
-    toSpecialLocationId :: Maybe Text
+    toSpecialLocationId :: Maybe Text,
+    discoveredSpecialLocationId :: Maybe Text,
+    discoveredDropSpecialLocationId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

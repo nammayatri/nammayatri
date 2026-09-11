@@ -1207,7 +1207,7 @@ eligibleDomainOffers ::
 eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider = do
   now <- getCurrentTime
   allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
-  let activeOffers = filter (\offer -> maybe True (> now) offer.validTill) allActiveOffers
+  let activeOffers = filter (\offer -> maybe True (<= now) offer.validFrom && maybe True (> now) offer.validTill) allActiveOffers
   catMaybes <$> forM activeOffers (\offer -> offersEligibilityFlow offer mbDomainContext mbRider now)
 
 listDomainOffers ::
