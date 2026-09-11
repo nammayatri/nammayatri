@@ -33,6 +33,7 @@ data Offer = Offer
     title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
+    validFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)

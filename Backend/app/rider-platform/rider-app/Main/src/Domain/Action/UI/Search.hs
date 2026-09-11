@@ -415,7 +415,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   whenJust numberOfLuggages $ \n ->
     whenJust riderCfg.maxNumberOfLuggages $ \maxN ->
       when (n > maxN) $ throwError (InvalidRequest $ "Number of luggages exceeds maximum allowed: " <> show maxN)
-  (RouteDetails {..}, mbDiscoveredSpecialLocId) <- withTimeAPI "rideSearch" "getRouteDetails" $ getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
+  (RouteDetails {..}, mbDiscoveredSpecialLocId, mbDiscoveredDropSpecialLocId) <- withTimeAPI "rideSearch" "getRouteDetails" $ getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- withTimeAPI "rideSearch" "buildFromLocation" $ buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- withTimeAPI "rideSearch" "buildStopLocations" $ buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let enrichedOrigin = SearchReqLocation {gps = origin.gps, address = fromLocation.address}
@@ -468,6 +468,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       fromSpecialLocationId
       toSpecialLocationId
       mbDiscoveredSpecialLocId
+      mbDiscoveredDropSpecialLocId
       mbEnableSyncSearch
       mbIsWhatsappRequest
       (Just routeCacheUsed)
@@ -619,7 +620,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       RiderConfig ->
       Maybe Bool ->
       SearchReq ->
-      m (RouteDetails, Maybe Text)
+      m (RouteDetails, Maybe Text, Maybe Text)
     getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
       OneWaySearch oneWayReq -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute oneWayReq.shouldCacheRoute
       AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
@@ -638,6 +639,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 multipleRoutes = Nothing,
                 routeCacheUsed = False
               },
+            Nothing,
             Nothing
           )
       FixedRouteSearch _ -> do
@@ -651,6 +653,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 multipleRoutes = Nothing,
                 routeCacheUsed = False
               },
+            Nothing,
             Nothing
           )
 
@@ -666,7 +669,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       Maybe Bool ->
       Maybe Bool ->
       Maybe Bool ->
-      m (RouteDetails, Maybe Text)
+      m (RouteDetails, Maybe Text, Maybe Text)
     processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderConfig isMeterRide mbEnforceTollRoute mbShouldCacheRoute = do
       destinationLatLong <- case lastMaybe stopsLatLong of
         Just latLong -> return (Just latLong)
@@ -680,21 +683,25 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             Just latLong -> return [sourceLatLong, latLong, sourceLatLong]
             Nothing -> throwError (InvalidRequest "Destination is required for Round Trips ")
           else return $ sourceLatLong : stopsLatLong
-      calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest_ mbShouldCacheRoute
+      (routeDetails, mbDiscoveredSpecialLocId) <- calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest_ mbShouldCacheRoute
+      mbDiscoveredDropSpecialLocId <- case destinationLatLong of
+        Just dropLatLong -> fmap (.id.getId) <$> QSpecialLocation.findSpecialLocationByLatLong' dropLatLong
+        Nothing -> pure Nothing
+      pure (routeDetails, mbDiscoveredSpecialLocId, mbDiscoveredDropSpecialLocId)
 
-    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text)
+    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text, Maybe Text)
     processRentalSearch person rentalReq stopsLatLong originCity = do
       case stopsLatLong of
-        [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing)
+        [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing, Nothing)
         (stop : _) -> do
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
-          return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing)
+          return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing, Nothing)
 
     -- No destination, no rider-given distance/duration estimate at all — the quote shown
     -- will just be the base fare from the regular (Progressive) fare policy; the real fare
     -- gets computed from actual GPS distance at end-ride.
-    processEasyBookingSearch :: SearchRequestFlow m r => DPerson.Person -> EasyBookingSearchReq -> Context.City -> m (RouteDetails, Maybe Text)
+    processEasyBookingSearch :: SearchRequestFlow m r => DPerson.Person -> EasyBookingSearchReq -> Context.City -> m (RouteDetails, Maybe Text, Maybe Text)
     processEasyBookingSearch _person _easyBookingReq _originCity =
       return
         ( RouteDetails
@@ -706,6 +713,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
               multipleRoutes = Nothing,
               routeCacheUsed = False
             },
+          Nothing,
           Nothing
         )
 
@@ -769,11 +777,12 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId discoveredDropSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE

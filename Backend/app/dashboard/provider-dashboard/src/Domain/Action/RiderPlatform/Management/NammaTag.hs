@@ -22,6 +22,7 @@ module Domain.Action.RiderPlatform.Management.NammaTag
     getNammaTagAppDynamicLogicGetDomainSchema,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
+    postNammaTagBulkUpdateCustomerTag,
     postNammaTagConfigPilotGetVersion,
     postNammaTagConfigPilotGetConfig,
     postNammaTagConfigPilotCreateUiConfig,
@@ -45,6 +46,7 @@ module Domain.Action.RiderPlatform.Management.NammaTag
 where
 
 import qualified API.Client.RiderPlatform.Management
+import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified Dashboard.Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
@@ -280,3 +282,9 @@ getNammaTagAppDynamicLogicExperimentGroups :: (Kernel.Types.Id.ShortId Domain.Ty
 getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity apiTokenInfo domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicExperimentGroups) domain
+
+postNammaTagBulkUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagReq -> Environment.Flow API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagRes)
+postNammaTagBulkUpdateCustomerTag merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagBulkUpdateCustomerTag) req)

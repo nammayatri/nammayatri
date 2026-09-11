@@ -69,6 +69,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - currency: Currency
     - minimumAmount: Maybe HighPrecMoney
@@ -86,6 +87,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - isActive: Maybe Bool
     - minimumAmount: Maybe HighPrecMoney
@@ -107,6 +109,7 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - currency: Currency
     - isActive: Bool

@@ -124,7 +124,11 @@ data OfferEligibilityInput = OfferEligibilityInput
     deviceOfferStats :: [DOfferStats.OfferStats],
     personDailyOfferStats :: Maybe DPDOS.PersonDailyOfferStats,
     personStats :: Maybe DPS.PersonStats,
-    serviceTierType :: Maybe Text
+    serviceTierType :: Maybe Text,
+    searchReq :: Maybe Y.SearchRequestData,
+    hasTakenValidRide :: Bool,
+    totalRidesCount :: Maybe Int,
+    personTags :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -181,7 +185,11 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             deviceOfferStats = deviceOfferStats,
                             personDailyOfferStats = mbPersonDailyOfferStats,
                             personStats = mbPersonStats,
-                            serviceTierType = mbServiceTierType
+                            serviceTierType = mbServiceTierType,
+                            searchReq = Nothing,
+                            hasTakenValidRide = person.hasTakenValidRide,
+                            totalRidesCount = person.totalRidesCount,
+                            personTags = offerEligibilityTags person.customerNammaTags
                           }
               DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
         DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
@@ -424,6 +432,9 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx mb
 autoApplyOfferTagName :: Text
 autoApplyOfferTagName = "AutoApplyOffer"
 
+offerEligibilityTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
+offerEligibilityTags = maybe [] (map ((.getTagNameValue) . LYTUtils.removeTagExpiry))
+
 getAutoApplyOfferCodes :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
 getAutoApplyOfferCodes mbTags = do
   validTags <- LYTUtils.filterExpiredTags (fromMaybe [] mbTags)
@@ -618,6 +629,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
+  let mbSearchReqData = mkSearchRequestData <$> mbSearchReq
   productOffers <-
     if useDomainOffers
       then do
@@ -648,13 +660,16 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       deviceOfferStats = deviceOfferStats,
                       personDailyOfferStats = mbPersonDailyOfferStats,
                       personStats = mbPersonStats,
-                      serviceTierType = Nothing
+                      serviceTierType = Nothing,
+                      searchReq = mbSearchReqData,
+                      hasTakenValidRide = person.hasTakenValidRide,
+                      totalRidesCount = person.totalRidesCount,
+                      personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
         offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
             language = fromMaybe ENGLISH person.language
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
@@ -670,7 +685,6 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
             mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)
