@@ -25,6 +25,7 @@ import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DriverInfo
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified DriverTrackingHealthCheck.API as HC
+import qualified DriverTrackingHealthCheck.Event as Event
 import Environment (Flow, HealthCheckAppCfg)
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -33,7 +34,9 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Service
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Processor.LocationUpdate.Types (DriverIdTokenKey)
+import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as SQP
 import "dynamic-offer-driver-app" Tools.Notifications
@@ -74,15 +77,30 @@ driverDevicePingService driverId fcmNofificationSendCount = do
         Just count | count > fcmNofificationSendCount -> do
           Redis.del (redisKey driverId)
           pure $ Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId
-        _ -> Redis.incr (redisKey driverId) >> Redis.expire (redisKey driverId) 86400 >> pingDriver driver >> pure Nothing
+        _ -> do
+          count <- Redis.incr (redisKey driverId)
+          Redis.expire (redisKey driverId) 86400
+          pingDriver driver count
+          pure Nothing
   where
-    pingDriver :: DP.Person -> Flow ()
-    pingDriver driver = do
+    pingDriver :: DP.Person -> Integer -> Flow ()
+    pingDriver driver count = do
       DI.findByPrimaryKey (Id driverId) >>= \case
         Nothing -> log ERROR ("Driver information not found: " <> driverId)
         Just driverInformation ->
           case driver.deviceToken of
-            Just token | driverInformation.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT] -> notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
+            Just token | driverInformation.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT] -> do
+              now <- getCurrentTime
+              mbTransporterConfig <- getConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing
+              when (maybe False (== Just True) ((.enableDriverHealthCheckDebug) <$> mbTransporterConfig)) $
+                fork "push health check ping event" $
+                  Event.pushHealthCheckPingEvent
+                    driverId
+                    now
+                    (driver.merchantOperatingCityId.getId)
+                    (fromIntegral count)
+                    (show driverInformation.mode)
+              notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
             Just _ -> log INFO $ "Driver went offline " <> show driver.id
             Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
 
