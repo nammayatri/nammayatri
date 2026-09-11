@@ -79,18 +79,9 @@ apis:
         - initiatedBy: InitiatedBy
       response:
         type: FleetBankAccountLinkResp
-      helperApi:
-        - POST:
-            endpoint: /register/bankAccount/link
-            auth: ApiAuthV2
-            query:
-              - fleetOwnerId: Text
-              - paymentMode: PaymentMode
-              - initiatedBy: InitiatedBy
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: FleetBankAccountLinkResp
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET:
       endpoint: /register/bankAccount/status
@@ -100,17 +91,9 @@ apis:
         - forceRefresh: Bool
       response:
         type: FleetBankAccountResp
-      helperApi:
-        - GET:
-            endpoint: /register/bankAccount/status
-            auth: ApiAuthV2
-            query:
-              - fleetOwnerId: Text
-              - forceRefresh: Bool
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: FleetBankAccountResp
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - PUT:
       endpoint: /profile/language
@@ -120,16 +103,9 @@ apis:
         type: FleetOwnerUpdateLanguageReq
       response:
         type: APISuccess
-      helperApi:
-        - PUT:
-            endpoint: /profile/language
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            request:
-              type: FleetOwnerUpdateLanguageReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET:
       endpoint: /profile/language
@@ -137,14 +113,9 @@ apis:
       auth: ApiAuthV2
       response:
         type: FleetOwnerLanguageRes
-      helperApi:
-        - GET:
-            endpoint: /profile/language
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: FleetOwnerLanguageRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
 types:
   FleetOwnerLoginReqV2:

@@ -315,75 +315,45 @@ apis:
         type: TdsReimbursementRequestSubmitRes
       migrate:
         capability: finance.tds_reimbursement.write
-      helperApi:
-        - POST:
-            endpoint: /tdsReimbursement/request/submit
-            auth: ApiAuthV2
-            request:
-              type: TdsReimbursementRequestSubmitReq
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: TdsReimbursementRequestSubmitRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementStatusAPI
       endpoint: /tdsReimbursement/status
       mandatoryQuery:
-        quarter: TdsReimbursementQuarter
-        assessmentYear: Text
+        - quarter: TdsReimbursementQuarter
+        - assessmentYear: Text
       auth: ApiAuthV2
       response:
         type: TdsReimbursementStatusRes
       migrate:
         capability: finance.tds_reimbursement.read
-      helperApi:
-        - GET:
-            endpoint: /tdsReimbursement/status
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - quarter: TdsReimbursementQuarter
-              - assessmentYear: Text
-              - requestorId: Text
-            response:
-              type: TdsReimbursementStatusRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementListAPI
       endpoint: /tdsReimbursement/list
       query:
-        limit: Int
-        offset: Int
-        fleetOwnerId: Text
-        tanNumber: Text
-        quarter: TdsReimbursementQuarter
-        assessmentYear: Text
-        excludeCurrentAdminMaker: Bool
-        status: TdsReimbursementStatus
-        from: UTCTime
-        to: UTCTime
+        - limit: Int
+        - offset: Int
+        - fleetOwnerId: Text
+        - tanNumber: Text
+        - quarter: TdsReimbursementQuarter
+        - assessmentYear: Text
+        - excludeCurrentAdminMaker: Bool
+        - status: TdsReimbursementStatus
+        - from: UTCTime
+        - to: UTCTime
       auth: ApiAuthV2
       response:
         type: TdsReimbursementListRes
       migrate:
         capability: finance.tds_reimbursement.read
-      helperApi:
-        - GET:
-            endpoint: /tdsReimbursement/list
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - fleetOwnerId: Text
-              - tanNumber: Text
-              - quarter: TdsReimbursementQuarter
-              - assessmentYear: Text
-              - excludeCurrentAdminMaker: Bool
-              - status: TdsReimbursementStatus
-              - from: UTCTime
-              - to: UTCTime
-            response:
-              type: TdsReimbursementListRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementDetailAPI
       endpoint: /tdsReimbursement/{requestId}
@@ -406,19 +376,10 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.tds_reimbursement.write
-      helperApi:
-        - POST:
-            endpoint: /tdsReimbursement/{requestId}/reject
-            params:
-              requestId: Id FinanceTdsReimbursementRequest
-            auth: ApiAuthV2
-            request:
-              type: TdsReimbursementRejectReq
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
 
 types:
   SubscriptionPurchaseStatus:
