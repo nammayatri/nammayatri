@@ -1141,7 +1141,8 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
           fromLocationAddress = Nothing,
           issuedToName = Nothing,
-          enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
+          enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+          buyerCounterpartyId = Nothing
         }
 
 unsupportedLedgerAdjustmentCategory ::

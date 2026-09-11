@@ -611,22 +611,6 @@ normaliseBuyerCounterpartyId raw =
         Nothing -> fromMaybe lowered (T.stripPrefix "http://" lowered)
    in T.dropWhileEnd (== '/') withoutScheme
 
--- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
-computeTdsRateReason :: Maybe DPanCard.DriverPanCard -> Bool -> Maybe TdsRateReason
-computeTdsRateReason mbPanCard hasCustomRate =
-  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panAadhaarLinked = maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
-   in Just $
-        if not hasValidPan
-          then NO_PAN
-          else
-            if hasCustomRate
-              then LDC_CERTIFICATE
-              else
-                if panAadhaarLinked
-                  then PAN_AADHAR_LINKAGE
-                  else PAN
-
 -- | Format a Stripe Address into a single text string for supplier_address on invoices.
 formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
