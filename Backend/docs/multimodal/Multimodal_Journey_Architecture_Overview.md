@@ -98,7 +98,7 @@ data MultimodalUserPreferences = MultimodalUserPreferences
 ### 2. **Redis-based Locking**
 ```haskell
 lockKey = "infoLock-" <> journeyId.getId
-Redis.withLockRedisAndReturnValue lockKey 60 $ do
+Redis.withWaitAndLockRedis lockKey 10 5000 $ do
   -- Critical section operations
 ```
 **Purpose**:

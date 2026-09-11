@@ -42,7 +42,7 @@ getIdentityInfo mbInfo driverInfo =
 driverIdentityInfoLockKey :: Id DP.Person -> Text
 driverIdentityInfoLockKey driverId = "driver_identity_info_upsert:" <> driverId.getId
 
--- Caller must run this inside `withLockRedis (driverIdentityInfoLockKey driverId)` with mbExisting read inside that lock.
+-- Caller must run this inside `withWaitAndLockRedis (driverIdentityInfoLockKey driverId)` with mbExisting read inside that lock.
 upsertDriverIdentityInfo ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Maybe DII.DriverIdentityInfo ->

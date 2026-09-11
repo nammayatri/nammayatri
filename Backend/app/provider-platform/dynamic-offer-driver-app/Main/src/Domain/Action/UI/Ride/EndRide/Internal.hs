@@ -343,7 +343,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     processEndRidePrepaidSubscription fare mbVC = do
       case ride.fleetOwnerId of
         Just fleetOwnerId -> do
-          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+          Redis.withWaitAndLockRedis (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 50000 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
             mbMetadata <- mkRideDebitAllocationMetadata counterpartyFleetOwner fleetOwnerId.getId DSP.FLEET_OWNER fare mbVC
             _ <-
@@ -376,7 +376,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                     }
             pure ()
         Nothing -> do
-          Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+          Redis.withWaitAndLockRedis (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 50000 $ do
             revenueAmount <- getPrepaidRevenueAmount fare mbVC
             mbMetadata <- mkRideDebitAllocationMetadata counterpartyDriver ride.driverId.getId DSP.DRIVER fare mbVC
             newBalance <-
@@ -533,7 +533,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               vatAbsorbed = rawTaxAmount - postTax
            in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 50000 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       resolvedIsOnline <-

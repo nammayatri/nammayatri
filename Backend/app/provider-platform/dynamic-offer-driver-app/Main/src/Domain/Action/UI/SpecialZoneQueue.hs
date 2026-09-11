@@ -190,7 +190,7 @@ postSpecialZoneQueueRequestRespond ::
   )
 postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) requestId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
-  Redis.withLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 $ do
+  Redis.withWaitAndLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 50000 $ do
     request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
     unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
     unless (request.status == Domain.Types.SpecialZoneQueueRequest.Active) $ throwError (InvalidRequest "Request is no longer active")
@@ -259,7 +259,7 @@ postSpecialZoneQueueRequestCancel ::
   )
 postSpecialZoneQueueRequestCancel (mbPersonId, _merchantId, _merchantOpCityId) requestId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
-  Redis.withLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 $ do
+  Redis.withWaitAndLockRedis (mkSpecialZoneQueueRequestLockKey requestId.getId) 10 50000 $ do
     request <- QSZQR.findByPrimaryKey requestId >>= fromMaybeM (InvalidRequest "Request not found")
     unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
     unless (request.status == Domain.Types.SpecialZoneQueueRequest.Accepted) $ throwError (InvalidRequest "Only accepted requests can be cancelled")

@@ -305,7 +305,7 @@ resolveDriverAddress personId merchantId merchantOpCityId person mbAadhaarAddres
     Nothing -> do
       mbResolved <- getDriverAddress personId person mbAadhaarAddress
       whenJust ((,) <$> mbResolved <*> mbDriverInfo) $ \(address, driverInfo) ->
-        Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+        Redis.withWaitAndLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 50000 $ do
           mbExisting <- QDII.findByDriverId personId
           void $
             DIInfo.upsertDriverIdentityInfo

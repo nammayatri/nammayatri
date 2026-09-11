@@ -1794,7 +1794,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
     handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity dailyPayoutCount = do
       case person.payoutVpa of
         Just vpa -> do
-          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey person.id.getId) 5 5 $ do
+          Redis.withWaitAndLockRedis (payoutProcessingLockKey person.id.getId) 5 50000 $ do
             case isReferredByPerson of
               True -> do
                 QPersonStats.updateReferralEarningsAndValidActivations (referredByPersonStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) (referredByPersonStats.validActivations + 1) person.id
@@ -1940,7 +1940,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
 
 updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
 updateAndNotifyDriverArrivalStatus booking ride newStatus =
-  Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
+  Redis.withWaitAndLockRedis (driverArrivalStatusLockKey ride.id.getId) 5 50000 $ do
     freshRide <- QRideLite.findByIdLite ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do

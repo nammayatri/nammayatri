@@ -786,7 +786,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
       then do
         -- Redis lock to prevent TOCTOU race on duplicate invoice check + create
         let lockKey = "tds-dedup-lock:" <> driverPersonId.getId
-        Redis.withLockRedisAndReturnValue lockKey 10 $ do
+        Redis.withWaitAndLockRedis lockKey 10 50000 $ do
           -- Check for duplicate invoiceIds across existing TDS documents for this driver
           tdsData' <- parseTDSCertificateData documentData
           let newInvoiceIds' = map (.invoiceId) tdsData'.tdsCertificates

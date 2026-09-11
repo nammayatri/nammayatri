@@ -1051,7 +1051,7 @@ getValidDocumentImage personId imageId_ expectedDocType = do
 
 getImageFromS3 :: OnboardingFlow m r => Image.Image -> m Text
 getImageFromS3 imageMetadata =
-  Redis.withLockRedisAndReturnValue (imageS3Lock imageMetadata.s3Path) 5 $
+  Redis.withWaitAndLockRedis (imageS3Lock imageMetadata.s3Path) 5 50000 $
     S3.get $ T.unpack imageMetadata.s3Path
 
 -- | Outcome of a server-side selfie-vs-document face match.

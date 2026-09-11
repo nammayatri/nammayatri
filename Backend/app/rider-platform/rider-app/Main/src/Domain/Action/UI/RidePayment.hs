@@ -126,7 +126,7 @@ getOrCreatePaymentCustomer person = withDynamicLogLevel "payment-mode" $ do
   logInfo $ "getOrCreatePaymentCustomer: " <> person.id.getId <> " " <> show person.paymentMode
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
       lockKey = "PaymentCustomer:Create:" <> person.id.getId <> ":" <> show paymentMode
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     -- Re-check inside the lock: another concurrent request may have already created it
     mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
     case mbCustomer of
@@ -277,7 +277,7 @@ postPaymentAddTip ::
     Environment.Flow APISuccess
   )
 postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
-  Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedis (SPayment.paymentJobExecLockKey rideId.getId) 10 50000 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -533,7 +533,7 @@ uploadRefundEvidence mbEvidence mbFileType mbContentType ctx rideId =
     imageExtension <- validateContentType mbFileType mbContentType
     path <- createPath ctx.booking.merchantId ctx.booking.riderId rideId ctx.refundPurpose imageExtension
     fork "S3 Put Image" do
-      Redis.withLockRedis (imageS3Lock path) 5 $
+      Redis.withWaitAndLockRedis (imageS3Lock path) 5 50000 $
         S3.put (Text.unpack path) evidence
     pure path
 
@@ -1099,7 +1099,7 @@ postPaymentRideCapture ::
 postPaymentRideCapture (mbPersonId, _merchantId) rideId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Redis.withWaitOnLockRedisWithExpiry (SPayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedis (SPayment.paymentJobExecLockKey rideId.getId) 10 50000 $ do
     pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
     when (null pendingEntries) $
       throwError $ InvalidRequest "No pending payment found for this ride"

@@ -364,7 +364,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
           fork "event_tracking: user_request_quotes" $
             ET.trackEvent searchRequest.merchantId searchRequest.merchantOperatingCityId (ET.UserRequestedQuotes (getId searchRequest.riderId) (length estimates))
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
-      Redis.withLockRedis lockKey 5 $ do
+      Redis.withWaitAndLockRedis lockKey 5 50000 $ do
         QEstimate.createMany estimates
         QQuote.createMany quotes
         QPFS.clearCache searchRequest.riderId

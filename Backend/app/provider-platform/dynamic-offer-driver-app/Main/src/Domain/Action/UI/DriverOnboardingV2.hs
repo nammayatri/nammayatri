@@ -628,7 +628,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
 
   -- Same lock checkAndAutoDisableWalletGatedTiers takes: a concurrent wallet-debit revoke must not
   -- interleave its strip between this read and these writes.
-  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey personId) 5 10 $ do
+  Redis.withWaitAndLockRedis (selectedServiceTiersLockKey personId) 5 50000 $ do
     vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
     -- Needs the driver's own tags for auto-accept opt-in; duplicates a fetch fetchVehicleTierForDriverWithUsageRestriction does internally, accepted for one cheap KV lookup.
@@ -954,7 +954,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
-      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withWaitAndLockRedis (SDO.imageS3Lock (imageMetadata.s3Path)) 5 50000 $
         S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m (Maybe Text)
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
@@ -1073,7 +1073,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
-      Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withWaitAndLockRedis (SDO.imageS3Lock (imageMetadata.s3Path)) 5 50000 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: TransporterConfig -> Text -> Flow Documents.VerificationStatus
     callIdfy transporterConfig personId = do

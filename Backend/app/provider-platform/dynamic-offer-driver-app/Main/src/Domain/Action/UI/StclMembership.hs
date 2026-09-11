@@ -252,7 +252,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
   -- check or both see "no PENDING" and create racing payment orders. The lock spans validation,
   -- resume-or-create decision, payment-order creation, and PENDING row insert so a second
   -- request enters with the new/resumed row already visible via findByDriverId.
-  Redis.withLockRedisAndReturnValue (QStclMembership.stclMembershipDriverLockKey driverId.getId) 60 $ do
+  Redis.withWaitAndLockRedis (QStclMembership.stclMembershipDriverLockKey driverId.getId) 60 50000 $ do
     existingApplications <- QStclMembership.findByDriverId driverId
     let submittedApps = filter (\a -> a.status == Domain.SUBMITTED) existingApplications
         pendingApps = filter (\a -> a.status == Domain.PENDING) existingApplications

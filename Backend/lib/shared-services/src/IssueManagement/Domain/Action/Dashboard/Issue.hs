@@ -240,7 +240,7 @@ createIssueReportV2 ::
   Identifier ->
   m APISuccess
 createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHandle identifier = do
-  Redis.withWaitOnLockRedisWithExpiry (issueTicketExecLockKey ticketId) 10 30 $ do
+  Redis.withWaitAndLockRedis (issueTicketExecLockKey ticketId) 10 50000 $ do
     when (identifier == DRIVER) $ do
       throwError $ InvalidRequest "Driver cannot create issue report v2"
     person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -473,7 +473,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
   -- Take the same per-issue lock the customer-facing updateIssueStatus holds, so the
   -- agent's status flip and the customer's prompt-response cannot interleave reads of
   -- issue.chats and overwrite each other's appends.
-  Redis.withLockRedisAndReturnValue (UIR.makeIssueReportKey issueReportId) 60 $ do
+  Redis.withWaitAndLockRedis (UIR.makeIssueReportKey issueReportId) 60 50000 $ do
     issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
     merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
     -- When the agent flips the issue to RESOLVED (or CLOSED) we must mirror what the
@@ -656,7 +656,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
   req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
   logError ("Parsed TicketStatusCallBackReq - " <> show req)
   transformedStatus <- transformKaptureStatus req
-  Redis.withWaitOnLockRedisWithExpiry (issueTicketExecLockKey req.ticketId) 10 30 $ do
+  Redis.withWaitAndLockRedis (issueTicketExecLockKey req.ticketId) 10 50000 $ do
     case transformedStatus of
       RESOLVED -> do
         issueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)

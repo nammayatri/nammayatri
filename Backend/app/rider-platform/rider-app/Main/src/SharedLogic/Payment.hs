@@ -1562,7 +1562,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
   case mbLatestRideBooking of
     Nothing -> pure () -- No rides, allow new ride
     Just (ride, booking) ->
-      Redis.withWaitOnLockRedisWithExpiry (paymentJobExecLockKey ride.id.getId) 10 20 $ do
+      Redis.withWaitAndLockRedis (paymentJobExecLockKey ride.id.getId) 10 50000 $ do
         -- 1. If there are already DUE entries (previous capture failed), block immediately
         existingDues <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
         unless (null existingDues) $ do

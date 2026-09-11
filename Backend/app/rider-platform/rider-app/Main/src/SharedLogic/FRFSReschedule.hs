@@ -306,7 +306,7 @@ rescheduleLockKey bookingId = "FRFS:RESCHEDULE:LOCK:" <> bookingId.getId
 
 withRescheduleLock :: (Redis.HedisFlow m r, MonadIO m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
 withRescheduleLock bookingId action =
-  Redis.withLockRedisAndReturnValue (rescheduleLockKey bookingId) 60 action
+  Redis.withWaitAndLockRedis (rescheduleLockKey bookingId) 60 50000 action
 
 -- | Mint a fresh internal search + fresh quote/quote-categories for the staging booking (copied from the
 -- old ones with the new trip's searchId/validTill/vehicleNumber). The OLD quote/categories are left

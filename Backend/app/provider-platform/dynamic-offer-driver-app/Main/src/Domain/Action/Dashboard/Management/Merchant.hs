@@ -3055,7 +3055,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               CQFP.create finalFarePolicy
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
-                  Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
+                  Hedis.withWaitAndLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 50000 $ do
                     QueriesFPAD.delete finalFarePolicy.id
                     forM_ (NE.toList details.slabs) $ \slab ->
                       QueriesFPAD.create (finalFarePolicy.id, slab)

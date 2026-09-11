@@ -163,7 +163,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
               QFOI.updateFleetType FOI.BUSINESS_FLEET person.id
           _ -> pure ()
   if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    then Redis.withWaitAndLockRedis (makeDocumentVerificationLockKey personId.getId) 10 50000 runBody
     else runBody
   -- GST upload promoted FLEET_OWNER -> FLEET_BUSINESS in the DB above, but person.role is still stale in memory.
   let enablementRole = if person.role == Person.FLEET_OWNER then Person.FLEET_BUSINESS else person.role

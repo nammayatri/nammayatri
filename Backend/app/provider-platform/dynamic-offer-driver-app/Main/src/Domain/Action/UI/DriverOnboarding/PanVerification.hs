@@ -176,7 +176,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           _ -> pure ()
 
   if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    then Redis.withWaitAndLockRedis (makeDocumentVerificationLockKey personId.getId) 10 50000 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
   logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))

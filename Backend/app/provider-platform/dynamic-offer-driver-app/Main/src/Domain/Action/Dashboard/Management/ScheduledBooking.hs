@@ -435,7 +435,7 @@ postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId r
   booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
   unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
     throwError (BookingNotFound transactionId)
-  Redis.withWaitOnLockRedisWithExpiry (opsNoteLockKey merchantOpCity.id transactionId) 10 10 $ do
+  Redis.withWaitAndLockRedis (opsNoteLockKey merchantOpCity.id transactionId) 10 50000 $ do
     issueReportId <- getOrCreateScheduledBookingIssueReport booking
     commentId <- generateGUID
     now <- getCurrentTime

@@ -129,7 +129,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
       payableBookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
   when (allLegsOnInitDone && not (null payableBookings)) $ do
-    Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
+    Redis.withWaitAndLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 50000 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer

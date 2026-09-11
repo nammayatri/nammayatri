@@ -1986,7 +1986,7 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
   let quarter = castTdsReimbursementQuarter req.quarter
 
   let lockKey = "tdsReimbursementSubmitLock:" <> requestorId
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  Redis.withWaitAndLockRedis lockKey 60 50000 $ do
     requestsForPeriod <- QTdsReq.findAllByFleetOwnerIdQuarterAndAssessmentYear requestorId quarter assessmentYear merchantOpCityId.getId
     let hasActiveDuplicate = any (\r -> r.status `elem` [DTdsReq.PENDING, DTdsReq.APPROVED]) requestsForPeriod
     when hasActiveDuplicate $

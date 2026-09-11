@@ -472,7 +472,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
               DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
             _ -> pure ()
   if isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    then Redis.withWaitAndLockRedis (makeDocumentVerificationLockKey personId.getId) 10 50000 runBody
     else runBody
   res <- case person.role of
     Person.DRIVER -> do

@@ -124,7 +124,7 @@ updateApplicationAndShareCounts membershipId numberOfShares = do
   (newAppCount, newShareStart, newShareEnd) <-
     if exists
       then atomicIncrCounts numberOfShares
-      else Redis.withLockRedisAndReturnValue stclMembershipLockKey 60 $ do
+      else Redis.withWaitAndLockRedis stclMembershipLockKey 60 50000 $ do
         -- Double-check Redis after acquiring lock (first process may have populated while we waited)
         exists' <- redisCountKeysExist
         if exists' then atomicIncrCounts numberOfShares else initFromDbAndIncr numberOfShares
