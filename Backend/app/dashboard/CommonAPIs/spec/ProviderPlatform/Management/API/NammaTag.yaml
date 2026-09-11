@@ -61,9 +61,6 @@ apis:
         type: CreateNammaTagRequest
       response:
         type: CreateNammaTagResponse
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - POST:
       endpoint: /tag/verify
       auth: ApiAuthV2
@@ -71,8 +68,6 @@ apis:
         type: VerifyNammaTagRequest
       response:
         type: VerifyNammaTagResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - POST:
       endpoint: /tag/update
       auth: ApiAuthV2
@@ -80,8 +75,6 @@ apis:
         type: UpdateNammaTagRequest
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - DELETE:
       endpoint: /tag/delete
       auth: ApiAuthV2
@@ -89,8 +82,6 @@ apis:
         tagName: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - GET:
       endpoint: /tag/all
       auth: ApiAuthV2
@@ -110,9 +101,6 @@ apis:
         type: ChakraQueriesAPIEntity
       response:
         type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
   - POST:
       endpoint: /query/update
       auth: ApiAuthV2
@@ -142,9 +130,6 @@ apis:
         type: AppDynamicLogicReq
       response:
         type: AppDynamicLogicResp
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /appDynamicLogic
       auth: ApiAuthV2
@@ -154,8 +139,6 @@ apis:
         version: Int
       response:
         type: "[GetLogicsResp]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /runJob
       auth: ApiAuthV2
@@ -163,8 +146,6 @@ apis:
         type: RunKaalChakraJobReq
       response:
         type: RunKaalChakraJobRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
   - GET:
       endpoint: /timeBounds
       auth: ApiAuthV2
@@ -172,8 +153,6 @@ apis:
         domain: LogicDomain
       response:
         type: TimeBoundResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - POST:
       endpoint: /timeBounds/create
       auth: ApiAuthV2
@@ -181,8 +160,6 @@ apis:
         type: CreateTimeBoundRequest
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - DELETE:
       endpoint: /timeBounds/delete
       auth: ApiAuthV2
@@ -191,8 +168,6 @@ apis:
         name: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - GET:
       endpoint: /appDynamicLogic/getLogicRollout
       auth: ApiAuthV2
@@ -203,8 +178,6 @@ apis:
         activeOnly: Bool
       response:
         type: "[LogicRolloutObject]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
   - POST:
       endpoint: /appDynamicLogic/upsertLogicRollout
       auth: ApiAuthV2
@@ -212,8 +185,6 @@ apis:
         type: LogicRolloutReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
   - POST:
       endpoint: /appDynamicLogic/bulkUpsertLogicRollout
       auth: ApiAuthV2
@@ -251,15 +222,11 @@ apis:
         offset: Int
       response:
         type: AppDynamicLogicVersionResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /appDynamicLogic/domains
       auth: ApiAuthV2
       response:
         type: AppDynamicLogicDomainResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /appDynamicLogic/domainsAndEvents
       auth: ApiAuthV2
@@ -281,8 +248,6 @@ apis:
         chakra: Chakra
       response:
         type: ChakraQueryResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG GET_CHAKRA_QUERY
   - POST:
       endpoint: /configPilot/getVersion
       auth: ApiAuthV2
@@ -290,8 +255,6 @@ apis:
         type: UiConfigRequest
       response:
         type: UiConfigGetVersionResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_VERSION
   - POST:
       endpoint: /configPilot/getConfig
       auth: ApiAuthV2
@@ -299,8 +262,6 @@ apis:
         type: UiConfigRequest
       response:
         type: UiConfigResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG POST_RETRIEVE_CONFIG
   - POST:
       endpoint: /configPilot/createUiConfig
       auth: ApiAuthV2
@@ -308,8 +269,6 @@ apis:
         type: CreateConfigRequest
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_UI_CONFIG
   - GET:
       endpoint: /configPilot/allConfigs/
       auth: ApiAuthV2
@@ -317,8 +276,6 @@ apis:
         underExperiment: Bool
       response:
         type: "[ConfigType]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/configDetails
       auth: ApiAuthV2
@@ -326,8 +283,6 @@ apis:
         tableName: ConfigType
       response:
         type: "[ConfigDetailsResp]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/getTableData
       auth: ApiAuthV2
@@ -335,8 +290,6 @@ apis:
         tableName: ConfigType
       response:
         type: TableDataResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/allUiConfigs
       auth: ApiAuthV2
@@ -344,8 +297,6 @@ apis:
         underExperiment: Bool
       response:
         type: "[LogicDomain]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/uiConfigDetails
       auth: ApiAuthV2
@@ -353,8 +304,6 @@ apis:
         type: UiDevicePlatformReq
       response:
         type: "[ConfigDetailsResp]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/getUiTableData
       auth: ApiAuthV2
@@ -362,8 +311,6 @@ apis:
         type: UiDevicePlatformReq
       response:
         type: TableDataResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /configPilot/alwaysOnList
       auth: ApiAuthV2
@@ -378,9 +325,6 @@ apis:
         type: ActionChangeRequest
       response:
         type: APISuccess
-      migrate:
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /configPilot/getPatchedElement
       auth: ApiAuthV2
@@ -388,8 +332,6 @@ apis:
         type: GetPatchedElementReq
       response:
         type: GetPatchedElementResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /configPilot/getConfigWithDimensions
       auth: ApiAuthV2

@@ -47,8 +47,6 @@ apis:
               - requestorId: Text
             response:
               type: PlanListAPIRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN
   - PUT: # SelectPlan
       endpoint: /{driverId}/{planId}/select
       name: PutSubscriptionSelectPlan
@@ -70,9 +68,6 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI SelectPlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN
   - PUT: # SuspendPlan
       endpoint: /{driverId}/suspend
       name: PutSubscriptionSuspendPlan
@@ -92,9 +87,6 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI SuspendPlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN
   - POST: # SubscribePlan
       endpoint: /{driverId}/{planId}/subscribe
       name: PostSubscriptionSubscribePlan
@@ -116,9 +108,6 @@ apis:
               - requestorId: Text
             response:
               type: PlanSubscribeRes
-      migrate:
-        endpoint: SubscriptionAPI SubscribePlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN
   - GET: # CurrentPlan
       endpoint: /{driverId}
       name: GetSubscriptionCurrentPlan
@@ -138,8 +127,6 @@ apis:
               - requestorId: Text
             response:
               type: CurrentPlanRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN
   - GET: # ListPlanV2
       endpoint: /{driverId}/{serviceName}/v2/list
       name: GetSubscriptionListPlanV2
@@ -161,8 +148,6 @@ apis:
               - requestorId: Text
             response:
               type: PlanListAPIRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN_V2
   - PUT: # SelectPlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/select
       name: PutSubscriptionSelectPlanV2
@@ -186,9 +171,6 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI SelectPlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN_V2
   - PUT: # SuspendPlanV2
       endpoint: /{driverId}/{serviceName}/v2/suspend
       name: PutSubscriptionSuspendPlanV2
@@ -210,9 +192,6 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI SuspendPlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN_V2
   - POST: # SubscribePlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
       name: PostSubscriptionSubscribePlanV2
@@ -240,9 +219,6 @@ apis:
               type: PlanSubscribeReq
             response:
               type: PlanSubscribeRes
-      migrate:
-        endpoint: SubscriptionAPI SubscribePlanEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN_V2
   - GET: # CurrentPlanV2
       endpoint: /{driverId}/{serviceName}
       name: GetSubscriptionCurrentPlanV2
@@ -264,8 +240,6 @@ apis:
               - requestorId: Text
             response:
               type: CurrentPlanRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN_V2
   - GET: # OrderStatus = (PaymentStatus)
       endpoint: /{driverId}/{orderId}/status
       name: GetSubscriptionOrderStatus
@@ -287,8 +261,6 @@ apis:
               - requestorId: Text
             response:
               type: PaymentStatusResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_STATUS
   - GET: # DriverPaymentHistoryAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}
       name: GetSubscriptionDriverPaymentHistoryAPIV2
@@ -317,8 +289,6 @@ apis:
               - requestorId: Text
             response:
               type: HistoryEntityV2
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_V2
   - GET: # DriverPaymentHistoryEntityDetailsAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
       name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
@@ -342,8 +312,6 @@ apis:
               - requestorId: Text
             response:
               type: HistoryEntryDetailsEntityV2
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_ENTITY_DETAILS_V2
   - GET: # CancellationChargeHistory
       endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
       name: GetSubscriptionCancellationChargeHistory
@@ -397,9 +365,6 @@ apis:
               type: CollectManualPaymentsReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI CollectPaymentsEndPoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION COLLECT_MANUAL_PAYMENTS
   - POST:
       endpoint: /waiveOff/fee
       name: PostSubscriptionFeeWaiveOff
@@ -419,9 +384,6 @@ apis:
               type: WaiveOffReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: SubscriptionAPI FeeWaiveOffEndPoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION FEE_WAIVE_OFF
   - GET: # ListSubscriptionPurchases
       endpoint: /{driverId}/subscriptionPurchases
       name: GetSubscriptionPurchaseList

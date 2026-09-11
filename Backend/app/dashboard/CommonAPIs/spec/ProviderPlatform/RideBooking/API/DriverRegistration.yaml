@@ -16,8 +16,6 @@ apis:
         type: AuthReq
       response:
         type: AuthRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS AUTH
   - POST: # VerifyAPI
       endpoint: /{authId}/verify
       auth: ApiAuthV2
@@ -27,8 +25,6 @@ apis:
         type: AuthVerifyReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS VERIFY
       helperApi:
         - POST: # VerifyAPI
             endpoint: /{authId}/{mbFleet}/{fleetOwnerId}/verify
