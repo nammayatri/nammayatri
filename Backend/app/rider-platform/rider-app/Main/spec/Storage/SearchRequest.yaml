@@ -109,6 +109,7 @@ SearchRequest:
     fromSpecialLocationId: Maybe Text  # Fixed route: origin area ID
     toSpecialLocationId: Maybe Text    # Fixed route: destination area ID
     discoveredSpecialLocationId: Maybe Text  # Auto-discovered special location from source geolocation
+    discoveredDropSpecialLocationId: Maybe Text  # Auto-discovered special location from destination geolocation
     syncSearch: Maybe Bool
     # Better route point suggestion. A search request with parentSearchRequestId set is a
     # shadow of that parent: same rider and time, but pickup/drop moved onto a point of the

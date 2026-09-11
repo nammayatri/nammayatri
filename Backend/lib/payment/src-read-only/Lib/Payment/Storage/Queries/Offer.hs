@@ -65,6 +65,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.Offer.Offer {..}) = do
       Se.Set Beam.title title,
       Se.Set Beam.tnc tnc,
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.validFrom validFrom,
       Se.Set Beam.validTill validTill
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -96,6 +97,7 @@ instance FromTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
             title = title,
             tnc = tnc,
             updatedAt = updatedAt,
+            validFrom = validFrom,
             validTill = validTill
           }
 
@@ -124,5 +126,6 @@ instance ToTType' Beam.Offer Lib.Payment.Domain.Types.Offer.Offer where
         Beam.title = title,
         Beam.tnc = tnc,
         Beam.updatedAt = updatedAt,
+        Beam.validFrom = validFrom,
         Beam.validTill = validTill
       }

@@ -28,6 +28,7 @@ Offer:
     tnc: Maybe Text
     offerEligibilityJsonLogic: Maybe Value
     currency: Currency
+    validFrom: Maybe UTCTime
     validTill: Maybe UTCTime
     isActive: Bool
     minimumAmount: Maybe HighPrecMoney

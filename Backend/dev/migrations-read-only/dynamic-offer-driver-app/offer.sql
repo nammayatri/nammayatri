@@ -42,3 +42,8 @@ ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN frequency_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN max_apply_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.offer ADD COLUMN valid_from timestamp with time zone ;
