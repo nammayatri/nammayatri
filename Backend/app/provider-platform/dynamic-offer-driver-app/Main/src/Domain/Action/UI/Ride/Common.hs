@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
@@ -50,6 +51,8 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFareParams
+import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
@@ -66,7 +69,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -79,6 +82,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
@@ -244,7 +248,13 @@ data DriverRideRes = DriverRideRes
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
     driverCancellationNotAllowed :: Maybe Bool,
-    isAutoAccepted :: Maybe Bool
+    isAutoAccepted :: Maybe Bool,
+    -- | Waiting-charge rate card for this booking. At most one of
+    -- 'waitingChargePerMin' / 'constantWaitingCharge' is set, matching whichever
+    -- 'DFPC.WaitingCharge' variant the fare policy uses.
+    freeWaitingTimeInMin :: Maybe Minutes,
+    waitingChargePerMin :: Maybe PriceAPIEntity,
+    constantWaitingCharge :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -474,7 +484,8 @@ mkExoPhone mbExophone booking =
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    CacheFlow m r
   ) =>
   KET.Language ->
   Maybe EarningsLabels ->
@@ -514,6 +525,10 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
       displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
+  -- Best-effort: the fare policy is cached by quote id with a 24h TTL, so this resolves for the
+  -- active/recent bookings the rate card is meant for, and is Nothing on older history rows.
+  mbFullFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  let mbWaitingChargeInfo = mbFullFarePolicy >>= getWaitingChargeInfo booking.estimatedDistance rideDetails.vehicleAge
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -700,8 +715,32 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
         customerLanguage = booking.customerLanguage,
-        isAutoAccepted = booking.isAutoAccepted
+        isAutoAccepted = booking.isAutoAccepted,
+        freeWaitingTimeInMin = (.freeWaitingTime) <$> mbWaitingChargeInfo,
+        waitingChargePerMin =
+          mbWaitingChargeInfo >>= \wci -> case wci.waitingCharge of
+            DFPC.PerMinuteWaitingCharge rate -> Just $ PriceAPIEntity rate ride.currency
+            DFPC.ConstantWaitingCharge _ -> Nothing,
+        constantWaitingCharge =
+          mbWaitingChargeInfo >>= \wci -> case wci.waitingCharge of
+            DFPC.ConstantWaitingCharge amount -> Just $ PriceAPIEntity amount ride.currency
+            DFPC.PerMinuteWaitingCharge _ -> Nothing
       }
+
+getWaitingChargeInfo :: Maybe Meters -> Maybe Months -> FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo
+getWaitingChargeInfo mbEstimatedDistance mbVehicleAge fp = case fp.farePolicyDetails of
+  FarePolicyD.ProgressiveDetails d -> d.waitingChargeInfo
+  FarePolicyD.RentalDetails d -> d.waitingChargeInfo
+  FarePolicyD.InterCityDetails d -> d.waitingChargeInfo
+  FarePolicyD.SlabsDetails d -> (.waitingChargeInfo) $ pickSlabBy (.startDistance) (fromMaybe 0 mbEstimatedDistance) d.slabs
+  FarePolicyD.AmbulanceDetails d -> (.waitingChargeInfo) $ pickSlabBy (.vehicleAge) (fromMaybe 0 mbVehicleAge) d.slabs
+
+pickSlabBy :: Ord a => (s -> a) -> a -> NE.NonEmpty s -> s
+pickSlabBy threshold value slabs = do
+  let sorted = NE.sortWith threshold slabs
+  case reverse $ NE.filter ((<= value) . threshold) sorted of
+    slab : _ -> slab
+    [] -> NE.head sorted
 
 -- calculateLocations moved from UI.Ride
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
