@@ -28,6 +28,7 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagAppDynamicLogicGetDomainSchema,
     getNammaTagQueryAll,
     postNammaTagUpdateCustomerTag,
+    postNammaTagBulkUpdateCustomerTag,
     postNammaTagConfigPilotGetVersion,
     postNammaTagConfigPilotGetConfig,
     postNammaTagConfigPilotCreateUiConfig,
@@ -47,6 +48,7 @@ module Domain.Action.Dashboard.NammaTag
   )
 where
 
+import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
@@ -762,6 +764,44 @@ postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
   unless (Just (LYTU.showRawTags tag) == (LYTU.showRawTags <$> person.customerNammaTags)) $
     CQPerson.updateCustomerTags (Just tag) personId
   pure Success
+
+postNammaTagBulkUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagReq -> Environment.Flow API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagRes)
+postNammaTagBulkUpdateCustomerTag merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = merchantOperatingCity.id
+      customerIds = ordNub req.customerIds
+      isInvalidTagPart tagPart = Text.null tagPart || Text.any (`elem` ['#', '&']) tagPart
+  when (null customerIds) $ throwError (InvalidRequest "customerIds must not be empty")
+  when (length customerIds > 500) $ throwError (InvalidRequest "Too many customers in one bulk tag update request (max 500)")
+  when (isInvalidTagPart req.tagName || isInvalidTagPart req.tagValue) $
+    throwError (InvalidRequest "tagName and tagValue must be non-empty and must not contain # or &")
+  when (maybe False (<= 0) req.validityHours) $ throwError (InvalidRequest "validityHours must be greater than 0")
+  let reqTag = LYTU.TagNameValue (req.tagName <> "#" <> req.tagValue)
+  mbNammaTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) reqTag
+  now <- getCurrentTime
+  let reqTagWithExpiry = LYTU.addTagExpiry reqTag ((Hours <$> req.validityHours) <|> (mbNammaTag >>= (.validity))) now
+      updateTags existingTags
+        | not req.isAddingTag = LYTU.removeTagNameValue (Just existingTags) reqTag
+        | reqTagWithExpiry `elem` existingTags = existingTags
+        | otherwise = LYTU.removeTagNameValue (Just existingTags) reqTag <> [reqTagWithExpiry]
+  persons <- QPerson.findAllByIds (cast @Common.User @DP.Person <$> customerIds)
+  let personById = Map.fromList [(person.id, person) | person <- persons]
+  failedItems <- fmap catMaybes . forM customerIds $ \customerId -> do
+    let mkFailedItem = API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagFailedItem customerId
+    case Map.lookup (cast @Common.User @DP.Person customerId) personById of
+      Just person | person.merchantOperatingCityId == merchantOpCityId -> do
+        let existingTags = fromMaybe [] person.customerNammaTags
+            newTags = updateTags existingTags
+        result <-
+          withTryCatch "bulkUpdateCustomerTag" $
+            unless (newTags == existingTags) $
+              CQPerson.updateCustomerTags (Just newTags) person.id
+        pure $ either (Just . mkFailedItem . Text.pack . displayException) (const Nothing) result
+      _ -> pure $ Just (mkFailedItem "Customer not found")
+  let failedCount = length failedItems
+      successCount = length customerIds - failedCount
+  logTagInfo "dashboard -> bulkUpdateCustomerTag" $ reqTag.getTagNameValue <> " isAddingTag: " <> show req.isAddingTag <> " success: " <> show successCount <> " failed: " <> show failedCount
+  pure $ API.Types.RiderPlatform.Management.NammaTag.BulkUpdateCustomerTagRes {success = successCount, failed = failedCount, failedItems}
 
 postNammaTagConfigPilotGetVersion :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UiConfigRequest -> Environment.Flow LYTU.UiConfigGetVersionResponse
 postNammaTagConfigPilotGetVersion _ _type uicr = do

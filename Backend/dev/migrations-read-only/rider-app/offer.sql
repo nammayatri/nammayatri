@@ -41,3 +41,8 @@ ALTER TABLE atlas_app.offer ADD COLUMN frequency_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.offer ADD COLUMN max_apply_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN valid_from timestamp with time zone ;
