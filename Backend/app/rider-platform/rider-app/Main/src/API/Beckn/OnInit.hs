@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
@@ -71,12 +72,27 @@ onInit _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
             let isPaytmEdcPaymentBeforeConfirm =
                   booking.requiresPaymentBeforeConfirm
                     && booking.paymentInstrument == Just DMPM.BoothOnline
+                isBookingDepositPaymentBeforeConfirm =
+                  booking.requiresPaymentBeforeConfirm
+                    && isJust booking.bookingDepositAmount
+                    && not isPaytmEdcPaymentBeforeConfirm
+                sendConfirm =
+                  handle (errHandler booking) . void . withShortRetry $ do
+                    confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+                    Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
+                    CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
             if isPaytmEdcPaymentBeforeConfirm
               then void $ DPayment.createRideBookingPaymentOrder booking
-              else handle (errHandler booking) . void . withShortRetry $ do
-                confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
-                Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
-                CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+              else
+                if isBookingDepositPaymentBeforeConfirm
+                  then whenJust booking.bookingDepositAmount $ \fee -> do
+                    reserveRes <- BookingDeposit.reserveBookingDeposit booking fee
+                    case reserveRes of
+                      BookingDeposit.Reserved ->
+                        handle (errHandler booking) $ DPayment.resumeBookingDepositConfirm booking.id
+                      BookingDeposit.Insufficient ->
+                        logInfo $ "Booking fee not covered by balance for " <> booking.id.getId <> "; withholding confirm until the rider pays"
+                  else sendConfirm
       else do
         let cancellationReason = "on_init API failure"
             cancelReq = buildCancelReq cancellationReason OnInit

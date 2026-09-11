@@ -113,7 +113,7 @@ data PaymentOrderAPIEntity = PaymentOrderAPIEntity
 
 type PaymentOrder = PaymentOrderE 'AsEncrypted
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase | ParkingBooking | Wallet | STCL | RideBooking | OnlineRideHailing | RideHailing
+data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase | ParkingBooking | Wallet | STCL | RideBooking | OnlineRideHailing | RideHailing | BookingDeposit
   deriving (Generic, Eq, Ord, Enum, Bounded, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''PaymentServiceType)

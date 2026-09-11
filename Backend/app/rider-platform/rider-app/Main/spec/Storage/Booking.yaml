@@ -6,6 +6,7 @@ imports:
   DeviceType: Kernel.Types.Version
   Price: Kernel.Types.Common
   Seconds: Kernel.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
   Client: Domain.Types.Client
   Location: Domain.Types.Location
@@ -214,6 +215,9 @@ Booking:
     estimatedStaticDuration: Maybe Seconds
     discount: Maybe Price
     estimatedTotalFare: Price
+    # Fee held against this booking, copied from the quote at confirm. Terminal handlers
+    # need it without a quote lookup. Deliberately excluded from estimatedTotalFare.
+    bookingDepositAmount: Maybe HighPrecMoney
     isScheduled: Bool
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int

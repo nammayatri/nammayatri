@@ -538,7 +538,7 @@ uploadRefundEvidence mbEvidence mbFileType mbContentType ctx rideId =
     pure path
 
 refundRequestProccessingKey :: Kernel.Types.Id.Id DPaymentOrder.PaymentOrder -> Text
-refundRequestProccessingKey orderId = "RefundRequest:Processing:OrderId" <> orderId.getId
+refundRequestProccessingKey = SPayment.refundRequestProccessingKey
 
 imageS3Lock :: Text -> Text
 imageS3Lock path = "image-s3-lock-" <> path

@@ -108,6 +108,7 @@ data BecknTagGroup
   | BOOKING_INFO
   | EMAIL_DOMAIN_INFO
   | BPP_INVOICE_INFO
+  | BOOKING_DEPOSIT_INFO
   | CHANGE_SERVICE_TIER_DETAILS
   | LOCATION_ADDRESS
   | -- v2.1.0 tag groups
@@ -340,6 +341,8 @@ data BecknTag
   | PER_STOP_CHARGES
   | PET_CHARGES
   | PRIORITY_CHARGES
+  | BOOKING_DEPOSIT -- FARE_POLICY: refundable rider deposit held on the BAP; sourced from the fare policy's BOOKING_DEPOSIT conditional charge, never part of the fare
+  | BOOKING_DEPOSIT_HELD -- BOOKING_DEPOSIT_INFO (confirm): deposit the BAP actually HOLDS for this booking. The BPP already knows the configured amount from its own fare policy; what it cannot derive is custody, which depends on BAP-only state (the client's supportsBookingDeposit and whether a ledger hold exists). Absence means the rider staked nothing. The amount is carried, not just a flag, so a fare-policy change between on_search and confirm cannot make the BPP forfeit more than was actually taken.
   | BUSINESS_DISCOUNT
   | PERSONAL_DISCOUNT
   | PERSONAL_DISCOUNT_PERCENTAGE
@@ -848,6 +851,8 @@ instance CompleteTag BecknTag where
     PER_STOP_CHARGES -> FARE_POLICY
     PET_CHARGES -> FARE_POLICY
     PRIORITY_CHARGES -> FARE_POLICY
+    BOOKING_DEPOSIT -> FARE_POLICY
+    BOOKING_DEPOSIT_HELD -> BOOKING_DEPOSIT_INFO
     BUSINESS_DISCOUNT -> INFO
     PERSONAL_DISCOUNT -> INFO
     PERSONAL_DISCOUNT_PERCENTAGE -> FARE_POLICY

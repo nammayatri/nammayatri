@@ -36,6 +36,7 @@ data MoneyDeduction
         minAmount :: Maybe HighPrecMoney,
         maxAmount :: Maybe HighPrecMoney
       }
+  | MatchBookingDeposit
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

@@ -45,7 +45,7 @@ RefundRequest:
       enum: "OPEN, APPROVED, REJECTED, FAILED, REFUNDED" # finally status should be REFUNDED or REJECTED
       derive: "HttpInstance"
     RefundPurpose:
-      enum: "RIDE_FARE, CANCELLATION_FEE"
+      enum: "RIDE_FARE, CANCELLATION_FEE, BOOKING_DEPOSIT"
     RefundComponentAmount:
       derive: "Eq"
       component: FareComponent

@@ -199,7 +199,8 @@ hasExactlyOneRide booking =
 calculateTotalFromRides :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalFromRides bookings =
   let amounts = mapMaybe getRideComputedPrice bookings
-   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+      fees = mapMaybe (fmap toRational . (.bookingDepositAmount)) bookings
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts + sum fees)
   where
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
