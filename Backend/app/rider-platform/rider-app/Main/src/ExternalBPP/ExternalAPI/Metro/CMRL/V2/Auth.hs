@@ -41,13 +41,34 @@ data AuthRes = AuthRes
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
+data AuthResult
+  = AuthRejected Text
+  | AuthGranted AuthRes
+
+instance FromJSON AuthResult where
+  parseJSON = withObject "CMRLV2 auth response" $ \o ->
+    o .:? "errMsg" >>= \case
+      Just errMsg -> pure (AuthRejected errMsg)
+      Nothing -> AuthGranted <$> parseJSON (Object o)
+
+instance ToJSON AuthResult where
+  toJSON = \case
+    AuthRejected errMsg -> object ["errMsg" .= errMsg]
+    AuthGranted granted -> toJSON granted
+
 type AuthAPI =
   "api" :> "qr" :> "v1" :> "connect" :> "token"
     :> ReqBody '[JSON] AuthReq
-    :> Post '[JSON] AuthRes
+    :> Post '[JSON] AuthResult
 
 authAPI :: Proxy AuthAPI
 authAPI = Proxy
+
+data IssuedEncryptionKey = IssuedEncryptionKey
+  { issuedKey :: Text,
+    issuedKeyIndex :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 authTokenKey :: Text -> Text
 authTokenKey merchantId = "CMRLV2Auth:Token:" <> merchantId
@@ -55,8 +76,8 @@ authTokenKey merchantId = "CMRLV2Auth:Token:" <> merchantId
 refreshTokenKey :: Text -> Text
 refreshTokenKey merchantId = "CMRLV2Auth:RefreshToken:" <> merchantId
 
-encryptionKeyKey :: Text -> Text
-encryptionKeyKey merchantId = "CMRLV2Auth:EncryptionKey:" <> merchantId
+issuedEncryptionKeyKey :: Text -> Text
+issuedEncryptionKeyKey merchantId = "CMRLV2Auth:IssuedEncryptionKey:" <> merchantId
 
 refreshLockKey :: Text -> Text
 refreshLockKey merchantId = "CMRLV2Auth:RefreshLock:" <> merchantId
@@ -105,14 +126,19 @@ resetAuthToken config retriesLeft = do
                 logInfo $ "[CMRLV2:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
                 password <- decrypt config.password
                 let authReq = AuthReq config.operatorNameId config.username password "password" config.merchantId
-                authRes <-
+                authResult <-
                   callAPI config.networkHostUrl (ET.client authAPI authReq) "authCMRLV2" authAPI
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_V2_AUTH_API") config.networkHostUrl)
+                authRes <- case authResult of
+                  AuthRejected errMsg -> do
+                    logError $ "[CMRLV2:Auth] CDAC REJECTED the configured credentials for merchantId: " <> config.merchantId <> " at " <> showBaseUrl config.networkHostUrl <> " - " <> errMsg
+                    throwError $ CMRLV2Unauthorized ("CMRL rejected the configured credentials: " <> errMsg)
+                  AuthGranted granted -> pure granted
                 logInfo $ "[CMRLV2:Auth] Successfully obtained auth token, expires_in: " <> show authRes.expires_in <> "s, key_index: " <> show authRes.key_index
                 let tokenExpiry = authRes.expires_in * 90 `div` 100
                 Hedis.setExp (authTokenKey config.merchantId) authRes.access_token tokenExpiry
                 Hedis.setExp (refreshTokenKey config.merchantId) authRes.refresh_token (7 * 24 * 3600)
-                Hedis.setExp (encryptionKeyKey config.merchantId) authRes.key (7 * 24 * 3600)
+                Hedis.setExp (issuedEncryptionKeyKey config.merchantId) (IssuedEncryptionKey authRes.key authRes.key_index) tokenExpiry
                 return authRes.access_token
           )
           `finally` unlockLock
@@ -126,6 +152,17 @@ resetAuthToken config retriesLeft = do
           logInfo $ "[CMRLV2:Auth] Redis lock already held by another pod, waiting 2 seconds (retries left: " <> show retriesLeft <> ")"
           threadDelay 2000000
           getAuthTokenWithRetries config (retriesLeft - 1)
+
+getEncryptionKey :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m (Text, Int)
+getEncryptionKey config = do
+  void $ getAuthToken config
+  mbIssued :: (Maybe IssuedEncryptionKey) <- Hedis.get (issuedEncryptionKeyKey config.merchantId)
+  case mbIssued of
+    Just issued -> pure (issued.issuedKey, issued.issuedKeyIndex)
+    Nothing -> do
+      logError $ "[CMRLV2:Auth] No issued encryption key cached for merchantId: " <> config.merchantId <> " - falling back to the static config key, which CDAC may have rotated away from"
+      encKey <- decrypt config.encryptionKey
+      pure (encKey, config.encKeyIndex)
 
 callCMRLV2API ::
   ( HasCallStack,

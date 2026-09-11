@@ -4,6 +4,7 @@
 
 module Storage.Queries.IntegratedBPPConfig (module Storage.Queries.IntegratedBPPConfig, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,6 +45,9 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
       Se.Set Beam.isTicketValidOnMultipleRoutes isTicketValidOnMultipleRoutes,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.ondcEncryptionPrivateKey ondcEncryptionPrivateKey,
+      Se.Set Beam.ondcRegistryPublicKey ondcRegistryPublicKey,
+      Se.Set Beam.operatorConfig (Data.Aeson.toJSON <$> operatorConfig),
       Se.Set Beam.passOverrideApplicable passOverrideApplicable,
       Se.Set Beam.platformType platformType,
       Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),

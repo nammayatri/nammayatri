@@ -10,6 +10,13 @@ module BecknV2.FRFS.Types
     AckResponse (..),
     Authorization (..),
     Billing (..),
+    Entity (..),
+    EntityGst (..),
+    EntityPan (..),
+    Info (..),
+    InfoReq (..),
+    OnInfoMessage (..),
+    OnInfoReq (..),
     CancelReq (..),
     CancelReqMessage (..),
     Cancellation (..),
@@ -139,7 +146,6 @@ optionsAckMessage =
 data AckResponse = AckResponse
   { -- |
     ackResponseError :: Maybe Error,
-    -- |
     ackResponseMessage :: AckMessage
   }
   deriving (Show, Eq, Generic, Data)
@@ -618,7 +624,11 @@ data Error = Error
     -- | Human readable message describing the error. Used mainly for logging. Not recommended to be shown to the user.
     errorMessage :: Maybe Text,
     -- | Path to json schema generating the error. Used only during json schema validation errors
-    errorPaths :: Maybe Text
+    errorPaths :: Maybe Text,
+    -- | Human readable, possibly contextual explanation meant to be shown to the user.
+    -- Part of the published BAP error contract (docs/bap-error-code-reference.md) alongside
+    -- code and message; unlike message it may name the station, order or retry hint.
+    errorDescription :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -638,7 +648,8 @@ optionsError =
     table =
       [ ("errorCode", "code"),
         ("errorMessage", "message"),
-        ("errorPaths", "paths")
+        ("errorPaths", "paths"),
+        ("errorDescription", "description")
       ]
 
 -- | Describes how a an order will be rendered/fulfilled to the end-customer
@@ -1460,7 +1471,8 @@ optionsPrice =
 
 -- | Describes the catalog of a business.
 data Provider = Provider
-  { -- |
+  { providerCancellationTerms :: Maybe [CancellationTerm],
+    -- |
     providerCategories :: Maybe [Category],
     -- |
     providerDescriptor :: Maybe Descriptor,
@@ -1493,7 +1505,8 @@ optionsProvider =
     }
   where
     table =
-      [ ("providerCategories", "categories"),
+      [ ("providerCancellationTerms", "cancellation_terms"),
+        ("providerCategories", "categories"),
         ("providerDescriptor", "descriptor"),
         ("providerFulfillments", "fulfillments"),
         ("providerId", "id"),
@@ -1843,3 +1856,121 @@ optionsVehicle =
       [ ("vehicleCategory", "category"),
         ("vehicleVariant", "variant")
       ]
+
+newtype InfoReq = InfoReq
+  { infoReqContext :: Context
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON InfoReq where
+  parseJSON = A.withObject "InfoReq" $ \o -> InfoReq <$> o A..: "context"
+
+instance ToJSON InfoReq where
+  toJSON r = A.object ["context" A..= r.infoReqContext]
+
+data OnInfoReq = OnInfoReq
+  { onInfoReqContext :: Context,
+    onInfoReqMessage :: OnInfoMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON OnInfoReq where
+  toJSON r = A.object ["context" A..= r.onInfoReqContext, "message" A..= r.onInfoReqMessage]
+
+instance FromJSON OnInfoReq where
+  parseJSON = A.withObject "OnInfoReq" $ \o -> OnInfoReq <$> o A..: "context" <*> o A..: "message"
+
+newtype OnInfoMessage = OnInfoMessage {onInfoMessageInfo :: Info}
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON OnInfoMessage where
+  toJSON m = A.object ["info" A..= m.onInfoMessageInfo]
+
+instance FromJSON OnInfoMessage where
+  parseJSON = A.withObject "OnInfoMessage" $ \o -> OnInfoMessage <$> o A..: "info"
+
+data Info = Info
+  { infoType :: Text,
+    infoEntity :: Entity
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON Info where
+  toJSON i = A.object ["type" A..= i.infoType, "entity" A..= i.infoEntity]
+
+instance FromJSON Info where
+  parseJSON = A.withObject "Info" $ \o -> Info <$> o A..: "type" <*> o A..: "entity"
+
+data Entity = Entity
+  { entityGst :: EntityGst,
+    entityPan :: EntityPan,
+    entityNameOfAuthorisedSignatory :: Text,
+    entityAddressOfAuthorisedSignatory :: Text,
+    entityEmailId :: Text,
+    entityMobileNo :: Double,
+    entityCountry :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON Entity where
+  toJSON e =
+    A.object
+      [ "gst" A..= e.entityGst,
+        "pan" A..= e.entityPan,
+        "name_of_authorised_signatory" A..= e.entityNameOfAuthorisedSignatory,
+        "address_of_authorised_signatory" A..= e.entityAddressOfAuthorisedSignatory,
+        "email_id" A..= e.entityEmailId,
+        "mobile_no" A..= e.entityMobileNo,
+        "country" A..= e.entityCountry
+      ]
+
+instance FromJSON Entity where
+  parseJSON = A.withObject "Entity" $ \o ->
+    Entity
+      <$> o A..: "gst"
+      <*> o A..: "pan"
+      <*> o A..: "name_of_authorised_signatory"
+      <*> o A..: "address_of_authorised_signatory"
+      <*> o A..: "email_id"
+      <*> o A..: "mobile_no"
+      <*> o A..: "country"
+
+data EntityGst = EntityGst
+  { entityGstLegalEntityName :: Text,
+    entityGstBusinessAddress :: Text,
+    entityGstCityCode :: [Text],
+    entityGstGstNo :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON EntityGst where
+  toJSON g =
+    A.object
+      [ "legal_entity_name" A..= g.entityGstLegalEntityName,
+        "business_address" A..= g.entityGstBusinessAddress,
+        "city_code" A..= g.entityGstCityCode,
+        "gst_no" A..= g.entityGstGstNo
+      ]
+
+instance FromJSON EntityGst where
+  parseJSON = A.withObject "EntityGst" $ \o ->
+    EntityGst <$> o A..: "legal_entity_name" <*> o A..: "business_address" <*> o A..: "city_code" <*> o A..: "gst_no"
+
+data EntityPan = EntityPan
+  { entityPanNameAsPerPan :: Text,
+    entityPanPanNo :: Text,
+    entityPanDateOfIncorporation :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance ToJSON EntityPan where
+  toJSON pan =
+    A.object
+      [ "name_as_per_pan" A..= pan.entityPanNameAsPerPan,
+        "pan_no" A..= pan.entityPanPanNo,
+        "date_of_incorporation" A..= pan.entityPanDateOfIncorporation
+      ]
+
+instance FromJSON EntityPan where
+  parseJSON = A.withObject "EntityPan" $ \o ->
+    EntityPan <$> o A..: "name_as_per_pan" <*> o A..: "pan_no" <*> o A..: "date_of_incorporation"

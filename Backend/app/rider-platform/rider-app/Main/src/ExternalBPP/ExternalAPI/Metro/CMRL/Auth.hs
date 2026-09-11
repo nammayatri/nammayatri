@@ -54,8 +54,11 @@ authTokenKey = "CMRLAuth:Token"
 refreshLockKey :: Text
 refreshLockKey = "CMRLAuth:RefreshLock"
 
-cmrlAppType :: Text
-cmrlAppType = "CMRL_CUM_IQR"
+-- | CMRL's per-merchant application identifier. Configurable because it is issued by the
+-- operator alongside the credentials it sits next to; the literal is what every deployment
+-- has used so far.
+cmrlAppType :: CMRLConfig -> Text
+cmrlAppType config = fromMaybe "CMRL_CUM_IQR" config.appType
 
 maxLockWaitRetries :: Int
 maxLockWaitRetries = 5
@@ -94,7 +97,7 @@ resetAuthToken config retriesLeft = do
                 logInfo $ "[CMRL:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
                 password <- decrypt config.password
                 authRes <-
-                  callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
+                  callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password (cmrlAppType config)) "authCMRL" authAPI
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
                 logInfo "[CMRL:Auth] Successfully obtained auth token"
                 let tokenExpiry = 2 * 3600

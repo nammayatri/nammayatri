@@ -134,3 +134,9 @@ ALTER TABLE atlas_app.merchant ADD COLUMN cloud_base_url text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN is_frfs_seller boolean  default false;

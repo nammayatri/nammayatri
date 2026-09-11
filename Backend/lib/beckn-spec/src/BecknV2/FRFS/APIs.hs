@@ -178,3 +178,19 @@ type OnUpdateAPIBS =
 
 onUpdateAPIBS :: Proxy OnUpdateAPIBS
 onUpdateAPIBS = Proxy
+
+type InfoAPI =
+  "info"
+    :> ReqBody '[JSON] Spec.InfoReq
+    :> Post '[JSON] Spec.AckResponse
+
+infoAPI :: Proxy InfoAPI
+infoAPI = Proxy
+
+type OnInfoAPI =
+  "on_info"
+    :> ReqBody '[JSON] Spec.OnInfoReq
+    :> Post '[JSON] Spec.AckResponse
+
+onInfoAPI :: Proxy OnInfoAPI
+onInfoAPI = Proxy
