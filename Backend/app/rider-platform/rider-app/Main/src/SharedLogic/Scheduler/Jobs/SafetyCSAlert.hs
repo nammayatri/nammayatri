@@ -80,6 +80,9 @@ createSafetyTicket person ride = do
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
   rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
+  -- Build the SOS first (ticketId = Nothing) so the dashboard link can use sos/<sosId>,
+  -- consistent with the interactive SOS flow; the ticketId is written back after ticket creation.
+  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, triggerApiList = Nothing} Nothing
   let merchantShortId = merchantConfig.shortId.getShortId
       dashboardCityCode =
         case A.toJSON rideMoc.city of
@@ -90,9 +93,9 @@ createSafetyTicket person ride = do
           []
           ( \patternS ->
               [ patternS
-                  & T.replace "<RIDES_OR_SOS>" "rides"
-                  & T.replace "<ID>" ride.id.getId
-                  & T.replace "<RIDE_ID>" ride.id.getId
+                  & T.replace "<RIDES_OR_SOS>" "sos"
+                  & T.replace "<ID>" sosDetails.id.getId
+                  & T.replace "<RIDE_ID>" sosDetails.id.getId
                   & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
                   & T.replace "<CITY_CODE>" dashboardCityCode
               ]
@@ -112,9 +115,8 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = SafetyDSos.CSAlertSosTicket, rideId = Just (cast ride.id), isRideEnded = Nothing, notifyAllContacts = Nothing, customerLocation = Nothing, sendPNOnPostRideSOS = Nothing, triggerApiList = Nothing} ticketId
-  -- SOS persistence via shared-services Safety library
-  void $ SafetySos.createSos sosDetails
+  -- SOS persistence via shared-services Safety library (with the resolved ticketId)
+  void $ SafetySos.createSos sosDetails {SafetyDSos.ticketId = ticketId}
 
 mkTicket :: DP.Person -> Maybe Text -> [Text] -> Maybe Ticket.RideInfo -> SafetyDSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
 mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
