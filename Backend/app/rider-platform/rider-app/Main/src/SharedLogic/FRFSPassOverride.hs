@@ -22,6 +22,7 @@ module SharedLogic.FRFSPassOverride
     passForOverrideAppliedEntity,
     paymentForOverrideAppliedEntity,
     parseOverrideBenefitConfig,
+    validateBenefit,
     isFullyPassCovered,
     fullyCoveredByPass,
     PassCandidate (..),
@@ -33,6 +34,10 @@ module SharedLogic.FRFSPassOverride
     remainingTrips,
     benefitFromPass,
     isUnlimitedBenefit,
+    seededRemainingTrips,
+    refreshTripCountTtl,
+    makeTripCountKey,
+    allowanceFor,
     consumeTrip,
     consumeTripOnce,
     spendTripForBooking,
@@ -41,6 +46,7 @@ module SharedLogic.FRFSPassOverride
     checkOverlappingBookingLimit,
     recordBookedTrip,
     recordAndDetectOverLimit,
+    withTripCountLock,
     releaseBookedTrip,
   )
 where
@@ -530,6 +536,10 @@ recordAndDetectOverLimit person pass paymentId ownerId mbParentId window =
 withOverlapRecordLock :: (CacheFlow m r, EsqDBFlow m r, MonadMask m) => Id DPPP.PurchasedPassPayment -> m a -> m a
 withOverlapRecordLock paymentId =
   Redis.withWaitAndLockRedis ("FRFSPassOverride:OverlapRecordLock-" <> paymentId.getId) 10 200000
+
+withTripCountLock :: (CacheFlow m r, EsqDBFlow m r, MonadMask m) => Id DPPP.PurchasedPassPayment -> m a -> m a
+withTripCountLock paymentId =
+  Redis.withWaitAndLockRedis ("FRFSPassOverride:TripCountLock-" <> paymentId.getId) 10 200000
 
 checkOverlappingBookingLimit ::
   (CacheFlow m r, EsqDBFlow m r) =>

@@ -25,6 +25,15 @@ module Domain.Action.UI.Pass
     createPassCatalog,
     updatePassCatalog,
     deletePassCatalog,
+    listPassCategories,
+    createPassCategory,
+    updatePassCategory,
+    listPassTypes,
+    createPassType,
+    updatePassType,
+    getPassOverrideConfig,
+    updatePassOverrideConfig,
+    postPassTripsAdjust,
   )
 where
 
@@ -120,9 +129,9 @@ import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 -- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
 -- both the generated CRUD and the hand-written Extra queries.
 import qualified Storage.Queries.Pass as QPass
-import qualified Storage.Queries.PassCategoryExtra as QPassCategory
+import qualified Storage.Queries.PassCategory as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
-import qualified Storage.Queries.PassTypeExtra as QPassType
+import qualified Storage.Queries.PassType as QPassType
 import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
@@ -593,17 +602,17 @@ buildPassTypeAPIEntity passType =
 listPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe (Id.Id DPassType.PassType) -> Environment.Flow [DashPass.PassCatalogItem]
 listPassCatalog merchantShortId opCity mbEnable mbPassTypeId = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
-  categories <- CQPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  categories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
   passTypes <- case mbPassTypeId of
     Just passTypeId ->
-      CQPassType.findById passTypeId
+      QPassType.findById passTypeId
         <&> maybeToList . mfilter ((== merchantOperatingCity.id) . (.merchantOperatingCityId))
-    Nothing -> concat <$> mapM (CQPassType.findAllByPassCategoryId . (.id)) categories
+    Nothing -> concat <$> mapM (QPassType.findAllByPassCategoryId . (.id)) categories
   let categoryNameById = map (\c -> (c.id, c.name)) categories
       enableFilters = maybe [True, False] (: []) mbEnable
   fmap concat $
     forM passTypes $ \passType -> do
-      passes <- concat <$> mapM (CQPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
+      passes <- concat <$> mapM (QPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
       pure $ map (mkPassCatalogItem passType (lookup passType.passCategoryId categoryNameById)) passes
 
 mkPassCatalogItem :: DPassType.PassType -> Maybe Text -> DPass.Pass -> DashPass.PassCatalogItem
@@ -690,6 +699,12 @@ createPassCatalog merchantShortId opCity req = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
   pure $ DashPass.PassCreateResp {passId = passId}
 
+patchNullable :: (Eq f, Show f) => Maybe [f] -> f -> Maybe a -> Maybe a -> Environment.Flow (Maybe a)
+patchNullable mbClearFields field mbNew stored
+  | field `notElem` fromMaybe [] mbClearFields = pure (mbNew <|> stored)
+  | isJust mbNew = throwError . InvalidRequest $ show field <> " is listed in clearFields and also given a value; send one or the other"
+  | otherwise = pure Nothing
+
 updatePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
 updatePassCatalog merchantShortId opCity passId req = do
   merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
@@ -701,29 +716,39 @@ updatePassCatalog merchantShortId opCity passId req = do
   whenJust (mfilter (/= passRow.code) req.code) $ \newCode ->
     assertPassCodeFree newCode merchantOperatingCity.id
   now <- getCurrentTime
+  newPassConfig <- patchNullable req.clearFields DashPass.PassMaxSwitchCount (DPass.PassConfig <$> req.maxSwitchCount) passRow.passConfig
+  newName <- patchNullable req.clearFields DashPass.PassName req.name passRow.name
+  newDescription <- patchNullable req.clearFields DashPass.PassDescription req.description passRow.description
+  newBenefit <- patchNullable req.clearFields DashPass.PassBenefit req.benefit passRow.benefit
+  newPricingTiers <- patchNullable req.clearFields DashPass.PassPricingTiers req.pricingTiers passRow.pricingTiers
+  newMaxValidTrips <- patchNullable req.clearFields DashPass.PassMaxValidTrips req.maxValidTrips passRow.maxValidTrips
+  newMaxValidDays <- patchNullable req.clearFields DashPass.PassMaxValidDays req.maxValidDays passRow.maxValidDays
+  newMinFare <- patchNullable req.clearFields DashPass.PassMinFare req.minFare passRow.minFare
+  newMaxFare <- patchNullable req.clearFields DashPass.PassMaxFare req.maxFare passRow.maxFare
+  newFormVerificationConfig <- patchNullable req.clearFields DashPass.PassFormVerificationConfig req.formVerificationConfig passRow.formVerificationConfig
   let updatedPass =
         passRow
           { DPass.passTypeId = fromMaybe passRow.passTypeId req.passTypeId,
             DPass.code = fromMaybe passRow.code req.code,
-            DPass.name = req.name <|> passRow.name,
-            DPass.description = req.description <|> passRow.description,
+            DPass.name = newName,
+            DPass.description = newDescription,
             DPass.amount = fromMaybe passRow.amount req.amount,
             DPass.benefitDescription = fromMaybe passRow.benefitDescription req.benefitDescription,
-            DPass.benefit = req.benefit <|> passRow.benefit,
+            DPass.benefit = newBenefit,
             DPass.applicableVehicleServiceTiers = fromMaybe passRow.applicableVehicleServiceTiers req.applicableVehicleServiceTiers,
             DPass.vehicleType = fromMaybe passRow.vehicleType req.vehicleType,
             DPass.documentsRequired = fromMaybe passRow.documentsRequired req.documentsRequired,
-            DPass.pricingTiers = req.pricingTiers <|> passRow.pricingTiers,
-            DPass.maxValidTrips = req.maxValidTrips <|> passRow.maxValidTrips,
-            DPass.maxValidDays = req.maxValidDays <|> passRow.maxValidDays,
+            DPass.pricingTiers = newPricingTiers,
+            DPass.maxValidTrips = newMaxValidTrips,
+            DPass.maxValidDays = newMaxValidDays,
             DPass.verificationValidity = fromMaybe passRow.verificationValidity req.verificationValidity,
             DPass.order = fromMaybe passRow.order req.order,
             DPass.enable = fromMaybe passRow.enable req.enable,
             DPass.autoApply = fromMaybe passRow.autoApply req.autoApply,
-            DPass.passConfig = (DPass.PassConfig <$> req.maxSwitchCount) <|> passRow.passConfig,
-            DPass.minFare = req.minFare <|> passRow.minFare,
-            DPass.maxFare = req.maxFare <|> passRow.maxFare,
-            DPass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
+            DPass.passConfig = newPassConfig,
+            DPass.minFare = newMinFare,
+            DPass.maxFare = newMaxFare,
+            DPass.formVerificationConfig = newFormVerificationConfig,
             DPass.updatedAt = now
           }
   QPass.updateByPrimaryKey updatedPass
@@ -741,6 +766,375 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
+
+-- Pass category / pass type catalog: the two levels above `pass`. No delete
+-- counterpart -- neither table has an `enable` column, and a hard delete would
+-- orphan pass / purchased_pass rows that still resolve their parent by id for
+-- rider history.
+
+listPassCategories :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow [DashPass.PassCategoryItem]
+listPassCategories merchantShortId opCity = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  -- Uncached reads: the dashboard must see its own write immediately, and the
+  -- CQ* in-mem layer (1h) survives clearCache*, which only drops the Redis key.
+  categories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  forM categories $ \category -> do
+    passTypes <- QPassType.findAllByPassCategoryId category.id
+    pure $
+      DashPass.PassCategoryItem
+        { id = category.id,
+          name = category.name,
+          description = category.description,
+          order = category.order,
+          passTypeCount = length passTypes
+        }
+
+createPassCategory :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassCategoryCreateReq -> Environment.Flow DashPass.PassCategoryCreateResp
+createPassCategory merchantShortId opCity req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passCategoryId <- generateGUID
+  now <- getCurrentTime
+  QPassCategory.create
+    DPassCategory.PassCategory
+      { id = passCategoryId,
+        name = req.name,
+        description = req.description,
+        order = req.order,
+        merchantId = merchant.id,
+        merchantOperatingCityId = merchantOperatingCity.id,
+        createdAt = now,
+        updatedAt = now
+      }
+  CQPassCategory.clearCacheByMerchantOperatingCityId merchantOperatingCity.id
+  pure $ DashPass.PassCategoryCreateResp {passCategoryId = passCategoryId}
+
+updatePassCategory :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPassCategory.PassCategory -> DashPass.PassCategoryUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassCategory merchantShortId opCity passCategoryId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  category <- findPassCategoryInCity passCategoryId merchantOperatingCity.id opCity
+  now <- getCurrentTime
+  newOrder <- patchNullable req.clearFields DashPass.PassCategoryOrder req.order category.order
+  QPassCategory.updateByPrimaryKey
+    category
+      { DPassCategory.name = fromMaybe category.name req.name,
+        DPassCategory.description = fromMaybe category.description req.description,
+        DPassCategory.order = newOrder,
+        DPassCategory.updatedAt = now
+      }
+  CQPassCategory.clearCacheById passCategoryId
+  CQPassCategory.clearCacheByMerchantOperatingCityId merchantOperatingCity.id
+  pure APISuccess.Success
+
+listPassTypes :: Id.ShortId DM.Merchant -> Context.City -> Maybe (Id.Id DPassCategory.PassCategory) -> Environment.Flow [DashPass.PassTypeItem]
+listPassTypes merchantShortId opCity mbPassCategoryId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  allCategories <- QPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  let categories = case mbPassCategoryId of
+        Just categoryId -> filter ((== categoryId) . (.id)) allCategories
+        Nothing -> allCategories
+  fmap concat $
+    forM categories $ \category -> do
+      passTypes <- QPassType.findAllByPassCategoryId category.id
+      forM passTypes $ \passType -> do
+        -- Both enable buckets, so the count reflects every pass authored under
+        -- the type rather than only the live ones.
+        passes <- concat <$> mapM (QPass.findAllByPassTypeIdAndEnabled passType.id) [True, False]
+        pure $ mkPassTypeItem category passType (length passes)
+
+mkPassTypeItem :: DPassCategory.PassCategory -> DPassType.PassType -> Int -> DashPass.PassTypeItem
+mkPassTypeItem category passType passCount =
+  DashPass.PassTypeItem
+    { id = passType.id,
+      passCategoryId = passType.passCategoryId,
+      passCategoryName = category.name,
+      name = passType.name,
+      catchline = passType.catchline,
+      title = passType.title,
+      description = passType.description,
+      order = passType.order,
+      passEnum = passType.passEnum,
+      maxPhotoChangeLimit = passType.maxPhotoChangeLimit,
+      photoReUploadTimeLimit = passType.photoReUploadTimeLimit,
+      passCount = passCount
+    }
+
+createPassType :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassTypeCreateReq -> Environment.Flow DashPass.PassTypeCreateResp
+createPassType merchantShortId opCity req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  -- A pass type under a category from another city would never be reached by the
+  -- city-scoped catalog walk, so reject rather than create an orphan row.
+  void $ findPassCategoryInCity req.passCategoryId merchantOperatingCity.id opCity
+  passTypeId <- generateGUID
+  now <- getCurrentTime
+  QPassType.create
+    DPassType.PassType
+      { id = passTypeId,
+        passCategoryId = req.passCategoryId,
+        name = req.name,
+        catchline = req.catchline,
+        title = req.title,
+        description = req.description,
+        order = req.order,
+        passEnum = req.passEnum,
+        maxPhotoChangeLimit = req.maxPhotoChangeLimit,
+        photoReUploadTimeLimit = req.photoReUploadTimeLimit,
+        merchantId = merchant.id,
+        merchantOperatingCityId = merchantOperatingCity.id,
+        createdAt = now,
+        updatedAt = now
+      }
+  CQPassType.clearCacheByPassCategoryId req.passCategoryId
+  pure $ DashPass.PassTypeCreateResp {passTypeId = passTypeId}
+
+updatePassType :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPassType.PassType -> DashPass.PassTypeUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassType merchantShortId opCity passTypeId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passType <- QPassType.findById passTypeId >>= fromMaybeM (PassTypeNotFound passTypeId.getId)
+  unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass type " <> passTypeId.getId <> " does not belong to city " <> show opCity)
+  whenJust req.passCategoryId $ \newCategoryId ->
+    void $ findPassCategoryInCity newCategoryId merchantOperatingCity.id opCity
+  now <- getCurrentTime
+  newName <- patchNullable req.clearFields DashPass.PassTypeName req.name passType.name
+  newCatchline <- patchNullable req.clearFields DashPass.PassTypeCatchline req.catchline passType.catchline
+  newDescription <- patchNullable req.clearFields DashPass.PassTypeDescription req.description passType.description
+  newPassEnum <- patchNullable req.clearFields DashPass.PassTypePassEnum req.passEnum passType.passEnum
+  newMaxPhotoChangeLimit <- patchNullable req.clearFields DashPass.PassTypeMaxPhotoChangeLimit req.maxPhotoChangeLimit passType.maxPhotoChangeLimit
+  newPhotoReUploadTimeLimit <- patchNullable req.clearFields DashPass.PassTypePhotoReUploadTimeLimit req.photoReUploadTimeLimit passType.photoReUploadTimeLimit
+  let updatedPassType =
+        passType
+          { DPassType.passCategoryId = fromMaybe passType.passCategoryId req.passCategoryId,
+            DPassType.name = newName,
+            DPassType.catchline = newCatchline,
+            DPassType.title = fromMaybe passType.title req.title,
+            DPassType.description = newDescription,
+            DPassType.order = fromMaybe passType.order req.order,
+            DPassType.passEnum = newPassEnum,
+            DPassType.maxPhotoChangeLimit = newMaxPhotoChangeLimit,
+            DPassType.photoReUploadTimeLimit = newPhotoReUploadTimeLimit,
+            DPassType.updatedAt = now
+          }
+  QPassType.updateByPrimaryKey updatedPassType
+  CQPassType.clearCacheById passTypeId
+  CQPassType.clearCacheByPassCategoryId passType.passCategoryId
+  CQPassType.clearCacheByPassCategoryId updatedPassType.passCategoryId
+  pure APISuccess.Success
+
+findPassCategoryInCity :: Id.Id DPassCategory.PassCategory -> Id.Id DMOC.MerchantOperatingCity -> Context.City -> Environment.Flow DPassCategory.PassCategory
+findPassCategoryInCity passCategoryId merchantOperatingCityId opCity = do
+  category <- QPassCategory.findById passCategoryId >>= fromMaybeM (PassCategoryNotFound passCategoryId.getId)
+  unless (category.merchantOperatingCityId == merchantOperatingCityId) $
+    throwError (InvalidRequest $ "Pass category " <> passCategoryId.getId <> " does not belong to city " <> show opCity)
+  pure category
+
+-- FRFS pass override / config. Separate from the catalog CRUD because these
+-- columns drive SharedLogic.FRFSPassOverride, not the rider-facing pass listing.
+
+getPassOverrideConfig :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> Environment.Flow DashPass.PassOverrideConfig
+getPassOverrideConfig merchantShortId opCity passId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  -- Report a broken blob rather than rendering an empty form over it: the
+  -- dashboard would otherwise overwrite a config it never showed the author.
+  let (mbBenefit, mbError) = readOverrideBenefit passRow
+  pure $
+    DashPass.PassOverrideConfig
+      { passId = passRow.id,
+        code = passRow.code,
+        frfsPriceOverrideApplicable = passRow.frfsPriceOverrideApplicable,
+        frfsCancelLimit = passRow.frfsCancelLimit,
+        minTripsAllowingOverlap = passRow.minTripsAllowingOverlap,
+        minDaysToSuggestRenewal = passRow.minDaysToSuggestRenewal,
+        timeOverlappingFrfsBookingsLimit = passRow.timeOverlappingFrfsBookingsLimit,
+        benefit = mkOverrideBenefitAPIEntity <$> mbBenefit,
+        benefitConfigError = mbError
+      }
+
+-- | The stored blob is OverrideBenefitConfig { override_benefits :: [..] }, but
+-- only the first entry is ever applied (FRFSPassOverride.benefitFromPass logs
+-- and ignores the rest), so the dashboard exposes exactly one.
+readOverrideBenefit :: DPass.Pass -> (Maybe FRFSPassOverride.OverrideBenefit, Maybe Text)
+readOverrideBenefit passRow = case passRow.overrideBenefitConfigJson of
+  Nothing -> (Nothing, Nothing)
+  Just configJson -> case FRFSPassOverride.parseOverrideBenefitConfig configJson of
+    Left err -> (Nothing, Just $ "unparseable override_benefit_config_json: " <> show err)
+    Right config -> case listToMaybe config.overrideBenefits of
+      Nothing -> (Nothing, Just "override_benefits is empty")
+      Just benefit -> case FRFSPassOverride.validateBenefit benefit of
+        Left reason -> (Just benefit, Just reason)
+        Right valid -> (Just valid, Nothing)
+
+updatePassOverrideConfig :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassOverrideUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassOverrideConfig merchantShortId opCity passId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  -- Validate with the same predicate the runtime uses to decide whether a pass
+  -- is usable, so the dashboard cannot save a config that silently disqualifies
+  -- the pass at booking time.
+  mbBenefitJson <- forM req.benefit $ \apiBenefit -> do
+    let benefit = fromOverrideBenefitAPIEntity apiBenefit
+    validated <- either (throwError . InvalidRequest . ("Invalid override benefit: " <>)) pure (FRFSPassOverride.validateBenefit benefit)
+    pure $ A.toJSON (FRFSPassOverride.OverrideBenefitConfig {overrideBenefits = [validated]})
+  now <- getCurrentTime
+  newPriceOverrideApplicable <- patchNullable req.clearFields DashPass.OverrideFrfsPriceOverrideApplicable req.frfsPriceOverrideApplicable passRow.frfsPriceOverrideApplicable
+  newCancelLimit <- patchNullable req.clearFields DashPass.OverrideFrfsCancelLimit req.frfsCancelLimit passRow.frfsCancelLimit
+  newMinTripsAllowingOverlap <- patchNullable req.clearFields DashPass.OverrideMinTripsAllowingOverlap req.minTripsAllowingOverlap passRow.minTripsAllowingOverlap
+  newMinDaysToSuggestRenewal <- patchNullable req.clearFields DashPass.OverrideMinDaysToSuggestRenewal req.minDaysToSuggestRenewal passRow.minDaysToSuggestRenewal
+  newTimeOverlappingFrfsBookingsLimit <- patchNullable req.clearFields DashPass.OverrideTimeOverlappingFrfsBookingsLimit req.timeOverlappingFrfsBookingsLimit passRow.timeOverlappingFrfsBookingsLimit
+  newBenefitJson <- patchNullable req.clearFields DashPass.OverrideBenefit mbBenefitJson passRow.overrideBenefitConfigJson
+  let updatedPass =
+        passRow
+          { DPass.frfsPriceOverrideApplicable = newPriceOverrideApplicable,
+            DPass.frfsCancelLimit = newCancelLimit,
+            DPass.minTripsAllowingOverlap = newMinTripsAllowingOverlap,
+            DPass.minDaysToSuggestRenewal = newMinDaysToSuggestRenewal,
+            DPass.timeOverlappingFrfsBookingsLimit = newTimeOverlappingFrfsBookingsLimit,
+            DPass.overrideBenefitConfigJson = newBenefitJson,
+            DPass.updatedAt = now
+          }
+  QPass.updateByPrimaryKey updatedPass
+  CQPass.clearCacheById passId
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  pure APISuccess.Success
+
+mkOverrideBenefitAPIEntity :: FRFSPassOverride.OverrideBenefit -> DashPass.OverrideBenefitAPIEntity
+mkOverrideBenefitAPIEntity benefit =
+  DashPass.OverrideBenefitAPIEntity
+    { percentageSaving =
+        benefit.percentageSaving <&> \p ->
+          DashPass.PercentageSavingAPIEntity {applicableValue = p.applicableValue, enabled = p.enabled},
+      fixedSaving =
+        benefit.fixedSaving <&> \f ->
+          DashPass.FixedSavingAPIEntity {applicableValue = f.applicableValue, currencyType = f.currencyType, enabled = f.enabled},
+      unlimitedTripCount = benefit.unlimitedTripCount,
+      maximumTripCount = benefit.maximumTripCount,
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+    }
+
+fromOverrideBenefitAPIEntity :: DashPass.OverrideBenefitAPIEntity -> FRFSPassOverride.OverrideBenefit
+fromOverrideBenefitAPIEntity apiBenefit =
+  FRFSPassOverride.OverrideBenefit
+    { percentageSaving =
+        apiBenefit.percentageSaving <&> \p ->
+          FRFSPassOverride.PercentageSaving {applicableValue = p.applicableValue, enabled = p.enabled},
+      fixedSaving =
+        apiBenefit.fixedSaving <&> \f ->
+          FRFSPassOverride.FixedSaving {applicableValue = f.applicableValue, currencyType = f.currencyType, enabled = f.enabled},
+      unlimitedTripCount = apiBenefit.unlimitedTripCount,
+      maximumTripCount = apiBenefit.maximumTripCount,
+      maxTicketQuantityPerOverride = apiBenefit.maxTicketQuantityPerOverride
+    }
+
+-- | Operator adjustment of a pass's remaining trips.
+--
+-- The authoritative counter is the Redis key seeded per term by
+-- FRFSPassOverride.seededRemainingTrips; purchased_pass_payment.available_trip_count
+-- is a mirror it reseeds from. Writing only the column would look like a no-op to
+-- the rider until the key expired, so both move here, in that order.
+postPassTripsAdjust ::
+  Id.ShortId DM.Merchant ->
+  Context.City ->
+  Id.Id DP.Person ->
+  Id.Id DPurchasedPass.PurchasedPass ->
+  DashPass.PassTripAdjustReq ->
+  Environment.Flow DashPass.PassTripAdjustResp
+postPassTripsAdjust merchantShortId opCity personId purchasedPassId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  when (req.value <= 0) $ throwError (InvalidRequest "value must be positive; the operation carries the direction")
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  unless (purchasedPass.personId == personId) $
+    throwError (InvalidRequest $ "Pass " <> purchasedPassId.getId <> " does not belong to customer " <> personId.getId)
+
+  -- Active-term selection is date-bounded, and the boundary is local, not UTC.
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) Nothing
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
+  let today = DT.utctDay istTime
+  payment <- resolveAdjustPayment purchasedPassId today req.purchasedPassPaymentId
+  unless (payment.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass term does not belong to city " <> show opCity)
+
+  pass <- maybe (pure Nothing) CQPass.findById payment.passId >>= fromMaybeM (PassNotFound $ maybe "<none>" (.getId) payment.passId)
+  benefit <- FRFSPassOverride.benefitFromPass pass >>= fromMaybeM (InvalidRequest "Pass has no usable override benefit, so it has no trip ledger to adjust")
+  -- An unlimited benefit keeps no counter at all (remainingTrips returns Nothing),
+  -- so there is nothing meaningful to add to or take from.
+  when (FRFSPassOverride.isUnlimitedBenefit benefit) $
+    throwError (InvalidRequest "Pass benefit is unlimited; it has no trip count to adjust")
+
+  let key = FRFSPassOverride.makeTripCountKey payment.id
+      delta = fromIntegral req.value :: Integer
+  (before, remaining) <- FRFSPassOverride.withTripCountLock payment.id $ do
+    -- Seed before the incr/decr: INCRBY on a missing key starts from 0 and would
+    -- silently discard the term's remaining allowance.
+    before <- FRFSPassOverride.seededRemainingTrips payment (FRFSPassOverride.allowanceFor payment benefit)
+    -- A term holds between zero and the benefit's configured maximum. INCRBY/DECRBY
+    -- are atomic but unbounded, so the adjustment is applied, checked, and put
+    -- straight back if it left the range -- the same shape consumeTrip uses for an
+    -- overspend. Rejecting rather than silently clamping: an operator asking for 400
+    -- trips on a 15-trip pass has made a mistake worth surfacing, not rounding off.
+    let ceiling' = fromIntegral (fromMaybe 0 benefit.maximumTripCount) :: Integer
+    adjusted <- case req.operation of
+      DashPass.IncrementBy -> Redis.incrby key delta
+      DashPass.DecrementBy -> Redis.decrby key delta
+    when (adjusted < 0 || adjusted > ceiling') $ do
+      void $ case req.operation of
+        DashPass.IncrementBy -> Redis.decrby key delta
+        DashPass.DecrementBy -> Redis.incrby key delta
+      throwError . InvalidRequest $
+        "Adjustment would put the trip count outside the pass's range of 0 to "
+          <> show ceiling'
+          <> " (currently "
+          <> show before
+          <> ", requested "
+          <> show adjusted
+          <> ")"
+    let remaining = adjusted
+    FRFSPassOverride.refreshTripCountTtl payment key
+    withTryCatch "postPassTripsAdjust:mirror" (QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id) >>= \case
+      Right () -> pure ()
+      Left err -> do
+        void $ case req.operation of
+          DashPass.IncrementBy -> Redis.decrby key delta
+          DashPass.DecrementBy -> Redis.incrby key delta
+        logError $ "PassTripAdjust: mirror write failed, rolled the counter back paymentId=" <> payment.id.getId <> " err=" <> show err
+        throwError . InternalError $ "Failed to persist the trip adjustment; the count is unchanged, retry is safe"
+    pure (before, remaining)
+  logInfo $
+    "PassTripAdjust: paymentId=" <> payment.id.getId <> " op=" <> show req.operation
+      <> " value="
+      <> show req.value
+      <> " before="
+      <> show before
+      <> " after="
+      <> show remaining
+  pure $
+    DashPass.PassTripAdjustResp
+      { purchasedPassPaymentId = payment.id,
+        remainingTrips = Just (fromIntegral remaining),
+        previousTrips = Just before
+      }
+
+-- | The named term, or the pass's active one when none is given.
+resolveAdjustPayment ::
+  Id.Id DPurchasedPass.PurchasedPass ->
+  DT.Day ->
+  Maybe (Id.Id DPurchasedPassPayment.PurchasedPassPayment) ->
+  Environment.Flow DPurchasedPassPayment.PurchasedPassPayment
+resolveAdjustPayment purchasedPassId today = \case
+  Just paymentId -> do
+    payment <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= fromMaybeM (PurchasedPassPaymentNotFound paymentId.getId)
+    unless (payment.purchasedPassId == purchasedPassId) $
+      throwError (InvalidRequest $ "Payment " <> paymentId.getId <> " does not belong to pass " <> purchasedPassId.getId)
+    unless (payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+      throwError (InvalidRequest $ "Payment " <> paymentId.getId <> " is " <> show payment.status <> "; only Active or PreBooked terms can be adjusted")
+    pure payment
+  Nothing -> do
+    payments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPassId [DPurchasedPass.Active] today
+    fromMaybeM
+      (InvalidRequest $ "Pass " <> purchasedPassId.getId <> " has no active term; pass purchasedPassPaymentId explicitly")
+      (listToMaybe payments)
 
 mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
 mkFrfsOverrideConfig benefit =
