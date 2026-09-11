@@ -27,6 +27,9 @@ module SharedLogic.Finance.Prepaid
     computeFifoSubscriptionAllocations,
     attributableRideDebitAmount,
     handleSubscriptionExpiry,
+    ownerHasRideInFlight,
+    markPrepaidSettlementPending,
+    clearPrepaidSettlementPending,
     checkAndMarkExhaustedSubscriptions,
     activateNextQueuedPurchaseExpiry,
     InvoiceCreationParams (..),
@@ -46,9 +49,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Common (Currency (..), HighPrecMoney, MonadFlow)
+import Kernel.Types.Common (Currency (..), HighPrecMoney, MonadFlow, Seconds (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, logWarning, withTryCatch)
+import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, secondsToNominalDiffTime, withTryCatch)
+import Kernel.Utils.Logging (logError, logInfo, logWarning)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance hiding (TransactionType (SubscriptionPurchase))
 import qualified Lib.Finance.Core.Types as Finance
@@ -61,7 +65,9 @@ import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.WalletAccount (computeTdsRateReason)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
@@ -958,10 +964,61 @@ attributableRideDebitAmount (Id subPurchaseId) entry =
         pure entry.amount
     Nothing -> pure entry.amount
 
+-- | A ride running longer than tripStartTime + estimatedDuration + this is
+-- treated as stuck/abandoned and stops blocking subscription expiry. Matches the
+-- 6h "ONGOING_6HRS" cutoff used elsewhere for INPROGRESS rides.
+inFlightRideGracePeriod :: Seconds
+inFlightRideGracePeriod = 6 * 60 * 60
+
+prepaidSettlementPendingKey :: Text -> Text
+prepaidSettlementPendingKey ownerId = "PrepaidSettlementPending:" <> ownerId
+
+prepaidSettlementPendingTtl :: Int
+prepaidSettlementPendingTtl = 30 * 60
+
+markPrepaidSettlementPending :: (Redis.HedisFlow m r) => Text -> Text -> m ()
+markPrepaidSettlementPending ownerId rideId =
+  Redis.sAddExp (prepaidSettlementPendingKey ownerId) [rideId] prepaidSettlementPendingTtl
+
+clearPrepaidSettlementPending :: (Redis.HedisFlow m r) => Text -> Text -> m ()
+clearPrepaidSettlementPending ownerId rideId =
+  void $ Redis.srem (prepaidSettlementPendingKey ownerId) [rideId]
+
+ownerHasRideInFlight ::
+  (BeamFlow m r, Redis.HedisFlow m r) =>
+  DSP.SubscriptionOwnerType ->
+  Text ->
+  m Bool
+ownerHasRideInFlight ownerType ownerId = do
+  pendingSettlements :: [Text] <- Redis.sMembers (prepaidSettlementPendingKey ownerId)
+  if not (null pendingSettlements)
+    then pure True
+    else do
+      inProgressRides <- case ownerType of
+        DSP.DRIVER -> maybeToList <$> QRide.getInProgressByDriverId (Id ownerId)
+        DSP.FLEET_OWNER -> QRide.getInProgressByFleetOwnerId ownerId
+      now <- getCurrentTime
+      or <$> mapM (rideStillInFlight now) inProgressRides
+  where
+    rideStillInFlight now ride = case ride.tripStartTime of
+      Nothing -> pure False
+      Just startedAt -> do
+        mbBooking <- QRB.findById ride.bookingId
+        let estDuration = fromMaybe (Seconds 0) (mbBooking >>= (.estimatedDuration))
+            staleAfter = addUTCTime (secondsToNominalDiffTime (estDuration + inFlightRideGracePeriod)) startedAt
+        pure $ now < staleAfter
+
 -- | Handle subscription expiry: compute expired credits, create revenue recognition
 -- and credit transfer entries, then mark the subscription as EXPIRED.
 -- NOTE: Does NOT activate the next queued purchase's expiry timer.
 -- The caller is responsible for calling activateNextQueuedPurchaseExpiry if needed.
+-- If the owner has a ride still INPROGRESS, expiry is deferred (no-op): the
+-- scheduled job reschedules itself and EndRide re-runs this after the fare debit.
+--
+-- Returns True iff this call actually performed the ACTIVE -> EXPIRED transition.
+-- Callers that cascade to the next queued purchase MUST gate that cascade on this
+-- result, not on a pre-call status snapshot (the ride-in-flight check can flip
+-- between the caller's own check and this one).
 handleSubscriptionExpiry ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
@@ -970,9 +1027,18 @@ handleSubscriptionExpiry ::
     Finance.HasActorInfo m r
   ) =>
   DSP.SubscriptionPurchase ->
-  m ()
+  m Bool
 handleSubscriptionExpiry purchase = do
-  when (purchase.status == DSP.ACTIVE) $ do
+  rideInFlight <-
+    if purchase.status == DSP.ACTIVE
+      then ownerHasRideInFlight purchase.ownerType purchase.ownerId
+      else pure False
+  when rideInFlight $
+    logInfo $
+      "Deferring subscription expiry for " <> purchase.id.getId <> ": owner " <> purchase.ownerId
+        <> " has a ride in progress; expiry will run after the ride ends and its fare is debited."
+  let shouldExpire = purchase.status == DSP.ACTIVE && not rideInFlight
+  when shouldExpire $ do
     let counterpartyType = case purchase.ownerType of
           DSP.FLEET_OWNER -> counterpartyFleetOwner
           DSP.DRIVER -> counterpartyDriver
@@ -1066,6 +1132,7 @@ handleSubscriptionExpiry purchase = do
           mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) Nothing
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
+  pure shouldExpire
 
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
