@@ -5,6 +5,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
+import Domain.Utils (mapConcurrently)
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface as Payment
@@ -31,17 +32,25 @@ create dsReq = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> m ()
-createStopsLocation = QL.createMany
+createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Forkable m) => [DL.Location] -> m ()
+createStopsLocation locations = void $ mapConcurrently QL.create locations
 
-createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
+-- | Persists the pickup/stops/drop LocationMapping rows for a SearchRequest that is
+-- being created right now, so its id (and thus every mapping's entityId) is brand new.
+-- Uses the "fresh" builders (see SharedLogic.LocationMapping) rather than
+-- buildPickUpLocationMapping/buildStopsLocationMapping/buildDropLocationMapping: those
+-- also query for past versions of the mapping to supersede, which a brand-new entityId
+-- can never have, and the drop's order is computed from the stop count directly instead
+-- of via a query, for the same reason. The stop and mapping writes that remain run
+-- concurrently rather than one at a time.
+createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Forkable m) => SearchRequest -> m ()
 createDSReq searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+  fromLocationMap <- SLM.buildFreshLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId) 0
   void $ QLM.create fromLocationMap
   void $ createStopsLocation searchRequest.stops
-  stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  void $ QLM.createMany stopsLocMapping
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
+  stopsLocMapping <- SLM.buildFreshStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+  void $ mapConcurrently QLM.create stopsLocMapping
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildFreshLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId) (length searchRequest.stops + 1)) searchRequest.toLocation
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create searchRequest
 
