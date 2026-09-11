@@ -23,6 +23,7 @@ module Lib.CommunicationEngine.Webhook
     SendNotificationReq (..),
     SmsMsg (..),
     EmailArgs (..),
+    EmailAttachment (..),
     RawTemplate (..),
     MerchantMessageTemplate (..),
     TemplateRequirement (..),
@@ -92,7 +93,15 @@ data SendNotificationReq = SendNotificationReq
     templateId :: Maybe Text,
     variables :: Maybe [Text],
     sender :: Maybe Text,
-    subject :: Maybe Text
+    subject :: Maybe Text,
+    attachments :: Maybe [EmailAttachment]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data EmailAttachment = EmailAttachment
+  { url :: Text,
+    filename :: Text,
+    contentType :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -101,7 +110,13 @@ data SendNotificationReq = SendNotificationReq
 data SmsMsg = SmsMsg {phoneNumber :: Text, body :: Text, sender :: Maybe Text, templateId :: Text}
 
 -- | Email payload handed to the app's raw sender.
-data EmailArgs = EmailArgs {from :: Text, to :: Text, subject :: Text, body :: Text}
+data EmailArgs = EmailArgs
+  { from :: Text,
+    to :: Text,
+    subject :: Text,
+    body :: Text,
+    attachments :: [EmailAttachment]
+  }
 
 -- | A merchant_message row as the app reads it.
 data RawTemplate = RawTemplate
@@ -208,5 +223,5 @@ sendNotificationWebhook h req = do
     EMAIL -> do
       toEmail <- fromMaybeM (InvalidRequest "Recipient email not available") contact.email
       from <- fromMaybeM (InvalidRequest "sender (from email) required for EMAIL channel") req.sender
-      h.sendEmail contact EmailArgs {from = from, to = toEmail, subject = fromMaybe req.title req.subject, body = req.body}
+      h.sendEmail contact EmailArgs {from = from, to = toEmail, subject = fromMaybe req.title req.subject, body = req.body, attachments = fromMaybe [] req.attachments}
   pure Success

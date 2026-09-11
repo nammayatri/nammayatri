@@ -132,3 +132,57 @@ buildRawEmail from to subject body pdfBase64 fileName mimeType =
           "",
           "--" <> boundary <> "--"
         ]
+
+sendEmailWithAttachments ::
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  [Email.EmailAttachment] ->
+  IO ()
+sendEmailWithAttachments from to subject bodyText attachments = do
+  let rawEmail = buildMultiAttachmentRawEmail from to subject bodyText attachments
+  env <- AWS.newEnv AWS.discover
+  let rawMessage = newRawMessage (TE.encodeUtf8 rawEmail)
+      sendReq = newSendRawEmail rawMessage
+  void $ AWS.runResourceT $ AWS.send env sendReq
+
+buildMultiAttachmentRawEmail ::
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  [Email.EmailAttachment] ->
+  Text
+buildMultiAttachmentRawEmail from to subject body attachments =
+  let boundary = "----=_Part_0_123456789.987654321"
+      toAddressList = T.intercalate ", " to
+      bodyPart =
+        [ "--" <> boundary,
+          "Content-Type: text/plain; charset=UTF-8",
+          "Content-Transfer-Encoding: 7bit",
+          "",
+          body,
+          ""
+        ]
+      attachmentPart att =
+        let b64 = TE.decodeUtf8 . B64.encode $ att.content
+         in [ "--" <> boundary,
+              "Content-Type: " <> att.contentType <> "; name=\"" <> att.filename <> "\"",
+              "Content-Description: " <> att.filename,
+              "Content-Disposition: attachment; filename=\"" <> att.filename <> "\"",
+              "Content-Transfer-Encoding: base64",
+              "",
+              b64,
+              ""
+            ]
+      headerPart =
+        [ "From: " <> from,
+          "To: " <> toAddressList,
+          "Subject: " <> subject,
+          "MIME-Version: 1.0",
+          "Content-Type: multipart/mixed; boundary=\"" <> boundary <> "\"",
+          ""
+        ]
+      closing = ["--" <> boundary <> "--"]
+   in T.unlines $ headerPart <> bodyPart <> concatMap attachmentPart attachments <> closing

@@ -18,6 +18,7 @@ module Email.Flow
     sendMagicLinkEmail,
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
+    sendEmailWithAttachments,
     module Email.Types,
   )
 where
@@ -92,6 +93,23 @@ sendEmailWithAttachment serviceConfig from to subject bodyText filePath fileName
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachment"
+
+sendEmailWithAttachments ::
+  EmailServiceConfig ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  [EmailAttachment] ->
+  IO ()
+sendEmailWithAttachments serviceConfig from to subject bodyText attachments = do
+  handleEmailRouting serviceConfig "sendEmailWithAttachments" $ \cloudType ->
+    case cloudType of
+      AWS -> AWS.sendEmailWithAttachments from to subject bodyText attachments
+      GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText attachments
+      UNAVAILABLE -> do
+        putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
+        error "CloudType UNAVAILABLE: Cannot route email with attachments"
 
 handleEmailRouting :: EmailServiceConfig -> Text -> (CloudType -> IO ()) -> IO ()
 handleEmailRouting config _ action = do
