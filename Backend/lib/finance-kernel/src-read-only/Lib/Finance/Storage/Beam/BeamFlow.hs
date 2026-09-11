@@ -24,6 +24,7 @@ import qualified Lib.Finance.Storage.Beam.JournalEntryTransaction as BeamJournal
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
+import qualified Lib.Finance.Storage.Beam.PgSettlementBatch as BeamPgSettlementBatch
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
@@ -50,6 +51,7 @@ type BeamFlow m r =
     HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT,
     HasSchemaName BeamPgPayment.PgPaymentSettlementReportT,
     HasSchemaName BeamPgPayout.PgPayoutSettlementReportT,
+    HasSchemaName BeamPgSettlementBatch.PgSettlementBatchT,
     HasSchemaName BeamSapJournal.SapJournalEntryT,
     HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT,
     HasSchemaName BeamJournalEntryTransaction.JournalEntryTransactionT,
