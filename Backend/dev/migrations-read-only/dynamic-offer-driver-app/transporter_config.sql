@@ -1168,6 +1168,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_surge_confi
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_health_check_debug boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_tag_validity_minutes integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_max_search_requests integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_daily_limit integer ;

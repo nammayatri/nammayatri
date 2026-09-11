@@ -1278,6 +1278,7 @@ TransporterConfig:
     aadhaarImageResizeConfig: Maybe AadhaarImageResizeConfig
     enableFaceVerification: Bool
     enableTollCrossedNotifications: Bool
+    enableDriverHealthCheckDebug: Maybe Bool
     specialZoneBookingOtpExpiry: Int
     isPlanMandatory: Bool
     freeTrialDays: Int
