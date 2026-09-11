@@ -42,8 +42,5 @@ apis:
             auth: ApiAuthV2
             response:
               type: ConfirmRes
-      migrate:
-        endpoint: ConfirmAPI ConfirmEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS CONFIRM
 
 types: {}

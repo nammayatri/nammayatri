@@ -85,7 +85,6 @@ import qualified Storage.Queries.TicketBookingServiceCategory as QTBSC
 import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
 import qualified Storage.Queries.TicketSubPlace as QTicketSubPlace
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
@@ -300,10 +299,7 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
         Just availableSeats -> Just $ availableSeats - (maybe 0 (.booked) mSeatM) - (maybe 0 (.blocked) mSeatM)
 
 postTicketPlacesBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postTicketPlacesBook (mbPersonId, merchantId) placeId req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req
-
-postTicketPlacesBookWithActor :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
+postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
@@ -1342,10 +1338,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
 
 -- Direct booking handler that supports both cash and online payments
 postTicketPlacesDirectBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
-postTicketPlacesDirectBook (mbPersonId, merchantId) mbRequestorId placeId req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ postTicketPlacesDirectBookWithActor (mbPersonId, merchantId) mbRequestorId placeId req
-
-postTicketPlacesDirectBookWithActor :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
-postTicketPlacesDirectBookWithActor (_mbPersonId, merchantId) mbRequestorId placeId req = do
+postTicketPlacesDirectBook (_mbPersonId, merchantId) mbRequestorId placeId req = do
   -- Find or create person using the same pattern as Registration.hs
   personId <- findOrCreatePersonForDirectBooking merchantId req
 
@@ -1370,7 +1363,7 @@ postTicketPlacesDirectBookWithActor (_mbPersonId, merchantId) mbRequestorId plac
           }
     DTTB.ONLINE -> do
       -- For online payment, use existing booking flow
-      createOrderResp <- postTicketPlacesBookWithActor (Just personId, merchantId) placeId ticketBookingReq
+      createOrderResp <- postTicketPlacesBook (Just personId, merchantId) placeId ticketBookingReq
       -- Get the booking details to return booking short id
       merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
       ticketBookings <- QTB.getAllBookingsByPersonIdAndStatus (Just 1) (Just 0) personId merchantOpCity.id DTTB.Pending

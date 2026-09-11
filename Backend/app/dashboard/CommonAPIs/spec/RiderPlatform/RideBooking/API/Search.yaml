@@ -21,8 +21,5 @@ apis:
         type: SearchReq
       response:
         type: SearchResp
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS SEARCH
-        endpoint: SearchAPI SearchEndPoint
 
 types: {}

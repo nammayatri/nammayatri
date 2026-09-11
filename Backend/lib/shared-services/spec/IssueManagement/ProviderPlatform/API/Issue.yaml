@@ -82,8 +82,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: IssueCategoryListRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_CATEGORY_LIST
   - GET: # IssueListAPI
       endpoint: /list
       auth: ApiAuthV2
@@ -102,8 +100,6 @@ apis:
         - toDate: UTCTime
       response:
         type: IssueReportListResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_LIST
   - GET: # IssueInfoAPI
       endpoint: /{issueId}/info
       auth: ApiAuthV2
@@ -111,8 +107,6 @@ apis:
         issueId: Id IssueReport
       response:
         type: IssueInfoDRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
   - GET: # IssueInfoAPIV2
       endpoint: /info
       name: GetIssueInfoV2
@@ -122,8 +116,6 @@ apis:
         - issueShortId: (ShortId IssueReport)
       response:
         type: IssueInfoDRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
   - PUT:  # IssueUpdateAPI
       endpoint: /{issueId}/update
       auth: ApiAuthV2
@@ -143,9 +135,6 @@ apis:
               type: IssueUpdateByUserReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: IssueAPI IssueUpdateEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_UPDATE
   # Operator-side media upload for live chat. POST a multipart file, get back a
   # MediaFile id, then send that id in the next /chat/message body. Mirrors the
   # driver-side /v2/issue/upload but goes through dashboard auth.
@@ -176,9 +165,6 @@ apis:
               type: IssueAddCommentByUserReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: IssueAPI IssueAddCommentEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_ADD_COMMENT
   - GET: # IssueFetchMediaAPI
       endpoint: /media
       auth: ApiAuthV2
@@ -186,8 +172,6 @@ apis:
         - filePath: Text
       response:
         type: Text
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_FETCH_MEDIA
   - POST:  # TicketStatusCallBackAPI
       endpoint: /kapture/ticketStatus
       name: PostIssueTicketStatusCallBack
@@ -196,8 +180,6 @@ apis:
         type: Value
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
   - POST:  # CreateIssueCategoryAPI
       endpoint: /category/create
       auth: ApiAuthV2
@@ -205,9 +187,6 @@ apis:
         type: CreateIssueCategoryReq
       response:
         type: CreateIssueCategoryRes
-      migrate:
-        endpoint: IssueAPI CreateIssueCategoryEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE CREATE_ISSUE_CATEGORY
   - POST:  # UpdateIssueCategoryAPI
       endpoint: /category/update
       auth: ApiAuthV2
@@ -217,9 +196,6 @@ apis:
         type: UpdateIssueCategoryReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: IssueAPI UpdateIssueCategoryEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPDATE_ISSUE_CATEGORY
   - POST:  # CreateIssueOptionAPI
       endpoint: /option/create
       auth: ApiAuthV2
@@ -230,9 +206,6 @@ apis:
         type: CreateIssueOptionReq
       response:
         type: CreateIssueOptionRes
-      migrate:
-        endpoint: IssueAPI CreateIssueOptionEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE CREATE_ISSUE_OPTION
   - POST:  # UpdateIssueOptionAPI
       endpoint: /option/update
       auth: ApiAuthV2
@@ -242,9 +215,6 @@ apis:
         type: UpdateIssueOptionReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: IssueAPI UpdateIssueOptionEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPDATE_ISSUE_OPTION
   - POST:  # UpsertIssueMessageAPI
       endpoint: /message/upsert
       auth: ApiAuthV2
@@ -252,9 +222,6 @@ apis:
         type: UpsertIssueMessageReq
       response:
         type: UpsertIssueMessageRes
-      migrate:
-        endpoint: IssueAPI UpsertIssueMessageEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
 
   - GET: # GetCategoryDetailAPI
       endpoint: /category/{categoryId}/detail

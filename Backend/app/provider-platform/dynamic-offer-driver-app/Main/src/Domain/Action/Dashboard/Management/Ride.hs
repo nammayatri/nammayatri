@@ -42,7 +42,6 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
@@ -59,7 +58,6 @@ import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 getRideList ::
@@ -107,7 +105,7 @@ getRideAgentList ::
 getRideAgentList = DRide.getRideAgentList
 
 postRideEndMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
-postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideEndMultiple merchantShortId opCity _mbRequestorId req = do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -127,7 +125,7 @@ postRideEndMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDas
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 postRideCancelMultiple :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.MultipleRideCancelReq -> Flow Common.MultipleRideCancelResp
-postRideCancelMultiple merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postRideCancelMultiple merchantShortId opCity _mbRequestorId req = do
   runRequestValidation Common.validateMultipleRideCancelReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)

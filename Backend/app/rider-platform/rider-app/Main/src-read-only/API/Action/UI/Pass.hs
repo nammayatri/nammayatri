@@ -28,6 +28,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -230,7 +231,7 @@ postMultimodalPassSelect ::
     Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+postMultimodalPassSelect a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

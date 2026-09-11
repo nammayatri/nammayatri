@@ -48,7 +48,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 payoutServer ::
@@ -114,7 +113,7 @@ getPayoutPayout ::
   Id.Id PayoutRequest.PayoutRequest ->
   Maybe Text ->
   Environment.Flow PayoutTypes.PayoutRequestResp
-getPayoutPayout merchantShortId opCity payoutRequestId mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+getPayoutPayout merchantShortId opCity payoutRequestId _mbRequestorId = do
   let (_history :<|> getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   getById payoutRequestId
@@ -177,7 +176,7 @@ getPayoutPayoutHistory ::
   Maybe UTCTime ->
   Maybe Text ->
   Environment.Flow PayoutTypes.PayoutHistoryRes
-getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo _mbRequestorId = do
   let (history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   history mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo
@@ -283,7 +282,7 @@ postPayoutPayoutRetry ::
   Id.Id PayoutRequest.PayoutRequest ->
   Maybe Text ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutRetry merchantShortId opCity payoutRequestId mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutRetry merchantShortId opCity payoutRequestId _mbRequestorId = do
   let (_history :<|> _getById :<|> retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   retry payoutRequestId
@@ -295,7 +294,7 @@ postPayoutPayoutCancel ::
   Maybe Text ->
   PayoutTypes.PayoutCancelReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutCancel merchantShortId opCity payoutRequestId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutCancel merchantShortId opCity payoutRequestId _mbRequestorId req = do
   let (_history :<|> _getById :<|> _retry :<|> cancelPayout :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   cancelPayout payoutRequestId req
@@ -307,7 +306,7 @@ postPayoutPayoutCash ::
   Maybe Text ->
   PayoutTypes.PayoutCashUpdateReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutCash merchantShortId opCity payoutRequestId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutCash merchantShortId opCity payoutRequestId _mbRequestorId req = do
   let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> markCash :<|> _deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   markCash payoutRequestId req
@@ -318,7 +317,7 @@ postPayoutPayoutVpaDelete ::
   Maybe Text ->
   PayoutTypes.DeleteVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutVpaDelete merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutVpaDelete merchantShortId opCity _mbRequestorId req = do
   let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> deleteVpa :<|> _updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   deleteVpa req
@@ -329,7 +328,7 @@ postPayoutPayoutVpaUpdate ::
   Maybe Text ->
   PayoutTypes.UpdateVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutVpaUpdate merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutVpaUpdate merchantShortId opCity _mbRequestorId req = do
   let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> updateVpa :<|> _refund) =
         payoutServer merchantShortId opCity
   updateVpa req
@@ -340,7 +339,7 @@ postPayoutPayoutVpaRefundRegistration ::
   Maybe Text ->
   PayoutTypes.RefundRegAmountReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
-postPayoutPayoutVpaRefundRegistration merchantShortId opCity mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id.Id @DP.Person) <$> mbRequestorId) $ do
+postPayoutPayoutVpaRefundRegistration merchantShortId opCity _mbRequestorId req = do
   let (_history :<|> _getById :<|> _retry :<|> _cancel :<|> _cash :<|> _deleteVpa :<|> _updateVpa :<|> refundReg) =
         payoutServer merchantShortId opCity
   refundReg req

@@ -304,6 +304,7 @@ apis:
         type: API.Types.UI.TicketService.TicketBookingReq
       response:
         type: Kernel.External.Payment.Interface.Types.CreateOrderResp
+      actorInfo: auth
 
   # # GET /ticket/bookings
   - GET:

@@ -35,8 +35,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: CollectionList
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER VOLUNTEER_COLLECTION_HISTORY
   - GET:
       endpoint: /allFeeHistory
       query:
@@ -45,5 +43,3 @@ apis:
       auth: ApiAuthV2
       response:
         type: '[AllFees]'
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER ALL_FEE_HISTORY

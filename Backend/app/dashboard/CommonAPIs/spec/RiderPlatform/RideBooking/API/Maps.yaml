@@ -24,9 +24,6 @@ apis:
         type: AutoCompleteReq
       response:
         type: AutoCompleteResp
-      migrate:
-        endpoint: MapsAPI AutoCompleteEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTOCOMPLETE
   - POST:  # RideGetPlaceDetailsAPI
       endpoint: /getPlaceDetails/{customerId}
       auth: ApiAuthV2
@@ -36,9 +33,6 @@ apis:
         type: GetPlaceDetailsReq
       response:
         type: GetPlaceDetailsResp
-      migrate:
-        endpoint: MapsAPI GetPlaceDetailsEndPoints
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACEDETAIL
   - POST:  # RideGetPlaceNameAPI
       endpoint: /getPlaceName/{customerId}
       auth: ApiAuthV2
@@ -48,8 +42,5 @@ apis:
         type: GetPlaceNameReq
       response:
         type: GetPlaceNameResp
-      migrate:
-        endpoint: MapsAPI GetPlaceNameEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACENAME
 
 types: {}

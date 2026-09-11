@@ -342,8 +342,8 @@ postTicketBookingCashCollect merchantShortId opCity apiTokenInfo bookingShortId 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketBookingCashCollect) bookingShortId
 
-postTicketPlacesDirectBook :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Maybe Text -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp)
-postTicketPlacesDirectBook merchantShortId opCity apiTokenInfo placeId _requestorId req = do
+postTicketPlacesDirectBook :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp)
+postTicketPlacesDirectBook merchantShortId opCity apiTokenInfo placeId req = do
   let requestorId = apiTokenInfo.personId.getId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketPlacesDirectBook) placeId (Just requestorId) req

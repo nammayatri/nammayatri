@@ -22,33 +22,34 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "submitApplication" :> ReqBody ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationReq
+  ( TokenAuth :> "submitApplication" :> ReqBody '[JSON] API.Types.UI.StclMembership.MembershipApplicationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "buyAdditionalShares"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.TopUpSharesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "updateApplication"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.UpdateMembershipApplicationReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "membership"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.MembershipDetailsResp
   )
 
@@ -63,7 +64,7 @@ postSubmitApplication ::
     API.Types.UI.StclMembership.MembershipApplicationReq ->
     Environment.FlowHandler Kernel.External.Payment.Interface.Types.CreateOrderResp
   )
-postSubmitApplication a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.postSubmitApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSubmitApplication a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.StclMembership.postSubmitApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postBuyAdditionalShares ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -73,7 +74,7 @@ postBuyAdditionalShares ::
     API.Types.UI.StclMembership.TopUpSharesReq ->
     Environment.FlowHandler Kernel.External.Payment.Interface.Types.CreateOrderResp
   )
-postBuyAdditionalShares a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.postBuyAdditionalShares (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postBuyAdditionalShares a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.StclMembership.postBuyAdditionalShares (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 putUpdateApplication ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -83,7 +84,7 @@ putUpdateApplication ::
     API.Types.UI.StclMembership.UpdateMembershipApplicationReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-putUpdateApplication a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.putUpdateApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+putUpdateApplication a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.StclMembership.putUpdateApplication (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMembership ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -92,4 +93,4 @@ getMembership ::
     ) ->
     Environment.FlowHandler API.Types.UI.StclMembership.MembershipDetailsResp
   )
-getMembership a1 = withFlowHandlerAPI $ Domain.Action.UI.StclMembership.getMembership (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getMembership a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.StclMembership.getMembership (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

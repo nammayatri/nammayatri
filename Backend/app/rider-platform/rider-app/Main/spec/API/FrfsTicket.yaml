@@ -648,6 +648,7 @@ apis:
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      actorInfo: auth
 
   # Confirm quote V2 for metro/bus tickets (return PP sdk params)
   - POST:
@@ -661,6 +662,7 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      actorInfo: auth
 
   # Retry payment
   - POST:
@@ -679,6 +681,7 @@ apis:
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      actorInfo: auth
 
   # List metro/bus tickets
   - GET:
@@ -729,6 +732,7 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSRescheduleReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      actorInfo: auth
 
   # Booking Cancel Status
   - GET:

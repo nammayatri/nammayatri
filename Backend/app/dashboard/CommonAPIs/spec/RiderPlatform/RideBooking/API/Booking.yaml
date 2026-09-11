@@ -25,9 +25,6 @@ apis:
         customerId: Id Person
       response:
         type: BookingAPIEntity
-      migrate:
-        endpoint: RBooking RideStatusEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKING_STATUS
   - GET: # BookingInfoAPI (search by display-id, phone, or pickup OTP)
       endpoint: /{searchValue}/booking
       auth: NoAuth
@@ -50,8 +47,6 @@ apis:
         - status: BookingStatus
       response:
         type: BookingListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKINGLIST
   - GET: # AgentBookingListAPI
       endpoint: /agentL1/list
       auth: ApiAuthV2

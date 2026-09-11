@@ -20,7 +20,5 @@ apis:
         customerId: Id Person
       response:
         type: GetQuotesRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS GETQUOTE
 
 types: {}

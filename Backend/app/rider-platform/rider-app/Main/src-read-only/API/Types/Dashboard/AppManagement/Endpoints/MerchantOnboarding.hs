@@ -38,9 +38,11 @@ newtype UploadFileResponse = UploadFileResponse {fileId :: Kernel.Types.Id.Id Da
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (MerchantOnboardingInfo :<|> MerchantOnboardingStart :<|> MerchantOnboardingList :<|> MerchantOnboardingStepSubmit :<|> MerchantOnboardingStepUpdatePayload :<|> MerchantOnboardingStepReject :<|> MerchantOnboardingStepApprove :<|> MerchantOnboardingStepUploadFile :<|> MerchantOnboardingReject :<|> MerchantOnboadingListAll :<|> MerchantOnboardingStepList :<|> MerchantOnboardingGetFile :<|> MerchantOnboardingCancel)
+type API = (MerchantOnboardingInfoHelper :<|> MerchantOnboardingStartHelper :<|> MerchantOnboardingListHelper :<|> MerchantOnboardingStepSubmitHelper :<|> MerchantOnboardingStepUpdatePayloadHelper :<|> MerchantOnboardingStepRejectHelper :<|> MerchantOnboardingStepApproveHelper :<|> MerchantOnboardingStepUploadFileHelper :<|> MerchantOnboardingRejectHelper :<|> MerchantOnboadingListAllHelper :<|> MerchantOnboardingStepListHelper :<|> MerchantOnboardingGetFileHelper :<|> MerchantOnboardingCancelHelper)
 
-type MerchantOnboardingInfo =
+type MerchantOnboardingInfo = ("onboarding" :> Capture "onboardingType" Kernel.Prelude.Text :> "info" :> Get '[JSON] Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+
+type MerchantOnboardingInfoHelper =
   ( "onboarding" :> Capture "onboardingType" Kernel.Prelude.Text :> "info" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -48,7 +50,9 @@ type MerchantOnboardingInfo =
       :> Get '[JSON] Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
   )
 
-type MerchantOnboardingStart =
+type MerchantOnboardingStart = ("onboarding" :> Capture "onboardingType" Kernel.Prelude.Text :> "start" :> Get '[JSON] Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+
+type MerchantOnboardingStartHelper =
   ( "onboarding" :> Capture "onboardingType" Kernel.Prelude.Text :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -56,7 +60,9 @@ type MerchantOnboardingStart =
       :> Get '[JSON] Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
   )
 
-type MerchantOnboardingList =
+type MerchantOnboardingList = ("onboarding" :> "list" :> Get '[JSON] [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+
+type MerchantOnboardingListHelper =
   ( "onboarding" :> "list" :> QueryParam "requestorId" Kernel.Prelude.Text :> QueryParam "requestorRole" Domain.Types.MerchantOnboarding.RequestorRole
       :> Get
            '[JSON]
@@ -64,6 +70,13 @@ type MerchantOnboardingList =
   )
 
 type MerchantOnboardingStepSubmit =
+  ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "submit" :> ReqBody '[JSON] Data.Aeson.Value
+      :> Post
+           '[JSON]
+           Domain.Types.MerchantOnboarding.MerchantOnboardingAPI
+  )
+
+type MerchantOnboardingStepSubmitHelper =
   ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "submit" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -75,6 +88,13 @@ type MerchantOnboardingStepSubmit =
   )
 
 type MerchantOnboardingStepUpdatePayload =
+  ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "updatePayload" :> ReqBody '[JSON] Data.Aeson.Value
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type MerchantOnboardingStepUpdatePayloadHelper =
   ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "updatePayload"
       :> QueryParam
            "requestorId"
@@ -87,6 +107,13 @@ type MerchantOnboardingStepUpdatePayload =
   )
 
 type MerchantOnboardingStepReject =
+  ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "reject" :> ReqBody '[JSON] Data.Aeson.Value
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type MerchantOnboardingStepRejectHelper =
   ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "reject" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -97,7 +124,9 @@ type MerchantOnboardingStepReject =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type MerchantOnboardingStepApprove =
+type MerchantOnboardingStepApprove = ("onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "approve" :> ReqBody '[JSON] Data.Aeson.Value :> Post '[JSON] ApproveResponse)
+
+type MerchantOnboardingStepApproveHelper =
   ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> "approve" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -107,6 +136,16 @@ type MerchantOnboardingStepApprove =
   )
 
 type MerchantOnboardingStepUploadFile =
+  ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text
+      :> Capture
+           "payloadKey"
+           Kernel.Prelude.Text
+      :> "uploadFile"
+      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UploadFileRequest
+      :> Post '[JSON] UploadFileResponse
+  )
+
+type MerchantOnboardingStepUploadFileHelper =
   ( "onboarding" :> "step" :> Capture "stepId" Kernel.Prelude.Text :> Capture "payloadKey" Kernel.Prelude.Text :> "uploadFile"
       :> QueryParam
            "requestorId"
@@ -122,7 +161,9 @@ type MerchantOnboardingStepUploadFile =
            UploadFileResponse
   )
 
-type MerchantOnboardingReject =
+type MerchantOnboardingReject = ("onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "reject" :> ReqBody '[JSON] Data.Aeson.Value :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type MerchantOnboardingRejectHelper =
   ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "reject" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -134,34 +175,57 @@ type MerchantOnboardingReject =
   )
 
 type MerchantOnboadingListAll =
-  ( "onboarding" :> "list" :> "all" :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> QueryParam
-           "requestorRole"
-           Domain.Types.MerchantOnboarding.RequestorRole
-      :> QueryParam "status" Domain.Types.MerchantOnboarding.OnboardingStatus
+  ( "onboarding" :> "list" :> "all" :> QueryParam "status" Domain.Types.MerchantOnboarding.OnboardingStatus
       :> QueryParam
            "onboardingType"
            Domain.Types.MerchantOnboarding.OnboardingType
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
            '[JSON]
            [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI]
   )
 
-type MerchantOnboardingStepList =
+type MerchantOnboadingListAllHelper =
+  ( "onboarding" :> "list" :> "all" :> QueryParam "status" Domain.Types.MerchantOnboarding.OnboardingStatus
+      :> QueryParam
+           "onboardingType"
+           Domain.Types.MerchantOnboarding.OnboardingType
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "requestorRole"
+           Domain.Types.MerchantOnboarding.RequestorRole
+      :> Get
+           '[JSON]
+           [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI]
+  )
+
+type MerchantOnboardingStepList = ("onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "step" :> "list" :> Get '[JSON] [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep])
+
+type MerchantOnboardingStepListHelper =
   ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "step" :> "list" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
            Domain.Types.MerchantOnboarding.RequestorRole
-      :> Get '[JSON] [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep]
+      :> Get
+           '[JSON]
+           [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep]
   )
 
 type MerchantOnboardingGetFile =
+  ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "file" :> Capture "fileId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Types.MerchantOnboarding.GetFileResponse
+  )
+
+type MerchantOnboardingGetFileHelper =
   ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "file" :> Capture "fileId" Kernel.Prelude.Text
       :> QueryParam
            "requestorId"
@@ -172,7 +236,9 @@ type MerchantOnboardingGetFile =
            Domain.Types.MerchantOnboarding.GetFileResponse
   )
 
-type MerchantOnboardingCancel =
+type MerchantOnboardingCancel = ("onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "cancel" :> Get '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type MerchantOnboardingCancelHelper =
   ( "onboarding" :> Capture "onboardingId" Kernel.Prelude.Text :> "cancel" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> QueryParam
            "requestorRole"
@@ -198,7 +264,7 @@ data MerchantOnboardingAPIs = MerchantOnboardingAPIs
       ) ->
       EulerHS.Types.EulerClient UploadFileResponse,
     merchantOnboardingReject :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    merchantOnboadingListAll :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI],
+    merchantOnboadingListAll :: Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI],
     merchantOnboardingStepList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep],
     merchantOnboardingGetFile :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.MerchantOnboarding.GetFileResponse,
     merchantOnboardingCancel :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess

@@ -22,8 +22,6 @@ apis:
         - checkForActiveBooking: Bool
       response:
         type: GetPersonFlowStatusRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS FLOW_STATUS
   - POST:  # NotifyEventAPI
       endpoint:  /notifyEvent/{customerId}
       auth: ApiAuthV2
@@ -33,8 +31,5 @@ apis:
         type: NotifyEventReq
       response:
         type: NotifyEventResp
-      migrate:
-        endpoint: FlowStatusAPI NotifyEventEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS NOTIFYEVENT
 
 types: {}

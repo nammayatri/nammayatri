@@ -37,21 +37,10 @@ apis:
         - to: UTCTime
       response:
         type: PayoutHistoryRes
-      helperApi:
-        - GET:
-            endpoint: /payout/history
-            auth: ApiAuthV2
-            query:
-            - driverId: Text
-            - driverPhoneNo: Text
-            - from: UTCTime
-            - isFailedOnly: Bool
-            - limit: Int
-            - offset: Int
-            - to: UTCTime
-            - requestorId: Text
-            response:
-              type: PayoutHistoryRes
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET:
       endpoint: /payout/referral/history
@@ -84,16 +73,10 @@ apis:
         payoutRequestId: Id PayoutRequest
       response:
         type: PayoutRequestResp
-      helperApi:
-        - GET:
-            endpoint: /payout/{payoutRequestId}
-            auth: ApiAuthV2
-            params:
-              payoutRequestId: Id PayoutRequest
-            query:
-              - requestorId: Text
-            response:
-              type: PayoutRequestResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/{payoutRequestId}/retry
@@ -102,16 +85,10 @@ apis:
         payoutRequestId: Id PayoutRequest
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/{payoutRequestId}/retry
-            auth: ApiAuthV2
-            params:
-              payoutRequestId: Id PayoutRequest
-            query:
-              - requestorId: Text
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/{payoutRequestId}/cancel
@@ -122,18 +99,10 @@ apis:
         type: PayoutCancelReq
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/{payoutRequestId}/cancel
-            auth: ApiAuthV2
-            params:
-              payoutRequestId: Id PayoutRequest
-            query:
-              - requestorId: Text
-            request:
-              type: PayoutCancelReq
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/{payoutRequestId}/cash
@@ -144,18 +113,10 @@ apis:
         type: PayoutCashUpdateReq
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/{payoutRequestId}/cash
-            auth: ApiAuthV2
-            params:
-              payoutRequestId: Id PayoutRequest
-            query:
-              - requestorId: Text
-            request:
-              type: PayoutCashUpdateReq
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/vpa/delete
@@ -164,16 +125,10 @@ apis:
         type: DeleteVpaReq
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/vpa/delete
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: DeleteVpaReq
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/vpa/update
@@ -182,16 +137,10 @@ apis:
         type: UpdateVpaReq
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/vpa/update
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: UpdateVpaReq
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/vpa/refundRegistration
@@ -200,16 +149,10 @@ apis:
         type: RefundRegAmountReq
       response:
         type: PayoutSuccess
-      helperApi:
-        - POST:
-            endpoint: /payout/vpa/refundRegistration
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: RefundRegAmountReq
-            response:
-              type: PayoutSuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /payout/scheduledPayoutConfig/upsert

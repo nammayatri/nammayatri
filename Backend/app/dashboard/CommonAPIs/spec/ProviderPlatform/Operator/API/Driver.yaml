@@ -68,23 +68,9 @@ apis:
         - mbStatus: DriverMode
       response:
         type: DriverInfoResp
-      helperApi:
-        - GET:
-            endpoint: /operator/list
-            auth: ApiAuthV2
-            query:
-              - isActive: Bool
-              - limit: Int
-              - offset: Int
-              - vehicleNo: Text
-              - mbSearchString: Text
-              - includeDocuments: Bool
-              - onlyMandatoryDocs: Bool
-              - mbStatus: DriverMode
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: DriverInfoResp
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   # following apis currently used only for Driver Cum Owner case
   - POST: # SendFleetJoiningOtpAPI
@@ -94,16 +80,9 @@ apis:
         type: AuthReq
       response:
         type: AuthRes
-      helperApi:
-        - POST:
-            endpoint: /operator/sendJoiningOtp
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            request:
-              type: AuthReq
-            response:
-              type: AuthRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - POST: # VerifyFleetJoiningOtpAPI
       endpoint: /operator/verifyJoiningOtp
@@ -114,18 +93,9 @@ apis:
         type: VerifyOperatorJoiningOtpReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /operator/verifyJoiningOtp
-            auth: ApiAuthV2
-            query:
-              - authId: Text
-            mandatoryQuery:
-              - requestorId: Text
-            request:
-              type: VerifyOperatorJoiningOtpReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET:
       endpoint: /operator/dashboard/analytics/allTime

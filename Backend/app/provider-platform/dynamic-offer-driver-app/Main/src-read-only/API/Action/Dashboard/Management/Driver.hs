@@ -21,6 +21,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.Driver.API)
@@ -132,7 +133,7 @@ postDriverUpdateSpecialLocWarrior :: (Kernel.Types.Id.ShortId Domain.Types.Merch
 postDriverUpdateSpecialLocWarrior a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverUpdateSpecialLocWarrior a4 a3 a2 a1
 
 postDriverClearFee :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.ClearDriverFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverClearFee a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverClearFee a5 a4 a3 a2 a1
+postDriverClearFee a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a3) $ Domain.Action.Dashboard.Management.Driver.postDriverClearFee a5 a4 a3 a2 a1
 
 getDriverPanAadharSelfieDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.PanAadharSelfieDetailsResp)
 getDriverPanAadharSelfieDetails a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverPanAadharSelfieDetails a4 a3 a2 a1
@@ -150,7 +151,7 @@ postDriverVehicleUpsertSelectedServiceTiers :: (Kernel.Types.Id.ShortId Domain.T
 postDriverVehicleUpsertSelectedServiceTiers a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverVehicleUpsertSelectedServiceTiers a3 a2 a1
 
 postDriverRefundByPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Driver.RefundByPayoutReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverRefundByPayout a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverRefundByPayout a5 a4 a3 a2 a1
+postDriverRefundByPayout a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.Management.Driver.postDriverRefundByPayout a5 a4 a3 a2 a1
 
 getDriverSecurityDepositStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverSecurityDepositStatus a4 a3 a2 a1

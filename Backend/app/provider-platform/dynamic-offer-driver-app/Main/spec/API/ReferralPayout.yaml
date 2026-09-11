@@ -81,6 +81,7 @@ apis:
         type: API.Types.UI.ReferralPayout.UpdatePayoutVpaReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+      actorInfo: auth
 
   # get API for payout registration
   - GET:
@@ -88,6 +89,7 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: ClearDuesRes
+      actorInfo: auth
 
   # post API for create payout order
   - POST:
@@ -97,6 +99,7 @@ apis:
         type: CreatePayoutOrderReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+      actorInfo: auth
 
   # get API for payout order status
   - GET:
@@ -106,3 +109,4 @@ apis:
         orderId: Text
       response:
         type: PayoutOrderStatusResp
+      actorInfo: auth

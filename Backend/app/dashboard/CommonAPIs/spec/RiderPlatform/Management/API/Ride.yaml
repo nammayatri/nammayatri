@@ -44,8 +44,6 @@ apis:
         - to: UTCTime
       response:
         type: RideListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES RIDE_LIST
   - GET:
       endpoint: /rideinfo/{rideId}
       name: GetRideInfo
@@ -54,8 +52,6 @@ apis:
         rideId: Id Ride
       response:
         type: RideInfoRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER
   - GET:
       endpoint: /cancellationChargesWaiveOff/{rideId}
       name: CancellationChargesWaiveOff
@@ -108,9 +104,6 @@ apis:
         type: MultipleRideSyncReq
       response:
         type: MultipleRideSyncResp
-      migrate:
-        endpoint: RideAPI MultipleRideSyncRideEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
   - POST:
       endpoint: /payoutOfferSync
       name: PostRidePayoutOfferSync
@@ -119,17 +112,10 @@ apis:
         type: MultipleRideSyncReq
       response:
         type: MultipleRideSyncResp
-      helperApi:
-        - POST:
-            endpoint: /payoutOfferSync
-            name: PostRidePayoutOfferSync
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: MultipleRideSyncReq
-            response:
-              type: MultipleRideSyncResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST:
       endpoint: /cancel
       name: PostRideCancelMultiple
@@ -138,9 +124,6 @@ apis:
         type: MultipleRideCancelReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: RideAPI MultipleRideCancelRideEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
   - GET:
       endpoint: /kapture/list
       auth: ApiAuthV2
@@ -151,8 +134,6 @@ apis:
         - supportPhoneNumber: Text
       response:
         type: TicketRideListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES TICKET_RIDE_LIST_API
 
   - GET: # BAPFlowDebugAPI
       endpoint: /flowDebug/bap

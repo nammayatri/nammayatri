@@ -26,6 +26,7 @@ import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -658,7 +659,7 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+postMultimodalConfirm a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -676,7 +677,7 @@ getMultimodalBookingPaymentStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyBookingPaymentStatus
   )
-getMultimodalBookingPaymentStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingPaymentStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalBookingPaymentStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingPaymentStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPaymentUpdateOrder ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -19,22 +19,23 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.RideBooking.Ride.API)
 handler merchantId city = postRideStart merchantId city :<|> postRideEnd merchantId city :<|> getRideCurrentActiveRide merchantId city :<|> postRideCancel merchantId city :<|> postRideBookingWithVehicleNumberAndPhone merchantId city
 
 postRideStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Ride.StartRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postRideStart a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Ride.postRideStart a5 a4 a3 a2 a1
+postRideStart a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.RideBooking.Ride.postRideStart a5 a4 a3 a2 a1
 
 postRideEnd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Ride.EndRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postRideEnd a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Ride.postRideEnd a5 a4 a3 a2 a1
+postRideEnd a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.RideBooking.Ride.postRideEnd a5 a4 a3 a2 a1
 
 getRideCurrentActiveRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler (Kernel.Types.Id.Id Dashboard.Common.Ride))
 getRideCurrentActiveRide a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Ride.getRideCurrentActiveRide a3 a2 a1
 
 postRideCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Ride.CancelRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postRideCancel a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Ride.postRideCancel a5 a4 a3 a2 a1
+postRideCancel a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.RideBooking.Ride.postRideCancel a5 a4 a3 a2 a1
 
 postRideBookingWithVehicleNumberAndPhone :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.Ride.BookingWithVehicleAndPhoneReq -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Ride.BookingWithVehicleAndPhoneRes)
-postRideBookingWithVehicleNumberAndPhone a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Ride.postRideBookingWithVehicleNumberAndPhone a4 a3 a2 a1
+postRideBookingWithVehicleNumberAndPhone a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.RideBooking.Ride.postRideBookingWithVehicleNumberAndPhone a4 a3 a2 a1
