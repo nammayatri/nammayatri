@@ -13,6 +13,6 @@ data GetDemandHotspotsResp = GetDemandHotspotsResp {createdAt :: Kernel.Prelude.
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data HotspotsDetails = HotspotsDetails {frequency :: Kernel.Prelude.Int, location :: Kernel.External.Maps.Types.LatLong}
+data HotspotsDetails = HotspotsDetails {frequency :: Kernel.Prelude.Int, location :: Kernel.External.Maps.Types.LatLong, multiplier :: Kernel.Prelude.Maybe Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

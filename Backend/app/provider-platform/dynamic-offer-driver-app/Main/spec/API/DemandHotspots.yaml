@@ -12,6 +12,7 @@ types:
   HotspotsDetails:
     location: LatLong
     frequency: Int
+    multiplier: Maybe Double
 
 apis:
   - GET:
