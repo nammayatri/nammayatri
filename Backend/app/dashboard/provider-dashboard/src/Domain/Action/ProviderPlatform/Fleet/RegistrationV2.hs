@@ -54,7 +54,7 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
   merchantServerAccessCheck merchant
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   whenJust mbPerson $ \p ->
-    unless (DP.isFleetOwner p) $
+    unless (DP.isFleetOwner p || DP.isOperator p) $
       throwError (InvalidRequest "A user with this mobile number already exists with a different role.")
   let req' = buildFleetOwnerRegisterReqV2 merchantShortId opCity req
   fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
