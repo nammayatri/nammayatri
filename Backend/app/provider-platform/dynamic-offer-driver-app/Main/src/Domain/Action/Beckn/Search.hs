@@ -999,7 +999,7 @@ validateRequest :: DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
 validateRequest merchant sReq = do
   isValueAddNP <- CQVAN.isValueAddNP sReq.bapId
   -- This checks for origin serviceability too
-  NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
+  NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation True
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
@@ -1040,7 +1040,7 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant pickupLatLong
+  NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant pickupLatLong True
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
@@ -1158,8 +1158,8 @@ data CityState = CityState
     state :: Context.IndianState
   }
 
-getNearestOperatingAndSourceCity :: DM.Merchant -> LatLong -> Flow NearestOperatingAndSourceCity
-getNearestOperatingAndSourceCity merchant pickupLatLong = do
+getNearestOperatingAndSourceCity :: DM.Merchant -> LatLong -> Bool -> Flow NearestOperatingAndSourceCity
+getNearestOperatingAndSourceCity merchant pickupLatLong allowMerchantFallback = do
   let geoRestriction = merchant.geofencingConfig.origin
   let merchantCityState = CityState {city = merchant.city, state = merchant.state}
   case geoRestriction of
@@ -1169,7 +1169,9 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
       {-
         Below logic is to find the nearest operating city for the pickup location.
         If the pickup location is in the operating city, then return the city.
-        If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
+        If the pickup location is not in the city, then return the nearest city for that state;
+        if none exists, fall back to the merchant's default city when allowMerchantFallback is
+        True, else the ride is not serviceable.
       -}
       geoms <- B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions
       case filter (\geom -> geom.city /= Context.City "AnyCity") geoms of
@@ -1177,8 +1179,16 @@ getNearestOperatingAndSourceCity merchant pickupLatLong = do
           find (\geom -> geom.city == Context.City "AnyCity") geoms & \case
             Just anyCityGeom -> do
               cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
-              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
-              return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
+              case listToMaybe $ sortBy (comparing fst) cities of
+                Just p -> do
+                  let nearestOperatingCity = CityState {city = snd p, state = anyCityGeom.state}
+                  return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
+                Nothing
+                  | allowMerchantFallback ->
+                    return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity = merchantCityState}
+                  | otherwise -> do
+                    logError $ "No operating city found near pickupLatLong: " <> show pickupLatLong <> " for state: " <> show anyCityGeom.state
+                    throwError RideNotServiceable
             Nothing -> do
               logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
               throwError RideNotServiceable

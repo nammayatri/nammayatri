@@ -1153,7 +1153,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   pure APISuccess.Success
   where
     checkIfGoToInDifferentGeometry :: DM.Merchant -> LatLong -> LatLong -> Flow Bool
-    checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.City "AnyCity" && hl /= Context.City "AnyCity")) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . getNearestOperatingAndSourceCity merchant) . (driverLoc,)
+    checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.City "AnyCity" && hl /= Context.City "AnyCity")) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . \latLong -> getNearestOperatingAndSourceCity merchant latLong True) . (driverLoc,)
 
     withLockDriverId driverId' = do
       isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 30
@@ -3027,7 +3027,7 @@ getCity req = do
   case req.merchantId of -- only for backward compatibility, Nothing part to be removed later
     Just mId -> do
       merchant <- CQM.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
-      nearestAndSourceCity <- withTryCatch "getNearestOperatingAndSourceCity:getCity" $ getNearestOperatingAndSourceCity merchant latLng
+      nearestAndSourceCity <- withTryCatch "getNearestOperatingAndSourceCity:getCity" $ getNearestOperatingAndSourceCity merchant latLng False
       case nearestAndSourceCity of
         Left _ -> return $ mkResp Nothing Nothing Nothing
         Right nearestSourceCity -> do
