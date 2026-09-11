@@ -216,10 +216,10 @@ data QuoteBreakupTitle
   | WAITING_CHARGES -- v2.1.0: waiting charges (spec name)
   | PARKING_CHARGES -- v2.1.0: parking charges (spec name)
   | TOLL_FARE_TAX_EXCLUSIVE
-  | -- Canonical nine-tag fare-breakup contract: every BPP fare sum partitions
-    -- into three categories × {tax-exclusive, tax}. The ride portion is
-    -- split by whether the customer offer discount applies. Sum of the 6
-    -- must equal the BPP fare sum.
+  | -- Canonical fare-breakup contract: every BPP fare sum partitions into
+    -- categories × {tax-exclusive, tax}. The ride portion is split by whether
+    -- the customer offer discount applies. Ten fare slots, plus the two
+    -- payment-charge slots below; the twelve sum to what the customer pays.
     RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
   | RIDE_FARE_DISCOUNT_APPLICABLE_TAX
   | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
@@ -229,6 +229,15 @@ data QuoteBreakupTitle
   | CANCELLATION_TAX
   | PARKING_CHARGE_TAX_EXCLUSIVE
   | PARKING_CHARGE_TAX
+  | -- The payment charge completes the partition: it is levied on the post-discount
+    -- total of the ten fare slots, so the twelve together equal what the customer pays.
+    -- Populated only when the rider bears the charge.
+    PAYMENT_CHARGE_TAX_EXCLUSIVE
+  | PAYMENT_CHARGE_TAX
+  | -- The rate the charge was priced at, so the BAP can re-derive it on the
+    -- post-discount base rather than rescaling and rounding differently.
+    PAYMENT_CHARGE_RATE
+  | PAYMENT_CHARGE_VAT_PCT
   | -- This ride's cancellation charge is distinct from CANCELLATION_CHARGES, which is a previous ride's carry-forward due.
     RIDE_CANCELLATION_CHARGES
   | RIDE_CANCELLATION_TAX

@@ -153,7 +153,12 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
                      Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
                      Just (show Enums.CANCELLATION_TAX),
                      Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
-                     Just (show Enums.PARKING_CHARGE_TAX)
+                     Just (show Enums.PARKING_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE_RATE),
+                     Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
                    ]
         DFParams.Slab ->
           title
@@ -192,7 +197,12 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
                      Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
                      Just (show Enums.CANCELLATION_TAX),
                      Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
-                     Just (show Enums.PARKING_CHARGE_TAX)
+                     Just (show Enums.PARKING_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE_RATE),
+                     Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
                    ]
         DFParams.Rental ->
           title
@@ -229,7 +239,12 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
                      Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
                      Just (show Enums.CANCELLATION_TAX),
                      Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
-                     Just (show Enums.PARKING_CHARGE_TAX)
+                     Just (show Enums.PARKING_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE_RATE),
+                     Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
                    ]
         DFParams.InterCity ->
           title
@@ -267,7 +282,12 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
                      Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE),
                      Just (show Enums.CANCELLATION_TAX),
                      Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE),
-                     Just (show Enums.PARKING_CHARGE_TAX)
+                     Just (show Enums.PARKING_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE),
+                     Just (show Enums.PAYMENT_CHARGE_TAX),
+                     Just (show Enums.PAYMENT_CHARGE_RATE),
+                     Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
                    ]
         _ -> True
 

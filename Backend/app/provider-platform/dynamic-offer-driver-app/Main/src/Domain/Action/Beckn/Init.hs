@@ -266,7 +266,8 @@ handler merchantId req validatedReq = do
             FC.finalisePaymentCharge
               ((.driverWalletConfig) <$> mbTransporterConfig)
               driverQuote.estimatedFare
-              (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee)
+              (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote.fareParams.paymentProcessingFeeVat)
+              mbClampedDiscount
               driverQuote.fareParams
 
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)

@@ -96,7 +96,7 @@ mkFareParamsBreakups isValueAddNP mkPrice mkBreakupItem fareParams =
   mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams
     <> mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams
 
--- | Canonical ten-tag summary only. Exposed so callers (e.g. rate-card
+-- | Canonical twelve-tag summary, plus the rate the charge was priced at. Exposed so callers (e.g. rate-card
 --   tag builders) can emit the summary with a custom 'mkBreakupItem'
 --   constructor — the rate card uses 'mkRateCardBreakupItem' here so the
 --   summary tag titles are preserved verbatim (no @_FARE_PARAM@ suffix),
@@ -121,8 +121,26 @@ mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams =
         mkBreakupItem (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE) (mkPrice b.cancellationFeeTaxExclusive),
         mkBreakupItem (show Enums.CANCELLATION_TAX) (mkPrice b.cancellationTax),
         mkBreakupItem (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE) (mkPrice b.parkingChargeTaxExclusive),
-        mkBreakupItem (show Enums.PARKING_CHARGE_TAX) (mkPrice b.parkingChargeTax)
+        mkBreakupItem (show Enums.PARKING_CHARGE_TAX) (mkPrice b.parkingChargeTax),
+        mkBreakupItem (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE) (mkPrice b.paymentChargeTaxExclusive),
+        mkBreakupItem (show Enums.PAYMENT_CHARGE_TAX) (mkPrice b.paymentChargeTax)
       ]
+        <> paymentChargeRateItems b
+  where
+    -- The BAP re-derives the charge on the post-discount base rather than
+    -- rescaling the pre-discount figure, so it needs the rate. Recovering it
+    -- from the stored pair keeps the two sides exactly in step and avoids
+    -- threading DriverWalletConfig through every caller of this function.
+    -- Emitted only when there is a charge; absent tags leave the BAP's slots
+    -- as-sent, which is correct for the driver- and platform-borne bearers.
+    paymentChargeRateItems b'
+      | b'.paymentChargeTaxExclusive <= 0 = []
+      | otherwise =
+        let base = RD.fareOnlyTotal b'
+            pct num den = if den > 0 then num / den * 100 else 0
+         in [ mkBreakupItem (show Enums.PAYMENT_CHARGE_RATE) (mkPrice (pct b'.paymentChargeTaxExclusive base)),
+              mkBreakupItem (show Enums.PAYMENT_CHARGE_VAT_PCT) (mkPrice (pct b'.paymentChargeTax b'.paymentChargeTaxExclusive))
+            ]
 
 -- | Cancellation-specific breakup items read from the ride table.
 -- Used by on_cancel to emit CANCELLATION_FEE_TAX_EXCLUSIVE and CANCELLATION_TAX.
@@ -431,6 +449,7 @@ fareSum fareParams conditionalChargeCategories =
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
         + fromMaybe 0.0 fareParams.paymentProcessingFee
+        + fromMaybe 0.0 fareParams.paymentProcessingFeeVat
         + fromMaybe 0.0 fareParams.tollFareTax
         + parkingTaxContribution
         -- Commission is intentionally excluded - stored for breakdown only
@@ -645,6 +664,7 @@ calculateFareParametersHandler params = do
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
             paymentProcessingFee = Nothing,
+            paymentProcessingFeeVat = Nothing,
             isVatTaxType = Nothing,
             discountApplicableRideFareTaxExclusive = Nothing,
             discountApplicableRideFareTax = Nothing,
@@ -1202,6 +1222,7 @@ applyConfiguredCharges farePolicy fareParams = do
       partiallyUpdatedFareParams =
         fareParams
           { paymentProcessingFee = Nothing,
+            paymentProcessingFeeVat = Nothing,
             govtCharges = if mergedGovtCharges > 0 then Just mergedGovtCharges else fareParams.govtCharges,
             isVatTaxType = Just hasVatConfig,
             discountApplicableRideFareTaxExclusive = Just discAppTaxExcl,
@@ -1478,26 +1499,24 @@ customerBorneCharge mbCharge mbBearerText =
     Just DTC.PAYMENT_CUSTOMER -> fromMaybe 0 mbCharge
     _ -> 0
 
+-- | Split a fare base into (charge, vat) at the configured rate. The bearer is
+--   returned so callers can tell "no charge configured" from "charge borne by
+--   someone other than the rider" -- both yield a zero gross-up of the fare, but
+--   the latter still deducts from the driver.
 applyPaymentChargeOnPayableFare ::
   Maybe DTC.DriverWalletConfig ->
-  FareParameters ->
   HighPrecMoney ->
-  (FareParameters, Maybe HighPrecMoney, Maybe Text)
-applyPaymentChargeOnPayableFare mbDwc fareParams preChargeFare =
+  (HighPrecMoney, HighPrecMoney, Maybe Text)
+applyPaymentChargeOnPayableFare mbDwc fareBase =
   case mbDwc of
     Just dwc
       | Just rate <- dwc.paymentChargeRate,
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0 ->
-        let totalRate = paymentChargeTotalRate dwc
-            p = HighPrecMoney (max 0 preChargeFare.getHighPrecMoney * (toRational totalRate / 100))
-            mbP = if p > 0 then Just p else Nothing
-            adjusted =
-              if isCustomerPaymentBearer bearer
-                then fareParams {paymentProcessingFee = mbP}
-                else fareParams
-         in (adjusted, mbP, Just (show bearer))
-    _ -> (fareParams, Nothing, Nothing)
+        let charge = HighPrecMoney ((max 0 fareBase).getHighPrecMoney * (toRational rate / 100))
+            vat = HighPrecMoney (charge.getHighPrecMoney * (toRational (fromMaybe 0 dwc.paymentChargeVat) / 100))
+         in (charge, vat, Just (show bearer))
+    _ -> (0, 0, Nothing)
 
 data PaymentChargeResult = PaymentChargeResult
   { adjustedFareParams :: FareParameters,
@@ -1506,19 +1525,41 @@ data PaymentChargeResult = PaymentChargeResult
     paymentChargeBearer :: Maybe Text
   }
 
+-- | Re-price the payment charge on what the customer actually pays.
+--
+--   The charge is levied on the fare AFTER the offer discount, so the discount
+--   removes the charge that sat on it and the rider's true saving exceeds the
+--   offer's face value. 'currentFare' is the pre-discount fare including
+--   whatever charge is already baked into it; 'appliedCharge' says how much
+--   that is, so the base can be recovered without assuming where it came from.
+--
+--   'adjustedFareParams' keeps the PRE-discount charge, because the
+--   fare_parameters row is the pre-discount record and every consumer re-derives
+--   from it. Only 'adjustedFare' and 'paymentCharge' carry post-discount values.
 finalisePaymentCharge ::
   Maybe DTC.DriverWalletConfig ->
   HighPrecMoney ->
   HighPrecMoney ->
+  Maybe HighPrecMoney ->
   FareParameters ->
   PaymentChargeResult
-finalisePaymentCharge mbDwc currentFare appliedCharge fareParams =
-  let preChargeFare = currentFare - appliedCharge
-      (adjusted, mbP, mbBearer) = applyPaymentChargeOnPayableFare mbDwc fareParams preChargeFare
+finalisePaymentCharge mbDwc currentFare appliedCharge mbDiscount fareParams =
+  let fareOnly = max 0 (currentFare - appliedCharge)
+      postDiscountBase = max 0 (fareOnly - fromMaybe 0 mbDiscount)
+      (charge, vat, mbBearer) = applyPaymentChargeOnPayableFare mbDwc postDiscountBase
+      (preCharge, preVat, _) = applyPaymentChargeOnPayableFare mbDwc fareOnly
+      customerBears = Just (show DTC.PAYMENT_CUSTOMER) == mbBearer
+      gross = charge + vat
    in PaymentChargeResult
-        { adjustedFareParams = adjusted,
-          adjustedFare = preChargeFare + customerBorneCharge adjusted.paymentProcessingFee mbBearer,
-          paymentCharge = mbP,
+        { adjustedFareParams =
+            if customerBears
+              then fareParams {paymentProcessingFee = Just preCharge, paymentProcessingFeeVat = Just preVat}
+              else fareParams,
+          -- ride.fare stays pre-discount on the fare side (the discount is
+          -- subtracted downstream) but carries the post-discount charge, so
+          -- fare - discount is exactly what the rider pays.
+          adjustedFare = fareOnly + (if customerBears then gross else 0),
+          paymentCharge = if gross > 0 then Just gross else Nothing,
           paymentChargeBearer = mbBearer
         }
 
@@ -1537,8 +1578,18 @@ paymentChargeFromFareTotal mbDwc total =
               DTC.PAYMENT_PLATFORM -> 0
     _ -> 0
 
--- | Gross up the fare by the payment charge when the RIDER bears it, by populating the
---   (otherwise-dormant) paymentProcessingFee slot which 'fareSum' already sums.
+-- | Gross up the fare by the payment charge when the RIDER bears it.
+--
+--   The charge is levied on the whole fare -- including the non-discountable
+--   components (pet, toll, parking, cancellation dues) -- because the customer
+--   pays those too. It is stored in its own pair of slots, NOT folded into
+--   'discountApplicableRideFareTaxExclusive': living there would both inflate
+--   the ceiling 'clampDiscount' allows and let 'applyRideDiscount' scale the
+--   charge by the discount ratio. It is re-priced on the post-discount total
+--   instead, by 'RD.applyDiscountAndRepriceCharge'.
+--
+--   This runs before any discount is known, so the stored pair is the
+--   pre-discount charge; every consumer re-derives the post-discount value.
 applyPaymentChargeGrossUp :: Maybe DTC.DriverWalletConfig -> FareParameters -> FareParameters
 applyPaymentChargeGrossUp mbDwc fareParams =
   case mbDwc of
@@ -1547,11 +1598,10 @@ applyPaymentChargeGrossUp mbDwc fareParams =
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0,
         isCustomerPaymentBearer bearer ->
-        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational (paymentChargeTotalRate dwc) / 100))
-         in fareParams
-              { paymentProcessingFee = Just p,
-                discountApplicableRideFareTaxExclusive = (+ p) <$> fareParams.discountApplicableRideFareTaxExclusive
-              }
+        let base = fareSum fareParams Nothing
+            charge = HighPrecMoney (base.getHighPrecMoney * (toRational rate / 100))
+            vat = HighPrecMoney (charge.getHighPrecMoney * (toRational (fromMaybe 0 dwc.paymentChargeVat) / 100))
+         in fareParams {paymentProcessingFee = Just charge, paymentProcessingFeeVat = Just vat}
     _ -> fareParams
 
 -- | Hardcoded list of 'FareChargeComponent' values the customer offer
@@ -1613,7 +1663,11 @@ projectFareParamsBreakup FareParameters {..}
           RD.cancellationFeeTaxExclusive = fromMaybe 0 cancellationFeeTaxExclusive,
           RD.cancellationTax = fromMaybe 0 cancellationTax,
           RD.parkingChargeTaxExclusive = fromMaybe 0 parkingChargeTaxExclusive,
-          RD.parkingChargeTax = fromMaybe 0 parkingChargeTax
+          RD.parkingChargeTax = fromMaybe 0 parkingChargeTax,
+          -- A row priced before the charge/VAT split has the blended amount in
+          -- paymentProcessingFee and NULL VAT; it still totals correctly.
+          RD.paymentChargeTaxExclusive = fromMaybe 0 paymentProcessingFee,
+          RD.paymentChargeTax = fromMaybe 0 paymentProcessingFeeVat
         }
 
 -- | Clamp a raw (BAP-reported) discount amount to the discount-applicable

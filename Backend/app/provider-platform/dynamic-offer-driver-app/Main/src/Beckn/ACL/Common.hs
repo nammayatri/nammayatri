@@ -139,6 +139,11 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_TAX",
                  "PARKING_CHARGE_TAX_EXCLUSIVE",
                  "PARKING_CHARGE_TAX",
+                 "PAYMENT_CHARGE",
+                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
+                 "PAYMENT_CHARGE_TAX",
+                 "PAYMENT_CHARGE_RATE",
+                 "PAYMENT_CHARGE_VAT_PCT",
                  "CONGESTION_CHARGE"
                ]
     DFParams.Slab ->
@@ -174,6 +179,11 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_TAX",
                  "PARKING_CHARGE_TAX_EXCLUSIVE",
                  "PARKING_CHARGE_TAX",
+                 "PAYMENT_CHARGE",
+                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
+                 "PAYMENT_CHARGE_TAX",
+                 "PAYMENT_CHARGE_RATE",
+                 "PAYMENT_CHARGE_VAT_PCT",
                  "CONGESTION_CHARGE"
                ]
     DFParams.Rental ->
@@ -209,6 +219,11 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_TAX",
                  "PARKING_CHARGE_TAX_EXCLUSIVE",
                  "PARKING_CHARGE_TAX",
+                 "PAYMENT_CHARGE",
+                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
+                 "PAYMENT_CHARGE_TAX",
+                 "PAYMENT_CHARGE_RATE",
+                 "PAYMENT_CHARGE_VAT_PCT",
                  "CONGESTION_CHARGE"
                ]
     DFParams.InterCity ->
@@ -245,6 +260,11 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_TAX",
                  "PARKING_CHARGE_TAX_EXCLUSIVE",
                  "PARKING_CHARGE_TAX",
+                 "PAYMENT_CHARGE",
+                 "PAYMENT_CHARGE_TAX_EXCLUSIVE",
+                 "PAYMENT_CHARGE_TAX",
+                 "PAYMENT_CHARGE_RATE",
+                 "PAYMENT_CHARGE_VAT_PCT",
                  "CONGESTION_CHARGE"
                ]
     _ -> True
