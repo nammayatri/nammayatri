@@ -1230,7 +1230,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
+    _ -> do
+      logError $ "Reverse geocoding location " <> show latLong <> " as the BAP address is unusable, bapAddress: " <> show address <> ", customerLanguage: " <> show customerLanguage
+      getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
