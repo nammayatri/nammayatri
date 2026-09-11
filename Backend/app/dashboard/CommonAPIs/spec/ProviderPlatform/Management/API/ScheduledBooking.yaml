@@ -65,19 +65,9 @@ apis:
         type: AssignDriverReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{transactionId}/assign
-            name: PostScheduledBookingAssign
-            auth: ApiAuthV2
-            params:
-              transactionId: Text
-            query:
-              - requestorId: Text
-            request:
-              type: AssignDriverReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
       migrate:
         capability: city-operations.scheduled-bookings.write
 
@@ -89,17 +79,9 @@ apis:
         transactionId: Text
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{transactionId}/unassign
-            name: PostScheduledBookingUnassign
-            auth: ApiAuthV2
-            params:
-              transactionId: Text
-            query:
-              - requestorId: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
       migrate:
         capability: city-operations.scheduled-bookings.write
 
@@ -113,19 +95,9 @@ apis:
         type: OpsNoteReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{transactionId}/opsNote
-            name: PostScheduledBookingOpsNote
-            auth: ApiAuthV2
-            params:
-              transactionId: Text
-            query:
-              - requestorId: Text
-            request:
-              type: OpsNoteReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
       migrate:
         capability: city-operations.scheduled-bookings.write
 

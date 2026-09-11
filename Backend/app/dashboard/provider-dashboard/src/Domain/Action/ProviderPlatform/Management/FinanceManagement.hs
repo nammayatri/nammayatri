@@ -164,14 +164,28 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity apiTok
   let requestorId = apiTokenInfo.personId.getId
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementTdsReimbursementRequestSubmit) requestorId req)
 
-getFinanceManagementTdsReimbursementStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatusRes)
-getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiTokenInfo assessmentYear quarter = do
+getFinanceManagementTdsReimbursementStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatusRes)
+getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiTokenInfo quarter assessmentYear = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementTdsReimbursementStatus) quarter assessmentYear requestorId
 
-getFinanceManagementTdsReimbursementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementListRes)
-getFinanceManagementTdsReimbursementList merchantShortId opCity apiTokenInfo assessmentYear excludeCurrentAdminMaker fleetOwnerId from limit offset quarter status tanNumber to = do
+getFinanceManagementTdsReimbursementList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementListRes
+getFinanceManagementTdsReimbursementList merchantShortId opCity apiTokenInfo limit offset fleetOwnerId tanNumber quarter assessmentYear excludeCurrentAdminMaker status from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementTdsReimbursementList) limit offset fleetOwnerId tanNumber quarter assessmentYear excludeCurrentAdminMaker status from to requestorId
