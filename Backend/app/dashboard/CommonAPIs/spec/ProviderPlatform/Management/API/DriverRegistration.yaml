@@ -54,16 +54,9 @@ apis:
         driverId: Id Driver
       response:
         type: TempAppCodeRes
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/generateTempAppCode
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: TempAppCodeRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
       migrate:
         capability: city-operations.onboarding.write
   - POST: # UploadDocumentAPI
@@ -264,18 +257,9 @@ apis:
         type: TriggerReminderReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/trigger/reminder
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            request:
-              type: TriggerReminderReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
 
 types:
   ValidationStatus:

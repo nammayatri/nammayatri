@@ -340,8 +340,8 @@ merchantOnboardingReject _merchantShortId _opCity onboardingId requestorId mbReq
   QMO.updateOnboardingStatusAndRemarks DMO.REJECTED (Just rejectReq.remarks) onboarding.id
   return Kernel.Types.APISuccess.Success
 
-merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
-merchantOnboadingListAll _merchantShortId _opCity mbRequestorId mbRequestorRole mbStatus mbOnboardingType limit offset = do
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
+merchantOnboadingListAll _merchantShortId _opCity mbStatus mbOnboardingType limit offset mbRequestorId mbRequestorRole = do
   onboardingType <- mbOnboardingType & fromMaybeM (InvalidRequest "OnboardingType is required")
   _reqId <- mbRequestorId & fromMaybeM (InvalidRequest "RequestorId is required")
   reqRole <- mbRequestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")

@@ -73,7 +73,7 @@ data FleetOwnerVerifyOtpReq = FleetOwnerVerifyOtpReq {fleetOwnerId :: Kernel.Typ
 instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerVerifyOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("operator" :> (GetFleetManagementFleetsHelper :<|> PostFleetManagementFleetCreateHelper :<|> PostFleetManagementFleetRegisterHelper :<|> PostFleetManagementFleetLinkSendOtpHelper :<|> PostFleetManagementFleetLinkVerifyOtpHelper :<|> PostFleetManagementFleetUnlinkHelper :<|> PostFleetManagementFleetMemberAssociationCreateHelper))
+type API = ("operator" :> (GetFleetManagementFleetsHelper :<|> PostFleetManagementFleetCreateHelper :<|> PostFleetManagementFleetRegisterHelper :<|> PostFleetManagementFleetLinkSendOtpHelper :<|> PostFleetManagementFleetLinkVerifyOtpHelper :<|> PostFleetManagementFleetUnlinkHelper :<|> PostFleetManagementFleetMemberAssociationCreate))
 
 type GetFleetManagementFleets =
   ( "fleets" :> QueryParam "isActive" Kernel.Prelude.Bool :> QueryParam "verified" Kernel.Prelude.Bool :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -175,13 +175,6 @@ type PostFleetManagementFleetUnlinkHelper =
   )
 
 type PostFleetManagementFleetMemberAssociationCreate =
-  ( "fleet" :> "member" :> "association" :> "create" :> ReqBody '[JSON] FleetMemberAssociationCreateReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
-
-type PostFleetManagementFleetMemberAssociationCreateHelper =
   ( "fleet" :> "member" :> "association" :> "create" :> ReqBody '[JSON] FleetMemberAssociationCreateReq
       :> Post
            '[JSON]

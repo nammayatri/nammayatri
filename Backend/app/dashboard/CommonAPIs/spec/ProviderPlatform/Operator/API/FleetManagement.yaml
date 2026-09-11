@@ -25,21 +25,9 @@ apis:
         - mbSearchString: Text
       response:
         type: FleetInfoRes
-      helperApi:
-        - GET:
-            endpoint: /fleets
-            auth: ApiAuthV2
-            query:
-              - isActive: Bool
-              - verified: Bool
-              - enabled: Bool
-              - limit: Int
-              - offset: Int
-              - mbSearchString: Text
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: FleetInfoRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - POST:
       endpoint: /fleet/create
@@ -86,18 +74,11 @@ apis:
         type: FleetOwnerSendOtpReq
       response:
         type: FleetOwnerSendOtpRes
-      helperApi:
-        - POST:
-            endpoint: /fleet/link/sendOtp
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            query:
-              - dashboardPersonId: Text
-            request:
-              type: FleetOwnerSendOtpReq
-            response:
-              type: FleetOwnerSendOtpRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+        query:
+          - dashboardPersonId: Text
 
   - POST:
       endpoint: /fleet/link/verifyOtp
@@ -106,16 +87,9 @@ apis:
         type: FleetOwnerVerifyOtpReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /fleet/link/verifyOtp
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            request:
-              type: FleetOwnerVerifyOtpReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - POST:
       endpoint: /fleet/{fleetOwnerId}/unlink
@@ -124,16 +98,9 @@ apis:
         fleetOwnerId: Text
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /fleet/{fleetOwnerId}/unlink
-            auth: ApiAuthV2
-            params:
-              fleetOwnerId: Text
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - POST:
       endpoint: /fleet/member/association/create
@@ -142,14 +109,6 @@ apis:
         type: FleetMemberAssociationCreateReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /fleet/member/association/create
-            auth: ApiAuthV2
-            request:
-              type: FleetMemberAssociationCreateReq
-            response:
-              type: APISuccess
 
 types:
   FleetInfoRes:
