@@ -426,6 +426,7 @@ let noSignatureSubscribers =
 let emailServiceConfig =
       { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send"
       , isForcedAWS = True
+      , maxAttachmentBytes = +10485760
       }
 
 in  { esqDBCfg

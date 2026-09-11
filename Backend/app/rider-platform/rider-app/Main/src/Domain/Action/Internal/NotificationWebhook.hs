@@ -5,11 +5,13 @@ module Domain.Action.Internal.NotificationWebhook
 where
 
 import qualified Control.Exception as E
+import qualified Data.Text as T
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Email.Flow as Email
 import Environment
 import EulerHS.Prelude hiding (id, map)
+import qualified IssueManagement.Utils.RemoteFile as RemoteFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
@@ -119,7 +121,22 @@ sendWhatsapp' contact req = do
 sendEmail' :: Webhook.Contact -> Webhook.EmailArgs -> Flow ()
 sendEmail' _ args = do
   emailServiceConfig <- asks (.emailServiceConfig)
-  result <- liftIO $ E.try @E.SomeException $ Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body
+  attachments <- traverse (fetchAttachment emailServiceConfig.maxAttachmentBytes) args.attachments
+  result <- liftIO $ E.try @E.SomeException $ case attachments of
+    [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body
+    _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body attachments
   case result of
     Left err -> throwError (InternalError $ "Email send failed: " <> show err)
     Right () -> pure ()
+
+fetchAttachment :: Int -> Webhook.EmailAttachment -> Flow Email.EmailAttachment
+fetchAttachment maxBytes att = do
+  mbFetched <- liftIO $ E.try @E.SomeException $ RemoteFile.fetchRemoteFile att.url maxBytes
+  rf <- case mbFetched of
+    Right (Just x) -> pure x
+    Right Nothing -> throwError (InvalidRequest $ "Attachment exceeds " <> T.pack (show maxBytes) <> " bytes: " <> att.url)
+    Left err -> throwError (InvalidRequest $ "Attachment fetch failed for " <> att.url <> ": " <> T.pack (show err))
+  let resolvedCT = case att.contentType of
+        Just ct -> ct
+        Nothing -> if T.null rf.contentType then "application/octet-stream" else rf.contentType
+  pure Email.EmailAttachment {content = rf.content, filename = att.filename, contentType = resolvedCT}
