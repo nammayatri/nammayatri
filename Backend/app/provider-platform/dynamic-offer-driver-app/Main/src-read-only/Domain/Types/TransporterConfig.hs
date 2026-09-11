@@ -471,7 +471,11 @@ data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), Eq)
 
 data DriverWalletConfig = DriverWalletConfig
-  { connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+  { clubProjectFareInEarnings :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
+    clubProjectFareInPayouts :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
+    clubProjectFareInRefundsInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
+    clubProjectFareInRideInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
+    connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     connectAccountChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ConnectChargeBearer,
     connectAccountChargeDayOfMonth :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     connectAccountChargeDayOfWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -583,6 +587,8 @@ data PickupStallStage = PickupStallStage
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
+data ProjectFareParamsComponent = RIDE_FARE | TOLL_FARE | CANCELLATION_FARE | PARKING_CHARGE | PAYMENT_CHARGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data ScheduledPickupMonitoringMode = DISTANCE_BASED | TIME_BASED deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), (Eq))
 
 data ScheduledRideConfig = ScheduledRideConfig
@@ -635,3 +641,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentChargeBearer))
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutChargeBearer))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutFeeType))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ProjectFareParamsComponent))

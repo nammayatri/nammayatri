@@ -74,10 +74,13 @@ data FareParameters = FareParameters
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available
     paymentProcessingFee :: Maybe HighPrecMoney,
+    -- | VAT on the payment charge. 'Nothing' on rows priced before the split,
+    --   where 'paymentProcessingFee' still holds the VAT-inclusive blend.
+    paymentProcessingFeeVat :: Maybe HighPrecMoney,
     isVatTaxType :: Maybe Bool,
-    -- | Canonical eight-slot fare-breakup partition, populated by
+    -- | Canonical fare-breakup partition, populated by
     --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
-    --   the 10 equals the fare sum. Ride is split by whether the
+    --   the 10, plus the payment charge and its VAT above, equals the fare sum. Ride is split by whether the
     --   customer offer discount applies; toll and cancellation are
     --   separate buckets. Each slot is 'Maybe' so pure GST mode
     --   (no V2 classification) can leave them 'Nothing'.

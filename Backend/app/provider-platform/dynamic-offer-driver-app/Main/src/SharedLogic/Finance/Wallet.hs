@@ -160,6 +160,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceRideFareRefundCommissionVAT,
     walletReferenceCancellationFeeRefund,
     walletReferenceCancellationFeeRefundVAT,
+    walletReferencePaymentChargeRefund,
+    walletReferencePaymentChargeRefundVAT,
     walletReferenceCancellationRefundCommission,
     walletReferenceCancellationRefundCommissionVAT,
     walletReferenceCancellationOverdueBenefitRefund,
@@ -384,6 +386,12 @@ walletReferenceCancellationFeeRefund = "CancellationFeeRefund"
 
 walletReferenceCancellationFeeRefundVAT :: Text
 walletReferenceCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+
+walletReferencePaymentChargeRefund :: Text
+walletReferencePaymentChargeRefund = "PaymentChargeRefund"
+
+walletReferencePaymentChargeRefundVAT :: Text
+walletReferencePaymentChargeRefundVAT = "PaymentChargeRefundVAT"
 
 -- The platform's commission slice given back on a driver-deducted cancellation-fee refund.
 walletReferenceCancellationRefundCommission :: Text

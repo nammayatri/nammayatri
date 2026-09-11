@@ -755,6 +755,8 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     parkingCharge :: HighPrecMoney, -- parking charges without tax
     parkingChargeVat :: HighPrecMoney, -- VAT on parking charges
     platformFee :: HighPrecMoney, -- application fee / platform commission
+    paymentCharge :: HighPrecMoney,
+    paymentChargeVat :: HighPrecMoney,
     offerDiscountAmount :: HighPrecMoney, -- discount absorbed by marketplace (0 for CASHBACK or no offer)
     cashbackPayoutAmount :: HighPrecMoney, -- cashback to pay rider (0 for DISCOUNT or no offer)
 
@@ -782,6 +784,8 @@ mkRidePaymentLedgerInfo ::
   HighPrecMoney -> -- parkingCharge (tax-exclusive)
   HighPrecMoney -> -- parkingChargeVat
   HighPrecMoney -> -- platformFee
+  HighPrecMoney -> -- paymentCharge (the payment-charge share of platformFee)
+  HighPrecMoney -> -- paymentChargeVat
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
@@ -789,7 +793,7 @@ mkRidePaymentLedgerInfo ::
   HighPrecMoney -> -- cancellationTax (0 for normal ride)
   FinanceCtx ->
   RidePaymentLedgerInfo
-mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax financeCtx =
+mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee paymentCharge paymentChargeVat offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax financeCtx =
   RidePaymentLedgerInfo
     { rideFare,
       gstAmount,
@@ -798,6 +802,8 @@ mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge 
       parkingCharge,
       parkingChargeVat,
       platformFee,
+      paymentCharge,
+      paymentChargeVat,
       offerDiscountAmount,
       cashbackPayoutAmount,
       rideVatAbsorbedOnDiscount,
@@ -819,20 +825,20 @@ buildLedgerInfoFromBreakups ::
   [DFareBreakup.FareBreakup] ->
   HighPrecMoney -> -- requestedDiscount (bookingDiscountAmount)
   HighPrecMoney -> -- cashbackPayoutAmount (0 for DISCOUNT or no offer)
-  HighPrecMoney -> -- applicationFeeAmount (platform commission)
+  HighPrecMoney -> -- applicationFeeAmount (platform commission + payment charge)
+  HighPrecMoney -> -- paymentChargeAmount (the payment-charge share of appFee)
   HighPrecMoney -> -- tipAmount (0 when tip is a separate PI add-on)
   FinanceCtx ->
   m (Maybe RidePaymentLedgerInfo)
-buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
+buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOverride _tip ctx =
   case RD.parseProjectFareParamsBreakup (breakupToPair <$> breakups) of
     Nothing -> pure Nothing
     Just b -> do
-      let r = RD.applyRideDiscount b discount
-          breakupPostDiscount =
-            b
-              { RD.discountApplicableRideFareTaxExclusive = r.postDiscountApplicableTaxExclusive,
-                RD.discountApplicableRideFareTax = r.postDiscountApplicableTax
-              }
+      let (breakupPostDiscount, r) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b discount
+          (paymentChargeAmt, paymentChargeVatAmt) =
+            if mbPaymentChargeOverride > 0
+              then (mbPaymentChargeOverride, 0)
+              else (breakupPostDiscount.paymentChargeTaxExclusive, breakupPostDiscount.paymentChargeTax)
           info =
             mkRidePaymentLedgerInfo
               (breakupPostDiscount.discountApplicableRideFareTaxExclusive + breakupPostDiscount.nonDiscountApplicableRideFareTaxExclusive - appFee)
@@ -842,6 +848,8 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
               breakupPostDiscount.parkingChargeTaxExclusive
               breakupPostDiscount.parkingChargeTax
               appFee
+              paymentChargeAmt
+              paymentChargeVatAmt
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
@@ -921,6 +929,73 @@ type MakePaymentIntentConstraints m r c =
 
 -- | The portion of the Stripe payment charge the platform collects via the application
 --   fee: added when the CUSTOMER or DRIVER bears it, zero when the PLATFORM bears it.
+-- | The rate a ride's payment charge was priced at, recovered from the fare
+--   breakup the BPP emitted. Needed wherever the charge must be levied on an
+--   amount that was not part of the original fare -- a tip, or a cancellation
+--   fee -- since there is no stored charge to read for those.
+--
+--   Prefers the explicit rate tags; falls back to dividing the emitted charge by
+--   its base, which is the same arithmetic and covers a BPP that predates them.
+paymentChargeRateFromFareBreakups :: [DFareBreakup.FareBreakup] -> Maybe RD.PaymentChargeRate
+paymentChargeRateFromFareBreakups bs =
+  let pairs = (\fb -> (fb.description, fb.amount.amount)) <$> bs
+   in case RD.parsePaymentChargeRate pairs of
+        Just r -> Just r
+        Nothing -> RD.paymentChargeRateFromBreakup =<< RD.parseProjectFareParamsBreakup pairs
+
+-- | The payment charge levied on an amount outside the original fare, split the
+--   way the invoice and ledger need it.
+data LeviedPaymentCharge = LeviedPaymentCharge
+  { -- | The charge and its VAT, for invoice lines and ledger legs.
+    chargeNet :: HighPrecMoney,
+    chargeVat :: HighPrecMoney,
+    -- | What the rider is captured on top of the amount.
+    riderGrossUp :: HighPrecMoney,
+    -- | What the platform collects as the payment intent's application fee.
+    applicationFee :: HighPrecMoney
+  }
+
+-- | Split a VAT-inclusive payment charge back into (net, VAT) at the rate the
+--   ride was priced at. booking.paymentCharge and ride.paymentCharge are stored
+--   gross, so anywhere the two halves are needed separately -- an invoice line
+--   pair, a ledger leg -- has to reverse the rate. Without a rate the whole
+--   amount is treated as net, which keeps the total right and simply omits the
+--   VAT line.
+splitGrossPaymentCharge :: Maybe RD.PaymentChargeRate -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossPaymentCharge mbRate gross =
+  case mbRate of
+    Just rate
+      | rate.vatPct > 0,
+        gross > 0 ->
+        let net = gross / (1 + rate.vatPct / 100)
+         in (net, gross - net)
+    _ -> (gross, 0)
+
+-- | Levy the ride's payment charge on an amount outside the original fare.
+--
+--   Mirrors the fare exactly rather than inventing a policy. Under
+--   PAYMENT_CUSTOMER the rider pays the charge on top and the platform collects
+--   it, so the driver still receives the full amount; under PAYMENT_DRIVER the
+--   rider pays only the amount and the driver funds the fee out of it; under
+--   PAYMENT_PLATFORM the platform absorbs it. So a tip or cancellation fee is
+--   not silently cheaper to process than a fare of the same size.
+levyPaymentChargeOn :: Maybe RD.PaymentChargeRate -> Maybe Text -> HighPrecMoney -> LeviedPaymentCharge
+levyPaymentChargeOn mbRate mbBearer amount =
+  case (mbRate, mbBearer) of
+    (Just rate, Just bearer)
+      | amount > 0,
+        rate.ratePct > 0 ->
+        let net = amount * rate.ratePct / 100
+            vat = net * rate.vatPct / 100
+            gross = net + vat
+         in case bearer of
+              "PAYMENT_CUSTOMER" -> LeviedPaymentCharge net vat gross gross
+              "PAYMENT_DRIVER" -> LeviedPaymentCharge net vat 0 gross
+              _ -> none
+    _ -> none
+  where
+    none = LeviedPaymentCharge 0 0 0 0
+
 paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 paymentChargeForAppFee mbCharge mbBearer =
   case mbBearer of
@@ -1043,6 +1118,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.rideVatAbsorbedOnDiscount
             ledgerInfo.cancellationCharge
             ledgerInfo.cancellationTax
+            (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
       pure (Just resp)
 
 cancelPaymentIntent ::
@@ -1384,7 +1460,8 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
     (customerPaymentId, _) <- getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let debtApplicationFeeAmount = fromMaybe 0 ride.commission + paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
+    let debtPaymentCharge = paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
+        debtApplicationFeeAmount = fromMaybe 0 ride.commission + debtPaymentCharge
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
@@ -1406,7 +1483,17 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
             duesResp.tollVatDue
             0
             0
-            duesResp.platformFeeDue
+            -- The charge is booked inside PlatformFee on the ride path, so carve
+            -- it back out here rather than adding it on top: the invoice total is
+            -- unchanged and the charge gets its own line instead of being
+            -- mislabelled as ride fare. duesResp is built for this one ride
+            -- (rides = [DueAmountRide {rideId = ride.id}]), so ride.paymentCharge
+            -- is the right figure to carve out.
+            (duesResp.platformFeeDue - debtPaymentCharge)
+            debtPaymentCharge
+            -- No fare breakup is loaded on this path, so there is no rate to
+            -- reverse; the whole charge shows as net and the VAT line is omitted.
+            0
             debtDiscountAmount
             0
             0
@@ -1626,6 +1713,7 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
         li.platformFee
         discountAmount
         li.rideVatAbsorbedOnDiscount
+        (li.paymentCharge, li.paymentChargeVat)
     case result of
       Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
       Left err -> logError $ "Failed to create fully discounted ledger: " <> show err

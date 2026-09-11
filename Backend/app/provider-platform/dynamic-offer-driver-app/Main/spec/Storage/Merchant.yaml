@@ -1049,6 +1049,11 @@ TransporterConfig:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
       enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
+    # The components of the ten-slot fare partition, plus the payment charge, that
+    # a surface may club together rather than itemise. Listing a component means
+    # "show it as one row"; omitting it means "show its parts separately".
+    ProjectFareParamsComponent:
+      enum: "RIDE_FARE, TOLL_FARE, CANCELLATION_FARE, PARKING_CHARGE, PAYMENT_CHARGE"
     PayoutChargeBearer:
       enum: "DRIVER_BEARER, PLATFORM_BEARER"
     ConnectChargeBearer:
@@ -1084,7 +1089,10 @@ TransporterConfig:
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
-      # Stripe connect-account maintenance charge (scheduled deduction).
+      clubProjectFareInRideInvoice: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInRefundsInvoice: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInEarnings: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInPayouts: Maybe [ProjectFareParamsComponent]
       connectAccountCharge: Maybe HighPrecMoney
       connectAccountChargeFrequency: Maybe ChargeFrequency
       connectAccountChargeBearer: Maybe ConnectChargeBearer

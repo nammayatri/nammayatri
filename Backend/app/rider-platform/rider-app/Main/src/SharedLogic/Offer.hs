@@ -196,9 +196,9 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
 --   offer.finalOrderAmount is used as-is (FRFS / pass flows etc.).
 type OfferFareCtx = Maybe RD.ProjectFareParamsBreakup
 
--- | Recompute the post-offer amount: VAT-aware when fare context + discount
---   are both present, falls back to the payment-library's
---   finalOrderAmount otherwise.
+-- | Recompute the post-offer amount: VAT-aware and payment-charge-aware when
+--   fare context + discount are both present, falls back to the payment
+--   library's finalOrderAmount otherwise.
 --
 --   When @offer.discountAmount > 0@ but no fare context was threaded
 --   through, we emit a warning — that path produces a stale figure that
@@ -212,12 +212,11 @@ recomputePostOfferAmount ::
 recomputePostOfferAmount mbCtx offer = case mbCtx of
   Just b
     | offer.discountAmount > 0 ->
-      let r = RD.applyRideDiscount b offer.discountAmount
-          updatedBreakup =
-            b
-              { RD.discountApplicableRideFareTaxExclusive = r.postDiscountApplicableTaxExclusive,
-                RD.discountApplicableRideFareTax = r.postDiscountApplicableTax
-              }
+      -- The payment charge is levied on what the rider actually pays, so it is
+      -- re-priced on the post-discount fare rather than carried through or
+      -- rescaled. This is why the saving exceeds the offer's face value, and it
+      -- must match what the BPP captures.
+      let (updatedBreakup, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
        in pure $ RD.projectFareParamsBreakupTotal updatedBreakup
   Nothing | offer.discountAmount > 0 -> do
     logWarning $
@@ -266,8 +265,21 @@ deriveComputedOfferAmount mbFareCtx offer = do
       { discountAmount = offer.discountAmount,
         payoutAmount = offer.cashbackAmount,
         postOfferAmount = postOfferAmount,
-        amountSaved = offer.discountAmount + offer.cashbackAmount
+        amountSaved = offerAmountSaved mbFareCtx offer
       }
+
+-- | What the rider actually saves. Discounting the fare also removes the payment
+--   charge that sat on it, so the saving exceeds the offer's face value; and the
+--   raw offer.discountAmount is unclamped, so it can exceed what was applied.
+--   Both are why this is derived from the two totals rather than added up.
+offerAmountSaved :: OfferFareCtx -> Payment.OfferResp -> HighPrecMoney
+offerAmountSaved mbCtx offer =
+  case mbCtx of
+    Just b
+      | offer.discountAmount > 0 ->
+        let (updated, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
+         in max 0 (RD.projectFareParamsBreakupTotal b - RD.projectFareParamsBreakupTotal updated) + offer.cashbackAmount
+    _ -> offer.discountAmount + offer.cashbackAmount
 
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Ride Payout Offer (entity + payout job) ---------------------------
@@ -519,9 +531,9 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         offerCode = offerCode,
         autoApply = fromMaybe False (uiConfigs >>= (.autoApply)),
         isHidden = fromMaybe True (uiConfigs >>= (.isHidden)),
-        amountSaved = discountAmount + cashbackAmount,
+        amountSaved = offerAmountSaved mbFareCtx offer,
         postOfferAmount = postOfferAmount,
-        estimatedAmountSaved = discountAmount + cashbackAmount,
+        estimatedAmountSaved = offerAmountSaved mbFareCtx offer,
         estimatedPostOfferAmount = postOfferAmount,
         offerType = readMaybe (T.unpack benefitType),
         minimumAmount = minimumAmount,

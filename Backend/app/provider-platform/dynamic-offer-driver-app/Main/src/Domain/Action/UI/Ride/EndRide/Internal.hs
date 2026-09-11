@@ -41,6 +41,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -500,7 +501,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
-        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - fromMaybe 0 fareParams.paymentProcessingFee
+        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - fromMaybe 0 fareParams.paymentProcessingFee - fromMaybe 0 fareParams.paymentProcessingFeeVat
       customerDiscountAmount = fromMaybe 0 ride.discountAmount
       tipAmount = fromMaybe 0 ride.tipAmount
       -- ServiceVAT (international): platform-service VAT input credit. The base
@@ -616,7 +617,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 let baseForServiceVat =
                       if isOnline
                         then case mbProjectedBreakup of
-                          Just b -> RD.projectFareParamsBreakupTotal b - commissionAmount
+                          -- fareOnlyTotal, not the full twelve slots: the payment
+                          -- charge is a pass-through, not driver taxable earning,
+                          -- and including it would over-credit the VAT input.
+                          Just b -> RD.fareOnlyTotal b - commissionAmount
                           Nothing -> totalFare - commissionAmount
                         else max 0 (customerDiscountAmount - commissionAmount)
                  in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
@@ -633,11 +637,17 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
-    let mbPaymentBearer = transporterConfig.driverWalletConfig.paymentChargeBearer
+    let mbPaymentBearer =
+          (Kernel.Prelude.readMaybe . T.unpack =<< ride.paymentChargeBearer)
+            <|> transporterConfig.driverWalletConfig.paymentChargeBearer
         paymentChargeGross = fromMaybe 0 ride.paymentCharge
         (paymentChargeAmt, paymentChargeVatAmt) =
           splitGrossByVatPct transporterConfig.driverWalletConfig.paymentChargeVat paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
+        -- The OwnerLiability -> SellerLiability deduction legs below fire for the
+        -- driver bearer as well as the customer one, so the driver funds the
+        -- gateway fee either way and their invoice must show it as a deduction.
+        driverBearsPayment = mbPaymentBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER]
     let mkRideLineItems clubVatInclusive issuedToType =
           let rideInclusiveLine = rawBaseFare + rawTaxAmount
               tollInclusiveLine = tollAmount + tollVatAmount
@@ -715,8 +725,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing,
-                  if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge paymentChargeAmt else Nothing,
-                  if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing
+                  -- Customer copy: part of what the rider paid, so a positive Fare/Tax pair.
+                  if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge paymentChargeAmt else Nothing,
+                  if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing,
+                  -- Supplier copy: a deduction, like commission above.
+                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge" PaymentCharge (negate paymentChargeAmt) else Nothing,
+                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge VAT" PaymentChargeTax (negate paymentChargeVatAmt) else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —

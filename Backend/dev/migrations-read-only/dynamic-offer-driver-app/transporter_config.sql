@@ -1178,3 +1178,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_r
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_daily_limit integer ;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}' :: json;
+
+
+
+------- SQL updates -------
+
