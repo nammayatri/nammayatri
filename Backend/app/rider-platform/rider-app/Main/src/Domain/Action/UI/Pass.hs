@@ -81,6 +81,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Types.Version (Version, textToVersion)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
@@ -196,6 +197,9 @@ postMultimodalPassSelectUtil ::
   Environment.Flow PassAPI.PassSelectionAPIEntity
 postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  unless isDashboard $ do
+    rateLimitOptions <- asks (.passSelectAPIRateLimitOptions)
+    checkSlidingWindowLimitWithOptions ("PassSelect:PersonId:" <> personId.getId) rateLimitOptions
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
