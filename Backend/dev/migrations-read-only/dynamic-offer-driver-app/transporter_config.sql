@@ -1183,3 +1183,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_con
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prefer_ondc_cancellation_reason_id boolean ;
+
+
+
+------- SQL updates -------
+

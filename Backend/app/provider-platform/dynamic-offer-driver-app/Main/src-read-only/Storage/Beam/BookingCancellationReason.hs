@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { additionalInfo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bookingId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverCancellationLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverCancellationLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -22,9 +23,11 @@ data BookingCancellationReasonT f = BookingCancellationReasonT
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ondcCancellationReasonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    source :: B.C f Domain.Types.BookingCancellationReason.CancellationSource
+    source :: B.C f Domain.Types.BookingCancellationReason.CancellationSource,
+    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
