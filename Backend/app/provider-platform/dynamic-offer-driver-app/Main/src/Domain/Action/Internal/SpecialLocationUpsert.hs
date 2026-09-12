@@ -19,7 +19,7 @@ module Domain.Action.Internal.SpecialLocationUpsert
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Data.Text as T
 import Domain.Types.Merchant (Merchant)
 import Environment

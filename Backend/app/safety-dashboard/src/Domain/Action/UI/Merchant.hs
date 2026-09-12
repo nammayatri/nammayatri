@@ -4,18 +4,19 @@
 module Domain.Action.UI.Merchant where
 
 import API.Types.UI.Merchant
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Dashboard.SafetyPlatform as Safety
 import qualified Data.Text as T (unpack)
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import Domain.Types.MerchantConfigs
 import "lib-dashboard" Domain.Types.Person.API as AP
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Network.URI (isURI)
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.MerchantAccess as QMCA
@@ -32,7 +33,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   Auth.TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 postSetMerchantConfig :: Auth.TokenInfo -> API.Types.UI.Merchant.SetMerchantConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess

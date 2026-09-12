@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.FarePolicyV2
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.FarePolicyV2
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -22,7 +23,6 @@ import Kernel.Utils.Common hiding (INFO)
 import qualified Lib.Types.SpecialLocation
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("farePolicyV2" :> (GetFarePolicyV2List :<|> GetFarePolicyV2Policy :<|> PostFarePolicyV2PolicyReplace :<|> PostFarePolicyV2BulkReplace :<|> PostFarePolicyV2Preview :<|> PostFarePolicyV2ProductCreate :<|> PostFarePolicyV2ProductUpdate :<|> PostFarePolicyV2ProductRemove :<|> GetFarePolicyV2ChangeRequestList :<|> PostFarePolicyV2ChangeRequestDecide :<|> GetFarePolicyV2AlertsSubscriptions :<|> PostFarePolicyV2AlertsSubscribe :<|> PostFarePolicyV2AlertsUnsubscribe))
 
@@ -133,41 +133,41 @@ type PostFarePolicyV2AlertsUnsubscribe =
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2AlertsUnsubscribe
   )
 
-getFarePolicyV2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Dashboard.Common.TripCategory) -> Kernel.Prelude.Maybe (Lib.Types.SpecialLocation.Area) -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ProductListRes)
+getFarePolicyV2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Dashboard.Common.TripCategory) -> Kernel.Prelude.Maybe (Lib.Types.SpecialLocation.Area) -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ProductListRes)
 getFarePolicyV2List merchantShortId opCity apiTokenInfo tripCategory area serviceTier enabled = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2List merchantShortId opCity apiTokenInfo tripCategory area serviceTier enabled
 
-getFarePolicyV2Policy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PolicyRes)
+getFarePolicyV2Policy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PolicyRes)
 getFarePolicyV2Policy merchantShortId opCity apiTokenInfo farePolicyId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2Policy merchantShortId opCity apiTokenInfo farePolicyId
 
-postFarePolicyV2PolicyReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceRes)
+postFarePolicyV2PolicyReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceRes)
 postFarePolicyV2PolicyReplace merchantShortId opCity apiTokenInfo farePolicyId dryRun req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2PolicyReplace merchantShortId opCity apiTokenInfo farePolicyId dryRun req
 
-postFarePolicyV2BulkReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceRes)
+postFarePolicyV2BulkReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceRes)
 postFarePolicyV2BulkReplace merchantShortId opCity apiTokenInfo dryRun req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2BulkReplace merchantShortId opCity apiTokenInfo dryRun req
 
-postFarePolicyV2Preview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewRes)
+postFarePolicyV2Preview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewRes)
 postFarePolicyV2Preview merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2Preview merchantShortId opCity apiTokenInfo req
 
-postFarePolicyV2ProductCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2CreateProductReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2CreateProductRes)
+postFarePolicyV2ProductCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2CreateProductReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2CreateProductRes)
 postFarePolicyV2ProductCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2ProductCreate merchantShortId opCity apiTokenInfo req
 
-postFarePolicyV2ProductUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2UpdateProductReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFarePolicyV2ProductUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2UpdateProductReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFarePolicyV2ProductUpdate merchantShortId opCity apiTokenInfo fareProductId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2ProductUpdate merchantShortId opCity apiTokenInfo fareProductId req
 
-postFarePolicyV2ProductRemove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2RemoveProductReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestRes)
+postFarePolicyV2ProductRemove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2RemoveProductReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestRes)
 postFarePolicyV2ProductRemove merchantShortId opCity apiTokenInfo fareProductId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2ProductRemove merchantShortId opCity apiTokenInfo fareProductId req
 
-getFarePolicyV2ChangeRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestStatus) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestListRes)
+getFarePolicyV2ChangeRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestStatus) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestListRes)
 getFarePolicyV2ChangeRequestList merchantShortId opCity apiTokenInfo status = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2ChangeRequestList merchantShortId opCity apiTokenInfo status
 
-postFarePolicyV2ChangeRequestDecide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2DecideChangeRequestReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFarePolicyV2ChangeRequestDecide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2DecideChangeRequestReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFarePolicyV2ChangeRequestDecide merchantShortId opCity apiTokenInfo requestId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2ChangeRequestDecide merchantShortId opCity apiTokenInfo requestId req
 
-getFarePolicyV2AlertsSubscriptions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionListRes)
+getFarePolicyV2AlertsSubscriptions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionListRes)
 getFarePolicyV2AlertsSubscriptions merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2AlertsSubscriptions merchantShortId opCity apiTokenInfo
 
-postFarePolicyV2AlertsSubscribe :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFarePolicyV2AlertsSubscribe :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFarePolicyV2AlertsSubscribe merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2AlertsSubscribe merchantShortId opCity apiTokenInfo req
 
-postFarePolicyV2AlertsUnsubscribe :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFarePolicyV2AlertsUnsubscribe :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2SubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postFarePolicyV2AlertsUnsubscribe merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2AlertsUnsubscribe merchantShortId opCity apiTokenInfo req

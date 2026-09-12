@@ -141,7 +141,6 @@ library
     , bytestring
     , case-insensitive
     , containers
-    , dashboard-helper-api
     , esqueleto
     , euler-hs
     , http-client
@@ -226,7 +225,6 @@ executable safety-dashboard-exe
     , bytestring
     , case-insensitive
     , containers
-    , dashboard-helper-api
     , esqueleto
     , euler-hs
     , http-client

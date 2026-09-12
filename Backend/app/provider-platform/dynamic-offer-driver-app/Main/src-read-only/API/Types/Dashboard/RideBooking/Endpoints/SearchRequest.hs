@@ -55,7 +55,7 @@ data SearchRequestsRes = SearchRequestsRes {searchrequests :: [SearchRequestOfDr
 
 type API = ("searchRequest" :> (PostSearchRequestSearchrequests :<|> GetSearchRequestList :<|> GetSearchRequestInfo))
 
-type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody '[JSON] SearchRequestsReq :> Post '[JSON] SearchRequestsRes)
+type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody ('[JSON]) SearchRequestsReq :> Post ('[JSON]) SearchRequestsRes)
 
 type GetSearchRequestList =
   ( "list" :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
@@ -68,7 +68,7 @@ type GetSearchRequestList =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           '[JSON]
+           ('[JSON])
            SearchRequestsRes
   )
 
@@ -77,13 +77,13 @@ type GetSearchRequestInfo =
       :> MandatoryQueryParam
            "driverId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
-      :> Get '[JSON] SearchReqInfoRes
+      :> Get ('[JSON]) SearchReqInfoRes
   )
 
 data SearchRequestAPIs = SearchRequestAPIs
-  { postSearchRequestSearchrequests :: SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes,
-    getSearchRequestList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes,
-    getSearchRequestInfo :: Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SearchReqInfoRes
+  { postSearchRequestSearchrequests :: (SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes),
+    getSearchRequestList :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes),
+    getSearchRequestInfo :: (Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SearchReqInfoRes)
   }
 
 mkSearchRequestAPIs :: (Client EulerHS.Types.EulerClient API -> SearchRequestAPIs)
@@ -98,4 +98,4 @@ data SearchRequestUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''SearchRequestUserActionType])
+$(Data.Singletons.TH.genSingletons [(''SearchRequestUserActionType)])

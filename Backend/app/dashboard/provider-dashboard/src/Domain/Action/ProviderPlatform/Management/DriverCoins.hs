@@ -21,7 +21,8 @@ module Domain.Action.ProviderPlatform.Management.DriverCoins
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.DriverCoins as Common
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -29,25 +30,24 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
-postDriverCoinsBulkUploadCoins :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReq -> Flow Common.BulkUploadCoinRes
+postDriverCoinsBulkUploadCoins :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.BulkUploadCoinsReq -> Flow Common.BulkUploadCoinRes
 postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoins) req
 
-postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.BulkUploadCoinsReqV2 -> Flow Common.BulkUploadCoinRes
+postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.BulkUploadCoinsReqV2 -> Flow Common.BulkUploadCoinRes
 postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBulkUploadCoinsV2) req
 
-getDriverCoinsCoinHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
+getDriverCoinsCoinHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
 getDriverCoinsCoinHistory merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.getDriverCoinsCoinHistory) driverId mbLimit mbOffset
 
-postDriverCoinsBlacklistedEventsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateBlacklistedCoinEventsReq -> Flow APISuccess
+postDriverCoinsBlacklistedEventsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Common.UpdateBlacklistedCoinEventsReq -> Flow APISuccess
 postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBlacklistedEventsUpdate) driverId req

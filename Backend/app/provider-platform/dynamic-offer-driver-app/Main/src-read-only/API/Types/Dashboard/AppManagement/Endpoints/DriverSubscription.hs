@@ -66,14 +66,14 @@ instance Kernel.Types.HideSecrets.HideSecrets SubscriptionDriverFeesAndInvoicesT
 
 type API = ("plan" :> (PostDriverSubscriptionSendSmsHelper :<|> PostDriverSubscriptionUpdateDriverFeeAndInvoiceInfo))
 
-type PostDriverSubscriptionSendSms = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "sendSms" :> ReqBody '[JSON] SendSmsReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverSubscriptionSendSms = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "sendSms" :> ReqBody ('[JSON]) SendSmsReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostDriverSubscriptionSendSmsHelper =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> Capture "volunteerId" Kernel.Prelude.Text :> "sendSms"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SendSmsReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverSubscriptionUpdateDriverFeeAndInvoiceInfo =
@@ -81,15 +81,15 @@ type PostDriverSubscriptionUpdateDriverFeeAndInvoiceInfo =
       :> Capture
            "serviceName"
            Dashboard.Common.ServiceNames
-      :> ReqBody '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
+      :> ReqBody ('[JSON]) SubscriptionDriverFeesAndInvoicesToUpdate
       :> Post
-           '[JSON]
+           ('[JSON])
            SubscriptionDriverFeesAndInvoicesToUpdate
   )
 
 data DriverSubscriptionAPIs = DriverSubscriptionAPIs
-  { postDriverSubscriptionSendSms :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> SendSmsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.Common.ServiceNames -> SubscriptionDriverFeesAndInvoicesToUpdate -> EulerHS.Types.EulerClient SubscriptionDriverFeesAndInvoicesToUpdate
+  { postDriverSubscriptionSendSms :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> SendSmsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.Common.ServiceNames -> SubscriptionDriverFeesAndInvoicesToUpdate -> EulerHS.Types.EulerClient SubscriptionDriverFeesAndInvoicesToUpdate)
   }
 
 mkDriverSubscriptionAPIs :: (Client EulerHS.Types.EulerClient API -> DriverSubscriptionAPIs)
@@ -103,4 +103,4 @@ data DriverSubscriptionUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''DriverSubscriptionUserActionType])
+$(Data.Singletons.TH.genSingletons [(''DriverSubscriptionUserActionType)])

@@ -95,7 +95,7 @@ dependencies:
   - persistent
   - extra
   - text-conversions
-  - dashboard-helper-api
+  - lib-dashboard
   - data-default-class
   - http-types
   - containers

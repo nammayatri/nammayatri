@@ -32,7 +32,7 @@ postOverlayDelete a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboa
 getOverlayList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.ListOverlayResp)
 getOverlayList a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Overlay.getOverlayList a2 a1
 
-getOverlayInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp)
+getOverlayInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp)
 getOverlayInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Overlay.getOverlayInfo a4 a3 a2 a1
 
 postOverlaySchedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Overlay.ScheduleOverlay -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

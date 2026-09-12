@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified Dashboard.Common
 import qualified Domain.Action.RiderPlatform.Management.Customer
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode :<|> PostCustomerOffersList :<|> PostCustomerApplyOffer :<|> PostCustomerEnsureExists :<|> PostCustomerBulkApplyOffer))
 
@@ -140,44 +140,44 @@ type PostCustomerBulkApplyOffer =
       :> API.Types.RiderPlatform.Management.Customer.PostCustomerBulkApplyOffer
   )
 
-getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerListRes)
+getCustomerList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerListRes)
 getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone countryCode personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.getCustomerList merchantShortId opCity apiTokenInfo limit offset enabled blocked phone countryCode personId
 
-deleteCustomerDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteCustomerDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteCustomerDelete merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.deleteCustomerDelete merchantShortId opCity apiTokenInfo customerId
 
-postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.BlockCustomerReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.BlockCustomerReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerBlock merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerBlock merchantShortId opCity apiTokenInfo customerId req
 
-postCustomerUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUnblock merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUnblock merchantShortId opCity apiTokenInfo customerId
 
-getCustomerInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerInfoRes)
+getCustomerInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CustomerInfoRes)
 getCustomerInfo merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.getCustomerInfo merchantShortId opCity apiTokenInfo customerId
 
-getCustomerCancellationDuesDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CancellationDuesDetailsRes)
+getCustomerCancellationDuesDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler API.Types.RiderPlatform.Management.Customer.CancellationDuesDetailsRes)
 getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId
 
-postCustomerUpdateSafetyCenterBlocking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdateSafetyCenterBlockingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerUpdateSafetyCenterBlocking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdateSafetyCenterBlockingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUpdateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUpdateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req
 
-postCustomerPersonNumbers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.PersonIdsReq -> Environment.FlowHandler [Dashboard.Common.PersonRes])
+postCustomerPersonNumbers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.PersonIdsReq -> Environment.FlowHandler [Dashboard.Common.PersonRes])
 postCustomerPersonNumbers merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerPersonNumbers merchantShortId opCity apiTokenInfo req
 
-postCustomerPersonId :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.PersonMobileNoReq -> Environment.FlowHandler [Dashboard.Common.PersonRes])
+postCustomerPersonId :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.PersonMobileNoReq -> Environment.FlowHandler [Dashboard.Common.PersonRes])
 postCustomerPersonId merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerPersonId merchantShortId opCity apiTokenInfo req
 
-postCustomerUpdatePaymentMode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdatePaymentModeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerUpdatePaymentMode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdatePaymentModeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req
 
-postCustomerOffersList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.CustomerOffersListReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.CustomerOfferEntity])
+postCustomerOffersList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Customer.CustomerOffersListReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.CustomerOfferEntity])
 postCustomerOffersList merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerOffersList merchantShortId opCity apiTokenInfo req
 
-postCustomerApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.ApplyCustomerOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Customer.ApplyCustomerOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerApplyOffer merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerApplyOffer merchantShortId opCity apiTokenInfo req
 
-postCustomerEnsureExists :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.CustomerEnsureExistsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerEnsureExists :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Customer.CustomerEnsureExistsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerEnsureExists merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerEnsureExists merchantShortId opCity apiTokenInfo req
 
-postCustomerBulkApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Customer.BulkApplyCustomerOfferReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.BulkApplyCustomerOfferRes])
+postCustomerBulkApplyOffer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Customer.BulkApplyCustomerOfferReq -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Customer.BulkApplyCustomerOfferRes])
 postCustomerBulkApplyOffer merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Customer.postCustomerBulkApplyOffer merchantShortId opCity apiTokenInfo req

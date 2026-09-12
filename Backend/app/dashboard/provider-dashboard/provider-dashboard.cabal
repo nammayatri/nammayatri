@@ -39,7 +39,6 @@ library
       API.RiderPlatform
       API.SpecialZone
       App
-      Domain.Action.Entity
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.DriverWallet
@@ -344,7 +343,6 @@ library
     , behavior-tracker
     , bytestring
     , containers
-    , dashboard-helper-api
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
@@ -433,7 +431,6 @@ executable provider-dashboard-exe
     , behavior-tracker
     , bytestring
     , containers
-    , dashboard-helper-api
     , esqueleto
     , euler-hs
     , http-client

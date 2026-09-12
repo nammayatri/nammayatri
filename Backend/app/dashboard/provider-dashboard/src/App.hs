@@ -21,6 +21,9 @@ where
 
 import API
 import qualified Data.HashMap.Strict as HMS
+import qualified "dynamic-offer-driver-app" Domain.Types.AccessMatrix as DriverAuth
+import qualified "rider-app" Domain.Types.AccessMatrix as RiderAuth
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import "lib-dashboard" Environment
 import EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -44,7 +47,8 @@ import qualified Network.Wai as Wai
 import Servant (Context (..))
 import "lib-dashboard" Storage.Beam.SchemaName (setDashboardSchemaName)
 import System.Timeout (timeout)
-import qualified "lib-dashboard" Tools.Auth as Auth
+import qualified "lib-dashboard" Tools.Auth.ApiAuth as Auth
+import qualified "lib-dashboard" Tools.Auth.Dashboard as DashboardAuth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
@@ -73,8 +77,10 @@ runService configModifier = do
     pure flowRt'
   where
     context =
-      Auth.verifyApiAction @(FlowR AppEnv)
-        :. Auth.verifyDashboardAction @(FlowR AppEnv)
+      Auth.verifyApiAction @DriverAuth.UserActionType @(FlowR AppEnv)
+        :. Auth.verifyApiAction @RiderAuth.UserActionType @(FlowR AppEnv)
+        :. Auth.verifyApiAction @DashAuth.DashboardActionType @(FlowR AppEnv)
+        :. DashboardAuth.verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext
 
     logIncomingRequest :: AppEnv -> Wai.Middleware

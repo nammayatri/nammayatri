@@ -2,8 +2,9 @@ module Domain.Action.ProviderPlatform.Fleet.LiveMap (getLiveMapDrivers) where
 
 import qualified API.Client.ProviderPlatform.Fleet
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap
-import qualified "dashboard-helper-api" Dashboard.Common
+import qualified "lib-dashboard" Dashboard.Common
 import Domain.Action.ProviderPlatform.Fleet.Driver (getMbFleetOwnerAndRequestorIdMerchantBased)
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -13,13 +14,12 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 getLiveMapDrivers ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Common.Meters ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) ->

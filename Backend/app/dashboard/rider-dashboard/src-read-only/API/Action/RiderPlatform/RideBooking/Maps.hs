@@ -7,10 +7,11 @@ module API.Action.RiderPlatform.RideBooking.Maps
   )
 where
 
-import qualified API.Types.Dashboard.RideBooking
+import qualified "rider-app" API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Maps
 import qualified Domain.Action.RiderPlatform.RideBooking.Maps
 import qualified "rider-app" Domain.Action.UI.Maps
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "lib-dashboard" Environment
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("maps" :> (PostMapsAutoComplete :<|> PostMapsGetPlaceDetails :<|> PostMapsGetPlaceName))
 
@@ -29,33 +29,33 @@ handler merchantId city = postMapsAutoComplete merchantId city :<|> postMapsGetP
 
 type PostMapsAutoComplete =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE))
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsAutoComplete
   )
 
 type PostMapsGetPlaceDetails =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_DETAILS)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_DETAILS))
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceDetails
   )
 
 type PostMapsGetPlaceName =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME))
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceName
   )
 
-postMapsAutoComplete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> Environment.FlowHandler Domain.Action.UI.Maps.AutoCompleteResp)
+postMapsAutoComplete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> Environment.FlowHandler Domain.Action.UI.Maps.AutoCompleteResp)
 postMapsAutoComplete merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Maps.postMapsAutoComplete merchantShortId opCity apiTokenInfo customerId req
 
-postMapsGetPlaceDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceDetailsReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceDetailsResp)
+postMapsGetPlaceDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceDetailsReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceDetailsResp)
 postMapsGetPlaceDetails merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Maps.postMapsGetPlaceDetails merchantShortId opCity apiTokenInfo customerId req
 
-postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceNameResp)
+postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceNameResp)
 postMapsGetPlaceName merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Maps.postMapsGetPlaceName merchantShortId opCity apiTokenInfo customerId req

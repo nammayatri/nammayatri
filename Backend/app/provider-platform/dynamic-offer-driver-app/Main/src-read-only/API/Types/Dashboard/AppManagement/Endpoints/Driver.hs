@@ -42,11 +42,11 @@ type GetDriverFleetListRides =
            "financeData"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Ride.DriverRideListRes
   )
 
-newtype DriverAPIs = DriverAPIs {getDriverFleetListRides :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Domain.Action.UI.Ride.DriverRideListRes}
+newtype DriverAPIs = DriverAPIs {getDriverFleetListRides :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.Ride.RideStatus) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient Domain.Action.UI.Ride.DriverRideListRes)}
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
@@ -59,10 +59,10 @@ data DriverUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON DriverUserActionType where
-  toJSON GET_DRIVER_FLEET_LIST_RIDES = Data.Aeson.String "GET_DRIVER_FLEET_LIST_RIDES"
+  toJSON (GET_DRIVER_FLEET_LIST_RIDES) = Data.Aeson.String "GET_DRIVER_FLEET_LIST_RIDES"
 
 instance FromJSON DriverUserActionType where
   parseJSON (Data.Aeson.String "GET_DRIVER_FLEET_LIST_RIDES") = pure GET_DRIVER_FLEET_LIST_RIDES
   parseJSON _ = fail "GET_DRIVER_FLEET_LIST_RIDES expected"
 
-$(Data.Singletons.TH.genSingletons [''DriverUserActionType])
+$(Data.Singletons.TH.genSingletons [(''DriverUserActionType)])

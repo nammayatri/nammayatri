@@ -17,18 +17,18 @@ import Servant.Client
 
 type API = ("profile" :> (GetProfileDetail :<|> PostProfileUpdate))
 
-type GetProfileDetail = ("detail" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get '[JSON] Domain.Action.UI.Profile.ProfileRes)
+type GetProfileDetail = ("detail" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get ('[JSON]) Domain.Action.UI.Profile.ProfileRes)
 
 type PostProfileUpdate =
-  ( "update" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] Domain.Action.UI.Profile.UpdateProfileReq
+  ( "update" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) Domain.Action.UI.Profile.UpdateProfileReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 data ProfileAPIs = ProfileAPIs
-  { getProfileDetail :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Profile.ProfileRes,
-    postProfileUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Profile.UpdateProfileReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getProfileDetail :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Profile.ProfileRes),
+    postProfileUpdate :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Profile.UpdateProfileReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkProfileAPIs :: (Client EulerHS.Types.EulerClient API -> ProfileAPIs)
@@ -42,4 +42,4 @@ data ProfileUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''ProfileUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ProfileUserActionType)])

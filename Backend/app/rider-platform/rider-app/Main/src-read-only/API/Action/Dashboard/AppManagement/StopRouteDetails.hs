@@ -25,7 +25,7 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.StopRouteDetails.API)
 handler merchantId city = stopRouteDetailsGetStops merchantId city :<|> stopRouteDetailsGetStop merchantId city :<|> stopRouteDetailsGetRouteStopMappingByStop merchantId city :<|> stopRouteDetailsGetRouteStopMappingByRoute merchantId city
 
-stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.Station.Station])
+stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.Station.Station])
 stopRouteDetailsGetStops a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetStops a4 a3 a2 a1
 
 stopRouteDetailsGetStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler API.Types.Dashboard.AppManagement.StopRouteDetails.StationResp)

@@ -7,7 +7,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant
 import "lib-dashboard" Storage.Beam.BeamFlow
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth.Dashboard
 
 -- DashboardAuth is coarse; fine-grained RBAC via verifyAccessLevel DASHBOARD_USER_BULK_CREATE inside the handler.
 type API =

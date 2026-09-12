@@ -35,6 +35,8 @@ let rcfg =
       , connectReadOnly = True
       }
 
+let dashboardApiRateLimitOptions = { limit = +300, limitResetTimeInSec = +60 }
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
@@ -79,6 +81,8 @@ let rccfgSecondary =
       , connectReadOnly = True
       }
 
+let dashboardHttpClientOptions = { timeoutMs = +25000 }
+
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
@@ -122,8 +126,9 @@ in  { esqDBCfg
         common.loggerConfig // { logFilePath = "/tmp/safety-dashboard.log" }
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
+    , dashboardApiRateLimitOptions
     , shareRideApiRateLimitOptions
-    , httpClientOptions = common.httpClientOptions
+    , httpClientOptions = dashboardHttpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
@@ -150,7 +155,7 @@ in  { esqDBCfg
     , enforceStrongPasswordPolicy = False
     , inMemConfig
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9993)
-    , incomingAPIResponseTimeout = +15
+    , incomingAPIResponseTimeout = +30
     , is2faMandatory = True
     , twoFaEnforcementDeadlineText = Some "2026-08-04T00:00:00Z"
     , twoFaOtpTTLInSecs = Some +900

@@ -39,7 +39,7 @@ import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
 import System.Environment
 import Tools.Metrics
-import Tools.Streaming.Kafka
+import Tools.Streaming.Kafka.Environment
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -57,6 +57,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
+    -- Per-operator limit on proxied dashboard APIs; there was none before.
+    dashboardApiRateLimitOptions :: APIRateLimitOptions,
     shareRideApiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
@@ -112,6 +114,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
+    dashboardApiRateLimitOptions :: APIRateLimitOptions,
     shareRideApiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,

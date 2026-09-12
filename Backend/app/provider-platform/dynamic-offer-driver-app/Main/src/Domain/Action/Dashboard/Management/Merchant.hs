@@ -85,9 +85,9 @@ module Domain.Action.Dashboard.Management.Merchant
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
-import qualified "dashboard-helper-api" Dashboard.Common.Merchant as DCM
+import qualified "lib-dashboard" Dashboard.Common.Merchant as DCM
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT

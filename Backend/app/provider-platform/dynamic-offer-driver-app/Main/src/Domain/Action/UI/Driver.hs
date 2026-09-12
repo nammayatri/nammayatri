@@ -98,9 +98,9 @@ module Domain.Action.UI.Driver
   )
 where
 
-import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
+import "this" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
+import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
+import qualified "this" API.Types.ProviderPlatform.Management.Message as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3

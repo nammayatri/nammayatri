@@ -10,6 +10,7 @@ where
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.SearchTry
 import qualified Domain.Action.RiderPlatform.Management.SearchTry
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -18,7 +19,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("searchTry" :> PostSearchTryRecentSearchTries)
 
@@ -33,5 +33,5 @@ type PostSearchTryRecentSearchTries =
       :> API.Types.RiderPlatform.Management.SearchTry.PostSearchTryRecentSearchTries
   )
 
-postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.SearchTry.RecentSearchTriesRes)
+postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.SearchTry.RecentSearchTriesReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.SearchTry.RecentSearchTriesRes)
 postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.SearchTry.postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req

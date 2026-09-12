@@ -19,6 +19,7 @@ where
 
 import API
 import qualified Data.HashMap.Strict as HMS
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import "lib-dashboard" Environment
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -39,14 +40,20 @@ import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification
 import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
 import Servant (Context (..))
+import "lib-dashboard" Storage.Beam.SchemaName (setDashboardSchemaName)
 import Storage.Beam.SystemConfigs ()
 import System.Timeout (timeout)
-import qualified "lib-dashboard" Tools.Auth as Auth
+import qualified "lib-dashboard" Tools.Auth.ApiAuth as Auth
+import qualified "lib-dashboard" Tools.Auth.Dashboard as DashboardAuth
 import qualified Tools.Auth.Webhook as AuthWebhook
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "safety-dashboard" <&> configModifier
+  -- Publish the configured schema before any DB connection is opened: the
+  -- dashboard Beam instances (lib-dashboard Storage.Beam.SchemaInstances) read
+  -- it through resolveSchema, and would otherwise fall back to atlas_dashboard.
+  setDashboardSchemaName appCfg.esqDBCfg.connectSchemaName
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   Metrics.serve (appCfg.metricsPort)
   runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler (dashboardTimeoutMiddleware appEnv appCfg.incomingAPIResponseTimeout . logIncomingRequest appEnv) identity context releaseAppEnv \flowRt -> do
@@ -67,8 +74,8 @@ runService configModifier = do
     pure flowRt'
   where
     context =
-      Auth.verifyApiAction @(FlowR AppEnv)
-        :. Auth.verifyDashboardAction @(FlowR AppEnv)
+      Auth.verifyApiAction @DashAuth.DashboardActionType @(FlowR AppEnv)
+        :. DashboardAuth.verifyDashboardAction @(FlowR AppEnv)
         :. AuthWebhook.verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext
 

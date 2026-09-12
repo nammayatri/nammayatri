@@ -18,8 +18,8 @@ module Domain.Action.Dashboard.Operator.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT

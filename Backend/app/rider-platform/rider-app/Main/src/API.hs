@@ -23,6 +23,7 @@ import qualified API.Beckn as Beckn
 import qualified API.Conductor as Conductor
 import qualified API.Dashboard as Dashboard
 import qualified API.Depot as Depot
+import qualified API.DirectDashboard as DirectDashboard
 import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
@@ -89,6 +90,7 @@ type MainAPI =
          )
     :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
+    :<|> DirectDashboard.API
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
@@ -125,6 +127,7 @@ mainServer =
     :<|> stripeTestWebhookHandler
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
+    :<|> DirectDashboard.handler
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Conductor.handler

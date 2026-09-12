@@ -504,9 +504,6 @@
     "role": {
       "dim": []
     },
-    "access_matrix": {
-      "dim": []
-    },
     "merchant_operating_city": {
       "dim": []
     }
@@ -519,9 +516,6 @@
       "dim": []
     },
     "role": {
-      "dim": []
-    },
-    "access_matrix": {
       "dim": []
     },
     "merchant_operating_city": {

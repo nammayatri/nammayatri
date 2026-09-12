@@ -18,6 +18,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, sort, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DP
+import qualified Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.Entity as Entity
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -26,7 +27,7 @@ import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
 import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
-import qualified Domain.Types.Transaction as DTransaction
+import qualified Domain.Types.Transaction as DT
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
@@ -53,8 +54,8 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
-import Tools.Auth
 import qualified Tools.Auth.Common as Auth
+import Tools.Auth.Dashboard
 import Tools.Auth.Merchant
 import Tools.Error
 import qualified Tools.InternalClient as InternalClient
@@ -241,7 +242,7 @@ login rawReq = do
           pure (merchant, city')
   loginRes <- generateLoginRes person merchant' otp city'
   when (not $ T.null loginRes.authToken) $ do
-    buildAndCreateAuthTransaction DTransaction.DashboardUserLogin person merchant'
+    buildAndCreateAuthTransaction DT.DashboardUserLogin person merchant'
   pure loginRes
 
 makeMobileHitsCountKey :: Text -> Text -> Text
@@ -721,7 +722,7 @@ logout tokenInfo = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city
-  buildAndCreateAuthTransaction DTransaction.DashboardUserLogout person merchant
+  buildAndCreateAuthTransaction DT.DashboardUserLogout person merchant
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
@@ -738,7 +739,7 @@ logoutAllMerchants tokenInfo = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
   QR.deleteAllByPersonId person.id
-  buildAndCreateAuthTransaction DTransaction.DashboardUserLogout person merchant
+  buildAndCreateAuthTransaction DT.DashboardUserLogout person merchant
   pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken
@@ -759,15 +760,15 @@ buildRegistrationToken personId merchantId city = do
 
 buildAndCreateAuthTransaction ::
   BeamFlow m r =>
-  DTransaction.Endpoint ->
+  DT.Endpoint DashAuth.DashboardActionType ->
   DP.Person ->
   DMerchant.Merchant ->
   m ()
-buildAndCreateAuthTransaction endpoint person merchant = do
+buildAndCreateAuthTransaction endpoint person merchant =
   whenJust person.dashboardAccessType $ \dashboardAccessType ->
     when (dashboardAccessType `elem` merchant.trackLoginLogoutForRoles) $ do
       transaction <- STransaction.buildDashboardAuthTransaction endpoint person.id merchant.id
-      QT.create transaction
+      QT.createDashboardTransaction transaction
 
 registerFleetOwner ::
   ( BeamFlow m r,
@@ -867,6 +868,84 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess
 
+-- | Create the dashboard-side operator.
+
+--
+-- @operatorId@ is the id the application server allocated, so the dashboard
+-- person and the application person share it.
+registerOperatorDashboardOnly ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
+  ) =>
+  City.City ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Id DP.Person ->
+  DMerchant.Merchant ->
+  Maybe Text ->
+  m ()
+registerOperatorDashboardOnly opCity email mobileNumber mobileCountryCode firstName lastName password operatorId merchant mbRoleId = do
+  operatorRole <-
+    case mbRoleId of
+      Just roleId -> QRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
+      Nothing -> QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
+  operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole merchant.id
+  merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
+  QP.create operator
+  QAccess.create merchantAccess
+
+buildOperator ::
+  (EncFlow m r) =>
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Id DP.Person ->
+  DRole.Role ->
+  Id DMerchant.Merchant ->
+  m PT.Person
+buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstName lastName password operatorId role merchantId = do
+  now <- getCurrentTime
+  mobileNumber <- encrypt mobileNumberUnencrypted
+  email <- forM emailUnencrypted encrypt
+  passwordHash <- getDbHash `mapM` password
+  return
+    PT.Person
+      { id = operatorId,
+        firstName = firstName,
+        lastName = lastName,
+        roleId = role.id,
+        email = email,
+        mobileNumber,
+        mobileCountryCode = mobileCountryCode,
+        passwordHash,
+        dashboardAccessType = Just role.dashboardAccessType,
+        receiveNotification = Nothing,
+        createdAt = now,
+        updatedAt = now,
+        verified = Just True,
+        rejectionReason = Nothing,
+        rejectedAt = Nothing,
+        dashboardType = PT.DEFAULT_DASHBOARD,
+        passwordUpdatedAt = Nothing,
+        forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
+        approvedBy = Nothing,
+        rejectedBy = Nothing,
+        language = Nothing,
+        secretKey = Nothing,
+        is2faEnabled = False,
+        tokenNo = Nothing,
+        vpa = Nothing
+      }
+
 -- 2FA status endpoint - used by frontend banner + post-login modal to show
 -- countdown and route to enrollment.
 
@@ -926,8 +1005,7 @@ adminResetTwoFa tokenInfo TwoFaAdminResetReq {..} = do
   Auth.cleanCachedTokens target.id
   QR.deleteAllByPersonId target.id
   -- Audit log
-  transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardTwoFactorAdminReset requestor.id merchant.id
-  QT.create transaction
+  STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorAdminReset :: DT.Endpoint DashAuth.DashboardActionType) requestor.id merchant.id >>= QT.createDashboardTransaction
   logInfo $ "2FA admin reset: requestor=" <> requestor.id.getId <> " target=" <> target.id.getId
   pure $ TwoFaAdminResetRes "2FA reset for target user. They must re-enroll on next login."
 

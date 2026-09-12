@@ -18,9 +18,9 @@ import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Storage.Beam.AccessAudit as BeamAA
-import qualified Storage.Beam.AccessMatrix as BeamAM
 import qualified Storage.Beam.Capability as BeamC
 import qualified Storage.Beam.CapabilityEndpoint as BeamCE
+import qualified Storage.Beam.DashboardTransaction as BeamDT
 import qualified Storage.Beam.DeletedUser as BeamDU
 import qualified Storage.Beam.Entity as BeamE
 import qualified Storage.Beam.EntityAccess as BeamEA
@@ -45,7 +45,6 @@ type BeamFlow m r =
 
 type BeamFlow' =
   ( HasSchemaName BeamAA.AccessAuditT,
-    HasSchemaName BeamAM.AccessMatrixT,
     HasSchemaName BeamC.CapabilityT,
     HasSchemaName BeamCE.CapabilityEndpointT,
     HasSchemaName BeamDU.DeletedUserT,
@@ -61,5 +60,6 @@ type BeamFlow' =
     HasSchemaName BeamRT.RegistrationTokenT,
     HasSchemaName BeamR.RoleT,
     HasSchemaName BeamRC.RoleCapabilityT,
-    HasSchemaName BeamT.TransactionT
+    HasSchemaName BeamT.TransactionT,
+    HasSchemaName BeamDT.DashboardTransactionT
   )

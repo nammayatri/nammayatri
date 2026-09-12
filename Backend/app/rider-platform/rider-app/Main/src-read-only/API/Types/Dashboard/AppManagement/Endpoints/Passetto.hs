@@ -40,13 +40,13 @@ data PassettoEncryptResp = PassettoEncryptResp {encryptedValue :: Kernel.Prelude
 
 type API = ("passetto" :> (PostPassettoEncrypt :<|> PostPassettoDecrypt))
 
-type PostPassettoEncrypt = ("encrypt" :> ReqBody '[JSON] PassettoEncryptReq :> Post '[JSON] PassettoEncryptResp)
+type PostPassettoEncrypt = ("encrypt" :> ReqBody ('[JSON]) PassettoEncryptReq :> Post ('[JSON]) PassettoEncryptResp)
 
-type PostPassettoDecrypt = ("decrypt" :> ReqBody '[JSON] PassettoDecryptReq :> Post '[JSON] PassettoDecryptResp)
+type PostPassettoDecrypt = ("decrypt" :> ReqBody ('[JSON]) PassettoDecryptReq :> Post ('[JSON]) PassettoDecryptResp)
 
 data PassettoAPIs = PassettoAPIs
-  { postPassettoEncrypt :: PassettoEncryptReq -> EulerHS.Types.EulerClient PassettoEncryptResp,
-    postPassettoDecrypt :: PassettoDecryptReq -> EulerHS.Types.EulerClient PassettoDecryptResp
+  { postPassettoEncrypt :: (PassettoEncryptReq -> EulerHS.Types.EulerClient PassettoEncryptResp),
+    postPassettoDecrypt :: (PassettoDecryptReq -> EulerHS.Types.EulerClient PassettoDecryptResp)
   }
 
 mkPassettoAPIs :: (Client EulerHS.Types.EulerClient API -> PassettoAPIs)
@@ -60,4 +60,4 @@ data PassettoUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''PassettoUserActionType])
+$(Data.Singletons.TH.genSingletons [(''PassettoUserActionType)])

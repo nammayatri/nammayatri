@@ -2,7 +2,7 @@
 
 module Storage.Clickhouse.FleetOperatorDailyStats where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Data.Time.Calendar (Day)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH

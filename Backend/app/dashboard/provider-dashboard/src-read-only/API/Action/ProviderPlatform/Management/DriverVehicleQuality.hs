@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverVehicleQuality
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.DriverVehicleQuality
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("driverVehicleQuality" :> (GetDriverVehicleQualityList :<|> GetDriverVehicleQualitySearch :<|> PostDriverVehicleQualityUpdateVehicleRating))
 
@@ -52,11 +52,11 @@ type PostDriverVehicleQualityUpdateVehicleRating =
       :> API.Types.ProviderPlatform.Management.DriverVehicleQuality.PostDriverVehicleQualityUpdateVehicleRating
   )
 
-getDriverVehicleQualityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityListRes)
+getDriverVehicleQualityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityListRes)
 getDriverVehicleQualityList merchantShortId opCity apiTokenInfo vehicleVariant limit maxVehicleRating minVehicleRating vehicleVariants offset maxVehicleAge minDriverRating = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverVehicleQuality.getDriverVehicleQualityList merchantShortId opCity apiTokenInfo vehicleVariant limit maxVehicleRating minVehicleRating vehicleVariants offset maxVehicleAge minDriverRating
 
-getDriverVehicleQualitySearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityResp])
+getDriverVehicleQualitySearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityResp])
 getDriverVehicleQualitySearch merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverVehicleQuality.getDriverVehicleQualitySearch merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber
 
-postDriverVehicleQualityUpdateVehicleRating :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverVehicleQuality.UpdateVehicleRatingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverVehicleQualityUpdateVehicleRating :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DriverVehicleQuality.UpdateVehicleRatingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverVehicleQuality.postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity apiTokenInfo req

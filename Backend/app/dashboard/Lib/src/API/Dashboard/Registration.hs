@@ -15,12 +15,12 @@
 module API.Dashboard.Registration where
 
 import qualified Domain.Action.Dashboard.Registration as DReg
-import Environment
 import Kernel.Prelude
+import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.Common
 import Servant
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 type API =
   "user"
@@ -62,7 +62,7 @@ type API =
              :> Post '[JSON] DReg.LoginRes
        )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
   login
     :<|> logout
@@ -76,35 +76,35 @@ handler =
     :<|> switchMerchant
     :<|> switchMerchantAndCity
 
-login :: BeamFlow' => DReg.LoginReq -> FlowHandler DReg.LoginRes
-login = withFlowHandlerAPI' . DReg.login
+login :: DashboardLoginFlow (FlowR r) r => DReg.LoginReq -> FlowHandlerR r DReg.LoginRes
+login = withDashboardDbFlowHandlerAPI . DReg.login
 
-logout :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
-logout = withFlowHandlerAPI' . DReg.logout
+logout :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DReg.LogoutRes
+logout = withDashboardDbFlowHandlerAPI . DReg.logout
 
-logoutAllMerchants :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
-logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
+logoutAllMerchants :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DReg.LogoutRes
+logoutAllMerchants = withDashboardDbFlowHandlerAPI . DReg.logoutAllMerchants
 
-enable2fa :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
-enable2fa = withFlowHandlerAPI' . DReg.enable2fa
+enable2fa :: DashboardLoginFlow (FlowR r) r => DReg.Enable2FAReq -> FlowHandlerR r DReg.Enable2FARes
+enable2fa = withDashboardDbFlowHandlerAPI . DReg.enable2fa
 
-initiate2FASetup :: BeamFlow' => DReg.Initiate2FASetupReq -> FlowHandler DReg.Initiate2FASetupRes
-initiate2FASetup = withFlowHandlerAPI' . DReg.initiate2FASetup
+initiate2FASetup :: DashboardLoginFlow (FlowR r) r => DReg.Initiate2FASetupReq -> FlowHandlerR r DReg.Initiate2FASetupRes
+initiate2FASetup = withDashboardDbFlowHandlerAPI . DReg.initiate2FASetup
 
-verify2FASetup :: BeamFlow' => DReg.Verify2FASetupReq -> FlowHandler DReg.Enable2FARes
-verify2FASetup = withFlowHandlerAPI' . DReg.verify2FASetup
+verify2FASetup :: DashboardLoginFlow (FlowR r) r => DReg.Verify2FASetupReq -> FlowHandlerR r DReg.Enable2FARes
+verify2FASetup = withDashboardDbFlowHandlerAPI . DReg.verify2FASetup
 
-twoFaStatus :: BeamFlow' => TokenInfo -> FlowHandler DReg.TwoFaStatusRes
-twoFaStatus = withFlowHandlerAPI' . DReg.getTwoFaStatus
+twoFaStatus :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DReg.TwoFaStatusRes
+twoFaStatus = withDashboardDbFlowHandlerAPI . DReg.getTwoFaStatus
 
-twoFaAdminReset :: BeamFlow' => TokenInfo -> DReg.TwoFaAdminResetReq -> FlowHandler DReg.TwoFaAdminResetRes
-twoFaAdminReset token = withFlowHandlerAPI' . DReg.adminResetTwoFa token
+twoFaAdminReset :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DReg.TwoFaAdminResetReq -> FlowHandlerR r DReg.TwoFaAdminResetRes
+twoFaAdminReset token = withDashboardDbFlowHandlerAPI . DReg.adminResetTwoFa token
 
-twoFaDispatchDeadlineNotifications :: BeamFlow' => TokenInfo -> FlowHandler DReg.DispatchNotificationsRes
-twoFaDispatchDeadlineNotifications = withFlowHandlerAPI' . DReg.dispatchTwoFaDeadlineNotifications
+twoFaDispatchDeadlineNotifications :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DReg.DispatchNotificationsRes
+twoFaDispatchDeadlineNotifications = withDashboardDbFlowHandlerAPI . DReg.dispatchTwoFaDeadlineNotifications
 
-switchMerchant :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
-switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
+switchMerchant :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandlerR r DReg.LoginRes
+switchMerchant token = withDashboardDbFlowHandlerAPI . DReg.switchMerchant token
 
-switchMerchantAndCity :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
-switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
+switchMerchantAndCity :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandlerR r DReg.LoginRes
+switchMerchantAndCity token = withDashboardDbFlowHandlerAPI . DReg.switchMerchantAndCity token

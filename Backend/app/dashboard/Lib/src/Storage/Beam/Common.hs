@@ -16,9 +16,9 @@ module Storage.Beam.Common where
 
 import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
-import Storage.Beam.AccessMatrix as BeamAM
 import Storage.Beam.BeamFlow
 import Storage.Beam.CapabilityEndpoint as BeamCE
+import Storage.Beam.DashboardTransaction as BeamDT
 import Storage.Beam.EntityAccess as BeamEA
 import Storage.Beam.Merchant as BeamM
 import Storage.Beam.MerchantAccess as BeamMA
@@ -33,8 +33,7 @@ atlasDB :: BeamFlow' => B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { accessMatrix = accessMatrixTable,
-        capabilityEndpoint = capabilityEndpointTable,
+      { capabilityEndpoint = capabilityEndpointTable,
         entityAccess = entityAccessTable,
         merchant = merchantTable,
         merchantAccess = merchantAccessTable,
@@ -47,8 +46,7 @@ atlasDB =
       }
 
 data AtlasDB f = AtlasDB
-  { accessMatrix :: f (B.TableEntity BeamAM.AccessMatrixT),
-    capabilityEndpoint :: f (B.TableEntity BeamCE.CapabilityEndpointT),
+  { capabilityEndpoint :: f (B.TableEntity BeamCE.CapabilityEndpointT),
     entityAccess :: f (B.TableEntity BeamEA.EntityAccessT),
     merchant :: f (B.TableEntity BeamM.MerchantT),
     merchantAccess :: f (B.TableEntity BeamMA.MerchantAccessT),
@@ -57,6 +55,7 @@ data AtlasDB f = AtlasDB
     registrationToken :: f (B.TableEntity BeamRT.RegistrationTokenT),
     role :: f (B.TableEntity BeamR.RoleT),
     roleCapability :: f (B.TableEntity BeamRC.RoleCapabilityT),
-    transaction :: f (B.TableEntity BeamT.TransactionT)
+    transaction :: f (B.TableEntity BeamT.TransactionT),
+    dashboardTransaction :: f (B.TableEntity BeamDT.DashboardTransactionT)
   }
   deriving (Generic, B.Database be)

@@ -48,6 +48,10 @@ let outputPath =
               outputPrefixDashboardReadOnly ++ "Domain/Types" ++ folderName
           , _servantApi =
               outputPrefixAppReadOnly ++ "API/Action/Dashboard/" ++ folderName
+          , _servantApiDashboardAuth =
+                  outputPrefixAppReadOnly
+              ++  "API/Action/DashboardAuth/"
+              ++  folderName
           , _servantApiDashboard =
                   outputPrefixDashboardReadOnly
               ++  "API/Action/RiderPlatform/"

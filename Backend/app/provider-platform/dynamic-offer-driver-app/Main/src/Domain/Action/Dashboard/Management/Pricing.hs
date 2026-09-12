@@ -39,7 +39,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Pricing as Common
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.Common as DCommon
+import qualified "lib-dashboard" Dashboard.Common as DCommon
 import Data.List (sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, TokenInfo (..), module Reexport) where
+module Tools.Auth.Dashboard (DashboardAuth, VerifyDashboard, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
 import Data.Singletons.TH
 import qualified Domain.Types.Merchant as DMerchant

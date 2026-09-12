@@ -4,23 +4,24 @@ module Domain.Action.UI.SuspectFlagRequest where
 
 import qualified API.Types.UI.Notification as Notification
 import API.Types.UI.SuspectFlagRequest
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.UI.Suspect as DS
 import Domain.Action.UI.Webhook as Webhook
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import qualified "lib-dashboard" Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Notification
 import qualified Domain.Types.Suspect
 import qualified Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (forM_, id, length, map, mapM_, readMaybe)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
@@ -38,7 +39,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 newtype WebhookReqBody = WebhookReqBody

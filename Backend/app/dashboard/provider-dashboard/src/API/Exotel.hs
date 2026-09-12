@@ -18,10 +18,11 @@ module API.Exotel
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import qualified "lib-dashboard" Dashboard.Common.Exotel as Common
 import Data.List (nub, sort)
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.ServerName as DSN
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -31,9 +32,9 @@ import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwEr
 import qualified ProviderPlatformClient.DynamicOfferDriver.Exotel as Client
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import qualified Storage.Queries.Transaction as QT
+import qualified "lib-dashboard" Storage.Queries.Transaction as QT
 
 type API =
   "exotel"
@@ -51,7 +52,7 @@ buildTransaction ::
   Common.ExotelEndpoint ->
   DSN.ServerName ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint serverName =
   T.buildTransaction (DT.ExotelAPI endpoint) (Just serverName) Nothing Nothing Nothing
 
@@ -63,7 +64,7 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI' $ do
     throwError $ InvalidToken incomingExotelToken
   let serverNames = [DSN.APP_BACKEND_MANAGEMENT, DSN.DRIVER_OFFER_BPP_MANAGEMENT]
   needToCallApps <- forM serverNames $ \serverName -> do
-    mbLastTransaction <- B.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+    mbLastTransaction <- B.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint :: DT.Endpoint DashAuth.DashboardActionType) serverName
     let mbLastReq =
           mbLastTransaction
             >>= (.request)

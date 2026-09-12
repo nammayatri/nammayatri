@@ -54,7 +54,7 @@ module SharedLogic.FareCalculator
   )
 where
 
-import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
+import "this" API.Types.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Char (isDigit)
 import qualified Data.List.NonEmpty as NE

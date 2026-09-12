@@ -34,10 +34,12 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
+import "lib-dashboard" Domain.Types.ServerName (DataServer)
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
@@ -56,7 +58,7 @@ import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as CF
-import Kernel.Types.Common (Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
+import Kernel.Types.Common (Days, Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -149,6 +151,32 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
+    -- Dashboard operator sessions, verified by this server instead of the proxy.
+    -- Names are fixed by the HasFlowEnv constraints in lib-dashboard's Tools.Auth.Common.
+    registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    authTokenCacheKeyPrefix :: Text,
+    passwordExpiryDays :: Maybe Int,
+    -- Dashboard operator login / 2FA / user administration, served here as well as
+    -- by provider-dashboard. Field names are fixed by the HasFlowEnv constraints in
+    -- lib-dashboard-api's Domain.Action.Dashboard.* handlers.
+    dataServers :: [DataServer],
+    updateRestrictedBppRoles :: [Text],
+    loginRateLimitOptions :: APIRateLimitOptions,
+    merchantUserAccountNumber :: Int,
+    enforceStrongPasswordPolicy :: Bool,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadlineText :: Maybe Text, -- ISO 8601; parsed to UTCTime in buildAppEnv
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text,
+    twoFaExemptRoles :: [Text],
+    -- Opt-in second connection to atlas_dashboard. Absent = this server never
+    -- enters runInDashboardDb and behaves exactly as before.
+    esqDashboardDBCfg :: Maybe EsqDBConfig,
+    esqDashboardDBReplicaCfg :: Maybe EsqDBConfig,
     signingKey :: PrivateKey,
     storeRidesTimeLimit :: Int,
     signatureExpiry :: Seconds,
@@ -263,6 +291,26 @@ data AppEnv = AppEnv
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
+    registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    authTokenCacheKeyPrefix :: Text,
+    passwordExpiryDays :: Maybe Int,
+    -- Dashboard operator login / 2FA / user administration, served here as well as
+    -- by provider-dashboard. Field names are fixed by the HasFlowEnv constraints in
+    -- lib-dashboard-api's Domain.Action.Dashboard.* handlers.
+    dataServers :: [DataServer],
+    updateRestrictedBppRoles :: [Text],
+    loginRateLimitOptions :: APIRateLimitOptions,
+    merchantUserAccountNumber :: Int,
+    enforceStrongPasswordPolicy :: Bool,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadline :: Maybe UTCTime,
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text,
+    twoFaExemptRoles :: [Text],
     storeRidesTimeLimit :: Int,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
@@ -448,7 +496,23 @@ buildAppEnv cfg@AppCfg {..} = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
+  -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as
+  -- lib-dashboard's buildAppEnv so a deadline behaves identically here.
+  let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
+  where
+    parseIso8601UTC :: Text -> Maybe UTCTime
+    parseIso8601UTC t =
+      let str = T.unpack t
+          tryFormats [] = Nothing
+          tryFormats (f : fs) = case parseTimeM True defaultTimeLocale f str of
+            Just v -> Just v
+            Nothing -> tryFormats fs
+       in tryFormats
+            [ "%Y-%m-%dT%H:%M:%SZ",
+              "%Y-%m-%dT%H:%M:%S%QZ",
+              "%Y-%m-%d %H:%M:%S%z"
+            ]
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

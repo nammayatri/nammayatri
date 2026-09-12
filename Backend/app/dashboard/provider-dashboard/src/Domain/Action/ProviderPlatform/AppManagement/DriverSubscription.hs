@@ -7,18 +7,18 @@ where
 import qualified API.Client.ProviderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified Dashboard.Common
-import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
+import "lib-dashboard" Dashboard.Common (HideSecrets (hideSecrets))
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
@@ -37,7 +37,7 @@ instance HideSecrets VolunteerTransactionStorageReq where
 postDriverSubscriptionSendSms ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id Dashboard.Common.Driver ->
   API.Types.Dashboard.AppManagement.DriverSubscription.SendSmsReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -45,7 +45,7 @@ postDriverSubscriptionSendSms merchantShortId opCity apiTokenInfo driverId req =
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -71,7 +71,7 @@ postDriverSubscriptionSendSms merchantShortId opCity apiTokenInfo driverId req =
 postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id Dashboard.Common.Driver ->
   Dashboard.Common.ServiceNames ->
   API.Types.Dashboard.AppManagement.DriverSubscription.SubscriptionDriverFeesAndInvoicesToUpdate ->
@@ -80,7 +80,7 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo merchantShortId opCity apiTo
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)

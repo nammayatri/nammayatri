@@ -9,7 +9,6 @@ packages:
   app/rider-platform/rider-app/Scheduler
   app/special-zone
   app/sdk-event-pipeline
-  app/dashboard/CommonAPIs
   app/alchemist
   lib/passetto-lib
   lib/beckn-spec

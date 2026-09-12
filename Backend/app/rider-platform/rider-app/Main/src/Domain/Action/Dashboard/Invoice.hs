@@ -3,7 +3,7 @@ module Domain.Action.Dashboard.Invoice
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Invoice as Common
+import qualified "this" API.Types.RiderPlatform.Management.Invoice as Common
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)

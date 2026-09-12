@@ -78,9 +78,9 @@ module Domain.Action.Dashboard.Management.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.Common
+import qualified "lib-dashboard" Dashboard.Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce

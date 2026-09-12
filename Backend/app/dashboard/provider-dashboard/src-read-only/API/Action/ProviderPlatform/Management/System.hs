@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified Domain.Action.ProviderPlatform.Management.System
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -19,7 +20,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("system" :> PostSystemRunQuery)
 
@@ -34,5 +34,5 @@ type PostSystemRunQuery =
       :> API.Types.ProviderPlatform.Management.System.PostSystemRunQuery
   )
 
-postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.System.QueryData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.System.QueryData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.System.postSystemRunQuery merchantShortId opCity apiTokenInfo req

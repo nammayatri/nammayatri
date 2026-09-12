@@ -15,7 +15,7 @@
 
 module Storage.Clickhouse.BppTransactionJoin where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified Data.Aeson as A
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE

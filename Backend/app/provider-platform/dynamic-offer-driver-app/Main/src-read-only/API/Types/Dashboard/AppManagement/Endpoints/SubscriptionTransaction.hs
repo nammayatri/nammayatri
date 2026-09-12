@@ -40,7 +40,7 @@ type GetSubscriptionTransactionSubscriptionTransactions =
            "toDate"
            Data.Time.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 
@@ -70,11 +70,11 @@ type GetSubscriptionTransactionSubscriptionTransactionsHelper =
            "toDate"
            Data.Time.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
 
-newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> EulerHS.Types.EulerClient API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse}
+newtype SubscriptionTransactionAPIs = SubscriptionTransactionAPIs {getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus) -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> EulerHS.Types.EulerClient API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)}
 
 mkSubscriptionTransactionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionTransactionAPIs)
 mkSubscriptionTransactionAPIs subscriptionTransactionClient = (SubscriptionTransactionAPIs {..})
@@ -87,10 +87,10 @@ data SubscriptionTransactionUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON SubscriptionTransactionUserActionType where
-  toJSON GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS = Data.Aeson.String "GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS"
+  toJSON (GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS) = Data.Aeson.String "GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS"
 
 instance FromJSON SubscriptionTransactionUserActionType where
   parseJSON (Data.Aeson.String "GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS") = pure GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS
   parseJSON _ = fail "GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS expected"
 
-$(Data.Singletons.TH.genSingletons [''SubscriptionTransactionUserActionType])
+$(Data.Singletons.TH.genSingletons [(''SubscriptionTransactionUserActionType)])

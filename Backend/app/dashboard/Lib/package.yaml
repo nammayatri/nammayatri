@@ -74,6 +74,10 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - beckn-spec
+  - cassava
+  - extra
+  - vector
+  - special-zone-a
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
@@ -97,9 +101,6 @@ dependencies:
   - passetto-client
   - passetto-lib
   - http-types
-  - dashboard-helper-api
-  - rider-app
-  - dynamic-offer-driver-app
   - random
   - base32
   - cryptonite

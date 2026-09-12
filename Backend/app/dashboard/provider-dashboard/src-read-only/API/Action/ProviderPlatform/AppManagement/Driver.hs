@@ -12,6 +12,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Dr
 import qualified Data.Time.Calendar
 import qualified Domain.Action.ProviderPlatform.AppManagement.Driver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "dynamic-offer-driver-app" Domain.Types.Person
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride
@@ -23,7 +24,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("driver" :> GetDriverFleetListRides)
 
@@ -32,11 +32,11 @@ handler merchantId city = getDriverFleetListRides merchantId city
 
 type GetDriverFleetListRides =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DRIVER / 'API.Types.Dashboard.AppManagement.Driver.GET_DRIVER_FLEET_LIST_RIDES)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DRIVER) / ('API.Types.Dashboard.AppManagement.Driver.GET_DRIVER_FLEET_LIST_RIDES))
       :> API.Types.Dashboard.AppManagement.Driver.GetDriverFleetListRides
   )
 
-getDriverFleetListRides :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler Domain.Action.UI.Ride.DriverRideListRes)
+getDriverFleetListRides :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.Ride.RideStatus) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler Domain.Action.UI.Ride.DriverRideListRes)
 getDriverFleetListRides merchantShortId opCity apiTokenInfo driverId limit offset onlyActive status day fleetOwnerId numOfDays financeData = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Driver.getDriverFleetListRides merchantShortId opCity apiTokenInfo driverId limit offset onlyActive status day fleetOwnerId numOfDays financeData

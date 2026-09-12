@@ -49,7 +49,7 @@ module Domain.Action.Dashboard.Merchant
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.RiderPlatform.Management.Merchant as Common
 import qualified BecknV2.FRFS.Enums as FRFS
 import Control.Applicative
 import qualified Data.Aeson as JSON

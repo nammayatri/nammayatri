@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
 import qualified Domain.Action.RiderPlatform.IssueManagement.IssueList
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("issue" :> (GetIssueListV1 :<|> PostIssueListTicketStatusCallBack))
 
@@ -44,8 +44,8 @@ type PostIssueListTicketStatusCallBack =
       :> API.Types.RiderPlatform.IssueManagement.IssueList.PostIssueListTicketStatusCallBack
   )
 
-getIssueListV1 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.IssueManagement.IssueList.IssueListRes)
+getIssueListV1 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.IssueManagement.IssueList.IssueListRes)
 getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCode mobileNumber from to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.IssueList.getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCode mobileNumber from to
 
-postIssueListTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueListTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.IssueList.postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req

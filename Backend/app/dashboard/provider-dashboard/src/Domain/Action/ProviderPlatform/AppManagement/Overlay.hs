@@ -9,30 +9,30 @@ where
 
 import qualified API.Client.ProviderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.Overlay
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 postOverlayCreate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   API.Types.Dashboard.AppManagement.Overlay.CreateOverlayReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postOverlayCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -48,14 +48,14 @@ postOverlayCreate merchantShortId opCity apiTokenInfo req = do
 postOverlayDelete ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   API.Types.Dashboard.AppManagement.Overlay.DeleteOverlayReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postOverlayDelete merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -71,7 +71,7 @@ postOverlayDelete merchantShortId opCity apiTokenInfo req = do
 getOverlayList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Environment.Flow API.Types.Dashboard.AppManagement.Overlay.ListOverlayResp
 getOverlayList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -80,7 +80,7 @@ getOverlayList merchantShortId opCity apiTokenInfo = do
 getOverlayInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp
@@ -96,14 +96,14 @@ getOverlayInfo merchantShortId opCity apiTokenInfo udf1 overlayKey = do
 postOverlaySchedule ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   API.Types.Dashboard.AppManagement.Overlay.ScheduleOverlay ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postOverlaySchedule merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing

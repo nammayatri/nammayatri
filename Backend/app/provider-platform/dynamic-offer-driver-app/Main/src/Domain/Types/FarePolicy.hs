@@ -24,7 +24,7 @@ module Domain.Types.FarePolicy
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text

@@ -10,6 +10,7 @@ where
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Payout
 import qualified Domain.Action.RiderPlatform.Management.Payout
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -20,7 +21,6 @@ import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.API.Payout.Types
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("payout" :> GetPayoutPayoutOrder)
 
@@ -35,5 +35,5 @@ type GetPayoutPayoutOrder =
       :> API.Types.RiderPlatform.Management.Payout.GetPayoutPayoutOrder
   )
 
-getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
+getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Payout.getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId

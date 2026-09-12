@@ -15,7 +15,7 @@ import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.RegistrationV2 as DRegistrationV2
-import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
+import qualified "dynamic-offer-driver-app" Domain.Types.AccessMatrix as DMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Role as DRole
@@ -28,7 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
-import qualified "lib-dashboard" Tools.Auth.Api
+import qualified "lib-dashboard" Tools.Auth.ApiAuth as Tools.Auth.Api
 import Prelude
 
 -- =============================================================================
@@ -240,7 +240,7 @@ testPostRegistrationV2RegisterWithRealExecution =
         isJust fleetType @? "Fleet type should be specified"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
+        let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo DMatrix.UserActionType -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different fleet types and validates request handling" $ do
         let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing Nothing
