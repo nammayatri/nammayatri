@@ -1004,6 +1004,8 @@ checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId mbC
 
 setActivity ::
   ( BeamFlow m r,
+    OnboardingFlow m r,
+    Forkable m,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -1024,7 +1026,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   unless isLocked $ throwError $ DriverActivityUpdateInProgress personId.getId
   finally
     ( do
-        void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let driverId = cast personId
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1095,6 +1097,11 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                           }
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+          when (driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER) $ do
+            mbAnyFleetAssociation <- QFDA.findOneByDriverIdWithStatus driverId
+            when (isNothing mbAnyFleetAssociation) $
+              fork "setActivity:resetOnboardingAs" $
+                SOnboardingComms.setOnboardingAs transporterConfig person DriverInfo.INDIVIDUAL
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline

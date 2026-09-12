@@ -164,7 +164,6 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
-    onboardingStages: Maybe [DocumentOnboardingStageAPIEntity]
   # Stage metadata for the onboarding hub, ordered by `order` with hidden stages already dropped.
   # Documents carry the same `documentOnboardingStage`, so that value IS the join key. The wire
   # form is the tagged object {"tag":..,"contents":..}; its DB/show spelling
@@ -192,6 +191,7 @@ types:
     documentFields: Maybe [FieldInfo]
     documentFlowGrouping: DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
+    onboardingStage: Maybe DocumentOnboardingStageAPIEntity
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -209,6 +209,7 @@ types:
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
     doNotValidateDuringOnboarding: Maybe Bool
+    doStrictVerification: Bool
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training,Fleet"
   DocumentFlowGrouping:
@@ -216,7 +217,7 @@ types:
   # FieldObject: children in `fields` become a nested object under `requestKey`.
   # FieldArray:  `fields` describe the shape of EACH element of the array under `requestKey`.
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear,FieldBool"
   # `requestKey` = the JSON key this field's value occupies in register's documentData; `_type` = its JSON value type.
   # Simple:  { _type: FieldText,   requestKey: "identifierNumber" }                    -> { "identifierNumber": "..." }
   # Nested:  { _type: FieldObject, requestKey: "registration", fields: [ ...leaves ] } -> { "registration": { ... } }
@@ -228,6 +229,7 @@ types:
     isMandatory: Bool
     regexValidation: Maybe Text
     description: Maybe Text
+    descriptionUrl: Maybe Text
     placeholder: Maybe Text
     hint: Maybe Text
     dropdownValues: Maybe [Text]
@@ -279,7 +281,7 @@ types:
   DLDocumentMetadata:
     driverLicenseNumber: Text
     driverDateOfBirth: Maybe UTCTime
-    dateOfExpiry: UTCTime
+    dateOfExpiry: Maybe UTCTime
   AadhaarDocumentMetadata:
     aadhaarNumber: Maybe Text
     nameOnCard: Maybe Text
@@ -308,7 +310,7 @@ types:
   GSTDocumentMetadata:
     gstNumber: Text
   RCDocumentMetadata:
-    fitnessExpiry: UTCTime
+    fitnessExpiry: Maybe UTCTime
     vehicleNumberPlate: Text
     vehicleVariant: Maybe Text
     vehicleManufacturer: Maybe Text

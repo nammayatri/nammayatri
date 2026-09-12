@@ -134,11 +134,13 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
+  | TermsAndConditions
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data FieldInfo = FieldInfo
   { _type :: Domain.Types.DocumentVerificationConfig.FieldType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    descriptionUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fieldConstraints :: Kernel.Prelude.Maybe Domain.Types.DocumentFieldConstraints.FieldConstraints,
     fields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
@@ -152,7 +154,18 @@ data FieldInfo = FieldInfo
   }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray | FieldDate | FieldYear deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FieldType
+  = FieldText
+  | FieldInt
+  | FieldDouble
+  | FieldDropdown
+  | FieldImage
+  | FieldObject
+  | FieldArray
+  | FieldDate
+  | FieldYear
+  | FieldBool
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
