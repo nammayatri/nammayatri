@@ -246,6 +246,7 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (ExecutionResult (..))
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -2111,13 +2112,29 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                   <> show sReqFD.batchNumber
                   <> " epoch="
                   <> show epoch
-              createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 $
-                SendSearchRequestToDriverJobData
-                  { searchTryId = searchTry.id,
-                    estimatedRideDistance = searchReq.estimatedDistance,
-                    batchEpoch = Just epoch,
-                    topUpSize = Nothing
-                  }
+              let advanceJobData =
+                    SendSearchRequestToDriverJobData
+                      { searchTryId = searchTry.id,
+                        estimatedRideDistance = searchReq.estimatedDistance,
+                        batchEpoch = Just epoch,
+                        topUpSize = Nothing
+                      }
+              -- Dispatch the next batch inline (we are already inside a fork), like the
+              -- continuous-batching top-up above, instead of paying the scheduler's
+              -- enqueue -> producer-poll round trip exactly when every driver has already
+              -- rejected. The job's ReSchedule result must be converted back into a
+              -- scheduled job here, or the batch chain would end with this batch.
+              res <- withTryCatch "inlineEarlyBatchAdvance" $ SSRD.processSendSearchRequestJob ("inline-early-advance-" <> searchTry.id.getId) advanceJobData
+              case res of
+                Right (ReSchedule scheduleTime) -> do
+                  now' <- getCurrentTime
+                  createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) (max 1 (diffUTCTime scheduleTime now')) advanceJobData
+                Right _ -> pure ()
+                Left err -> do
+                  -- The epoch is already bumped (the pending job is orphaned), so the chain
+                  -- must survive an inline failure: fall back to the scheduler path.
+                  logError $ "inlineEarlyBatchAdvance failed, falling back to scheduled dispatch: " <> show err
+                  createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 advanceJobData
     callWithErrorHandling func = do
       exep <- withTryCatch "callWithErrorHandling:respondQuote" func
       case exep of

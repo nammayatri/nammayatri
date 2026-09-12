@@ -53,7 +53,7 @@ isReceivedMaxDriverQuotes ::
   Id SearchTry ->
   m Bool
 isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
-  totalQuotesRecieved <- length <$> QDQ.findAllBySTId searchTryId
+  totalQuotesRecieved <- QDQ.countAllBySTId searchTryId
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
@@ -63,11 +63,14 @@ getRescheduleTime ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime
   ) =>
   Seconds ->
+  -- | Anchor: when this batch's processing STARTED. Anchoring on the current time
+  -- instead would add the pool-computation + fan-out duration to every inter-batch
+  -- gap, compounding across batches.
+  UTCTime ->
   m UTCTime
-getRescheduleTime singleBatchProcessTime = do
+getRescheduleTime singleBatchProcessTime batchStartTime = do
   singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
-  now <- getCurrentTime
-  return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` now) -- Temporarily adding this singleBatchProcessingTempDelayTime for preventing second fcm to be triggered when first is already there, should be removed later once UI fix is done.
+  return $ singleBatchProcessingTempDelay `addUTCTime` (fromIntegral singleBatchProcessTime `addUTCTime` batchStartTime) -- Temporarily adding this singleBatchProcessingTempDelayTime for preventing second fcm to be triggered when first is already there, should be removed later once UI fix is done.
 
 cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED

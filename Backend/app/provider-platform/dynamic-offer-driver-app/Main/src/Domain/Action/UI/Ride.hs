@@ -274,8 +274,12 @@ arrivedAtPickup rideId req = do
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
-    QRide.updateArrival rideId now
+    -- Notify the BAP BEFORE committing driverArrivalTime: with the write first, a
+    -- failed on_update makes the driver's retry a silent no-op (flag already set)
+    -- and the customer never learns the driver arrived. Notify-then-write keeps the
+    -- retry meaningful; the BAP-side arrival handler is idempotent on redelivery.
     BP.sendDriverArrivalUpdateToBAP booking ride (Just now)
+    QRide.updateArrival rideId now
     -- Extra Fare Mitigation warning --
     driverInfo <- runInReplica $ QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
     when (fromMaybe False driverInfo.extraFareMitigationFlag) $ fork "Extra Fare Mitigation Warning" $ notifyDriverOnExtraFareWarning ride.driverId ride.merchantOperatingCityId
@@ -353,8 +357,11 @@ arrivedAtStop rideId pt = do
           distance = distanceBetweenInMeters pt curPt
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
-      QBooking.updateStopArrival booking.id
+      -- Notify BEFORE the write: updateStopArrival nulls stopLocationId, so with the
+      -- old order a failed on_update made the driver's retry throw "No stop present"
+      -- forever and the customer never learned the stop was reached.
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
+      QBooking.updateStopArrival booking.id
       pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS
@@ -540,8 +547,10 @@ arrivedAtDestination rideId pt = do
   unless (distance < dropLocThreshold) $ throwError $ InvalidRequest ("Driver is not at destination location for ride " <> ride.id.getId)
   unless (isJust ride.destinationReachedAt) $ do
     now <- getCurrentTime
-    QRide.updateDestinationArrival ride.id now
+    -- Notify BEFORE committing destinationReachedAt (same reasoning as arrivedAtPickup):
+    -- write-first makes a failed on_update unretryable and silently lost.
     BP.sendDestinationArrivalUpdateToBAP booking ride (Just now)
+    QRide.updateDestinationArrival ride.id now
   pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS

@@ -155,10 +155,16 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
             instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
         if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
           then do
+            dispatchStartTime <- getCurrentTime
             (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
+            afterDispatchTime <- getCurrentTime
             let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral (getNextBatchScheduleTime driverPoolConfig)) fromIntegral mbNewScheduleTimeIn
+                -- Anchor batch 2 on batch 1's START: the inline dispatch above (pool
+                -- computation + fan-out) can take seconds, and scheduling relative to
+                -- its end would push the whole batch chain back by that much.
+                inTime' = max 1 (inTime - diffUTCTime afterDispatchTime dispatchStartTime)
             case res of
-              (ReSchedule _) -> scheduleBatching searchTry inTime
+              (ReSchedule _) -> scheduleBatching searchTry inTime'
               _ -> return ()
             SharedRedisKeys.setBatchConfig searchReq.transactionId $
               SharedRedisKeys.BatchConfig
