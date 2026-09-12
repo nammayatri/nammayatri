@@ -62,7 +62,7 @@ getBusTripSchedule ::
   Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 7200 $ do
+getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 300 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
 

@@ -81,6 +81,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -889,7 +890,7 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         }
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> DJourneyLeg.JourneyLeg -> m LegInfo
+  (ServiceFlow m r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "cloudType" r (Maybe CloudType)) => DFRFSBooking.FRFSTicketBooking -> DJourneyLeg.JourneyLeg -> m LegInfo
 mkLegInfoFromFrfsBooking booking journeyLeg = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
@@ -1239,7 +1240,7 @@ getLegRouteInfo mbFallback journeyRouteDetailsWithTrackingStatuses integratedBPP
         }
 
 computeIsCancellableAndReschedulable ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  (ServiceFlow m r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "cloudType" r (Maybe CloudType)) =>
   DFRFSBooking.FRFSTicketBooking ->
   DIBC.IntegratedBPPConfig ->
   m (Maybe Bool, Maybe Bool, Maybe Int)
@@ -1252,30 +1253,29 @@ computeIsCancellableAndReschedulable booking integratedBPPConfig = do
   mbVst <- case mbServiceTierType of
     Just serviceTierType -> QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
     Nothing -> return Nothing
-  let isCancellable = case mbServiceTierType of
+  let remainingReschedules = max 0 (fromMaybe 1 (mbVst >>= (.maxRescheduleCount)) - fromMaybe 0 booking.rescheduleCount)
+      isCancellable = case mbServiceTierType of
         Just _ -> configCancellable && fromMaybe True (mbVst >>= (.isCancellable)) && userCancellationAllowed
         Nothing -> configCancellable && userCancellationAllowed
-  isReschedulable <- computeIsReschedulable mbVst configReschedulable
-  let remainingRescheduleCount =
-        if isReschedulable
-          then max 0 (fromMaybe 1 (mbVst >>= (.maxRescheduleCount)) - fromMaybe 0 booking.rescheduleCount)
-          else 0
+  isReschedulable <- computeIsReschedulable mbVst configReschedulable remainingReschedules
+  let remainingRescheduleCount = if isReschedulable then remainingReschedules else 0
   return (Just isCancellable, Just isReschedulable, Just remainingRescheduleCount)
   where
-    computeIsReschedulable mbVst configReschedulable = do
-      let vstReschedulable = fromMaybe False (mbVst >>= (.isRescheduleAllowed))
-          withinRescheduleCount = fromMaybe 0 booking.rescheduleCount < fromMaybe 1 (mbVst >>= (.maxRescheduleCount))
-          maxRescheduleTimeAfterStart = fromMaybe (Seconds 1800) (mbVst >>= (.maxRescheduleTimeAfterStart))
-      now <- getCurrentTime
-      let pastWindow = case booking.startTime of
-            Just startTime -> now > addUTCTime (fromIntegral (getSeconds maxRescheduleTimeAfterStart)) startTime
-            Nothing -> False
-      return $
-        booking.status == DFRFSBookingStatus.CONFIRMED
-          && configReschedulable
-          && vstReschedulable
-          && withinRescheduleCount
-          && not pastWindow
+    computeIsReschedulable mbVst configReschedulable remainingReschedules = do
+      let scheduleReschedulable =
+            booking.status == DFRFSBookingStatus.CONFIRMED
+              && configReschedulable
+              && fromMaybe False (mbVst >>= (.isRescheduleAllowed))
+              && remainingReschedules > 0
+      if not scheduleReschedulable
+        then return False
+        else do
+          mbLiveDecision <- FRFSLiveTrip.getLiveTripDecision booking
+          now <- getCurrentTime
+          let withinScheduledWindow = case booking.startTime of
+                Just startTime -> now <= addUTCTime (fromIntegral (getSeconds (fromMaybe (Seconds 1800) (mbVst >>= (.maxRescheduleTimeAfterStart))))) startTime
+                Nothing -> True
+          return $ maybe withinScheduledWindow (.canReschedule) mbLiveDecision
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro

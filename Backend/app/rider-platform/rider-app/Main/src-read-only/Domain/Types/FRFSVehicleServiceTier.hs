@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   { _type :: BecknV2.FRFS.Enums.ServiceTierType,
+    cancellationDelayThresholdSeconds :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     cancellationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
@@ -32,6 +33,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     providerCode :: Kernel.Prelude.Text,
     shortName :: Kernel.Prelude.Text,
     trainType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    useLiveForCancellationAndRescheduling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

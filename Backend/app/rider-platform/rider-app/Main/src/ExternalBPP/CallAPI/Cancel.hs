@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -61,9 +62,10 @@ cancel ::
   CancellationInitiator ->
   -- | Enforce the per-rider cancellation cap. False for journey-driven cancellations.
   Bool ->
+  Maybe FRFSLiveTrip.LiveTripDecision ->
   DBooking.FRFSTicketBooking ->
   m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
-cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap inputBooking =
+cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap mbLiveDecision inputBooking =
   FRFSReschedule.withRescheduleLock inputBooking.id $ do
     booking <- QFRFSTicketBooking.findById inputBooking.id >>= fromMaybeM (InvalidRequest "Booking not found for cancellation")
     when (booking.status == DFRFSTicketBooking.RESCHEDULED) $
@@ -81,6 +83,9 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
     whenJust mbServiceTierType $ \serviceTierType -> do
       mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
       unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
+    whenJust mbLiveDecision $ \decision ->
+      unless decision.canCancel $
+        throwError $ InvalidRequest (fromMaybe "Cancellation is not available for this trip" decision.cancelDenyReason)
     when (cancellationType == Spec.SOFT_CANCEL) $
       unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
     -- Must stay last of the gates, and enforceCap must stay False on the journey path or route edits
@@ -100,7 +105,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
           void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
         return Nothing
       _ -> do
-        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking
+        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking
         mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
         let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
         return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData
