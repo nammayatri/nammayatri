@@ -7,9 +7,11 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Data.Time.Calendar
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSSavedPassenger
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -71,6 +73,15 @@ data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Data.Text.Text, latency 
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSAddPassengerReq = FRFSAddPassengerReq
+  { age :: Kernel.Prelude.Int,
+    gender :: Domain.Types.Person.Gender,
+    name :: Data.Text.Text,
+    passengerId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger)
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
   | BookingFeedback BookingFeedbackReq
@@ -123,7 +134,11 @@ data FRFSCategorySelectionReq = FRFSCategorySelectionReq
     quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
     seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat]
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSConcession = FRFSConcession {categoryLookupId :: Data.Maybe.Maybe Data.Text.Text, concessionDesc :: Data.Text.Text, concessionId :: Data.Text.Text}
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSConfigAPIRes = FRFSConfigAPIRes
@@ -161,6 +176,10 @@ data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSFareBreakupItem = FRFSFareBreakupItem {amount :: Kernel.Types.Common.HighPrecMoney, title :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSGtfsFareAPI = FRFSGtfsFareAPI {code :: Data.Text.Text, name :: Data.Maybe.Maybe Data.Text.Text, providerCode :: Data.Maybe.Maybe Data.Text.Text, validityDuration :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -186,6 +205,10 @@ data FRFSGtfsRouteStopAPI = FRFSGtfsRouteStopAPI {routeCode :: Data.Text.Text, s
 
 data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Maybe.Maybe Kernel.Prelude.Double, lon :: Data.Maybe.Maybe Kernel.Prelude.Double, name :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSIdProofType = FRFSIdProofType {lookupId :: Data.Text.Text, name :: Data.Text.Text}
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
@@ -226,6 +249,10 @@ data FRFSPaymentOrderAttemptsAPI = FRFSPaymentOrderAttemptsAPI {domain :: Data.M
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPickupPoint = FRFSPickupPoint {name :: Data.Text.Text, placeId :: Data.Text.Text, platformNo :: Data.Maybe.Maybe Data.Text.Text, time :: Data.Maybe.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -233,7 +260,11 @@ data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Tex
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     applicablePasses :: [FRFSPassOptionAPIEntity],
+    arrivalDate :: Data.Maybe.Maybe Data.Text.Text,
+    arrivalTime :: Data.Maybe.Maybe Data.Text.Text,
+    availableSeats :: Data.Maybe.Maybe Kernel.Prelude.Int,
     categories :: [CategoryInfoResponse],
+    departureTime :: Data.Maybe.Maybe Data.Text.Text,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
@@ -241,6 +272,10 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    providerClassId :: Data.Maybe.Maybe Data.Text.Text,
+    providerLayoutId :: Data.Maybe.Maybe Data.Text.Text,
+    providerServiceId :: Data.Maybe.Maybe Data.Text.Text,
+    providerTripCode :: Data.Maybe.Maybe Data.Text.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -249,6 +284,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
+    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -344,9 +380,14 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSSavedPassengerAPI = FRFSSavedPassengerAPI {age :: Kernel.Prelude.Int, gender :: Domain.Types.Person.Gender, name :: Data.Text.Text, passengerId :: Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    journeyDate :: Data.Maybe.Maybe Data.Time.Calendar.Day,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -354,6 +395,8 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
+    travellerGroup :: Data.Maybe.Maybe Domain.Types.FRFSSearch.FRFSTravellerGroup,
+    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
     tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }
@@ -362,6 +405,32 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
 
 data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSelectPassenger = FRFSSelectPassenger {passengerId :: Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger, seatId :: Kernel.Types.Id.Id Domain.Types.Seat.Seat}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSelectReq = FRFSSelectReq
+  { concessionTypeId :: Data.Text.Text,
+    dropOffPointPlaceId :: Data.Text.Text,
+    idProofLookupId :: Data.Maybe.Maybe Data.Text.Text,
+    idProofNumber :: Data.Maybe.Maybe Data.Text.Text,
+    passengers :: [FRFSSelectPassenger],
+    pickupPointPlaceId :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSelectRes = FRFSSelectRes
+  { blockExpiresAt :: Kernel.Prelude.UTCTime,
+    categories :: [CategoryInfoResponse],
+    fareBreakup :: [FRFSFareBreakupItem],
+    quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    seatBlockIds :: Data.Maybe.Maybe [Data.Text.Text],
+    totalFare :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSStationAPI = FRFSStationAPI
@@ -530,7 +599,14 @@ data SeatLayoutDetailsResp = SeatLayoutDetailsResp {seatLayout :: Domain.Types.S
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SeatLayoutResp = SeatLayoutResp {seatLayout :: Domain.Types.SeatLayout.SeatLayout, seats :: [SeatWithStatus]}
+data SeatLayoutResp = SeatLayoutResp
+  { concessions :: Data.Maybe.Maybe [FRFSConcession],
+    dropOffPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
+    idProofTypes :: Data.Maybe.Maybe [FRFSIdProofType],
+    pickupPoints :: Data.Maybe.Maybe [FRFSPickupPoint],
+    seatLayout :: Domain.Types.SeatLayout.SeatLayout,
+    seats :: [SeatWithStatus]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -14,6 +14,7 @@ import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.FRFSTicketService
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSSavedPassenger
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig
@@ -387,6 +388,56 @@ type API =
            API.Types.UI.FRFSTicketService.SeatLayoutResp
       :<|> TokenAuth
       :> "frfs"
+      :> "quote"
+      :> Capture
+           "quoteId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+      :> "seats"
+      :> QueryParam
+           "seatNumbers"
+           [Data.Text.Text]
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.SeatLayoutResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "passengers"
+      :> Get
+           '[JSON]
+           [API.Types.UI.FRFSTicketService.FRFSSavedPassengerAPI]
+      :<|> TokenAuth
+      :> "frfs"
+      :> "passengers"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSAddPassengerReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSSavedPassengerAPI
+      :<|> TokenAuth
+      :> "frfs"
+      :> "passengers"
+      :> Capture
+           "passengerId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger)
+      :> Delete
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "frfs"
+      :> "quote"
+      :> Capture
+           "quoteId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+      :> "select"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSSelectReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.FRFSSelectRes
+      :<|> TokenAuth
+      :> "frfs"
       :> "route"
       :> Capture
            "routeId"
@@ -457,7 +508,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsQuoteSeats :<|> getFrfsPassengers :<|> postFrfsPassengers :<|> deleteFrfsPassengers :<|> postFrfsQuoteSelect :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -703,6 +754,52 @@ getFrfsTripRouteSeats ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutResp
   )
 getFrfsTripRouteSeats a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsTripRouteSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+
+getFrfsQuoteSeats ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    Kernel.Prelude.Maybe [Data.Text.Text] ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutResp
+  )
+getFrfsQuoteSeats a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsQuoteSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getFrfsPassengers ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSSavedPassengerAPI]
+  )
+getFrfsPassengers a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsPassengers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postFrfsPassengers ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.FRFSTicketService.FRFSAddPassengerReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSavedPassengerAPI
+  )
+postFrfsPassengers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsPassengers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+deleteFrfsPassengers ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSSavedPassenger.FRFSSavedPassenger ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+deleteFrfsPassengers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.deleteFrfsPassengers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsQuoteSelect ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    API.Types.UI.FRFSTicketService.FRFSSelectReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSelectRes
+  )
+postFrfsQuoteSelect a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getFrfsRouteSeatLayout ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

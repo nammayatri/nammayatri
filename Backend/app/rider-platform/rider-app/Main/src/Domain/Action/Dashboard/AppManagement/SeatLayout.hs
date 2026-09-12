@@ -55,6 +55,7 @@ applyPatch now old u =
       seatType = u.seatType <|> old.seatType,
       isBookable = fromMaybe old.isBookable u.isBookable,
       isLadiesOnly = u.isLadiesOnly <|> old.isLadiesOnly,
+      isDifferentlyAbled = old.isDifferentlyAbled,
       directionDegrees = u.directionDegrees <|> old.directionDegrees,
       minStopsRequired = u.minStopsRequired <|> old.minStopsRequired,
       updatedAt = now
@@ -94,6 +95,7 @@ buildSeat layoutId merchantId merchantOperatingCityId allPositions now (row, col
           seatType = finalType,
           isBookable = fromMaybe True s.isBookable,
           isLadiesOnly = s.isLadiesOnly,
+          isDifferentlyAbled = Nothing,
           seatLayoutId = layoutId,
           merchantId = merchantId,
           merchantOperatingCityId = merchantOperatingCityId,

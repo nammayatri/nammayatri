@@ -369,6 +369,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
           Just adultPrice -> SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback adultPrice search.quantity ticketsBookedInEvent
           Nothing -> (Nothing, Nothing)
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
+      cappedValidTill = maybe validTill (min validTill)
       frfsQuote =
         Quote.FRFSQuote
           { Quote._type = _type,
@@ -385,7 +386,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.searchId = search.id,
             Quote.stationsJson = stationsJSON,
             Quote.routeStationsJson = Just routeStationsJSON,
-            Quote.validTill,
+            Quote.validTill = cappedValidTill stopBookingTime,
             Quote.vehicleType,
             Quote.merchantId = search.merchantId,
             Quote.merchantOperatingCityId = search.merchantOperatingCityId,
@@ -405,6 +406,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.vehicleNumber = search.vehicleNumber,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
+            Quote.providerRefNo = Nothing,
+            Quote.extraFees = Nothing,
+            Quote.concessionTypeId = Nothing,
             Quote.offerSegment = offerSegment,
             ..
           }
@@ -430,7 +434,8 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             updatedAt = now,
             seatIds = Nothing,
             seatLabels = Nothing,
-            holdId = Nothing
+            holdId = Nothing,
+            providerBlockIds = Nothing
           }
 
   return (frfsQuote, frfsQuoteCategories)
@@ -538,7 +543,19 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationAddress = quotesFromOnSearch.toStationAddress,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
-      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber
+      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
+      Quote.tripCategory = quotesFromOnSearch.tripCategory,
+      Quote.providerServiceId = quotesFromOnSearch.providerServiceId,
+      Quote.providerLayoutId = quotesFromOnSearch.providerLayoutId,
+      Quote.providerClassId = quotesFromOnSearch.providerClassId,
+      Quote.providerTripCode = quotesFromOnSearch.providerTripCode,
+      Quote.departureTime = quotesFromOnSearch.departureTime,
+      Quote.arrivalTime = quotesFromOnSearch.arrivalTime,
+      Quote.arrivalDate = quotesFromOnSearch.arrivalDate,
+      Quote.availableSeats = quotesFromOnSearch.availableSeats,
+      Quote.providerRefNo = quotesFromOnSearch.providerRefNo,
+      Quote.extraFees = quotesFromOnSearch.extraFees,
+      Quote.concessionTypeId = quotesFromOnSearch.concessionTypeId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text

@@ -18,8 +18,8 @@ import qualified Storage.Beam.FRFSSearch as Beam
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
@@ -36,6 +36,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
             isSingleMode = isSingleMode,
+            journeyDate = journeyDate,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             multimodalSearchRequestId = multimodalSearchRequestId,
@@ -51,6 +52,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             toStationCode = toStationId,
             toStationName = toStationName,
             toStationPoint = Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon,
+            travellerGroup = travellerGroup,
             validTill = validTill,
             vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
@@ -75,6 +77,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
         Beam.isSingleMode = isSingleMode,
+        Beam.journeyDate = journeyDate,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.multimodalSearchRequestId = multimodalSearchRequestId,
@@ -91,6 +94,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.toStationName = toStationName,
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
+        Beam.travellerGroup = travellerGroup,
         Beam.validTill = validTill,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,

@@ -491,6 +491,10 @@ RouteDetails:
       kvFunction: updateWithKV
       params: [userBookedRouteShortName]
       where: journeyLegId
+    updateBoardingPlatforms:
+      kvFunction: updateWithKV
+      params: [fromStopPlatformCode, toStopPlatformCode]
+      where: journeyLegId
 
   extraOperations:
     - EXTRA_QUERY_FILE

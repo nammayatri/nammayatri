@@ -22,8 +22,8 @@ import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Prelude as P
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
-getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRoute vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> Maybe CallAPI.TnstcSearchDetail -> m (Bool, [FRFSFare])
+getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRoute vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode tnstcSearchDetail = do
   subwayFareDetail <-
     case integratedBPPConfig.providerConfig of
       CRIS _ ->
@@ -97,6 +97,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
         (Just parentSearchReqId, True) -> Just $ ":" <> parentSearchReqId
         (_, False) -> Just $ maybe "" (\sd -> ":" <> sd.rawChangeOver) subwayFareDetail
         _ -> Nothing
+      TNSTC _ -> Nothing
       _ -> Just ""
 
     getCacheTTL :: Int
@@ -157,6 +158,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
                     vehicleCategory
                     serviceTier
                     subwayFareDetail
+                    tnstcSearchDetail
               case result of
                 Left _ -> do
                   CB.recordFailure ptMode CB.FareAPI merchantOperatingCityId
@@ -199,6 +201,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
             vehicleCategory
             serviceTier
             subwayFareDetail
+            tnstcSearchDetail
 
       case result of
         Left _ -> do
