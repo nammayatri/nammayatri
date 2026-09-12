@@ -91,6 +91,8 @@ data MessageKey
   | FLEET_COMMUNICATION_WHATSAPP
   | SEND_TOTP
   | DOCUMENT_VALID
+  | DRIVER_ONBOARDING_DEEPLINK_MESSAGE
+  | FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 type MerchantMessage = MerchantMessageD ('Safe)
