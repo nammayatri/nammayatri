@@ -182,6 +182,7 @@ instance YTH.GenericDefaults DDVC.FieldInfo where
     [ DDVC.FieldInfo
         { DDVC._type = DDVC.FieldText,
           DDVC.description = Just "defaultText",
+          DDVC.descriptionUrl = Just "defaultText",
           DDVC.dropdownValues = Just ["defaultText"],
           DDVC.fields = Nothing,
           DDVC.isMandatory = True,

@@ -46,7 +46,7 @@ data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DLDocumentMetadata = DLDocumentMetadata {dateOfExpiry :: Kernel.Prelude.UTCTime, driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, driverLicenseNumber :: Kernel.Prelude.Text}
+data DLDocumentMetadata = DLDocumentMetadata {dateOfExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, driverLicenseNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -131,6 +131,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    doStrictVerification :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [FieldInfo],
     documentFlowGrouping :: DocumentFlowGrouping,
@@ -143,6 +144,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    onboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStageAPIEntity,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType],
     title :: Kernel.Prelude.Text
@@ -158,7 +160,6 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     fleet :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    onboardingStages :: Kernel.Prelude.Maybe [DocumentOnboardingStageAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
@@ -168,6 +169,7 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
 data FieldInfo = FieldInfo
   { _type :: FieldType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    descriptionUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fieldConstraints :: Kernel.Prelude.Maybe Domain.Types.DocumentFieldConstraints.FieldConstraints,
     fields :: Kernel.Prelude.Maybe [FieldInfo],
@@ -192,6 +194,7 @@ data FieldType
   | FieldArray
   | FieldDate
   | FieldYear
+  | FieldBool
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -241,7 +244,7 @@ data PanDocumentMetadata = PanDocumentMetadata
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RCDocumentMetadata = RCDocumentMetadata
-  { fitnessExpiry :: Kernel.Prelude.UTCTime,
+  { fitnessExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -498,18 +498,48 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       let imageId = Id entityId
       img <- getImage merchant.id imageId
       image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
-      pure Common.GetDocumentResponse {imageBase64 = Just img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing}
+      let docType = maybe image.imageType mapDocumentType mbDocType
+      mbMeta <- metadataByImageId docType image
+      let mbFinalMeta = mbMeta <|> (VDocs.imageMetadataToDocumentMetadata docType (Just imageId.getId) =<< image.metadata)
+      pure Common.GetDocumentResponse {imageBase64 = Just img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing, metadata = A.toJSON <$> mbFinalMeta}
     Common.DocumentEntity -> do
       docType <- mbDocType & fromMaybeM (InvalidRequest "docType is required for DocumentEntity")
-      (mbImgId, mbCommonDocData, mbRejectReason, mbDocStatus) <- resolveDocumentDetails (mapDocumentType docType) entityId
-      (mbImg, mbCreatedAt) <- case mbImgId of
+      (mbImgId, mbCommonDocData, mbRejectReason, mbDocStatus, mbMeta) <- resolveDocumentDetails (mapDocumentType docType) entityId
+      (mbImg, mbImage) <- case mbImgId of
         Just imgId -> do
           img <- getImage merchant.id imgId
           mbImage <- QImage.findById imgId
-          pure (Just img, mbImage <&> (.createdAt))
+          pure (Just img, mbImage)
         Nothing -> pure (Nothing, Nothing)
-      pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbCreatedAt, commonDocumentData = mbCommonDocData, rejectReason = mbRejectReason}
+      let mbFinalMeta = mbMeta <|> (mbImage >>= \image -> VDocs.imageMetadataToDocumentMetadata (mapDocumentType docType) (Just image.id.getId) =<< image.metadata)
+      pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbImage <&> (.createdAt), commonDocumentData = mbCommonDocData, rejectReason = mbRejectReason, metadata = A.toJSON <$> mbFinalMeta}
   where
+    withRc :: (DRC.VehicleRegistrationCertificate -> Maybe a -> Flow (Maybe VDocs.DocumentMetadata)) -> Maybe a -> Id DRC.VehicleRegistrationCertificate -> Flow (Maybe VDocs.DocumentMetadata)
+    withRc mk mbDoc rcId = QRC.findById rcId >>= maybe (pure Nothing) (\rc -> mk rc mbDoc)
+
+    metadataByImageId :: DVC.DocumentType -> DImage.Image -> Flow (Maybe VDocs.DocumentMetadata)
+    metadataByImageId docType image = do
+      let imageId = image.id
+      mbMeta <- case docType of
+        DVC.DriverLicense -> QDL.findByImageId imageId >>= SStatus.mkDLMetadata
+        DVC.VehicleRegistrationCertificate -> QRC.findByImageId imageId >>= mapM VDocs.mkRCMetadata
+        DVC.PanCard -> QPan.findByImageId imageId >>= SStatus.mkPanMetadata
+        DVC.GSTCertificate -> QGstin.findByImageId imageId >>= SStatus.mkGSTMetadata
+        DVC.UDYAMCertificate -> QUdyam.findByImageId imageId >>= maybe (pure Nothing) (\u -> SStatus.mkUDYAMMetadata u.driverId (Just u))
+        DVC.AadhaarCard -> (QAadhaarCard.findByFrontImageId (Just imageId) |<|>| QAadhaarCard.findByBackImageId (Just imageId)) >>= SStatus.mkAadhaarMetadata
+        DVC.VehiclePUC -> QVPUC.findByImageId imageId >>= maybe (pure Nothing) (\d -> withRc VDocs.mkVehiclePUCMetadata (Just d) d.rcId)
+        DVC.VehiclePermit -> QVPermit.findByImageId imageId >>= maybe (pure Nothing) (\d -> withRc VDocs.mkVehiclePermitMetadata (Just d) d.rcId)
+        DVC.VehicleInsurance -> QVI.findByImageId imageId >>= maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleInsuranceMetadata (Just d) d.rcId)
+        DVC.VehicleFitnessCertificate -> QFC.findByImageId imageId >>= maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleFitnessMetadata (Just d) d.rcId)
+        DVC.VehicleNOC -> QVNOC.findByImageId imageId >>= maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleNOCMetadata (Just d) d.rcId)
+        _ -> pure Nothing
+      case mbMeta of
+        Just meta -> pure (Just meta)
+        Nothing -> do
+          mbIdfy <- IDQuery.findLatestPendingByDocTypeAndImage image.personId docType imageId
+          mbHV <- HVQuery.findLatestPendingByDocTypeAndImage image.personId docType imageId
+          maybe (pure Nothing) VDocs.mkInProgressMetadata (VDocs.getLatestVerificationRecord mbIdfy mbHV)
+
     castVerificationStatus :: VerificationStatus -> Common.VerificationStatus
     castVerificationStatus = \case
       PENDING -> Common.PENDING
@@ -519,74 +549,62 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       UNAUTHORIZED -> Common.UNAUTHORIZED
       PULL_REQUIRED -> Common.PENDING
 
-    resolveDocumentDetails :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image), Maybe Text, Maybe Text, Maybe VerificationStatus)
+    resolveDocumentDetails :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image), Maybe Text, Maybe Text, Maybe VerificationStatus, Maybe VDocs.DocumentMetadata)
     resolveDocumentDetails docType docId = do
       mbCd <- QCommonDriverOnboardingDocuments.findById (Id docId)
       case mbCd of
-        Just cd -> pure (cd.documentImageId, Just $ DCommonDocData.renderCommonDocumentData cd.documentData, cd.rejectReason, Just cd.verificationStatus)
+        Just cd -> pure (cd.documentImageId, Just $ DCommonDocData.renderCommonDocumentData cd.documentData, cd.rejectReason, Just cd.verificationStatus, Nothing)
         Nothing -> resolveImageIdFromDomainDoc docType docId
 
-    resolveImageIdFromDomainDoc :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image), Maybe Text, Maybe Text, Maybe VerificationStatus)
+    resolveImageIdFromDomainDoc :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image), Maybe Text, Maybe Text, Maybe VerificationStatus, Maybe VDocs.DocumentMetadata)
     resolveImageIdFromDomainDoc docType docId = case docType of
       DVC.DriverLicense -> do
         mb <- QDL.findById (Id docId)
         mbMeta <- SStatus.mkDLMetadata mb
-        pure (mb <&> (.documentImageId1), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        pure (mb <&> (.documentImageId1), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleRegistrationCertificate -> do
         mb <- QRC.findById (Id docId)
         mbMeta <- forM mb VDocs.mkRCMetadata
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        pure (mb <&> (.documentImageId), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.PanCard -> do
         mb <- QPan.findById (Id docId)
         mbMeta <- SStatus.mkPanMetadata mb
-        pure (mb <&> (.documentImageId1), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        pure (mb <&> (.documentImageId1), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.GSTCertificate -> do
         mb <- QGstin.findById (Id docId)
         mbMeta <- SStatus.mkGSTMetadata mb
-        pure (mb <&> (.documentImageId1), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        pure (mb <&> (.documentImageId1), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.VehiclePUC -> do
         mb <- QVPUC.findByPrimaryKey (Id docId)
-        mbMeta <- case mb of
-          Just doc -> QRC.findById doc.rcId >>= maybe (pure Nothing) (\rc -> VDocs.mkVehiclePUCMetadata rc (Just doc))
-          Nothing -> pure Nothing
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, Nothing, mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehiclePUCMetadata (Just d) d.rcId) mb
+        pure (mb <&> (.documentImageId), Nothing, Nothing, mb <&> (.verificationStatus), mbMeta)
       DVC.VehiclePermit -> do
         mb <- QVPermit.findByPrimaryKey (Id docId)
-        mbMeta <- case mb of
-          Just doc -> QRC.findById doc.rcId >>= maybe (pure Nothing) (\rc -> VDocs.mkVehiclePermitMetadata rc (Just doc))
-          Nothing -> pure Nothing
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, Nothing, mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehiclePermitMetadata (Just d) d.rcId) mb
+        pure (mb <&> (.documentImageId), Nothing, Nothing, mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleInsurance -> do
         mb <- QVI.findByPrimaryKey (Id docId)
-        mbMeta <- case mb of
-          Just doc -> QRC.findById doc.rcId >>= maybe (pure Nothing) (\rc -> VDocs.mkVehicleInsuranceMetadata rc (Just doc))
-          Nothing -> pure Nothing
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleInsuranceMetadata (Just d) d.rcId) mb
+        pure (mb <&> (.documentImageId), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleFitnessCertificate -> do
         mb <- QFC.findByPrimaryKey (Id docId)
-        mbMeta <- case mb of
-          Just doc -> QRC.findById doc.rcId >>= maybe (pure Nothing) (\rc -> VDocs.mkVehicleFitnessMetadata rc (Just doc))
-          Nothing -> pure Nothing
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, Nothing, mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleFitnessMetadata (Just d) d.rcId) mb
+        pure (mb <&> (.documentImageId), Nothing, Nothing, mb <&> (.verificationStatus), mbMeta)
       DVC.VehicleNOC -> do
         mb <- QVNOC.findByPrimaryKey (Id docId)
-        pure (mb <&> (.documentImageId), Nothing, Nothing, mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\d -> withRc VDocs.mkVehicleNOCMetadata (Just d) d.rcId) mb
+        pure (mb <&> (.documentImageId), Nothing, Nothing, mb <&> (.verificationStatus), mbMeta)
       DVC.UDYAMCertificate -> do
         mb <- QUdyam.findById (Id docId)
-        mbMeta <- case mb of
-          Just udyam -> SStatus.mkUDYAMMetadata udyam.driverId (Just udyam)
-          Nothing -> pure Nothing
-        pure (mb <&> (.documentImageId), encodeMeta mbMeta, mb >>= (.rejectReason), mb <&> (.verificationStatus))
+        mbMeta <- maybe (pure Nothing) (\udyam -> SStatus.mkUDYAMMetadata udyam.driverId (Just udyam)) mb
+        pure (mb <&> (.documentImageId), Nothing, mb >>= (.rejectReason), mb <&> (.verificationStatus), mbMeta)
       DVC.AadhaarCard -> do
         mbAadhaar <- QAadhaarCard.findByPrimaryKey (Id docId)
         mbMeta <- SStatus.mkAadhaarMetadata mbAadhaar
-        pure (mbAadhaar >>= \aa -> aa.aadhaarFrontImageId <|> aa.aadhaarBackImageId, encodeMeta mbMeta, mbAadhaar >>= (.rejectReason), mbAadhaar <&> (.verificationStatus))
+        pure (mbAadhaar >>= \aa -> aa.aadhaarFrontImageId <|> aa.aadhaarBackImageId, Nothing, mbAadhaar >>= (.rejectReason), mbAadhaar <&> (.verificationStatus), mbMeta)
       _ -> do
         mbCd <- QCommonDriverOnboardingDocuments.findById (Id docId)
-        pure (mbCd >>= (.documentImageId), mbCd <&> DCommonDocData.renderCommonDocumentData . (.documentData), mbCd >>= (.rejectReason), mbCd <&> (.verificationStatus))
-      where
-        encodeMeta :: Maybe VDocs.DocumentMetadata -> Maybe Text
-        encodeMeta = fmap (TE.decodeUtf8 . BSL.toStrict . A.encode)
+        pure (mbCd >>= (.documentImageId), mbCd <&> DCommonDocData.renderCommonDocumentData . (.documentData), mbCd >>= (.rejectReason), mbCd <&> (.verificationStatus), Nothing)
 
 mapDocumentType :: Common.DocumentType -> DVC.DocumentType
 mapDocumentType Common.DriverLicense = DVC.DriverLicense
@@ -661,6 +679,7 @@ mapDocumentType Common.IndividualCompanyDetails = DVC.IndividualCompanyDetails
 mapDocumentType Common.LegalEntityLegalEntityId = DVC.LegalEntityLegalEntityId
 mapDocumentType Common.LegalEntityTAXDetails = DVC.LegalEntityTAXDetails
 mapDocumentType Common.LegalEntityCompanyDetails = DVC.LegalEntityCompanyDetails
+mapDocumentType Common.TermsAndConditions = DVC.TermsAndConditions
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

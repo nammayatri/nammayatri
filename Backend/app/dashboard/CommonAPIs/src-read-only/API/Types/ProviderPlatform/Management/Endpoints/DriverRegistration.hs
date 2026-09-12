@@ -7,6 +7,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import Data.Aeson
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -284,6 +285,7 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
+  | TermsAndConditions
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -383,7 +385,8 @@ data GetDocumentResponse = GetDocumentResponse
     status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    metadata :: Kernel.Prelude.Maybe Data.Aeson.Value
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
