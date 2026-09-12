@@ -702,6 +702,7 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         estimatedDuration = mbDuration,
         estimatedStaticDuration = mbStaticDuration,
         riderId = Nothing,
+        riderName = Nothing,
         createdAt = now,
         driverDefaultExtraFee = mbDefaultDriverExtra,
         pickupZoneGateId = mbSpecialZoneGateId,

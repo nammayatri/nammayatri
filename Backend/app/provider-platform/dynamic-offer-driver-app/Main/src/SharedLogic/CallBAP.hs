@@ -37,6 +37,7 @@ module SharedLogic.CallBAP
     sendPhoneCallRequestUpdateToBAP,
     sendPhoneCallCompletedUpdateToBAP,
     mkTxnIdKey,
+    rideAssignedCommon,
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,

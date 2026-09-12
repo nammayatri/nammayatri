@@ -225,7 +225,11 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     favCount :: Maybe Int,
     isSafetyPlus :: Bool,
     isSynchronousOnUpdateProcessing :: Bool,
-    bppInvoiceProviderFields :: QRBE.BPPInvoiceProviderFields
+    bppInvoiceProviderFields :: QRBE.BPPInvoiceProviderFields,
+    -- | One-shot assignment (internal oneShotAssign API): the booking row was created
+    -- directly in its final state (TRIP_ASSIGNED, bppBookingId set), so the two
+    -- corresponding writes here must be skipped. False on every Beckn path.
+    bookingPrePersisted :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -481,7 +485,8 @@ rideAssignedReqHandler ::
   m ()
 rideAssignedReqHandler req = do
   let BookingDetails {..} = req.bookingDetails
-  void $ QRBE.updateBPPBookingIdAndProviderUrl req.booking.id bppBookingId req.bppUri req.bppInvoiceProviderFields
+  unless req.bookingPrePersisted $
+    void $ QRBE.updateBPPBookingIdAndProviderUrl req.booking.id bppBookingId req.bppUri req.bppInvoiceProviderFields
   let bppInfo = req.bppInvoiceProviderFields
       booking =
         req.booking
@@ -679,7 +684,7 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
+      unless req'.bookingPrePersisted $ QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -1615,7 +1620,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
   let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-  return $ ValidatedRideAssignedReq {..}
+  return $ ValidatedRideAssignedReq {bookingPrePersisted = False, ..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])
 

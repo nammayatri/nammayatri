@@ -65,6 +65,7 @@ library
       API.Internal.InMemManagement
       API.Internal.NotificationWebhook
       API.Internal.OfferDiscount
+      API.Internal.OneShotAssign
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.SendEmailOTP
@@ -249,6 +250,7 @@ library
       Domain.Action.Internal.GetPickupInstructions
       Domain.Action.Internal.NotificationWebhook
       Domain.Action.Internal.OfferDiscount
+      Domain.Action.Internal.OneShotAssign
       Domain.Action.Internal.Payout
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating

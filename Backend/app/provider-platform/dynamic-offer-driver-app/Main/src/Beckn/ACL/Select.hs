@@ -85,6 +85,7 @@ buildSelectReqV2 subscriber req = do
     _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
+      customerName = getCustomerName fulfillment
   paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
   bapUri <- case context.contextBapUri of
@@ -105,6 +106,7 @@ buildSelectReqV2 subscriber req = do
         negotiatedFare = Nothing,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
+        customerName = customerName,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
@@ -206,6 +208,9 @@ cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do
   let msgKey = mkTxnIdKey transactionId
   Hedis.setExp msgKey messageId 3600
+
+getCustomerName :: Maybe Spec.Fulfillment -> Maybe Text
+getCustomerName mbFulfillment = mbFulfillment >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
 
 getCustomerPhoneNumber :: Maybe Spec.Fulfillment -> Maybe Text
 getCustomerPhoneNumber (Just fulfillment) = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)

@@ -85,7 +85,7 @@ tfOrder res endLoc isValueAddNP bapConfig riderConfig =
 
 tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> [Location.Location] -> Spec.Fulfillment
 tfFulfillment res startLoc endLoc isValueAddNP stops =
-  let fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
+  let fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber res.riderName else Nothing
       fulfillmentStops = UCommon.mkStops' (Just startLoc) stops (Just endLoc)
    in emptyFulfillment
         { Spec.fulfillmentId = Just res.estimate.bppEstimateId.getId,
@@ -95,10 +95,21 @@ tfFulfillment res startLoc endLoc isValueAddNP stops =
           Spec.fulfillmentCustomer = fulfillmentCustomer
         }
 
-tfCustomer :: Maybe T.Text -> Maybe Spec.Customer
-tfCustomer mbPhoneNumber = do
+tfCustomer :: Maybe T.Text -> Maybe T.Text -> Maybe Spec.Customer
+tfCustomer mbPhoneNumber mbRiderName = do
   let customerContact = Just $ Spec.Contact {contactPhone = mbPhoneNumber}
-      customerPerson = Nothing
+      -- Customer name for the one-shot assignment flow: the BPP stores it on
+      -- SearchRequest.riderName so the driver app can show it at accept time.
+      customerPerson =
+        mbRiderName <&> \riderName ->
+          Spec.Person
+            { personCreds = Nothing,
+              personGender = Nothing,
+              personId = Nothing,
+              personImage = Nothing,
+              personName = Just riderName,
+              personTags = Nothing
+            }
       returnData = Spec.Customer {customerContact = customerContact, customerPerson = customerPerson}
       allNothing = UCommonV2.allNothing returnData
   if allNothing

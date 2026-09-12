@@ -195,6 +195,9 @@ data DSelectRes = DSelectRes
     autoAssignEnabled :: Bool,
     isPetRide :: Maybe Bool,
     phoneNumber :: Maybe Text,
+    -- | Customer display name, sent to value-add-NP BPPs in select
+    -- (fulfillment.customer.person) for the one-shot assignment flow.
+    riderName :: Maybe Text,
     isValueAddNP :: Bool,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
@@ -351,6 +354,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
         billingCategory = fromMaybe PERSONAL billingCategory,
         paymentMode = person.paymentMode,
         emailDomain = emailDomain',
+        riderName = bool Nothing person.firstName isValueAddNP,
         ..
       }
   where

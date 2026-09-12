@@ -164,6 +164,7 @@ ValueAddNP:
   fields:
     subscriberId: Text
     enabled: Bool
+    enableOneShotAssign: Maybe Bool
 
   constraints:
     subscriberId: PrimaryKey

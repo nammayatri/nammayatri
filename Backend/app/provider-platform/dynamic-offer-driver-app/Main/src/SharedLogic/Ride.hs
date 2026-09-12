@@ -110,8 +110,11 @@ initializeRide ::
   Maybe Bool ->
   Maybe (Id Person) ->
   Bool ->
+  -- | bookingPreAssigned: one-shot assignment creates the booking row directly as
+  -- TRIP_ASSIGNED, so the status update here must be skipped (no double write).
+  Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
@@ -184,14 +187,13 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
   ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer
   rideDetails <- buildRideDetails booking ride driver vehicle
-  QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
+  unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
   QRideD.create rideDetails
-  fork "updateRiderDetails" $ do
-    whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
+  whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
     when (not booking.isScheduled) $ do
       whenJust (booking.toLocation) $ \toLoc -> do

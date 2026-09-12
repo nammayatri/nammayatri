@@ -69,6 +69,7 @@ import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -132,8 +133,12 @@ acceptDynamicOfferDriverRequest ::
   Maybe HighPrecMoney ->
   DStats.DriverStats ->
   TransporterConfig ->
+  -- | One-shot assignment action (booking + ride + single BAP callback), supplied by
+  -- Flow-level callers (respondQuote); when eligible it replaces sendDriverOffer.
+  -- Server-side replay paths (silent-assign) pass Nothing and keep the legacy on_select.
+  Maybe (DDrQuote.DriverQuote -> m ()) ->
   m [SearchRequestForDriver]
-acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig = do
+acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign = do
   let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
   logDebug $ "offered fare: " <> show reqOfferedValue
   quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -193,7 +198,25 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           isScheduled = searchTry.isScheduled,
           ..
         }
-  driverQuote <- buildDriverQuote clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
+  mbOneShotAction <- case mbOneShotAssign of
+    Nothing -> pure Nothing
+    Just action -> do
+      eligible <-
+        if searchReq.autoAssignEnabled == Just True
+          && searchTry.tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+          && not searchTry.isScheduled
+          && isJust searchReq.riderId
+          && sReqFD.upgradeCabRequest /= Just True
+          -- online (Stripe) payment needs the init/on_confirm parameter exchange
+          && not merchant.onlinePayment
+          -- pickup-zone supply/demand accounting lives in the Beckn init/confirm handlers
+          && isNothing searchReq.pickupZoneGateId
+          && isNothing searchReq.pickupGateId
+          then CQVAN.isOneShotAssignEnabled searchReq.bapId
+          else pure False
+      pure $ if eligible then Just action else Nothing
+  -- One-shot builds the winning quote directly in its terminal state: no Active -> Inactive flip
+  driverQuote <- buildDriverQuote (if isJust mbOneShotAction then DDrQuote.Inactive else DDrQuote.Active) clientId driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
   void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
   triggerQuoteEvent QuoteEventData {quote = driverQuote}
   void $ QDrQt.create driverQuote
@@ -202,7 +225,9 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
       then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
       else pure []
   pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
-  sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
+  case mbOneShotAction of
+    Just action -> action driverQuote
+    Nothing -> sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
   return driverFCMPulledList
   where
     getQuoteLimit dist vehicleServiceTier tripCategory sr area searchRepeatType searchRepeatCounter = do
@@ -222,6 +247,9 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
 
 buildDriverQuote ::
   (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>
+  -- | One-shot assignment builds the winning quote directly as Inactive (its terminal
+  -- state — the booking is assigned in the same request), legacy builds Active.
+  DDrQuote.DriverQuoteStatus ->
   Maybe Text ->
   SP.Person ->
   DStats.DriverStats ->
@@ -236,7 +264,7 @@ buildDriverQuote ::
   Maybe Text ->
   Maybe Text ->
   m DDrQuote.DriverQuote
-buildDriverQuote clientId driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' = do
+buildDriverQuote initialStatus clientId driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' = do
   guid <- generateGUID
   now <- getCurrentTime
   deploymentVersion <- asks (.version)
@@ -258,7 +286,7 @@ buildDriverQuote clientId driver driverStats searchReq sd estimateId tripCategor
         driverId = driver.id,
         driverName = driver.firstName,
         driverRating = SP.roundToOneDecimal <$> driverStats.rating,
-        status = DDrQuote.Active,
+        status = initialStatus,
         vehicleVariant = sd.vehicleVariant,
         vehicleServiceTier = sd.vehicleServiceTier,
         distance = searchReq.estimatedDistance,

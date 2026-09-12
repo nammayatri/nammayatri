@@ -72,6 +72,7 @@ data SearchRequest = SearchRequest
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
+    riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderPreferredOption :: Domain.Types.RiderPreferredOption.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     searchTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],

@@ -41,6 +41,7 @@ SearchRequest:
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)
+    riderName: Maybe Text
     fromLocation: Location
     fromLocGeohash: Maybe Text
     toLocGeohash: Maybe Text

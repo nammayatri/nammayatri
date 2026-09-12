@@ -27,6 +27,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQ
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Trip as DTrip
@@ -156,13 +157,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
+        booking <- buildBooking (mkBuildBookingReq DRB.NEW Nothing Nothing) searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+        booking <- buildBooking (mkBuildBookingReq DRB.NEW Nothing Nothing) searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing Nothing Nothing Nothing Nothing Nothing Nothing
         QRB.createBooking booking
         cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
         distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
@@ -218,185 +219,22 @@ handler merchantId req validatedReq = do
       riderGender = req.riderGender
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
-    buildBooking ::
-      ( CacheFlow m r,
-        EsqDBFlow m r,
-        Esq.EsqDBReplicaFlow m r,
-        EncFlow m r,
-        HasField "vehicleServiceTier" q ServiceTierType,
-        HasField "distance" q (Maybe Meters),
-        HasField "estimatedFare" q HighPrecMoney,
-        HasField "currency" q Currency,
-        HasField "fareParams" q DFP.FareParameters,
-        HasField "specialLocationTag" q (Maybe Text)
-      ) =>
-      DSR.SearchRequest ->
-      q ->
-      SLT.BillingCategory ->
-      Text ->
-      TripCategory ->
-      UTCTime ->
-      Maybe DMPM.MerchantPaymentMethod ->
-      Maybe Text ->
-      Maybe Meters ->
-      Maybe InitReqDetails ->
-      [LYT.ConfigVersionMap] ->
-      Maybe Int ->
-      Maybe Double ->
-      Maybe (Id DST.SearchTry) ->
-      Maybe Seconds ->
-      Maybe Text ->
-      Maybe Text ->
-      Maybe Bool ->
-      m DRB.Booking
-    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide mbPreferenceMatchScore searchTryId dqDurationToPickup emailDomain businessEmailDomain isAutoAccepted = do
-      id <- Id <$> generateGUID
-      let fromLocation = searchRequest.fromLocation
-          toLocation = searchRequest.toLocation
-          stops = searchRequest.stops
-          isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
-      exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
-      mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
-      commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
-      cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
-      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
-      let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams req.discountAmount
-          chargeRes =
-            FC.finalisePaymentCharge
-              ((.driverWalletConfig) <$> mbTransporterConfig)
-              driverQuote.estimatedFare
-              (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote.fareParams.paymentProcessingFeeVat)
-              mbClampedDiscount
-              driverQuote.fareParams
-
-      mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
-      let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
-      let bapUri = showBaseUrl searchRequest.bapUri
-          displayBookingId = req.displayBookingId
-      (initiatedAs, senderDetails, receiverDetails) <- do
-        case tripCategory of
-          Delivery _ -> do
-            initReqDetail' <- fromMaybeM (InternalError "Delivery details not found") initReqDetails
-            case initReqDetail' of
-              InitReqDeliveryDetails deliveryDetails -> makeBookingDeliveryDetails searchRequest deliveryDetails merchantId
-          _ -> pure (Nothing, Nothing, Nothing)
-      pure
-        DRB.Booking
-          { transactionId = searchRequest.transactionId,
-            status = DRB.NEW,
-            providerId = merchantId,
-            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-            primaryExophone = exophone.primaryPhone,
-            bapId = req.bapId,
-            bapCity = Just req.bapCity,
-            bapCountry = Just req.bapCountry,
-            riderId = Nothing,
-            estimatedCongestionCharge = driverQuote.fareParams.congestionCharge,
-            vehicleServiceTier = driverQuote.vehicleServiceTier,
-            vehicleServiceTierName = vehicleServiceTierItem.name,
-            vehicleServiceTierSeatingCapacity = vehicleServiceTierItem.seatingCapacity,
-            vehicleServiceTierAirConditioned = vehicleServiceTierItem.airConditionedThreshold,
-            isAirConditioned = vehicleServiceTierItem.isAirConditioned,
-            estimatedDistance = driverQuote.distance,
-            maxEstimatedDistance = req.maxEstimatedDistance,
-            createdAt = now,
-            updatedAt = now,
-            isPetRide = isJust driverQuote.fareParams.petCharges,
-            preferenceMatchScore = mbPreferenceMatchScore,
-            estimatedFare = driverQuote.estimatedFare,
-            currency = driverQuote.currency,
-            distanceUnit = searchRequest.distanceUnit,
-            customerLanguage = searchRequest.customerLanguage,
-            riderName = Nothing,
-            billingCategory = billingCategory,
-            estimatedDuration = searchRequest.estimatedDuration,
-            estimatedStaticDuration = searchRequest.estimatedStaticDuration,
-            fareParams = driverQuote.fareParams,
-            specialLocationTag = driverQuote.specialLocationTag,
-            specialLocationName = searchRequest.specialLocationName,
-            specialZoneOtpCode = Nothing,
-            disabilityTag = searchRequest.disabilityTag,
-            area = searchRequest.area,
-            isScheduled = searchRequest.isScheduled,
-            paymentMethodId = mbPaymentMethod <&> (.id),
-            paymentInstrument = mbPaymentMethod <&> (.paymentInstrument),
-            distanceToPickup = distanceToPickup,
-            stopLocationId = (.id) <$> toLocation,
-            startTime = searchRequest.startTime,
-            returnTime = searchRequest.returnTime,
-            roundTrip = searchRequest.roundTrip,
-            tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
-            tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
-            tollIds = if isTollApplicable then searchRequest.tollIds else Nothing,
-            estimateId = Just $ Id req.estimateId,
-            paymentId = Nothing,
-            isDashboardRequest = searchRequest.isDashboardRequest,
-            fromLocGeohash = searchRequest.fromLocGeohash,
-            toLocGeohash = searchRequest.toLocGeohash,
-            hasStops = searchRequest.hasStops,
-            isReferredRide = searchRequest.driverIdForSearch $> True,
-            dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
-            parcelType = searchRequest.parcelType,
-            parcelQuantity = searchRequest.parcelQuantity,
-            isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
-            commission = commission,
-            cancellationCommission = cancellationCommission,
-            paymentCharge = chargeRes.paymentCharge,
-            paymentChargeBearer = chargeRes.paymentChargeBearer,
-            isInsured = fromMaybe False req.isInsured,
-            insuredAmount = req.insuredAmount,
-            exotelDeclinedCallStatusReceivingTime = Nothing,
-            numberOfLuggages = searchRequest.numberOfLuggages,
-            isPickupOrDestinationEdited = Just False,
-            paymentMode = searchRequest.paymentMode,
-            searchTryId = searchTryId,
-            dqDurationToPickup = dqDurationToPickup,
-            reconciliationStatus = Nothing,
-            pickupGateId = searchRequest.pickupGateId,
-            ledgerWriteMode = Nothing,
-            financeInvoiceId = Nothing,
-            discountAmount = mbClampedDiscount,
-            ..
-          }
-    makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
-    makeBookingDeliveryDetails searchReq deliveryDetails mId = do
-      --update search req locations
-      merchant <- QM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
-      let senderLocationId = searchReq.fromLocation.id
-          mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
-      receiverLocationId <- (searchReq.toLocation <&> (.id)) & fromMaybeM (InternalError $ "To location not found for trip category delivery search request " <> show searchReq.id)
-      QLoc.updateInstructionsAndExtrasById deliveryDetails.senderDetails.address.instructions deliveryDetails.senderDetails.address.extras senderLocationId
-      QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
-
-      -- update Rider details
-      -- consent tag is only emitted at confirm, not init, so no consent to record yet here
-      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False Nothing
-      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False Nothing
-      when isNewSender $ QRD.create senderRiderDetails
-      when isNewReceiver $ QRD.create receiverRiderDetails
-
-      -- update trip category of search request
-      QSR.updateTripCategory (Just (DTrip.Delivery DTrip.OneWayOnDemandDynamicOffer)) searchReq.id
-
-      -- get the sender and receiver exophone number
-      senderPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_SENDER
-      receiverPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_RECEIVER
-
-      let senderPersonDetails =
-            DTDPD.DeliveryPersonDetails
-              { DTDPD.name = deliveryDetails.senderDetails.name,
-                DTDPD.primaryExophone = senderPrimaryExophone.primaryPhone,
-                DTDPD.id = senderRiderDetails.id
-              }
-          receiverPersonDetails =
-            DTDPD.DeliveryPersonDetails
-              { DTDPD.name = deliveryDetails.receiverDetails.name,
-                DTDPD.primaryExophone = receiverPrimaryExophone.primaryPhone,
-                DTDPD.id = receiverRiderDetails.id
-              }
-      return (Just deliveryDetails.initiatedAs, Just senderPersonDetails, Just receiverPersonDetails)
-
+    mkBuildBookingReq initialStatus' riderId' riderName' =
+      BuildBookingReq
+        { merchantId = merchantId,
+          bapId = req.bapId,
+          bapCity = Just req.bapCity,
+          bapCountry = Just req.bapCountry,
+          maxEstimatedDistance = req.maxEstimatedDistance,
+          estimateId = req.estimateId,
+          isInsured = req.isInsured,
+          insuredAmount = req.insuredAmount,
+          displayBookingId = req.displayBookingId,
+          discountAmount = req.discountAmount,
+          initialStatus = initialStatus',
+          riderId = riderId',
+          riderName = riderName'
+        }
     fetchPaymentMethodAndUrl merchantOpCityId = do
       mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
         allPaymentMethods <-
@@ -404,6 +242,206 @@ handler merchantId req validatedReq = do
         let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
+
+-- | Formerly-closure-captured inputs of buildBooking, so both Beckn init and the
+-- one-shot assignment path (SharedLogic.OneShotAssign) can build a booking. One-shot
+-- creates the row directly in its final state (TRIP_ASSIGNED, rider fields set).
+data BuildBookingReq = BuildBookingReq
+  { merchantId :: Id DM.Merchant,
+    bapId :: Text,
+    bapCity :: Maybe Context.City,
+    bapCountry :: Maybe Context.Country,
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    estimateId :: Text,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text,
+    displayBookingId :: Maybe Text,
+    discountAmount :: Maybe HighPrecMoney,
+    initialStatus :: DRB.BookingStatus,
+    riderId :: Maybe (Id DRD.RiderDetails),
+    riderName :: Maybe Text
+  }
+
+buildBooking ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    HasField "vehicleServiceTier" q ServiceTierType,
+    HasField "distance" q (Maybe Meters),
+    HasField "estimatedFare" q HighPrecMoney,
+    HasField "currency" q Currency,
+    HasField "fareParams" q DFP.FareParameters,
+    HasField "specialLocationTag" q (Maybe Text)
+  ) =>
+  BuildBookingReq ->
+  DSR.SearchRequest ->
+  q ->
+  SLT.BillingCategory ->
+  Text ->
+  TripCategory ->
+  UTCTime ->
+  Maybe DMPM.MerchantPaymentMethod ->
+  Maybe Text ->
+  Maybe Meters ->
+  Maybe InitReqDetails ->
+  [LYT.ConfigVersionMap] ->
+  Maybe Int ->
+  Maybe Double ->
+  Maybe (Id DST.SearchTry) ->
+  Maybe Seconds ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Bool ->
+  m DRB.Booking
+buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide mbPreferenceMatchScore searchTryId dqDurationToPickup emailDomain businessEmailDomain isAutoAccepted = do
+  id <- Id <$> generateGUID
+  let fromLocation = searchRequest.fromLocation
+      toLocation = searchRequest.toLocation
+      stops = searchRequest.stops
+      isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
+  exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
+  commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
+  cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
+  let mbClampedDiscount = FC.clampDiscountToDiscountable driverQuote.fareParams bArgs.discountAmount
+      chargeRes =
+        FC.finalisePaymentCharge
+          ((.driverWalletConfig) <$> mbTransporterConfig)
+          driverQuote.estimatedFare
+          (fromMaybe 0 driverQuote.fareParams.paymentProcessingFee + fromMaybe 0 driverQuote.fareParams.paymentProcessingFeeVat)
+          mbClampedDiscount
+          driverQuote.fareParams
+
+  mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
+  let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
+  let bapUri = showBaseUrl searchRequest.bapUri
+      displayBookingId = bArgs.displayBookingId
+  (initiatedAs, senderDetails, receiverDetails) <- do
+    case tripCategory of
+      Delivery _ -> do
+        initReqDetail' <- fromMaybeM (InternalError "Delivery details not found") initReqDetails
+        case initReqDetail' of
+          InitReqDeliveryDetails deliveryDetails -> makeBookingDeliveryDetails searchRequest deliveryDetails bArgs.merchantId
+      _ -> pure (Nothing, Nothing, Nothing)
+  pure
+    DRB.Booking
+      { transactionId = searchRequest.transactionId,
+        status = bArgs.initialStatus,
+        providerId = bArgs.merchantId,
+        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+        primaryExophone = exophone.primaryPhone,
+        bapId = bArgs.bapId,
+        bapCity = bArgs.bapCity,
+        bapCountry = bArgs.bapCountry,
+        riderId = bArgs.riderId,
+        estimatedCongestionCharge = driverQuote.fareParams.congestionCharge,
+        vehicleServiceTier = driverQuote.vehicleServiceTier,
+        vehicleServiceTierName = vehicleServiceTierItem.name,
+        vehicleServiceTierSeatingCapacity = vehicleServiceTierItem.seatingCapacity,
+        vehicleServiceTierAirConditioned = vehicleServiceTierItem.airConditionedThreshold,
+        isAirConditioned = vehicleServiceTierItem.isAirConditioned,
+        estimatedDistance = driverQuote.distance,
+        maxEstimatedDistance = bArgs.maxEstimatedDistance,
+        createdAt = now,
+        updatedAt = now,
+        isPetRide = isJust driverQuote.fareParams.petCharges,
+        preferenceMatchScore = mbPreferenceMatchScore,
+        estimatedFare = driverQuote.estimatedFare,
+        currency = driverQuote.currency,
+        distanceUnit = searchRequest.distanceUnit,
+        customerLanguage = searchRequest.customerLanguage,
+        riderName = bArgs.riderName,
+        billingCategory = billingCategory,
+        estimatedDuration = searchRequest.estimatedDuration,
+        estimatedStaticDuration = searchRequest.estimatedStaticDuration,
+        fareParams = driverQuote.fareParams,
+        specialLocationTag = driverQuote.specialLocationTag,
+        specialLocationName = searchRequest.specialLocationName,
+        specialZoneOtpCode = Nothing,
+        disabilityTag = searchRequest.disabilityTag,
+        area = searchRequest.area,
+        isScheduled = searchRequest.isScheduled,
+        paymentMethodId = mbPaymentMethod <&> (.id),
+        paymentInstrument = mbPaymentMethod <&> (.paymentInstrument),
+        distanceToPickup = distanceToPickup,
+        stopLocationId = (.id) <$> toLocation,
+        startTime = searchRequest.startTime,
+        returnTime = searchRequest.returnTime,
+        roundTrip = searchRequest.roundTrip,
+        tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
+        tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
+        tollIds = if isTollApplicable then searchRequest.tollIds else Nothing,
+        estimateId = Just $ Id bArgs.estimateId,
+        paymentId = Nothing,
+        isDashboardRequest = searchRequest.isDashboardRequest,
+        fromLocGeohash = searchRequest.fromLocGeohash,
+        toLocGeohash = searchRequest.toLocGeohash,
+        hasStops = searchRequest.hasStops,
+        isReferredRide = searchRequest.driverIdForSearch $> True,
+        dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
+        parcelType = searchRequest.parcelType,
+        parcelQuantity = searchRequest.parcelQuantity,
+        isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
+        commission = commission,
+        cancellationCommission = cancellationCommission,
+        paymentCharge = chargeRes.paymentCharge,
+        paymentChargeBearer = chargeRes.paymentChargeBearer,
+        isInsured = fromMaybe False bArgs.isInsured,
+        insuredAmount = bArgs.insuredAmount,
+        exotelDeclinedCallStatusReceivingTime = Nothing,
+        numberOfLuggages = searchRequest.numberOfLuggages,
+        isPickupOrDestinationEdited = Just False,
+        paymentMode = searchRequest.paymentMode,
+        searchTryId = searchTryId,
+        dqDurationToPickup = dqDurationToPickup,
+        reconciliationStatus = Nothing,
+        pickupGateId = searchRequest.pickupGateId,
+        ledgerWriteMode = Nothing,
+        financeInvoiceId = Nothing,
+        discountAmount = mbClampedDiscount,
+        ..
+      }
+
+makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
+makeBookingDeliveryDetails searchReq deliveryDetails mId = do
+  --update search req locations
+  merchant <- QM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
+  let senderLocationId = searchReq.fromLocation.id
+      mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
+  receiverLocationId <- (searchReq.toLocation <&> (.id)) & fromMaybeM (InternalError $ "To location not found for trip category delivery search request " <> show searchReq.id)
+  QLoc.updateInstructionsAndExtrasById deliveryDetails.senderDetails.address.instructions deliveryDetails.senderDetails.address.extras senderLocationId
+  QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
+
+  -- update Rider details
+  -- consent tag is only emitted at confirm, not init, so no consent to record yet here
+  (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False Nothing
+  (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False Nothing
+  when isNewSender $ QRD.create senderRiderDetails
+  when isNewReceiver $ QRD.create receiverRiderDetails
+
+  -- update trip category of search request
+  QSR.updateTripCategory (Just (DTrip.Delivery DTrip.OneWayOnDemandDynamicOffer)) searchReq.id
+
+  -- get the sender and receiver exophone number
+  senderPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_SENDER
+  receiverPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_RECEIVER
+
+  let senderPersonDetails =
+        DTDPD.DeliveryPersonDetails
+          { DTDPD.name = deliveryDetails.senderDetails.name,
+            DTDPD.primaryExophone = senderPrimaryExophone.primaryPhone,
+            DTDPD.id = senderRiderDetails.id
+          }
+      receiverPersonDetails =
+        DTDPD.DeliveryPersonDetails
+          { DTDPD.name = deliveryDetails.receiverDetails.name,
+            DTDPD.primaryExophone = receiverPrimaryExophone.primaryPhone,
+            DTDPD.id = receiverRiderDetails.id
+          }
+  return (Just deliveryDetails.initiatedAs, Just senderPersonDetails, Just receiverPersonDetails)
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> DExophone.ExophoneType -> m DExophone.Exophone
 findRandomExophone merchantOpCityId _ exoType = do

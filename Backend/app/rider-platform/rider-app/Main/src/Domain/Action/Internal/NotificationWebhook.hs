@@ -122,9 +122,10 @@ sendEmail' :: Webhook.Contact -> Webhook.EmailArgs -> Flow ()
 sendEmail' _ args = do
   emailServiceConfig <- asks (.emailServiceConfig)
   attachments <- traverse (fetchAttachment emailServiceConfig.maxAttachmentBytes) args.attachments
-  result <- liftIO $ E.try @E.SomeException $ case attachments of
-    [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body
-    _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body attachments
+  result <- liftIO $
+    E.try @E.SomeException $ case attachments of
+      [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body
+      _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body attachments
   case result of
     Left err -> throwError (InternalError $ "Email send failed: " <> show err)
     Right () -> pure ()

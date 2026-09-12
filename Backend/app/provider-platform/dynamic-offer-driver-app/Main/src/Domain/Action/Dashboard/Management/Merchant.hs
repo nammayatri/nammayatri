@@ -4907,7 +4907,9 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   whiteListOrgId <- generateGUID
   let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, supportedBecknProtocols = Nothing, createdAt = now, updatedAt = now}
-      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
+      -- enableOneShotAssign deliberately Nothing at onboarding: the one-shot assignment
+      -- fast path is opted in per subscriber during rollout, never by default.
+      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, enableOneShotAssign = Nothing, createdAt = now, updatedAt = now}
       registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
   existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
   when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq

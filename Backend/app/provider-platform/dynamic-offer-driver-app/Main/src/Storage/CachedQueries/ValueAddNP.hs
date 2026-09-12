@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.ValueAddNP
   ( isValueAddNP,
+    isOneShotAssignEnabled,
   )
 where
 
@@ -42,6 +43,27 @@ getValueAddNPList =
 
 checkIfValueAddNP :: Text -> [Text] -> Bool
 checkIfValueAddNP subscriberId subscriberIds = subscriberId `elem` subscriberIds
+
+isOneShotAssignEnabled :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Bool
+isOneShotAssignEnabled subscriberId = (subscriberId `elem`) <$> getOneShotAssignNPList
+
+-- | Short TTLs (unlike the 1h isValueAddNP cache): this flag is the one-shot
+-- assignment kill switch, so flipping it off must reach every pod quickly.
+getOneShotAssignNPList :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => m [Text]
+getOneShotAssignNPList =
+  IM.withInMemCache [oneShotLookupKey] oneShotInMemCacheTtl $
+    Hedis.safeGet oneShotLookupKey >>= \case
+      Just subscriberIds -> return subscriberIds
+      Nothing -> do
+        subscriberIds <- Queries.findAll True <&> map (.subscriberId) . filter ((== Just True) . (.enableOneShotAssign))
+        Hedis.setExp oneShotLookupKey subscriberIds oneShotInMemCacheTtl.getSeconds
+        return subscriberIds
+
+oneShotInMemCacheTtl :: Seconds
+oneShotInMemCacheTtl = 120
+
+oneShotLookupKey :: Text
+oneShotLookupKey = "CachedQueries:ValueAddNP:OneShotAssign"
 
 lookupKey :: Text
 lookupKey = "CachedQueries:ValueAddNP"

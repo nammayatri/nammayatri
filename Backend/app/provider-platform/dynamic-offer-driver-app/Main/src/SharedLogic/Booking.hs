@@ -70,7 +70,62 @@ cancelBooking ::
   Maybe DPerson.Person ->
   DM.Merchant ->
   m ()
-cancelBooking booking mbDriver transporter = do
+cancelBooking = cancelBooking' True
+
+-- | One-shot assignment failure path: the BAP was never informed of this booking
+-- (the single internal callback failed), so there is nothing to send on_cancel to.
+cancelBookingSilentToBAP ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadCatch m,
+    Metrics.HasBPPMetrics m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasShortDurationRetryCfg r c,
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
+  ) =>
+  DRB.Booking ->
+  Maybe DPerson.Person ->
+  DM.Merchant ->
+  m ()
+cancelBookingSilentToBAP = cancelBooking' False
+
+cancelBooking' ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadCatch m,
+    Metrics.HasBPPMetrics m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasShortDurationRetryCfg r c,
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
+  ) =>
+  Bool ->
+  DRB.Booking ->
+  Maybe DPerson.Person ->
+  DM.Merchant ->
+  m ()
+cancelBooking' notifyBAP booking mbDriver transporter = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   let transporterId' = Just booking.providerId
   unless (transporterId' == Just transporter.id) $ throwError AccessDenied
@@ -111,8 +166,9 @@ cancelBooking booking mbDriver transporter = do
         (show $ castServiceTierToVariant booking.vehicleServiceTier)
         ((.id) <$> mbDriver)
 
-    fork "cancelBooking - Notify BAP" $ do
-      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing Nothing mbRide
+    when notifyBAP $
+      fork "cancelBooking - Notify BAP" $ do
+        BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing Nothing mbRide
     whenJust mbRide $ \ride ->
       case mbDriver of
         Nothing -> throwError (PersonNotFound ride.driverId.getId)

@@ -90,6 +90,9 @@ data DSelectReq = DSelectReq
     negotiatedFare :: Maybe HighPrecMoney,
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
+    -- | Customer display name from fulfillment.customer.person (value-add-NP BAPs
+    -- send it for the one-shot assignment flow); stored on SearchRequest.riderName.
+    customerName :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
@@ -163,6 +166,7 @@ handler merchant sReq searchReq estimates = do
             DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled || searchReq.isAdvanceBookingEnabled,
             DSR.autoAssignEnabled = if sReq.autoAssignEnabled then Just sReq.autoAssignEnabled else searchReq.autoAssignEnabled,
             DSR.riderId = riderId,
+            DSR.riderName = sReq.customerName <|> searchReq.riderName,
             DSR.parcelType = if isJust parcelType then parcelType else searchReq.parcelType,
             DSR.parcelQuantity = if isJust parcelType then snd sReq.parcelDetails else searchReq.parcelQuantity,
             DSR.preferSafetyPlus = sReq.preferSafetyPlus,

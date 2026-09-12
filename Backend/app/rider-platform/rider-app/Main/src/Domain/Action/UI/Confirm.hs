@@ -89,7 +89,7 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
-  SConfirm.confirm SConfirm.DConfirmReq {..}
+  SConfirm.confirm SConfirm.DConfirmReq {mbOneShotDetails = Nothing, ..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasKafkaProducer r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => DRB.Booking -> m ()

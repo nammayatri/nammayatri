@@ -281,6 +281,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -1969,7 +1970,19 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
+              DTC.EstimateBased _ -> do
+                let oneShotAssignAction driverQuote =
+                      OneShot.oneShotAssign
+                        OneShot.OneShotAssignReq
+                          { merchant = merchant,
+                            searchReq = searchReq,
+                            searchTry = searchTry,
+                            driverQuote = driverQuote,
+                            driver = driver,
+                            clientId = clientId,
+                            transporterConfig = transporterConfig
+                          }
+                acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
@@ -2156,11 +2169,11 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
             CS.markBookingAssignmentCompleted booking.id
             void $ addScheduledBookingInRedis booking
             throwM exc
-        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
         -- gate write stays under the lock so concurrent accepts/releases cannot lose the min
         updateLatestScheduledAsMin booking
         pure res
-      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
