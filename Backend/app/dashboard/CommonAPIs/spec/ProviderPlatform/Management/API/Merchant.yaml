@@ -45,6 +45,8 @@ imports:
   DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  UpsertAllowedDestinationStatesReq: Dashboard.Common.Merchant
+  AllowedDestinationStatesResp: Dashboard.Common.Merchant
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
   SpecialLocationType: Lib.Types.SpecialLocation
@@ -619,6 +621,24 @@ apis:
       response:
         type: WhiteListOperatingCityRes
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
+  - POST: # UpsertAllowedDestinationStatesAPI
+      endpoint: /config/allowedDestinationStates
+      auth: ApiAuthV2
+      request:
+        type: UpsertAllowedDestinationStatesReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-config.launch.write
+  - GET: # GetAllowedDestinationStatesAPI
+      endpoint: /config/allowedDestinationStates
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - stateName: Text
+      response:
+        type: AllowedDestinationStatesResp
+      migrate:
+        capability: city-config.launch.read
   - POST: # CreateMerchantAPI
       endpoint: /config/merchant/create
       auth: ApiAuthV2
