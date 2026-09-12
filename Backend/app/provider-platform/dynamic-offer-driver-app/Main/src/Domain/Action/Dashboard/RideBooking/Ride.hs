@@ -23,7 +23,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Ride
 import qualified "this" API.Types.Dashboard.RideBooking.Ride as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler

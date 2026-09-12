@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified Domain.Action.ProviderPlatform.Management.DomainDiscountConfig
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -19,7 +20,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("domainDiscountConfig" :> (PostDomainDiscountConfigCreate :<|> GetDomainDiscountConfigList :<|> DeleteDomainDiscountConfigDelete))
 
@@ -50,11 +50,11 @@ type DeleteDomainDiscountConfigDelete =
       :> API.Types.ProviderPlatform.Management.DomainDiscountConfig.DeleteDomainDiscountConfigDelete
   )
 
-postDomainDiscountConfigCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.CreateDomainDiscountConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDomainDiscountConfigCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.CreateDomainDiscountConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDomainDiscountConfigCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DomainDiscountConfig.postDomainDiscountConfigCreate merchantShortId opCity apiTokenInfo req
 
-getDomainDiscountConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.BillingCategory -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigRes])
+getDomainDiscountConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.BillingCategory -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigRes])
 getDomainDiscountConfigList merchantShortId opCity apiTokenInfo billingCategory = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DomainDiscountConfig.getDomainDiscountConfigList merchantShortId opCity apiTokenInfo billingCategory
 
-deleteDomainDiscountConfigDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.DeleteDomainDiscountConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteDomainDiscountConfigDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DomainDiscountConfig.DeleteDomainDiscountConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteDomainDiscountConfigDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DomainDiscountConfig.deleteDomainDiscountConfigDelete merchantShortId opCity apiTokenInfo req

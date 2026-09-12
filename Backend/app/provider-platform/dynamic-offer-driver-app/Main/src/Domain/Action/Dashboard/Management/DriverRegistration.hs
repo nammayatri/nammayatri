@@ -47,7 +47,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
 where
 
 import qualified API.Types.ProviderPlatform.Management.Account as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified Dashboard.Common

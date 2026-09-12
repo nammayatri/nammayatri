@@ -17,31 +17,31 @@ import Servant.Client
 type API = ("maps" :> (PostMapsAutoComplete :<|> PostMapsGetPlaceDetails :<|> PostMapsGetPlaceName))
 
 type PostMapsAutoComplete =
-  ( "autoComplete" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] Domain.Action.UI.Maps.AutoCompleteReq
+  ( "autoComplete" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) Domain.Action.UI.Maps.AutoCompleteReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Maps.AutoCompleteResp
   )
 
 type PostMapsGetPlaceDetails =
   ( "getPlaceDetails" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Maps.GetPlaceDetailsReq
-      :> Post '[JSON] Domain.Action.UI.Maps.GetPlaceDetailsResp
+      :> Post ('[JSON]) Domain.Action.UI.Maps.GetPlaceDetailsResp
   )
 
 type PostMapsGetPlaceName =
-  ( "getPlaceName" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] Domain.Action.UI.Maps.GetPlaceNameReq
+  ( "getPlaceName" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) Domain.Action.UI.Maps.GetPlaceNameReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Maps.GetPlaceNameResp
   )
 
 data MapsAPIs = MapsAPIs
-  { postMapsAutoComplete :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.AutoCompleteResp,
-    postMapsGetPlaceDetails :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceDetailsReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceDetailsResp,
-    postMapsGetPlaceName :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceNameResp
+  { postMapsAutoComplete :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.AutoCompleteResp),
+    postMapsGetPlaceDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceDetailsReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceDetailsResp),
+    postMapsGetPlaceName :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceNameResp)
   }
 
 mkMapsAPIs :: (Client EulerHS.Types.EulerClient API -> MapsAPIs)
@@ -56,4 +56,4 @@ data MapsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''MapsUserActionType])
+$(Data.Singletons.TH.genSingletons [(''MapsUserActionType)])

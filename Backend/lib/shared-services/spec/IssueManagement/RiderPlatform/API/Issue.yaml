@@ -128,6 +128,7 @@ apis:
         type: IssueInfoDRes
   - PUT:  # IssueUpdateAPI
       endpoint: /{issueId}/update
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         issueId: Id IssueReport
@@ -158,6 +159,7 @@ apis:
         type: IssueMediaUploadRes
   - POST:  # IssueAddCommentAPI
       endpoint: /{issueId}/comment
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         issueId: Id IssueReport
@@ -425,6 +427,7 @@ apis:
   # Live chat endpoints
   - POST:  # PostIssueChatMessageAPI
       endpoint: /{issueId}/chat/message
+      appServerHandler: custom
       name: PostIssueChatMessage
       auth: ApiAuthV2
       params:

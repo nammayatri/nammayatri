@@ -17,16 +17,12 @@ module Storage.Beam.CommonInstances where
 
 import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH as Reexport
-import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
 import qualified "lib-dashboard" Storage.Beam.Person as BeamP
 import qualified "lib-dashboard" Storage.Beam.RegistrationToken as BeamRT
 import qualified "lib-dashboard" Storage.Beam.Role as BeamR
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
-
-instance HasSchemaName BeamAM.AccessMatrixT where
-  schemaName _ = T.pack "atlas_safety_dashboard"
 
 instance HasSchemaName BeamM.MerchantT where
   schemaName _ = T.pack "atlas_safety_dashboard"

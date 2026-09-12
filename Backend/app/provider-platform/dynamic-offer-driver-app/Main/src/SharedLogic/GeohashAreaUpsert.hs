@@ -28,7 +28,7 @@ module SharedLogic.GeohashAreaUpsert
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.GeohashArea as Common
+import qualified "this" API.Types.ProviderPlatform.Management.GeohashArea as Common
 import Data.Csv
 import qualified Domain.Types.GeohashArea as DGA
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -36,6 +36,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.GeohashArea as CQGA
 import qualified Storage.Queries.GeohashArea as QGeohashArea
 import Tools.Csv (cleanField, readCsv)
 import Tools.Error
@@ -53,8 +54,11 @@ upsertGeohashAreasFromCsv merchantOpCity csvFile = do
 
 upsertGeohashAreas :: DMOC.MerchantOperatingCity -> [Common.GeohashAreaItem] -> Flow APISuccess
 upsertGeohashAreas merchantOpCity items = do
-  forM_ items $ \item ->
-    void $ withTryCatch "upsertGeohashArea" (upsertOne item)
+  results <- forM items $ \item -> withTryCatch "upsertGeohashArea" (upsertOne item)
+  -- Reconcile the cache directly with what was just written -- see
+  -- 'Storage.CachedQueries.GeohashArea.mergeIntoCache' for why this replaced a
+  -- plain cache-clear.
+  CQGA.mergeIntoCache merchantOpCity.id [area | Right area <- results]
   pure Success
   where
     upsertOne item = do
@@ -63,16 +67,21 @@ upsertGeohashAreas merchantOpCity items = do
       mbExisting <- QGeohashArea.findByMerchantOperatingCityAndGeohash (Just merchantOpCity.id) geohash
       now <- getCurrentTime
       case mbExisting of
-        Just existing -> QGeohashArea.updateByPrimaryKey existing {DGA.areaName = areaName, DGA.updatedAt = now}
+        Just existing -> do
+          let updated = existing {DGA.areaName = areaName, DGA.updatedAt = now}
+          QGeohashArea.updateByPrimaryKey updated
+          pure updated
         Nothing -> do
           newId <- generateGUID
-          QGeohashArea.create
-            DGA.GeohashArea
-              { DGA.id = newId,
-                DGA.geohash = geohash,
-                DGA.areaName = areaName,
-                DGA.merchantId = Just merchantOpCity.merchantId,
-                DGA.merchantOperatingCityId = Just merchantOpCity.id,
-                DGA.createdAt = now,
-                DGA.updatedAt = now
-              }
+          let new =
+                DGA.GeohashArea
+                  { DGA.id = newId,
+                    DGA.geohash = geohash,
+                    DGA.areaName = areaName,
+                    DGA.merchantId = Just merchantOpCity.merchantId,
+                    DGA.merchantOperatingCityId = Just merchantOpCity.id,
+                    DGA.createdAt = now,
+                    DGA.updatedAt = now
+                  }
+          QGeohashArea.create new
+          pure new

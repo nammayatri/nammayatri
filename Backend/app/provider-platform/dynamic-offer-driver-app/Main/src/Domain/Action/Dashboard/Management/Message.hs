@@ -15,7 +15,7 @@
 module Domain.Action.Dashboard.Management.Message where
 
 import API.Types.ProviderPlatform.Management.Message (InputType (..))
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Message as Common
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.ByteString as BS

@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+-- | Building and persisting dashboard audit rows, parameterised by the action
+-- type of whichever package owns the endpoint.
 module SharedLogic.Transaction
   ( emptyRequest,
     emptyResponse,
@@ -23,10 +25,11 @@ module SharedLogic.Transaction
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified Dashboard.Common as Common
 import qualified Data.Text as Text
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import Domain.Types.ServerName (ServerName)
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -35,7 +38,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (encodeToText, logError, throwError)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Transaction as QT
-import Tools.Auth
+import Tools.Auth.ApiAuth (ApiTokenInfo (..))
+import Tools.Auth.Dashboard (TokenInfo)
 import qualified Tools.Error as E
 
 emptyRequest :: Maybe ()
@@ -55,13 +59,13 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  DT.Endpoint ->
+  DT.Endpoint uat ->
   Maybe ServerName ->
-  Maybe ApiTokenInfo ->
+  Maybe (ApiTokenInfo uat) ->
   Maybe (Id Common.Driver) ->
   Maybe (Id Common.Ride) ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction uat)
 buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId request = do
   uid <- generateGUID
   now <- getCurrentTime
@@ -81,10 +85,10 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
 
 buildDashboardAuthTransaction ::
   MonadFlow m =>
-  DT.Endpoint ->
+  DT.Endpoint uat ->
   Id DP.Person ->
   Id DM.Merchant ->
-  m DT.Transaction
+  m (DT.Transaction uat)
 buildDashboardAuthTransaction endpoint requestorId merchantId = do
   uid <- generateGUID
   now <- getCurrentTime
@@ -108,9 +112,11 @@ buildDashboardAuthTransaction endpoint requestorId merchantId = do
 -- If client call fails, then write error code to transaction.
 withTransactionStoring ::
   ( BeamFlow m r,
+    Show uat,
+    Eq uat,
     MonadCatch m
   ) =>
-  DT.Transaction ->
+  DT.Transaction uat ->
   m response ->
   m response
 withTransactionStoring =
@@ -122,10 +128,12 @@ withTransactionStoring =
 -- Else write error code to transaction.
 withResponseTransactionStoring ::
   ( BeamFlow m r,
+    Show uat,
+    Eq uat,
     MonadCatch m,
     Common.HideSecrets response
   ) =>
-  DT.Transaction ->
+  DT.Transaction uat ->
   m response ->
   m response
 withResponseTransactionStoring =
@@ -133,11 +141,13 @@ withResponseTransactionStoring =
 
 withResponseTransactionStoring' ::
   ( BeamFlow m r,
+    Show uat,
+    Eq uat,
     MonadCatch m,
     ToJSON transactionResponse
   ) =>
   (response -> Maybe transactionResponse) ->
-  DT.Transaction ->
+  DT.Transaction uat ->
   m response ->
   m response
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
@@ -155,10 +165,10 @@ withResponseTransactionStoring' responseModifier transaction clientCall = handle
 buildTransactionForSafetyDashboard ::
   ( MonadFlow m
   ) =>
-  DT.Endpoint ->
+  DT.Endpoint uat ->
   Maybe TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction uat)
 buildTransactionForSafetyDashboard endpoint apiTokenInfo request = do
   uid <- generateGUID
   now <- getCurrentTime

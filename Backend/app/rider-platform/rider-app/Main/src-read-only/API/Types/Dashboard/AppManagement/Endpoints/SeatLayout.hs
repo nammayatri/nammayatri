@@ -60,19 +60,19 @@ instance Kernel.Types.HideSecrets.HideSecrets SeatLayoutUpsertReq where
 
 type API = ("seatLayout" :> (UpsertSeatLayout :<|> ListSeatLayout :<|> GetSeatLayout :<|> DeleteSeatLayout))
 
-type UpsertSeatLayout = ("upsert" :> ReqBody '[JSON] SeatLayoutUpsertReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type UpsertSeatLayout = ("upsert" :> ReqBody ('[JSON]) SeatLayoutUpsertReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type ListSeatLayout = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] [Domain.Types.SeatLayout.SeatLayout])
+type ListSeatLayout = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) [Domain.Types.SeatLayout.SeatLayout])
 
-type GetSeatLayout = (Capture "seatLayoutId" (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout) :> Get '[JSON] SeatLayoutDetailResp)
+type GetSeatLayout = (Capture "seatLayoutId" (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout) :> Get ('[JSON]) SeatLayoutDetailResp)
 
-type DeleteSeatLayout = (Capture "seatLayoutId" (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type DeleteSeatLayout = (Capture "seatLayoutId" (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout) :> "delete" :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 data SeatLayoutAPIs = SeatLayoutAPIs
-  { upsertSeatLayout :: SeatLayoutUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    listSeatLayout :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [Domain.Types.SeatLayout.SeatLayout],
-    getSeatLayout :: Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> EulerHS.Types.EulerClient SeatLayoutDetailResp,
-    deleteSeatLayout :: Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { upsertSeatLayout :: (SeatLayoutUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    listSeatLayout :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient [Domain.Types.SeatLayout.SeatLayout]),
+    getSeatLayout :: (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> EulerHS.Types.EulerClient SeatLayoutDetailResp),
+    deleteSeatLayout :: (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkSeatLayoutAPIs :: (Client EulerHS.Types.EulerClient API -> SeatLayoutAPIs)
@@ -88,4 +88,4 @@ data SeatLayoutUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''SeatLayoutUserActionType])
+$(Data.Singletons.TH.genSingletons [(''SeatLayoutUserActionType)])

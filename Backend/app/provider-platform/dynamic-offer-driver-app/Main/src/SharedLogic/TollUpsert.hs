@@ -17,7 +17,7 @@ module SharedLogic.TollUpsert
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Dashboard.Common.Merchant as DM
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS

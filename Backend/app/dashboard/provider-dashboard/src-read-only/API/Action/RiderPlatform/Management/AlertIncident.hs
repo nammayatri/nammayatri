@@ -10,6 +10,7 @@ where
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.AlertIncident
 import qualified Domain.Action.RiderPlatform.Management.AlertIncident
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -19,7 +20,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("alertIncident" :> GetAlertIncidentAlertsIncidents)
 
@@ -34,5 +34,5 @@ type GetAlertIncidentAlertsIncidents =
       :> API.Types.RiderPlatform.Management.AlertIncident.GetAlertIncidentAlertsIncidents
   )
 
-getAlertIncidentAlertsIncidents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentsResponse)
+getAlertIncidentAlertsIncidents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentsResponse)
 getAlertIncidentAlertsIncidents merchantShortId opCity apiTokenInfo fromTime toTime = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.AlertIncident.getAlertIncidentAlertsIncidents merchantShortId opCity apiTokenInfo fromTime toTime

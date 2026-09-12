@@ -1,6 +1,6 @@
 module API.Entity where
 
-import qualified Domain.Action.Entity as DEntity
+import qualified "lib-dashboard" Domain.Action.Dashboard.Entity as DEntity
 import qualified "lib-dashboard" Domain.Types.Entity as DE
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant
 import "lib-dashboard" Storage.Beam.BeamFlow
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth.Dashboard
 
 type API =
   "entity"

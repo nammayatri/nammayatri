@@ -101,3 +101,37 @@ getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHiera
       forM fleetOwnerIds $ \(fleetOwnerId, fleetOwnerName) -> do
         mbFleetOwnerInfo <- QFOI.findByPrimaryKey (Id fleetOwnerId)
         pure FleetOwnerInfo {fleetOwnerId, fleetOwnerName, fleetName = mbFleetOwnerInfo >>= (.fleetName), requestorId = fleetOwnerId}
+
+-------------------------------- merchant based fleet owner resolution --------------------------------
+
+-- | The resolution provider-dashboard performed before forwarding a fleet
+-- request (@getMbFleetOwnerAndRequestorIdMerchantBased@ there). Routes served
+-- here directly have to do the same, or a fleet member acting on behalf of an
+-- owner would be treated as the owner themselves.
+--
+-- The two leading arguments come from the caller's dashboard session:
+-- their merchant's @hasFleetMemberHierarchy@ and whether their role is a fleet
+-- owner's.
+getMbFleetOwnerAndRequestorIdMerchantBased :: Maybe Bool -> Bool -> Text -> Maybe Text -> Flow (Maybe Text, Text)
+getMbFleetOwnerAndRequestorIdMerchantBased hasFleetMemberHierarchy isRequestorFleetOwner requestorId mbFleetOwnerId =
+  case hasFleetMemberHierarchy of
+    Just False ->
+      -- MSIL: requestor is fleet owner or operator, access check happens here
+      if isRequestorFleetOwner
+        then do
+          whenJust mbFleetOwnerId $ \fleetOwnerId ->
+            unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+          return (Just requestorId, requestorId)
+        else return (mbFleetOwnerId, requestorId)
+    _ -> do
+      -- fleet member operates on behalf of a fleet owner
+      fleetOwnerId <- getFleetOwnerId requestorId mbFleetOwnerId
+      return (Just fleetOwnerId, fleetOwnerId)
+
+-- | As 'getMbFleetOwnerAndRequestorIdMerchantBased', for endpoints where the
+-- fleet owner is mandatory.
+getFleetOwnerAndRequestorIdMerchantBased :: Maybe Bool -> Bool -> Text -> Maybe Text -> Flow (Text, Text)
+getFleetOwnerAndRequestorIdMerchantBased hasFleetMemberHierarchy isRequestorFleetOwner requestorId mbFleetOwnerId = do
+  (mbFleetOwnerId', requestorId') <- getMbFleetOwnerAndRequestorIdMerchantBased hasFleetMemberHierarchy isRequestorFleetOwner requestorId mbFleetOwnerId
+  fleetOwnerId <- mbFleetOwnerId' & fromMaybeM (InvalidRequest "fleetOwnerId required")
+  return (fleetOwnerId, requestorId')

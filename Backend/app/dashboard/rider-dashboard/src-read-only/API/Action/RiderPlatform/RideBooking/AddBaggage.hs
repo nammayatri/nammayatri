@@ -7,9 +7,10 @@ module API.Action.RiderPlatform.RideBooking.AddBaggage
   )
 where
 
-import qualified API.Types.Dashboard.RideBooking
+import qualified "rider-app" API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.AddBaggage
 import qualified Domain.Action.RiderPlatform.RideBooking.AddBaggage
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "rider-app" Domain.Types.Booking
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("rideBooking" :> PostAddBaggageConfirm)
 
@@ -36,5 +36,5 @@ type PostAddBaggageConfirm =
       :> API.Types.Dashboard.RideBooking.AddBaggage.PostAddBaggageConfirm
   )
 
-postAddBaggageConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.RideBooking.AddBaggage.AddBaggageConfirmReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postAddBaggageConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.RideBooking.AddBaggage.AddBaggageConfirmReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postAddBaggageConfirm merchantShortId opCity apiTokenInfo bookingId customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.AddBaggage.postAddBaggageConfirm merchantShortId opCity apiTokenInfo bookingId customerId req

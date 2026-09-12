@@ -106,7 +106,6 @@ library
     , beckn-spec
     , bytestring
     , cryptonite
-    , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator
     , dynamic-offer-driver-app
@@ -205,7 +204,6 @@ test-suite beckn-integ-test
     , beckn-test
     , bytestring
     , cryptonite
-    , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator
     , dynamic-offer-driver-app
