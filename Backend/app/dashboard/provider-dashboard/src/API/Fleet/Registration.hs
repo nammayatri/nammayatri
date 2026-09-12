@@ -20,8 +20,8 @@ where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Registration as DReg
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as DP
-import qualified Domain.Action.Dashboard.Registration as DashboardReg
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
+import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DashboardReg
 import qualified "dynamic-offer-driver-app" Domain.Types.FleetOwnerInformation as FOI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment

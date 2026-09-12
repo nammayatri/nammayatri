@@ -17,7 +17,6 @@ module Storage.Beam.Transaction where
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import qualified Domain.Types.ServerName as DSN
-import qualified Domain.Types.Transaction as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 
@@ -28,7 +27,7 @@ data TransactionT f = TransactionT
     merchantId :: B.C f (Maybe Text),
     commonDriverId :: B.C f (Maybe Text),
     commonRideId :: B.C f (Maybe Text),
-    endpoint :: B.C f Domain.Endpoint,
+    endpoint :: B.C f Text,
     request :: B.C f (Maybe Text),
     response :: B.C f (Maybe Text),
     responseError :: B.C f (Maybe Text),

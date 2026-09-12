@@ -2,7 +2,7 @@
 
 module Storage.Queries.RideExtra where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import qualified "this" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.HashSet as HS
 import Data.List (sortBy)

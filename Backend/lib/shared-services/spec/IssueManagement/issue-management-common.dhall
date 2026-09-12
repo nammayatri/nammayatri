@@ -1,3 +1,5 @@
+let rootDir = env:GIT_ROOT_PATH
+
 let outputPath =
       { _beamQueries = ""
       , _extraBeamQueries = ""
@@ -11,8 +13,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_DASHBOARD_AUTH
       | API_TREE
       | API_TREE_DASHBOARD
+      | API_TREE_DASHBOARD_AUTH
       | API_TREE_COMMON
       | API_TREE_CLIENT
       | API_TYPES
@@ -125,7 +129,6 @@ let mkDefaultImports =
         , { _simpleImports =
             [ "EulerHS.Prelude"
             , "Servant"
-            , "Tools.Auth.Api"
             , "Kernel.Utils.Common"
             , "Storage.Beam.CommonInstances ()"
             ]
@@ -137,7 +140,11 @@ let mkDefaultImports =
             , "Kernel.Types.Beckn.Context"
             ]
           , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
+            [ { _importType = ImportType.SIMPLE
+              , _importPackageName = appName
+              , _importModuleName = "Domain.Types.AccessMatrix"
+              }
+            , { _importType = ImportType.QUALIFIED
               , _importPackageName = "lib-dashboard"
               , _importModuleName = "Domain.Types.Merchant"
               }
@@ -150,7 +157,6 @@ let mkDefaultImports =
           }
         , { _simpleImports =
             [ "EulerHS.Prelude"
-            , "Tools.Auth.Api"
             , "Tools.Auth.Merchant"
             , "Kernel.Utils.Common"
             , "Storage.Beam.CommonInstances ()"
@@ -163,7 +169,11 @@ let mkDefaultImports =
             , "SharedLogic.Transaction"
             ]
           , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
+            [ { _importType = ImportType.SIMPLE
+              , _importPackageName = appName
+              , _importModuleName = "Domain.Types.AccessMatrix"
+              }
+            , { _importType = ImportType.QUALIFIED
               , _importPackageName = "lib-dashboard"
               , _importModuleName = "Domain.Types.Merchant"
               }
@@ -323,8 +333,10 @@ let defaultConfigs =
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
         , GeneratorType.SERVANT_API_DASHBOARD
+        , GeneratorType.SERVANT_API_DASHBOARD_AUTH
         , GeneratorType.API_TREE
         , GeneratorType.API_TREE_DASHBOARD
+        , GeneratorType.API_TREE_DASHBOARD_AUTH
         , GeneratorType.API_TREE_COMMON
         , GeneratorType.API_TREE_CLIENT
         , GeneratorType.SQL
@@ -335,7 +347,9 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
-      , _capabilityBaseline = None Text
+      , _appServerDashboardAuth = Some True
+      , _capabilityBaseline = Some
+          (rootDir ++ "/Backend/dev/dsl-capability-baseline.txt")
       , _endpointPrefix = None Text
       , _migrationParams =
         [ { _migrationName = "localAccessForRoleId"

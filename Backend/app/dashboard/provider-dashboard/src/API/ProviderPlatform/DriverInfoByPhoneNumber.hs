@@ -27,13 +27,13 @@ where
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver
 import qualified Domain.Action.ProviderPlatform.RideBooking.DriverInfoByPhoneNumber as Domain
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant
-import Tools.Auth.Api
 
 -- Reuses the GET_DRIVER_INFO action type on purpose: this endpoint exposes a strict subset
 -- of what the caller could already obtain by logging into each of their granted cities in

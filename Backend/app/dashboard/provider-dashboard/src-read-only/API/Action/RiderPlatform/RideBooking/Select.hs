@@ -11,6 +11,7 @@ import qualified "rider-app" API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Select
 import qualified Domain.Action.RiderPlatform.RideBooking.Select
 import qualified "rider-app" Domain.Action.UI.Select
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "rider-app" Domain.Types.Estimate
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
@@ -22,7 +23,6 @@ import Kernel.Utils.Common
 import Servant
 import qualified "rider-app" SharedLogic.Cancel
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("select" :> (PostSelectEstimate :<|> GetSelectQuotes :<|> GetSelectResult :<|> PostSelectCancelSearch))
 
@@ -61,14 +61,14 @@ type PostSelectCancelSearch =
       :> API.Types.Dashboard.RideBooking.Select.PostSelectCancelSearch
   )
 
-postSelectEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Domain.Action.UI.Select.DSelectReq -> Environment.FlowHandler Domain.Action.UI.Select.MultimodalSelectRes)
+postSelectEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Domain.Action.UI.Select.DSelectReq -> Environment.FlowHandler Domain.Action.UI.Select.MultimodalSelectRes)
 postSelectEstimate merchantShortId opCity apiTokenInfo customerId estimateId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.postSelectEstimate merchantShortId opCity apiTokenInfo customerId estimateId req
 
-getSelectQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.SelectListRes)
+getSelectQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.SelectListRes)
 getSelectQuotes merchantShortId opCity apiTokenInfo customerId estimateId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.getSelectQuotes merchantShortId opCity apiTokenInfo customerId estimateId
 
-getSelectResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.QuotesResultResponse)
+getSelectResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.QuotesResultResponse)
 getSelectResult merchantShortId opCity apiTokenInfo customerId estimateId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.getSelectResult merchantShortId opCity apiTokenInfo customerId estimateId
 
-postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler SharedLogic.Cancel.CancelAPIResponse)
+postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler SharedLogic.Cancel.CancelAPIResponse)
 postSelectCancelSearch merchantShortId opCity apiTokenInfo customerId estimateId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.postSelectCancelSearch merchantShortId opCity apiTokenInfo customerId estimateId

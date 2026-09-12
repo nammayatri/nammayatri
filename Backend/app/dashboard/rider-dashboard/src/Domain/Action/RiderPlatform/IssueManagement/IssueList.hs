@@ -7,6 +7,7 @@ where
 import qualified API.Client.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -15,13 +16,12 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 getIssueListV1 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
@@ -45,7 +45,7 @@ getIssueListV1 merchantShortId opCity apiTokenInfo limit offset mobileCountryCod
 postIssueListTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Data.Aeson.Value ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req = do

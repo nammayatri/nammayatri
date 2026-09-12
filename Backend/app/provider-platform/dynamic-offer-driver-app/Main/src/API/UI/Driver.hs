@@ -36,7 +36,7 @@ module API.UI.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
+import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Registration as DRegistration
 import Domain.Types

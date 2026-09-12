@@ -135,7 +135,7 @@ type GetPaymentRefundRequestList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            RefundRequestResp
   )
 
@@ -144,15 +144,15 @@ type GetPaymentRefundRequestInfo =
       :> QueryParam
            "refreshRefunds"
            Kernel.Prelude.Bool
-      :> Get '[JSON] RefundRequestInfoResp
+      :> Get ('[JSON]) RefundRequestInfoResp
   )
 
 type PostPaymentRefundRequestRespond =
   ( "refundRequest" :> Capture "refundRequestId" (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest) :> "respond"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            RefundRequestRespondReq
-      :> Post '[JSON] RefundRequestRespondResp
+      :> Post ('[JSON]) RefundRequestRespondResp
   )
 
 type PostPaymentRefundRequestInitiate =
@@ -171,7 +171,7 @@ type PostPaymentRefundRequestBookingInitiate =
            RefundRequestRespondResp
   )
 
-type GetPaymentFareBreakup = (Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "fareBreakup" :> Get '[JSON] API.Types.UI.RidePayment.FareBreakupRes)
+type GetPaymentFareBreakup = (Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "fareBreakup" :> Get ('[JSON]) API.Types.UI.RidePayment.FareBreakupRes)
 
 data PaymentAPIs = PaymentAPIs
   { getPaymentRefundRequestList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.RefundRequest.RefundRequestStatus) -> Kernel.Prelude.Maybe (Domain.Types.RefundRequest.RefundRequestCode) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient RefundRequestResp),
@@ -197,4 +197,4 @@ data PaymentUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''PaymentUserActionType])
+$(Data.Singletons.TH.genSingletons [(''PaymentUserActionType)])

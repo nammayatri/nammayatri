@@ -11,6 +11,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Penalty
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.AppManagement.Penalty
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("penalty" :> PostPenaltyTriggerJobCancellationPenaltyServiceName)
 
@@ -35,5 +35,5 @@ type PostPenaltyTriggerJobCancellationPenaltyServiceName =
       :> API.Types.Dashboard.AppManagement.Penalty.PostPenaltyTriggerJobCancellationPenaltyServiceName
   )
 
-postPenaltyTriggerJobCancellationPenaltyServiceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.ServiceNames -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPenaltyTriggerJobCancellationPenaltyServiceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.ServiceNames -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPenaltyTriggerJobCancellationPenaltyServiceName merchantShortId opCity apiTokenInfo serviceName = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Penalty.postPenaltyTriggerJobCancellationPenaltyServiceName merchantShortId opCity apiTokenInfo serviceName

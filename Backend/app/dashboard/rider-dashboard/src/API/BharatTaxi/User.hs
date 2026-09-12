@@ -24,7 +24,8 @@ import qualified Dashboard.Common as Common
 import Data.Aeson (Value)
 import qualified Data.Text as T
 import qualified Domain.Action.RiderPlatform.Management.Customer as Customer
-import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
+import "rider-app" Domain.Types.AccessMatrix (ApiAuth, ApiTokenInfo (..))
+import qualified "rider-app" Domain.Types.AccessMatrix as DMatrix
 import "lib-dashboard" Domain.Types.ServerName as DSN
 import "lib-dashboard" Environment
 import qualified EulerHS.Types as ET
@@ -34,7 +35,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
 import Servant
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth.Api (ApiAuth, ApiTokenInfo)
 import "lib-dashboard" Tools.Client as Client
 
 type ExternalFromListAPI =
@@ -344,19 +344,19 @@ callBharatTaxiAPI ::
 callBharatTaxiAPI =
   Client.callServerAPI @_ @m @r DSN.BHARAT_TAXI mkBharatTaxiAPIs "callBharatTaxiAPI"
 
-fromList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
+fromList :: ApiTokenInfo DMatrix.UserActionType -> Maybe Text -> FlowHandler Value
 fromList _ toLocation = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.fromListDSL toLocation)
 
-toList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
+toList :: ApiTokenInfo DMatrix.UserActionType -> Maybe Text -> FlowHandler Value
 toList _ fromLocation = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.toListDSL fromLocation)
 
-estimate :: ApiTokenInfo -> Value -> FlowHandler Value
+estimate :: ApiTokenInfo DMatrix.UserActionType -> Value -> FlowHandler Value
 estimate _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.estimateDSL req)
 
-booking :: ApiTokenInfo -> Value -> FlowHandler Value
+booking :: ApiTokenInfo DMatrix.UserActionType -> Value -> FlowHandler Value
 booking _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL req)
 
-invoice :: ApiTokenInfo -> Text -> Text -> FlowHandler Value
+invoice :: ApiTokenInfo DMatrix.UserActionType -> Text -> Text -> FlowHandler Value
 invoice apiTokenInfo bookingId riderId =
   withFlowHandlerAPI' $ do
     -- Extract rider phone number and name from rider-app person table using riderId
@@ -373,23 +373,23 @@ invoice apiTokenInfo bookingId riderId =
         riderName = if null nameParts then Nothing else Just fullName
     callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId riderPhoneNumber riderName)
 
-bookingLatest :: ApiTokenInfo -> Text -> FlowHandler Value
+bookingLatest :: ApiTokenInfo DMatrix.UserActionType -> Text -> FlowHandler Value
 bookingLatest _ riderId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingLatestDSL riderId)
 
-bookingById :: ApiTokenInfo -> Text -> FlowHandler Value
+bookingById :: ApiTokenInfo DMatrix.UserActionType -> Text -> FlowHandler Value
 bookingById _ bookingId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingByIdDSL bookingId)
 
-updateBooking :: ApiTokenInfo -> Text -> Value -> FlowHandler Value
+updateBooking :: ApiTokenInfo DMatrix.UserActionType -> Text -> Value -> FlowHandler Value
 updateBooking _ bookingId body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.updateBookingDSL bookingId body)
 
-vehiclesList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
+vehiclesList :: ApiTokenInfo DMatrix.UserActionType -> Maybe Text -> FlowHandler Value
 vehiclesList _ driverNo = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.vehiclesListDSL driverNo)
 
-vehiclesCreate :: ApiTokenInfo -> Value -> FlowHandler Value
+vehiclesCreate :: ApiTokenInfo DMatrix.UserActionType -> Value -> FlowHandler Value
 vehiclesCreate _ body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.vehiclesCreateDSL body)
 
-driversList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
+driversList :: ApiTokenInfo DMatrix.UserActionType -> Maybe Text -> FlowHandler Value
 driversList _ vehicleNumber = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.driversListDSL vehicleNumber)
 
-driversCreate :: ApiTokenInfo -> Value -> FlowHandler Value
+driversCreate :: ApiTokenInfo DMatrix.UserActionType -> Value -> FlowHandler Value
 driversCreate _ body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.driversCreateDSL body)

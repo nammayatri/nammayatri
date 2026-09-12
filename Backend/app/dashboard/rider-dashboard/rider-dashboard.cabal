@@ -32,7 +32,6 @@ library
       API.Person
       API.RiderPlatform
       App
-      Domain.Action.Entity
       Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement
@@ -188,7 +187,7 @@ library
     , beckn-spec
     , bytestring
     , containers
-    , dashboard-helper-api
+    , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
     , http-types
@@ -267,7 +266,6 @@ executable rider-dashboard-exe
     , beckn-spec
     , bytestring
     , containers
-    , dashboard-helper-api
     , esqueleto
     , euler-hs
     , http-types

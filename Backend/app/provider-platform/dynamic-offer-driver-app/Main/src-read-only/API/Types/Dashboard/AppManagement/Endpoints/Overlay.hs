@@ -112,22 +112,22 @@ instance Kernel.Types.HideSecrets.HideSecrets ScheduleOverlay where
 
 type API = ("overlay" :> (PostOverlayCreate :<|> PostOverlayDelete :<|> GetOverlayList :<|> GetOverlayInfo :<|> PostOverlaySchedule))
 
-type PostOverlayCreate = ("createOverlay" :> ReqBody '[JSON] CreateOverlayReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOverlayCreate = ("createOverlay" :> ReqBody ('[JSON]) CreateOverlayReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostOverlayDelete = ("deleteOverlay" :> ReqBody '[JSON] DeleteOverlayReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOverlayDelete = ("deleteOverlay" :> ReqBody ('[JSON]) DeleteOverlayReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type GetOverlayList = ("listOverlay" :> Get '[JSON] ListOverlayResp)
+type GetOverlayList = ("listOverlay" :> Get ('[JSON]) ListOverlayResp)
 
-type GetOverlayInfo = ("overlayInfo" :> QueryParam "udf1" Kernel.Prelude.Text :> MandatoryQueryParam "overlayKey" Kernel.Prelude.Text :> Get '[JSON] OverlayInfoResp)
+type GetOverlayInfo = ("overlayInfo" :> QueryParam "udf1" Kernel.Prelude.Text :> MandatoryQueryParam "overlayKey" Kernel.Prelude.Text :> Get ('[JSON]) OverlayInfoResp)
 
-type PostOverlaySchedule = ("scheduleOverlay" :> ReqBody '[JSON] ScheduleOverlay :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostOverlaySchedule = ("scheduleOverlay" :> ReqBody ('[JSON]) ScheduleOverlay :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 data OverlayAPIs = OverlayAPIs
-  { postOverlayCreate :: CreateOverlayReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postOverlayDelete :: DeleteOverlayReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getOverlayList :: EulerHS.Types.EulerClient ListOverlayResp,
-    getOverlayInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient OverlayInfoResp,
-    postOverlaySchedule :: ScheduleOverlay -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { postOverlayCreate :: (CreateOverlayReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postOverlayDelete :: (DeleteOverlayReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getOverlayList :: (EulerHS.Types.EulerClient ListOverlayResp),
+    getOverlayInfo :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient OverlayInfoResp),
+    postOverlaySchedule :: (ScheduleOverlay -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkOverlayAPIs :: (Client EulerHS.Types.EulerClient API -> OverlayAPIs)
@@ -144,4 +144,4 @@ data OverlayUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''OverlayUserActionType])
+$(Data.Singletons.TH.genSingletons [(''OverlayUserActionType)])

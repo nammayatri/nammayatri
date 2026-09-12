@@ -22,7 +22,7 @@ import Kernel.Types.Id
 -- to its per-platform merchant rows (BAP: NAMMA_YATRI, BPP:
 -- NAMMA_YATRI_PARTNER). Lets one dashboard token serve both the "bap" and
 -- "bpp" route trees on the unified server: when the token's merchant cannot
--- serve the required platform, Tools.Auth.Api resolves the paired partner
+-- serve the required platform, Tools.Auth.Verify resolves the paired partner
 -- via this table. A NULL side means the merchant exists on one platform only.
 -- Seeded by the Phase 1 merge (dashboard-unification/0006-merchants.sql);
 -- empty on the pre-merge per-side schemas, which keeps legacy behavior there.

@@ -24,11 +24,10 @@ import qualified DashboardAlert.Domain.Types.Audience as DAAudience
 import qualified Domain.Types.Capability as DC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
-import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.BeamFlow (BeamFlow')
+import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonTier as QPT
 import Tools.Error
@@ -61,7 +60,15 @@ resolveAccessType mbAccessType mbAdminTier
     Just DAAudience.DASHBOARD_ADMIN
   | otherwise = castAccessType <$> mbAccessType
 
-resolveTopicForPerson :: BeamFlow' => (Text -> Flow [Text]) -> Id DP.Person -> Flow (DAAudience.Topic, [Text])
+-- Polymorphic in the flow so an application server can call it too: the
+-- fleet-owner lookup it takes runs against the APPLICATION database, while
+-- everything else here reads the dashboard one, and only the caller knows which
+-- scope it is in.
+resolveTopicForPerson ::
+  (BeamFlow m r, MonadCatch m) =>
+  (Text -> m [Text]) ->
+  Id DP.Person ->
+  m (DAAudience.Topic, [Text])
 resolveTopicForPerson lookupFleetOwners personId = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbTier <- QPT.findByPersonId personId

@@ -100,7 +100,6 @@ dependencies:
   - dynamic-offer-driver-app
   - location-updates
   - driver-offer-allocator
-  - dashboard-helper-api
   - sequelize
   - beckn-spec
   - cryptonite

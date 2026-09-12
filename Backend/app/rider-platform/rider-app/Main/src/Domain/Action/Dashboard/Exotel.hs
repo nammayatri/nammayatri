@@ -18,7 +18,7 @@ module Domain.Action.Dashboard.Exotel
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import qualified "lib-dashboard" Dashboard.Common.Exotel as Common
 import qualified Data.Text as T
 import Environment
 import Kernel.Prelude

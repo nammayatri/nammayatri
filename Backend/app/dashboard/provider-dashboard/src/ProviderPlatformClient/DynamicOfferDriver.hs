@@ -18,7 +18,7 @@ module ProviderPlatformClient.DynamicOfferDriver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.SearchTry as ProviderSearch
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.SearchTry as ProviderSearch
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler

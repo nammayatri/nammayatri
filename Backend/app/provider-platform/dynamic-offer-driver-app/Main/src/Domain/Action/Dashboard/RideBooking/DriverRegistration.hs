@@ -6,7 +6,7 @@ module Domain.Action.Dashboard.RideBooking.DriverRegistration
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.FleetDriverAssociation as FDV
 import qualified Domain.Action.UI.Registration as DReg

@@ -17,7 +17,7 @@ module SharedLogic.MediaFileDocument
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
+import qualified "this" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
 import AWS.S3 as S3
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM

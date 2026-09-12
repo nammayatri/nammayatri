@@ -16,7 +16,6 @@ module Storage.Beam.Common where
 
 import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
-import Storage.Beam.AccessMatrix as BeamAM
 import Storage.Beam.BeamFlow
 import Storage.Beam.CapabilityEndpoint as BeamCE
 import Storage.Beam.EntityAccess as BeamEA
@@ -33,8 +32,7 @@ atlasDB :: BeamFlow' => B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { accessMatrix = accessMatrixTable,
-        capabilityEndpoint = capabilityEndpointTable,
+      { capabilityEndpoint = capabilityEndpointTable,
         entityAccess = entityAccessTable,
         merchant = merchantTable,
         merchantAccess = merchantAccessTable,
@@ -47,8 +45,7 @@ atlasDB =
       }
 
 data AtlasDB f = AtlasDB
-  { accessMatrix :: f (B.TableEntity BeamAM.AccessMatrixT),
-    capabilityEndpoint :: f (B.TableEntity BeamCE.CapabilityEndpointT),
+  { capabilityEndpoint :: f (B.TableEntity BeamCE.CapabilityEndpointT),
     entityAccess :: f (B.TableEntity BeamEA.EntityAccessT),
     merchant :: f (B.TableEntity BeamM.MerchantT),
     merchantAccess :: f (B.TableEntity BeamMA.MerchantAccessT),

@@ -11,6 +11,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.MeterRide
 import qualified "dynamic-offer-driver-app" API.Types.UI.PriceBreakup
 import qualified Domain.Action.ProviderPlatform.RideBooking.MeterRide
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride
 import qualified "lib-dashboard" Environment
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("meterRide" :> GetMeterRidePrice)
 
