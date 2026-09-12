@@ -57,6 +57,10 @@ data ConsequenceDeduction
     -- required; the legacy DriverFee rail cannot pay out), customer → reduces
     -- outstanding cancellation dues (clamped at zero; no payout rail exists)
     MoneyAddition MoneyDeduction
+  | -- | debit the party's PREPAID SUBSCRIPTION balance (positive amounts). The holder is
+    -- resolved per ride — fleet owner when the ride has one, else the driver — the same
+    -- way the money and coin consequences resolve theirs.
+    RideCreditDeduction MoneyDeduction
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
@@ -70,7 +74,13 @@ data CommissionAndTax = CommissionAndTax
   { -- tax is always a percentage of the base charge
     taxPercentage :: Maybe HighPrecMoney,
     -- commission on the base charge: fixed amount or percentage
-    commission :: Maybe ChargeRate
+    commission :: Maybe ChargeRate,
+    -- When True, every amount in the paired deduction (fixed amount, and a
+    -- percentage's computed value together with its min/max bounds) is GROSS —
+    -- tax is already inside it and gets backed out rather than added on top.
+    -- So a PercentageMoney capped at 100 charges the customer 100, not 100 + tax.
+    -- Absent/False keeps the legacy reading: the amounts are net and tax is added.
+    amountsInclusiveOfTax :: Maybe Bool
   }
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
