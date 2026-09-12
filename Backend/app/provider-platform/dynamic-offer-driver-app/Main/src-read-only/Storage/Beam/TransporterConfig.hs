@@ -149,6 +149,7 @@ data TransporterConfigT f = TransporterConfigT
     driverFeeRetryThresholdConfig :: (B.C f Kernel.Prelude.Int),
     driverLocationAccuracyBuffer :: (B.C f Kernel.Types.Common.Meters),
     driverLocationStalenessThresholdSeconds :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
+    driverOnboardingLinkExpiryHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     driverPaymentCycleBuffer :: (B.C f Kernel.Types.Common.Seconds),
     driverPaymentCycleDuration :: (B.C f Kernel.Types.Common.Seconds),
     driverPaymentCycleStartTime :: (B.C f Kernel.Types.Common.Seconds),

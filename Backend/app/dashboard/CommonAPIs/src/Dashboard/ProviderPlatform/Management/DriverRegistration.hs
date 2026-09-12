@@ -68,7 +68,8 @@ data AuthRes = AuthRes
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: FCMRecipientToken
+    deviceToken :: FCMRecipientToken,
+    isOnboardingFlow :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
