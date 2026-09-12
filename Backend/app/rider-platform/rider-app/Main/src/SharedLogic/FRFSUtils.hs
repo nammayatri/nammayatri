@@ -857,15 +857,19 @@ getQuoteOfferSegment ::
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   Spec.VehicleCategory ->
-  Maybe Text ->
+  -- | Route stations for this quote, already cast -- avoids re-decoding the JSON.
+  [APITypes.FRFSRouteStationsAPI] ->
   -- | Origin and destination of the quote, in that order.
   Maybe (Station.Station, Station.Station) ->
+  -- | Bus registration number, when the search carried one.
+  Maybe Text ->
   m (Maybe Text)
-getQuoteOfferSegment riderId merchantOperatingCityId vehicleType mbRouteStationsJson mbFromToStations = do
+getQuoteOfferSegment riderId merchantOperatingCityId vehicleType routeStations mbFromToStations mbVehicleNumber = do
   result <- withTryCatch "getQuoteOfferSegment" $ do
     person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+    let routeStationsInfo = getRouteStationsInfo routeStations
     SOfferSegment.getPersonOfferSegment person merchantOperatingCityId $
-      SOfferSegment.ticketContext (Just vehicleType) (getServiceTierTypeFromRouteStationsJson mbRouteStationsJson) (mkStationPair <$> mbFromToStations)
+      SOfferSegment.ticketContext (Just vehicleType) routeStationsInfo.serviceTierType (mkStationPair <$> mbFromToStations) routeStationsInfo.routes mbVehicleNumber
   case result of
     Right segment -> pure segment
     Left err -> do
@@ -1647,6 +1651,18 @@ getPaymentType isMultiModalBooking = \case
 
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
+
+data RouteStationsInfo = RouteStationsInfo
+  { serviceTierType :: Maybe Spec.ServiceTierType,
+    routes :: [SOfferSegment.RouteInfo]
+  }
+
+getRouteStationsInfo :: [APITypes.FRFSRouteStationsAPI] -> RouteStationsInfo
+getRouteStationsInfo routeStations =
+  RouteStationsInfo
+    { serviceTierType = listToMaybe routeStations >>= (.vehicleServiceTier) <&> (._type),
+      routes = map (\r -> SOfferSegment.RouteInfo {routeCode = r.code, routeShortName = r.shortName}) routeStations
+    }
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do
