@@ -615,6 +615,9 @@ type API =
            Kernel.Prelude.Text
       :> "routes"
       :> QueryParam
+           "allowClusters"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "routeCodes"
            Kernel.Prelude.Text
       :> Get
@@ -1070,7 +1073,8 @@ getMultimodalTrackStopRoutes ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.MultimodalConfirm.PassingRoutes]
   )
-getMultimodalTrackStopRoutes a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalTrackStopRoutes a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
