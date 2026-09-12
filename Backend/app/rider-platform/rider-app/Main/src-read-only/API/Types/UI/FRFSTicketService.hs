@@ -53,6 +53,10 @@ data BookingFeedbackReq = BookingFeedbackReq {feedbackDetails :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BookingRatingReq = BookingRatingReq {driverRating :: Data.Maybe.Maybe Kernel.Prelude.Int, feedbackDetails :: Data.Maybe.Maybe Data.Text.Text, fleetRating :: Data.Maybe.Maybe Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CategoryInfoResponse = CategoryInfoResponse
   { categoryFinalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     categoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
@@ -74,6 +78,7 @@ data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Data.Text.Text, latency 
 data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
   | BookingFeedback BookingFeedbackReq
+  | BookingRating BookingRatingReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -99,6 +104,15 @@ data FRFSBookingPaymentStatusAPI
   | REFUND_FAILED
   | REFUND_INITIATED
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingRatingAggRes = FRFSBookingRatingAggRes
+  { driverRating :: Data.Maybe.Maybe Kernel.Types.Common.Centesimal,
+    driverRatingCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    fleetRating :: Data.Maybe.Maybe Kernel.Types.Common.Centesimal,
+    fleetRatingCount :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
