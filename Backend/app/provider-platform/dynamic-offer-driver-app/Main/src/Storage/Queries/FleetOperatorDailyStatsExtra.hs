@@ -1,6 +1,6 @@
 module Storage.Queries.FleetOperatorDailyStatsExtra where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Data.Time.Calendar (Day)
 import qualified Database.Beam as B
 import qualified Domain.Types.FleetOperatorDailyStats as DFODS

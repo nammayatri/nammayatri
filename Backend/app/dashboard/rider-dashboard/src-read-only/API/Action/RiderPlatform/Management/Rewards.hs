@@ -12,6 +12,7 @@ import qualified API.Types.RiderPlatform.Management.Rewards
 import qualified Dashboard.Common
 import qualified Dashboard.RiderPlatform.Management.Rewards
 import qualified Domain.Action.RiderPlatform.Management.Rewards
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval :<|> PostRewardsCohortValidateEligibility))
 
@@ -116,35 +116,35 @@ type PostRewardsCohortValidateEligibility =
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCohortValidateEligibility
   )
 
-postRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Rewards.CreateCampaignReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCampaignResp)
+postRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Rewards.CreateCampaignReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCampaignResp)
 postRewardsCampaign merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCampaign merchantShortId opCity apiTokenInfo req
 
-putRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.EditCampaignReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+putRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.EditCampaignReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putRewardsCampaign merchantShortId opCity apiTokenInfo campaignId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.putRewardsCampaign merchantShortId opCity apiTokenInfo campaignId req
 
-postRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.CreateCohortReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCohortResp)
+postRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.CreateCohortReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCohortResp)
 postRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId req
 
-putRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> API.Types.RiderPlatform.Management.Rewards.EditCohortReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+putRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> API.Types.RiderPlatform.Management.Rewards.EditCohortReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId cohortId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.putRewardsCampaignCohort merchantShortId opCity apiTokenInfo campaignId cohortId req
 
-postRewardsCampaignCohortCodes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.UploadCodesResp)
+postRewardsCampaignCohortCodes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.UploadCodesResp)
 postRewardsCampaignCohortCodes merchantShortId opCity apiTokenInfo campaignId cohortId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCampaignCohortCodes merchantShortId opCity apiTokenInfo campaignId cohortId req
 
-postRewardsCampaignStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.SetStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRewardsCampaignStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.SetStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRewardsCampaignStatus merchantShortId opCity apiTokenInfo campaignId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCampaignStatus merchantShortId opCity apiTokenInfo campaignId req
 
-getRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignDetails)
+getRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignDetails)
 getRewardsCampaign merchantShortId opCity apiTokenInfo campaignId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.getRewardsCampaign merchantShortId opCity apiTokenInfo campaignId
 
-getRewardsCampaigns :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Rewards.CampaignDetails])
+getRewardsCampaigns :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Rewards.CampaignDetails])
 getRewardsCampaigns merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.getRewardsCampaigns merchantShortId opCity apiTokenInfo
 
-getRewardsCampaignStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignStats)
+getRewardsCampaignStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignStats)
 getRewardsCampaignStats merchantShortId opCity apiTokenInfo campaignId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.getRewardsCampaignStats merchantShortId opCity apiTokenInfo campaignId
 
-postRewardsTriggerEval :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRewardsTriggerEval :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRewardsTriggerEval merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsTriggerEval merchantShortId opCity apiTokenInfo personId
 
-postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
+postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
 postRewardsCohortValidateEligibility merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Rewards.postRewardsCohortValidateEligibility merchantShortId opCity apiTokenInfo req

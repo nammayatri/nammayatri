@@ -2,7 +2,7 @@
 
 module API.UI.Issue where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as DRR
+import qualified "this" API.Types.RiderPlatform.Management.Ride as DRR
 import qualified AWS.S3 as S3
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL

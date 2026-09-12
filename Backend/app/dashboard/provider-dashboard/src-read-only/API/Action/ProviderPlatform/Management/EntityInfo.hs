@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
 import qualified Domain.Action.ProviderPlatform.Management.EntityInfo
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("entityInfo" :> (GetEntityInfoList :<|> PostEntityInfoUpdate))
 
@@ -43,8 +43,8 @@ type PostEntityInfoUpdate =
       :> API.Types.ProviderPlatform.Management.EntityInfo.PostEntityInfoUpdate
   )
 
-getEntityInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.EntityInfo.EntityExtraInformation)
+getEntityInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.EntityInfo.EntityExtraInformation)
 getEntityInfoList merchantShortId opCity apiTokenInfo entityType entityId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.EntityInfo.getEntityInfoList merchantShortId opCity apiTokenInfo entityType entityId
 
-postEntityInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.EntityInfo.UpdateEntityInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postEntityInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.EntityInfo.UpdateEntityInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postEntityInfoUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.EntityInfo.postEntityInfoUpdate merchantShortId opCity apiTokenInfo req

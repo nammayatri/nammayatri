@@ -19,35 +19,35 @@ module Domain.Action.ProviderPlatform.Management.DriverReferral
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverReferral as Common
-import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.DriverReferral as Common
+import qualified "lib-dashboard" Dashboard.Common as Common
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow)
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant (merchantCityAccessCheck)
 
 buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction UserActionType)
 buildTransaction apiTokenInfo =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postDriverReferralReferralOpsPassword ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.ReferralLinkPasswordUpdateAPIReq ->
   Flow APISuccess
 postDriverReferralReferralOpsPassword merchantShortId opCity apiTokenInfo req = do
@@ -59,7 +59,7 @@ postDriverReferralReferralOpsPassword merchantShortId opCity apiTokenInfo req = 
 postDriverReferralLinkReferral ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.ReferralLinkReq ->
   Flow Common.LinkReport
 postDriverReferralLinkReferral merchantShortId opCity apiTokenInfo req = do

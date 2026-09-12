@@ -16,14 +16,13 @@ module API.Dashboard.Roles where
 
 import qualified Domain.Action.Dashboard.Roles as DRoles
 import Domain.Types.Role as DRole
-import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 type API =
   "admin"
@@ -32,11 +31,6 @@ type API =
            :> DashboardAuth 'DASHBOARD_ADMIN
            :> ReqBody '[JSON] DRoles.CreateRoleReq
            :> Post '[JSON] DRole.RoleAPIEntity
-           :<|> DashboardAuth 'DASHBOARD_ADMIN
-             :> Capture "roleId" (Id DRole.Role)
-             :> "assignAccessLevel"
-             :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
-             :> Post '[JSON] APISuccess
            :<|> "list"
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> QueryParam "searchString" Text
@@ -50,25 +44,20 @@ type API =
              :> Post '[JSON] APISuccess
        )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow r => FlowServerR r API
 handler =
   createRole
-    :<|> assignAccessLevel
     :<|> listRoles
     :<|> disableRole
 
-createRole :: BeamFlow' => TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
+createRole :: DashboardLoginFlow r => TokenInfo -> DRoles.CreateRoleReq -> FlowHandlerR r DRole.RoleAPIEntity
 createRole tokenInfo =
-  withFlowHandlerAPI' . DRoles.createRole tokenInfo
+  withDashboardDbFlowHandlerAPI . DRoles.createRole tokenInfo
 
-assignAccessLevel :: BeamFlow' => TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
-assignAccessLevel tokenInfo roleId =
-  withFlowHandlerAPI' . DRoles.assignAccessLevel tokenInfo roleId
-
-listRoles :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+listRoles :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandlerR r DRoles.ListRoleRes
 listRoles mbsearchstr mblimit mboffset =
-  withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset
+  withDashboardDbFlowHandlerAPI . DRoles.listRoles mbsearchstr mblimit mboffset
 
-disableRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> DRoles.DisableRoleReq -> FlowHandler APISuccess
+disableRole :: DashboardLoginFlow r => TokenInfo -> Id DRole.Role -> DRoles.DisableRoleReq -> FlowHandlerR r APISuccess
 disableRole tokenInfo roleId =
-  withFlowHandlerAPI' . DRoles.disableRole tokenInfo roleId
+  withDashboardDbFlowHandlerAPI . DRoles.disableRole tokenInfo roleId

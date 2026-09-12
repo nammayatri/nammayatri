@@ -11,6 +11,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Maps
 import qualified Domain.Action.ProviderPlatform.RideBooking.Maps
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Maps
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "dynamic-offer-driver-app" Domain.Types.Person
 import qualified "lib-dashboard" Environment
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("maps" :> (PostMapsAutoComplete :<|> PostMapsGetPlaceName))
 
@@ -29,22 +29,22 @@ handler merchantId city = postMapsAutoComplete merchantId city :<|> postMapsGetP
 
 type PostMapsAutoComplete =
   ( ApiAuth
-      'DRIVER_OFFER_BPP
-      'DSL
-      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE)
+      ('DRIVER_OFFER_BPP)
+      ('DSL)
+      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE))
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsAutoComplete
   )
 
 type PostMapsGetPlaceName =
   ( ApiAuth
-      'DRIVER_OFFER_BPP
-      'DSL
-      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME)
+      ('DRIVER_OFFER_BPP)
+      ('DSL)
+      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME))
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceName
   )
 
-postMapsAutoComplete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> Environment.FlowHandler Domain.Action.UI.Maps.AutoCompleteResp)
+postMapsAutoComplete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> Environment.FlowHandler Domain.Action.UI.Maps.AutoCompleteResp)
 postMapsAutoComplete merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Maps.postMapsAutoComplete merchantShortId opCity apiTokenInfo driverId req
 
-postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceNameResp)
+postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceNameResp)
 postMapsGetPlaceName merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Maps.postMapsGetPlaceName merchantShortId opCity apiTokenInfo driverId req

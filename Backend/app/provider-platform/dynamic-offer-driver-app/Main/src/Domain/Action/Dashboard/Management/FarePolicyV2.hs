@@ -37,9 +37,9 @@ module Domain.Action.Dashboard.Management.FarePolicyV2
 where
 
 import qualified API.Types.ProviderPlatform.Management.FarePolicyV2 as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.Common as DCommon
+import qualified "lib-dashboard" Dashboard.Common as DCommon
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM

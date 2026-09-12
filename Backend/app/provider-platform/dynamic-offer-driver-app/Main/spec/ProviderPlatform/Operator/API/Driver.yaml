@@ -1,0 +1,380 @@
+imports:
+  Summary: Dashboard.Common
+  Driver: Dashboard.Common
+  StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  OperationHub: Dashboard.Common
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
+  DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+  DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  Image: Dashboard.Common
+  CRCVerificationResponse: Kernel.External.Verification.Types
+
+module: Driver
+
+apis:
+  - GET: # FetchOperationHubRequests
+      endpoint: /operator/fetch/hubRequests
+      auth: ApiAuthV2
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbStatus: RequestStatus
+        - mbReqType: RequestType
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbDriverId: Text
+        - mbMobileNumber: Text
+        - mbDriverMobileNumber: Text
+        - mbOperationHubId: Id OperationHub
+        - mbOperationHubName: Text
+        - mbRegistrationNo: Text
+      response:
+        type: OperationHubReqResp
+
+  - GET:
+      endpoint: /operation/getAllHubs
+      auth: ApiAuthV2
+      response:
+        type: "[OperationHub]"
+
+  - POST: # RespondOperationHubRequest
+      endpoint: /operator/respond/hubRequest
+      auth: ApiAuthV2
+      request:
+        type: RespondHubRequest
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /operator/createRequest
+      auth: ApiAuthV2
+      request:
+        type: DriverOperationHubRequest
+      response:
+        type: APISuccess
+  - GET: # ListDriversAPI
+      endpoint: /operator/list
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - limit: Int
+        - offset: Int
+        - vehicleNo: Text
+        - mbSearchString: Text
+        - includeDocuments: Bool
+        - onlyMandatoryDocs: Bool
+        - mbStatus: DriverMode
+      response:
+        type: DriverInfoResp
+      helperApi:
+        - GET:
+            endpoint: /operator/list
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - limit: Int
+              - offset: Int
+              - vehicleNo: Text
+              - mbSearchString: Text
+              - includeDocuments: Bool
+              - onlyMandatoryDocs: Bool
+              - mbStatus: DriverMode
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: DriverInfoResp
+
+  # following apis currently used only for Driver Cum Owner case
+  - POST: # SendFleetJoiningOtpAPI
+      endpoint: /operator/sendJoiningOtp
+      auditRequestBody: false
+      auth: ApiAuthV2
+      request:
+        type: AuthReq
+      response:
+        type: AuthRes
+      helperApi:
+        - POST:
+            endpoint: /operator/sendJoiningOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: AuthReq
+            response:
+              type: AuthRes
+
+  - POST: # VerifyFleetJoiningOtpAPI
+      endpoint: /operator/verifyJoiningOtp
+      auth: ApiAuthV2
+      query:
+        - authId: Text
+      request:
+        type: VerifyOperatorJoiningOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /operator/verifyJoiningOtp
+            auth: ApiAuthV2
+            query:
+              - authId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: VerifyOperatorJoiningOtpReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /operator/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            response:
+              type: AllTimeOperatorAnalyticsRes
+
+  - GET:
+      endpoint: /operator/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredOperatorAnalyticsRes
+  - GET:
+      endpoint: /review/queue/{entityType}/request/{reviewRequestType}
+      auth: ApiAuthV2
+      params:
+        entityType: EntityType
+        reviewRequestType: ReviewRequestType
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbMobileNumber: Text
+        - mbPersonId: Text
+        - mbRcNo: Text
+        - mbRcId: Text
+        - approved: Bool
+      response:
+        type: ReviewQueueResp
+  - POST:
+      endpoint: /submit/review/request
+      auth: ApiAuthV2
+      request:
+        type: SubmitReviewRequest
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/submit/review/request
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: SubmitReviewRequest
+            response:
+              type: APISuccess
+  - GET:
+      endpoint: /{entityType}/request/{reviewRequestType}/review/history
+      auth: ApiAuthV2
+      params:
+        entityType: EntityType
+        reviewRequestType: ReviewRequestType
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbMobileCountryCode: Text
+        - mbMobileNumber: Text
+        - mbPersonId: Text
+        - mbRcNo: Text
+        - mbRequestStatus: ReviewRequestStatus
+        - mbRcId: Text
+      response:
+        type: ReviewRequestHistoryList
+
+types:
+  DriverInfoResp:
+    - listItem: [DriverInfo]
+    - summary: Summary
+  OperationHub:
+    id : Id OperationHub
+    name : Text
+    address : Text
+    lat: Double
+    lon: Double
+    mobileNumber: Text
+    description: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+  DriverOperationHubRequest:
+    requestType: RequestType
+    operationHubId: Id OperationHub
+    registrationNo: Maybe Text
+    driverId: Maybe (Id Driver)
+    creatorId: Text
+    derive: "'HideSecrets"
+  RequestStatus:
+    enum: "PENDING,APPROVED,REJECTED"
+    derive: "HttpInstance"
+  RequestType:
+    enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION, DRIVER_ONBOARDING_INSPECTION, DRIVER_REGULAR_INSPECTION"
+    derive: "HttpInstance"
+  OperationHubReqResp:
+    - requests: [OperationHubDriverRequest]
+    - summary: Summary
+  OperationHubDriverRequest:
+    id: Text
+    operationHubId: Id OperationHub
+    operationHubName: Text
+    driverPhoneNo: Maybe Text
+    creatorPhoneNo: Maybe Text
+    driverId: Maybe (Id Driver)
+    rcId: Maybe Text
+    registrationNo: Maybe Text
+    requestType: RequestType
+    requestStatus: RequestStatus
+    requestTime: UTCTime
+    remarks: Maybe Text
+    operatorPhoneNo: Maybe Text
+    fulfilledAt: Maybe UTCTime
+    inspectionResponse: Maybe [InspectionResponseItem]
+  RespondHubRequest:
+    status: RequestStatus
+    operationHubRequestId: Text
+    operatorId: Text
+    remarks: Text
+    responses: Maybe [InspectionResponseItem]
+    derive: "'HideSecrets"
+  InspectionResponseItem:
+    questionId: Text
+    question: Text
+    answer: Text
+    mediaFileId: Maybe Text
+  DriverInfo:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - status: Maybe DriverMode
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicle: Maybe Text
+    - vehicleNo: Maybe Text
+    - isRcActive: Bool
+    - approved: Maybe Bool
+    - verified: Maybe Bool
+    - enabled: Maybe Bool
+    - documents: Maybe StatusRes
+  VerifyOperatorJoiningOtpReq:
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - otp: Text
+    - deviceToken: Maybe FCMRecipientToken
+    - derive: "'HideSecrets"
+
+  AllTimeOperatorAnalyticsRes:
+    - rating: Maybe Double
+    - cancellationRate: Maybe Double
+    - acceptanceRate: Maybe Double
+    - totalActiveDrivers: Maybe Int
+    - totalAssociatedDriver: Maybe Int
+    - totalEnabledDriver: Maybe Int
+
+  FilteredOperatorAnalyticsRes:
+    - activeDriver: Int
+    - driverEnabled: Int
+    - greaterThanOneRide: Int
+    - greaterThanTenRide: Int
+    - greaterThanFiftyRide: Int
+    - totalInspectionCompleted: TotalInspectionCompletedRes
+
+  TotalInspectionCompletedRes:
+    - approvedVehicleInspection: Int
+    - approvedDriverInspection: Int
+    - rejectedVehicleInspection: Int
+    - rejectedDriverInspection: Int
+  EntityDetails:
+    - entityType: EntityType
+    - entityId: Text
+    - name: Maybe Text
+    - mobileNumber: Maybe Text
+    - rcNo: Maybe Text
+    - courtRecord: Maybe CourtRecordResult
+    - pendingChallan: Maybe PendingChallanResult
+    - fleetType: Maybe FleetType
+
+  CourtRecordResult:
+    - result: Maybe CRCVerificationResponse
+    - errorMessage: Maybe Text
+
+  PendingChallanResult:
+    - pendingChallanCount: Maybe Int
+    - errorMessage: Maybe Text
+
+  ReviewQueueResp:
+    - reviewQueue : [ReviewQueue]
+  ReviewQueue:
+    - entityDetails: EntityDetails
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - verified: Maybe Bool
+    - enabled: Maybe Bool
+    - approved: Maybe Bool
+  ReviewRequestStatus:
+    enum: "RR_IN_PROGRESS,RR_COMPLETED,RR_REJECTED"
+  ReviewRequestType:
+    enum: "BOT_REVIEW"
+  EntityType:
+    enum: "DRIVER,VEHICLE,FLEET_OWNER"
+  FleetType:
+    enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+  SubmitReviewRequest:
+    - entityType: EntityType
+    - entityId: Text
+    - rejectDocumentUpdateReq: [DocumentDetail]
+    - derive: "'HideSecrets"
+  ReviewRequestHistoryList:
+    - reviewHistory : [ReviewRequestHistory]
+  ReviewRequestHistory:
+    - id: Text
+    - requestType: ReviewRequestType
+    - entityDetails: EntityDetails
+    - requestStatus: ReviewRequestStatus
+    - reviewerId: Maybe Text
+    - documentDetails: Maybe [DocumentDetail]
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  DocumentDetail:
+    - documentType: DocumentType
+    - documentDescription: Maybe Text
+    - rejectedReason: Text
+    - remarks: Maybe Text
+    - imageId1: Maybe (Id Image)
+    - imageId2: Maybe (Id Image)
+    - mediaId: Maybe Text
+    - derive: "Show"

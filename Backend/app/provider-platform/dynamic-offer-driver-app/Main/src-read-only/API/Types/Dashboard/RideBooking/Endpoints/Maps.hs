@@ -17,22 +17,22 @@ import Servant.Client
 type API = ("maps" :> (PostMapsAutoComplete :<|> PostMapsGetPlaceName))
 
 type PostMapsAutoComplete =
-  ( "autoComplete" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] Domain.Action.UI.Maps.AutoCompleteReq
+  ( "autoComplete" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) Domain.Action.UI.Maps.AutoCompleteReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Maps.AutoCompleteResp
   )
 
 type PostMapsGetPlaceName =
-  ( "getPlaceName" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] Domain.Action.UI.Maps.GetPlaceNameReq
+  ( "getPlaceName" :> Capture "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) Domain.Action.UI.Maps.GetPlaceNameReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Maps.GetPlaceNameResp
   )
 
 data MapsAPIs = MapsAPIs
-  { postMapsAutoComplete :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.AutoCompleteResp,
-    postMapsGetPlaceName :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceNameResp
+  { postMapsAutoComplete :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.AutoCompleteReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.AutoCompleteResp),
+    postMapsGetPlaceName :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> EulerHS.Types.EulerClient Domain.Action.UI.Maps.GetPlaceNameResp)
   }
 
 mkMapsAPIs :: (Client EulerHS.Types.EulerClient API -> MapsAPIs)
@@ -46,4 +46,4 @@ data MapsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''MapsUserActionType])
+$(Data.Singletons.TH.genSingletons [(''MapsUserActionType)])

@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.RideBooking.Volunteer
 where
 
 import qualified API.Types.Dashboard.RideBooking.Volunteer as Common
-import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified "lib-dashboard" Dashboard.Common as Common
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart

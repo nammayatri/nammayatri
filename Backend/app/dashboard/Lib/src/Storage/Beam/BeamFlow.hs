@@ -18,7 +18,6 @@ import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Storage.Beam.AccessAudit as BeamAA
-import qualified Storage.Beam.AccessMatrix as BeamAM
 import qualified Storage.Beam.Capability as BeamC
 import qualified Storage.Beam.CapabilityEndpoint as BeamCE
 import qualified Storage.Beam.DeletedUser as BeamDU
@@ -45,7 +44,6 @@ type BeamFlow m r =
 
 type BeamFlow' =
   ( HasSchemaName BeamAA.AccessAuditT,
-    HasSchemaName BeamAM.AccessMatrixT,
     HasSchemaName BeamC.CapabilityT,
     HasSchemaName BeamCE.CapabilityEndpointT,
     HasSchemaName BeamDU.DeletedUserT,

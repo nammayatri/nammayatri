@@ -12,6 +12,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Su
 import qualified API.Types.UI.SubscriptionTransaction
 import qualified Data.Time
 import qualified Domain.Action.ProviderPlatform.AppManagement.SubscriptionTransaction
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -23,7 +24,6 @@ import Kernel.Utils.Common hiding (INFO)
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("subscriptionTransaction" :> GetSubscriptionTransactionSubscriptionTransactions)
 
@@ -32,11 +32,11 @@ handler merchantId city = getSubscriptionTransactionSubscriptionTransactions mer
 
 type GetSubscriptionTransactionSubscriptionTransactions =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION_TRANSACTION / 'API.Types.Dashboard.AppManagement.SubscriptionTransaction.GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION_TRANSACTION) / ('API.Types.Dashboard.AppManagement.SubscriptionTransaction.GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS))
       :> API.Types.Dashboard.AppManagement.SubscriptionTransaction.GetSubscriptionTransactionSubscriptionTransactions
   )
 
-getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
+getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus) -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
 getSubscriptionTransactionSubscriptionTransactions merchantShortId opCity apiTokenInfo fromDate limit maxAmount minAmount offset status toDate = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions merchantShortId opCity apiTokenInfo fromDate limit maxAmount minAmount offset status toDate

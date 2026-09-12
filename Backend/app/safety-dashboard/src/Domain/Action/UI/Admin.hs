@@ -4,24 +4,25 @@ module Domain.Action.UI.Admin where
 
 import API.Types.UI.Admin
 import qualified API.Types.UI.Suspect
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
 import qualified Domain.Action.UI.Suspect as DS
 import qualified Domain.Action.UI.SuspectFlagRequest as SAF
 import Domain.Action.UI.Webhook as Webhook
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.Notification
 import qualified Domain.Types.Suspect
 import Domain.Types.SuspectFlagRequest
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (concatMap, elem, filter, id, length, map, mapM_, null, readMaybe, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantConfigs as SQMC
@@ -55,7 +56,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 postChangeSuspectFlag :: TokenInfo -> API.Types.UI.Admin.SuspectFlagChangeRequestList -> Environment.Flow Kernel.Types.APISuccess.APISuccess

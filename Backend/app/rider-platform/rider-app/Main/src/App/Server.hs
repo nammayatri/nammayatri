@@ -26,6 +26,7 @@ import qualified Kernel.Utils.Servant.Server as BU
 import qualified Network.HTTP.Client as Http
 import Servant
 import Tools.Auth
+import Tools.Auth.DashboardUserAuth (verifyDashboardUserAction)
 
 run :: Http.Manager -> Env -> Application
 run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
@@ -57,5 +58,6 @@ run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
+        :. verifyDashboardUserAction @(FlowR AppEnv)
         :. verifyPartnerOrganizationAction @(FlowR AppEnv)
         :. EmptyContext

@@ -23,6 +23,7 @@ import qualified API.Client.ProviderPlatform.RideBooking as Client
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver as Common
 import Data.List (nub, partition)
 import qualified Domain.Action.ProviderPlatform.RideBooking.Driver as RBDriver
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.MerchantAccess as DAccess
 import "lib-dashboard" Environment
@@ -32,7 +33,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error as E
 
@@ -63,7 +63,7 @@ selectSearchCities tokenMerchantId tokenCity accesses =
 -- payload as @\/driver\/info@, so it is a drop-in for callers that only hold a phone number.
 getDriverInfoByPhoneNumber ::
   ShortId DM.Merchant ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Text ->
   Maybe Text ->
   Flow Common.DriverInfoRes
@@ -105,7 +105,7 @@ getDriverInfoByPhoneNumber merchantShortId apiTokenInfo mbMobileNumber mbMobileC
 -- 'ExternalAPICallError', a separate type this handler never sees.
 tryCity ::
   CheckedShortId DM.Merchant ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Text ->
   Maybe Text ->
   City.City ->

@@ -30,8 +30,8 @@ module Domain.Action.Dashboard.Customer
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as Common
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as CommonC
+import qualified "this" API.Types.RiderPlatform.Management.Customer as Common
+import qualified "this" API.Types.RiderPlatform.Management.Customer as CommonC
 import qualified Dashboard.Common as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS

@@ -3,15 +3,16 @@
 module Domain.Action.UI.Notification where
 
 import API.Types.UI.Notification
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
-import qualified Domain.Types.Transaction as DT
+import qualified Dashboard.SafetyPlatform as Safety
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Storage.Queries.Notification as SQN
 import qualified "lib-dashboard" Storage.Queries.Person as QP
@@ -24,7 +25,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 getListNotification :: TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.UI.Notification.NotificationList

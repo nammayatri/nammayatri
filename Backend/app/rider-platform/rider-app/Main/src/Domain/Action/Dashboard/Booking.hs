@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Booking
 where
 
 import Beckn.ACL.Status
-import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import qualified "lib-dashboard" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
