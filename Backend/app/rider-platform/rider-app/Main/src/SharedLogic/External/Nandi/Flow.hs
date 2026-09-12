@@ -16,9 +16,9 @@ getRouteStopMappingByRouteCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, 
 getRouteStopMappingByRouteCode baseUrl gtfsId routeCode = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByRouteId gtfsId routeCode) "getRouteStopMappingByRouteCode" NandiAPI.nandiGetRouteStopMappingByRouteIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_ROUTE_CODE_API") baseUrl)
 
-getRouteStopMappingByStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
-getRouteStopMappingByStopCode baseUrl gtfsId stopCode = do
-  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByStopCode gtfsId stopCode) "getRouteStopMappingByStopCode" NandiAPI.nandiGetRouteStopMappingByStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_STOP_CODE_API") baseUrl)
+getRouteStopMappingByStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Bool -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingByStopCode baseUrl gtfsId stopCode mbAllowClusters = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByStopCode gtfsId stopCode mbAllowClusters) "getRouteStopMappingByStopCode" NandiAPI.nandiGetRouteStopMappingByStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_STOP_CODE_API") baseUrl)
 
 getClusterRoutesBetweenStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Text -> m (Maybe [ClusterRouteConnectionNandi])
 getClusterRoutesBetweenStops baseUrl gtfsId fromStopCode toStopCode = do
@@ -58,14 +58,14 @@ getRoutesByGtfsId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurat
 getRoutesByGtfsId baseUrl gtfsId = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutesByGtfsId gtfsId) "getRoutesByGtfsId" NandiAPI.nandiRoutesByGtfsIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_BY_GTFS_ID_API") baseUrl)
 
-getRouteStopMappingInMemoryServer :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> m [RouteStopMappingInMemoryServer]
-getRouteStopMappingInMemoryServer baseUrl gtfsId routeCode' stopCode' = do
+getRouteStopMappingInMemoryServer :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> Maybe Bool -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingInMemoryServer baseUrl gtfsId routeCode' stopCode' mbAllowClusters = do
   case (routeCode', stopCode') of
     (Just routeCode, Just stopCode) -> do
       routeStopMapping <- getRouteStopMappingByRouteCode baseUrl gtfsId routeCode
       return $ filter (\r -> r.stopCode == stopCode) routeStopMapping
     (Just routeCode, Nothing) -> getRouteStopMappingByRouteCode baseUrl gtfsId routeCode
-    (Nothing, Just stopCode) -> getRouteStopMappingByStopCode baseUrl gtfsId stopCode
+    (Nothing, Just stopCode) -> getRouteStopMappingByStopCode baseUrl gtfsId stopCode mbAllowClusters
     (Nothing, Nothing) -> do
       logError $ "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls" <> show (baseUrl, gtfsId)
       throwError $ InternalError "routeCode or stopCode is not provided, skipping gtfs inmemory server rest api calls"

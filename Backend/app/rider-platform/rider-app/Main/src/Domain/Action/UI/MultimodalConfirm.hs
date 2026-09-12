@@ -3271,28 +3271,31 @@ getMultimodalTrackStopRoutes ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow [ApiTypes.PassingRoutes]
-getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = do
+getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbAllowClusters mbRouteCodes = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
+  mappings <- OTPRest.getRouteStopMappingByStopCodeWithClusters mbAllowClusters stopCode integratedBPPConfig
   let filterRouteCodes = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbRouteCodes
       passingRouteCodes = nub (map (.routeCode) mappings)
+      stopCodeByRoute = Map.fromListWith (\_new old -> old) [(mapping.routeCode, mapping.stopCode) | mapping <- mappings]
       routeCodes =
         if null filterRouteCodes
           then passingRouteCodes
           else filter (`elem` filterRouteCodes) passingRouteCodes
 
   frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId person.merchantOperatingCityId integratedBPPConfig.id
-  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap) routeCodes
+  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap stopCodeByRoute) routeCodes
   where
-    etaAtStop etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode == stopCode) etaEntries))
+    etaAtStop routeStopCode etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode == routeStopCode) etaEntries))
 
-    getRouteEtaAtStop integratedBPPConfig frfsTierMap routeCode = do
+    getRouteEtaAtStop integratedBPPConfig frfsTierMap stopCodeByRoute routeCode = do
+      let routeStopCode = Map.findWithDefault stopCode routeCode stopCodeByRoute
       mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
       case mbRoute of
         Nothing -> do
@@ -3311,7 +3314,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
                   [ (bus.vehicleNumber, busEta)
                     | routeWithBuses <- busesForRoutes,
                       bus <- routeWithBuses.buses,
-                      Just busEta <- [etaAtStop (fromMaybe [] bus.busData.eta_data)]
+                      Just busEta <- [etaAtStop routeStopCode (fromMaybe [] bus.busData.eta_data)]
                   ]
           scheduleVehiclesFork <-
             awaitableFork "getMultimodalTrackStopRoutes->schedules" $ do
@@ -3319,7 +3322,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
               pure
                 [ (scheduleDetail.vehicle_no, scheduleDetail.service_tier, detailEta)
                   | scheduleDetail <- schedules,
-                    Just detailEta <- [etaAtStop scheduleDetail.eta]
+                    Just detailEta <- [etaAtStop routeStopCode scheduleDetail.eta]
                 ]
           liveVehicles <-
             L.await Nothing liveVehiclesFork >>= \case
@@ -3337,7 +3340,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
           scheduleVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) scheduleVehicles
           routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
-                (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
+                (lastStopMapping : _) -> lastStopMapping.stopCode == routeStopCode
                 [] -> False
           pure $
             Just
