@@ -22,7 +22,7 @@ module SharedLogic.TollDashboard
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.Common.Merchant as DM
+import qualified "lib-dashboard" Dashboard.Common.Merchant as DM
 import qualified Data.Aeson as Aeson
 import qualified Data.Text.Encoding as TE
 import Kernel.Prelude

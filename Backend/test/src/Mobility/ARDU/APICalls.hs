@@ -15,7 +15,7 @@
 module Mobility.ARDU.APICalls where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Dashboard
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.Ride as Dashboard
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified Domain.Action.UI.Ride.CancelRide as DCR

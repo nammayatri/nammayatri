@@ -90,19 +90,19 @@ module Domain.Action.Dashboard.Fleet.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
-import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
+import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
+import "this" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.FleetOwnerList as FleetOwnerListAPI
 import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
 import Control.Applicative (liftA2, optional)
-import qualified "dashboard-helper-api" Dashboard.Common as DC
-import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
-import qualified "dashboard-helper-api" Dashboard.Common.Driver
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified "lib-dashboard" Dashboard.Common as DC
+import qualified "lib-dashboard" Dashboard.Common as DCommonRole (Role (..))
+import qualified "lib-dashboard" Dashboard.Common.Driver
+import qualified "this" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DTR
 import qualified DashboardAlert.Storage.Queries.DashboardAlert as QAR
 import Data.Char (isDigit)

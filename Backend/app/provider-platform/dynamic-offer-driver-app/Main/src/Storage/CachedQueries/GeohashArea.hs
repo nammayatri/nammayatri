@@ -24,6 +24,7 @@ module Storage.CachedQueries.GeohashArea
   ( findAllByMerchantOperatingCity,
     getAreaNameMap,
     clearCacheByMerchantOperatingCity,
+    mergeIntoCache,
   )
 where
 
@@ -60,3 +61,28 @@ clearCacheByMerchantOperatingCity = Hedis.del . makeGeohashAreaKeyByMerchantOper
 
 makeGeohashAreaKeyByMerchantOperatingCityId :: Id MerchantOperatingCity -> Text
 makeGeohashAreaKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:GeohashArea:MerchantOpCityId-" <> getId merchantOpCityId
+
+-- | Reconcile the cached snapshot with rows an upsert just wrote, instead of
+-- invalidating and leaving the next reader to repopulate it from Postgres.
+-- The write path (createWithKV/updateWithKV) can drain to Postgres well after
+-- this is called, so a read racing that window would otherwise re-cache an
+-- incomplete snapshot for a full TTL -- reproduced locally: a read immediately
+-- after upsert cached a list missing the new row, and kept serving it for the
+-- rest of the TTL even after the row landed in Postgres. We already know
+-- exactly what was written, so there is nothing to wait for.
+--
+-- Only touches a WARM cache. On a cold cache there is nothing to reconcile
+-- against, and setting just the upserted rows would wrongly evict every other
+-- area for the city, so a cold cache is left for the next reader to populate
+-- fresh from Postgres.
+mergeIntoCache :: (CacheFlow m r) => Id MerchantOperatingCity -> [GeohashArea] -> m ()
+mergeIntoCache _ [] = pure ()
+mergeIntoCache merchantOpCityId written =
+  Hedis.safeGet (makeGeohashAreaKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
+    Nothing -> pure ()
+    Just existing -> cacheByMerchantOperatingCity merchantOpCityId (reconcile existing)
+  where
+    writtenByGeohash = HashMap.fromList [(a.geohash, a) | a <- written]
+    reconcile existing =
+      [fromMaybe old (HashMap.lookup old.geohash writtenByGeohash) | old <- existing]
+        <> [a | a <- written, a.geohash `notElem` map (.geohash) existing]

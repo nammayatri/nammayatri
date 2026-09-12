@@ -47,42 +47,42 @@ data SavedReqLocationsListRes = SavedReqLocationsListRes {list :: [Domain.Types.
 type API = ("customer" :> (PostCustomerSosCreate :<|> PostCustomerDeletedPerson :<|> GetCustomerSavedLocations :<|> PostCustomerSavedLocations :<|> DeleteCustomerSavedLocations))
 
 type PostCustomerSosCreate =
-  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "sos" :> "create" :> ReqBody '[JSON] API.Types.UI.Sos.SosReq
+  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "sos" :> "create" :> ReqBody ('[JSON]) API.Types.UI.Sos.SosReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosRes
   )
 
 type PostCustomerDeletedPerson =
   ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "deleted" :> "person"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.DeletedPerson.DeletedPersonReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
-type GetCustomerSavedLocations = (Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "savedLocations" :> Get '[JSON] SavedReqLocationsListRes)
+type GetCustomerSavedLocations = (Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "savedLocations" :> Get ('[JSON]) SavedReqLocationsListRes)
 
 type PostCustomerSavedLocations =
-  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "savedLocations" :> ReqBody '[JSON] CreateSavedReqLocationReq
+  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "savedLocations" :> ReqBody ('[JSON]) CreateSavedReqLocationReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 type DeleteCustomerSavedLocations =
   ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "savedLocations" :> Capture "tag" Kernel.Prelude.Text
       :> Delete
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 data CustomerAPIs = CustomerAPIs
-  { postCustomerSosCreate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.Sos.SosReq -> EulerHS.Types.EulerClient API.Types.UI.Sos.SosRes,
-    postCustomerDeletedPerson :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.DeletedPerson.DeletedPersonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getCustomerSavedLocations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SavedReqLocationsListRes,
-    postCustomerSavedLocations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> CreateSavedReqLocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    deleteCustomerSavedLocations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { postCustomerSosCreate :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.Sos.SosReq -> EulerHS.Types.EulerClient API.Types.UI.Sos.SosRes),
+    postCustomerDeletedPerson :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.DeletedPerson.DeletedPersonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getCustomerSavedLocations :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SavedReqLocationsListRes),
+    postCustomerSavedLocations :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> CreateSavedReqLocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    deleteCustomerSavedLocations :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
@@ -99,4 +99,4 @@ data CustomerUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''CustomerUserActionType])
+$(Data.Singletons.TH.genSingletons [(''CustomerUserActionType)])

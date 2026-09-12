@@ -32,7 +32,7 @@ module Domain.Action.Dashboard.RideBooking.Driver
 where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Control.Applicative ((<|>))
 import qualified Dashboard.Common
 import qualified Data.Map as M

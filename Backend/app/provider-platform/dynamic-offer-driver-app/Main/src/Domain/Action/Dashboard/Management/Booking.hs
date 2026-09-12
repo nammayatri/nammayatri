@@ -18,7 +18,7 @@ module Domain.Action.Dashboard.Management.Booking
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import qualified "lib-dashboard" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Internal as HashMap
 import qualified Domain.Types.Booking as DBooking

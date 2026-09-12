@@ -16,6 +16,13 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.DashboardCacAuth as DashboardCacAuth
+import qualified API.DashboardDriverInfoByPhoneNumber as DashboardDriverInfo
+import qualified API.DashboardExotel as DashboardExotel
+import qualified API.DashboardFleetRegistration as DashboardFleetRegistration
+import qualified API.DashboardInternalAuth as DashboardInternalAuth
+import qualified API.DashboardLogin as DashboardLogin
+import qualified API.DirectDashboard as DirectDashboard
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
@@ -123,6 +130,19 @@ type MainAPI =
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
+    :<|> DirectDashboard.API
+    :<|> DashboardLogin.API
+    -- Dashboard routes that are not part of the login tree and are not
+    -- capability-authorized: an api-key probe, the CAC shim, and fleet-owner
+    -- onboarding. Same /direct-dashboard prefix so ingress stays a prefix swap.
+    :<|> ( "direct-dashboard"
+             :> ( DashboardInternalAuth.API
+                    :<|> DashboardCacAuth.API
+                    :<|> DashboardFleetRegistration.API
+                    :<|> DashboardExotel.API
+                    :<|> DashboardDriverInfo.API
+                )
+         )
     :<|> Internal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -150,6 +170,14 @@ mainServer env =
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
+    :<|> DirectDashboard.handler
+    :<|> DashboardLogin.handler
+    :<|> ( DashboardInternalAuth.handler
+             :<|> DashboardCacAuth.handler
+             :<|> DashboardFleetRegistration.handler
+             :<|> DashboardExotel.handler
+             :<|> DashboardDriverInfo.handler
+         )
     :<|> Internal.handler env
 
 driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI

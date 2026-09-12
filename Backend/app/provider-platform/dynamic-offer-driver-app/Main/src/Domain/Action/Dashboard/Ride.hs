@@ -30,8 +30,8 @@ module Domain.Action.Dashboard.Ride
 where
 
 import qualified API.Types.Dashboard.RideBooking.Ride as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as MGMT
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)

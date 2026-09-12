@@ -26,6 +26,8 @@ import qualified Kernel.Utils.Servant.Server as BU
 import qualified Network.HTTP.Client as Http
 import Servant
 import Tools.Auth
+import qualified "lib-dashboard" Tools.Auth.DashboardLoginFlow as DashboardLogin
+import Tools.Auth.DashboardUserAuth (verifyDashboardUserAction)
 
 run :: Http.Manager -> Env -> Application
 run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
@@ -41,4 +43,8 @@ run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
       verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
+        :. verifyDashboardUserAction @(FlowR AppEnv)
+        -- Serves lib-dashboard's login tree: resolves the operator's session
+        -- against the dashboard database rather than this server's own.
+        :. DashboardLogin.dashboardLoginVerifyAction @(FlowR AppEnv)
         :. EmptyContext

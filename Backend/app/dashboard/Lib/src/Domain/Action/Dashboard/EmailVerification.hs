@@ -30,7 +30,7 @@ import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QP
-import Tools.Auth
+import Tools.Auth.Dashboard
 import qualified Tools.InternalClient as InternalClient
 
 data EmailOtpSendReq = EmailOtpSendReq

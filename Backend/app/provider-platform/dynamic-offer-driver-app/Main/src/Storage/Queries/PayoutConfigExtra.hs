@@ -3,7 +3,7 @@
 
 module Storage.Queries.PayoutConfigExtra where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.VehicleCategory as DVC
