@@ -5,32 +5,32 @@ module Domain.Action.RiderPlatform.Management.SearchTry
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.SearchTry as ProviderSearch
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.SearchTry as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.SearchTry as ProviderSearch
+import qualified "rider-app" API.Types.RiderPlatform.Management.SearchTry as Common
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver as ProviderClient
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 postSearchTryRecentSearchTries ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.RecentSearchTriesReq ->
   Environment.Flow Common.RecentSearchTriesRes
 postSearchTryRecentSearchTries merchantShortId opCity apiTokenInfo req = do
   void $ merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Just apiTokenInfo)
       Nothing

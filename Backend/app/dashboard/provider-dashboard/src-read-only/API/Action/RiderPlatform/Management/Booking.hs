@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified Dashboard.Common.Booking
 import qualified Domain.Action.RiderPlatform.Management.Booking
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -19,7 +20,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("booking" :> (PostBookingCancelAllStuck :<|> PostBookingSyncMultiple))
 
@@ -28,22 +28,22 @@ handler merchantId city = postBookingCancelAllStuck merchantId city :<|> postBoo
 
 type PostBookingCancelAllStuck =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_CANCEL_ALL_STUCK)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.BOOKING) / ('API.Types.RiderPlatform.Management.Booking.POST_BOOKING_CANCEL_ALL_STUCK))
       :> API.Types.RiderPlatform.Management.Booking.PostBookingCancelAllStuck
   )
 
 type PostBookingSyncMultiple =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_SYNC_MULTIPLE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.BOOKING) / ('API.Types.RiderPlatform.Management.Booking.POST_BOOKING_SYNC_MULTIPLE))
       :> API.Types.RiderPlatform.Management.Booking.PostBookingSyncMultiple
   )
 
-postBookingCancelAllStuck :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Booking.StuckBookingsCancelReq -> Environment.FlowHandler Dashboard.Common.Booking.StuckBookingsCancelRes)
+postBookingCancelAllStuck :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.Booking.StuckBookingsCancelReq -> Environment.FlowHandler Dashboard.Common.Booking.StuckBookingsCancelRes)
 postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Booking.postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req
 
-postBookingSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Booking.MultipleBookingSyncReq -> Environment.FlowHandler Dashboard.Common.Booking.MultipleBookingSyncResp)
+postBookingSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.Booking.MultipleBookingSyncReq -> Environment.FlowHandler Dashboard.Common.Booking.MultipleBookingSyncResp)
 postBookingSyncMultiple merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Booking.postBookingSyncMultiple merchantShortId opCity apiTokenInfo req

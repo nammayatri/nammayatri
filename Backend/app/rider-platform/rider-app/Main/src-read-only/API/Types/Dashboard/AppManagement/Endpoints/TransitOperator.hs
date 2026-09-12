@@ -46,7 +46,7 @@ type TransitOperatorGetRow =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] SharedLogic.External.Nandi.Types.NandiRow
+      :> Get ('[JSON]) SharedLogic.External.Nandi.Types.NandiRow
   )
 
 type TransitOperatorGetAllRows =
@@ -56,7 +56,7 @@ type TransitOperatorGetAllRows =
            SharedLogic.External.Nandi.Types.NandiTable
       :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.NandiRow]
   )
 
@@ -65,8 +65,8 @@ type TransitOperatorDeleteRow =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> ReqBody '[JSON] Data.Aeson.Value
-      :> Delete '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> ReqBody ('[JSON]) Data.Aeson.Value
+      :> Delete ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 type TransitOperatorUpsertRow =
@@ -74,9 +74,9 @@ type TransitOperatorUpsertRow =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> ReqBody '[JSON] Data.Aeson.Value
+      :> ReqBody ('[JSON]) Data.Aeson.Value
       :> Post
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.NandiRow
   )
 
@@ -85,9 +85,9 @@ type TransitOperatorUpsertRows =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> ReqBody '[JSON] [Data.Aeson.Value]
+      :> ReqBody ('[JSON]) [Data.Aeson.Value]
       :> Post
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.NandiRow]
   )
 
@@ -96,39 +96,39 @@ type TransitOperatorQueryRows =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> ReqBody '[JSON] SharedLogic.External.Nandi.Types.QueryBody
+      :> ReqBody ('[JSON]) SharedLogic.External.Nandi.Types.QueryBody
       :> Post
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.NandiRow]
   )
 
-type TransitOperatorGetServiceTypes = ("serviceTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.ServiceType])
+type TransitOperatorGetServiceTypes = ("serviceTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.ServiceType])
 
-type TransitOperatorGetRoutes = ("routes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.NandiRoute])
+type TransitOperatorGetRoutes = ("routes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.NandiRoute])
 
-type TransitOperatorGetDepots = ("depots" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.Depot])
+type TransitOperatorGetDepots = ("depots" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.Depot])
 
-type TransitOperatorGetShiftTypes = ("shiftTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.ShiftType])
+type TransitOperatorGetShiftTypes = ("shiftTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.ShiftType])
 
 type TransitOperatorGetScheduleNumbers =
   ( "scheduleNumbers" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.ScheduleNumber]
   )
 
-type TransitOperatorGetDayTypes = ("dayTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.DayType])
+type TransitOperatorGetDayTypes = ("dayTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.DayType])
 
-type TransitOperatorGetTripTypes = ("tripTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.TripType])
+type TransitOperatorGetTripTypes = ("tripTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.TripType])
 
-type TransitOperatorGetBreakTypes = ("breakTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [SharedLogic.External.Nandi.Types.BreakType])
+type TransitOperatorGetBreakTypes = ("breakTypes" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.BreakType])
 
 type TransitOperatorGetTripDetails =
   ( "tripDetails" :> MandatoryQueryParam "scheduleNumber" Kernel.Prelude.Text
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] [SharedLogic.External.Nandi.Types.NandiTripDetail]
+      :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.NandiTripDetail]
   )
 
 type TransitOperatorGetFleets =
@@ -136,65 +136,65 @@ type TransitOperatorGetFleets =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] [SharedLogic.External.Nandi.Types.Fleet]
+      :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.Fleet]
   )
 
 type TransitOperatorGetConductor =
   ( "conductor" :> MandatoryQueryParam "token" Kernel.Prelude.Text :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.Employee
   )
 
 type TransitOperatorGetDriver =
   ( "driver" :> MandatoryQueryParam "token" Kernel.Prelude.Text :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.Employee
   )
 
-type TransitOperatorGetDeviceIds = ("deviceIds" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [Kernel.Prelude.Text])
+type TransitOperatorGetDeviceIds = ("deviceIds" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [Kernel.Prelude.Text])
 
-type TransitOperatorGetTabletIds = ("tabletIds" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] [Kernel.Prelude.Text])
+type TransitOperatorGetTabletIds = ("tabletIds" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) [Kernel.Prelude.Text])
 
 type TransitOperatorGetOperators =
   ( "operators" :> MandatoryQueryParam "role" SharedLogic.External.Nandi.Types.OperatorRole
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] [SharedLogic.External.Nandi.Types.Employee]
+      :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.Employee]
   )
 
 type TransitOperatorUpdateWaybillStatus =
   ( "waybillStatus" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.UpdateWaybillStatusReq
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> Post ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 type TransitOperatorUpdateWaybillFleet =
   ( "waybillFleet" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.UpdateWaybillFleetReq
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> Post ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 type TransitOperatorUpdateWaybillDetails =
   ( "waybillDetails" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.UpdateWaybillDetailsReq
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> Post ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 type TransitOperatorUpdateWaybillTablet =
   ( "waybillTablet" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.UpdateWaybillTabletReq
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> Post ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 type TransitOperatorGetWaybills =
@@ -202,20 +202,20 @@ type TransitOperatorGetWaybills =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] [SharedLogic.External.Nandi.Types.NandiWaybillRow]
+      :> Get ('[JSON]) [SharedLogic.External.Nandi.Types.NandiWaybillRow]
   )
 
-type TransitOperatorGetDeviceVehicleMappingList = ("deviceVehicleMapping" :> "list" :> Get '[JSON] DeviceVehicleMappingListRes)
+type TransitOperatorGetDeviceVehicleMappingList = ("deviceVehicleMapping" :> "list" :> Get ('[JSON]) DeviceVehicleMappingListRes)
 
 type TransitOperatorUpsertDeviceVehicleMapping =
   ( "deviceVehicleMapping" :> "upsert"
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            UpsertDeviceVehicleMappingReq
-      :> Post '[JSON] UpsertDeviceVehicleMappingResp
+      :> Post ('[JSON]) UpsertDeviceVehicleMappingResp
   )
 
-type TransitOperatorUnblockBus = ("bus" :> Capture "vehicleNumber" Kernel.Prelude.Text :> "unblock" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type TransitOperatorUnblockBus = ("bus" :> Capture "vehicleNumber" Kernel.Prelude.Text :> "unblock" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type TransitOperatorSearchStops =
   ( "stops" :> "search" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "withRoutes" Kernel.Prelude.Bool
@@ -224,7 +224,7 @@ type TransitOperatorSearchStops =
            Kernel.Prelude.Text
       :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.EnrichedStop]
   )
 
@@ -241,22 +241,22 @@ type TransitOperatorNearbyStops =
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.EnrichedStop]
   )
 
 type TransitOperatorBulkReplaceStops =
   ( "stops" :> "bulkReplace" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.BulkReplaceReq
-      :> Post '[JSON] SharedLogic.External.Nandi.Types.BulkReplaceResult
+      :> Post ('[JSON]) SharedLogic.External.Nandi.Types.BulkReplaceResult
   )
 
 type TransitOperatorRouteStops =
   ( "routeStops" :> MandatoryQueryParam "routeId" Kernel.Prelude.Text :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.RouteStopsResponse
   )
 
@@ -265,24 +265,24 @@ type TransitOperatorInsertRouteStop =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> ReqBody '[JSON] SharedLogic.External.Nandi.Types.InsertRouteStopReq
+      :> ReqBody ('[JSON]) SharedLogic.External.Nandi.Types.InsertRouteStopReq
       :> Post
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.InsertRouteStopResp
   )
 
 type TransitOperatorReprocessRoutes =
   ( "routes" :> "reprocess" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            SharedLogic.External.Nandi.Types.ReprocessReq
-      :> Post '[JSON] [SharedLogic.External.Nandi.Types.ReprocessResult]
+      :> Post ('[JSON]) [SharedLogic.External.Nandi.Types.ReprocessResult]
   )
 
 type TransitOperatorExportRouteStopMapping =
   ( "routeStopMapping" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.RouteStopMappingExport]
   )
 
@@ -293,16 +293,16 @@ type TransitOperatorQueryVehicle =
            Kernel.Prelude.Text
       :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.Fleet]
   )
 
 type TransitOperatorUpsertVehicles =
   ( "upsertVehicles" :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            [SharedLogic.External.Nandi.Types.VehicleUpsertRequest]
-      :> Post '[JSON] [SharedLogic.External.Nandi.Types.Fleet]
+      :> Post ('[JSON]) [SharedLogic.External.Nandi.Types.Fleet]
   )
 
 type TransitOperatorDeleteVehicle =
@@ -310,49 +310,49 @@ type TransitOperatorDeleteVehicle =
       :> MandatoryQueryParam
            "vehicleId"
            Kernel.Prelude.Text
-      :> Delete '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
+      :> Delete ('[JSON]) SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
 data TransitOperatorAPIs = TransitOperatorAPIs
-  { transitOperatorGetRow :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
-    transitOperatorGetAllRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
-    transitOperatorDeleteRow :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorUpsertRow :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
-    transitOperatorUpsertRows :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> [Data.Aeson.Value] -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
-    transitOperatorQueryRows :: SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
-    transitOperatorGetServiceTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ServiceType],
-    transitOperatorGetRoutes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRoute],
-    transitOperatorGetDepots :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Depot],
-    transitOperatorGetShiftTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ShiftType],
-    transitOperatorGetScheduleNumbers :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ScheduleNumber],
-    transitOperatorGetDayTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.DayType],
-    transitOperatorGetTripTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.TripType],
-    transitOperatorGetBreakTypes :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.BreakType],
-    transitOperatorGetTripDetails :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiTripDetail],
-    transitOperatorGetFleets :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet],
-    transitOperatorGetConductor :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.Employee,
-    transitOperatorGetDriver :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.Employee,
-    transitOperatorGetDeviceIds :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Kernel.Prelude.Text],
-    transitOperatorGetTabletIds :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Kernel.Prelude.Text],
-    transitOperatorGetOperators :: SharedLogic.External.Nandi.Types.OperatorRole -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Employee],
-    transitOperatorUpdateWaybillStatus :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillStatusReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorUpdateWaybillFleet :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillFleetReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorUpdateWaybillDetails :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillDetailsReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorUpdateWaybillTablet :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillTabletReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
-    transitOperatorGetWaybills :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiWaybillRow],
-    transitOperatorGetDeviceVehicleMappingList :: EulerHS.Types.EulerClient DeviceVehicleMappingListRes,
-    transitOperatorUpsertDeviceVehicleMapping :: (Data.ByteString.Lazy.ByteString, UpsertDeviceVehicleMappingReq) -> EulerHS.Types.EulerClient UpsertDeviceVehicleMappingResp,
-    transitOperatorUnblockBus :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    transitOperatorSearchStops :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.EnrichedStop],
-    transitOperatorNearbyStops :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.EnrichedStop],
-    transitOperatorBulkReplaceStops :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.BulkReplaceReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.BulkReplaceResult,
-    transitOperatorRouteStops :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RouteStopsResponse,
-    transitOperatorInsertRouteStop :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.InsertRouteStopReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.InsertRouteStopResp,
-    transitOperatorReprocessRoutes :: BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.ReprocessReq -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ReprocessResult],
-    transitOperatorExportRouteStopMapping :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.RouteStopMappingExport],
-    transitOperatorQueryVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet],
-    transitOperatorUpsertVehicles :: BecknV2.OnDemand.Enums.VehicleCategory -> [SharedLogic.External.Nandi.Types.VehicleUpsertRequest] -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet],
-    transitOperatorDeleteVehicle :: BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp
+  { transitOperatorGetRow :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow),
+    transitOperatorGetAllRows :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow]),
+    transitOperatorDeleteRow :: (SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp),
+    transitOperatorUpsertRow :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow),
+    transitOperatorUpsertRows :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> [Data.Aeson.Value] -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow]),
+    transitOperatorQueryRows :: (SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow]),
+    transitOperatorGetServiceTypes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ServiceType]),
+    transitOperatorGetRoutes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRoute]),
+    transitOperatorGetDepots :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Depot]),
+    transitOperatorGetShiftTypes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ShiftType]),
+    transitOperatorGetScheduleNumbers :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ScheduleNumber]),
+    transitOperatorGetDayTypes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.DayType]),
+    transitOperatorGetTripTypes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.TripType]),
+    transitOperatorGetBreakTypes :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.BreakType]),
+    transitOperatorGetTripDetails :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiTripDetail]),
+    transitOperatorGetFleets :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet]),
+    transitOperatorGetConductor :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.Employee),
+    transitOperatorGetDriver :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.Employee),
+    transitOperatorGetDeviceIds :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Kernel.Prelude.Text]),
+    transitOperatorGetTabletIds :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Kernel.Prelude.Text]),
+    transitOperatorGetOperators :: (SharedLogic.External.Nandi.Types.OperatorRole -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Employee]),
+    transitOperatorUpdateWaybillStatus :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillStatusReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp),
+    transitOperatorUpdateWaybillFleet :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillFleetReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp),
+    transitOperatorUpdateWaybillDetails :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillDetailsReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp),
+    transitOperatorUpdateWaybillTablet :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillTabletReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp),
+    transitOperatorGetWaybills :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiWaybillRow]),
+    transitOperatorGetDeviceVehicleMappingList :: (EulerHS.Types.EulerClient DeviceVehicleMappingListRes),
+    transitOperatorUpsertDeviceVehicleMapping :: ((Data.ByteString.Lazy.ByteString, UpsertDeviceVehicleMappingReq) -> EulerHS.Types.EulerClient UpsertDeviceVehicleMappingResp),
+    transitOperatorUnblockBus :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    transitOperatorSearchStops :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.EnrichedStop]),
+    transitOperatorNearbyStops :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Double) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.EnrichedStop]),
+    transitOperatorBulkReplaceStops :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.BulkReplaceReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.BulkReplaceResult),
+    transitOperatorRouteStops :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RouteStopsResponse),
+    transitOperatorInsertRouteStop :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.InsertRouteStopReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.InsertRouteStopResp),
+    transitOperatorReprocessRoutes :: (BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.ReprocessReq -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.ReprocessResult]),
+    transitOperatorExportRouteStopMapping :: (BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.RouteStopMappingExport]),
+    transitOperatorQueryVehicle :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet]),
+    transitOperatorUpsertVehicles :: (BecknV2.OnDemand.Enums.VehicleCategory -> [SharedLogic.External.Nandi.Types.VehicleUpsertRequest] -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet]),
+    transitOperatorDeleteVehicle :: (BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp)
   }
 
 mkTransitOperatorAPIs :: (Client EulerHS.Types.EulerClient API -> TransitOperatorAPIs)
@@ -403,4 +403,4 @@ data TransitOperatorUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''TransitOperatorUserActionType])
+$(Data.Singletons.TH.genSingletons [(''TransitOperatorUserActionType)])

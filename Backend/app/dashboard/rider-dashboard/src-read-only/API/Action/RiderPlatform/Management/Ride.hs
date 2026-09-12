@@ -7,12 +7,13 @@ module API.Action.RiderPlatform.Management.Ride
   )
 where
 
-import qualified API.Types.ProviderPlatform.Management.Endpoints.Ride
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
+import qualified "lib-dashboard" Dashboard.Common.RideDebug
 import qualified Domain.Action.RiderPlatform.Management.Ride
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -24,7 +25,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRidePayoutOfferSync :<|> PostRideCancelMultiple :<|> GetRideKaptureList :<|> GetRideFlowDebugBap))
 
@@ -33,25 +33,25 @@ handler merchantId city = getRideList merchantId city :<|> getRideInfo merchantI
 
 type GetRideList =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.GET_RIDE_LIST)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.GET_RIDE_LIST))
       :> API.Types.RiderPlatform.Management.Ride.GetRideList
   )
 
 type GetRideInfo =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.GET_RIDE_INFO)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.GET_RIDE_INFO))
       :> API.Types.RiderPlatform.Management.Ride.GetRideInfo
   )
 
 type CancellationChargesWaiveOff =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.CANCELLATION_CHARGES_WAIVE_OFF)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.CANCELLATION_CHARGES_WAIVE_OFF))
       :> API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOff
   )
 
@@ -65,51 +65,51 @@ type GetRidePickupRoute = API.Types.RiderPlatform.Management.Ride.GetRidePickupR
 
 type PostRideSyncMultiple =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.POST_RIDE_SYNC_MULTIPLE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.POST_RIDE_SYNC_MULTIPLE))
       :> API.Types.RiderPlatform.Management.Ride.PostRideSyncMultiple
   )
 
 type PostRidePayoutOfferSync =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.POST_RIDE_PAYOUT_OFFER_SYNC)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.POST_RIDE_PAYOUT_OFFER_SYNC))
       :> API.Types.RiderPlatform.Management.Ride.PostRidePayoutOfferSync
   )
 
 type PostRideCancelMultiple =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.POST_RIDE_CANCEL_MULTIPLE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.POST_RIDE_CANCEL_MULTIPLE))
       :> API.Types.RiderPlatform.Management.Ride.PostRideCancelMultiple
   )
 
 type GetRideKaptureList =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.GET_RIDE_KAPTURE_LIST)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.GET_RIDE_KAPTURE_LIST))
       :> API.Types.RiderPlatform.Management.Ride.GetRideKaptureList
   )
 
 type GetRideFlowDebugBap =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.GET_RIDE_FLOW_DEBUG_BAP)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.RIDE) / ('API.Types.RiderPlatform.Management.Ride.GET_RIDE_FLOW_DEBUG_BAP))
       :> API.Types.RiderPlatform.Management.Ride.GetRideFlowDebugBap
   )
 
-getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideListRes)
+getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (API.Types.RiderPlatform.Management.Ride.BookingStatus) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideListRes)
 getRideList merchantShortId opCity apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRideList merchantShortId opCity apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to
 
-getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)
+getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)
 getRideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRideInfo merchantShortId opCity apiTokenInfo rideId
 
-cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
+cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
 cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId
 
 getShareRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
@@ -124,17 +124,17 @@ getRideTripRoute merchantShortId opCity rideId lat lon = withFlowHandlerAPI' $ D
 getRidePickupRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
 getRidePickupRoute merchantShortId opCity rideId lat lon = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRidePickupRoute merchantShortId opCity rideId lat lon
 
-postRideSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
+postRideSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
 postRideSyncMultiple merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.postRideSyncMultiple merchantShortId opCity apiTokenInfo req
 
-postRidePayoutOfferSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
+postRidePayoutOfferSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
 postRidePayoutOfferSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.postRidePayoutOfferSync merchantShortId opCity apiTokenInfo req
 
-postRideCancelMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideCancelMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideCancelMultiple merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.postRideCancelMultiple merchantShortId opCity apiTokenInfo req
 
-getRideKaptureList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.TicketRideListRes)
+getRideKaptureList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.TicketRideListRes)
 getRideKaptureList merchantShortId opCity apiTokenInfo rideShortId countryCode phoneNumber supportPhoneNumber = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRideKaptureList merchantShortId opCity apiTokenInfo rideShortId countryCode phoneNumber supportPhoneNumber
 
-getRideFlowDebugBap :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug)
+getRideFlowDebugBap :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler Dashboard.Common.RideDebug.BAPSideDebug)
 getRideFlowDebugBap merchantShortId opCity apiTokenInfo bapBookingId bapRideId bapRideShortId bapSearchRequestId bppBookingId transactionId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRideFlowDebugBap merchantShortId opCity apiTokenInfo bapBookingId bapRideId bapRideShortId bapSearchRequestId bppBookingId transactionId

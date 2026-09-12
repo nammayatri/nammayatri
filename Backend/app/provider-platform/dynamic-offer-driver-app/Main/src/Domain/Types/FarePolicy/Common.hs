@@ -17,7 +17,7 @@
 
 module Domain.Types.FarePolicy.Common where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson
 import EulerHS.Prelude hiding (length, map)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)

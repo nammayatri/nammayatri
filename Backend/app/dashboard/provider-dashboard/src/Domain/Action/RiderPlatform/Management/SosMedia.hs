@@ -8,6 +8,7 @@ where
 import qualified API.Client.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.SosMedia
 import qualified Dashboard.Common
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -15,13 +16,12 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 getSosMediaSosMedia ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id Dashboard.Common.Customer ->
   Environment.Flow [API.Types.RiderPlatform.Management.SosMedia.GetSosMediaResponse]
 getSosMediaSosMedia merchantShortId opCity apiTokenInfo customerId = do

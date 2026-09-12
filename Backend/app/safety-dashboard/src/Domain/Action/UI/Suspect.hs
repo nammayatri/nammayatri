@@ -3,9 +3,10 @@
 module Domain.Action.UI.Suspect where
 
 import API.Types.UI.Suspect
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Dashboard.SafetyPlatform as Safety
 import qualified Data.List as DL
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import qualified "lib-dashboard" Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Notification
 import qualified "lib-dashboard" Domain.Types.Person
@@ -13,14 +14,14 @@ import Domain.Types.Suspect
 import Domain.Types.SuspectFlagRequest
 import qualified Domain.Types.SuspectStatusChangeRequest
 import qualified Domain.Types.SuspectStatusHistory
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (concatMap, elem, filter, groupBy, id, length, map, mapM_, maximumBy, null, readMaybe, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
@@ -44,7 +45,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 data ChangeFlagNotificationMetadata = ChangeFlagNotificationMetadata

@@ -16,14 +16,14 @@ module API.Dashboard.ResourceScope where
 
 import qualified Domain.Action.Dashboard.ResourceScope as DRS
 import qualified Domain.Types.Person as DP
-import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI')
+import Kernel.Utils.Common (FlowHandlerR, FlowServerR)
 import Servant hiding (throwError)
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 -- Layer C surface. /user/resourceScope is what control-center analytics + the
 -- frontend read to filter results/dropdowns to the caller's assigned resources;
@@ -52,7 +52,7 @@ type API =
                :> Post '[JSON] APISuccess
          )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
   getUserResourceScope
     :<|> ( getPersonResourceAccess
@@ -60,14 +60,14 @@ handler =
              :<|> resetResourceAccess
          )
 
-getUserResourceScope :: BeamFlow' => TokenInfo -> FlowHandler DRS.UserResourceScopeRes
-getUserResourceScope = withFlowHandlerAPI' . DRS.getUserResourceScope
+getUserResourceScope :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DRS.UserResourceScopeRes
+getUserResourceScope = withDashboardDbFlowHandlerAPI . DRS.getUserResourceScope
 
-getPersonResourceAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> FlowHandler DRS.PersonResourceAccessRes
-getPersonResourceAccess tokenInfo = withFlowHandlerAPI' . DRS.getPersonResourceAccess tokenInfo
+getPersonResourceAccess :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> FlowHandlerR r DRS.PersonResourceAccessRes
+getPersonResourceAccess tokenInfo = withDashboardDbFlowHandlerAPI . DRS.getPersonResourceAccess tokenInfo
 
-assignResourceAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DRS.AssignResourceAccessReq -> FlowHandler APISuccess
-assignResourceAccess tokenInfo personId = withFlowHandlerAPI' . DRS.assignResourceAccess tokenInfo personId
+assignResourceAccess :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> DRS.AssignResourceAccessReq -> FlowHandlerR r APISuccess
+assignResourceAccess tokenInfo personId = withDashboardDbFlowHandlerAPI . DRS.assignResourceAccess tokenInfo personId
 
-resetResourceAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DRS.ResetResourceAccessReq -> FlowHandler APISuccess
-resetResourceAccess tokenInfo personId = withFlowHandlerAPI' . DRS.resetResourceAccess tokenInfo personId
+resetResourceAccess :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> DRS.ResetResourceAccessReq -> FlowHandlerR r APISuccess
+resetResourceAccess tokenInfo personId = withDashboardDbFlowHandlerAPI . DRS.resetResourceAccess tokenInfo personId

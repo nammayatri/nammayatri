@@ -10,6 +10,7 @@ where
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Offer
 import qualified Domain.Action.RiderPlatform.Management.Offer
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -20,7 +21,6 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.Offer
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("offer" :> (PostOfferCreate :<|> PostOfferUpdate :<|> GetOfferList :<|> PostOfferToggle :<|> PostOfferValidateEligibility :<|> GetOfferEligibilitySchema))
 
@@ -75,20 +75,20 @@ type GetOfferEligibilitySchema =
       :> API.Types.RiderPlatform.Management.Offer.GetOfferEligibilitySchema
   )
 
-postOfferCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Offer.CreateOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postOfferCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Offer.CreateOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postOfferCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.postOfferCreate merchantShortId opCity apiTokenInfo req
 
-postOfferUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> API.Types.RiderPlatform.Management.Offer.UpdateOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postOfferUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> API.Types.RiderPlatform.Management.Offer.UpdateOfferReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postOfferUpdate merchantShortId opCity apiTokenInfo offerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.postOfferUpdate merchantShortId opCity apiTokenInfo offerId req
 
-getOfferList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Offer.OfferResp])
+getOfferList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Offer.OfferResp])
 getOfferList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.getOfferList merchantShortId opCity apiTokenInfo
 
-postOfferToggle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postOfferToggle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postOfferToggle merchantShortId opCity apiTokenInfo offerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.postOfferToggle merchantShortId opCity apiTokenInfo offerId
 
-postOfferValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Offer.ValidateOfferEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Offer.ValidateOfferEligibilityResp)
+postOfferValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Offer.ValidateOfferEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Offer.ValidateOfferEligibilityResp)
 postOfferValidateEligibility merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.postOfferValidateEligibility merchantShortId opCity apiTokenInfo req
 
-getOfferEligibilitySchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.RiderPlatform.Management.Offer.OfferEligibilitySchemaResp)
+getOfferEligibilitySchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler API.Types.RiderPlatform.Management.Offer.OfferEligibilitySchemaResp)
 getOfferEligibilitySchema merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Offer.getOfferEligibilitySchema merchantShortId opCity apiTokenInfo

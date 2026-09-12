@@ -17,12 +17,13 @@ import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DDR
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "beckn-spec" Domain.Types.InitiatedBy as DIB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.Prelude
@@ -32,12 +33,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
 
@@ -100,7 +100,7 @@ postRegistrationV2RegisterClientCall checkedMerchantId opCity requestorId req' =
 postRegistrationV2Register ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.FleetOwnerRegisterReqV2 ->
   Flow APISuccess
 postRegistrationV2Register = postRegistrationV2Register' postRegistrationV2RegisterClientCall
@@ -109,7 +109,7 @@ postRegistrationV2Register' ::
   RegisterClientCall ->
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.FleetOwnerRegisterReqV2 ->
   Flow APISuccess
 postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req = do
@@ -143,7 +143,7 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
   let fleetRole = getFleetRole req.fleetType
   fleetOwnerRole <- QRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
 
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <-
     T.withTransactionStoring transaction $
       clientCall checkedMerchantId opCity requestorId req'
@@ -165,21 +165,21 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
 postRegistrationV2RegisterBankAccountLink ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Text ->
   Maybe DMPM.PaymentMode ->
   Maybe DIB.InitiatedBy ->
   Flow Common.FleetBankAccountLinkResp
 postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode initiatedBy = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2RegisterBankAccountLink) fleetOwnerId paymentMode initiatedBy apiTokenInfo.personId.getId
 
 getRegistrationV2RegisterBankAccountStatus ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Text ->
   Maybe Bool ->
   Flow Common.FleetBankAccountResp
@@ -190,12 +190,12 @@ getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo f
 putRegistrationV2ProfileLanguage ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.FleetOwnerUpdateLanguageReq ->
   Flow APISuccess
 putRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   _ <-
     T.withTransactionStoring transaction $
       Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.putRegistrationV2ProfileLanguage) apiTokenInfo.personId.getId req
@@ -205,7 +205,7 @@ putRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo req = do
 getRegistrationV2ProfileLanguage ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Flow Common.FleetOwnerLanguageRes
 getRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city

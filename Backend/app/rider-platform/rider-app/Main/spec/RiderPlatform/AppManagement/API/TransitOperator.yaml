@@ -1,0 +1,486 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+  ServiceType: SharedLogic.External.Nandi.Types
+  NandiRoute: SharedLogic.External.Nandi.Types
+  Depot: SharedLogic.External.Nandi.Types
+  ScheduleNumber: SharedLogic.External.Nandi.Types
+  Fleet: SharedLogic.External.Nandi.Types
+  Employee: SharedLogic.External.Nandi.Types
+  NandiTripDetail: SharedLogic.External.Nandi.Types
+  UpdateWaybillStatusReq: SharedLogic.External.Nandi.Types
+  UpdateWaybillFleetReq: SharedLogic.External.Nandi.Types
+  UpdateWaybillDetailsReq: SharedLogic.External.Nandi.Types
+  UpdateWaybillTabletReq: SharedLogic.External.Nandi.Types
+  RowsAffectedResp: SharedLogic.External.Nandi.Types
+  NandiTable: SharedLogic.External.Nandi.Types
+  WaybillStatus: SharedLogic.External.Nandi.Types
+  OperatorRole: SharedLogic.External.Nandi.Types
+  ShiftType: SharedLogic.External.Nandi.Types
+  DayType: SharedLogic.External.Nandi.Types
+  TripType: SharedLogic.External.Nandi.Types
+  BreakType: SharedLogic.External.Nandi.Types
+  NandiRow: SharedLogic.External.Nandi.Types
+  NandiWaybillRow: SharedLogic.External.Nandi.Types
+  QueryBody: SharedLogic.External.Nandi.Types
+  EnrichedStop: SharedLogic.External.Nandi.Types
+  BulkReplaceReq: SharedLogic.External.Nandi.Types
+  BulkReplaceResult: SharedLogic.External.Nandi.Types
+  RouteStopsResponse: SharedLogic.External.Nandi.Types
+  InsertRouteStopReq: SharedLogic.External.Nandi.Types
+  InsertRouteStopResp: SharedLogic.External.Nandi.Types
+  ReprocessReq: SharedLogic.External.Nandi.Types
+  ReprocessResult: SharedLogic.External.Nandi.Types
+  RouteStopMappingExport: SharedLogic.External.Nandi.Types
+  VehicleUpsertRequest: SharedLogic.External.Nandi.Types
+  Value: Data.Aeson
+  FilePath: EulerHS.Prelude
+  APISuccess: Kernel.Types.APISuccess
+
+importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
+  BecknV2.OnDemand.Enums: "beckn-spec"
+  SharedLogic.External.Nandi.Types: "rider-app"
+
+module: TransitOperator
+apiPrefix: transitOperator
+
+apis:
+  - GET:
+      endpoint: /row
+      name: TransitOperatorGetRow
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      query:
+        column: Text
+      response:
+        type: NandiRow
+
+  - GET:
+      endpoint: /allRows
+      name: TransitOperatorGetAllRows
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[NandiRow]"
+
+  - DELETE:
+      endpoint: /row
+      name: TransitOperatorDeleteRow
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      request:
+        type: Value
+      response:
+        type: RowsAffectedResp
+
+  - POST:
+      endpoint: /row
+      name: TransitOperatorUpsertRow
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      query:
+        toRegen: Text
+      request:
+        type: Value
+      response:
+        type: NandiRow
+
+  - POST:
+      endpoint: /rows
+      auditRequestBody: false
+      name: TransitOperatorUpsertRows
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      query:
+        toRegen: Text
+      request:
+        type: "[Value]"
+      response:
+        type: "[NandiRow]"
+
+  - POST:
+      endpoint: /queryRow
+      name: TransitOperatorQueryRows
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        table: NandiTable
+      request:
+        type: QueryBody
+      response:
+        type: "[NandiRow]"
+
+  - GET:
+      endpoint: /serviceTypes
+      name: TransitOperatorGetServiceTypes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[ServiceType]"
+
+  - GET:
+      endpoint: /routes
+      name: TransitOperatorGetRoutes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[NandiRoute]"
+
+  - GET:
+      endpoint: /depots
+      name: TransitOperatorGetDepots
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[Depot]"
+
+  - GET:
+      endpoint: /shiftTypes
+      name: TransitOperatorGetShiftTypes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[ShiftType]"
+
+  - GET:
+      endpoint: /scheduleNumbers
+      name: TransitOperatorGetScheduleNumbers
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[ScheduleNumber]"
+
+  - GET:
+      endpoint: /dayTypes
+      name: TransitOperatorGetDayTypes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[DayType]"
+
+  - GET:
+      endpoint: /tripTypes
+      name: TransitOperatorGetTripTypes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[TripType]"
+
+  - GET:
+      endpoint: /breakTypes
+      name: TransitOperatorGetBreakTypes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[BreakType]"
+
+  - GET:
+      endpoint: /tripDetails
+      name: TransitOperatorGetTripDetails
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        scheduleNumber: Text
+      response:
+        type: "[NandiTripDetail]"
+
+  - GET:
+      endpoint: /fleets
+      name: TransitOperatorGetFleets
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[Fleet]"
+
+  - GET:
+      endpoint: /conductor
+      name: TransitOperatorGetConductor
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        token: Text
+      response:
+        type: Employee
+
+  - GET:
+      endpoint: /driver
+      name: TransitOperatorGetDriver
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        token: Text
+      response:
+        type: Employee
+
+  - GET:
+      endpoint: /deviceIds
+      name: TransitOperatorGetDeviceIds
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[Text]"
+
+  - GET:
+      endpoint: /tabletIds
+      name: TransitOperatorGetTabletIds
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[Text]"
+
+  - GET:
+      endpoint: /operators
+      name: TransitOperatorGetOperators
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        role: OperatorRole
+      response:
+        type: "[Employee]"
+
+  - POST:
+      endpoint: /waybillStatus
+      name: TransitOperatorUpdateWaybillStatus
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillStatusReq
+      response:
+        type: RowsAffectedResp
+
+  - POST:
+      endpoint: /waybillFleet
+      name: TransitOperatorUpdateWaybillFleet
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillFleetReq
+      response:
+        type: RowsAffectedResp
+
+  - POST:
+      endpoint: /waybillDetails
+      name: TransitOperatorUpdateWaybillDetails
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillDetailsReq
+      response:
+        type: RowsAffectedResp
+
+  - POST:
+      endpoint: /waybillTablet
+      name: TransitOperatorUpdateWaybillTablet
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillTabletReq
+      response:
+        type: RowsAffectedResp
+
+  - GET:
+      endpoint: /waybills
+      name: TransitOperatorGetWaybills
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[NandiWaybillRow]"
+
+  - GET:
+      endpoint: /deviceVehicleMapping/list
+      name: TransitOperatorGetDeviceVehicleMappingList
+      auth: ApiAuthV2
+      response:
+        type: DeviceVehicleMappingListRes
+
+  - POST:
+      endpoint: /deviceVehicleMapping/upsert
+      name: TransitOperatorUpsertDeviceVehicleMapping
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertDeviceVehicleMappingReq
+      response:
+        type: UpsertDeviceVehicleMappingResp
+
+  - POST:
+      endpoint: /bus/{vehicleNumber}/unblock
+      name: TransitOperatorUnblockBus
+      auth: ApiAuthV2
+      params:
+        vehicleNumber: Text
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /stops/search
+      name: TransitOperatorSearchStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        q: Text
+      query:
+        limit: Int
+        withRoutes: Bool
+      response:
+        type: "[EnrichedStop]"
+
+  - GET:
+      endpoint: /stops/nearby
+      name: TransitOperatorNearbyStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        lat: Double
+        lon: Double
+      query:
+        radius: Double
+        limit: Int
+        withRoutes: Bool
+      response:
+        type: "[EnrichedStop]"
+
+  - POST:
+      endpoint: /stops/bulkReplace
+      name: TransitOperatorBulkReplaceStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: BulkReplaceReq
+      response:
+        type: BulkReplaceResult
+
+  - GET:
+      endpoint: /routeStops
+      name: TransitOperatorRouteStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        routeId: Text
+      response:
+        type: RouteStopsResponse
+
+  - POST:
+      endpoint: /routeStops/insert
+      name: TransitOperatorInsertRouteStop
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        routeId: Text
+      request:
+        type: InsertRouteStopReq
+      response:
+        type: InsertRouteStopResp
+
+  - POST:
+      endpoint: /routes/reprocess
+      name: TransitOperatorReprocessRoutes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: ReprocessReq
+      response:
+        type: "[ReprocessResult]"
+
+  - GET:
+      endpoint: /routeStopMapping
+      name: TransitOperatorExportRouteStopMapping
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[RouteStopMappingExport]"
+
+  - GET:
+      endpoint: /queryVehicle
+      name: TransitOperatorQueryVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        vehicleNo: Text
+        tagNumber: Text
+        fleetNo: Text
+      response:
+        type: "[Fleet]"
+
+  - POST:
+      endpoint: /upsertVehicles
+      name: TransitOperatorUpsertVehicles
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: "[VehicleUpsertRequest]"
+      response:
+        type: "[Fleet]"
+
+  - DELETE:
+      endpoint: /deleteVehicle
+      name: TransitOperatorDeleteVehicle
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        vehicleId: Text
+      response:
+        type: RowsAffectedResp
+
+types:
+  DeviceVehicleMappingListRes:
+    mappings: "[DeviceVehicleMappingItem]"
+  DeviceVehicleMappingItem:
+    deviceId: Text
+    vehicleNo: Text
+    gtfsId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  UpsertDeviceVehicleMappingReq:
+    recordType: NewType
+    file: FilePath
+    derive: "'HideSecrets"
+  UpsertDeviceVehicleMappingResp:
+    success: Text
+    unprocessedEntries: [Text]
+

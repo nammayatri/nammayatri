@@ -9,6 +9,6 @@ INSERT INTO atlas_dashboard.role (id, name, dashboard_access_type, description, 
     ('a708c6a1-78b5-4e5e-9df8-468cd81dc2aa', 'CUSTOMER_SERVICE',   'DASHBOARD_USER',     'customer service',                               '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('e5a69a26-d165-455a-a711-33a41e0d4812', 'FLEET',              'FLEET_OWNER',        'fleet owner',                                    '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('00000000-0000-0000-rental-fleet-role', 'RENTAL_FLEET_OWNER', 'RENTAL_FLEET_OWNER', 'rental fleet owner',                             '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
-    ('00000000-0000-0000-000-operator-role', 'OPERATOR',           'OPERATOR',           'operator',                                       '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
+    ('00000000-0000-0000-000-operator-role', 'OPERATOR',           'DASHBOARD_OPERATOR', 'operator',                                       '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('f6b70b37-d165-455a-a711-33a41e0d47c6', 'INTERNAL_ADMIN',     'DASHBOARD_ADMIN',    'InternalAdmin',                                  '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00')
 ON CONFLICT (id) DO NOTHING;

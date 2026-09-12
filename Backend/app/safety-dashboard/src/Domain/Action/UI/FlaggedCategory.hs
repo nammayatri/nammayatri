@@ -4,16 +4,17 @@ module Domain.Action.UI.FlaggedCategory where
 
 import API.Types.UI.FlaggedCategory
 import qualified API.Types.UI.Notification as Notification
-import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
+import qualified Dashboard.SafetyPlatform as Safety
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.FlaggedCategory
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.FlaggedCategory as SQFC
 import qualified Storage.Queries.FlaggedCategoryExtra as SQFCE
@@ -26,7 +27,7 @@ buildTransaction ::
   Safety.SafetyEndpoint ->
   TokenInfo ->
   Text ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 postAddFlagCategory :: TokenInfo -> API.Types.UI.FlaggedCategory.AddFlagCategoryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess

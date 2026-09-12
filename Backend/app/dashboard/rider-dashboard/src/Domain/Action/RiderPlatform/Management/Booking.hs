@@ -19,38 +19,38 @@ module Domain.Action.RiderPlatform.Management.Booking
 where
 
 import qualified API.Client.RiderPlatform.Management as Client
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Booking as Common
+import qualified "rider-app" API.Types.RiderPlatform.Management.Booking as Common
+import "rider-app" Domain.Types.AccessMatrix hiding (DRIVER_OFFER_BPP)
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow)
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
 import "lib-dashboard" Tools.Auth.Merchant
 
 buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction UserActionType)
 buildTransaction apiTokenInfo =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-postBookingCancelAllStuck :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> Flow Common.StuckBookingsCancelRes
+postBookingCancelAllStuck :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.StuckBookingsCancelReq -> Flow Common.StuckBookingsCancelRes
 postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.bookingDSL.postBookingCancelAllStuck) req
 
-postBookingSyncMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
+postBookingSyncMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.MultipleBookingSyncReq -> Flow Common.MultipleBookingSyncResp
 postBookingSyncMultiple merchantShortId opCity apiTokenInfo req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city

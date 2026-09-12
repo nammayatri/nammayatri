@@ -11,8 +11,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_DASHBOARD_AUTH
       | API_TREE
       | API_TREE_DASHBOARD
+      | API_TREE_DASHBOARD_AUTH
       | API_TREE_COMMON
       | API_TREE_CLIENT
       | API_TYPES
@@ -125,7 +127,6 @@ let mkDefaultImports =
         , { _simpleImports =
             [ "EulerHS.Prelude"
             , "Servant"
-            , "Tools.Auth.Api"
             , "Kernel.Utils.Common"
             , "Storage.Beam.CommonInstances ()"
             ]
@@ -137,7 +138,11 @@ let mkDefaultImports =
             , "Kernel.Types.Beckn.Context"
             ]
           , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
+            [ { _importType = ImportType.SIMPLE
+              , _importPackageName = appName
+              , _importModuleName = "Domain.Types.AccessMatrix"
+              }
+            , { _importType = ImportType.QUALIFIED
               , _importPackageName = "lib-dashboard"
               , _importModuleName = "Domain.Types.Merchant"
               }
@@ -150,7 +155,6 @@ let mkDefaultImports =
           }
         , { _simpleImports =
             [ "EulerHS.Prelude"
-            , "Tools.Auth.Api"
             , "Tools.Auth.Merchant"
             , "Kernel.Utils.Common"
             , "Storage.Beam.CommonInstances ()"
@@ -163,7 +167,11 @@ let mkDefaultImports =
             , "SharedLogic.Transaction"
             ]
           , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
+            [ { _importType = ImportType.SIMPLE
+              , _importPackageName = appName
+              , _importModuleName = "Domain.Types.AccessMatrix"
+              }
+            , { _importType = ImportType.QUALIFIED
               , _importPackageName = "lib-dashboard"
               , _importModuleName = "Domain.Types.Merchant"
               }
@@ -335,6 +343,7 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
+      , _appServerDashboardAuth = None Bool
       , _capabilityBaseline = None Text
       , _endpointPrefix = None Text
       , _migrationParams =

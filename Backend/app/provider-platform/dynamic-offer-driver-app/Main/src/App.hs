@@ -28,7 +28,7 @@ import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
+import Kernel.Beam.Connection.Flow (prepareConnectionDriver, prepareDashboardDbForApp)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
@@ -127,6 +127,12 @@ runDynamicOfferDriverApp' appCfg = do
               }
             appCfg.kvConfigUpdateFrequency
         )
+          -- Opt-in: only registers when the dhall config supplies it. Without it
+          -- runInDashboardDb has nothing to resolve and is never entered.
+          >> maybe
+            (pure ())
+            (\dashboardCfg -> prepareDashboardDbForApp dashboardCfg appCfg.esqDashboardDBReplicaCfg)
+            appCfg.esqDashboardDBCfg
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
           >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
       )

@@ -26,7 +26,7 @@ module Lib.DriverCoins.Types
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
+import qualified "this" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Domain.Types.CancellationReason
 import Domain.Types.Ride
 import Kernel.Prelude

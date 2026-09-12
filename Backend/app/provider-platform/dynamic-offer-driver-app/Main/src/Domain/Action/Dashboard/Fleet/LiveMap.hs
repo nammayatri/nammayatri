@@ -1,6 +1,6 @@
 module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers) where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as ATD
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as ATD
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)

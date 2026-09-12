@@ -5,7 +5,7 @@ module DriverOperationHubUnitTests where
 
 -- Imports for the real function and types
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Operator.Endpoints.Driver as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Operator.Endpoints.Driver as Common
 import Control.Exception (evaluate, try)
 import qualified Data.Text as T
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Operator.Driver as DDriverOp

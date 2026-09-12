@@ -36,7 +36,7 @@ import qualified Storage.Queries.MerchantPair as QMerchantPair
 -- Dashboard unification: BAP routes are served by the provider server, so a
 -- BPP token legitimately addresses BAP-tree URLs — /bpp/bap/JATRI_SAATHI/...
 -- with a token bound to JATRI_SAATHI_PARTNER. A plain equality check denies
--- every one of those. `Tools.Auth.Api.verifyServerWithPair` already resolves
+-- every one of those. `Tools.Auth.Verify.verifyServerWithPair` already resolves
 -- the logical partner for the SERVER check; this is the same idea for the
 -- merchant short id.
 --

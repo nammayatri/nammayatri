@@ -21,10 +21,11 @@ where
 
 import qualified "special-zone" API.Types as SzAPI
 import Dashboard.Common (HideSecrets)
-import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
-import Domain.Types.ServerName
+import qualified "lib-dashboard" Dashboard.Common.SpecialZone as Common
+import "lib-dashboard" Domain.Types.DashboardActionType
+import qualified "lib-dashboard" Domain.Types.DashboardActionType as DashAuth
 import "special-zone" Domain.Types.SpecialZone
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
@@ -33,9 +34,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.SpecialZone as Client
 import Servant
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth
 
 type API =
   "specialZone"
@@ -63,27 +63,27 @@ buildTransaction ::
   ) =>
   Common.SpecialZoneEndpoint ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction DashAuth.DashboardActionType)
 buildTransaction endpoint =
   T.buildTransaction (DT.SpecialZoneAPI endpoint) (Just SPECIAL_ZONE) Nothing Nothing Nothing
 
-lookupSpecialZone :: ApiTokenInfo -> LatLong -> LatLong -> FlowHandler [SpecialZone]
+lookupSpecialZone :: ApiTokenInfo DashboardActionType -> LatLong -> LatLong -> FlowHandler [SpecialZone]
 lookupSpecialZone _ minLatLng maxLatLng = withFlowHandlerAPI' $ do
   Client.callSpecialZone (.lookupSpecialZone) minLatLng maxLatLng
 
-createSpecialZone :: ApiTokenInfo -> SpecialZoneAPIEntity -> FlowHandler APISuccess
+createSpecialZone :: ApiTokenInfo DashboardActionType -> SpecialZoneAPIEntity -> FlowHandler APISuccess
 createSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.CreateSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
     Client.callSpecialZone (.createSpecialZone) req
 
-updateSpecialZone :: ApiTokenInfo -> SpecialZone -> FlowHandler APISuccess
+updateSpecialZone :: ApiTokenInfo DashboardActionType -> SpecialZone -> FlowHandler APISuccess
 updateSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.UpdateSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
     Client.callSpecialZone (.updateSpecialZone) req
 
-deleteSpecialZone :: ApiTokenInfo -> Id SpecialZone -> FlowHandler APISuccess
+deleteSpecialZone :: ApiTokenInfo DashboardActionType -> Id SpecialZone -> FlowHandler APISuccess
 deleteSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.DeleteSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
