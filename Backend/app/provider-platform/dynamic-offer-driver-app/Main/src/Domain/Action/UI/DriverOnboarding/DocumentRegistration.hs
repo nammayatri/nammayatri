@@ -22,6 +22,7 @@ module Domain.Action.UI.DriverOnboarding.DocumentRegistration
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -42,6 +43,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -78,7 +80,17 @@ validateDocument ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ValidateDocumentImageRequest ->
   Flow ValidateDocumentImageResponse
-validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDocumentImageRequest {..} = do
+validateDocument isDashboard ids req = do
+  resp <- validateDocumentImage isDashboard ids req
+  persistImageMetadata resp
+  pure resp
+
+validateDocumentImage ::
+  Bool ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ValidateDocumentImageRequest ->
+  Flow ValidateDocumentImageResponse
+validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) ValidateDocumentImageRequest {..} = do
   logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageResponse <- Image.validateImage isDashboard Nothing Nothing (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
@@ -158,6 +170,47 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
                 return $ emptyValidateDocumentImageResponse imageId
         _ -> return $ emptyValidateDocumentImageResponse imageId
 
+persistImageMetadata :: ValidateDocumentImageResponse -> Flow ()
+persistImageMetadata resp =
+  unless (T.null resp.imageId.getId || metadata == emptyImageMetadata) $
+    QImage.updateMetadata (Just metadata) resp.imageId
+  where
+    metadata = mkImageMetadata resp
+
+mkImageMetadata :: ValidateDocumentImageResponse -> Domain.ImageMetadata
+mkImageMetadata ValidateDocumentImageResponse {..} =
+  Domain.ImageMetadata
+    { documentNumber,
+      nameOnCard,
+      dateOfBirth,
+      vehicleClass,
+      manufacturer,
+      vehicleModel,
+      fuelType,
+      colour,
+      chassisNumber,
+      engineNumber,
+      registrationDate,
+      ownerName
+    }
+
+emptyImageMetadata :: Domain.ImageMetadata
+emptyImageMetadata =
+  Domain.ImageMetadata
+    { documentNumber = Nothing,
+      nameOnCard = Nothing,
+      dateOfBirth = Nothing,
+      vehicleClass = Nothing,
+      manufacturer = Nothing,
+      vehicleModel = Nothing,
+      fuelType = Nothing,
+      colour = Nothing,
+      chassisNumber = Nothing,
+      engineNumber = Nothing,
+      registrationDate = Nothing,
+      ownerName = Nothing
+    }
+
 emptyValidateDocumentImageResponse :: Id Domain.Image -> ValidateDocumentImageResponse
 emptyValidateDocumentImageResponse imageId =
   ValidateDocumentImageResponse
@@ -184,6 +237,16 @@ getOCRResultRC ::
   Maybe Text ->
   Flow ValidateDocumentImageResponse
 getOCRResultRC personId merchantOpCityId mbImageId = do
+  resp <- getOCRResultRC' personId merchantOpCityId mbImageId
+  persistImageMetadata resp
+  pure resp
+
+getOCRResultRC' ::
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  Flow ValidateDocumentImageResponse
+getOCRResultRC' personId merchantOpCityId mbImageId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRC <- Verification.getOCRResultRC personId.getId
   let resolvedImageId = maybe (Id "") Id mbImageId
@@ -211,6 +274,16 @@ getOCRResultDL ::
   Maybe Text ->
   Flow ValidateDocumentImageResponse
 getOCRResultDL personId merchantOpCityId mbImageId = do
+  resp <- getOCRResultDL' personId merchantOpCityId mbImageId
+  persistImageMetadata resp
+  pure resp
+
+getOCRResultDL' ::
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  Flow ValidateDocumentImageResponse
+getOCRResultDL' personId merchantOpCityId mbImageId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbDL <- Verification.getOCRResultDL personId.getId
   let resolvedImageId = maybe (Id "") Id mbImageId
@@ -236,6 +309,15 @@ getOCRResultPAN ::
   Maybe Text ->
   Flow ValidateDocumentImageResponse
 getOCRResultPAN personId mbImageId = do
+  resp <- getOCRResultPAN' personId mbImageId
+  persistImageMetadata resp
+  pure resp
+
+getOCRResultPAN' ::
+  Id Person.Person ->
+  Maybe Text ->
+  Flow ValidateDocumentImageResponse
+getOCRResultPAN' personId mbImageId = do
   mbPAN <- Verification.getOCRResultPAN personId.getId
   let resolvedImageId = maybe (Id "") Id mbImageId
   case mbPAN of

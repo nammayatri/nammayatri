@@ -61,8 +61,7 @@ data VehicleDocsEntry = VehicleDocsEntry
   { vdeRegistrationNo :: Text,
     vdeItem :: VehicleDocumentItem,
     vdeConfigs :: [DVC.DocumentVerificationConfig],
-    -- | statusHandler passes the caller's value; the standalone vehicle recompute passes Nothing.
-    --   The two differ today and both are preserved.
+    -- | The caller's value when known (statusHandler); standalone recomputes pass Nothing.
     vdeMakeSelfieAadhaarPanMandatory :: Maybe Bool
   }
 
@@ -181,10 +180,11 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
         logError $ "onboardingFlags: mutation blocked for " <> person.id.getId <> ": " <> show err
         pure False
   let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
-  isFleetDriver <-
-    if useUnifiedOnboardingFlagsRecompute
-      then pure $ fromMaybe (effectiveOnboardingAs == DI.FLEET_DRIVER) mbIsFleetDriver
-      else hasActiveFleetAssociation person.id
+  isFleetDriver <- case mbIsFleetDriver of
+    Just isFleet -> pure isFleet
+    Nothing
+      | effectiveOnboardingAs == DI.FLEET_DRIVER -> isJust <$> QFDA.findOneByDriverIdWithStatus person.id
+      | otherwise -> pure False
   let driverDocConfigs = case allDocVerificationConfigs of Right configs -> configs; Left _ -> []
       unavailableVehicleDocs =
         map mkUnavailableDoc . nub . map (.documentType) $
@@ -192,8 +192,9 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       checkDriverDocs mode = checkAllDocsValid mode (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       checkVehicleDocs mode category docs = checkAllDocsValid mode (Just isFleetDriver) (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
       mbValidVehicleDoc mode = find (\item -> checkVehicleDocs mode (vehicleDocCategory item) item.documents) vehicleDocuments
+      includeVehicleDocs = transporterConfig.separateDriverVehicleEnablement /= Just True
       vehicleDocsOk mode =
-        not useUnifiedOnboardingFlagsRecompute
+        not includeVehicleDocs
           || ( case vehicleDocuments of
                  [] -> checkVehicleDocs mode vehicleCategory unavailableVehicleDocs
                  _ -> isJust (mbValidVehicleDoc mode)
@@ -201,19 +202,15 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       allMandatoryDocsValid = checkDriverDocs ForVerified && vehicleDocsOk ForVerified
       allEnablingDocsValid = checkDriverDocs ForEnabling && vehicleDocsOk ForEnabling
       approvalDocs =
-        if useUnifiedOnboardingFlagsRecompute
+        if includeVehicleDocs
           then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
       approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
       newApproved =
-        if useUnifiedOnboardingFlagsRecompute
-          then
-            ( case derivedApproved of
-                Just True | not allMandatoryDocsValid -> Nothing
-                other -> other
-            )
-          else if allMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
+        case derivedApproved of
+          Just True | not allMandatoryDocsValid -> Nothing
+          other -> other
       holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (driverInfo.verified || driverInfo.enabled)
       verifiedToWrite =
         if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed)
@@ -223,30 +220,27 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
         if holdEnabledWithoutDocsVerifiedEnabledOrApproved || (driverInfo.approved == Just True && newApproved /= Just True && not mutationAllowed)
           then driverInfo.approved
           else newApproved
-  when (verifiedToWrite /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= driverInfo.approved)) $
+  when (verifiedToWrite /= driverInfo.verified || approvedToWrite /= driverInfo.approved) $
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) verifiedToWrite approvedToWrite
   consentGateOk <-
-    if useUnifiedOnboardingFlagsRecompute && effectiveOnboardingAs == DI.FLEET_DRIVER
+    if effectiveOnboardingAs == DI.FLEET_DRIVER
       then hasActiveFleetAssociation person.id
       else pure True
   -- Fleet disablement is *pulled*, not pushed: a fleet owner going disabled only stamps its own
   -- FleetOwnerInformation. A FLEET_DRIVER picks that up here, on its own recompute, and drops it
   -- again once the fleet's flag clears. Drivers disabled for another reason are left alone.
   effectiveDisabledReasonFlag <-
-    if useUnifiedOnboardingFlagsRecompute
-      then
-        if effectiveOnboardingAs == DI.FLEET_DRIVER
-          then do
-            fleetDisabled <- isFleetOfDriverDisabled person.id
-            pure $ case (fleetDisabled, driverInfo.disabledReasonFlag) of
-              (True, Nothing) -> Just DI.FleetDisabled
-              (False, Just DI.FleetDisabled) -> Nothing
-              (_, existing) -> existing
-          else pure $ case driverInfo.disabledReasonFlag of
-            Just DI.FleetDisabled -> Nothing
-            existing -> existing
-      else pure driverInfo.disabledReasonFlag
-  when (useUnifiedOnboardingFlagsRecompute && effectiveDisabledReasonFlag /= driverInfo.disabledReasonFlag) $
+    if effectiveOnboardingAs == DI.FLEET_DRIVER && consentGateOk
+      then do
+        fleetDisabled <- isFleetOfDriverDisabled person.id
+        pure $ case (fleetDisabled, driverInfo.disabledReasonFlag) of
+          (True, Nothing) -> Just DI.FleetDisabled
+          (False, Just DI.FleetDisabled) -> Nothing
+          (_, existing) -> existing
+      else pure $ case driverInfo.disabledReasonFlag of
+        Just DI.FleetDisabled -> Nothing
+        existing -> existing
+  when (effectiveDisabledReasonFlag /= driverInfo.disabledReasonFlag) $
     DIQuery.updateDisabledReasonFlag effectiveDisabledReasonFlag (cast person.id)
   -- A disabled driver keeps its force-enable marker unless the city wants the disable to send them
   -- back to onboarding; clearing it is what makes `enabled` derive from documents again.
@@ -257,8 +251,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           DIQueryExtra.updateEnabledReasonFlag (Just DI.AdminEnabled) (cast person.id)
         pure (Just DI.AdminEnabled)
       else
-        if useUnifiedOnboardingFlagsRecompute
-          && mutationAllowed
+        if mutationAllowed
           && isJust effectiveDisabledReasonFlag
           && driverInfo.enabledReasonFlag == Just DI.AdminEnabled
           && transporterConfig.forceEnabledBypassingDocsUponDisableTakesToOnboarding == Just True
@@ -266,26 +259,23 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
             DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
             pure Nothing
           else pure driverInfo.enabledReasonFlag
-  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else True
+  let approvedGateOk = approvedToWrite == Just True
       bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
       docsDerivedEnable = consentGateOk && verifiedToWrite && allEnablingDocsValid && approvedGateOk
       derivedShouldEnable = bypassDocGates || docsDerivedEnable
       shouldEnable = derivedShouldEnable || (driverInfo.enabled && not mutationAllowed)
-  when (useUnifiedOnboardingFlagsRecompute && bypassDocGates && docsDerivedEnable) $
+  when (bypassDocGates && docsDerivedEnable) $
     DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.
   mbFleetAssoc <-
-    if effectiveOnboardingAs == DI.FLEET_DRIVER || useUnifiedOnboardingFlagsRecompute
+    if effectiveOnboardingAs == DI.FLEET_DRIVER
       then QFDA.findOneByDriverIdWithStatus person.id
       else pure Nothing
   if justEnabled
     then do
-      let mbRcNumberToActivate =
-            if useUnifiedOnboardingFlagsRecompute
-              then (.registrationNo) <$> mbValidVehicleDoc ForEnabling
-              else Nothing
+      let mbRcNumberToActivate = (.registrationNo) <$> mbValidVehicleDoc ForEnabling
       enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId verifiedToWrite mbRcNumberToActivate
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
@@ -300,7 +290,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
   when (newDocsVerificationStatus /= driverInfo.docsVerificationStatus) $
     DIQueryExtra.updateDocsVerificationStatus newDocsVerificationStatus (cast person.id)
-  unless (driverInfo.isNew == Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
+  when (useUnifiedOnboardingFlagsRecompute && driverInfo.isNew /= Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterDriver
@@ -332,17 +322,15 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
       derivedApproved = computeApprovedFromDocs Nothing allDocVerificationConfigs person.role driverDocuments
       approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
       newApproved =
-        if useUnifiedOnboardingFlagsRecompute
-          then case derivedApproved of
-            Just True | not allFleetMandatoryDocsValid -> Nothing
-            other -> other
-          else if allFleetMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
+        case derivedApproved of
+          Just True | not allFleetMandatoryDocsValid -> Nothing
+          other -> other
       holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (fleetOwnerInfo.verified || fleetOwnerInfo.enabled)
       verifiedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.verified else allFleetMandatoryDocsValid
       approvedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.approved else newApproved
-  when (verifiedToWrite /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= fleetOwnerInfo.approved)) $
+  when (verifiedToWrite /= fleetOwnerInfo.verified || approvedToWrite /= fleetOwnerInfo.approved) $
     QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite approvedToWrite person.id
-  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else True
+  let approvedGateOk = approvedToWrite == Just True
       newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
@@ -353,7 +341,7 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
   let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
   when (newDocsVerificationStatus /= fleetOwnerInfo.docsVerificationStatus) $
     QFOI.updateDocsVerificationStatus newDocsVerificationStatus person.id
-  unless (fleetOwnerInfo.isNew == Just False) $ QFOI.updateIsNew (Just False) person.id
+  when (useUnifiedOnboardingFlagsRecompute && fleetOwnerInfo.isNew /= Just False) $ QFOI.updateIsNew (Just False) person.id
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterFleetOwner
@@ -380,33 +368,32 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
   -- still read, so letting the unified flow move verified / approved without it would leave those
   -- surfaces showing a stale status.
   RCQuery.updateDocsVerificationStatusByCertificateNumberHash (Just $ computeAdminDocsVerificationStatus vehicleDocItem'.documents) rcHash
-  if useUnifiedOnboardingFlagsRecompute
-    then do
-      mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
-      let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
-          approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
-      whenJust mbRc $ \rc -> do
-        let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && rc.verified == Just True
-            newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
-            newApproved =
-              if holdEnabledWithoutDocsVerifiedEnabledOrApproved
-                then rc.approved
-                else case derivedApproved of
-                  Just True | not allVehicleMandatoryDocsValid -> Nothing
-                  other -> other
-        when (newVerified /= rc.verified || newApproved /= rc.approved) $
-          VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
-        -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
-        unless (rc.isNew == Just False) $ RCQuery.updateIsNew (Just False) rc.id
-        whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
-          adjustOnboardingCounters
-            useUnifiedOnboardingFlagsRecompute
-            CounterVehicle
-            rcMerchantOpCityId
-            rc.fleetOwnerId
-            (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
-            (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
-    else RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+  mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
+  let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
+      approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)
+  case mbRc of
+    Just rc -> do
+      let holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && rc.verified == Just True
+          newVerified = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then rc.verified else Just allVehicleMandatoryDocsValid
+          newApproved =
+            if holdEnabledWithoutDocsVerifiedEnabledOrApproved
+              then rc.approved
+              else case derivedApproved of
+                Just True | not allVehicleMandatoryDocsValid -> Nothing
+                other -> other
+      when (newVerified /= rc.verified || newApproved /= rc.approved) $
+        VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
+      -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
+      when (useUnifiedOnboardingFlagsRecompute && rc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) rc.id
+      whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
+        adjustOnboardingCounters
+          useUnifiedOnboardingFlagsRecompute
+          CounterVehicle
+          rcMerchantOpCityId
+          rc.fleetOwnerId
+          (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
+          (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
+    Nothing -> RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
 
 -- | Which entity's onboarding counters a write belongs to.
 data OnboardingCounterEntity = CounterDriver | CounterFleetOwner | CounterVehicle

@@ -4,6 +4,7 @@
 
 module Storage.Queries.Image (module Storage.Queries.Image, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -87,6 +88,11 @@ updateMerchantIdAndCityIdByPersonId merchantId merchantOperatingCityId personId 
     ]
     [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
+updateMetadata :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Image.ImageMetadata -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
+updateMetadata metadata id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.metadata (Data.Aeson.toJSON <$> metadata), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
@@ -146,6 +152,7 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
       Se.Set Beam.imageType imageType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.metadata (Data.Aeson.toJSON <$> metadata),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rcId rcId,
       Se.Set Beam.reviewerEmail reviewerEmail,

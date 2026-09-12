@@ -121,6 +121,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    doStrictVerification :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
@@ -133,6 +134,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    onboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStageAPIEntity,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
@@ -148,7 +150,6 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    onboardingStages :: Kernel.Prelude.Maybe [DocumentOnboardingStageAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }

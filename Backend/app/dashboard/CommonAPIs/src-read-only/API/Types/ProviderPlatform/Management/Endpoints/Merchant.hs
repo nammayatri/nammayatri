@@ -199,6 +199,7 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
+  | TermsAndConditions
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

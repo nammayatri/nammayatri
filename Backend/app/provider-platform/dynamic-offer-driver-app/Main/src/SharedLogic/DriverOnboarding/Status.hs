@@ -391,10 +391,13 @@ mkRCDocsStatusKey rcId = "DocsStatus:RC:" <> rcId.getId
 --   Note the two paths differ in what they return: the legacy path reports the flag as persisted
 --   (read back after the writes), the unified path reports the value it just computed.
 runRefreshOnboardingFlagsDriver :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
-runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig = runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig False
+runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig = refreshPersonOnboardingFlags mbPerson mbTransporterConfig Nothing False
 
 runRefreshOnboardingFlagsDriverWithBotApproval :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Bool -> Id DP.Person -> m (Maybe Bool)
-runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig forceBotApproval personId =
+runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig = refreshPersonOnboardingFlags mbPerson mbTransporterConfig Nothing
+
+refreshPersonOnboardingFlags :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Maybe Bool -> Bool -> Id DP.Person -> m (Maybe Bool)
+refreshPersonOnboardingFlags mbPerson mbTransporterConfig makeSelfieAadhaarPanMandatory forceBotApproval personId =
   Hedis.withWaitAndLockRedis (mkPersonDocsStatusKey personId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
     PersonStatusContext {statusPerson, statusEntityImagesInfo} <- loadPersonStatusContext mbPerson mbTransporterConfig personId
     let transporterConfig = statusEntityImagesInfo.transporterConfig
@@ -416,7 +419,7 @@ runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig forc
                     pfcConfigs = allDocVerificationConfigs,
                     pfcDocs = driverDocuments,
                     pfcVehicleCategory = vehicleCategory,
-                    pfcMakeSelfieAadhaarPanMandatory = Nothing,
+                    pfcMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory,
                     pfcDriverName = Nothing,
                     pfcOnboardingVehicleCategory = Nothing,
                     pfcIsFleetDriver = Nothing,
@@ -430,29 +433,29 @@ runRefreshOnboardingFlagsDriverWithBotApproval mbPerson mbTransporterConfig forc
 runRefreshOnboardingFlagsFleet :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
 runRefreshOnboardingFlagsFleet = runRefreshOnboardingFlagsDriver
 
-runRefreshOnboardingFlagsDriverVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
-runRefreshOnboardingFlagsDriverVehicle mbPerson mbTransporterConfig personId mbRcNo = do
-  res <- runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId
-  refreshVehicleByRcNo mbTransporterConfig mbRcNo
+runRefreshOnboardingFlagsDriverVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Maybe Bool -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
+runRefreshOnboardingFlagsDriverVehicle mbPerson mbTransporterConfig makeSelfieAadhaarPanMandatory personId mbRcNo = do
+  res <- refreshPersonOnboardingFlags mbPerson mbTransporterConfig makeSelfieAadhaarPanMandatory False personId
+  refreshVehicleByRcNo mbTransporterConfig makeSelfieAadhaarPanMandatory mbRcNo
   pure res
 
-runRefreshOnboardingFlagsFleetAndVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
-runRefreshOnboardingFlagsFleetAndVehicle mbPerson mbTransporterConfig personId mbRcNo = do
-  res <- runRefreshOnboardingFlagsFleet mbPerson mbTransporterConfig personId
-  refreshVehicleByRcNo mbTransporterConfig mbRcNo
-  pure res
+runRefreshOnboardingFlagsFleetAndVehicle :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Maybe Bool -> Id DP.Person -> Maybe Text -> m (Maybe Bool)
+runRefreshOnboardingFlagsFleetAndVehicle = runRefreshOnboardingFlagsDriverVehicle
 
-refreshVehicleByRcNo :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Maybe Text -> m ()
-refreshVehicleByRcNo mbTransporterConfig mbRcNo =
+refreshVehicleByRcNo :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Maybe Bool -> Maybe Text -> m ()
+refreshVehicleByRcNo mbTransporterConfig makeSelfieAadhaarPanMandatory mbRcNo =
   whenJust mbRcNo $ \rcNo -> do
     mbRc <- RCQuery.findLastVehicleRCWrapper rcNo
-    whenJust mbRc $ \rc -> void $ runRefreshOnboardingFlagsVehicle mbTransporterConfig rc.id
+    whenJust mbRc $ \rc -> void $ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory False True rc.id
 
 runRefreshOnboardingFlagsVehicle :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
-runRefreshOnboardingFlagsVehicle mbTransporterConfig = runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig False True
+runRefreshOnboardingFlagsVehicle mbTransporterConfig = refreshVehicleOnboardingFlags mbTransporterConfig Nothing False True
 
 runRefreshOnboardingFlagsVehicleWithBotApproval :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Bool -> Bool -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
-runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig forceBotApproval shouldOverrideInspectionHub rcId = do
+runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig = refreshVehicleOnboardingFlags mbTransporterConfig Nothing
+
+refreshVehicleOnboardingFlags :: OnboardingFlow m r => Maybe DTC.TransporterConfig -> Maybe Bool -> Bool -> Bool -> Id RC.VehicleRegistrationCertificate -> m (Maybe Bool)
+refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory forceBotApproval shouldOverrideInspectionHub rcId = do
   Hedis.withWaitAndLockRedis (mkRCDocsStatusKey rcId) onboardingLockTTLSeconds onboardingLockRetryMicros $ do
     rc <- RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id: " <> rcId.getId)
     merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
@@ -476,7 +479,7 @@ runRefreshOnboardingFlagsVehicleWithBotApproval mbTransporterConfig forceBotAppr
                   { vdeRegistrationNo = registrationNo,
                     vdeItem = vehicleDocItem',
                     vdeConfigs = allDocumentVerificationConfigs,
-                    vdeMakeSelfieAadhaarPanMandatory = Nothing
+                    vdeMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory
                   }
               ]
           }
@@ -602,8 +605,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         when (SDO.isFleetRole person.role || person.role == DP.DRIVER) $
           void $
             if SDO.isFleetRole person.role
-              then runRefreshOnboardingFlagsFleetAndVehicle (Just person) (Just transporterConfig) person.id mbReqRegistrationNo
-              else runRefreshOnboardingFlagsDriverVehicle (Just person) (Just transporterConfig) person.id mbReqRegistrationNo
+              then runRefreshOnboardingFlagsFleetAndVehicle (Just person) (Just transporterConfig) makeSelfieAadhaarPanMandatory person.id mbReqRegistrationNo
+              else runRefreshOnboardingFlagsDriverVehicle (Just person) (Just transporterConfig) makeSelfieAadhaarPanMandatory person.id mbReqRegistrationNo
         -- Vehicle status list (+ vehicle `verified` write, handled inside getVehicleDocuments under enableBotFlow)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else -- Legacy enablement (unchanged): conditional on separateDriverVehicleEnablement.
@@ -746,7 +749,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         when enableBotFlow $ do
           mbRcForRefresh <- RCQuery.findLastVehicleRCWrapper vehicleDoc.registrationNo
           whenJust mbRcForRefresh $ \rcForRefresh ->
-            void $ runRefreshOnboardingFlagsVehicle (Just entityImagesInfo.transporterConfig) rcForRefresh.id
+            void $ refreshVehicleOnboardingFlags (Just entityImagesInfo.transporterConfig) makeSelfieAadhaarPanMandatory False True rcForRefresh.id
         mbVehicle <- QVehicle.findById personId
         let firstTimeOnboarding = maybe False (isNothing . (.enabledAt)) mbDriverInfo
             allowAutoActivate =
@@ -862,7 +865,12 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
-    return $ DocumentStatusItem {documentType = docType, documentId = mbDocumentIdFinal, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbMetadata, commonDocumentData = mbCommonDocData}
+    mbDocMetadata <- case mbMetadata of
+      Just meta -> pure (Just meta)
+      Nothing | enableMetadata && isNothing mbProcessedStatus -> inProgressMetadataFor driverId docType
+      Nothing -> pure Nothing
+    mbFinalMetadata <- withImageMetadataFallback entityImagesInfo Nothing docType mbImageIdFinal mbDocMetadata
+    return $ DocumentStatusItem {documentType = docType, documentId = mbDocumentIdFinal, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbFinalMetadata, commonDocumentData = mbCommonDocData}
 
 getDriverDocTypes ::
   OnboardingFlow m r =>
@@ -990,7 +998,7 @@ ensureNoActiveRidesUnderFleet fleetOwnerId = do
 mkDLMetadata :: OnboardingFlow m r => Maybe DL.DriverLicense -> m (Maybe DocumentMetadata)
 mkDLMetadata mbDl = forM mbDl $ \dl -> do
   licenseNumberDec <- decrypt dl.licenseNumber
-  pure $ DLMetadata DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = dl.licenseExpiry, imageId1 = Just dl.documentImageId1.getId, imageId2 = dl.documentImageId2 <&> (.getId)}
+  pure $ DLMetadata DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = Just dl.licenseExpiry, imageId1 = Just dl.documentImageId1.getId, imageId2 = dl.documentImageId2 <&> (.getId)}
 
 mkAadhaarMetadata :: OnboardingFlow m r => Maybe DAadhaarCard.AadhaarCard -> m (Maybe DocumentMetadata)
 mkAadhaarMetadata mbAadhaarCard = forM mbAadhaarCard $ \aadhaar -> do

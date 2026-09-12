@@ -795,8 +795,8 @@ filterInCompatibleFlows ::
   [documentVerificationConfigAPIEntity]
 filterInCompatibleFlows makeSelfieAadhaarPanMandatory = filter (\doc -> not (fromMaybe False doc.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
 
-mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
-mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
+mkFleetOwnerDocumentVerificationConfigAPIEntity :: Language -> [API.Types.ProviderPlatform.Fleet.Onboarding.DocumentOnboardingStageAPIEntity] -> Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
+mkFleetOwnerDocumentVerificationConfigAPIEntity language onboardingStages Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig {..} = do
   mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
   mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
   return $
@@ -817,6 +817,8 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isApprovalSupported = Nothing,
         rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
         doNotValidateDuringOnboarding = Nothing,
+        doStrictVerification = doStrictVerifcation,
+        onboardingStage = find (\stage -> Just stage.stage == (castDocumentOnboardingStage <$> documentOnboardingStage)) onboardingStages,
         ..
       }
 
@@ -851,6 +853,7 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
       dropdownValues = dropdownValues,
       fieldConstraints = fieldConstraints,
       requestKey = requestKey,
+      descriptionUrl = descriptionUrl,
       fields = fmap (map castDocumentFieldInfo) fields,
       images = fmap (map castImageInfo) images
     }
@@ -874,6 +877,7 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldArray -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldArray
   Domain.Types.DocumentVerificationConfig.FieldDate -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDate
   Domain.Types.DocumentVerificationConfig.FieldYear -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldYear
+  Domain.Types.DocumentVerificationConfig.FieldBool -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldBool
 
 castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case
@@ -982,6 +986,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.LegalEntityLegalEntityId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityLegalEntityId
   Domain.Types.DocumentVerificationConfig.LegalEntityTAXDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityTAXDetails
   Domain.Types.DocumentVerificationConfig.LegalEntityCompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityCompanyDetails
+  Domain.Types.DocumentVerificationConfig.TermsAndConditions -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TermsAndConditions
 
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.

@@ -1140,6 +1140,7 @@ castDDocumentType = \case
   DVC.LegalEntityLegalEntityId -> Common.LegalEntityLegalEntityId
   DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
   DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
+  DVC.TermsAndConditions -> Common.TermsAndConditions
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1259,6 +1260,7 @@ castDocumentType = \case
   Common.LegalEntityLegalEntityId -> DVC.LegalEntityLegalEntityId
   Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
   Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
+  Common.TermsAndConditions -> DVC.TermsAndConditions
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
