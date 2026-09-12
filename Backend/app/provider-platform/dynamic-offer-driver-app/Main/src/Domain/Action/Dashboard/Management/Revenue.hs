@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Management.Revenue
 where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Revenue as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Revenue as Common
 import Data.Maybe
 import Data.Text hiding (drop, elem, filter, length, map)
 import Data.Time hiding (getCurrentTime)

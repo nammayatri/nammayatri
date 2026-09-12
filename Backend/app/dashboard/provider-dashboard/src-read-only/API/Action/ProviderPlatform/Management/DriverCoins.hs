@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.DriverCoins
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory :<|> PostDriverCoinsBlacklistedEventsUpdate))
 
@@ -60,14 +60,14 @@ type PostDriverCoinsBlacklistedEventsUpdate =
       :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBlacklistedEventsUpdate
   )
 
-postDriverCoinsBulkUploadCoins :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinRes)
+postDriverCoinsBulkUploadCoins :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinRes)
 postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverCoins.postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req
 
-postDriverCoinsBulkUploadCoinsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReqV2 -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinRes)
+postDriverCoinsBulkUploadCoinsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReqV2 -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinRes)
 postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverCoins.postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity apiTokenInfo req
 
-getDriverCoinsCoinHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.CoinHistoryRes)
+getDriverCoinsCoinHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.CoinHistoryRes)
 getDriverCoinsCoinHistory merchantShortId opCity apiTokenInfo driverId limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverCoins.getDriverCoinsCoinHistory merchantShortId opCity apiTokenInfo driverId limit offset
 
-postDriverCoinsBlacklistedEventsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverCoins.UpdateBlacklistedCoinEventsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverCoinsBlacklistedEventsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverCoins.UpdateBlacklistedCoinEventsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverCoins.postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity apiTokenInfo driverId req

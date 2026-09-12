@@ -20,8 +20,8 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as ProviderRide
 import qualified Dashboard.Common.Exotel as Exotel
+import qualified "lib-dashboard" Dashboard.Common.RideDebug as ProviderRide
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler

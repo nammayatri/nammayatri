@@ -98,7 +98,6 @@ library
     , cereal
     , containers
     , cryptonite
-    , dashboard-helper-api
     , either
     , esqueleto
     , euler-hs

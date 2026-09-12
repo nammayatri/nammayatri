@@ -34,7 +34,8 @@ where
 
 import qualified API.Client.ProviderPlatform.RideBooking as Client
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -45,11 +46,10 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.Role as QRole
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
 
@@ -57,47 +57,47 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction UserActionType)
 buildTransaction apiTokenInfo driverId =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
+  T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
 
-getDriverPaymentDue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp]
+getDriverPaymentDue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp]
 getDriverPaymentDue merchantShortId opCity apiTokenInfo mbMobileCountryCode phone = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverPaymentDue) mbMobileCountryCode phone
 
-postDriverEnable :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverEnable :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverEnable merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverEnable) driverId
 
-postDriverCollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow APISuccess
+postDriverCollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Maybe Text -> Flow APISuccess
 postDriverCollectCash merchantShortId opCity apiTokenInfo driverId mbVendorId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverCollectCash) driverId mbVendorId apiTokenInfo.personId.getId
 
-postDriverV2CollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ServiceNames -> Maybe Text -> Flow APISuccess
+postDriverV2CollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Common.ServiceNames -> Maybe Text -> Flow APISuccess
 postDriverV2CollectCash merchantShortId opCity apiTokenInfo driverId serviceName mbVendorId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverV2CollectCash) driverId apiTokenInfo.personId.getId serviceName mbVendorId
 
-postDriverExemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverExemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverExemptCash merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverExemptCash) driverId apiTokenInfo.personId.getId
 
-postDriverV2ExemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ServiceNames -> Flow APISuccess
+postDriverV2ExemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Common.ServiceNames -> Flow APISuccess
 postDriverV2ExemptCash merchantShortId opCity apiTokenInfo driverId serviceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
@@ -107,7 +107,7 @@ postDriverV2ExemptCash merchantShortId opCity apiTokenInfo driverId serviceName 
 getDriverInfo ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
@@ -128,60 +128,60 @@ getDriverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountry
 
 -- | Whether the requesting dashboard user is a fleet owner. The driver-app restricts what
 -- a fleet owner may search by, so callers need this flag before dispatching a lookup.
-getRequestorFleetFlag :: ApiTokenInfo -> Flow Bool
+getRequestorFleetFlag :: ApiTokenInfo UserActionType -> Flow Bool
 getRequestorFleetFlag apiTokenInfo = do
   encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   pure $ role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
 
-postDriverUnlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverUnlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkVehicle merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverUnlinkVehicle) driverId
 
-postDriverEndRCAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverEndRCAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverEndRCAssociation merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverEndRCAssociation) driverId
 
-postDriverAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> CommonFleet.AddVehicleReq -> Flow APISuccess
+postDriverAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> CommonFleet.AddVehicleReq -> Flow APISuccess
 postDriverAddVehicle merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverAddVehicle) driverId req
 
-postDriverSetRCStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> CommonFleet.RCStatusReq -> Flow APISuccess
+postDriverSetRCStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> CommonFleet.RCStatusReq -> Flow APISuccess
 postDriverSetRCStatus merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverSetRCStatus) driverId req
 
-postDriverExemptDriverFee :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ServiceNames -> Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
+postDriverExemptDriverFee :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Common.ServiceNames -> Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
 postDriverExemptDriverFee merchantShortId opCity apiTokenInfo driverId serviceName req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverExemptDriverFee) driverId apiTokenInfo.personId.getId serviceName req
 
-getDriverFeedbackList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Flow Common.GetFeedbackListRes)
+getDriverFeedbackList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Flow Common.GetFeedbackListRes)
 getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverFeedbackList) personId mobileNumber mobileCountryCode
 
-postDriverDeleteAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverDeleteAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverDeleteAadhaar merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteAadhaar) driverId
 
-postDriverDeletePanCard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverDeletePanCard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow APISuccess
 postDriverDeletePanCard merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest

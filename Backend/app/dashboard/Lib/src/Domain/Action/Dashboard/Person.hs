@@ -14,7 +14,6 @@
 
 module Domain.Action.Dashboard.Person where
 
-import qualified API.Types.UnifiedDashboard.Management.Person as BPPPerson
 import Dashboard.Common
 import Data.Char (isDigit, isLower, isUpper)
 import Data.Containers.ListUtils (nubOrd)
@@ -24,7 +23,7 @@ import Data.List (groupBy, nub, sortOn, (\\))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Capability as DCap
-import qualified Domain.Types.AccessMatrix as DMatrix
+import qualified Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.DeletedUser as DDU
 import qualified Domain.Types.Entity as DE
 import qualified Domain.Types.EntityAccess as DEA
@@ -36,7 +35,7 @@ import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
-import qualified Domain.Types.Transaction as DTransaction
+import qualified Domain.Types.Transaction as DT
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (DbHash, EncKind (..), EncryptedHashedField, decrypt, encrypt, getDbHash, unEncrypted)
 import qualified Kernel.External.Types as KET
@@ -56,7 +55,6 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
-import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.DeletedUser as QDeletedUser
 import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.EntityAccess as QEntityAccess
@@ -68,14 +66,14 @@ import qualified Storage.Queries.PersonResourceAccess as QPRA
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
-import Tools.Auth
-import qualified Tools.Auth.Api as ApiAuth
 -- isSuperAdmin lives here rather than in Domain.Action.Dashboard.Capability: that module has no
 -- export list, so it re-exports only what it defines, not what it imports.
 import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Capability as AuthCap
 import qualified Tools.Auth.Common as Auth
+import Tools.Auth.Dashboard
 import Tools.Auth.Merchant
+import qualified Tools.Auth.Verify as Verify
 import Tools.Error
 import qualified Tools.InternalClient as InternalClient
 
@@ -320,13 +318,13 @@ assertMayGrantAccessToMerchant tokenInfo targetMerchantId
 -- only payload — request bodies here carry credentials and must never reach the audit log.
 recordAdminActionOnPerson ::
   BeamFlow m r =>
-  DTransaction.Endpoint ->
+  DT.Endpoint DashAuth.DashboardActionType ->
   TokenInfo ->
   Id DP.Person ->
   m ()
 recordAdminActionOnPerson endpoint tokenInfo personId = do
   transaction <- STransaction.buildDashboardAuthTransaction endpoint tokenInfo.personId tokenInfo.merchantId
-  QT.create transaction {DTransaction.request = Just personId.getId}
+  QT.createDashboardTransaction transaction {DT.request = Just personId.getId}
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -378,7 +376,7 @@ createPerson tokenInfo personEntity = do
         merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
         roleName <- driverRoleName role.dashboardAccessType
         let createReq =
-              BPPPerson.CreatePersonReq
+              InternalClient.CreatePersonReq
                 { email = Just personEntity.email,
                   firstName = personEntity.firstName,
                   lastName = personEntity.lastName,
@@ -507,7 +505,7 @@ assignRole tokenInfo personId roleId = do
   DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
   DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
   QP.updatePersonRole personId newRole
-  recordAdminActionOnPerson DTransaction.DashboardUserRoleAssign tokenInfo personId
+  recordAdminActionOnPerson DT.DashboardUserRoleAssign tokenInfo personId
   pure Success
 
 assignMerchantCityAccess ::
@@ -746,16 +744,6 @@ getCurrentMerchant tokenInfo = do
         >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantCityAccessReq merchant.shortId tokenInfo.city
 
-getAccessMatrix ::
-  BeamFlow m r =>
-  TokenInfo ->
-  m DMatrix.AccessMatrixRowAPIEntity
-getAccessMatrix tokenInfo = do
-  encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
-  pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
-
 changePasswordByAdmin ::
   ( BeamFlow m r,
     EncFlow m r,
@@ -779,7 +767,7 @@ changePasswordByAdmin tokenInfo personId req = do
     validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
   QP.updatePersonPasswordByAdmin personId newHash
-  recordAdminActionOnPerson DTransaction.DashboardUserPasswordResetByAdmin tokenInfo personId
+  recordAdminActionOnPerson DT.DashboardUserPasswordResetByAdmin tokenInfo personId
   -- An admin reset is also the remedy for a compromised account, so any session established
   -- with the old credential must die with it.
   Auth.cleanCachedTokens personId
@@ -804,7 +792,7 @@ changeMobileNumberByAdmin tokenInfo personId req = do
     throwError $ InvalidRequest $ "Cannot update phone number for role: " <> role.name
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
-  recordAdminActionOnPerson DTransaction.DashboardUserMobileChangeByAdmin tokenInfo personId
+  recordAdminActionOnPerson DT.DashboardUserMobileChangeByAdmin tokenInfo personId
   pure Success
 
 changeEnabledStatus ::
@@ -844,7 +832,7 @@ changeEmailByAdmin tokenInfo personId req = do
   assertAdminEmailDomainForPerson tokenInfo person role (Just newEmail)
   encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
-  recordAdminActionOnPerson DTransaction.DashboardUserEmailChangeByAdmin tokenInfo personId
+  recordAdminActionOnPerson DT.DashboardUserEmailChangeByAdmin tokenInfo personId
   pure Success
 
 validateChangeEmailReq :: Validate ChangeEmailByAdminReq
@@ -868,8 +856,7 @@ deletePerson tokenInfo personId mbDeleteReason = do
     throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
-  transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
-  QT.create transaction{DTransaction.request = Just personId.getId}
+  recordAdminActionOnPerson DT.DashboardUserDelete tokenInfo personId
   -- Snapshot the user into deleted_user (tombstone) before removing them, so the
   -- deletion leaves a resolvable record (also lets orphaned granted_by ids be
   -- traced back to who was deleted).
@@ -1070,14 +1057,11 @@ bulkUpsert ::
   m BulkUpsertPersonResp
 bulkUpsert tokenInfo merchantShortId req = do
   let actorPersonId = tokenInfo.personId
-      accessLevel =
-        DMatrix.ApiAccessLevel
-          { serverName = DTServer.APP_BACKEND_MANAGEMENT,
-            apiEntity = DMatrix.DSL,
-            userActionType = DMatrix.DASHBOARD_USER_BULK_CREATE
-          }
-      endpointId = AuthCap.mkEndpointId accessLevel
-  actorPerson <- ApiAuth.verifyAccessLevel accessLevel actorPersonId
+      -- lib-dashboard no longer defines an AccessMatrix (each app owns its own
+      -- action union), so the capability table is keyed on the endpoint-id
+      -- string directly rather than on a reconstructed ApiAccessLevel.
+      endpointId = "DASHBOARD_USER_BULK_CREATE"
+  actorPerson <- Verify.verifyAccessLevel endpointId actorPersonId
   -- The route is DashboardAuth, which never runs verifyApi, so the capability gate is enforced
   -- here; verifyAccessLevel alone no longer checks it.
   actorAccessCaps <- AuthCap.resolveAccess actorPerson.id actorPerson.roleId
@@ -1096,7 +1080,7 @@ bulkUpsert tokenInfo merchantShortId req = do
   merchant <-
     QMerchant.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  ApiAuth.verifyCity merchant req.operatingCity
+  Verify.verifyCity merchant req.operatingCity
   actorAccess <- QAccess.findByPersonIdAndMerchantId actorPersonId merchant.id
   when (null actorAccess) $
     throwError AccessDenied

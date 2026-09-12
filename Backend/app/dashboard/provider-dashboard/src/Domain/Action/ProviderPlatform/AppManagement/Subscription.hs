@@ -25,26 +25,26 @@ import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified Domain.Action.UI.Driver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Plan
 import qualified "dynamic-offer-driver-app" Domain.Types.SubscriptionPurchase
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 getSubscriptionListPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
 getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId = do
@@ -59,7 +59,7 @@ getSubscriptionListPlan merchantShortId opCity apiTokenInfo driverId = do
 putSubscriptionSelectPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -67,7 +67,7 @@ putSubscriptionSelectPlan merchantShortId opCity apiTokenInfo driverId planId = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -85,14 +85,14 @@ putSubscriptionSelectPlan merchantShortId opCity apiTokenInfo driverId planId = 
 putSubscriptionSuspendPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 putSubscriptionSuspendPlan merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -109,7 +109,7 @@ putSubscriptionSuspendPlan merchantShortId opCity apiTokenInfo driverId = do
 postSubscriptionSubscribePlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Environment.Flow Domain.Action.UI.Plan.PlanSubscribeRes
@@ -117,7 +117,7 @@ postSubscriptionSubscribePlan merchantShortId opCity apiTokenInfo driverId planI
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -135,7 +135,7 @@ postSubscriptionSubscribePlan merchantShortId opCity apiTokenInfo driverId planI
 getSubscriptionCurrentPlan ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
 getSubscriptionCurrentPlan merchantShortId opCity apiTokenInfo driverId = do
@@ -150,7 +150,7 @@ getSubscriptionCurrentPlan merchantShortId opCity apiTokenInfo driverId = do
 getSubscriptionListPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
@@ -167,7 +167,7 @@ getSubscriptionListPlanV2 merchantShortId opCity apiTokenInfo driverId serviceNa
 putSubscriptionSelectPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Domain.Types.Plan.ServiceNames ->
@@ -176,7 +176,7 @@ putSubscriptionSelectPlanV2 merchantShortId opCity apiTokenInfo driverId planId 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -195,7 +195,7 @@ putSubscriptionSelectPlanV2 merchantShortId opCity apiTokenInfo driverId planId 
 putSubscriptionSuspendPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -203,7 +203,7 @@ putSubscriptionSuspendPlanV2 merchantShortId opCity apiTokenInfo driverId servic
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -221,7 +221,7 @@ putSubscriptionSuspendPlanV2 merchantShortId opCity apiTokenInfo driverId servic
 postSubscriptionSubscribePlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Domain.Types.Plan.ServiceNames ->
@@ -231,7 +231,7 @@ postSubscriptionSubscribePlanV2 merchantShortId opCity apiTokenInfo driverId pla
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -251,7 +251,7 @@ postSubscriptionSubscribePlanV2 merchantShortId opCity apiTokenInfo driverId pla
 getSubscriptionCurrentPlanV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
@@ -268,7 +268,7 @@ getSubscriptionCurrentPlanV2 merchantShortId opCity apiTokenInfo driverId servic
 getSubscriptionOrderStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Types.Id.Id Domain.Types.Invoice.Invoice ->
   Environment.Flow Domain.Action.UI.Payment.PaymentStatusResp
@@ -285,7 +285,7 @@ getSubscriptionOrderStatus merchantShortId opCity apiTokenInfo driverId orderId 
 getSubscriptionDriverPaymentHistoryAPIV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode ->
@@ -308,7 +308,7 @@ getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity apiTokenInfo dri
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   Kernel.Types.Id.Id Domain.Types.Invoice.Invoice ->
@@ -327,7 +327,7 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity apiTok
 postSubscriptionCollectManualPayments ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Domain.Types.Plan.ServiceNames ->
   API.Types.Dashboard.AppManagement.Subscription.CollectManualPaymentsReq ->
@@ -336,7 +336,7 @@ postSubscriptionCollectManualPayments merchantShortId opCity apiTokenInfo driver
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       (Kernel.Prelude.Just driverId)
@@ -352,16 +352,16 @@ postSubscriptionCollectManualPayments merchantShortId opCity apiTokenInfo driver
       (Kernel.Prelude.Just apiTokenInfo.personId.getId)
       req
 
-postSubscriptionFeeWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Subscription.WaiveOffReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postSubscriptionFeeWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.Subscription.WaiveOffReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSubscriptionFeeWaiveOff merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.subscriptionDSL.postSubscriptionFeeWaiveOff) (Kernel.Prelude.Just apiTokenInfo.personId.getId) req
 
 getSubscriptionPurchaseList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -379,7 +379,7 @@ getSubscriptionPurchaseList merchantShortId opCity apiTokenInfo driverId limit o
     status
     (Kernel.Prelude.Just apiTokenInfo.personId.getId)
 
-getSubscriptionCancellationChargeHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Domain.Action.UI.Plan.CancellationChargeHistoryRes)
+getSubscriptionCancellationChargeHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Domain.Action.UI.Plan.CancellationChargeHistoryRes)
 getSubscriptionCancellationChargeHistory merchantShortId opCity apiTokenInfo driverId serviceName limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.AppManagement.callAppManagementAPI

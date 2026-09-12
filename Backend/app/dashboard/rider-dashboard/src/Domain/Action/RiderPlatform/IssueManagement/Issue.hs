@@ -50,8 +50,9 @@ import qualified API.Client.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.Issue
 import qualified Dashboard.Common
 import qualified Data.Aeson
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Common
@@ -71,16 +72,15 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (PersonError (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 getIssueCategoryList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueCategoryListRes
 getIssueCategoryList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -89,7 +89,7 @@ getIssueCategoryList merchantShortId opCity apiTokenInfo = do
 getIssueList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus ->
@@ -110,14 +110,14 @@ getIssueList merchantShortId opCity apiTokenInfo limit offset status category ca
 getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
   Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoDRes
 getIssueInfo merchantShortId opCity apiTokenInfo issueId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueInfo) issueId
 
-getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoDRes)
+getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoDRes)
 getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueInfoV2) issueId issueShortId
@@ -149,7 +149,7 @@ addAuthorDetails Common.IssueInfoDRes {..} = do
 putIssueUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
   IssueManagement.Common.Dashboard.Issue.IssueUpdateReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -157,7 +157,7 @@ putIssueUpdate merchantShortId opCity apiTokenInfo issueId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -180,7 +180,7 @@ putIssueUpdate merchantShortId opCity apiTokenInfo issueId req = do
 postIssueComment ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
   IssueManagement.Common.Dashboard.Issue.IssueAddCommentReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -188,7 +188,7 @@ postIssueComment merchantShortId opCity apiTokenInfo issueId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -211,7 +211,7 @@ postIssueComment merchantShortId opCity apiTokenInfo issueId req = do
 getIssueMedia ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Prelude.Text ->
   Environment.Flow Kernel.Prelude.Text
 getIssueMedia merchantShortId opCity apiTokenInfo filePath = do
@@ -221,7 +221,7 @@ getIssueMedia merchantShortId opCity apiTokenInfo filePath = do
 postIssueChatUpload ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
   Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes
 postIssueChatUpload merchantShortId opCity apiTokenInfo req = do
@@ -235,7 +235,7 @@ postIssueChatUpload merchantShortId opCity apiTokenInfo req = do
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Data.Aeson.Value ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postIssueTicketStatusCallBack merchantShortId opCity apiTokenInfo req = do
@@ -249,14 +249,14 @@ postIssueTicketStatusCallBack merchantShortId opCity apiTokenInfo req = do
 postIssueCategoryCreate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   IssueManagement.Common.Dashboard.Issue.CreateIssueCategoryReq ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.CreateIssueCategoryRes
 postIssueCategoryCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -272,7 +272,7 @@ postIssueCategoryCreate merchantShortId opCity apiTokenInfo req = do
 postIssueCategoryUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
   IssueManagement.Common.Dashboard.Issue.UpdateIssueCategoryReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -280,7 +280,7 @@ postIssueCategoryUpdate merchantShortId opCity apiTokenInfo issueCategoryId req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -297,7 +297,7 @@ postIssueCategoryUpdate merchantShortId opCity apiTokenInfo issueCategoryId req 
 postIssueOptionCreate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage ->
   IssueManagement.Common.Dashboard.Issue.CreateIssueOptionReq ->
@@ -306,7 +306,7 @@ postIssueOptionCreate merchantShortId opCity apiTokenInfo issueCategoryId issueM
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -324,7 +324,7 @@ postIssueOptionCreate merchantShortId opCity apiTokenInfo issueCategoryId issueM
 postIssueOptionUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption ->
   IssueManagement.Common.Dashboard.Issue.UpdateIssueOptionReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -332,7 +332,7 @@ postIssueOptionUpdate merchantShortId opCity apiTokenInfo issueOptionid req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -349,14 +349,14 @@ postIssueOptionUpdate merchantShortId opCity apiTokenInfo issueOptionid req = do
 postIssueMessageUpsert ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes
 postIssueMessageUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <-
     SharedLogic.Transaction.buildTransaction
-      (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType)
+      (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType)
       (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT)
       (Kernel.Prelude.Just apiTokenInfo)
       Kernel.Prelude.Nothing
@@ -369,121 +369,121 @@ postIssueMessageUpsert merchantShortId opCity apiTokenInfo req = do
       (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.issueDSL.postIssueMessageUpsert))
       req
 
-postIssueKaptureCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueKaptureCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueKaptureCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueKaptureCreate) req)
 
-getIssueCategoryDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes)
+getIssueCategoryDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes)
 getIssueCategoryDetail merchantShortId opCity apiTokenInfo categoryId language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueCategoryDetail) categoryId language
 
-getIssueOptionDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes)
+getIssueOptionDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes)
 getIssueOptionDetail merchantShortId opCity apiTokenInfo optionId language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueOptionDetail) optionId language
 
-getIssueMessageDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes)
+getIssueMessageDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes)
 getIssueMessageDetail merchantShortId opCity apiTokenInfo messageId language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMessageDetail) messageId language
 
-getIssueMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageListRes)
+getIssueMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageListRes)
 getIssueMessageList merchantShortId opCity apiTokenInfo categoryId optionId isActive language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMessageList) categoryId optionId isActive language
 
-getIssueOptionList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes)
+getIssueOptionList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes)
 getIssueOptionList merchantShortId opCity apiTokenInfo categoryId messageId isActive language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueOptionList) categoryId messageId isActive language
 
-deleteIssueCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deleteIssueCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteIssueCategory merchantShortId opCity apiTokenInfo categoryId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.deleteIssueCategory) categoryId)
 
-deleteIssueOption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deleteIssueOption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteIssueOption merchantShortId opCity apiTokenInfo optionId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.deleteIssueOption) optionId)
 
-deleteIssueMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deleteIssueMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteIssueMessage merchantShortId opCity apiTokenInfo messageId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.deleteIssueMessage) messageId)
 
-getIssueCategoryFlowPreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes)
+getIssueCategoryFlowPreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes)
 getIssueCategoryFlowPreview merchantShortId opCity apiTokenInfo categoryId language = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueCategoryFlowPreview) categoryId language
 
-getIssueTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
+getIssueTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
 getIssueTranslations merchantShortId opCity apiTokenInfo sentence = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueTranslations) sentence
 
-postIssueBulkUpsertTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueBulkUpsertTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueBulkUpsertTranslations merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueBulkUpsertTranslations) req)
 
-getIssueConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
+getIssueConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
 getIssueConfig merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueConfig)
 
-postIssueConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueConfigUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueConfigUpdate) req)
 
-postIssueCategoryReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueCategoryReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueCategoryReorder merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueCategoryReorder) req)
 
-postIssueOptionReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueOptionReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueOptionReorder merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueOptionReorder) req)
 
-postIssueMessageReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueMessageReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueMessageReorder merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueMessageReorder) req)
 
-postIssueCategoryCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes)
+postIssueCategoryCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes)
 postIssueCategoryCopy merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueCategoryCopy) req)
 
-postIssueCategoryDefaultCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
+postIssueCategoryDefaultCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
 postIssueCategoryDefaultCopy merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueCategoryDefaultCopy)
 
-postIssueCategoryAllCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
+postIssueCategoryAllCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
 postIssueCategoryAllCopy merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueCategoryAllCopy) req)
 
-postIssueChatMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageReq -> Environment.Flow IssueManagement.Common.UI.Issue.ChatMessageItem)
+postIssueChatMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageReq -> Environment.Flow IssueManagement.Common.UI.Issue.ChatMessageItem)
 postIssueChatMessage merchantShortId opCity apiTokenInfo issueId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI
       checkedMerchantId
@@ -498,41 +498,41 @@ postIssueChatMessage merchantShortId opCity apiTokenInfo issueId req = do
           ..
         }
 
-getIssueChatMessages :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow [IssueManagement.Common.UI.Issue.ChatMessageItem])
+getIssueChatMessages :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow [IssueManagement.Common.UI.Issue.ChatMessageItem])
 getIssueChatMessages merchantShortId opCity apiTokenInfo issueId since limit = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueChatMessages) issueId since limit
 
-postIssueChatRead :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueChatRead :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueChatRead merchantShortId opCity apiTokenInfo issueId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueChatRead) issueId req)
 
-getIssueApiIntegrationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow IssueManagement.Common.Dashboard.Issue.ApiIntegrationListRes)
+getIssueApiIntegrationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow IssueManagement.Common.Dashboard.Issue.ApiIntegrationListRes)
 getIssueApiIntegrationList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueApiIntegrationList)
 
-postIssueApiIntegrationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationRes)
+postIssueApiIntegrationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationRes)
 postIssueApiIntegrationUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueApiIntegrationUpsert) req)
 
-postIssueApiIntegrationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueApiIntegration.IssueApiIntegration -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIssueApiIntegrationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueApiIntegration.IssueApiIntegration -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postIssueApiIntegrationDelete merchantShortId opCity apiTokenInfo apiIntegrationId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueApiIntegrationDelete) apiIntegrationId)
 
-postIssueApiIntegrationTest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes)
+postIssueApiIntegrationTest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq -> Environment.Flow IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes)
 postIssueApiIntegrationTest merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.postIssueApiIntegrationTest) req)
 
-getIssueFlowSimulate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Environment.Flow IssueManagement.Common.UI.Issue.IssueOptionListRes)
+getIssueFlowSimulate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Environment.Flow IssueManagement.Common.UI.Issue.IssueOptionListRes)
 getIssueFlowSimulate merchantShortId opCity apiTokenInfo optionId rideId sessionId categoryId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueFlowSimulate) optionId rideId sessionId categoryId

@@ -22,7 +22,9 @@ let outputPath =
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
       , _servantApiDashboard = ""
+      , _servantApiDashboardAuth = ""
       , _servantApiClient = ""
+      , _configPilot = ""
       , _sql = [ { _1 = migrationPath, _2 = "atlas_safety_dashboard" } ]
       , _purescriptFrontend = ""
       }
@@ -30,8 +32,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_DASHBOARD_AUTH
       | API_TREE
       | API_TREE_DASHBOARD
+      | API_TREE_DASHBOARD_AUTH
       | API_TREE_COMMON
       | API_TREE_CLIENT
       | API_TYPES
@@ -43,6 +47,7 @@ let GeneratorType =
       | DOMAIN_TYPE
       | SQL
       | PURE_SCRIPT_FRONTEND
+      | CONFIG_PILOT
       >
 
 let ImportType = < SIMPLE | QUALIFIED >
@@ -213,6 +218,7 @@ in  { _output = outputPath
     , _folderName = None Text
     , _apiDashboardPrefix = None Text
     , _serverNameTypePrefix = None Text
+    , _appServerDashboardAuth = None Bool
     , _capabilityBaseline = None Text
     , _migrationParams =
         [] : List { _migrationName : Text, _migrationParam : Optional Text }

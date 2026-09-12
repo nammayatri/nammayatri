@@ -106,7 +106,7 @@ dependencies:
   - esqueleto
   - beckn-services
   - unordered-containers
-  - dashboard-helper-api
+  - lib-dashboard
   - shared-services
   - extra
   - scheduler

@@ -12,7 +12,7 @@ module Domain.Action.Dashboard.Common
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC

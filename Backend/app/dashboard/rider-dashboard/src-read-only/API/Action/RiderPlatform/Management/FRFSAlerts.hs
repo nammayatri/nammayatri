@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts
 import qualified Data.Text
 import qualified Domain.Action.RiderPlatform.Management.FRFSAlerts
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("fRFSAlerts" :> GetFRFSAlertsFrfsLiveMetrics)
 
@@ -35,5 +35,5 @@ type GetFRFSAlertsFrfsLiveMetrics =
       :> API.Types.RiderPlatform.Management.FRFSAlerts.GetFRFSAlertsFrfsLiveMetrics
   )
 
-getFRFSAlertsFrfsLiveMetrics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSAlerts.LiveMetricsResponse)
+getFRFSAlertsFrfsLiveMetrics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSAlerts.LiveMetricsResponse)
 getFRFSAlertsFrfsLiveMetrics merchantShortId opCity apiTokenInfo from to modes = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSAlerts.getFRFSAlertsFrfsLiveMetrics merchantShortId opCity apiTokenInfo from to modes

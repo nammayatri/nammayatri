@@ -21,7 +21,7 @@ module Domain.Action.Dashboard.Management.DriverGoHome
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Driver as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
+import qualified "this" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
 import qualified Domain.Types.DriverHomeLocation as DDHL

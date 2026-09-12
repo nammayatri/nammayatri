@@ -7,10 +7,11 @@ module API.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
   )
 where
 
-import qualified API.Types.Dashboard.AppManagement
+import qualified "rider-app" API.Types.Dashboard.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
 import qualified Data.Text
 import qualified Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("vehicleSeatLayoutMapping" :> (ListVehicleSeatLayoutMapping :<|> UpsertVehicleSeatLayoutMapping :<|> DeleteVehicleSeatLayoutMapping))
 
@@ -52,11 +52,11 @@ type DeleteVehicleSeatLayoutMapping =
       :> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.DeleteVehicleSeatLayoutMapping
   )
 
-listVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Data.Text.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingItem])
+listVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Data.Text.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingItem])
 listVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo limit offset gtfsId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping.listVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo limit offset gtfsId
 
-upsertVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+upsertVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 upsertVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping.upsertVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo req
 
-deleteVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Data.Text.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Data.Text.Text -> Data.Text.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo vehicleNo gtfsId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping.deleteVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo vehicleNo gtfsId

@@ -23,7 +23,7 @@ module Domain.Action.Dashboard.Management.ScheduledBooking
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
+import qualified "this" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
 import qualified API.UI.Issue as AUI
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nubBy, sortOn)

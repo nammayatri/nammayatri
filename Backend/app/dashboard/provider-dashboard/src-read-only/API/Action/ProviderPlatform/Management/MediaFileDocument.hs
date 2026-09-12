@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified Domain.Action.ProviderPlatform.Management.MediaFileDocument
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("mediaFileDocument" :> (PostMediaFileDocumentUploadLink :<|> PostMediaFileDocumentConfirm :<|> PostMediaFileDocumentDelete :<|> GetMediaFileDocumentDownloadLink))
 
@@ -59,14 +59,14 @@ type GetMediaFileDocumentDownloadLink =
       :> API.Types.ProviderPlatform.Management.MediaFileDocument.GetMediaFileDocumentDownloadLink
   )
 
-postMediaFileDocumentUploadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.MediaFileDocument.UploadMediaFileDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
+postMediaFileDocumentUploadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.MediaFileDocument.UploadMediaFileDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
 postMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.postMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req
 
-postMediaFileDocumentConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMediaFileDocumentConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.postMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req
 
-postMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req
 
-getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
+getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
 getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId

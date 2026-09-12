@@ -14,7 +14,6 @@
 
 module Tools.Auth.Capability
   ( CachedAccess (..),
-    mkEndpointId,
     computeEffective,
     resolveAccess,
     adminTierOf,
@@ -24,14 +23,12 @@ module Tools.Auth.Capability
     endpointCapabilities,
     enforce,
     enforceResourceScopeFromRequest,
-    endpointIdForAction,
   )
 where
 
 import Data.List (nub)
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Capability as DC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -64,23 +61,6 @@ import Tools.Error (ResourceScopeError (..))
 -- SUPER_ADMIN bypasses the check entirely. That is break-glass by design
 -- (PLAN.md admin tiering) — the tier is DB-seeded, never mintable over the
 -- API — and every use of it logs.
-
--- | The endpoint_id this request's action is registered under in
--- capability_endpoint. DSL actions serialize to MODULE/RESOURCE/ACTION via the
--- UserActionTypeWrapper Show instance; legacy (non-DSL) actions carry a
--- LEGACY/<entity>/<action> qualified id.
-mkEndpointId :: DMatrix.ApiAccessLevel -> Text
-mkEndpointId lvl = do
-  let actionStr = show (DMatrix.UserActionTypeWrapper lvl.userActionType)
-  case lvl.apiEntity of
-    DMatrix.DSL -> actionStr
-    entity -> "LEGACY/" <> show entity <> "/" <> actionStr
-
--- | The endpoint_id for a DSL action, from just its UserActionType — what a
--- proxy handler has on its ApiTokenInfo. Same value mkEndpointId produces for
--- DSL entities. Handlers use it to look up the endpoint's resource scoping.
-endpointIdForAction :: DMatrix.UserActionType -> Text
-endpointIdForAction uat = show (DMatrix.UserActionTypeWrapper uat)
 
 -- | Everything the auth path needs about a person, cached as one value so a
 -- request costs one Redis read instead of three Postgres queries.

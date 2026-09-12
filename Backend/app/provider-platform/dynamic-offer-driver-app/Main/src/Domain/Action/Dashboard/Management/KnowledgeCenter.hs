@@ -13,7 +13,7 @@ module Domain.Action.Dashboard.Management.KnowledgeCenter
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.KnowledgeCenter as API
+import qualified "this" API.Types.ProviderPlatform.Management.KnowledgeCenter as API
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude

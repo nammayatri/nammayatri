@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.Pricing
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("pricing" :> (GetPricingSurgeList :<|> PostPricingSurgeCreate :<|> PostPricingSurgeUpdate :<|> PostPricingSurgeStatus :<|> PostPricingSurgePreview :<|> GetPricingObservabilityEstimate :<|> GetPricingObservabilityCustomer :<|> GetPricingObservabilityHealth))
 
@@ -92,26 +92,26 @@ type GetPricingObservabilityHealth =
       :> API.Types.ProviderPlatform.Management.Pricing.GetPricingObservabilityHealth
   )
 
-getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
+getPricingSurgeList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigListRes)
 getPricingSurgeList merchantShortId opCity apiTokenInfo serviceTier = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingSurgeList merchantShortId opCity apiTokenInfo serviceTier
 
-postPricingSurgeCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigRes)
+postPricingSurgeCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigRes)
 postPricingSurgeCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.postPricingSurgeCreate merchantShortId opCity apiTokenInfo req
 
-postPricingSurgeUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.SurgeConfig -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPricingSurgeUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.SurgeConfig -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPricingSurgeUpdate merchantShortId opCity apiTokenInfo surgeConfigId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.postPricingSurgeUpdate merchantShortId opCity apiTokenInfo surgeConfigId req
 
-postPricingSurgeStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.SurgeConfig -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPricingSurgeStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.SurgeConfig -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgeStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPricingSurgeStatus merchantShortId opCity apiTokenInfo surgeConfigId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.postPricingSurgeStatus merchantShortId opCity apiTokenInfo surgeConfigId req
 
-postPricingSurgePreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgePreviewReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgePreviewRes)
+postPricingSurgePreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.Pricing.PricingSurgePreviewReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingSurgePreviewRes)
 postPricingSurgePreview merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.postPricingSurgePreview merchantShortId opCity apiTokenInfo req
 
-getPricingObservabilityEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingEstimateExplainRes)
+getPricingObservabilityEstimate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingEstimateExplainRes)
 getPricingObservabilityEstimate merchantShortId opCity apiTokenInfo estimateId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityEstimate merchantShortId opCity apiTokenInfo estimateId
 
-getPricingObservabilityCustomer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingCustomerSearchRes)
+getPricingObservabilityCustomer :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingCustomerSearchRes)
 getPricingObservabilityCustomer merchantShortId opCity apiTokenInfo phone = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityCustomer merchantShortId opCity apiTokenInfo phone
 
-getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
+getPricingObservabilityHealth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Pricing.PricingHealthRes)
 getPricingObservabilityHealth merchantShortId opCity apiTokenInfo hours = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Pricing.getPricingObservabilityHealth merchantShortId opCity apiTokenInfo hours

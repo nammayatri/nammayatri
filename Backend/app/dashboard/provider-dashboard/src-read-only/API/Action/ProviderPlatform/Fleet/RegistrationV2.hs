@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
 import qualified Domain.Action.ProviderPlatform.Fleet.RegistrationV2
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified Domain.Types.InitiatedBy
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.PaymentMode
@@ -22,7 +23,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("fleet" :> (PostRegistrationV2LoginOtp :<|> PostRegistrationV2VerifyOtp :<|> PostRegistrationV2Register :<|> PostRegistrationV2RegisterBankAccountLink :<|> GetRegistrationV2RegisterBankAccountStatus :<|> PutRegistrationV2ProfileLanguage :<|> GetRegistrationV2ProfileLanguage))
 
@@ -35,41 +35,41 @@ type PostRegistrationV2VerifyOtp = API.Types.ProviderPlatform.Fleet.Registration
 
 type PostRegistrationV2Register =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER))
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2Register
   )
 
 type PostRegistrationV2RegisterBankAccountLink =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK))
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2RegisterBankAccountLink
   )
 
 type GetRegistrationV2RegisterBankAccountStatus =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS))
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.GetRegistrationV2RegisterBankAccountStatus
   )
 
 type PutRegistrationV2ProfileLanguage =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.PUT_REGISTRATION_V2_PROFILE_LANGUAGE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.PUT_REGISTRATION_V2_PROFILE_LANGUAGE))
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PutRegistrationV2ProfileLanguage
   )
 
 type GetRegistrationV2ProfileLanguage =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_PROFILE_LANGUAGE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_PROFILE_LANGUAGE))
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.GetRegistrationV2ProfileLanguage
   )
 
@@ -79,17 +79,17 @@ postRegistrationV2LoginOtp merchantShortId opCity req = withFlowHandlerAPI' $ Do
 postRegistrationV2VerifyOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerVerifyReqV2 -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerVerifyResV2)
 postRegistrationV2VerifyOtp merchantShortId opCity req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.postRegistrationV2VerifyOtp merchantShortId opCity req
 
-postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRegistrationV2Register merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.postRegistrationV2Register merchantShortId opCity apiTokenInfo req
 
-postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
+postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.PaymentMode.PaymentMode) -> Kernel.Prelude.Maybe (Domain.Types.InitiatedBy.InitiatedBy) -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
 postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode initiatedBy = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode initiatedBy
 
-getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
+getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
 getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId forceRefresh = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId forceRefresh
 
-putRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerUpdateLanguageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+putRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerUpdateLanguageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.putRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo req
 
-getRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLanguageRes)
+getRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLanguageRes)
 getRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.getRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo

@@ -11,8 +11,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_DASHBOARD_AUTH
       | API_TREE
       | API_TREE_DASHBOARD
+      | API_TREE_DASHBOARD_AUTH
       | API_TREE_COMMON
       | API_TREE_CLIENT
       | API_TYPES
@@ -335,6 +337,7 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
+      , _appServerDashboardAuth = None Bool
       , _capabilityBaseline = None Text
       , _endpointPrefix = None Text
       , _migrationParams =

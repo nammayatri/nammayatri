@@ -32,9 +32,9 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonCapability as QPC
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.RoleCapability as QRC
-import Tools.Auth
 import Tools.Auth.Capability (adminTierOf, computeEffective, isSuperAdmin)
 import qualified Tools.Auth.Capability as Capability
+import Tools.Auth.Dashboard
 import Tools.Error
 
 -- Access Control framework admin surface (dashboard unification Phase 4).

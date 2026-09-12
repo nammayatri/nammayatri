@@ -50,6 +50,7 @@ library
       API.Dashboard
       API.Dashboard.Exotel
       API.Depot
+      API.DirectDashboard
       API.FleetEngineToken
       API.FRFS
       API.FRFSMetrics
@@ -167,6 +168,10 @@ library
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
+      Dashboard.RiderPlatform.Management.FRFSTicket
+      Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.Rewards
+      Dashboard.RiderPlatform.Management.Ride
       Domain.Action.Beckn.Common
       Domain.Action.Beckn.FRFS.Common
       Domain.Action.Beckn.FRFS.GWLink
@@ -375,6 +380,7 @@ library
       Domain.Action.UI.ZendeskWebhook
       Domain.Action.UnifiedDashboard.Management.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
+      Domain.Types.AccessMatrix
       Domain.Types.Beckn.FRFS.OnCancel
       Domain.Types.Beckn.FRFS.OnSearch
       Domain.Types.Booking.API
@@ -623,6 +629,7 @@ library
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
+      Storage.Beam.RiderDashboardTransaction
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
       Storage.Beam.SpecialZone
@@ -788,6 +795,7 @@ library
       Storage.Queries.RewardCouponUploadBatchExtra
       Storage.Queries.RewardUnlockExtra
       Storage.Queries.RideExtra
+      Storage.Queries.RiderDashboardTransaction
       Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
@@ -836,6 +844,8 @@ library
       Tools.AadhaarVerification
       Tools.ActorInfo
       Tools.Auth
+      Tools.Auth.DashboardUser
+      Tools.Auth.DashboardUserAuth
       Tools.Beam.UtilsTH
       Tools.Call
       Tools.ConfigPilot
@@ -930,6 +940,59 @@ library
       API.Action.Dashboard.RideBooking.Registration
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
+      API.Action.DashboardAuth.AppManagement
+      API.Action.DashboardAuth.AppManagement.Customer
+      API.Action.DashboardAuth.AppManagement.EDCMachine
+      API.Action.DashboardAuth.AppManagement.EventManagement
+      API.Action.DashboardAuth.AppManagement.FRFSTicketService
+      API.Action.DashboardAuth.AppManagement.MerchantOnboarding
+      API.Action.DashboardAuth.AppManagement.Pass
+      API.Action.DashboardAuth.AppManagement.Passetto
+      API.Action.DashboardAuth.AppManagement.PassOrganization
+      API.Action.DashboardAuth.AppManagement.Payment
+      API.Action.DashboardAuth.AppManagement.SeatLayout
+      API.Action.DashboardAuth.AppManagement.StopRouteDetails
+      API.Action.DashboardAuth.AppManagement.TicketDashboard
+      API.Action.DashboardAuth.AppManagement.Tickets
+      API.Action.DashboardAuth.AppManagement.TransitOperator
+      API.Action.DashboardAuth.AppManagement.VehicleSeatLayoutMapping
+      API.Action.DashboardAuth.IssueManagement
+      API.Action.DashboardAuth.IssueManagement.Issue
+      API.Action.DashboardAuth.IssueManagement.IssueList
+      API.Action.DashboardAuth.Management
+      API.Action.DashboardAuth.Management.AlertIncident
+      API.Action.DashboardAuth.Management.Booking
+      API.Action.DashboardAuth.Management.Customer
+      API.Action.DashboardAuth.Management.FRFSAlerts
+      API.Action.DashboardAuth.Management.FRFSTicket
+      API.Action.DashboardAuth.Management.Invoice
+      API.Action.DashboardAuth.Management.Media
+      API.Action.DashboardAuth.Management.Merchant
+      API.Action.DashboardAuth.Management.NammaTag
+      API.Action.DashboardAuth.Management.Notification
+      API.Action.DashboardAuth.Management.Offer
+      API.Action.DashboardAuth.Management.Payout
+      API.Action.DashboardAuth.Management.Rewards
+      API.Action.DashboardAuth.Management.Ride
+      API.Action.DashboardAuth.Management.SearchTry
+      API.Action.DashboardAuth.Management.Sos
+      API.Action.DashboardAuth.Management.SosMedia
+      API.Action.DashboardAuth.Management.System
+      API.Action.DashboardAuth.RideBooking
+      API.Action.DashboardAuth.RideBooking.AddBaggage
+      API.Action.DashboardAuth.RideBooking.Booking
+      API.Action.DashboardAuth.RideBooking.Cancel
+      API.Action.DashboardAuth.RideBooking.ChangeServiceTier
+      API.Action.DashboardAuth.RideBooking.Confirm
+      API.Action.DashboardAuth.RideBooking.Frontend
+      API.Action.DashboardAuth.RideBooking.Maps
+      API.Action.DashboardAuth.RideBooking.MultiModal
+      API.Action.DashboardAuth.RideBooking.NotifyRideInfo
+      API.Action.DashboardAuth.RideBooking.Profile
+      API.Action.DashboardAuth.RideBooking.Quote
+      API.Action.DashboardAuth.RideBooking.Registration
+      API.Action.DashboardAuth.RideBooking.Search
+      API.Action.DashboardAuth.RideBooking.Select
       API.Action.UI.AlertWebhook
       API.Action.UI.AssetManifest
       API.Action.UI.AssetReleaseInternal
@@ -1048,6 +1111,43 @@ library
       API.Types.Dashboard.RideBooking.Registration
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
+      API.Types.RiderPlatform.Management
+      API.Types.RiderPlatform.Management.AlertIncident
+      API.Types.RiderPlatform.Management.Booking
+      API.Types.RiderPlatform.Management.Customer
+      API.Types.RiderPlatform.Management.Endpoints.AlertIncident
+      API.Types.RiderPlatform.Management.Endpoints.Booking
+      API.Types.RiderPlatform.Management.Endpoints.Customer
+      API.Types.RiderPlatform.Management.Endpoints.FRFSAlerts
+      API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
+      API.Types.RiderPlatform.Management.Endpoints.Invoice
+      API.Types.RiderPlatform.Management.Endpoints.Media
+      API.Types.RiderPlatform.Management.Endpoints.Merchant
+      API.Types.RiderPlatform.Management.Endpoints.NammaTag
+      API.Types.RiderPlatform.Management.Endpoints.Notification
+      API.Types.RiderPlatform.Management.Endpoints.Offer
+      API.Types.RiderPlatform.Management.Endpoints.Payout
+      API.Types.RiderPlatform.Management.Endpoints.Rewards
+      API.Types.RiderPlatform.Management.Endpoints.Ride
+      API.Types.RiderPlatform.Management.Endpoints.SearchTry
+      API.Types.RiderPlatform.Management.Endpoints.Sos
+      API.Types.RiderPlatform.Management.Endpoints.SosMedia
+      API.Types.RiderPlatform.Management.Endpoints.System
+      API.Types.RiderPlatform.Management.FRFSAlerts
+      API.Types.RiderPlatform.Management.FRFSTicket
+      API.Types.RiderPlatform.Management.Invoice
+      API.Types.RiderPlatform.Management.Media
+      API.Types.RiderPlatform.Management.Merchant
+      API.Types.RiderPlatform.Management.NammaTag
+      API.Types.RiderPlatform.Management.Notification
+      API.Types.RiderPlatform.Management.Offer
+      API.Types.RiderPlatform.Management.Payout
+      API.Types.RiderPlatform.Management.Rewards
+      API.Types.RiderPlatform.Management.Ride
+      API.Types.RiderPlatform.Management.SearchTry
+      API.Types.RiderPlatform.Management.Sos
+      API.Types.RiderPlatform.Management.SosMedia
+      API.Types.RiderPlatform.Management.System
       API.Types.UI.AlertWebhook
       API.Types.UI.AssetManifest
       API.Types.UI.AssetReleaseInternal
@@ -1770,7 +1870,6 @@ library
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
-    , dashboard-helper-api
     , data-default-class
     , directory
     , euler-hs
@@ -1792,6 +1891,7 @@ library
     , jwt
     , lens
     , lens-aeson
+    , lib-dashboard
     , memory
     , mobility-core
     , morpheus-graphql-client
@@ -1918,7 +2018,6 @@ executable rider-app-exe
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
-    , dashboard-helper-api
     , data-default-class
     , directory
     , euler-hs
@@ -1937,6 +2036,7 @@ executable rider-app-exe
     , jwt
     , lens
     , lens-aeson
+    , lib-dashboard
     , memory
     , mobility-core
     , morpheus-graphql-client
@@ -2059,7 +2159,6 @@ test-suite rider-app-test
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
-    , dashboard-helper-api
     , data-default-class
     , directory
     , euler-hs
@@ -2078,6 +2177,7 @@ test-suite rider-app-test
     , jwt
     , lens
     , lens-aeson
+    , lib-dashboard
     , memory
     , mobility-core
     , morpheus-graphql-client

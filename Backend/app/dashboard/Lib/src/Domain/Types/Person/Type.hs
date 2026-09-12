@@ -99,6 +99,12 @@ instance EncryptedItem' Person where
 data DashboardType = DEFAULT_DASHBOARD | TICKET_DASHBOARD
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+-- | Verification outcome for a fleet-owner person. Defined here rather than
+-- imported from the provider API types so lib-dashboard stays independent of
+-- the application packages; callers map their wire type onto this.
+data FleetOwnerStatus = Approved | Rejected
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data DashboardTypeTag = DefaultDashboard | TicketDashboard
 
 data SingDashboardType (t :: DashboardTypeTag) where

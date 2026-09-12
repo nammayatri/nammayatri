@@ -5,7 +5,8 @@ module Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
 where
 
 import qualified API.Client.ProviderPlatform.RideBooking as Client
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dynamic-offer-driver-app" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import "lib-dashboard" Environment
@@ -18,16 +19,15 @@ import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.Role as QRole
-import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
 
-postDriverRegistrationAuth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AuthReq -> Flow Common.AuthRes
+postDriverRegistrationAuth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.AuthReq -> Flow Common.AuthRes
 postDriverRegistrationAuth merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRideBookingAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationAuth) req
 
-postDriverRegistrationVerify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.AuthVerifyReq -> Flow APISuccess
+postDriverRegistrationVerify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Text -> Common.AuthVerifyReq -> Flow APISuccess
 postDriverRegistrationVerify merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)

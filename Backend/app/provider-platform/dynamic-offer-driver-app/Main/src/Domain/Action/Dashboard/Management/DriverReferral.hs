@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Management.DriverReferral
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverReferral as Common
+import qualified "this" API.Types.ProviderPlatform.Management.DriverReferral as Common
 import Control.Applicative
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS

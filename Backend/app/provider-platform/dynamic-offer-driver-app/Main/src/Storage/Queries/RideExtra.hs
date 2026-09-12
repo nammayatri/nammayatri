@@ -2,7 +2,7 @@
 
 module Storage.Queries.RideExtra where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Either
 import qualified Data.HashMap.Strict as HMS

@@ -43,6 +43,13 @@ library
       API.Dashboard.Exotel
       API.Dashboard.Fleet
       API.Dashboard.Fleet.Registration
+      API.DashboardCacAuth
+      API.DashboardDriverInfoByPhoneNumber
+      API.DashboardExotel
+      API.DashboardFleetRegistration
+      API.DashboardInternalAuth
+      API.DashboardLogin
+      API.DirectDashboard
       API.External.LiveEKD
       API.FleetEngineToken
       API.IGM
@@ -95,6 +102,7 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.OnixBppWebhook
+      API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -182,6 +190,23 @@ library
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search
+      Dashboard.ProviderPlatform.CacAuth
+      Dashboard.ProviderPlatform.Fleet.Driver
+      Dashboard.ProviderPlatform.Fleet.PayoutAccount
+      Dashboard.ProviderPlatform.Fleet.RegistrationV2
+      Dashboard.ProviderPlatform.Management.Communication
+      Dashboard.ProviderPlatform.Management.Driver
+      Dashboard.ProviderPlatform.Management.DriverCoins
+      Dashboard.ProviderPlatform.Management.DriverReferral
+      Dashboard.ProviderPlatform.Management.DriverRegistration
+      Dashboard.ProviderPlatform.Management.FinanceManagement
+      Dashboard.ProviderPlatform.Management.KnowledgeCenter
+      Dashboard.ProviderPlatform.Management.MediaFileDocument
+      Dashboard.ProviderPlatform.Management.Merchant
+      Dashboard.ProviderPlatform.Management.Message
+      Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Operator.Driver
+      Dashboard.ProviderPlatform.Operator.Registration
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -429,6 +454,7 @@ library
       Domain.Action.UnifiedDashboard.Management.Person
       Domain.Action.UnifiedDashboard.Operator.HealthCheck
       Domain.Action.UnifiedDashboard.RideBooking.HealthCheck
+      Domain.Types.AccessMatrix
       Domain.Types.Beckn.Status
       Domain.Types.Cac
       Domain.Types.CacType
@@ -705,6 +731,7 @@ library
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
       Storage.Beam.DashboardAlert
+      Storage.Beam.DriverDashboardTransaction
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersAmbulanceDetails
       Storage.Beam.FareParameters.FareParametersInterCityDetails
@@ -889,6 +916,7 @@ library
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.DriverBankAccountExtra
       Storage.Queries.DriverBlockReasonExtra
+      Storage.Queries.DriverDashboardTransaction
       Storage.Queries.DriverFeeExtra
       Storage.Queries.DriverGoHomeRequestExtra
       Storage.Queries.DriverGstinExtra
@@ -1058,6 +1086,9 @@ library
       Tools.AadhaarVerification
       Tools.ActorInfo
       Tools.Auth
+      Tools.Auth.DashboardRegistration
+      Tools.Auth.DashboardUser
+      Tools.Auth.DashboardUserAuth
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH
       Tools.Call
@@ -1164,6 +1195,75 @@ library
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
+      API.Action.DashboardAuth.AppManagement
+      API.Action.DashboardAuth.AppManagement.Driver
+      API.Action.DashboardAuth.AppManagement.DriverSubscription
+      API.Action.DashboardAuth.AppManagement.DriverWallet
+      API.Action.DashboardAuth.AppManagement.FrfsFleetOperator
+      API.Action.DashboardAuth.AppManagement.Overlay
+      API.Action.DashboardAuth.AppManagement.Penalty
+      API.Action.DashboardAuth.AppManagement.Subscription
+      API.Action.DashboardAuth.AppManagement.SubscriptionTransaction
+      API.Action.DashboardAuth.Fleet
+      API.Action.DashboardAuth.Fleet.Driver
+      API.Action.DashboardAuth.Fleet.LiveMap
+      API.Action.DashboardAuth.Fleet.Onboarding
+      API.Action.DashboardAuth.Fleet.PayoutAccount
+      API.Action.DashboardAuth.Fleet.RegistrationV2
+      API.Action.DashboardAuth.IssueManagement
+      API.Action.DashboardAuth.IssueManagement.Issue
+      API.Action.DashboardAuth.Management
+      API.Action.DashboardAuth.Management.Account
+      API.Action.DashboardAuth.Management.Booking
+      API.Action.DashboardAuth.Management.CancellationConsequence
+      API.Action.DashboardAuth.Management.CoinsConfig
+      API.Action.DashboardAuth.Management.Communication
+      API.Action.DashboardAuth.Management.DomainDiscountConfig
+      API.Action.DashboardAuth.Management.Driver
+      API.Action.DashboardAuth.Management.DriverCoins
+      API.Action.DashboardAuth.Management.DriverGoHome
+      API.Action.DashboardAuth.Management.DriverReferral
+      API.Action.DashboardAuth.Management.DriverRegistration
+      API.Action.DashboardAuth.Management.DriverVehicleQuality
+      API.Action.DashboardAuth.Management.EntityInfo
+      API.Action.DashboardAuth.Management.FarePolicyV2
+      API.Action.DashboardAuth.Management.FeedbackForm
+      API.Action.DashboardAuth.Management.FinanceManagement
+      API.Action.DashboardAuth.Management.GeohashArea
+      API.Action.DashboardAuth.Management.IncentiveJourney
+      API.Action.DashboardAuth.Management.KnowledgeCenter
+      API.Action.DashboardAuth.Management.Media
+      API.Action.DashboardAuth.Management.MediaFileDocument
+      API.Action.DashboardAuth.Management.Merchant
+      API.Action.DashboardAuth.Management.Message
+      API.Action.DashboardAuth.Management.NammaTag
+      API.Action.DashboardAuth.Management.Notification
+      API.Action.DashboardAuth.Management.Payout
+      API.Action.DashboardAuth.Management.PlanManagement
+      API.Action.DashboardAuth.Management.Pricing
+      API.Action.DashboardAuth.Management.Revenue
+      API.Action.DashboardAuth.Management.Ride
+      API.Action.DashboardAuth.Management.ScheduledBooking
+      API.Action.DashboardAuth.Management.SearchTry
+      API.Action.DashboardAuth.Management.SosMedia
+      API.Action.DashboardAuth.Management.SpecialZoneQueue
+      API.Action.DashboardAuth.Management.System
+      API.Action.DashboardAuth.Management.Vehicle
+      API.Action.DashboardAuth.Management.VehicleDetails
+      API.Action.DashboardAuth.Management.VehicleInfo
+      API.Action.DashboardAuth.Management.Volunteer
+      API.Action.DashboardAuth.Operator
+      API.Action.DashboardAuth.Operator.Driver
+      API.Action.DashboardAuth.Operator.FleetManagement
+      API.Action.DashboardAuth.Operator.Registration
+      API.Action.DashboardAuth.RideBooking
+      API.Action.DashboardAuth.RideBooking.Driver
+      API.Action.DashboardAuth.RideBooking.DriverRegistration
+      API.Action.DashboardAuth.RideBooking.Maps
+      API.Action.DashboardAuth.RideBooking.MeterRide
+      API.Action.DashboardAuth.RideBooking.Ride
+      API.Action.DashboardAuth.RideBooking.SearchRequest
+      API.Action.DashboardAuth.RideBooking.Volunteer
       API.Action.UI.AvailableForRides
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
@@ -1252,6 +1352,103 @@ library
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
+      API.Types.ProviderPlatform.Fleet
+      API.Types.ProviderPlatform.Fleet.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.LiveMap
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+      API.Types.ProviderPlatform.Fleet.Endpoints.PayoutAccount
+      API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+      API.Types.ProviderPlatform.Fleet.LiveMap
+      API.Types.ProviderPlatform.Fleet.Onboarding
+      API.Types.ProviderPlatform.Fleet.PayoutAccount
+      API.Types.ProviderPlatform.Fleet.RegistrationV2
+      API.Types.ProviderPlatform.Management
+      API.Types.ProviderPlatform.Management.Account
+      API.Types.ProviderPlatform.Management.Booking
+      API.Types.ProviderPlatform.Management.CancellationConsequence
+      API.Types.ProviderPlatform.Management.CoinsConfig
+      API.Types.ProviderPlatform.Management.Communication
+      API.Types.ProviderPlatform.Management.DomainDiscountConfig
+      API.Types.ProviderPlatform.Management.Driver
+      API.Types.ProviderPlatform.Management.DriverCoins
+      API.Types.ProviderPlatform.Management.DriverGoHome
+      API.Types.ProviderPlatform.Management.DriverReferral
+      API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.DriverVehicleQuality
+      API.Types.ProviderPlatform.Management.Endpoints.Account
+      API.Types.ProviderPlatform.Management.Endpoints.Booking
+      API.Types.ProviderPlatform.Management.Endpoints.CancellationConsequence
+      API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
+      API.Types.ProviderPlatform.Management.Endpoints.Communication
+      API.Types.ProviderPlatform.Management.Endpoints.DomainDiscountConfig
+      API.Types.ProviderPlatform.Management.Endpoints.Driver
+      API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
+      API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
+      API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
+      API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.DriverVehicleQuality
+      API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
+      API.Types.ProviderPlatform.Management.Endpoints.FarePolicyV2
+      API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
+      API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
+      API.Types.ProviderPlatform.Management.Endpoints.GeohashArea
+      API.Types.ProviderPlatform.Management.Endpoints.IncentiveJourney
+      API.Types.ProviderPlatform.Management.Endpoints.KnowledgeCenter
+      API.Types.ProviderPlatform.Management.Endpoints.Media
+      API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
+      API.Types.ProviderPlatform.Management.Endpoints.Merchant
+      API.Types.ProviderPlatform.Management.Endpoints.Message
+      API.Types.ProviderPlatform.Management.Endpoints.NammaTag
+      API.Types.ProviderPlatform.Management.Endpoints.Notification
+      API.Types.ProviderPlatform.Management.Endpoints.Payout
+      API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
+      API.Types.ProviderPlatform.Management.Endpoints.Pricing
+      API.Types.ProviderPlatform.Management.Endpoints.Revenue
+      API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
+      API.Types.ProviderPlatform.Management.Endpoints.SearchTry
+      API.Types.ProviderPlatform.Management.Endpoints.SosMedia
+      API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
+      API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.Vehicle
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
+      API.Types.ProviderPlatform.Management.Endpoints.Volunteer
+      API.Types.ProviderPlatform.Management.EntityInfo
+      API.Types.ProviderPlatform.Management.FarePolicyV2
+      API.Types.ProviderPlatform.Management.FeedbackForm
+      API.Types.ProviderPlatform.Management.FinanceManagement
+      API.Types.ProviderPlatform.Management.GeohashArea
+      API.Types.ProviderPlatform.Management.IncentiveJourney
+      API.Types.ProviderPlatform.Management.KnowledgeCenter
+      API.Types.ProviderPlatform.Management.Media
+      API.Types.ProviderPlatform.Management.MediaFileDocument
+      API.Types.ProviderPlatform.Management.Merchant
+      API.Types.ProviderPlatform.Management.Message
+      API.Types.ProviderPlatform.Management.NammaTag
+      API.Types.ProviderPlatform.Management.Notification
+      API.Types.ProviderPlatform.Management.Payout
+      API.Types.ProviderPlatform.Management.PlanManagement
+      API.Types.ProviderPlatform.Management.Pricing
+      API.Types.ProviderPlatform.Management.Revenue
+      API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.ScheduledBooking
+      API.Types.ProviderPlatform.Management.SearchTry
+      API.Types.ProviderPlatform.Management.SosMedia
+      API.Types.ProviderPlatform.Management.SpecialZoneQueue
+      API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.Vehicle
+      API.Types.ProviderPlatform.Management.VehicleDetails
+      API.Types.ProviderPlatform.Management.VehicleInfo
+      API.Types.ProviderPlatform.Management.Volunteer
+      API.Types.ProviderPlatform.Operator
+      API.Types.ProviderPlatform.Operator.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
+      API.Types.ProviderPlatform.Operator.Endpoints.Registration
+      API.Types.ProviderPlatform.Operator.FleetManagement
+      API.Types.ProviderPlatform.Operator.Registration
       API.Types.UI.AvailableForRides
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
@@ -2068,7 +2265,6 @@ library
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
-    , dashboard-helper-api
     , dashcam
     , data-default-class
     , directory
@@ -2095,6 +2291,7 @@ library
     , jwt >=0.11
     , lens
     , lens-aeson
+    , lib-dashboard
     , location-updates
     , memory
     , mobility-core
@@ -2220,7 +2417,6 @@ executable dynamic-offer-driver-app-exe
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
-    , dashboard-helper-api
     , data-default-class
     , directory
     , dynamic-offer-driver-app
@@ -2245,6 +2441,7 @@ executable dynamic-offer-driver-app-exe
     , jwt >=0.11
     , lens
     , lens-aeson
+    , lib-dashboard
     , memory
     , mobility-core
     , network-uri

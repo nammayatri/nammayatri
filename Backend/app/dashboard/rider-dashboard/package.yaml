@@ -78,7 +78,6 @@ dependencies:
   - unordered-containers
   - openapi3
   - servant-openapi3
-  - dashboard-helper-api
   - unordered-containers
   - yudhishthira
   - wai
@@ -126,6 +125,7 @@ library:
   dependencies:
     - lib-dashboard
     - rider-app
+    - dynamic-offer-driver-app
     - shared-services
     - special-zone-a
     - payment

@@ -10,6 +10,7 @@ where
 import qualified "rider-app" API.Types.Dashboard.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Passetto
 import qualified Domain.Action.RiderPlatform.AppManagement.Passetto
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -18,7 +19,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("passetto" :> (PostPassettoEncrypt :<|> PostPassettoDecrypt))
 
@@ -27,22 +27,22 @@ handler merchantId city = postPassettoEncrypt merchantId city :<|> postPassettoD
 
 type PostPassettoEncrypt =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASSETTO / 'API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_ENCRYPT)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASSETTO) / ('API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_ENCRYPT))
       :> API.Types.Dashboard.AppManagement.Passetto.PostPassettoEncrypt
   )
 
 type PostPassettoDecrypt =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASSETTO / 'API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_DECRYPT)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASSETTO) / ('API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_DECRYPT))
       :> API.Types.Dashboard.AppManagement.Passetto.PostPassettoDecrypt
   )
 
-postPassettoEncrypt :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Passetto.PassettoEncryptReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Passetto.PassettoEncryptResp)
+postPassettoEncrypt :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.Passetto.PassettoEncryptReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Passetto.PassettoEncryptResp)
 postPassettoEncrypt merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Passetto.postPassettoEncrypt merchantShortId opCity apiTokenInfo req
 
-postPassettoDecrypt :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptResp)
+postPassettoDecrypt :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptResp)
 postPassettoDecrypt merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Passetto.postPassettoDecrypt merchantShortId opCity apiTokenInfo req

@@ -15,7 +15,6 @@
 module Domain.Action.Dashboard.Roles where
 
 import Dashboard.Common
-import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B
@@ -29,10 +28,9 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
-import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
-import Tools.Auth
+import Tools.Auth.Dashboard
 import Tools.Error (RoleError (..))
 
 data CreateRoleReq = CreateRoleReq
@@ -40,13 +38,6 @@ data CreateRoleReq = CreateRoleReq
     dashboardAccessType :: Maybe DashboardAccessType,
     description :: Text,
     isBppSyncNeeded :: Maybe Bool
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data AssignAccessLevelReq = AssignAccessLevelReq
-  { apiEntity :: DMatrix.ApiEntity,
-    userActionType :: DMatrix.UserActionTypeWrapper,
-    userAccessType :: DMatrix.UserAccessType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -102,41 +93,6 @@ buildRole req = do
         updatedAt = now
       }
 
-assignAccessLevel ::
-  BeamFlow m r =>
-  TokenInfo ->
-  Id DRole.Role ->
-  AssignAccessLevelReq ->
-  m APISuccess
-assignAccessLevel _ roleId req = do
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
-  case mbAccessMatrixItem of
-    Just accessMatrixItem -> QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
-    Nothing -> do
-      accessMatrixItem <- buildAccessMatrixItem roleId req
-      void $ QMatrix.create accessMatrixItem
-  pure Success
-
-buildAccessMatrixItem ::
-  MonadFlow m =>
-  Id DRole.Role ->
-  AssignAccessLevelReq ->
-  m DMatrix.AccessMatrixItem
-buildAccessMatrixItem roleId req = do
-  uid <- generateGUID
-  now <- getCurrentTime
-  pure
-    DMatrix.AccessMatrixItem
-      { id = uid,
-        roleId = roleId,
-        apiEntity = req.apiEntity,
-        userActionType = req.userActionType,
-        userAccessType = req.userAccessType,
-        createdAt = now,
-        updatedAt = now
-      }
-
 -- Soft-disable a role: migrate its users to a replacement role (which must share
 -- the same dashboardAccessType), wipe the disabled role's access-matrix rows, then
 -- flag it disabled. The role row itself is retained (never hard-deleted).
@@ -155,7 +111,6 @@ disableRole _ roleId req = do
     throwError RoleAccessTypeMismatch
   persons <- QP.findAllByRole roleId
   forM_ persons $ \person -> QP.updatePersonRole person.id replacementRole
-  QMatrix.deleteAllByRoleId roleId
   QRole.markRoleAsDisabled roleId
   pure Success
 

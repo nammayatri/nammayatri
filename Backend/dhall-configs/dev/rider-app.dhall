@@ -12,6 +12,8 @@ let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
 
 let driverAppInternalPort = Natural/show (env:DRIVER_APP_INTERNAL_PORT ? 8116)
 
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
 let sosAlertsTopicARN =
@@ -33,6 +35,26 @@ let esqDBCfg =
       , connectSchemaName = "atlas_app"
       , connectionPoolCount = +10
       }
+
+let esqDashboardDBCfg =
+      { connectHost = env:DASHBOARD_DB_HOST ? "localhost"
+      , connectPort = env:DASHBOARD_DB_PORT ? 5434
+      , connectUser = sec.dbUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = env:DASHBOARD_DB_NAME as Text ? "atlas_dev"
+      , connectSchemaName = "atlas_dashboard"
+      , connectionPoolCount = +10
+      }
+
+let esqDashboardDBReplicaCfg =
+          esqDashboardDBCfg
+      //  { connectHost =
+                env:DASHBOARD_DB_REPLICA_HOST
+              ? env:DASHBOARD_DB_HOST
+              ? "localhost"
+          , connectPort =
+              env:DASHBOARD_DB_REPLICA_PORT ? env:DASHBOARD_DB_PORT ? 5434
+          }
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
@@ -429,8 +451,45 @@ let emailServiceConfig =
       , maxAttachmentBytes = +10485760
       }
 
+let dashboardLoginRateLimitOptions =
+      { limit = +100, limitResetTimeInSec = +600 }
+
+let dashboardDataServers =
+      [ { name = common.ServerName.DRIVER_OFFER_BPP
+        , url = "http://localhost:${driverAppPort}/"
+        , token = sec.driverOfferBppToken
+        }
+      , { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
+        , url = "http://localhost:${driverAppPort}/"
+        , token = sec.driverOfferBppToken
+        }
+      , { name = common.ServerName.APP_BACKEND
+        , url = "http://localhost:${riderAppPort}/"
+        , token = sec.appBackendToken
+        }
+      , { name = common.ServerName.APP_BACKEND_MANAGEMENT
+        , url = "http://localhost:${riderAppPort}/"
+        , token = sec.appBackendToken
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
+    , esqDashboardDBCfg = Some esqDashboardDBCfg
+    , esqDashboardDBReplicaCfg = Some esqDashboardDBReplicaCfg
+    , dataServers = dashboardDataServers
+    , updateRestrictedBppRoles = [ "FLEET_OWNER", "OPERATOR" ]
+    , loginRateLimitOptions = dashboardLoginRateLimitOptions
+    , merchantUserAccountNumber = +100
+    , enforceStrongPasswordPolicy = False
+    , is2faMandatory = False
+    , twoFaEnforcementDeadlineText = Some "2026-08-15T00:00:00Z"
+    , twoFaOtpTTLInSecs = Some +900
+    , twoFaMaxOtpVerifyAttempts = Some +5
+    , totpStepSize = Some +30
+    , totpClockSkew = Some +2
+    , twoFaIssuerName = "Control Centre"
+    , twoFaExemptRoles = [] : List Text
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
     , hedisSecondaryClusterCfg = hccfgSecondary
@@ -482,6 +541,10 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
+    , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = None Integer
+    , authTokenCacheKeyPrefix = "rider-app:dashboardAuthTokenCacheKey:"
+    , passwordExpiryDays = None Integer
     , disableSignatureAuth = False
     , encTools
     , kafkaProducerCfg

@@ -82,13 +82,14 @@ module Domain.Action.ProviderPlatform.Management.Merchant
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Data.Text as T
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -105,27 +106,26 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.GateInfo.Geometry as GGeom
 import Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as SQM
 import qualified Toll.Domain.Types.Toll as Toll
-import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
 buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction UserActionType)
 buildTransaction apiTokenInfo =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMerchantUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.MerchantUpdateReq ->
   Flow Common.MerchantUpdateRes
 postMerchantUpdate merchantShortId opCity apiTokenInfo req = do
@@ -138,7 +138,7 @@ postMerchantUpdate merchantShortId opCity apiTokenInfo req = do
 getMerchantConfigCommon ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Flow Common.MerchantCommonConfigRes
 getMerchantConfigCommon merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -147,7 +147,7 @@ getMerchantConfigCommon merchantShortId opCity apiTokenInfo = do
 postMerchantConfigCommonUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.MerchantCommonConfigUpdateReq ->
   Flow APISuccess
 postMerchantConfigCommonUpdate merchantShortId opCity apiTokenInfo req = do
@@ -160,7 +160,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity apiTokenInfo req = do
 getMerchantConfigDriverPool ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Meters ->
   Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
@@ -172,7 +172,7 @@ getMerchantConfigDriverPool merchantShortId opCity apiTokenInfo tripDistance tri
 postMerchantConfigDriverPoolUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
   Maybe Common.VehicleVariant ->
@@ -191,7 +191,7 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity apiTokenInfo tripDista
 postMerchantConfigDriverPoolCreate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
   Maybe Common.VehicleVariant ->
@@ -210,7 +210,7 @@ postMerchantConfigDriverPoolCreate merchantShortId opCity apiTokenInfo tripDista
 getMerchantConfigDriverIntelligentPool ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Flow Common.DriverIntelligentPoolConfigRes
 getMerchantConfigDriverIntelligentPool merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -219,7 +219,7 @@ getMerchantConfigDriverIntelligentPool merchantShortId opCity apiTokenInfo = do
 postMerchantConfigDriverIntelligentPoolUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.DriverIntelligentPoolConfigUpdateReq ->
   Flow APISuccess
 postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity apiTokenInfo req = do
@@ -232,7 +232,7 @@ postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity apiTokenInf
 getMerchantConfigOnboardingDocument ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Common.DocumentType ->
   Maybe Common.VehicleCategory ->
   Flow Common.DocumentVerificationConfigRes
@@ -243,7 +243,7 @@ getMerchantConfigOnboardingDocument merchantShortId opCity apiTokenInfo document
 postMerchantConfigOnboardingDocumentUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.DocumentType ->
   Common.VehicleCategory ->
   Common.DocumentVerificationConfigUpdateReq ->
@@ -259,7 +259,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity apiTokenInfo d
 postMerchantConfigOnboardingDocumentCreate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.DocumentType ->
   Common.VehicleCategory ->
   Common.DocumentVerificationConfigCreateReq ->
@@ -274,7 +274,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity apiTokenInfo d
 getMerchantServiceUsageConfig ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -283,7 +283,7 @@ getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo = do
 postMerchantServiceConfigMapsUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
 postMerchantServiceConfigMapsUpdate merchantShortId opCity apiTokenInfo req = do
@@ -295,7 +295,7 @@ postMerchantServiceConfigMapsUpdate merchantShortId opCity apiTokenInfo req = do
 postMerchantServiceUsageConfigMapsUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.MapsServiceUsageConfigUpdateReq ->
   Flow APISuccess
 postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity apiTokenInfo req = do
@@ -308,7 +308,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity apiTokenInfo req
 postMerchantServiceConfigSmsUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
 postMerchantServiceConfigSmsUpdate merchantShortId opCity apiTokenInfo req = do
@@ -320,7 +320,7 @@ postMerchantServiceConfigSmsUpdate merchantShortId opCity apiTokenInfo req = do
 postMerchantServiceUsageConfigSmsUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.SmsServiceUsageConfigUpdateReq ->
   Flow APISuccess
 postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity apiTokenInfo req = do
@@ -333,7 +333,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity apiTokenInfo req 
 postMerchantServiceConfigVerificationUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.VerificationServiceConfigUpdateReq ->
   Flow APISuccess
 postMerchantServiceConfigVerificationUpdate merchantShortId opCity apiTokenInfo req = do
@@ -342,52 +342,52 @@ postMerchantServiceConfigVerificationUpdate merchantShortId opCity apiTokenInfo 
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantServiceConfigVerificationUpdate) req
 
-postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.FarePolicy -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
 postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate merchantShortId opCity apiTokenInfo farePolicyId startDistanceValue distanceUnit startDistance req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate) farePolicyId startDistanceValue distanceUnit startDistance req
 
-postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.FarePolicy -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
 postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate merchantShortId opCity apiTokenInfo farePolicyId startDistanceValue distanceUnit startDistance req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate) farePolicyId startDistanceValue distanceUnit startDistance req
 
-postMerchantConfigFarePolicyPerExtraKmRateUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
+postMerchantConfigFarePolicyPerExtraKmRateUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
 postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantShortId opCity apiTokenInfo farePolicyId startDistance req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFarePolicyPerExtraKmRateUpdate) farePolicyId startDistance req
 
-postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
+postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 postMerchantConfigFarePolicyUpdate merchantShortId opCity apiTokenInfo farePolicyId req = do
   runRequestValidation Common.validateUpdateFarePolicyReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFarePolicyUpdate) farePolicyId req
 
-postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
+postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigFarePolicyUpsert)) req
 
-postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req = do
   processMerchantCreateRequest merchantShortId opCity apiTokenInfo False req
 
 postMerchantSchedulerTrigger ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.SchedulerTriggerReq ->
   Flow APISuccess
 postMerchantSchedulerTrigger merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSchedulerTrigger) req
 
-postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
+postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
@@ -396,27 +396,27 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity apiToke
   where
     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
-postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> Flow APISuccess
+postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> Flow APISuccess
 postMerchantSpecialLocationUpsert merchantShortId opCity apiTokenInfo mbSpecialLocationId req@Common.UpsertSpecialLocationReq {..} = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   geom <- maybe (return Nothing) mkGeom (req.file)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSpecialLocationUpsert) mbSpecialLocationId Common.UpsertSpecialLocationReqT {geom = geom, ..}
 
-deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Flow APISuccess
+deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id SL.SpecialLocation -> Flow APISuccess
 deleteMerchantSpecialLocationDelete merchantShortId opCity apiTokenInfo specialLocationId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantSpecialLocationDelete) specialLocationId
 
-postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> Flow APISuccess
+postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> Flow APISuccess
 postMerchantSpecialLocationGatesUpsert merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationGateReq {..} = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   geom <- maybe (return Nothing) mkGeom (req.file)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSpecialLocationGatesUpsert) specialLocationId Common.UpsertSpecialLocationGateReqT {geom = geom, ..}
 
-deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Text -> Flow APISuccess
+deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id SL.SpecialLocation -> Text -> Flow APISuccess
 deleteMerchantSpecialLocationGatesDelete merchantShortId opCity apiTokenInfo specialLocationId gateName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
@@ -427,37 +427,37 @@ mkGeom kmlFile = do
   result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
   return $ Just $ T.pack result
 
-postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
+postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
 postMerchantConfigClearCacheSubscription merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigClearCacheSubscription) req
 
-postMerchantConfigFailover :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ConfigNames -> Common.ConfigFailoverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMerchantConfigFailover :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.ConfigNames -> Common.ConfigFailoverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req
 
-postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PayoutConfigReq -> Flow APISuccess
+postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.PayoutConfigReq -> Flow APISuccess
 postMerchantPayoutConfigUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantPayoutConfigUpdate) req
 
-postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigSpecialLocationUpsert)) req
 
-postMerchantConfigUpsertPlanAndConfigSubscription :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertPlanAndConfigReq -> Environment.Flow Common.UpsertPlanAndConfigResp
+postMerchantConfigUpsertPlanAndConfigSubscription :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertPlanAndConfigReq -> Environment.Flow Common.UpsertPlanAndConfigResp
 postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigUpsertPlanAndConfigSubscription) req
 
-postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.WhiteListOperatingCityReq -> Environment.Flow Common.WhiteListOperatingCityRes
+postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.WhiteListOperatingCityReq -> Environment.Flow Common.WhiteListOperatingCityRes
 postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
@@ -466,7 +466,7 @@ postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req
 processMerchantCreateRequest ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Bool ->
   Common.CreateMerchantOperatingCityReq ->
   Flow Common.CreateMerchantOperatingCityRes
@@ -527,15 +527,15 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           adminEmailDomains = baseMerchant.adminEmailDomains
         }
 
-postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = processMerchantCreateRequest merchantShortId opCity apiTokenInfo True req
 
-getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Kernel.Prelude.Text)
+getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow Kernel.Prelude.Text)
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)
 
-getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Dashboard.Common.FarePolicy -> Flow Common.FarePolicyDetailsResp
+getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Dashboard.Common.FarePolicy -> Flow Common.FarePolicyDetailsResp
 getMerchantConfigFarePolicyDetails merchantShortId opCity apiTokenInfo farePolicyId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyDetails) farePolicyId
@@ -543,7 +543,7 @@ getMerchantConfigFarePolicyDetails merchantShortId opCity apiTokenInfo farePolic
 getMerchantConfigFareProductList ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   SL.Area ->
   Bool ->
   Dashboard.Common.TripCategory ->
@@ -558,51 +558,51 @@ getMerchantConfigFareProductList merchantShortId opCity apiTokenInfo area enable
     enabled
     tripCategory
 
-getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
+getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier merchantShortId opCity apiTokenInfo serviceTierType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTier) serviceTierType
 
-postMerchantConfigVehicleServiceTierUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.ServiceTierType -> Common.VehicleServiceTierConfigUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMerchantConfigVehicleServiceTierUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.ServiceTierType -> Common.VehicleServiceTierConfigUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity apiTokenInfo serviceTierType req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigVehicleServiceTierUpdate) serviceTierType req)
 
-getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)
+getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)
 getMerchantConfigSpecialLocationList merchantShortId opCity apiTokenInfo limit offset mbSpecialLocationType mbSpecialLocationTypes = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSpecialLocationList) limit offset mbSpecialLocationType mbSpecialLocationTypes
 
-getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Common.GeometryResp)
+getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow Common.GeometryResp)
 getMerchantConfigGeometryList merchantShortId opCity apiTokenInfo limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigGeometryList) limit offset
 
-putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Common.UpdateGeometryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 putMerchantConfigGeometryUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.putMerchantConfigGeometryUpdate)) req
 
-postMerchantConfigDriverPoolUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertDriverPoolConfigCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigDriverPoolUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertDriverPoolConfigCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigDriverPoolUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigDriverPoolUpsert)) req
 
-postMerchantConfigVehicleServiceTierCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.VehicleServiceTierConfigCreateReq -> Flow APISuccess
+postMerchantConfigVehicleServiceTierCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.VehicleServiceTierConfigCreateReq -> Flow APISuccess
 postMerchantConfigVehicleServiceTierCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigVehicleServiceTierCreate) req
 
-getMerchantConfigDriverPoolList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.DriverPoolConfigListRes)
+getMerchantConfigDriverPoolList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow Common.DriverPoolConfigListRes)
 getMerchantConfigDriverPoolList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigDriverPoolList)
 
-getMerchantConfigVehicleServiceTierList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Common.VehicleServiceTierListRes)
+getMerchantConfigVehicleServiceTierList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow Common.VehicleServiceTierListRes)
 getMerchantConfigVehicleServiceTierList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVehicleServiceTierList)
@@ -610,7 +610,7 @@ getMerchantConfigVehicleServiceTierList merchantShortId opCity apiTokenInfo = do
 postMerchantConfigDebugLogUpdate ::
   ShortId DM.Merchant ->
   City.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   DebugLog.SetJsonLogicDebugReq ->
   Flow APISuccess
 postMerchantConfigDebugLogUpdate merchantShortId opCity apiTokenInfo req = do
@@ -633,7 +633,7 @@ getMerchantMerchantDocument merchantShortId opCity documentType language role = 
 getMerchantMerchantDocumentList ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Kernel.External.Types.Language ->
   Common.MerchantDocumentRoleT ->
   Flow Common.MerchantDocumentListResp
@@ -644,7 +644,7 @@ getMerchantMerchantDocumentList merchantShortId opCity apiTokenInfo language rol
 postMerchantMerchantDocumentCreate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.CreateMerchantDocumentReq ->
   Flow Common.MerchantDocumentItem
 postMerchantMerchantDocumentCreate merchantShortId opCity apiTokenInfo req = do
@@ -656,7 +656,7 @@ postMerchantMerchantDocumentCreate merchantShortId opCity apiTokenInfo req = do
 postMerchantMerchantDocumentUpdate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.UpdateMerchantDocumentReq ->
   Flow Common.MerchantDocumentItem
 postMerchantMerchantDocumentUpdate merchantShortId opCity apiTokenInfo req = do
@@ -668,7 +668,7 @@ postMerchantMerchantDocumentUpdate merchantShortId opCity apiTokenInfo req = do
 postMerchantMerchantDocumentDelete ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.DeleteMerchantDocumentReq ->
   Flow APISuccess
 postMerchantMerchantDocumentDelete merchantShortId opCity apiTokenInfo req = do
@@ -685,59 +685,59 @@ getMerchantCityList merchantShortId opCity = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantCityList)
 
-postMerchantConfigTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertTollCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertTollCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigTollUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigTollUpsert)) req
 
-getMerchantConfigTollList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Flow Common.TollListResp
+getMerchantConfigTollList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe Int -> Maybe Int -> Flow Common.TollListResp
 getMerchantConfigTollList merchantShortId opCity apiTokenInfo limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigTollList) limit offset
 
-postMerchantTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Toll.Toll) -> Common.UpsertTollReq -> Flow APISuccess
+postMerchantTollUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe (Id Toll.Toll) -> Common.UpsertTollReq -> Flow APISuccess
 postMerchantTollUpsert merchantShortId opCity apiTokenInfo tollId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantTollUpsert) tollId req
 
-deleteMerchantTollDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Toll.Toll -> Flow APISuccess
+deleteMerchantTollDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Toll.Toll -> Flow APISuccess
 deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
 
-postMerchantConfigFareProductSetEnabled :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Flow APISuccess
+postMerchantConfigFareProductSetEnabled :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Flow APISuccess
 postMerchantConfigFareProductSetEnabled merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFareProductSetEnabled) req
 
-deleteMerchantMerchantMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Common.VehicleCategory -> Environment.Flow APISuccess
+deleteMerchantMerchantMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Text -> Maybe Common.VehicleCategory -> Environment.Flow APISuccess
 deleteMerchantMerchantMessage merchantShortId opCity apiTokenInfo messageKey mbVehicleCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantMerchantMessage) messageKey mbVehicleCategory
 
-getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MerchantMessageCatalogType -> Environment.Flow Common.MerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.MerchantMessageCatalogType -> Environment.Flow Common.MerchantMessageCatalogResp
 getMerchantMerchantMessageCatalog merchantShortId opCity apiTokenInfo catalogType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantMessageCatalog) catalogType
 
-postMerchantMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantMessageReq -> Environment.Flow APISuccess
+postMerchantMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.UpsertMerchantMessageReq -> Environment.Flow APISuccess
 postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageUpsert) req
 
-getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Common.VendorSplitDetailsAPIEntity])
+getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow [Common.VendorSplitDetailsAPIEntity])
 getMerchantConfigVendorSplitDetailsList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigVendorSplitDetailsList)
 
-getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Common.SubscriptionConfigAPIEntity])
+getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.Flow [Common.SubscriptionConfigAPIEntity])
 getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSubscriptionConfigList)

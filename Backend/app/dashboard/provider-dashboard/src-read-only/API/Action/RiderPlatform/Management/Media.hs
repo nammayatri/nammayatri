@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Media
 import qualified Data.Text
 import qualified Domain.Action.RiderPlatform.Management.Media
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -19,7 +20,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("media" :> GetMediaFile)
 
@@ -34,5 +34,5 @@ type GetMediaFile =
       :> API.Types.RiderPlatform.Management.Media.GetMediaFile
   )
 
-getMediaFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Media.GetMediaFileResponse)
+getMediaFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Media.GetMediaFileResponse)
 getMediaFile merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Media.getMediaFile merchantShortId opCity apiTokenInfo filePath

@@ -37,7 +37,7 @@ type PostConfirmRideSearchQuotes =
            "isAdvancedBookingEnabled"
            Kernel.Prelude.Bool
       :> Post
-           '[JSON]
+           ('[JSON])
            API.UI.Confirm.ConfirmRes
   )
 
@@ -58,11 +58,11 @@ type PostConfirmRideSearchQuotesConfirmHelper =
            "isAdvancedBookingEnabled"
            Kernel.Prelude.Bool
       :> Post
-           '[JSON]
+           ('[JSON])
            API.UI.Confirm.ConfirmRes
   )
 
-newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes}
+newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.External.Payment.Interface.PaymentMethodId) -> Kernel.Prelude.Maybe (Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes)}
 
 mkConfirmAPIs :: (Client EulerHS.Types.EulerClient API -> ConfirmAPIs)
 mkConfirmAPIs confirmClient = (ConfirmAPIs {..})
@@ -75,10 +75,10 @@ data ConfirmUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON ConfirmUserActionType where
-  toJSON POST_CONFIRM_RIDE_SEARCH_QUOTES = Data.Aeson.String "POST_CONFIRM_RIDE_SEARCH_QUOTES"
+  toJSON (POST_CONFIRM_RIDE_SEARCH_QUOTES) = Data.Aeson.String "POST_CONFIRM_RIDE_SEARCH_QUOTES"
 
 instance FromJSON ConfirmUserActionType where
   parseJSON (Data.Aeson.String "POST_CONFIRM_RIDE_SEARCH_QUOTES") = pure POST_CONFIRM_RIDE_SEARCH_QUOTES
   parseJSON _ = fail "POST_CONFIRM_RIDE_SEARCH_QUOTES expected"
 
-$(Data.Singletons.TH.genSingletons [''ConfirmUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ConfirmUserActionType)])

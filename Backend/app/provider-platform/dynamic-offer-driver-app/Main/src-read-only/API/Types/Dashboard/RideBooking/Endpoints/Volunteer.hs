@@ -70,20 +70,20 @@ data LocationAddress = LocationAddress
 
 type API = ("volunteer" :> (GetVolunteerBooking :<|> PostVolunteerAssignStartOtpRideHelper))
 
-type GetVolunteerBooking = (Capture "bookingOtp" Kernel.Prelude.Text :> "booking" :> Get '[JSON] BookingInfoResponse)
+type GetVolunteerBooking = (Capture "bookingOtp" Kernel.Prelude.Text :> "booking" :> Get ('[JSON]) BookingInfoResponse)
 
-type PostVolunteerAssignStartOtpRide = ("assign" :> "start" :> ReqBody '[JSON] AssignCreateAndStartOtpRideAPIReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostVolunteerAssignStartOtpRide = ("assign" :> "start" :> ReqBody ('[JSON]) AssignCreateAndStartOtpRideAPIReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostVolunteerAssignStartOtpRideHelper =
-  ( "assign" :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] AssignCreateAndStartOtpRideAPIReq
+  ( "assign" :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) AssignCreateAndStartOtpRideAPIReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 data VolunteerAPIs = VolunteerAPIs
-  { getVolunteerBooking :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient BookingInfoResponse,
-    postVolunteerAssignStartOtpRide :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> AssignCreateAndStartOtpRideAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getVolunteerBooking :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient BookingInfoResponse),
+    postVolunteerAssignStartOtpRide :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> AssignCreateAndStartOtpRideAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkVolunteerAPIs :: (Client EulerHS.Types.EulerClient API -> VolunteerAPIs)
@@ -97,4 +97,4 @@ data VolunteerUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''VolunteerUserActionType])
+$(Data.Singletons.TH.genSingletons [(''VolunteerUserActionType)])

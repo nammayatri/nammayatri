@@ -1,13 +1,13 @@
 module API.Dashboard.EmailVerification where
 
 import qualified Domain.Action.Dashboard.EmailVerification as DEV
-import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.Common
 import Servant
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 type API =
   "user"
@@ -22,13 +22,13 @@ type API =
              :> Post '[JSON] APISuccess
        )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
   sendEmailVerificationOtp
     :<|> verifyEmailOtp
 
-sendEmailVerificationOtp :: BeamFlow' => TokenInfo -> DEV.EmailOtpSendReq -> FlowHandler APISuccess
-sendEmailVerificationOtp token = withFlowHandlerAPI' . DEV.sendEmailVerificationOtp token
+sendEmailVerificationOtp :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DEV.EmailOtpSendReq -> FlowHandlerR r APISuccess
+sendEmailVerificationOtp token = withDashboardDbFlowHandlerAPI . DEV.sendEmailVerificationOtp token
 
-verifyEmailOtp :: BeamFlow' => TokenInfo -> DEV.EmailOtpVerifyReq -> FlowHandler APISuccess
-verifyEmailOtp token = withFlowHandlerAPI' . DEV.verifyEmailOtp token
+verifyEmailOtp :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DEV.EmailOtpVerifyReq -> FlowHandlerR r APISuccess
+verifyEmailOtp token = withDashboardDbFlowHandlerAPI . DEV.verifyEmailOtp token

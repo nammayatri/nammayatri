@@ -40,8 +40,8 @@ import qualified Storage.Queries.MerchantAccess as QMerchantAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QRT
 import qualified Storage.Queries.Role as QRole
-import Tools.Auth
 import qualified Tools.Auth.Common as Auth
+import Tools.Auth.Dashboard
 import Tools.Error
 
 data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq

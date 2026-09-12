@@ -19,17 +19,19 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.External.LiveEKD
 import qualified Domain.Types.Merchant as DM
+import "lib-dashboard" Domain.Types.ServerName (DataServer)
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
-import Kernel.Prelude (NominalDiffTime)
+import Kernel.Prelude (NominalDiffTime, UTCTime)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -40,7 +42,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
 import qualified Kernel.Types.CacheFlow as KTC
-import Kernel.Types.Common (HighPrecMeters, Seconds)
+import Kernel.Types.Common (Days, HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
@@ -117,6 +119,36 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
+    -- Dashboard operator sessions, verified by this server instead of the proxy.
+    -- Names are fixed by the HasFlowEnv constraints in lib-dashboard's Tools.Auth.Common.
+    registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    authTokenCacheKeyPrefix :: Text,
+    passwordExpiryDays :: Maybe Int,
+    -- Dashboard operator login / 2FA / user administration, served here as well as
+    -- by provider-dashboard. Field names are fixed by the HasFlowEnv constraints in
+    -- lib-dashboard-api's Domain.Action.Dashboard.* handlers.
+    dataServers :: [DataServer],
+    updateRestrictedBppRoles :: [Text],
+    loginRateLimitOptions :: APIRateLimitOptions,
+    merchantUserAccountNumber :: Int,
+    enforceStrongPasswordPolicy :: Bool,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadlineText :: Maybe Text, -- ISO 8601; parsed to UTCTime in buildAppEnv
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text,
+    twoFaExemptRoles :: [Text],
+    -- Dashboard routes this server now serves directly that are not part of the
+    -- login tree: the internal-auth probe, the Exotel heartbeat, and the CAC shim.
+    internalAuthAPIKey :: Text,
+    exotelToken :: Text,
+    -- Opt-in second connection to atlas_dashboard. Absent = this server never
+    -- enters runInDashboardDb and behaves exactly as before.
+    esqDashboardDBCfg :: Maybe EsqDBConfig,
+    esqDashboardDBReplicaCfg :: Maybe EsqDBConfig,
     disableSignatureAuth :: Bool,
     smsCfg :: SmsConfig,
     slackCfg :: SlackConfig,
@@ -236,6 +268,33 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
+    registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    authTokenCacheKeyPrefix :: Text,
+    passwordExpiryDays :: Maybe Int,
+    -- Dashboard operator login / 2FA / user administration, served here as well as
+    -- by provider-dashboard. Field names are fixed by the HasFlowEnv constraints in
+    -- lib-dashboard-api's Domain.Action.Dashboard.* handlers.
+    dataServers :: [DataServer],
+    updateRestrictedBppRoles :: [Text],
+    loginRateLimitOptions :: APIRateLimitOptions,
+    merchantUserAccountNumber :: Int,
+    enforceStrongPasswordPolicy :: Bool,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadline :: Maybe UTCTime,
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text,
+    twoFaExemptRoles :: [Text],
+    internalAuthAPIKey :: Text,
+    exotelToken :: Text,
+    -- Read from AUTH_MAP. Absent means "no CAC tokens configured" rather than a
+    -- boot failure: provider-dashboard errors out without it, but refusing to
+    -- start a rider/driver-facing server over a shim that is documented as
+    -- temporary would be the wrong trade.
+    cacAclMap :: [(String, [(String, String)])],
     port :: Int,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
@@ -432,7 +491,26 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let url = Nothing
   masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
+  -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as
+  -- lib-dashboard's buildAppEnv so a deadline behaves identically here.
+  let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
+  -- Unlike provider-dashboard, an unset or unparseable AUTH_MAP is not fatal here:
+  -- it just means no CAC tokens are configured and the shim denies every request.
+  cacAclMap <- maybe [] (fromMaybe [] . readMaybe) <$> lookupEnv "AUTH_MAP"
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
+  where
+    parseIso8601UTC :: Text -> Maybe UTCTime
+    parseIso8601UTC t =
+      let str = T.unpack t
+          tryFormats [] = Nothing
+          tryFormats (f : fs) = case parseTimeM True defaultTimeLocale f str of
+            Just v -> Just v
+            Nothing -> tryFormats fs
+       in tryFormats
+            [ "%Y-%m-%dT%H:%M:%SZ",
+              "%Y-%m-%dT%H:%M:%S%QZ",
+              "%Y-%m-%d %H:%M:%S%z"
+            ]
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

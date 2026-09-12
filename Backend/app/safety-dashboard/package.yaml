@@ -78,7 +78,6 @@ dependencies:
   - euler-hs
   - containers
   - unordered-containers
-  - dashboard-helper-api
   - http-client
   - http-client-tls
   - servant-client

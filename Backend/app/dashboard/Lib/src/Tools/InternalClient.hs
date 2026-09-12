@@ -12,6 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+-- | Internal HTTP calls the dashboard makes to an application server.
+--
+-- Lives in lib-dashboard so the login/user-administration tree can be served by
+-- an application server as well as by provider-dashboard. The one call that
+-- needs an application package's request type
+-- request and response bodies are declared here rather than imported from the
+-- application package, so this module links no application code. They must stay
+-- structurally identical to @API.Types.UnifiedDashboard.Management.Endpoints.Person@
+-- in dynamic-offer-driver-app, which is what actually serves them.
 module Tools.InternalClient
   ( SendSMSReq (..),
     SendSMSRes (..),
@@ -24,11 +33,13 @@ module Tools.InternalClient
     VerifyEmailUpdateReq (..),
     callBPPInternalVerifyEmailUpdate,
     callBAPInternalVerifyEmailUpdate,
+    CreatePersonReq (..),
+    CreatePersonResp (..),
     callBPPInternalCreatePerson,
   )
 where
 
-import qualified API.Types.UnifiedDashboard.Management.Person as BPPPerson
+import qualified Dashboard.Common as Common
 import qualified Data.HashMap.Strict as HM
 import Data.Map.Strict (Map)
 import qualified Domain.Types.ServerName as DSN
@@ -36,6 +47,7 @@ import qualified EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error, callAPI, throwError)
 import Kernel.Utils.Error.Throwing (throwError)
 import Servant hiding (throwError)
@@ -211,6 +223,24 @@ callBAPInternalVerifyEmailUpdate merchantShortId req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (verifyEmailUpdateClient merchantShortId (Just dataServer.token) req) "callBAPInternalVerifyEmailUpdate" (Proxy :: Proxy Raw)
 
+-- | Mirror of driver-app's @CreatePersonReq@. Field names are the wire contract:
+-- changing one here without changing it there silently breaks person creation.
+data CreatePersonReq = CreatePersonReq
+  { email :: Maybe Text,
+    firstName :: Text,
+    lastName :: Text,
+    mobileCountryCode :: Text,
+    mobileNumber :: Text,
+    password :: Maybe Text,
+    roleName :: Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype CreatePersonResp = CreatePersonResp {personId :: Id Common.Person}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 type CreatePersonAPI =
   "internal"
     :> "person"
@@ -218,10 +248,10 @@ type CreatePersonAPI =
     :> Capture "merchantShortId" Text
     :> Capture "city" City.City
     :> Header "api-key" Text
-    :> ReqBody '[JSON] BPPPerson.CreatePersonReq
-    :> Post '[JSON] BPPPerson.CreatePersonResp
+    :> ReqBody '[JSON] CreatePersonReq
+    :> Post '[JSON] CreatePersonResp
 
-createPersonClient :: Text -> City.City -> Maybe Text -> BPPPerson.CreatePersonReq -> Euler.EulerClient BPPPerson.CreatePersonResp
+createPersonClient :: Text -> City.City -> Maybe Text -> CreatePersonReq -> Euler.EulerClient CreatePersonResp
 createPersonClient = Euler.client (Proxy @CreatePersonAPI)
 
 callBPPInternalCreatePerson ::
@@ -232,8 +262,8 @@ callBPPInternalCreatePerson ::
   ) =>
   Text ->
   City.City ->
-  BPPPerson.CreatePersonReq ->
-  m BPPPerson.CreatePersonResp
+  CreatePersonReq ->
+  m CreatePersonResp
 callBPPInternalCreatePerson merchantShortId city req = do
   dataServers <- asks (.dataServers)
   let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers

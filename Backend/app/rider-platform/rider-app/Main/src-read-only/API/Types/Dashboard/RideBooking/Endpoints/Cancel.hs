@@ -24,11 +24,11 @@ type PostCancelBooking =
       :> Capture
            "customerId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
-      :> ReqBody '[JSON] Domain.Action.UI.Cancel.CancelReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> ReqBody ('[JSON]) Domain.Action.UI.Cancel.CancelReq
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
-newtype CancelAPIs = CancelAPIs {postCancelBooking :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Cancel.CancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
+newtype CancelAPIs = CancelAPIs {postCancelBooking :: (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Cancel.CancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
 
 mkCancelAPIs :: (Client EulerHS.Types.EulerClient API -> CancelAPIs)
 mkCancelAPIs cancelClient = (CancelAPIs {..})
@@ -41,10 +41,10 @@ data CancelUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON CancelUserActionType where
-  toJSON POST_CANCEL_BOOKING = Data.Aeson.String "POST_CANCEL_BOOKING"
+  toJSON (POST_CANCEL_BOOKING) = Data.Aeson.String "POST_CANCEL_BOOKING"
 
 instance FromJSON CancelUserActionType where
   parseJSON (Data.Aeson.String "POST_CANCEL_BOOKING") = pure POST_CANCEL_BOOKING
   parseJSON _ = fail "POST_CANCEL_BOOKING expected"
 
-$(Data.Singletons.TH.genSingletons [''CancelUserActionType])
+$(Data.Singletons.TH.genSingletons [(''CancelUserActionType)])

@@ -20,7 +20,7 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.List.NonEmpty

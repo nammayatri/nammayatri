@@ -23,7 +23,7 @@ module Domain.Action.Dashboard.Management.GeohashArea
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.GeohashArea as Common
+import qualified "this" API.Types.ProviderPlatform.Management.GeohashArea as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Environment
@@ -47,16 +47,16 @@ getGeohashAreaList merchantShortId opCity = do
 postGeohashAreaUpsert :: ShortId DM.Merchant -> Context.City -> Common.GeohashAreaBulkUpsertReq -> Flow APISuccess
 postGeohashAreaUpsert merchantShortId opCity req = do
   merchantOpCity <- findMerchantOpCity merchantShortId opCity
-  result <- SLGA.upsertGeohashAreas merchantOpCity req.areas
-  CQGA.clearCacheByMerchantOperatingCity merchantOpCity.id
-  pure result
+  -- SLGA.upsertGeohashAreas reconciles the cache itself with the rows it just
+  -- wrote (see Storage.CachedQueries.GeohashArea.mergeIntoCache); clearing it
+  -- again here would only throw that reconciliation away.
+  SLGA.upsertGeohashAreas merchantOpCity req.areas
 
 postGeohashAreaUpsertCsv :: ShortId DM.Merchant -> Context.City -> Common.GeohashAreaCsvReq -> Flow APISuccess
 postGeohashAreaUpsertCsv merchantShortId opCity req = do
   merchantOpCity <- findMerchantOpCity merchantShortId opCity
-  result <- SLGA.upsertGeohashAreasFromCsv merchantOpCity req.file
-  CQGA.clearCacheByMerchantOperatingCity merchantOpCity.id
-  pure result
+  -- Same reconciliation as postGeohashAreaUpsert -- see the comment there.
+  SLGA.upsertGeohashAreasFromCsv merchantOpCity req.file
 
 findMerchantOpCity :: ShortId DM.Merchant -> Context.City -> Flow DMOC.MerchantOperatingCity
 findMerchantOpCity merchantShortId opCity = do

@@ -17,9 +17,10 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as ManagementClient
 import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
-import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified "lib-dashboard" Dashboard.Common as Common
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified Domain.Types.Transaction as DT
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess
@@ -28,9 +29,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
-import qualified SharedLogic.Transaction as T
+import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 import Tools.Auth.Merchant
 
 instance Common.HideSecrets ApiPayout.UpdateScheduledPayoutConfigReq where
@@ -40,16 +40,16 @@ buildPayoutManagementServerTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe request ->
-  m DT.Transaction
+  m (DT.Transaction UserActionType)
 buildPayoutManagementServerTransaction apiTokenInfo =
-  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 getPayoutPayout ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id PayoutRequest.PayoutRequest ->
   Environment.Flow PayoutTypes.PayoutRequestResp
 getPayoutPayout merchantShortId opCity apiTokenInfo payoutRequestId = do
@@ -59,7 +59,7 @@ getPayoutPayout merchantShortId opCity apiTokenInfo payoutRequestId = do
 getPayoutPayoutHistory ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Text ->
   Maybe Text ->
   Maybe UTCTime ->
@@ -75,7 +75,7 @@ getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneN
 getPayoutPayoutReferralHistory ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Maybe Bool ->
   Maybe Text ->
   Maybe (Kernel.Types.Id.Id Common.Driver) ->
@@ -93,7 +93,7 @@ getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedR
 postPayoutPayoutRetry ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id PayoutRequest.PayoutRequest ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutRetry merchantShortId opCity apiTokenInfo payoutRequestId = do
@@ -105,7 +105,7 @@ postPayoutPayoutRetry merchantShortId opCity apiTokenInfo payoutRequestId = do
 postPayoutPayoutCancel ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id PayoutRequest.PayoutRequest ->
   PayoutTypes.PayoutCancelReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
@@ -118,7 +118,7 @@ postPayoutPayoutCancel merchantShortId opCity apiTokenInfo payoutRequestId req =
 postPayoutPayoutCash ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id PayoutRequest.PayoutRequest ->
   PayoutTypes.PayoutCashUpdateReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
@@ -131,7 +131,7 @@ postPayoutPayoutCash merchantShortId opCity apiTokenInfo payoutRequestId req = d
 postPayoutPayoutVpaDelete ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   PayoutTypes.DeleteVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaDelete merchantShortId opCity apiTokenInfo req = do
@@ -143,7 +143,7 @@ postPayoutPayoutVpaDelete merchantShortId opCity apiTokenInfo req = do
 postPayoutPayoutVpaUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   PayoutTypes.UpdateVpaReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaUpdate merchantShortId opCity apiTokenInfo req = do
@@ -155,7 +155,7 @@ postPayoutPayoutVpaUpdate merchantShortId opCity apiTokenInfo req = do
 postPayoutPayoutVpaRefundRegistration ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   PayoutTypes.RefundRegAmountReq ->
   Environment.Flow PayoutTypes.PayoutSuccess
 postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = do
@@ -167,7 +167,7 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity apiTokenInfo req = 
 postPayoutPayoutScheduledPayoutConfigUpsert ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   ApiPayout.UpdateScheduledPayoutConfigReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo req = do
@@ -179,7 +179,7 @@ postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo 
 getPayoutPayoutOrder ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Text ->
   Environment.Flow PayoutTypes.PayoutOrderResp
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do

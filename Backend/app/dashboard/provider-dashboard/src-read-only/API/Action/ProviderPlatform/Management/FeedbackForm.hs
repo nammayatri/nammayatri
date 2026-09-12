@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.FeedbackForm
 import qualified Domain.Action.ProviderPlatform.Management.FeedbackForm
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("feedbackForm" :> (GetFeedbackFormList :<|> PostFeedbackFormCreate :<|> PutFeedbackFormUpdate :<|> DeleteFeedbackFormDelete :<|> GetFeedbackForm))
 
@@ -67,17 +67,17 @@ type GetFeedbackForm =
       :> API.Types.ProviderPlatform.Management.FeedbackForm.GetFeedbackForm
   )
 
-getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
+getFeedbackFormList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes])
 getFeedbackFormList merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.getFeedbackFormList merchantShortId opCity apiTokenInfo limit offset
 
-postFeedbackFormCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormRes)
+postFeedbackFormCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.CreateFeedbackFormRes)
 postFeedbackFormCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.postFeedbackFormCreate merchantShortId opCity apiTokenInfo req
 
-putFeedbackFormUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.FeedbackForm.UpdateFeedbackFormReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+putFeedbackFormUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.FeedbackForm.UpdateFeedbackFormReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putFeedbackFormUpdate merchantShortId opCity apiTokenInfo feedbackFormId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.putFeedbackFormUpdate merchantShortId opCity apiTokenInfo feedbackFormId req
 
-deleteFeedbackFormDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteFeedbackFormDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteFeedbackFormDelete merchantShortId opCity apiTokenInfo feedbackFormId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.deleteFeedbackFormDelete merchantShortId opCity apiTokenInfo feedbackFormId
 
-getFeedbackForm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes)
+getFeedbackForm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FeedbackForm.FeedbackFormRes)
 getFeedbackForm merchantShortId opCity apiTokenInfo feedbackFormId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FeedbackForm.getFeedbackForm merchantShortId opCity apiTokenInfo feedbackFormId
