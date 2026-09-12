@@ -231,6 +231,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverFeeRetryThresholdConfig driverFeeRetryThresholdConfig,
       Se.Set Beam.driverLocationAccuracyBuffer driverLocationAccuracyBuffer,
       Se.Set Beam.driverLocationStalenessThresholdSeconds driverLocationStalenessThresholdSeconds,
+      Se.Set Beam.driverOnboardingLinkExpiryHours driverOnboardingLinkExpiryHours,
       Se.Set Beam.driverPaymentCycleBuffer (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleBuffer),
       Se.Set Beam.driverPaymentCycleDuration (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleDuration),
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
