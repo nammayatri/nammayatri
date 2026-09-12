@@ -2316,6 +2316,38 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
             Just merchantMessage -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=emptyTemplateId templateId=" <> show merchantMessage.templateId
             Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noMerchantMessageRow"
 
+rideCashbackUnlockedNotificationConfig ::
+  Text ->
+  (Text, DMM.MessageKey, [(Text, Text)], [Maybe Text])
+rideCashbackUnlockedNotificationConfig amountText =
+  ( "RIDE_CASHBACK_UNLOCKED",
+    DMM.WHATSAPP_RIDE_CASHBACK_UNLOCKED,
+    [("amount", amountText)],
+    [Just amountText]
+  )
+
+notifyRideCashbackUnlocked ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  Person.Person ->
+  HighPrecMoney ->
+  m ()
+notifyRideCashbackUnlocked booking person payoutAmount = do
+  -- `show` on HighPrecMoney goes via Double ("25.0"); riders should see a plain "25".
+  let amountText = show (Prelude.roundToIntegral payoutAmount :: Int)
+      (fcmKey, whatsappKey, templateParams, whatsappVariables) = rideCashbackUnlockedNotificationConfig amountText
+      entity = Notification.Entity Notification.Person person.id.getId EmptyDynamicParam
+  dynamicNotifyPerson
+    person
+    (createNotificationReq fcmKey identity)
+    EmptyDynamicParam
+    entity
+    booking.tripCategory
+    templateParams
+    (Just booking.configInExperimentVersions)
+    Nothing
+  sendWhatsAppTemplateIfOptedIn person whatsappKey whatsappVariables
+
 -- | On FRFS shuttle booking confirmation (payment fulfillment success), send the reassurance:
 -- push `SHUTTLE_TRACKING_ON_START` (carries journeyId) + opt-in WhatsApp `shuttle_booking_confirmation`
 -- ("thanks for booking, live tracking appears once your trip starts"). Gated on the booking's service

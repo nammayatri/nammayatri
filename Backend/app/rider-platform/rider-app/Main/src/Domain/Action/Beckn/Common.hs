@@ -1129,6 +1129,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- Schedule the cashback-payout job after the ledger leg has been created above.
   SOffer.scheduleCashbackPayoutJob booking updRide person.id ridePayoutAmount
+  when (ridePayoutAmount > 0) $
+    fork "notify rider: ride cashback unlocked" $
+      Notify.notifyRideCashbackUnlocked booking person ridePayoutAmount
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
