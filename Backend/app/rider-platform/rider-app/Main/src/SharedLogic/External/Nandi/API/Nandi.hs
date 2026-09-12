@@ -8,7 +8,7 @@ import SharedLogic.External.Nandi.Types
 
 type RouteStopMappingByRouteIdAPI = "route-stop-mapping" :> Capture "gtfs_id" Text :> "route" :> Capture "route_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
-type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" Text :> "stop" :> Capture "stop_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
+type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" Text :> "stop" :> Capture "stop_code" Text :> QueryParam "allowClusters" Bool :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
 type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] RouteInfoNandi
 
@@ -164,7 +164,7 @@ nandiWaybillMetadataAPI = Proxy
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
-getNandiGetRouteStopMappingByStopCode :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
+getNandiGetRouteStopMappingByStopCode :: Text -> Text -> Maybe Bool -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByStopCode = ET.client nandiGetRouteStopMappingByStopCodeAPI
 
 getNandiRouteByRouteId :: Text -> Text -> ET.EulerClient RouteInfoNandi
