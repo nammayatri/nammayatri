@@ -2,17 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { configSyncBaseFor } from '../config';
 import './ConfigSyncPanel.css';
 
-type Phase = 'idle' | 'export' | 'patch' | 'done' | 'error' | 'cancelled' | 'skipped';
-
-interface SyncMarker {
-  from?: string;
-  to?: string;
-  s3_prefix?: string;
-  s3_bucket?: string;
-  synced_at?: number;
-  task_id?: string;
-}
-
 interface TaskView {
   id: string;
   cmd: string;
@@ -23,8 +12,12 @@ interface TaskView {
   log: string[];
 }
 
+interface AvailableVersion {
+  version: number;
+  metadata: string;
+}
+
 // to=local is intentionally hardcoded: this panel only seeds the dev box.
-// If we ever need to sync into staging from here, lift it into a select.
 const TO_ENV = 'local';
 
 const FROM_ENVS = ['prod', 'prod_international', 'master', 'env'];
@@ -38,44 +31,39 @@ const formatDur = (start: number | null, end: number | null): string => {
   return `${m}m${s.toString().padStart(2, '0')}s`;
 };
 
+// Export/Patch/Publish is now DB Manager's job — it's the properly
+// role-gated (MASTER/ADMIN), centrally-run path for actually touching real
+// master/prod/prod_international databases. This panel's only job is the
+// other half: pick an already-published version (from metadata.json, which
+// DB Manager writes to S3 after a successful patch) and pull it down into
+// this dev box. No direct export/patch trigger lives here anymore.
 export const ConfigSyncPanel: React.FC = () => {
-  const [fromEnv, setFromEnv] = useState<string>(() =>
-    localStorage.getItem('configsync.from') || 'prod_international');
-  const [versionPrefix, setVersionPrefix] = useState<string>(() =>
-    localStorage.getItem('configsync.versionPrefix') || 'v1');
-  const [s3Bucket, setS3Bucket] = useState<string>(() =>
-    localStorage.getItem('configsync.s3Bucket') || 'backend-ny-config-sync');
-  const [parallel, setParallel] = useState<number>(() =>
-    Number(localStorage.getItem('configsync.parallel') || 10));
+  const [importFromEnv, setImportFromEnv] = useState<string>(() =>
+    localStorage.getItem('configsync.import.from') || 'master');
+  const [versions, setVersions] = useState<AvailableVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsError, setVersionsError] = useState<string | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
+  const [dryRun, setDryRun] = useState(false);
+  const [importPhase, setImportPhase] = useState<'idle' | 'running' | 'done' | 'error' | 'cancelled'>('idle');
+  const [importTask, setImportTask] = useState<TaskView | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importStopping, setImportStopping] = useState(false);
+  const importCancelledRef = useRef(false);
+  const importLiveTaskIdRef = useRef<string | null>(null);
+  const importLogRef = useRef<HTMLPreElement | null>(null);
 
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [exportTask, setExportTask] = useState<TaskView | null>(null);
-  const [patchTask, setPatchTask] = useState<TaskView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [skipMessage, setSkipMessage] = useState<string | null>(null);
-  const logRef = useRef<HTMLPreElement | null>(null);
-  const cancelledRef = useRef(false);
-  // Track the currently-running task id so the Stop button can call
-  // /tasks/<id>/stop on the right one even mid-phase-transition.
-  const liveTaskIdRef = useRef<string | null>(null);
-  const [stopping, setStopping] = useState(false);
-
-  useEffect(() => { localStorage.setItem('configsync.from', fromEnv); }, [fromEnv]);
-  useEffect(() => { localStorage.setItem('configsync.versionPrefix', versionPrefix); }, [versionPrefix]);
-  useEffect(() => { localStorage.setItem('configsync.s3Bucket', s3Bucket); }, [s3Bucket]);
-  useEffect(() => { localStorage.setItem('configsync.parallel', String(parallel)); }, [parallel]);
+  useEffect(() => { localStorage.setItem('configsync.import.from', importFromEnv); }, [importFromEnv]);
 
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [exportTask?.log, patchTask?.log]);
+    if (importLogRef.current) importLogRef.current.scrollTop = importLogRef.current.scrollHeight;
+  }, [importTask?.log]);
 
-  const s3Prefix = `${fromEnv}_to_${TO_ENV}/${versionPrefix}`;
-  // Each --from env may live in its own cluster, so the config-sync server
-  // address is keyed by the source env (with localhost:8090 as fallback).
-  const configSyncBase = configSyncBaseFor(fromEnv);
+  const importDirection = `${importFromEnv}_to_${TO_ENV}`;
+  const importConfigSyncBase = configSyncBaseFor(importFromEnv);
 
-  const startTask = async (path: string, body: Record<string, unknown>): Promise<string> => {
-    const r = await fetch(`${configSyncBase}${path}`, {
+  const startTask = async (base: string, path: string, body: Record<string, unknown>): Promise<string> => {
+    const r = await fetch(`${base}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -88,10 +76,12 @@ export const ConfigSyncPanel: React.FC = () => {
     return j.task_id as string;
   };
 
-  const pollTask = async (id: string, setter: (t: TaskView) => void): Promise<TaskView> => {
+  const pollTask = async (
+    base: string, id: string, cancelRef: React.MutableRefObject<boolean>, setter: (t: TaskView) => void
+  ): Promise<TaskView> => {
     while (true) {
-      if (cancelledRef.current) throw new Error('cancelled');
-      const r = await fetch(`${configSyncBase}/tasks/${id}`);
+      if (cancelRef.current) throw new Error('cancelled');
+      const r = await fetch(`${base}/tasks/${id}`);
       if (!r.ok) throw new Error(`GET /tasks/${id} failed: ${r.status}`);
       const t: TaskView = await r.json();
       setter(t);
@@ -100,271 +90,193 @@ export const ConfigSyncPanel: React.FC = () => {
     }
   };
 
-  const run = async () => {
-    cancelledRef.current = false;
-    setError(null);
-    setSkipMessage(null);
-    setExportTask(null);
-    setPatchTask(null);
-    liveTaskIdRef.current = null;
+  const fetchVersions = async () => {
+    setVersionsLoading(true);
+    setVersionsError(null);
     try {
-      try {
-        const r = await fetch(`${configSyncBase}/sync-marker`);
-        if (r.ok) {
-          const j: { marker: SyncMarker | null } = await r.json();
-          if (j.marker && j.marker.from === fromEnv) {
-            const when = j.marker.synced_at
-              ? new Date(j.marker.synced_at * 1000).toLocaleString()
-              : 'previously';
-            setSkipMessage(`Already synced from ${fromEnv} (${when}). Delete <repo-root>/data/config-sync/metadata.json to force re-sync.`);
-            setPhase('skipped');
-            return;
-          }
-        }
-      } catch {
-        // marker fetch is best-effort — fall through and run the sync.
+      const r = await fetch(`${importConfigSyncBase}/versions?direction=${importDirection}`);
+      if (!r.ok) {
+        const detail = await r.text();
+        throw new Error(`GET /versions failed: ${r.status} ${detail}`);
       }
+      const j: { versions: AvailableVersion[] } = await r.json();
+      const sorted = [...(j.versions || [])].sort((a, b) => b.version - a.version);
+      setVersions(sorted);
+      setSelectedVersion(prev =>
+        sorted.some(v => `v${v.version}` === prev) ? prev : sorted.length ? `v${sorted[0].version}` : '');
+    } catch (e: unknown) {
+      setVersionsError(e instanceof Error ? e.message : String(e));
+      setVersions([]);
+      setSelectedVersion('');
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
 
-      setPhase('export');
-      const exportId = await startTask('/export', { from: fromEnv, parallel });
-      liveTaskIdRef.current = exportId;
-      const exp = await pollTask(exportId, setExportTask);
-      liveTaskIdRef.current = null;
-      if (exp.status === 'cancelled') { setPhase('cancelled'); return; }
-      if (exp.status !== 'succeeded') {
-        setPhase('error');
-        setError(`export failed (rc=${exp.returncode})`);
-        return;
-      }
+  // Re-fetch whenever the source env (hence the direction/server) changes —
+  // fetchVersions itself is intentionally not memoized; only importFromEnv
+  // should re-trigger this.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchVersions(); }, [importFromEnv]);
 
-      setPhase('patch');
-      const patchId = await startTask('/patch', {
-        from: fromEnv,
+  const runImport = async () => {
+    if (!selectedVersion) return;
+    importCancelledRef.current = false;
+    setImportError(null);
+    setImportTask(null);
+    importLiveTaskIdRef.current = null;
+    setImportPhase('running');
+    try {
+      const taskId = await startTask(importConfigSyncBase, '/import', {
+        from: importFromEnv,
         to: TO_ENV,
-        s3: true,
-        s3_bucket: s3Bucket,
-        s3_prefix: s3Prefix,
+        version: selectedVersion,
+        dry_run: dryRun,
       });
-      liveTaskIdRef.current = patchId;
-      const pat = await pollTask(patchId, setPatchTask);
-      liveTaskIdRef.current = null;
-      if (pat.status === 'cancelled') { setPhase('cancelled'); return; }
-      if (pat.status !== 'succeeded') {
-        setPhase('error');
-        setError(`patch failed (rc=${pat.returncode})`);
+      importLiveTaskIdRef.current = taskId;
+      const t = await pollTask(importConfigSyncBase, taskId, importCancelledRef, setImportTask);
+      importLiveTaskIdRef.current = null;
+      if (t.status === 'cancelled') { setImportPhase('cancelled'); return; }
+      if (t.status !== 'succeeded') {
+        setImportPhase('error');
+        setImportError(`import failed (rc=${t.returncode})`);
         return;
       }
-      setPhase('done');
+      setImportPhase('done');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg !== 'cancelled') setError(msg);
-      setPhase('error');
+      if (msg !== 'cancelled') setImportError(msg);
+      setImportPhase('error');
     }
   };
 
-  const stop = async () => {
-    const id = liveTaskIdRef.current;
+  const stopImport = async () => {
+    const id = importLiveTaskIdRef.current;
     if (!id) {
-      // Already finished or no live task — just stop polling locally.
-      cancelledRef.current = true;
+      importCancelledRef.current = true;
       return;
     }
-    setStopping(true);
+    setImportStopping(true);
     try {
-      const r = await fetch(`${configSyncBase}/tasks/${id}/stop`, { method: 'POST' });
+      const r = await fetch(`${importConfigSyncBase}/tasks/${id}/stop`, { method: 'POST' });
       if (!r.ok) {
         const txt = await r.text();
-        setError(`stop failed: ${r.status} ${txt}`);
+        setImportError(`stop failed: ${r.status} ${txt}`);
       }
-      // Also tell the local poller to bail so the chain doesn't kick off the
-      // next step against a freshly-cancelled task.
-      cancelledRef.current = true;
+      importCancelledRef.current = true;
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      setImportError(e instanceof Error ? e.message : String(e));
     } finally {
-      setStopping(false);
+      setImportStopping(false);
     }
   };
 
-  const running = phase === 'export' || phase === 'patch';
-  // After both run, exportTask is still in memory — let the user flip back to
-  // it while patch runs / after it finishes, instead of locking the log view
-  // to the most recent task.
-  const [logSelect, setLogSelect] = useState<'export' | 'patch' | 'auto'>('auto');
-  const effectiveSelect: 'export' | 'patch' =
-    logSelect !== 'auto' ? logSelect : (phase === 'patch' ? 'patch' : 'export');
-  const activeTask = effectiveSelect === 'patch' ? patchTask : exportTask;
-  // When we know we're mid-export/patch but haven't received the first
-  // /tasks/<id> response yet, surface that explicitly instead of leaving the
-  // user staring at a "PENDING" badge — that's almost always a CORS/network
-  // problem on /tasks rather than the task actually being pending.
-  const showSkeletonLog = running && !activeTask;
+  const importRunning = importPhase === 'running';
 
   return (
     <div className="configsync-panel">
       <div className="configsync-header">
-        <h2>Config Sync</h2>
+        <h2>Config Sync — Import</h2>
         <span className="configsync-subtitle">
-          export from <code>{fromEnv}</code> → patch into <code>{TO_ENV}</code>, then publish to S3
+          pulls an already-patched, already-published zip from S3 (via <code>metadata.json</code>) and imports it into <code>{TO_ENV}</code>. Export/Patch/Publish now happens exclusively through DB Manager.
         </span>
       </div>
 
       <div className="configsync-form">
         <label className="configsync-field">
           <span>From env</span>
-          <select value={fromEnv} disabled={running}
-                  onChange={e => setFromEnv(e.target.value)}>
+          <select value={importFromEnv} disabled={importRunning}
+                  onChange={e => setImportFromEnv(e.target.value)}>
             {FROM_ENVS.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
         </label>
 
         <label className="configsync-field">
-          <span>Version prefix</span>
-          <input type="text" value={versionPrefix} disabled={running}
-                 onChange={e => setVersionPrefix(e.target.value)}
-                 placeholder="v1" />
+          <span>Version</span>
+          <select value={selectedVersion} disabled={importRunning || versionsLoading || !versions.length}
+                  onChange={e => setSelectedVersion(e.target.value)}>
+            {!versions.length && (
+              <option value="">{versionsLoading ? 'loading…' : 'no published versions'}</option>
+            )}
+            {versions.map(v => (
+              <option key={v.version} value={`v${v.version}`}>
+                v{v.version}{v.metadata ? ` — ${v.metadata}` : ''}
+              </option>
+            ))}
+          </select>
         </label>
 
-        <label className="configsync-field">
-          <span>S3 bucket</span>
-          <input type="text" value={s3Bucket} disabled={running}
-                 onChange={e => setS3Bucket(e.target.value)} />
-        </label>
-
-        <label className="configsync-field">
-          <span>Parallel exports</span>
-          <input type="number" min={1} max={32} value={parallel} disabled={running}
-                 onChange={e => setParallel(Math.max(1, Number(e.target.value) || 1))} />
+        <label className="configsync-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={dryRun} disabled={importRunning}
+                 onChange={e => setDryRun(e.target.checked)} />
+          <span>Dry run (write SQL only, don't execute)</span>
         </label>
 
         <div className="configsync-resolved">
           <span>To: <code>{TO_ENV}</code></span>
-          <span>S3 key: <code>s3://{s3Bucket}/{s3Prefix}.zip</code></span>
-          <span>Server: <code>{configSyncBase}</code></span>
+          <span>Direction: <code>{importDirection}</code></span>
+          <span>Server: <code>{importConfigSyncBase}</code></span>
         </div>
 
         <div className="configsync-actions">
-          <button
-            className="configsync-run"
-            disabled={running || !fromEnv || !versionPrefix.trim() || !s3Bucket.trim()}
-            onClick={run}>
-            {running ? 'Running…' : 'Export + Patch + Publish'}
+          <button className="configsync-run" disabled={importRunning || !selectedVersion} onClick={runImport}>
+            {importRunning ? 'Importing…' : 'Import'}
           </button>
-          {running && (
-            <button
-              className="configsync-cancel"
-              onClick={stop}
-              disabled={stopping}
-              title="SIGTERM the running config_transfer subprocess (and its passetto-server child)">
-              {stopping ? 'Stopping…' : 'Stop'}
+          <button className="configsync-cancel" onClick={fetchVersions} disabled={versionsLoading || importRunning}
+                  title="Re-fetch metadata.json">
+            {versionsLoading ? 'Refreshing…' : '↻ Refresh versions'}
+          </button>
+          {importRunning && (
+            <button className="configsync-cancel" onClick={stopImport} disabled={importStopping}
+                    title="SIGTERM the running config_transfer subprocess">
+              {importStopping ? 'Stopping…' : 'Stop'}
             </button>
           )}
         </div>
 
-        {error && <div className="configsync-error">{error}</div>}
-        {skipMessage && phase === 'skipped' && (
-          <div className="configsync-skip">{skipMessage}</div>
-        )}
+        {versionsError && <div className="configsync-error">Could not load versions: {versionsError}</div>}
+        {importError && <div className="configsync-error">{importError}</div>}
       </div>
 
-      <div className="configsync-steps">
-        <Step
-          label="1. Export"
-          task={exportTask}
-          phase={phase}
-          mine="export"
-        />
-        <Step
-          label="2. Patch + S3"
-          task={patchTask}
-          phase={phase}
-          mine="patch"
-        />
-      </div>
-
-      {(activeTask || showSkeletonLog || phase === 'done' || phase === 'error') && (
+      {(importTask || importRunning) && (
         <div className="configsync-log-wrap">
-          <div className="configsync-log-tabs">
-            <button
-              className={`configsync-log-tab ${effectiveSelect === 'export' ? 'active' : ''}`}
-              onClick={() => setLogSelect('export')}
-              disabled={!exportTask && !showSkeletonLog}>
-              Export {exportTask ? `(${exportTask.log.length})` : ''}
-            </button>
-            <button
-              className={`configsync-log-tab ${effectiveSelect === 'patch' ? 'active' : ''}`}
-              onClick={() => setLogSelect('patch')}
-              disabled={!patchTask && phase !== 'patch'}>
-              Patch + S3 {patchTask ? `(${patchTask.log.length})` : ''}
-            </button>
-          </div>
           <div className="configsync-log-header">
             <span>
-              {activeTask
-                ? `${activeTask.cmd} log`
-                : showSkeletonLog
-                  ? `${phase} — waiting for first /tasks response…`
-                  : 'log'}
-              {activeTask && (
-                <span className={`configsync-pill configsync-pill-${activeTask.status}`}>
-                  {activeTask.status === 'running'
-                    ? `running · ${formatDur(activeTask.started_at, null)}`
-                    : activeTask.status === 'succeeded'
-                      ? `done · ${formatDur(activeTask.started_at, activeTask.finished_at)}`
-                      : activeTask.status === 'cancelled'
-                        ? `cancelled · ${formatDur(activeTask.started_at, activeTask.finished_at)}`
-                        : `failed · rc=${activeTask.returncode ?? '?'}`}
+              import log
+              {importTask && (
+                <span className={`configsync-pill configsync-pill-${importTask.status}`}>
+                  {importTask.status === 'running'
+                    ? `running · ${formatDur(importTask.started_at, null)}`
+                    : importTask.status === 'succeeded'
+                      ? `done · ${formatDur(importTask.started_at, importTask.finished_at)}`
+                      : importTask.status === 'cancelled'
+                        ? `cancelled · ${formatDur(importTask.started_at, importTask.finished_at)}`
+                        : `failed · rc=${importTask.returncode ?? '?'}`}
                 </span>
               )}
             </span>
             <button
               className="configsync-copy"
               onClick={() => {
-                const text = activeTask?.log?.join('\n') || '';
+                const text = importTask?.log?.join('\n') || '';
                 navigator.clipboard?.writeText(text).catch(() => { });
               }}
-              disabled={!activeTask?.log?.length}
+              disabled={!importTask?.log?.length}
               title="Copy log to clipboard">
               📋 Copy
             </button>
           </div>
-          <pre ref={logRef} className="configsync-log">
-            {activeTask
-              ? (activeTask.log.length ? activeTask.log.join('\n') : '(no output yet — polling)')
-              : `Started ${phase} task on ${configSyncBase}; polling /tasks/<id>.\nIf this stays here, check the browser Network tab — likely CORS or the server isn't running with the latest code.`}
+          <pre ref={importLogRef} className="configsync-log">
+            {importTask
+              ? (importTask.log.length ? importTask.log.join('\n') : '(no output yet — polling)')
+              : `Started import task on ${importConfigSyncBase}; polling /tasks/<id>.`}
           </pre>
           <div className="configsync-log-footer">
-            <span>{activeTask?.log?.length ?? 0} lines · polling every 1.5s</span>
-            {activeTask?.id && <span>task: {activeTask.id}</span>}
+            <span>{importTask?.log?.length ?? 0} lines · polling every 1.5s</span>
+            {importTask?.id && <span>task: {importTask.id}</span>}
           </div>
         </div>
       )}
     </div>
   );
 };
-
-const Step: React.FC<{
-  label: string;
-  task: TaskView | null;
-  phase: Phase;
-  mine: 'export' | 'patch';
-}> = ({ label, task, phase, mine }) => {
-  const isActive = phase === mine;
-  const status: TaskView['status'] | 'pending' | 'starting' = task
-    ? task.status
-    : phase === 'done' || (phase === 'patch' && mine === 'export') ? 'succeeded'
-    : isActive ? 'starting'
-    : 'pending';
-  return (
-    <div className={`configsync-step status-${status} ${isActive ? 'active' : ''}`}>
-      <div className="configsync-step-label">{label}</div>
-      <div className="configsync-step-status">{status}</div>
-      {task && (
-        <div className="configsync-step-meta">
-          rc={task.returncode ?? '—'} · {formatDur(task.started_at, task.finished_at)}
-        </div>
-      )}
-    </div>
-  );
-};
-
