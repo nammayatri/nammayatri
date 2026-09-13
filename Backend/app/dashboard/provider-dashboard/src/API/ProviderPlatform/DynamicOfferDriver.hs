@@ -28,6 +28,7 @@ import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementD
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.Operator as OperatorDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
+import qualified API.ProviderPlatform.BulkLogicRollout as BulkLogicRollout
 import qualified API.ProviderPlatform.DriverInfoByPhoneNumber as DriverInfoByPhoneNumber
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.InternalAuth as InternalAuth
@@ -46,6 +47,7 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> ( API'
            :<|> DriverInfoByPhoneNumber.API
+           :<|> BulkLogicRollout.API
        )
 
 type APIV2 =
@@ -80,6 +82,7 @@ handler merchantId = do
       :<|> OperatorDSL.handler merchantId city
     )
     :<|> DriverInfoByPhoneNumber.handler merchantId
+    :<|> BulkLogicRollout.handler merchantId
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.City "Bangalore"
