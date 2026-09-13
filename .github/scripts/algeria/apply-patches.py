@@ -163,6 +163,31 @@ double =
     <|> P.float lexer""",
         "beckn: a coordinate may be negative -- Nouakchott is at -15.9",
     ),
+    # ── One search, two merchants, one lock ─────────────────────────────────
+    #
+    # Two countries since 2026-09-13 means two driver merchants in this one
+    # process, and the gateway sends every search to both. The handler guards
+    # the work with `whenWithLockRedis` on the MESSAGE id alone -- which runs
+    # the body only if the lock is free and otherwise does nothing at all, with
+    # no error and no log. So whichever merchant arrives second while the
+    # first still holds the lock silently drops the search. Measured: a
+    # Nouakchott search reached the Algerian merchant first, which held the
+    # lock ~6 ms while refusing it on georestrictions; the Mauritanian merchant
+    # arrived 3 ms later, logged "Reached" and nothing else, and the passenger
+    # got no prices. Which one wins depends on the gateway's send order, which
+    # a registry restart reshuffles -- so it looked like a bad image.
+    #
+    # Keyed on merchant + message instead: each merchant handles its own copy,
+    # and a redelivery of the same search to the same merchant is still
+    # skipped, which is what the lock was for. `transporterId` and `getId` are
+    # both already in scope in this module; no import changes.
+    (
+        f"{DRIVER_SRC}/API/Beckn/Search.hs",
+        53,
+        "Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId) 60 $ do",
+        'Redis.whenWithLockRedis (searchLockKey (transporterId.getId <> ":" <> dSearchReq.messageId)) 60 $ do',
+        "driver: the search lock is per merchant -- two countries share this process",
+    ),
     # ── The car, on the driver's offer ──────────────────────────────────────
     #
     # The client asked, repeatedly, for the passenger to see which car is
