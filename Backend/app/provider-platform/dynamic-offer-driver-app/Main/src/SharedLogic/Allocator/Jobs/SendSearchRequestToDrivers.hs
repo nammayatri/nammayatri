@@ -402,7 +402,7 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
           mbTopUpSize = mbTopUpSize,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo,
-          popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.id,
+          popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.requestId searchTry.id,
           markDriversAttempted = I.markDriversAttempted searchTry.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           logDriversExhausted = do

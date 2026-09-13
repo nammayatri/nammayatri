@@ -71,7 +71,8 @@ data ActionEvent = ActionEvent
 data CounterConfig = CounterConfig
   { windowSizeDays :: Integer, -- SWC storage window
     counters :: [CounterType], -- which counters to increment
-    periods :: [PeriodConfig] -- which time periods to compute in snapshot
+    periods :: [PeriodConfig], -- which time periods to compute in snapshot
+    hashTagEntityId :: Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

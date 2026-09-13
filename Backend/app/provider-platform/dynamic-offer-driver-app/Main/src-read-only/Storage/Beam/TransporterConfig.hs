@@ -174,6 +174,7 @@ data TransporterConfigT f = TransporterConfigT
     enableDirectWalletIncentives :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     enableDownwardRecomputeForDifferentDestination :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     enableDriverHealthCheckDebug :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableDriverPoolEnrichment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableEstimatedTollFallback :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     enableExistingVehicleInBulkUpload :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     enableFaceVerification :: (B.C f Kernel.Prelude.Bool),

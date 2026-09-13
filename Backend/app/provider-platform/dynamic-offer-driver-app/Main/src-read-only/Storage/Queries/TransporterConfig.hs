@@ -256,6 +256,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableDirectWalletIncentives enableDirectWalletIncentives,
       Se.Set Beam.enableDownwardRecomputeForDifferentDestination enableDownwardRecomputeForDifferentDestination,
       Se.Set Beam.enableDriverHealthCheckDebug enableDriverHealthCheckDebug,
+      Se.Set Beam.enableDriverPoolEnrichment enableDriverPoolEnrichment,
       Se.Set Beam.enableEstimatedTollFallback (Just enableEstimatedTollFallback),
       Se.Set Beam.enableExistingVehicleInBulkUpload (Just enableExistingVehicleInBulkUpload),
       Se.Set Beam.enableFaceVerification enableFaceVerification,

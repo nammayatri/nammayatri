@@ -18,6 +18,7 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Database.Redis as Hedis
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DI
@@ -183,10 +184,10 @@ processCandidatesChunk ::
 processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  -- Parallel-cap filter (one Redis ZCOUNT per driver in the chunk).
+  -- Parallel-cap filter (one pipelined Redis ZCOUNT per driver in the chunk).
   filteredChunk <-
     if applyParallelRequestFilter
-      then filterM (parallelRequestsFilterForDriver req . (.driverId) . driverLoc) chunk
+      then filterByParallelRequestCap req chunk
       else pure chunk
   -- Pool-data MGET for chunk survivors only.
   let chunkDriverIds = (.driverId) . driverLoc <$> filteredChunk
@@ -356,13 +357,14 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         distanceFromDriverToDestination = mbDistToDestination
       }
 
-parallelRequestsFilterForDriver :: (Redis.HedisFlow m r) => NearestDriversReq -> Id Person.Driver -> m Bool
-parallelRequestsFilterForDriver NearestDriversReq {..} driverId = do
-  currentCount <- Redis.withMasterRedis $
-    Redis.withCrossAppRedis $ do
-      validCount <- Redis.zCount (DPD.mkParallelSearchRequestKey merchantId driverId) ((realToFrac . utcTimeToPOSIXSeconds) now) ((realToFrac . utcTimeToPOSIXSeconds) (addUTCTime 5000 now))
-      pure (fromIntegral validCount :: Int)
-  pure $ currentCount < maxParallelSearchRequests
+filterByParallelRequestCap :: (Redis.HedisFlow m r, MonadFlow m) => NearestDriversReq -> [SortedLTSCandidate] -> m [SortedLTSCandidate]
+filterByParallelRequestCap NearestDriversReq {..} chunk = do
+  let toScore = realToFrac . utcTimeToPOSIXSeconds :: UTCTime -> Double
+      parallelKeys = DPD.mkParallelSearchRequestKey merchantId . (.driverId) . driverLoc <$> chunk
+  activeCounts <-
+    Redis.withMasterRedis . Redis.withCrossAppRedis $
+      Redis.runPipelinedByKey "zCountPipelined" (\key -> Hedis.zcount key (toScore now) (toScore (addUTCTime 5000 now))) parallelKeys
+  pure [candidate | (candidate, activeCount) <- zip chunk activeCounts, maybe True ((< maxParallelSearchRequests) . fromIntegral) activeCount]
 
 isDriverModeEligibleHelper :: Maybe DriverInfo.DriverMode -> Bool -> Bool
 isDriverModeEligibleHelper Nothing active = active

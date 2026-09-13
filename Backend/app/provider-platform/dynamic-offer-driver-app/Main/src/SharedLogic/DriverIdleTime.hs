@@ -32,10 +32,10 @@ import Kernel.Utils.Common
 -- online (paused/cleared when offline) and the seconds "banked" across previous online spells.
 -- idle = banked + (lastRequestAt ? now - lastRequestAt : 0).
 mkIdleLastRequestAtKey :: Text -> Text
-mkIdleLastRequestAtKey driverId = "driver-offer:Idle:lastReqAt:DriverId-" <> driverId
+mkIdleLastRequestAtKey driverId = "driver-offer:Idle:lastReqAt:{" <> driverId <> "}"
 
 mkIdleBankedKey :: Text -> Text
-mkIdleBankedKey driverId = "driver-offer:Idle:banked:DriverId-" <> driverId
+mkIdleBankedKey driverId = "driver-offer:Idle:banked:{" <> driverId <> "}"
 
 -- 7-day expiry so stale idle-tracking keys self-clean.
 idleKeyExpiry :: Redis.ExpirationTime

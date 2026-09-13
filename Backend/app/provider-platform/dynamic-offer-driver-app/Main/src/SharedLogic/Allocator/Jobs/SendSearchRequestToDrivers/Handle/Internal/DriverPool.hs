@@ -49,6 +49,7 @@ import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import qualified Kernel.External.Maps as EMaps
@@ -230,7 +231,7 @@ makeTaggedDriverPool ::
     ClickhouseFlow m r
   ) =>
   Id MerchantOperatingCity ->
-  Seconds ->
+  DTC.TransporterConfig ->
   DSR.SearchRequest ->
   [DriverPoolWithActualDistResult] ->
   Int ->
@@ -241,8 +242,8 @@ makeTaggedDriverPool ::
   DriverPoolConfig ->
   Id DST.SearchTry ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
-  localTime <- getLocalCurrentTime timeDiffFromUtc
+makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
+  localTime <- getLocalCurrentTime transporterCfg.timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
   updateVersionInSearchReq mbVersion
   -- A rollout toss happens here whenever mbPoolingLogicVersion is Nothing, so the version applied to
@@ -264,8 +265,10 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   -- (counters + idle) instead of a Redis read pass per driver.
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
     let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-    countersMap <- getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds
-    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
+    (countersMap, idleMap) <-
+      if fromMaybe True transporterCfg.enableDriverPoolEnrichment
+        then (,) <$> getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds <*> DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
+        else pure (Map.empty, Map.empty)
     return $
       map
         ( \driver ->
@@ -326,18 +329,15 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       softCap = min hardCap (fromMaybe hardCap driverPoolCfg.softMaxParallelSearchRequests)
       -- `isLessThenNParallelRequests` is a single atomic check-and-reserve (zAddIfPossible), so
       -- a failed soft attempt reserves nothing and the hard retry below can't double-count.
-      tryReserve cap driverPoolResult =
-        isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId valueToPut cap fromScore
-  softResults <- forM sortedPool' $ \driverPoolResult -> do
-    fork "removeExpiredSearchRequestInfoFromCache" $ removeExpiredSearchRequestInfoFromCache driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId
-    (driverPoolResult,) <$> tryReserve softCap driverPoolResult
-  let underSoft = [d | (d, True) <- softResults]
-      overSoft = [d | (d, False) <- softResults] -- at/over the soft cap, possibly still under the hard one
+      tryReserve cap drivers =
+        isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId ((.driverPoolResult.driverId) <$> drivers) valueToPut cap fromScore
+  fork "removeExpiredSearchRequestInfoFromCache" $ removeExpiredSearchRequestInfoFromCache driverPoolCfg.merchantId ((.driverPoolResult.driverId) <$> sortedPool')
+  (underSoft, overSoft) <- reserveInRankOrder (tryReserve softCap) batchSize sortedPool'
   sortedPool <-
     if softCap >= hardCap || length underSoft >= batchSize
       then pure underSoft
       else do
-        backfill <- filterM (tryReserve hardCap) overSoft
+        (backfill, _) <- reserveInRankOrder (tryReserve hardCap) (batchSize - length underSoft) overSoft
         logInfo $
           "SoftParallelBackfill: searchTryId=" <> searchTryId.getId
             <> " batchNum="
@@ -354,10 +354,12 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
             <> show (length backfill)
         -- Ranking is preserved: soft-cap drivers first, backfill appended behind them.
         pure (underSoft <> backfill)
+  let reservedIds = (.driverPoolResult.driverId) <$> sortedPool
+      rest = filter ((`notElem` reservedIds) . (.driverPoolResult.driverId)) sortedPool'
 
-  pushTaggedPoolToKafka sortedPool
+  pushTaggedPoolToKafka (sortedPool <> rest)
   when (isContinuousBatchingEnabled driverPoolCfg && not isOnRidePool) $
-    setDriverReserveList searchTryId (getNextBatchScheduleTime driverPoolCfg + driverReserveListTtlBufferSeconds) (drop batchSize sortedPool)
+    setDriverReserveList searchTryId (getNextBatchScheduleTime driverPoolCfg + driverReserveListTtlBufferSeconds) rest
   return (mbVersion, take batchSize sortedPool)
   where
     updateVersionInSearchReq mbVersion =
@@ -381,6 +383,16 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         )
         "search-try-driver-tagged-pool-batch"
         searchTryId.getId
+
+reserveInRankOrder :: Monad m => ([a] -> m [Bool]) -> Int -> [a] -> m ([a], [a])
+reserveInRankOrder tryReserve target = go [] []
+  where
+    go reserved rejected candidates
+      | length reserved >= target || null candidates = pure (reserved, rejected)
+      | otherwise = do
+        let (wave, remaining) = splitAt (target - length reserved) candidates
+        results <- tryReserve wave
+        go (reserved <> [d | (d, True) <- zip wave results]) (rejected <> [d | (d, False) <- zip wave results]) remaining
 
 -- | Whether this job has been superseded as the owner of the search try's batch chain.
 --
@@ -445,13 +457,16 @@ incrementBatchNum searchTryId = do
 
 popTopUpDrivers ::
   ( Redis.HedisFlow m r,
-    Log m
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   DriverPoolConfig ->
+  Id DSR.SearchRequest ->
   Id DST.SearchTry ->
   Int ->
   m [DriverPoolWithActualDistResult]
-popTopUpDrivers driverPoolCfg searchTryId topUpSize
+popTopUpDrivers driverPoolCfg searchReqId searchTryId topUpSize
   | not (isContinuousBatchingEnabled driverPoolCfg) = pure []
   | otherwise = do
     attempted <- previouslyAttemptedDrivers searchTryId Nothing
@@ -465,7 +480,13 @@ popTopUpDrivers driverPoolCfg searchTryId topUpSize
         Nothing -> pure $ reverse acc
         Just driver
           | driver.driverPoolResult.driverId `elem` attemptedIds -> go attemptedIds n acc
-          | otherwise -> go attemptedIds (n - 1) (driver : acc)
+          | otherwise -> do
+            now <- getCurrentTime
+            let holdFor = fromIntegral driverPoolCfg.singleBatchProcessTime
+            reserved <- isLessThenNParallelRequests searchReqId driverPoolCfg.merchantId [driver.driverPoolResult.driverId] (addUTCTime holdFor now) driverPoolCfg.maxParallelSearchRequests (addUTCTime (negate holdFor) now)
+            if or reserved
+              then go attemptedIds (n - 1) (driver : acc)
+              else go attemptedIds n acc
 
 markDriversAttempted ::
   ( Redis.HedisFlow m r

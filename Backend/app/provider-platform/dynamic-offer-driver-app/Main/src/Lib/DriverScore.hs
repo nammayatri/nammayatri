@@ -121,7 +121,8 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
               periods =
                 [ BTT.mkPeriodConfig "daily" 1,
                   BTT.mkPeriodConfig "weekly" 7
-                ]
+                ],
+              hashTagEntityId = DP.rideCancellationCounterConfig.hashTagEntityId
             }
     eventTime <- getCurrentTime
     let actionEvent =
