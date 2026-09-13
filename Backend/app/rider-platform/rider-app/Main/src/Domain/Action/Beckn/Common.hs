@@ -684,7 +684,12 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      unless req'.bookingPrePersisted $ QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
+      -- A pre-persisted booking (one-shot assign) is born TRIP_ASSIGNED, so it never
+      -- goes through QRB.updateStatus — the only writer of the ACBL active-booking
+      -- cache that getBookingList serves active rides from. Register it directly.
+      if req'.bookingPrePersisted
+        then QRB.addActiveBookingAvailableInCache booking.riderId booking.id
+        else QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
