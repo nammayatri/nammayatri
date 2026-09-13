@@ -250,6 +250,7 @@ data AppEnv = AppEnv
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     driverSearchRequestResponseMetrics :: DriverSearchRequestResponseMetricsContainer,
+    driverSupplyMetrics :: DriverSupplyMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
@@ -403,6 +404,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   driverSearchRequestResponseMetrics <- registerDriverSearchRequestResponseMetricsContainer
+  driverSupplyMetrics <- registerDriverSupplyMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   serviceClickhouseEnv <- createConn driverClickhouseCfg
