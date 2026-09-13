@@ -108,6 +108,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -189,6 +190,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
+  DSC.recordOnRideChange booking.merchantOperatingCityId False
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance) pickupZone dropZone
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
