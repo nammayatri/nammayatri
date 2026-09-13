@@ -49,7 +49,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
           paymentMode = "UPI",
-          appType = cmrlAppType,
+          appType = cmrlAppType config,
           paxCount = totalTicketQuantity, -- Number of tickets
           qrTypeCode = "FQR"
         }

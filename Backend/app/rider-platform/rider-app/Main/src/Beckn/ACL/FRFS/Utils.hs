@@ -349,6 +349,18 @@ getTicketStatus booking checkInprogress dTicket = do
     then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
     else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
+wireTicketStatus :: Ticket.FRFSTicketStatus -> Text
+wireTicketStatus = \case
+  Ticket.ACTIVE -> "UNCLAIMED"
+  Ticket.INPROGRESS -> "UNCLAIMED"
+  Ticket.EXPIRED -> "EXPIRED"
+  Ticket.USED -> "CLAIMED"
+  Ticket.CANCELLED -> "CANCELLED"
+  Ticket.COUNTER_CANCELLED -> "CANCELLED"
+  Ticket.CANCEL_INITIATED -> "CANCELLED"
+  Ticket.TECHNICAL_CANCEL_REJECTED -> "UNCLAIMED"
+  Ticket.RESCHEDULED -> "CANCELLED"
+
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> Spec.VehicleCategory -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ False _ = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
 castTicketStatus "UNCLAIMED" _ True Spec.BUS = return Ticket.USED -- In case of bus, ticket is scanned only once to validate the booking
