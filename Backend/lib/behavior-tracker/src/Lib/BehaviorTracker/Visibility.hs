@@ -48,6 +48,7 @@ queryEntityVisibility entityType entityId config = do
         forM counterCfg.periods $ \period -> do
           vals <-
             buildCounterValues
+              counterCfg.hashTagEntityId
               entityType
               actionType
               entityId

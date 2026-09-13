@@ -315,7 +315,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
           addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit

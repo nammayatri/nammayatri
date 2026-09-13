@@ -63,7 +63,8 @@ pickupStallCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 30,
       counters = [BTT.ACTION_COUNT],
-      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7, BTT.mkPeriodConfig "monthly" 30]
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7, BTT.mkPeriodConfig "monthly" 30],
+      hashTagEntityId = False
     }
 
 data PickupStallSource = SystemReallocation | SystemDetection | CustomerCancelledDriverAtFault

@@ -97,7 +97,7 @@ incrementCounterOnly ::
   CounterType ->
   m ()
 incrementCounterOnly config entityType entityId actionType counterType =
-  incrementCounter entityType actionType counterType entityId config.windowSizeDays
+  incrementCounter config.hashTagEntityId entityType actionType counterType entityId config.windowSizeDays
 
 -- | Decrement a specific counter in the bucket of the original event time.
 --
@@ -117,7 +117,7 @@ decrementCounterOnly ::
   UTCTime -> -- when the event being reversed was originally counted
   m ()
 decrementCounterOnly config entityType entityId actionType counterType eventTime =
-  decrementCounterInTimeBucket entityType actionType counterType entityId eventTime config.windowSizeDays
+  decrementCounterInTimeBucket config.hashTagEntityId entityType actionType counterType entityId eventTime config.windowSizeDays
 
 -- Internal helpers
 
@@ -133,6 +133,7 @@ incrementCounters ::
 incrementCounters config event =
   forM_ config.counters $ \counterType ->
     incrementCounter
+      config.hashTagEntityId
       event.entityType
       event.actionType
       counterType
@@ -152,6 +153,7 @@ buildCounterMap config event = do
   pairs <- forM config.periods $ \period -> do
     values <-
       buildCounterValues
+        config.hashTagEntityId
         event.entityType
         event.actionType
         event.entityId
