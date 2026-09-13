@@ -40,8 +40,8 @@ module SharedLogic.MessageBuilder
     buildOperatorJoiningMessage,
     BuildDownloadAppMessageReq (..),
     buildFleetJoinAndDownloadAppMessage,
-    BuildFleetDeepLinkAuthMessage (..),
-    buildFleetDeepLinkAuthMessage,
+    BuildDriverOnboardingLinkMessageReq (..),
+    buildDriverOnboardingLinkMessage,
     BuildSendReceiptMessageReq (..),
     buildSendReceiptMessage,
     BuildOperatorDeepLinkAuthMessage (..),
@@ -391,24 +391,41 @@ buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
 
   pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
 
-data BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
-  { fleetOwnerName :: Text,
-    fleetOwnerId :: Text,
-    fleetName :: Text
+data BuildDriverOnboardingLinkMessageReq = BuildDriverOnboardingLinkMessageReq
+  { code :: Text,
+    expiryHours :: Int,
+    fleetOwnerName :: Maybe Text,
+    fleetName :: Maybe Text
   }
 
-buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text, Text, Maybe Text)
-buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
-  (senderHeader, staticMsg, templateId, messageType) <- buildGenericMessage merchantOperatingCityId DMM.FLEET_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
+-- | Onboarding-link SMS. The row's @var1@ is the city's link template with @{#code#}@; the filled
+-- link is shortened (long link if the shortener fails) and substituted as @{#url#}@.
+buildDriverOnboardingLinkMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildDriverOnboardingLinkMessageReq -> m (Maybe Text, Text, Text, Maybe Text)
+buildDriverOnboardingLinkMessage merchantOperatingCityId messageKey req = do
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show messageKey))
+  linkTemplate <- merchantMessage.jsonData.var1 & fromMaybeM (InvalidRequest $ "Missing json_data.var1 link template for " <> show messageKey)
+  let longUrl = T.replace (templateText "code") req.code linkTemplate
+  url <- shortenOrFallback longUrl
   now <- getCurrentTime
-  let expiryDate = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" (addUTCTime (7 * 86400) now) -- consent deep link valid for 7 days
-      dynamicMsg =
-        staticMsg
-          & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
-          & T.replace (templateText "fleetOwnerId") req.fleetOwnerId
-          & T.replace (templateText "fleetName") req.fleetName
+  let expiryDate = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" (addUTCTime (fromIntegral req.expiryHours * 3600) now)
+      msg =
+        merchantMessage.message
+          & T.replace (templateText "url") url
+          & T.replace (templateText "fleetOwnerName") (fromMaybe "" req.fleetOwnerName)
+          & T.replace (templateText "fleetName") (fromMaybe "" req.fleetName)
           & T.replace (templateText "expiryDate") expiryDate
-  pure (senderHeader, dynamicMsg, templateId, messageType)
+  pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
+  where
+    shortenOrFallback longUrl = do
+      let shortLinkExpiryHours = min 255 (req.expiryHours + 24) -- outlives the code; the shortener stores hours in a u8
+      result <- try @_ @SomeException $ UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq longUrl Nothing Nothing (Just shortLinkExpiryHours) (Just UrlShortner.DRIVER_ONBOARDING_LINK))
+      case result of
+        Right res -> pure res.shortUrl
+        Left err -> do
+          logWarning $ "Url shortener failed, sending the long onboarding link: " <> show err
+          pure longUrl
 
 newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
   { operatorName :: Text

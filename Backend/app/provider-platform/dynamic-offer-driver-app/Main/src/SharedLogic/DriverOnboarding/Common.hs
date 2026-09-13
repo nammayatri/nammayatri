@@ -30,6 +30,8 @@ module SharedLogic.DriverOnboarding.Common
     enableDriver,
     activateRCAutomatically,
     sendEnablementSms,
+    sendOnboardingLinkSms,
+    defaultDriverOnboardingLinkExpiryHours,
   )
 where
 
@@ -37,11 +39,13 @@ import Control.Applicative ((<|>))
 import Data.List (partition)
 import qualified Data.List as List
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentOnboardingStage as DOS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
@@ -52,6 +56,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
@@ -60,7 +65,10 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import qualified TempAppCode.Flow as TempAppCode
+import TempAppCode.Types (TempAppCodeCfg (..))
 import qualified Tools.SMS as Sms
+import qualified UrlShortner.Common as UrlShortner
 
 -- | Treat an InspectionHub document as VALID. Applied by the caller to the document array before
 --   handing it to the recompute, so each handler decides whether the inspection gate is waived —
@@ -354,3 +362,44 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
         MessageBuilder.buildOnboardingMessage merchantOpCityId $
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
+
+defaultDriverOnboardingLinkExpiryHours :: Int
+defaultDriverOnboardingLinkExpiryHours = 24
+
+-- | SMS the driver a login link for whatever a dashboard add left pending: fleet invitation,
+-- documents, or both. Nothing pending ⇒ no SMS.
+sendOnboardingLinkSms ::
+  (OnboardingFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) =>
+  DMOC.MerchantOperatingCity ->
+  DTC.TransporterConfig ->
+  DP.Person ->
+  Maybe DP.Person ->
+  m ()
+sendOnboardingLinkSms merchantOpCity transporterConfig driver mbFleetOwner = do
+  mbDriverInfo <- DIQuery.findById driver.id
+  mbPendingInvite <- QFDA.findByDriverId driver.id False
+  let onboardingPending = maybe True (not . (.verified)) mbDriverInfo
+      consentPending = isJust mbPendingInvite
+  whenJust (pickMessageKey consentPending onboardingPending) $ \messageKey -> do
+    let expiryHours = fromMaybe defaultDriverOnboardingLinkExpiryHours transporterConfig.driverOnboardingLinkExpiryHours
+        codeCfg = DReg.operatorLinkTempAppCodeCfg {ttlSeconds = expiryHours * 3600}
+    codeRes <- TempAppCode.generateTempAppCode codeCfg driver.id.getId
+    mbFleetOwnerInfo <- maybe (pure Nothing) (QFOI.findByPrimaryKey . (.id)) mbFleetOwner
+    mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+    smsCfg <- asks (.smsCfg)
+    let countryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) driver.mobileCountryCode
+        phoneNumber = countryCode <> mobileNumber
+    (mbSender, message, templateId, messageType) <-
+      MessageBuilder.buildDriverOnboardingLinkMessage merchantOpCity.id messageKey $
+        MessageBuilder.BuildDriverOnboardingLinkMessageReq
+          { code = codeRes.code,
+            expiryHours,
+            fleetOwnerName = (.firstName) <$> mbFleetOwner,
+            fleetName = (mbFleetOwnerInfo >>= (.fleetName)) <|> ((.firstName) <$> mbFleetOwner)
+          }
+    Sms.sendSMS merchantOpCity.merchantId merchantOpCity.id (Sms.SendSMSReq message phoneNumber (fromMaybe smsCfg.sender mbSender) templateId messageType) >>= Sms.checkSmsResult
+  where
+    pickMessageKey True False = Just DMM.FLEET_CONSENT_DEEPLINK_MESSAGE
+    pickMessageKey False True = Just DMM.DRIVER_ONBOARDING_DEEPLINK_MESSAGE
+    pickMessageKey True True = Just DMM.FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
+    pickMessageKey False False = Nothing

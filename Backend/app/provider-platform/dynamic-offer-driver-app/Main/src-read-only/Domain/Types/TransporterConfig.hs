@@ -154,6 +154,7 @@ data TransporterConfig = TransporterConfig
     driverFeeRetryThresholdConfig :: Kernel.Prelude.Int,
     driverLocationAccuracyBuffer :: Kernel.Types.Common.Meters,
     driverLocationStalenessThresholdSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    driverOnboardingLinkExpiryHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverPaymentCycleBuffer :: Kernel.Prelude.NominalDiffTime,
     driverPaymentCycleDuration :: Kernel.Prelude.NominalDiffTime,
     driverPaymentCycleStartTime :: Kernel.Prelude.NominalDiffTime,

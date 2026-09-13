@@ -24,11 +24,13 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideExtra as QRideExtra
 import Tools.Error
 
@@ -82,6 +84,11 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
           whatsappNotificationEnroll = Nothing
         }
       Nothing
+  unless mbFleet $
+    fork "Sending onboarding link SMS to Driver" $ do
+      driver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
+      merchantOpCity <- CQMOC.findById transporterConfig.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound transporterConfig.merchantOperatingCityId.getId)
+      SOnbCommon.sendOnboardingLinkSms merchantOpCity transporterConfig driver Nothing
   when mbFleet $ do
     checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")

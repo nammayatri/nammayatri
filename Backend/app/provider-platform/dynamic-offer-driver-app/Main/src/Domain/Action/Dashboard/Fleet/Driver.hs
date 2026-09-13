@@ -203,6 +203,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
@@ -3830,12 +3831,11 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               SA.endDriverAssociations moc.id transporterConfig person
               when (merchant.overwriteAssociation == Just True) $
                 DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
-            let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
-            fork "Sending Fleet Consent SMS to Driver" $
-              sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
+            fork "Sending onboarding link SMS to Driver" $
+              SOnbCommon.sendOnboardingLinkSms moc transporterConfig person (Just fleetOwner)
       pure person.id
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
@@ -3850,23 +3850,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $
               SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
       pure person.id
-
-    sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
-    sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country fleetOwner = do
-      let countryCode = fromMaybe (P.getCountryMobileCode country) person.mobileCountryCode
-          phoneNumber = countryCode <> mobileNumber
-      smsCfg <- asks (.smsCfg)
-      mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwner.id
-      withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
-            MessageBuilder.BuildFleetDeepLinkAuthMessage
-              { fleetOwnerName = fleetOwner.firstName,
-                fleetOwnerId = fleetOwner.id.getId,
-                fleetName = fromMaybe fleetOwner.firstName ((.fleetName) =<< mbFleetOwnerInfo)
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
 mkAddDriverCounterKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
 mkAddDriverCounterKey merchantOpCityId driverId = "Fleet:AddDriverCount:" <> driverId.getId <> ":" <> merchantOpCityId.getId
