@@ -56,6 +56,13 @@ path, *args = sys.argv[1:]
 CC = os.environ.get("COUNTRY_CODE", "+222")
 NSN = int(os.environ.get("NSN_LENGTH", "8"))
 CC_DIGITS = CC.lstrip("+")
+# Two countries since 2026-09-13. Algeria is the other habit on every axis:
+#   COUNTRY_CODE=+213 NSN_LENGTH=9 TRUNK_ZERO=1 MOBILE_FIRST=567 FIXED_SECOND=
+# The app sends an Algerian number WITH its trunk zero (+2130555...), so the
+# key has to carry it too, or enrolment "works" and sign-in never matches.
+TRUNK = os.environ.get("TRUNK_ZERO", "") == "1"
+MOBILE_FIRST = os.environ.get("MOBILE_FIRST", "234")
+FIXED_SECOND = os.environ.get("FIXED_SECOND", "5")
 
 def key(local):
     d = "".join(c for c in local if c.isdigit())
@@ -69,14 +76,13 @@ def key(local):
     # elsewhere. Dropped rather than refused.
     d = d.lstrip("0") or d
     if len(d) != NSN:
-        sys.exit(f"'{local}' is not a Mauritanian mobile number "
-                 f"(expected {NSN} digits like 22334455)")
-    # Mobiles are 2, 3 or 4 and never x5 -- 45 and 25 are fixed ranges. The
-    # guard is the last place to catch this before a code is handed to somebody
-    # whose phone can never receive one.
-    if d[0] not in "234" or d[1] == "5":
-        sys.exit(f"'{local}' is not a mobile range (2, 3 or 4, and not x5)")
-    return CC + d
+        sys.exit(f"'{local}' is not a {CC} mobile number (expected {NSN} digits)")
+    # Mauritania: mobiles are 2, 3 or 4 and never x5 -- 45 and 25 are fixed
+    # ranges. Algeria: 5, 6 or 7. The guard is the last place to catch this
+    # before a code is handed to somebody whose phone can never receive one.
+    if d[0] not in MOBILE_FIRST or (FIXED_SECOND and d[1] == FIXED_SECOND):
+        sys.exit(f"'{local}' is not a mobile range for {CC}")
+    return CC + ("0" if TRUNK else "") + d
 
 def load():
     try:

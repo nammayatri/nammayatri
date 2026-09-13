@@ -608,6 +608,25 @@ const rx = {
   start: (p) => new RegExp(`^${p}auth/?$`),
 };
 
+/**
+ * Which countries may sign in at all, by dialling code.
+ *
+ * Two countries since 2026-09-13, and only one of them open: Algeria has no SMS
+ * provider yet, so a +213 sign-in is refused here with `COUNTRY_NOT_OPEN` —
+ * which the app shows as "not open in Algeria yet" rather than as a wrong
+ * number. Refused BEFORE forwarding, so no person row is created and no code
+ * is sent for a country that cannot receive one.
+ *
+ * A setting and not code, so opening Algeria is `OPEN_COUNTRIES=+222,+213` and
+ * a restart — no build, and no new APK: the app already has both countries.
+ *
+ * Numbers on SMS_BYPASS pass regardless. That is how an Algerian test account
+ * can sign in from a real phone before the country opens.
+ */
+const OPEN_COUNTRIES = new Set(
+  (process.env.OPEN_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
+);
+
 async function handle(req, res) {
   const pathname = req.url.split('?')[0];
 
@@ -668,10 +687,19 @@ async function handle(req, res) {
      was measured, not assumed. */
   if (isStart && req.method === 'POST') {
     let number = null;
+    let dialCode = null;
     try {
       const parsed = JSON.parse(body.toString('utf8'));
+      dialCode = typeof parsed.mobileCountryCode === 'string' ? parsed.mobileCountryCode : null;
       number = `${parsed.mobileCountryCode || ''}${parsed.mobileNumber || ''}`;
     } catch { /* malformed: let the backend give its own 400 */ }
+
+    // First, before enrolment and throttling: a closed country is not a
+    // question about this number at all. See OPEN_COUNTRIES.
+    if (dialCode && !OPEN_COUNTRIES.has(dialCode) && !SMS_BYPASS.has(number)) {
+      console.warn(`[guard] ${route.name}: ${dialCode} is not open for sign-in`);
+      return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
+    }
 
     if (codes && number && !codes[number]) {
       console.warn(`[guard] ${route.name}: ${number} is not enrolled`);

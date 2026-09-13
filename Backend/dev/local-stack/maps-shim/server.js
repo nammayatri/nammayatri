@@ -562,7 +562,9 @@ http.createServer((req, res) => {
     if (what === 'status' && req.method === 'GET') return wallet.status(pool, token, res);
     if (what === 'history' && req.method === 'GET') return wallet.history(pool, token, res);
     if (what === 'topup' && req.method === 'POST') {
-      return wallet.topup(pool, token, url.searchParams.get('amount'), res);
+      // `method` only matters in Algeria, where Chargily wants the card type.
+      return wallet.topup(pool, token, url.searchParams.get('amount'),
+        url.searchParams.get('method'), res);
     }
     // The state of one, which our own tables cannot answer on their own: an
     // abandoned checkout and a late webhook are the same `pending` row here.

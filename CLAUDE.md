@@ -141,7 +141,7 @@ Types: feat, fix, chore, ci, docs, perf, refactor, test
 
 ---
 
-# This fork: Movin (Mauritania since 2026-09-03, Algeria before that)
+# This fork: Movin (Mauritania and Algeria on one stack, since 2026-09-13)
 
 Everything above is upstream Namma Yatri and still applies to the Haskell
 services. This section is what is different here, and it is mostly about what
@@ -222,14 +222,25 @@ another service first. See the driver API section of the local-stack README.
 
 ## Country-specific data
 
-**The pilot moved from Algeria to Mauritania on 2026-09-03, replacing it.** The
-Algerian data is all still on the box and in git; going back is a variable and
-an image swap, not a rebuild. Everything below is Mauritanian now.
+**Two countries at once since 2026-09-13.** The pilot moved Algeria →
+Mauritania on 2026-09-03 by *replacing* one with the other; the client then
+chose to run both. Mauritania is live; Algeria is built, priced and routed, and
+closed to sign-in (`OPEN_COUNTRIES` in the auth guard) until it has an SMS
+provider. The whole design — one rider merchant, one driver merchant per
+country, and the search-lock race that design exposed — is in the local-stack
+README, section *Two countries*. Read it before touching merchants, tariffs,
+the registry or the map.
 
-- The map stack takes a country: `COUNTRY=mauritania ./osrm-prepare.sh`, same
-  for `tiles-prepare.sh` and `geocoder-prepare.sh`, and `MAP_COUNTRY` in the
-  compose. All default to `algeria`, so an unqualified run still builds what it
-  always built.
+- **One driver merchant per country:** `favorit0-…` is Mauritania,
+  `algeria0-0000-0000-0000-00000algeria` is Algeria. Both tariff files and every
+  per-merchant script are keyed by `merchant_id` — an unkeyed statement reprices
+  the other country.
+- The map is one combined build, `MAP_COUNTRY=algeria-mauritania`, now written
+  in `.env` (it used to be typed inline, and a plain `docker compose up` would
+  have reverted it). `COUNTRY=` on `osrm-prepare.sh` / `tiles-prepare.sh` still
+  builds one country; `maps-two-countries.sh` builds both. **Never
+  `geocoder-prepare.sh load`**: it drops the place index and its reviewed Arabic
+  names; add a country with `geocoder/append-country.sql`.
 - **There are TWO service areas, not one.** `atlas_app.geometry` +
   `atlas_app.merchant.origin_restriction` for the rider, and
   `atlas_driver_offer_bpp.geometry` + its own two merchants for the provider.
@@ -237,14 +248,23 @@ an image swap, not a rebuild. Everything below is Mauritanian now.
   there, with no error and no estimate. `mauritania-geofences.sql`.
 - `serviceable: true` means "inside the country", not "a car will come" — the
   Majabat al-Koubra is serviceable and several hundred km from any driver.
-- Phone numbers are `+222` and **eight digits with no trunk prefix**. Mobiles
-  start 2, 3 or 4 and the second digit is never 5 (`x5` is fixed-line). This is
-  the exact inverse of Algeria, where 5/6/7 were mobile and 2/3/4 were
-  landlines, and where the server demanded a trunk zero.
-- The tariff is `mauritania-tariff.sql`, converted from the Algerian one at
-  1 DZD = 0.30 MRU as a **placeholder** until the client sets real prices.
-- A test fleet lives in `./seed-mauritanian-fleet.sh` — two drivers per
-  sellable variant, in Nouakchott.
+- Phone numbers, and they are each other's inverse: **Mauritania** `+222`,
+  eight digits, no trunk prefix, mobiles start 2/3/4 and never `x5`;
+  **Algeria** `+213`, nine digits typed and sent as ten WITH the trunk zero,
+  mobiles start 5/6/7. The backend accepts either (`Or` patches); the app's
+  `src/lib/country.ts` pairs code and length; the guard decides which country
+  is open.
+- Tariffs: `mauritania-tariff.sql` (MRU, the Algerian table × 0.30, a
+  **placeholder**) and `algeria-tariff.sql` (DA, the Mauritanian ÷ 0.30).
+  Each is keyed to its own merchant.
+- Test fleets: `./seed-mauritanian-fleet.sh` (two per sellable variant in
+  Nouakchott, driven by the simulator — never sign in as one) and the pilot's
+  twelve `+213` drivers parked in Algiers under `algeria0`. Algerian test
+  accounts that sign in without SMS: `./algerian-test-accounts.sh` — they must
+  be removed before Algeria opens.
+- **With more than one merchant in one process, audit every per-message
+  lock.** The search handler's `whenWithLockRedis` on the message id silently
+  dropped whichever merchant arrived second; patched to merchant + message.
 
 ## Backups
 

@@ -493,8 +493,16 @@ services:
       #
       # This list must be empty before the first real rider. It is the same
       # instruction TEST_OTP carries in the app, and the two go together.
+      #
+      # The +213 line: Algerian TEST accounts (2026-09-13), added by
+      # algerian-test-accounts.sh -- passengers 0555000001-3 (code 111111),
+      # drivers 0666000001-2 (personal codes). Being listed here is also what
+      # lets them past OPEN_COUNTRIES while Algeria is closed. Remove the line
+      # before Algeria opens. No comments INSIDE the value below: it is a folded
+      # scalar, so a '#' line there becomes part of a number.
       SMS_BYPASS: >-
         +22222778899,
+        +2130555000001,+2130555000002,+2130555000003,+2130666000001,+2130666000002,
         +22222000001,+22222000002,
         +22222100001,+22222100002,+22222100003,+22222100004,
         +22222100005,+22222100006,+22222100007,+22222100008,

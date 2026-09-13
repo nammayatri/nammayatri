@@ -61,17 +61,22 @@ ok "$cleared key(s) cleared, $(docker exec ny-redis redis-cli DBSIZE | tr -d '\r
 
 say "what a rider will now be quoted"
 docker exec ny-postgres psql -U postgres -d atlas_dev -c \
-  "SELECT DISTINCT
-          CASE vehicle_variant WHEN 'HATCHBACK' THEN 'Economy'
-                               WHEN 'SEDAN'     THEN 'Comfort'
-                               WHEN 'SUV'       THEN 'Premium'
-                               ELSE vehicle_variant END      AS category,
+  "SELECT CASE merchant_id WHEN 'favorit0-0000-0000-0000-00000favorit' THEN 'Mauritanie (MRU)'
+                           WHEN 'algeria0-0000-0000-0000-00000algeria' THEN 'Algérie (DA)'
+                           ELSE merchant_id END               AS country,
+          CASE vehicle_variant WHEN 'HATCHBACK' THEN 'Waw / Herbin'
+                               WHEN 'SEDAN'     THEN 'Voiture'
+                               WHEN 'SUV'       THEN 'Fourgon'
+                               ELSE 'Scooter' END             AS vehicle,
           base_distance_fare  AS start,
           per_extra_km_fare   AS per_km,
           dead_km_fare        AS pickup,
           driver_max_extra_fee AS max_extra
      FROM atlas_driver_offer_bpp.fare_policy
-    ORDER BY 2;"
+    -- Per merchant since 2026-09-13: two countries, two tariffs.
+    WHERE merchant_id IN ('favorit0-0000-0000-0000-00000favorit',
+                          'algeria0-0000-0000-0000-00000algeria')
+    ORDER BY 1, 3;"
 
 echo
 echo "   Verify with a real search — the table being right is not the point,"

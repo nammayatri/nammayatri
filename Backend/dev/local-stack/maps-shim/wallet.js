@@ -71,6 +71,37 @@ const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
 const DRIVER_URL = (process.env.DRIVER_URL || 'http://localhost:8016').replace(/\/$/, '');
 /** A checkout the driver never finishes should not sit open all day. */
 const EXPIRES_MIN = Number(process.env.WALLET_CHECKOUT_MINUTES || 30);
+
+/**
+ * ── Two countries since 2026-09-13 ─────────────────────────────────────────
+ * Same model in both — credit loaded, one day taken at the first ride — with
+ * each country's own price, currency and gateway:
+ *
+ *   Mauritania   30 MRU a day    Moosyl     (Bankily, Masrivi, Sedad…)
+ *   Algeria     100 DA a day     Chargily   (Edahabia, CIB)
+ *
+ * A driver's country is his MERCHANT, read from the database for every call —
+ * never taken from the phone. The constants above stay the Mauritanian row so
+ * the one-country environment variables keep meaning what they meant.
+ *
+ * Chargily asks for the card type when the checkout is created (Moosyl lets the
+ * driver pick on its own page), so an Algerian top-up carries `method`.
+ * Credit is still only ever written after reading the checkout's status back
+ * from the gateway with our own key — for Chargily as for Moosyl — so the
+ * webhook stays a hint and an unsigned POST can never put money in a wallet.
+ */
+const DZ_MERCHANT = 'algeria0-0000-0000-0000-00000algeria';
+const COUNTRIES = {
+  MR: { price: PRICE, minTopup: MIN_TOPUP, currency: CURRENCY, gateway: 'moosyl' },
+  DZ: {
+    price: Number(process.env.WALLET_DAY_PRICE_DZ || 100),
+    minTopup: Number(process.env.WALLET_MIN_TOPUP_DZ || 100),
+    currency: 'DZD',
+    gateway: 'chargily',
+  },
+};
+const CHARGILY_SECRET = process.env.CHARGILY_SECRET_KEY || '';
+const CHARGILY = (process.env.CHARGILY_BASE || 'https://pay.chargily.net/test/api/v2').replace(/\/$/, '');
 const MAX_BODY = 64 * 1024;
 
 function send(res, status, body) {
@@ -153,6 +184,46 @@ async function walletOf(pool, driverId) {
   return rows[0] || { balance: 0, day_until: null };
 }
 
+/** His country's row, from his merchant. Anything not Algerian is Mauritanian. */
+async function countryOf(pool, driverId) {
+  const { rows } = await pool.query(
+    `SELECT merchant_id FROM atlas_driver_offer_bpp.person WHERE id = $1`,
+    [driverId],
+  );
+  const merchant = rows[0] ? String(rows[0].merchant_id).trim() : '';
+  return merchant === DZ_MERCHANT ? COUNTRIES.DZ : COUNTRIES.MR;
+}
+
+/** Whether this country's gateway can be used at all. */
+const configuredFor = (cfg) =>
+  Boolean(PUBLIC_URL && (cfg.gateway === 'chargily' ? CHARGILY_SECRET : SECRET));
+
+/* ── Chargily ───────────────────────────────────────────────────────────── */
+
+async function chargily(path, { method = 'GET', body } = {}) {
+  const headers = { authorization: `Bearer ${CHARGILY_SECRET}` };
+  if (body !== undefined) headers['content-type'] = 'application/json';
+  const r = await fetch(`${CHARGILY}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(20000),
+  });
+  const text = await r.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch { /* keep the text for the log */ }
+  return { ok: r.ok, status: r.status, json, text };
+}
+
+/** A Chargily checkout's state, in Moosyl's words: `paid` is `completed`. */
+async function chargilyStatus(checkoutId) {
+  const r = await chargily(`/checkouts/${encodeURIComponent(checkoutId)}`);
+  if (!r.ok || !r.json) return null;
+  const s = r.json.status;
+  if (s === 'paid') return 'completed';
+  return typeof s === 'string' ? s : null;
+}
+
 /**
  * What the driver sees.
  *
@@ -166,22 +237,26 @@ async function status(pool, token, res) {
   if (!driver) return send(res, 401, { error: 'unauthorized' });
 
   try {
+    const cfg = await countryOf(pool, driver.id);
     const w = await walletOf(pool, driver.id);
     const dayUntil = w.day_until ? new Date(w.day_until) : null;
     const dayActive = !!dayUntil && dayUntil.getTime() > Date.now();
 
     send(res, 200, {
       balance: w.balance,
-      currency: CURRENCY,
-      dayPrice: PRICE,
-      minTopup: MIN_TOPUP,
+      currency: cfg.currency,
+      dayPrice: cfg.price,
+      minTopup: cfg.minTopup,
+      // Which page he will be sent to. The app shows the Edahabia / CIB choice
+      // for Chargily only, and names the right gateway in its hand-off line.
+      gateway: cfg.gateway,
       dayUntil: dayActive ? dayUntil.toISOString() : null,
       dayActive,
-      /* Deliberately not `balance >= PRICE` alone: an active day is worth as
+      /* Deliberately not `balance >= price` alone: an active day is worth as
          much as the credit to buy one, and a driver mid-day with an empty
          wallet is still working. */
-      canWork: dayActive || w.balance >= PRICE,
-      configured: configured(),
+      canWork: dayActive || w.balance >= cfg.price,
+      configured: configuredFor(cfg),
     });
   } catch (e) {
     console.error('[wallet] status:', e.message);
@@ -199,17 +274,25 @@ async function status(pool, token, res) {
  * anywhere: a checkout that exists at Moosyl and not here is a payment we
  * cannot credit, which is the one failure that costs a driver money.
  */
-async function topup(pool, token, amountRaw, res) {
+async function topup(pool, token, amountRaw, method, res) {
   const driver = await driverFromToken(token);
   if (!driver) return send(res, 401, { error: 'unauthorized' });
-  if (!configured()) return send(res, 503, { error: 'not_configured' });
+
+  let cfg;
+  try {
+    cfg = await countryOf(pool, driver.id);
+  } catch (e) {
+    console.error('[wallet] country lookup:', e.message);
+    return send(res, 503, { error: 'unavailable' });
+  }
+  if (!configuredFor(cfg)) return send(res, 503, { error: 'not_configured' });
 
   const amount = Math.floor(Number(amountRaw));
-  if (!Number.isFinite(amount) || amount < MIN_TOPUP) {
-    return send(res, 400, { error: 'amount_too_small', minTopup: MIN_TOPUP });
+  if (!Number.isFinite(amount) || amount < cfg.minTopup) {
+    return send(res, 400, { error: 'amount_too_small', minTopup: cfg.minTopup });
   }
 
-  // Ours, and what Moosyl echoes back on every read. Prefixed so a support
+  // Ours, and what the gateway echoes back on every read. Prefixed so a support
   // question carrying only this string is recognisable as ours at a glance.
   const transactionId = `movin-${driver.id.slice(0, 8)}-${Date.now()}`;
 
@@ -217,8 +300,12 @@ async function topup(pool, token, amountRaw, res) {
     await pool.query(
       `INSERT INTO movin.wallet_topup (transaction_id, driver_id, amount, currency)
        VALUES ($1, $2, $3, $4)`,
-      [transactionId, driver.id, amount, CURRENCY],
+      [transactionId, driver.id, amount, cfg.currency],
     );
+
+    if (cfg.gateway === 'chargily') {
+      return await chargilyTopup(pool, transactionId, amount, method, cfg, res);
+    }
 
     const pr = await moosyl('/payment-request', {
       method: 'POST',
@@ -265,11 +352,61 @@ async function topup(pool, token, amountRaw, res) {
       [transactionId, sessionId, url],
     );
 
-    send(res, 200, { transactionId, url, amount, currency: CURRENCY });
+    send(res, 200, { transactionId, url, amount, currency: cfg.currency });
   } catch (e) {
     console.error('[wallet] topup:', e.message);
     send(res, 503, { error: 'unavailable' });
   }
+}
+
+/**
+ * The Algerian half of `topup`: one Chargily checkout.
+ *
+ * The same order as Moosyl's — our row exists before the driver is sent
+ * anywhere — and the same fee rule the subscription had: we pay Chargily's fee,
+ * not the driver. `method` is his card, Edahabia unless he chose CIB.
+ */
+async function chargilyTopup(pool, transactionId, amount, method, cfg, res) {
+  const pay = method === 'cib' ? 'cib' : 'edahabia';
+  const cr = await chargily('/checkouts', {
+    method: 'POST',
+    body: {
+      amount,
+      currency: 'dzd',
+      payment_method: pay,
+      locale: 'fr',
+      description: `Movin - rechargement ${amount} DA`,
+      chargily_pay_fees_allocation: 'merchant',
+      success_url: `${PUBLIC_URL}/wallet/done?ok=1`,
+      failure_url: `${PUBLIC_URL}/wallet/done?ok=0`,
+      // The same route Moosyl calls. Its body only names which top-up to go and
+      // re-read (`data.id` is the checkout id, stored as payment_ref below).
+      webhook_endpoint: `${PUBLIC_URL}/wallet/webhook`,
+      metadata: [{ key: 'transaction_id', value: transactionId }],
+    },
+  });
+  const checkoutId = cr.json && cr.json.id;
+  // Chargily hands back an http:// URL that redirects once; ask for https.
+  const url = cr.json && cr.json.checkout_url
+    ? String(cr.json.checkout_url).replace(/^http:\/\//i, 'https://')
+    : null;
+  if (!cr.ok || !checkoutId || !url) {
+    console.error(`[wallet] chargily refused: HTTP ${cr.status} ${cr.text.slice(0, 200)}`);
+    await pool.query(
+      `UPDATE movin.wallet_topup SET status = 'failed', updated_at = now()
+        WHERE transaction_id = $1`,
+      [transactionId],
+    );
+    return send(res, 502, { error: 'gateway' });
+  }
+
+  await pool.query(
+    `UPDATE movin.wallet_topup
+        SET payment_ref = $2, checkout_url = $3, updated_at = now()
+      WHERE transaction_id = $1`,
+    [transactionId, checkoutId, url],
+  );
+  return send(res, 200, { transactionId, url, amount, currency: cfg.currency });
 }
 
 /**
@@ -280,7 +417,11 @@ async function topup(pool, token, amountRaw, res) {
  * design, and the loser updates zero rows and credits nothing.
  */
 async function creditIfPaid(pool, row) {
-  const state = await sessionStatus(row.payment_ref);
+  // Read back from the gateway that took it. The currency says which: a DZD
+  // top-up was a Chargily checkout, anything else a Moosyl session.
+  const state = row.currency === 'DZD'
+    ? await chargilyStatus(row.payment_ref)
+    : await sessionStatus(row.payment_ref);
   if (state !== 'completed') return state;
 
   const client = await pool.connect();
@@ -313,7 +454,7 @@ async function creditIfPaid(pool, row) {
       [driverId, amount, row.transaction_id],
     );
     await client.query('COMMIT');
-    console.log(`[wallet] credited ${amount} ${CURRENCY} to ${driverId.slice(0, 8)}`);
+    console.log(`[wallet] credited ${amount} ${row.currency || CURRENCY} to ${driverId.slice(0, 8)}`);
     return 'completed';
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
@@ -331,7 +472,7 @@ async function topupState(pool, token, transactionId, res) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT transaction_id, driver_id, amount, status, payment_ref, credited_at
+      `SELECT transaction_id, driver_id, amount, currency, status, payment_ref, credited_at
          FROM movin.wallet_topup WHERE transaction_id = $1`,
       [transactionId],
     );
@@ -351,7 +492,7 @@ async function topupState(pool, token, transactionId, res) {
       status: after[0] ? after[0].status : row.status,
       credited: !!(after[0] && after[0].credited_at),
       balance: w.balance,
-      currency: CURRENCY,
+      currency: row.currency || CURRENCY,
     });
   } catch (e) {
     console.error('[wallet] topupState:', e.message);
@@ -402,7 +543,7 @@ async function webhook(pool, req, res) {
   try {
     if (ref) {
       const { rows } = await pool.query(
-        `SELECT transaction_id, driver_id, amount, status, payment_ref, credited_at
+        `SELECT transaction_id, driver_id, amount, currency, status, payment_ref, credited_at
            FROM movin.wallet_topup
           WHERE (transaction_id = $1 OR payment_ref = $1) AND credited_at IS NULL`,
         [String(ref)],
@@ -454,8 +595,10 @@ async function chargeStartedRides(pool) {
     // window is generous: it only bounds the scan, and the unique index is what
     // actually stops a double charge.
     const { rows } = await pool.query(
-      `SELECT r.id AS ride_id, r.driver_id, r.trip_start_time AS started_at
+      `SELECT r.id AS ride_id, r.driver_id, r.trip_start_time AS started_at,
+              p.merchant_id
          FROM atlas_driver_offer_bpp.ride r
+         JOIN atlas_driver_offer_bpp.person p ON p.id = r.driver_id
         WHERE r.trip_start_time IS NOT NULL
           AND r.trip_start_time > now() - interval '2 days'
           AND NOT EXISTS (
@@ -466,6 +609,10 @@ async function chargeStartedRides(pool) {
 
     for (const r of rows) {
       const started = r.started_at ? new Date(r.started_at) : new Date();
+      // The day costs what it costs in HIS country: his merchant decides.
+      const price = String(r.merchant_id || '').trim() === DZ_MERCHANT
+        ? COUNTRIES.DZ.price
+        : COUNTRIES.MR.price;
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
@@ -483,7 +630,7 @@ async function chargeStartedRides(pool) {
         // anyway with amount 0 so the index records that this ride was seen and
         // the sweep never looks at it again.
         const covered = !!dayUntil && dayUntil.getTime() > started.getTime();
-        const amount = covered ? 0 : -PRICE;
+        const amount = covered ? 0 : -price;
         const until = covered
           ? dayUntil
           : new Date(started.getTime() + DAY_HOURS * 3600 * 1000);
@@ -511,7 +658,7 @@ async function chargeStartedRides(pool) {
             `UPDATE movin.wallet
                 SET balance = balance - $2, day_until = $3, updated_at = now()
               WHERE driver_id = $1`,
-            [r.driver_id, PRICE, until],
+            [r.driver_id, price, until],
           );
         }
         await client.query('COMMIT');
@@ -548,9 +695,10 @@ async function history(pool, token, res) {
       [driver.id],
     );
     const w = await walletOf(pool, driver.id);
+    const cfg = await countryOf(pool, driver.id);
     send(res, 200, {
       balance: w.balance,
-      currency: CURRENCY,
+      currency: cfg.currency,
       entries: rows.map((r) => ({
         kind: r.kind,
         amount: r.amount,
@@ -595,5 +743,5 @@ const configured = () => Boolean(SECRET && PUBLIC_URL);
 
 module.exports = {
   status, topup, topupState, webhook, history, done,
-  chargeStartedRides, configured, PRICE, MIN_TOPUP, CURRENCY, DAY_HOURS,
+  chargeStartedRides, configured, PRICE, MIN_TOPUP, CURRENCY, DAY_HOURS, COUNTRIES,
 };

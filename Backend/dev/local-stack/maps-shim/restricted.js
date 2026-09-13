@@ -39,6 +39,11 @@ const RIDE_CAP = Number(process.env.SUBSCRIPTION_RIDE_CAP || 300);
     the same environment variable `wallet.js` uses, so the gate and the charge
     can never disagree about the price. */
 const DAY_PRICE = Number(process.env.WALLET_DAY_PRICE || 30);
+/** Two countries since 2026-09-13, each with its own day: 30 MRU in Mauritania,
+    100 DA in Algeria. A driver's country is his merchant. Both read from the
+    same variables wallet.js uses, for the same reason as above. */
+const DAY_PRICE_DZ = Number(process.env.WALLET_DAY_PRICE_DZ || 100);
+const DZ_MERCHANT = 'algeria0-0000-0000-0000-00000algeria';
 const EVERY_MS = Number(process.env.RESTRICTED_REFRESH_MS || 5 * 60 * 1000);
 const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
@@ -91,7 +96,15 @@ const SQL = `
      AND (
        (
          coalesce(w.day_until, to_timestamp(0)) <= now()
-         AND coalesce(w.balance, 0) < $2
+         -- The price of a day in HIS country. One price for everyone would let
+         -- an Algerian driver holding 40 DA count as able to work, because 40
+         -- is more than Mauritania's 30.
+         -- Typed explicitly. Without the casts Postgres resolves the CASE's
+         -- two parameters as text and refuses "integer < text" -- measured on
+         -- the first deploy, 2026-09-13, where it kept the old list silently.
+         -- (No backticks anywhere in this SQL: it lives inside a JS template
+         -- string, and one backtick ends it -- which crash-looped the shim.)
+         AND coalesce(w.balance, 0) < CASE WHEN p.merchant_id = $3::text THEN $4::int ELSE $2::int END
        )
        OR ($1 > 0 AND w.day_until > now() AND (
             SELECT count(*)
@@ -103,7 +116,7 @@ const SQL = `
      )`;
 
 async function compute(pool) {
-  const q = await pool.query(SQL, [RIDE_CAP, DAY_PRICE]);
+  const q = await pool.query(SQL, [RIDE_CAP, DAY_PRICE, DZ_MERCHANT, DAY_PRICE_DZ]);
   return q.rows.map((r) => r.id);
 }
 

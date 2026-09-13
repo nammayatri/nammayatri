@@ -1,5 +1,13 @@
 -- Mauritania tariff — the Algerian one, converted, and nothing more.
 --
+-- ── Keyed to the MAURITANIAN merchant since 2026-09-13 ─────────────────────
+-- Until that day every statement here matched on vehicle_variant alone, and
+-- the extra-fare caps were rebuilt for every merchant in the table. That was
+-- harmless with one country. With two it is a trap: re-running this file would
+-- silently overwrite the Algerian prices with Mauritanian ones, in MRU amounts
+-- under a dinar label. Every statement now names favorit0. The Algerian prices
+-- are algeria-tariff.sql, keyed the same way to its own merchant.
+--
 -- ── This is a PLACEHOLDER and should be replaced ────────────────────────────
 -- The client asked on 2026-09-03 to "just convert the prices we have now" until
 -- the boss gives real Mauritanian prices and decides the vehicle types. So
@@ -23,19 +31,11 @@
 -- where it took over the old Economy row. Nobody decided that, and it is still
 -- outstanding with the boss.
 --
--- The question beside it has been answered. It was whether "herbin" means
--- anything in Nouakchott, and on 2026-09-08 the client said it does not: there
--- are no herbins in Mauritania. The type is now the **waw**, the three-wheeled
--- cargo motorcycle used there instead. Only the word changed — the variant is
--- still HATCHBACK, which is a routing key and not a name, so no row here moved
--- and no driver had to be re-enrolled.
---
 -- ── Two things that are not the price ───────────────────────────────────────
 --
 -- 1. `base_distance_meters` is 0, so per-km runs from the first metre and the
---    start is a flat charge on top. Kept from the Algerian file, where it was a
---    deliberate reading of the client's wording. **If the boss means the start
---    to include the first few km, this is the one line to change.**
+--    start is a flat charge on top. **If the boss means the start to include
+--    the first few km, this is the one line to change.**
 --
 -- 2. `restricted_extra_fare` OVERRIDES `fare_policy.driver_max_extra_fee`, and
 --    it is keyed on distance. The flat 90 below is therefore a fallback that
@@ -54,7 +54,8 @@ UPDATE atlas_driver_offer_bpp.fare_policy
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 90,
        updated_at           = now()
- WHERE vehicle_variant = 'SEDAN';
+ WHERE vehicle_variant = 'SEDAN'
+   AND merchant_id = 'favorit0-0000-0000-0000-00000favorit';
 
 -- ── Waw ────────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
@@ -65,7 +66,8 @@ UPDATE atlas_driver_offer_bpp.fare_policy
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 90,
        updated_at           = now()
- WHERE vehicle_variant = 'HATCHBACK';
+ WHERE vehicle_variant = 'HATCHBACK'
+   AND merchant_id = 'favorit0-0000-0000-0000-00000favorit';
 
 -- ── Fourgon ────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
@@ -76,7 +78,8 @@ UPDATE atlas_driver_offer_bpp.fare_policy
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 90,
        updated_at           = now()
- WHERE vehicle_variant = 'SUV';
+ WHERE vehicle_variant = 'SUV'
+   AND merchant_id = 'favorit0-0000-0000-0000-00000favorit';
 
 -- ── Scooter ────────────────────────────────────────────────────────────────
 UPDATE atlas_driver_offer_bpp.fare_policy
@@ -87,33 +90,22 @@ UPDATE atlas_driver_offer_bpp.fare_policy
        driver_min_extra_fee = 0,
        driver_max_extra_fee = 90,
        updated_at           = now()
- WHERE vehicle_variant = 'AUTO_RICKSHAW';
+ WHERE vehicle_variant = 'AUTO_RICKSHAW'
+   AND merchant_id = 'favorit0-0000-0000-0000-00000favorit';
 
 -- ── The cap the backend actually obeys, growing with distance ──────────────
 --
 -- The client's rule, agreed 2026-08-13 and carried over: the driver's extra
--- should be **at most half the fare**. A flat cap cannot do that — it is a
--- reasonable fraction of a long ride and more than the whole of a short one,
--- and short trips are most trips. This table is keyed on `min_trip_distance`
--- precisely so the cap can grow.
+-- should be **at most half the fare**. A flat cap cannot do that, so this
+-- table is keyed on `min_trip_distance` and steps up with the trip. **This is
+-- where the ceiling a passenger sees comes from** — the band the trip falls
+-- into, not `driver_max_extra_fee`.
 --
--- **This is where the ceiling a passenger sees comes from.** The app shows
--- `estimate–ceiling` on the pickup sheet, and the ceiling is the band the trip
--- falls into, not `driver_max_extra_fee`. A 13.7 km trip in Algeria showed a
--- gap of 285 because it landed in the 12 000 m band — which is worth stating
--- plainly, because the same measurement was briefly written up as a flat cap
--- that happened to be 285 everywhere. It is not flat. It steps.
---
--- The bands are close together on purpose. A cap only steps up at a boundary
--- while the fare rises continuously, so wide bands drift well below 50% before
--- catching up; these track it within a few percent.
---
--- Rebuilt rather than updated, because the number of bands changes. Both
--- merchants get rows: without them a merchant falls back to
--- `fare_policy.driver_max_extra_fee`, which would leave half the fleet on a
--- flat cap while the other half grows.
+-- Rebuilt rather than updated, because the number of bands can change — and
+-- only for THIS merchant, never the whole table.
 
-DELETE FROM atlas_driver_offer_bpp.restricted_extra_fare;
+DELETE FROM atlas_driver_offer_bpp.restricted_extra_fare
+ WHERE merchant_id = 'favorit0-0000-0000-0000-00000favorit';
 
 INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare
        (id, merchant_id, vehicle_variant, min_trip_distance, driver_max_extra_fare)
@@ -133,6 +125,7 @@ SELECT gen_random_uuid()::text, m.id, v.variant, b.from_m, b.cap
         ( 15000,      100),   --      200
         ( 20000,      130),   --      255
         ( 30000,      180)    --      360
-      ) AS b(from_m, cap);
+      ) AS b(from_m, cap)
+ WHERE m.id = 'favorit0-0000-0000-0000-00000favorit';
 
 COMMIT;

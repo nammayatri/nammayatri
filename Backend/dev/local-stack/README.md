@@ -3041,6 +3041,160 @@ A `+222` number, eight digits, searching Tevragh Zeina → Ksar:
     SEDAN            123-158 MRU     2 cars nearby
     SUV              167-202 MRU     2 cars nearby
 
+## Two countries — Algeria beside Mauritania, since 2026-09-13
+
+The client reversed the 3 September *replacement*: the stack now serves **both**
+countries at once. Mauritania is live; Algeria is built, priced and routed, and
+**closed to sign-in** until it has an SMS provider.
+
+### The design: one merchant per country — on the driver side only
+
+Prices live on the driver side (`fare_policy` is per merchant and variant; this
+binary has no operating-city level), so each country is its own **driver
+merchant**. The rider side prices nothing and keeps **one** merchant:
+
+| side | merchant | serves |
+|---|---|---|
+| rider | `YATRI` | `{Mauritania, Algeria}` |
+| driver | `favorit0-…` (NAMMA_YATRI_PARTNER, `JUSPAY.MOBILITY.PROVIDER.UAT.3`) | `{Mauritania}` |
+| driver | `algeria0-0000-0000-0000-00000algeria` (MOVIN_DZ_PARTNER, `MOVIN.DZ.PROVIDER`) | `{Algeria}` |
+
+The gateway sends every search to both driver merchants; each drops the other
+country's as `RIDE_NOT_SERVICEABLE`. The app sends `YATRI` for a passenger in
+either country, and the country's own driver merchant id for a driver
+(`src/lib/country.ts` in the app).
+
+The Algerian merchant is a **clone** of the Mauritanian one — every
+`merchant_id`-keyed config row (service config, usage config, transporter
+config, fares, extra-fare caps, operating city) copied from the catalogue, so
+it behaves exactly like the merchant that is proven. It must also be in
+`atlas_registry.subscriber`, or it never receives a search. The upstream test
+merchant `nearest-drivers-testing-organization` was deliberately NOT reused: no
+registry row, never ours.
+
+    bash apply-two-countries.sh     # backup, merchants, tariffs, caches, fleet, state
+                                    #   (two-countries-merchants.sql + both tariffs)
+
+Backup first, always: `backups/pre-two-countries-<ts>.sql` (data-only, the
+tables it touches).
+
+### The tariffs are keyed by merchant now — both files
+
+    ./apply-tariff.sh mauritania-tariff.sql     # favorit0 only
+    ./apply-tariff.sh algeria-tariff.sql        # algeria0 only
+
+Both files used to match on `vehicle_variant` alone and rebuild
+`restricted_extra_fare` for **every** merchant. With two countries that is a
+trap: re-running either one reprices the other. Algeria = the Mauritanian
+figures ÷ 0.30, rounded to 5 (Voiture 150/50/65, Scooter & Herbin 100/35/50,
+Fourgon 200/65/100) — close to, not equal to, the 13 August Algerian table.
+
+### One map — `./maps-two-countries.sh`
+
+    bash maps-two-countries.sh all      # places, merge, osrm, tiles, switch, check
+    bash maps-two-countries.sh rollback # back to the Mauritania-only files
+
+The two Geofabrik extracts are merged with `osmium` in a throwaway container
+(the host has none) into `algeria-mauritania-latest.osm.pbf`; the graph and
+`algeria-mauritania.mbtiles` (388.6 MB) are built **beside** the old files, and
+only `switch` changes what riders get. It checks routes, tiles and search in
+both countries and rolls itself back on a failed check.
+
+**`MAP_COUNTRY=algeria-mauritania` is in `.env` now.** It never was: the
+compose defaults to `algeria`, and `mauritania` had been typed inline on 3
+September, so any later plain `docker compose up` would have silently put the
+Algeria-only map back.
+
+The first switch rolled back on a **good** build: the check slept 8 s, and
+OSRM loading a graph ten times Mauritania's was still refusing connections. It
+now waits for OSRM to answer.
+
+### The place index is APPENDED to, never rebuilt
+
+`geocoder-prepare.sh load` drops `geo.place` — and with it `name_ar`, 3,324
+reviewed Mauritanian Arabic names that exist nowhere else. Algeria went in
+through `geocoder/append-country.sql` from `places.algeria.csv`: the same four
+passes as `index.sql`, inserting only rows not present, Arabic names filled
+**for the new rows only** (arabic-names.sql's rule would rewrite reviewed
+names), NFKC'd. 121,886 places, 58,329 with Arabic.
+
+### Sign-in: accepted by the backend, gated by the guard
+
+The backend patch accepts `+222`/8 digits and `+213`/10 (the trunk-zero form
+Algerian accounts were stored in): `ExactLength 8 Or ExactLength 10`, `"+222"
+Or "+213"`. **Which countries may sign in is the guard's**:
+
+    OPEN_COUNTRIES=+222            # default; +213 answers 403 COUNTRY_NOT_OPEN
+
+Opening Algeria is `OPEN_COUNTRIES=+222,+213` and a restart — no build, no APK.
+Numbers on `SMS_BYPASS` pass the gate, which is how the test accounts work:
+
+    bash algerian-test-accounts.sh
+      passengers  +213 0555000001..3      code 111111
+      drivers     +213 0666000001 Voiture code 213001
+                  +213 0666000002 Herbin  code 213002   (approved, 1000 DA test credit)
+
+**All five must go before Algeria opens**: the `+213` line in `SMS_BYPASS`
+and `enrol-driver.sh --revoke`. `enrol-driver.sh` takes Algerian numbers with
+`COUNTRY_CODE=+213 NSN_LENGTH=9 TRUNK_ZERO=1 MOBILE_FIRST=567 FIXED_SECOND=`.
+
+`SMS_BYPASS` is a **folded scalar** (`>-`): a `#` line inside it is part of the
+value, not a comment, and would corrupt a number. Comments go above the key.
+
+### The wallet, per country
+
+`maps-shim/wallet.js` reads the driver's merchant on every call:
+
+| | day | minimum | gateway |
+|---|---|---|---|
+| Mauritania | 30 MRU | 30 | Moosyl (driver picks the method on Moosyl's page) |
+| Algeria | 100 DZD | 100 | Chargily (`method=edahabia|cib`, asked in the app) |
+
+`WALLET_DAY_PRICE_DZ` / `WALLET_MIN_TOPUP_DZ` override. Credit is still only
+written after reading the status back from the gateway with our key, so the
+webhook stays a hint for both. `restricted.js` compares each driver against
+**his** country's price — typed parameters, because an untyped `CASE` made
+Postgres refuse `integer < text` and silently keep the old list.
+
+### The search lock — the bug two merchants in one process exposed
+
+`API/Beckn/Search.hs` guarded the search with
+`whenWithLockRedis (searchLockKey messageId)`, which **silently skips** when
+the lock is taken. One process, two driver merchants, the same message id from
+the gateway: whichever arrived second while the first held the lock dropped
+the search — no error, no log beyond "Search API Flow: Reached". Measured: a
+Nouakchott search reached the Algerian merchant first (held ~6 ms, refused on
+georestrictions) and the Mauritanian one 3 ms later did nothing. The order is
+the gateway's and a registry restart reshuffles it — so it presented as a bad
+image and was rolled back as one (15:29-15:34, Mauritania without prices).
+
+Patched: the key is **merchant + message**. Stopgap if it ever recurs — take
+the second country out of the registry:
+
+    DELETE FROM atlas_registry.subscriber WHERE subscriber_id = 'MOVIN.DZ.PROVIDER';
+    # then clear '*egistry*' and '*ubscriber*' in Redis; restore with the
+    # INSERT in two-countries-merchants.sql
+
+With more than one merchant per process, **audit every per-message lock**.
+
+### Deploying the pieces
+
+    bash deploy-backend.sh            # patch inside BOTH binaries, rollback tag, swap
+    bash deploy-backend.sh rollback   # newest ny-rider:rollback-* back
+    bash deploy-shims.sh              # restart guard + shim, prove +213 refused, +222 ok,
+                                      #   wallet rows, restriction list republished
+
+`node --check` every shim file before copying it: a backtick in a SQL comment
+inside a JS template string crash-looped the shim for ~2.5 minutes.
+
+### Proof
+
+    python3 probe-two-country-rides.py both
+
+Mauritania as passenger only (the simulator drives; never sign in as
+22100001-08 or 22100009), Algeria playing a parked `+213` driver; each ride
+must end COMPLETED and charge the driver's own day (−30 MRU / −100 DZD).
+
 ## The SMS gateway — Moorsyl, since 2026-09-06
 
 Codes are real now. `7891` no longer signs anybody in from the internet.
