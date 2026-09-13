@@ -852,6 +852,30 @@ data LogicRolloutObject = LogicRolloutObject
 instance HideSecrets LogicRolloutObject where
   hideSecrets = identity
 
+data BulkLogicRolloutReq = BulkLogicRolloutReq
+  { cityIds :: [Text],
+    rollout :: LogicRolloutReq
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutReq where
+  hideSecrets = identity
+
+data BulkRolloutCityFailure = BulkRolloutCityFailure
+  { cityId :: Text,
+    reason :: Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkLogicRolloutResult = BulkLogicRolloutResult
+  { succeededCityIds :: [Text],
+    failures :: [BulkRolloutCityFailure]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutResult where
+  hideSecrets = identity
+
 data RolloutVersion = RolloutVersion
   { version :: Int,
     rolloutPercentage :: Int,

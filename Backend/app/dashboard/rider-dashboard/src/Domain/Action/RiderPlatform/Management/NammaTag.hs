@@ -41,6 +41,7 @@ module Domain.Action.RiderPlatform.Management.NammaTag
     getNammaTagTagDetails,
     getNammaTagQueryDetails,
     postNammaTagAppDynamicLogicUpdateExperimentGroup,
+    postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
     getNammaTagAppDynamicLogicExperimentGroups,
   )
 where
@@ -59,6 +60,8 @@ import qualified Kernel.Types.Id
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified Storage.Queries.Merchant
+import qualified Storage.Queries.MerchantAccess
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -131,6 +134,29 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInf
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just updatedReq)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicUpsertLogicRollout) updatedReq)
+
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout ::
+  (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> ApiTokenInfo -> Lib.Yudhishthira.Types.BulkLogicRolloutReq -> Environment.Flow Lib.Yudhishthira.Types.BulkLogicRolloutResult)
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantShortId apiTokenInfo req = do
+  merchant <- Storage.Queries.Merchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  results <- Kernel.Prelude.forM req.cityIds $ \cityIdText -> do
+    let city = Kernel.Types.Beckn.Context.City cityIdText
+    mbAccess <- Storage.Queries.MerchantAccess.findByPersonIdAndMerchantIdAndCity apiTokenInfo.personId merchant.id city
+    case mbAccess of
+      Kernel.Prelude.Nothing -> Kernel.Prelude.pure (Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure cityIdText "You have no access to this operation."))
+      Kernel.Prelude.Just _ -> do
+        let updatedReq = map (\r -> r{modifiedBy = Just (Kernel.Types.Id.cast apiTokenInfo.personId)}) req.rollout
+        transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just updatedReq)
+        result <-
+          SharedLogic.Transaction.withTransactionStoring transaction $
+            API.Client.RiderPlatform.Management.callManagementAPI merchantShortId city (.nammaTagDSL.postNammaTagAppDynamicLogicUpsertLogicRollout) updatedReq
+        case result of
+          Kernel.Types.APISuccess.Success -> Kernel.Prelude.pure (Kernel.Prelude.Right cityIdText)
+  Kernel.Prelude.pure
+    Lib.Yudhishthira.Types.BulkLogicRolloutResult
+      { succeededCityIds = [c | Kernel.Prelude.Right c <- results],
+        failures = [f | Kernel.Prelude.Left f <- results]
+      }
 
 getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
 getNammaTagAppDynamicLogicVersions merchantShortId opCity apiTokenInfo limit offset domain = do
