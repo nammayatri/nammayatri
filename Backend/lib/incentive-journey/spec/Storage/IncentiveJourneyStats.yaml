@@ -1,0 +1,73 @@
+imports:
+  Person: Lib.IncentiveJourney.Domain.Types.Common
+  IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  IncentiveJourneyMilestone: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionOperator: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+
+IncentiveJourneyStats:
+  tableName: incentive_journey_stats
+
+  types:
+    JourneyMilestoneStatus:
+      enum: "NotStarted, InProgress, Completed, Rewarded, WaivedOff"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <JourneyMilestoneStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <JourneyMilestoneStatus>
+
+  fields:
+    id: Id IncentiveJourneyStats
+    personId: Id Person
+    journeyId: Id IncentiveJourney
+    milestoneId: Id IncentiveJourneyMilestone
+    periodKey: Text
+    conditionType: MilestoneConditionType
+    conditionOperator: Maybe MilestoneConditionOperator
+    conditionValue: Int
+    currentValue: Int
+    status: JourneyMilestoneStatus
+    rewardType: MilestoneRewardType
+    rewardValue: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    conditionOperator: "'GTE'"
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+      orderBy: createdAt
+    findByPersonIdAndJourneyId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, journeyId]
+      orderBy: createdAt
+    findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, journeyId, milestoneId, periodKey]
+
+  extraIndexes:
+    - columns: [personId, journeyId, milestoneId, periodKey]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

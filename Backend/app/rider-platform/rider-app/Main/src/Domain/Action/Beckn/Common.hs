@@ -89,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -113,6 +114,7 @@ import qualified SharedLogic.CancellationFee as CancellationFee
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
@@ -121,6 +123,7 @@ import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -152,6 +155,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Constants
 import Tools.Error
 import Tools.Event
@@ -1165,6 +1169,39 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       booking.merchantOperatingCityId
       (fromMaybe now rideEndTime)
       isValidRide
+  fork "Evaluate rider incentive journey" $ do
+    let validRideTaken = fromMaybe True isValidRide
+    when validRideTaken $ do
+      hasJourneys <- SLJourney.hasAssignedJourneys person.id
+      when hasJourneys $
+        IJ.withJourneyEvalIdempotency IJ.RiderActor ride.id.getId $ do
+          mbSearchRequest <- B.runInReplica $ QSearchRequest.findById (Id booking.transactionId)
+          let earningsDelta = roundToIntegral totalFare.amount
+              distanceDelta = maybe 0 (getMeters . distanceToMeters) updRide.chargeableDistance
+              rideTimeDelta =
+                fromMaybe 0 $
+                  (\start end -> max 0 (roundToIntegral (diffUTCTime end start)))
+                    <$> ride.rideStartTime
+                    <*> (updRide.rideEndTime <|> rideEndTime)
+              timeBoundReferenceUtc = fromMaybe ride.createdAt ride.rideStartTime
+              rideDeltas =
+                IJ.RideDeltas
+                  { ridesDelta = 1,
+                    earningsDelta,
+                    distanceMetersDelta = distanceDelta,
+                    rideTimeSecondsDelta = rideTimeDelta
+                  }
+          void $
+            withTryCatch "IncentiveJourney:evaluateRiderJourney" $
+              SLJourney.evaluateRiderJourney
+                person.id
+                booking.merchantId
+                booking.merchantOperatingCityId
+                riderConfig.timeDiffFromUtc
+                (mbSearchRequest >>= (.fromSpecialLocationId))
+                (mbSearchRequest >>= (.toSpecialLocationId))
+                timeBoundReferenceUtc
+                rideDeltas
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do

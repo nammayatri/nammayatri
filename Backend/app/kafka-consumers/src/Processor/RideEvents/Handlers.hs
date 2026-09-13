@@ -16,6 +16,7 @@ module Processor.RideEvents.Handlers
     handleLeaderboard,
     handleReferral,
     handleDriverCityMigration,
+    handleDriverCoinsAndJourney,
   )
 where
 
@@ -36,7 +37,7 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CHConfig
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -47,9 +48,11 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Common (MonadFlow)
 import Kernel.Types.Confidence (Confidence (..))
 import qualified Kernel.Types.Documents as Documents
+import Kernel.Types.Field ((:::))
 import Kernel.Types.Id
 import Kernel.Utils.Common
   ( CacheFlow,
+    HasFlowEnv,
     HasShortDurationRetryCfg,
     Hours,
     fromMaybeM,
@@ -64,6 +67,7 @@ import qualified Lib.BehaviorTracker.Types as BTT
 import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates.Internal as LU
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (HasYudhishthiraTablesSchema)
@@ -71,12 +75,15 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as YTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Processor.RideEvents.InternalHelpers as IH
+import Servant.Client (BaseUrl)
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
+import qualified "dynamic-offer-driver-app" SharedLogic.RideEvents.DriverCoinsAndJourney as DriverCoinsAndJourney
 import qualified "dynamic-offer-driver-app" SharedLogic.ScheduledNotifications as SN
+import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.RideRelatedNotificationConfig as CRN
@@ -560,3 +567,22 @@ driverCityMigrationLockTtl :: Int
 driverCityMigrationLockTtl = 86400 -- 1 day: debounces the entire migration (auth sync +
 -- notification + reconciliation) per driver, per the
 -- senior-review decision -- not just a job enqueue.
+
+handleDriverCoinsAndJourney ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow.EncFlow m r,
+    Finance.HasActorInfo m r,
+    CHConfig.ClickhouseFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleDriverCoinsAndJourney ev = ActorInfo.withMbActorInfo ev.actorInfo . withRideAndBooking ev $ \ride booking -> do
+  thresholdConfig <- fetchTransporterConfig ride
+  DriverCoinsAndJourney.processRideEndedCoinsAndJourney ride booking thresholdConfig

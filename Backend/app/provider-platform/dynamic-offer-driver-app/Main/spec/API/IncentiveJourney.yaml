@@ -1,15 +1,16 @@
 imports:
   Id: Kernel.Types.Id
-  IncentiveJourney: Domain.Types.IncentiveJourney
-  IncentiveJourneyMilestone: Domain.Types.IncentiveJourneyMilestone
-  IncentiveJourneyType: Domain.Types.IncentiveJourney
-  MilestoneConditionType: Domain.Types.IncentiveJourneyMilestone
-  MilestoneConditionOperator: Domain.Types.IncentiveJourneyMilestone
-  MilestoneRewardType: Domain.Types.IncentiveJourneyMilestone
-  JourneyMilestoneStatus: Domain.Types.IncentiveJourneyStats
+  IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  IncentiveJourneyMilestone: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  IncentiveJourneyType: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  MilestoneConditionType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionOperator: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneAreaType: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone
+  MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
+  JourneyMilestoneStatus: Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats
   TimeBound: Kernel.Types.TimeBound
   VehicleCategory: Domain.Types.VehicleCategory
-  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
   CoinsConfig: Domain.Types.Coins.CoinsConfig
   Text: Data.Text
   Merchant: Domain.Types.Merchant
@@ -20,15 +21,19 @@ module: IncentiveJourney
 types:
   IncentiveJourneyMilestoneItem:
     milestoneId: Id IncentiveJourneyMilestone
+    name: Maybe Text
     description: Maybe Text
     order: Int
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
-    pickupSpecialLocationNames: Maybe [Text]
-    dropSpecialLocationNames: Maybe [Text]
+    areaType: Maybe MilestoneAreaType
+    specialLocationNames: Maybe [Text]
+    vehicleCategory: Maybe VehicleCategory
+    serviceTierType: Maybe ServiceTierType
     rewardType: MilestoneRewardType
     rewardValue: Maybe Int
+    timeBounds: Maybe TimeBound
     status: JourneyMilestoneStatus
     currentValue: Int
 
@@ -37,11 +42,9 @@ types:
     name: Text
     description: Maybe Text
     journeyType: Maybe IncentiveJourneyType
-    timeBounds: Maybe TimeBound
     startDate: UTCTime
     endDate: UTCTime
-    vehicleCategory: Maybe VehicleCategory
-    vehicleVariant: Maybe VehicleVariant
+    streakRange: Int
     enabled: Bool
     milestones: "[IncentiveJourneyMilestoneItem]"
 
@@ -53,13 +56,14 @@ types:
     journeyName: Text
     journeyType: Maybe IncentiveJourneyType
     milestoneId: Id IncentiveJourneyMilestone
+    milestoneName: Maybe Text
     milestoneDescription: Maybe Text
     milestoneOrder: Int
     conditionType: MilestoneConditionType
     conditionOperator: MilestoneConditionOperator
     conditionValue: Int
-    pickupSpecialLocationNames: Maybe [Text]
-    dropSpecialLocationNames: Maybe [Text]
+    areaType: Maybe MilestoneAreaType
+    specialLocationNames: Maybe [Text]
     currentValue: Int
     status: JourneyMilestoneStatus
     rewardType: MilestoneRewardType

@@ -17,15 +17,20 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getConfigList)
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as SQIJ
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as SQIJM
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
+import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Exophone as CQExo
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
+import qualified Storage.CachedQueries.IncentiveJourney as CQJourney
+import qualified Storage.CachedQueries.IncentiveJourneyMilestone as CQMilestone
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
@@ -39,6 +44,8 @@ import Storage.ConfigPilot.Config.CancellationReason (CancellationReasonDimensio
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
+import Storage.ConfigPilot.Config.IncentiveJourney (IncentiveJourneyDimensions (..))
+import Storage.ConfigPilot.Config.IncentiveJourneyMilestone (IncentiveJourneyMilestoneDimensions (..))
 import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
@@ -116,6 +123,12 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON pcCfgs}
+    LYTU.RIDER_CONFIG LYTU.IncentiveJourneyConfigRider -> do
+      journeyCfg <- getConfigList (IncentiveJourneyDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, enabled = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON journeyCfg}
+    LYTU.RIDER_CONFIG LYTU.IncentiveJourneyMilestoneConfigRider -> do
+      milestoneCfg <- getConfigList (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, milestoneId = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON milestoneCfg}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
@@ -155,6 +168,27 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfigRider) SQIC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       handleConfigUpdateViaJson SQPC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.PassCategory) >> invalidateConfigInMem LYTU.PassCategory) SQPC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.IncentiveJourneyConfigRider -> do
+      handleConfigUpdateViaJson
+        (\mocId -> SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast mocId))
+        ( CQJourney.clearCacheByMerchantOperatingCityId (cast merchantOpCityId)
+            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IncentiveJourneyConfigRider)
+            >> invalidateConfigInMem LYTU.IncentiveJourneyConfigRider
+        )
+        SQIJ.updateByPrimaryKey
+        (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.IncentiveJourneyMilestoneConfigRider -> do
+      handleConfigUpdateViaJson
+        ( \mocId -> do
+            journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast mocId)
+            concat <$> mapM (SQIJM.findByJourneyId Nothing Nothing . (.id)) journeys
+        )
+        ( clearIncentiveJourneyMilestoneCaches (cast merchantOpCityId)
+            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IncentiveJourneyMilestoneConfigRider)
+            >> invalidateConfigInMem LYTU.IncentiveJourneyMilestoneConfigRider
+        )
+        SQIJM.updateByPrimaryKey
+        (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.getUiConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq
@@ -306,3 +340,11 @@ toCacheConfigType cfgType = case cfgType of
   LYTU.MerchantServiceUsageConfig -> LYTU.MerchantServiceUsageConfigRider
   LYTU.Exophone -> LYTU.ExophoneRider
   other -> other
+
+clearIncentiveJourneyMilestoneCaches ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  m ()
+clearIncentiveJourneyMilestoneCaches merchantOpCityId = do
+  journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast merchantOpCityId)
+  mapM_ (CQMilestone.clearCacheByJourneyId . (.id)) journeys

@@ -111,13 +111,6 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
   -- Day key exists for any driver who completed a valid ride; missing Redis → 0.
   dayValidRideCount <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let metricWindow =
-        case listToMaybe selectedConfigs of
-          Nothing -> IncentiveMetrics.unBoundedWindowKey
-          Just SelectedIncentiveConfig {selected} ->
-            case selected.timeBounds of
-              Just tb | tb /= TB.Unbounded -> IncentiveMetrics.mkIncentiveWindowKey localTime tb
-              _ -> IncentiveMetrics.unBoundedWindowKey
   timeBoundValidRideCount <-
     case listToMaybe selectedConfigs of
       Nothing -> pure Nothing
@@ -129,7 +122,6 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
                 Just . fromMaybe 0 <$> Coins.getValidRideCountByDriverIdWindowKey driverId windowKey
               IncentiveMetrics.DayWindow -> pure Nothing
           _ -> pure Nothing
-  metrics <- IncentiveMetrics.getIncentiveMetricsData driverId metricWindow
   -- Per-config progress for self-scoped milestones (variant / special location):
   -- each reads its own scoped counter rather than the global day count.
   -- EndRide increments the DynamicOffer- or OTP-based key by the ride's own trip
@@ -156,11 +148,7 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
       { dayValidRideCount = dayValidRideCount,
         timeBoundValidRideCount = timeBoundValidRideCount,
         progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount,
-        scopedRideCounts = scopedRideCounts,
-        ridesCompleted = metrics.ridesCompleted,
-        totalEarnings = metrics.totalEarnings,
-        totalTripDistanceMeters = metrics.totalTripDistanceMeters,
-        totalRideTimeSeconds = metrics.totalRideTimeSeconds
+        scopedRideCounts = scopedRideCounts
       }
 
 loadDriverContext ::

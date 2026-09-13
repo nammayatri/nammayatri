@@ -14,6 +14,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getConfigList)
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as SQIJ
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as SQIJM
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYTBF
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as LTSCADLE
@@ -58,8 +60,6 @@ import qualified Storage.Queries.DocumentVerificationStagesConfig as SQDVSC
 import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as SQFODVC
 import qualified Storage.Queries.GoHomeConfig as SQGHC
-import qualified Storage.Queries.IncentiveJourney as SQIJ
-import qualified Storage.Queries.IncentiveJourneyMilestone as SQIJM
 import qualified Storage.Queries.LeaderBoardConfigs as SQLBC
 import qualified Storage.Queries.MerchantMessage as SQM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -123,10 +123,10 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
       coinsCfg <- getConfigList (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Nothing, merchantId = Nothing, active = Nothing, vehicleCategory = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig -> do
-      journeyCfg <- getConfigList (IncentiveJourneyDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, enabled = Nothing, vehicleCategory = Nothing, vehicleVariant = Nothing})
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfigDriver -> do
+      journeyCfg <- getConfigList (IncentiveJourneyDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, enabled = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON journeyCfg}
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfigDriver -> do
       milestoneCfg <- getConfigList (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, journeyId = Nothing, milestoneId = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON milestoneCfg}
     LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
@@ -185,22 +185,22 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson SQRMC.findAllByMerchantOpCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.ReminderConfig)) SQRMC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
       handleConfigUpdateViaJson SQCC.findAllByMerchantOptCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.CoinsConfig)) SQCC.updateByPrimaryKey (cast merchantOpCityId)
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfigDriver -> do
       handleConfigUpdateViaJson
-        (\mocId -> SQIJ.findByMerchantOperatingCityId Nothing Nothing mocId)
+        (\mocId -> SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast mocId))
         ( CQJourney.clearCacheByMerchantOperatingCityId (cast merchantOpCityId)
-            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfig)
+            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.IncentiveJourneyConfigDriver)
         )
         SQIJ.updateByPrimaryKey
         (cast merchantOpCityId)
-    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig -> do
+    LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfigDriver -> do
       handleConfigUpdateViaJson
         ( \mocId -> do
-            journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing mocId
+            journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast mocId)
             concat <$> mapM (SQIJM.findByJourneyId Nothing Nothing . (.id)) journeys
         )
         ( clearIncentiveJourneyMilestoneCaches (cast merchantOpCityId)
-            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfig)
+            >> DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.IncentiveJourneyMilestoneConfigDriver)
         )
         SQIJM.updateByPrimaryKey
         (cast merchantOpCityId)
@@ -358,5 +358,5 @@ clearIncentiveJourneyMilestoneCaches ::
   Id MerchantOperatingCity ->
   m ()
 clearIncentiveJourneyMilestoneCaches merchantOpCityId = do
-  journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId
+  journeys <- SQIJ.findByMerchantOperatingCityId Nothing Nothing (cast merchantOpCityId)
   mapM_ (CQMilestone.clearCacheByJourneyId . (.id)) journeys

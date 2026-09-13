@@ -1,0 +1,49 @@
+imports:
+  Person: Lib.IncentiveJourney.Domain.Types.Common
+  CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
+
+UserCohortMapping:
+  tableName: user_cohort_mapping
+
+  fields:
+    id: Id UserCohortMapping
+    userId: Id Person
+    cohortMappingId: Id CohortJourneyMapping
+    isTestGroup: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    isTestGroup: "NULL"
+
+  constraints:
+    id: PrimaryKey
+    userId: "!SecondaryKey"
+    cohortMappingId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByUserId:
+      kvFunction: findAllWithKV
+      where: userId
+    findByUserIdAndCohortMappingId:
+      kvFunction: findOneWithKV
+      where:
+        and: [userId, cohortMappingId]
+
+  extraIndexes:
+    - columns: [userId]
+    - columns: [cohortMappingId]
+    - columns: [userId, cohortMappingId]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

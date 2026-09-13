@@ -1,0 +1,59 @@
+imports:
+  CohortDetails: Lib.IncentiveJourney.Domain.Types.CohortDetails
+  IncentiveJourney: Lib.IncentiveJourney.Domain.Types.IncentiveJourney
+  MilestoneRewardType: Lib.IncentiveJourney.Domain.Types.Common
+
+CohortJourneyMapping:
+  tableName: cohort_journey_mapping
+
+  fields:
+    id: Id CohortJourneyMapping
+    cohortId: Id CohortDetails
+    journeyId: Id IncentiveJourney
+    startDate: UTCTime
+    streakRange: Int
+    streakEndRewardType: Maybe MilestoneRewardType
+    streakEndRewardValue: Maybe Int
+    streakEndRewardExpirationAt: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    streakEndRewardType: "NULL"
+    streakEndRewardValue: "NULL"
+    streakEndRewardExpirationAt: "NULL"
+
+  constraints:
+    id: PrimaryKey
+    cohortId: "!SecondaryKey"
+    journeyId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByCohortId:
+      kvFunction: findAllWithKV
+      where: cohortId
+    findByJourneyId:
+      kvFunction: findAllWithKV
+      where: journeyId
+    findByCohortIdAndJourneyId:
+      kvFunction: findOneWithKV
+      where:
+        and: [cohortId, journeyId]
+
+  extraIndexes:
+    - columns: [cohortId]
+    - columns: [journeyId]
+    - columns: [cohortId, journeyId]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

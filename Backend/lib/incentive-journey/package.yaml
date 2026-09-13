@@ -1,0 +1,110 @@
+name: incentive-journey
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2026 Moving Innovation Technologies Private Limited"
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+description: Shared incentive-journey engine and storage — cohort assignment, period keys, window checks, sequential milestone eval, reward dispatcher, and dual-schema Beam tables for rider-app and dynamic-offer-driver-app.
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DerivingStrategies
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+dependencies:
+  - base >= 4.7 && < 5
+  - record-dot-preprocessor
+  - record-hasfield
+  - text
+  - time
+  - aeson
+  - openapi3
+  - containers
+  - unordered-containers
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - postgresql-simple
+  - sequelize
+  - euler-hs
+  - template-haskell
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs:
+    - src
+    - src-read-only
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+    - -Wwarn=ambiguous-fields
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
+          - -O2
+          - -j4
+  dependencies:
+    - mobility-core
+    - beckn-spec
