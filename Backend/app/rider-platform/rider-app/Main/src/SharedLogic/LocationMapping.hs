@@ -72,3 +72,24 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+-- | Builds a LocationMapping for an entity created earlier in this same request (for
+-- example a SearchRequest whose id was just generated). A freshly generated entityId
+-- cannot have any prior mapping, so unlike buildPickUpLocationMapping,
+-- buildDropLocationMapping and buildStopLocationMapping this skips the query that looks
+-- for past versions of the mapping to supersede -- that query is guaranteed to find
+-- nothing here, every time, and costs a KV-plus-conditional-DB round trip to ask.
+buildFreshLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildFreshLocationMapping locationId entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  return DLM.LocationMapping {..}
+
+-- | buildStopsLocationMapping, minus the per-stop past-version query -- see
+-- buildFreshLocationMapping.
+buildFreshStopsLocationMapping :: MonadFlow m => [DL.Location] -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+buildFreshStopsLocationMapping locations entityId tag merchantId merchantOperatingCityId =
+  mapM (\(location, order) -> buildFreshLocationMapping location.id entityId tag merchantId merchantOperatingCityId order) $ zip locations [1 ..]
