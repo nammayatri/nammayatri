@@ -12,13 +12,15 @@ Upstream hard-codes India in six places: the dial code in five, and the
 *length* of a phone number in a sixth. Every one of them rejects, or silently
 fails to find, a Mauritanian number.
 
-We replace them with +222 rather than accepting any country code: a permissive
-check would let anyone in the world trigger an OTP SMS, which is how
-SMS-pumping fraud works. Kleene's `\\/` is exported here and would allow
-`"+213" \\/ "+222"` if two countries were ever wanted -- the client chose one,
-on 2026-09-03, and said the Algerian test accounts can go.
+We replace them with the countries we serve rather than accepting any country
+code: a permissive check would let anyone in the world trigger an OTP SMS,
+which is how SMS-pumping fraud works.
 
-This file said +213 until 2026-09-03. The Algerian history is in git.
+History: +213 (Algeria) until 2026-09-03, +222 (Mauritania) alone until
+2026-09-13, and both since -- the client chose to run the two countries side
+by side. The sign-in checks accept either code and either length; the three
+phone LOOKUPS below (dashboard, Exotel calls, onboarding by phone) stay +222:
+none of them is reached by the app, and each can only look in one country.
 
 The script is idempotent — running it twice is a no-op — and it fails loudly
 rather than silently skipping a site, because a missed patch produces a binary
@@ -64,33 +66,42 @@ PATCHES = [
     # which stack fetches at a pinned commit and this script cannot reach.
     # Neither file needs a new import; the driver's already compiles the very
     # same construction for the OTP field one line away.
+    #
+    # ── Two countries since 2026-09-13 ──────────────────────────────────────
+    # Mauritania: +222, 8 digits. Algeria: +213, 10 digits WITH the trunk zero,
+    # which is how the Algerian accounts were always stored and what the app
+    # sends. `Or` is shared-kernel's own predicate combinator -- `data Or p1 p2`
+    # beside `And` in Kernel/Types/Predicate.hs at the pinned 28bae0f, read from
+    # that exact commit rather than assumed. The server does not pair a length
+    # with a country (+222 with 10 digits passes here); the app and the auth
+    # guard do, and the guard also decides which countries are open at all.
     (
         f"{RIDER}/Registration.hs",
         207,
         'validateField "mobileNumber" mobileNumber P.mobileNumber',
-        'validateField "mobileNumber" mobileNumber (ExactLength 8 `And` star P.digit)',
-        "rider: 10 digits is India's, Mauritania's numbers are 8",
+        'validateField "mobileNumber" mobileNumber ((ExactLength 8 `Or` ExactLength 10) `And` star P.digit)',
+        "rider: India's 10 digits -> Mauritania's 8 or Algeria's 10",
     ),
     (
         f"{DRIVER}/UI/Registration.hs",
         141,
         'validateField "mobileNumber" mobileNumber P.mobileNumber',
-        'validateField "mobileNumber" mobileNumber (P.ExactLength 8 `P.And` P.star P.digit)',
+        'validateField "mobileNumber" mobileNumber ((P.ExactLength 8 `P.Or` P.ExactLength 10) `P.And` P.star P.digit)',
         "driver: same, qualified -- both predicate modules are aliased P here",
     ),
     (
         f"{RIDER}/Registration.hs",
         81,
         'validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode',
-        'validateField "mobileCountryCode" mobileCountryCode ("+222" :: Regex)',
-        "rider: POST /v2/auth country-code validation",
+        'validateField "mobileCountryCode" mobileCountryCode (("+222" :: Regex) `Or` ("+213" :: Regex))',
+        "rider: POST /v2/auth country-code validation, both countries",
     ),
     (
         f"{DRIVER}/UI/Registration.hs",
         76,
         'validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode',
-        'validateField "mobileCountryCode" mobileCountryCode ("+222" :: P.Regex)',
-        "driver: driver login country-code validation",
+        'validateField "mobileCountryCode" mobileCountryCode (("+222" :: P.Regex) `P.Or` ("+213" :: P.Regex))',
+        "driver: driver login country-code validation, both countries",
     ),
     (
         f"{DRIVER}/Dashboard/Driver.hs",
