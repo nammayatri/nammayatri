@@ -239,7 +239,35 @@ const COUNTRY_CODE = process.env.COUNTRY_CODE || 'MR';
 const describe = (row) =>
   row.locality ? `${row.display_name}, ${row.locality}` : row.display_name;
 
-function addressComponents(row) {
+// Which of our countries a point is in -- since 2026-09-13 there are two, and
+// the single COUNTRY_NAME above signed an Algiers pickup "Cherarba, Mauritanie".
+// Answered from the same service areas the rider app itself serves from
+// (atlas_app.geometry, SRID 0 like the rows), so an address and serviceability
+// can never disagree about the country. COUNTRY_NAME is now only the fallback.
+const COUNTRY_OF_REGION = {
+  Algeria: { name: 'Algérie', code: 'DZ' },
+  Mauritania: { name: 'Mauritanie', code: 'MR' },
+};
+const FALLBACK_COUNTRY = { name: COUNTRY_NAME, code: COUNTRY_CODE };
+
+async function countryAt(lat, lon) {
+  try {
+    const { rows } = await pool.query(
+      `select region from atlas_app.geometry
+        where region in ('Algeria', 'Mauritania')
+          and st_contains(geom, st_point($2::float8, $1::float8))
+        limit 1`,
+      [lat, lon],
+    );
+    return (rows[0] && COUNTRY_OF_REGION[rows[0].region]) || FALLBACK_COUNTRY;
+  } catch (err) {
+    // A label with the fallback country beats no label at all.
+    console.error(`[country] ${lat},${lon}: ${err.message}`);
+    return FALLBACK_COUNTRY;
+  }
+}
+
+function addressComponents(row, country = FALLBACK_COUNTRY) {
   const parts = [{
     long_name: row.display_name,
     short_name: row.display_name,
@@ -248,12 +276,12 @@ function addressComponents(row) {
   if (row.locality) {
     parts.push({ long_name: row.locality, short_name: row.locality, types: ['locality', 'political'] });
   }
-  parts.push({ long_name: COUNTRY_NAME, short_name: COUNTRY_CODE, types: ['country', 'political'] });
+  parts.push({ long_name: country.name, short_name: country.code, types: ['country', 'political'] });
   return parts;
 }
 
-const formatAddress = (row) =>
-  [row.display_name, row.locality, COUNTRY_NAME].filter(Boolean).join(', ');
+const formatAddress = (row, country = FALLBACK_COUNTRY) =>
+  [row.display_name, row.locality, country.name].filter(Boolean).join(', ');
 
 // "36.7538,3.0588" -> [36.7538, 3.0588]
 function parseLatLng(raw) {
@@ -398,12 +426,13 @@ async function placeDetails(query, res) {
   }
 
   const row = rows[0];
+  const country = await countryAt(row.lat, row.lon);
   send(res, 200, {
     status: 'OK',
     result: {
       place_id: row.place_id,
-      formatted_address: formatAddress(row),
-      address_components: addressComponents(row),
+      formatted_address: formatAddress(row, country),
+      address_components: addressComponents(row, country),
       geometry: { location: { lat: row.lat, lng: row.lon } },
     },
   });
@@ -433,13 +462,16 @@ async function reverseGeocode(query, res) {
   if (!rows.length) return send(res, 200, { status: 'ZERO_RESULTS', results: [] });
 
   const row = rows[0];
-  console.log(`[geocode] ${at ? at.join(',') : placeId} -> ${row.display_name}`);
+  // The country of the point asked about (the dropped pin), not of the feature
+  // matched near it -- a pin by a border names the country it is standing in.
+  const country = await countryAt(at ? at[0] : row.lat, at ? at[1] : row.lon);
+  console.log(`[geocode] ${at ? at.join(',') : placeId} -> ${row.display_name}, ${country.name}`);
   send(res, 200, {
     status: 'OK',
     results: [{
       place_id: row.place_id,
-      formatted_address: formatAddress(row),
-      address_components: addressComponents(row),
+      formatted_address: formatAddress(row, country),
+      address_components: addressComponents(row, country),
       // The point that was asked about, not the feature's own node. The caller
       // is naming a pin the rider dropped; moving it to the centre of the
       // school we matched would make the pin jump under their finger.
