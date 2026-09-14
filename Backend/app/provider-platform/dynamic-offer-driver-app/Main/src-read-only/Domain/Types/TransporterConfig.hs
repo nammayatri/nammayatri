@@ -176,6 +176,7 @@ data TransporterConfig = TransporterConfig
     enableDirectWalletIncentives :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDownwardRecomputeForDifferentDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDriverHealthCheckDebug :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableDriverPoolEnrichment :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEstimatedTollFallback :: Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,

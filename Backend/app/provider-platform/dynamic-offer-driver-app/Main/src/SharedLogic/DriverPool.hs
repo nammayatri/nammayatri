@@ -62,11 +62,21 @@ module SharedLogic.DriverPool
     incrementSearchTryRejectCount,
     getSearchTryRejectCount,
     setBatchSentCount,
+    incrementBatchSentCount,
     getBatchSentCount,
     incrementBatchRejectCount,
     getBatchRejectCount,
     getBatchEpoch,
     bumpBatchEpoch,
+    getNextBatchScheduleTime,
+    getBatchingMode,
+    isContinuousBatchingEnabled,
+    driverReserveListKey,
+    setDriverReserveList,
+    popDriverFromReserveList,
+    hasDriverReserveList,
+    maxDriverReserveListSize,
+    driverReserveListTtlBufferSeconds,
   )
 where
 
@@ -82,6 +92,7 @@ import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Data.Vector as V
+import qualified Database.Redis as Hedis
 import Domain.Types as DVST
 import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -169,7 +180,7 @@ quoteResponseCooldownTags :: [Text]
 quoteResponseCooldownTags = ["QuoteResponseNudge", "QuoteResponseBlock"]
 
 mkQuoteResponseCounterKey :: Text -> BTT.CounterType -> Text -> Text
-mkQuoteResponseCounterKey actionType counterType driverId = BTAcc.mkCounterKey BTT.DRIVER actionType counterType driverId
+mkQuoteResponseCounterKey actionType counterType driverId = BTAcc.mkCounterKey quoteResponseCounterConfig.hashTagEntityId BTT.DRIVER actionType counterType driverId
 
 srdStatsWindow :: SWC.SlidingWindowOptions
 srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
@@ -198,7 +209,8 @@ quoteResponseCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
-      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7]
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
+      hashTagEntityId = True
     }
 
 -- | Snapshot for one quote-response outcome. Rates are computed against the shared
@@ -268,6 +280,13 @@ getBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m (Ma
 getBatchSentCount searchTryId batchNum =
   Redis.withCrossAppRedis $ Redis.get (mkBatchSentCountKey searchTryId.getId batchNum)
 
+incrementBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> Int -> m ()
+incrementBatchSentCount searchTryId batchNum sentCount =
+  Redis.withCrossAppRedis $ do
+    let key = mkBatchSentCountKey searchTryId.getId batchNum
+    void $ Redis.incrby key (fromIntegral sentCount)
+    Redis.expire key searchTryDispatchCounterTtl
+
 -- | Returns the post-increment count. The INCR is atomic, so of several drivers rejecting at
 -- once exactly one observes `rejects == sent` — that one owns the early advance.
 incrementBatchRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m Int
@@ -294,6 +313,47 @@ bumpBatchEpoch searchTryId = Redis.withCrossAppRedis $ do
   epoch <- Redis.incr key
   Redis.expire key searchTryDispatchCounterTtl
   pure $ fromIntegral epoch
+
+getBatchingMode :: DriverPoolConfig -> BatchingMode
+getBatchingMode driverPoolCfg = fromMaybe OFF driverPoolCfg.batchingMode
+
+getNextBatchScheduleTime :: DriverPoolConfig -> Seconds
+getNextBatchScheduleTime driverPoolCfg =
+  case getBatchingMode driverPoolCfg of
+    STAGGERED -> fromMaybe driverPoolCfg.singleBatchProcessTime driverPoolCfg.nextBatchScheduleTime
+    _ -> driverPoolCfg.singleBatchProcessTime
+
+isContinuousBatchingEnabled :: DriverPoolConfig -> Bool
+isContinuousBatchingEnabled driverPoolCfg = getBatchingMode driverPoolCfg == CONTINUOUS
+
+maxDriverReserveListSize :: Int
+maxDriverReserveListSize = 50
+
+driverReserveListTtlBufferSeconds :: Seconds
+driverReserveListTtlBufferSeconds = 2
+
+driverReserveListKey :: Id DSTry.SearchTry -> Text
+driverReserveListKey searchTryId = "Driver-Offer:SearchTry:ReservePool:" <> searchTryId.getId
+
+setDriverReserveList :: (Redis.HedisFlow m r, Log m) => Id DSTry.SearchTry -> Seconds -> [DriverPoolWithActualDistResult] -> m ()
+setDriverReserveList searchTryId ttl reserve = Redis.withCrossAppRedis $ do
+  let key = driverReserveListKey searchTryId
+      reserve' = take maxDriverReserveListSize reserve
+  Redis.del key
+  unless (null reserve') $ do
+    Redis.rPushExp key (reverse reserve') (fromIntegral ttl)
+    logInfo $
+      "DriverReserveList set: searchTryId=" <> searchTryId.getId
+        <> " size="
+        <> show (length reserve')
+        <> " ttl="
+        <> show ttl
+
+popDriverFromReserveList :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m (Maybe DriverPoolWithActualDistResult)
+popDriverFromReserveList searchTryId = Redis.withCrossAppRedis $ Redis.rPop (driverReserveListKey searchTryId)
+
+hasDriverReserveList :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Bool
+hasDriverReserveList searchTryId = Redis.withCrossAppRedis $ (> 0) <$> Redis.lLen (driverReserveListKey searchTryId)
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig _merchantOpCityId _windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days
@@ -330,17 +390,14 @@ isLessThenNParallelRequests ::
   ) =>
   Id SearchRequest ->
   Id DM.Merchant ->
-  Id DP.Driver ->
+  [Id DP.Driver] ->
   UTCTime ->
   Int ->
   UTCTime ->
-  m Bool
-isLessThenNParallelRequests searchReqId merchantId driverId valueToPut maxSize fromScore = do
-  parallelCount <- Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zAddIfPossible (mkParallelSearchRequestKey merchantId driverId) (searchReqId.getId, (realToFrac . utcTimeToPOSIXSeconds) valueToPut) maxSize ((realToFrac . utcTimeToPOSIXSeconds) fromScore)
-  if parallelCount == 1
-    then return True
-    else do
-      return False
+  m [Bool]
+isLessThenNParallelRequests searchReqId merchantId driverIds valueToPut maxSize fromScore = do
+  parallelCounts <- Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zAddIfPossibleMany (mkParallelSearchRequestKey merchantId <$> driverIds) (searchReqId.getId, (realToFrac . utcTimeToPOSIXSeconds) valueToPut) maxSize ((realToFrac . utcTimeToPOSIXSeconds) fromScore)
+  pure $ (== 1) <$> parallelCounts
 
 addSearchRequestInfoToCache ::
   ( Redis.HedisFlow m r,
@@ -365,11 +422,12 @@ removeExpiredSearchRequestInfoFromCache ::
     CacheFlow m r
   ) =>
   Id DM.Merchant ->
-  Id DP.Driver ->
+  [Id DP.Driver] ->
   m ()
-removeExpiredSearchRequestInfoFromCache merchantId driverId = do
+removeExpiredSearchRequestInfoFromCache merchantId driverIds = do
   now <- getCurrentTime
-  void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRemRangeByScore (mkParallelSearchRequestKey merchantId driverId) 0 ((realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now)
+  let expiredBefore = (realToFrac . utcTimeToPOSIXSeconds) $ addUTCTime (-2) now
+  void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.runPipelinedByKey "zRemRangeByScore" (\key -> Hedis.zremrangebyscore key 0 expiredBefore) (mkParallelSearchRequestKey merchantId <$> driverIds)
 
 getValidSearchRequestCount ::
   Redis.HedisFlow m r =>
@@ -401,7 +459,8 @@ rideCancellationCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 7,
       counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
-      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7]
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7],
+      hashTagEntityId = True
     }
 
 incrementTotalRidesCount ::
@@ -422,7 +481,7 @@ getTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Int
-getTotalRidesCount _merchantOpCityId driverId = fromIntegral <$> BTAcc.getCountForPeriod BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT driverId.getId 7 rideCancellationCounterConfig.windowSizeDays
+getTotalRidesCount _merchantOpCityId driverId = fromIntegral <$> BTAcc.getCountForPeriod rideCancellationCounterConfig.hashTagEntityId BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT driverId.getId 7 rideCancellationCounterConfig.windowSizeDays
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -442,7 +501,7 @@ getLatestCancellationRatio' ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT) (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT)
+getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId (BTAcc.mkCounterKey rideCancellationCounterConfig.hashTagEntityId BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT) (BTAcc.mkCounterKey rideCancellationCounterConfig.hashTagEntityId BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT)
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
@@ -529,7 +588,7 @@ getSrdStatsCountersBulk mbChunkSize driverIds =
   where
     baseKeysFor did =
       [ mkQuoteResponseCounterKey quoteResponseAcceptActionType BTT.ACTION_COUNT did,
-        BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did,
+        BTAcc.mkCounterKey rideCancellationCounterConfig.hashTagEntityId BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did,
         mkQuoteResponseCounterKey quoteResponseRejectActionType BTT.ACTION_COUNT did,
         mkQuoteResponseCounterKey quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT did
       ]
@@ -545,7 +604,7 @@ getSrdStatsCountersBulk mbChunkSize driverIds =
              in (fromIntegral (case vs of (x : _) -> x; _ -> 0 :: Integer), fromIntegral (sum vs))
           countersFor did =
             let (accT, accW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseAcceptActionType BTT.ACTION_COUNT did))
-                (canT, canW) = sumHead (dayKeys (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did))
+                (canT, canW) = sumHead (dayKeys (BTAcc.mkCounterKey rideCancellationCounterConfig.hashTagEntityId BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did))
                 (rejT, rejW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseRejectActionType BTT.ACTION_COUNT did))
                 (sentT, sentW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT did))
              in SearchReqDriverStatsCounters

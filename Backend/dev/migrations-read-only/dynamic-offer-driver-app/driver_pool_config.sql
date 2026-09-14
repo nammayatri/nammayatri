@@ -156,3 +156,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN idle_bulk_chunk
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN next_batch_schedule_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batching_mode text ;
+
+
+------- SQL updates -------
+

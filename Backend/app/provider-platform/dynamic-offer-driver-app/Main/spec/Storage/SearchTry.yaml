@@ -23,6 +23,7 @@ SearchTry:
 
   fields:
     id : Id SearchTry
+    batchingMode : Maybe Domain.Types.DriverPoolConfig.BatchingMode
     requestId : Id SearchRequest
     estimateId : Text
     estimateIds : "[Text]"
@@ -141,6 +142,7 @@ SearchTry:
       where: id
 
   sqlType:
+    batchingMode: text
     messageId: character (36)
     vehicleVariant: character varying (255)
     estimateId: character (36)
