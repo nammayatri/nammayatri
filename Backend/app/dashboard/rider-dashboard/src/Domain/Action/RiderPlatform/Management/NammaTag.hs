@@ -60,7 +60,7 @@ import qualified Kernel.Types.Id
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
-import qualified Storage.Queries.Merchant
+import qualified "lib-dashboard" Storage.Queries.Merchant
 import qualified Storage.Queries.MerchantAccess
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -159,7 +159,7 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout apiTokenInfo req = do
               attempt <-
                 Kernel.Prelude.try $
                   SharedLogic.Transaction.withTransactionStoring transaction $
-                    API.Client.RiderPlatform.Management.callManagementAPI merchantShortId city (.nammaTagDSL.postNammaTagAppDynamicLogicUpsertLogicRollout) updatedReq
+                    API.Client.RiderPlatform.Management.callManagementAPI (skipMerchantCityAccessCheck merchantShortId) city (.nammaTagDSL.postNammaTagAppDynamicLogicUpsertLogicRollout) updatedReq
               case attempt of
                 Kernel.Prelude.Left (e :: SomeException) ->
                   Kernel.Prelude.pure (Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityIdText (show e)))

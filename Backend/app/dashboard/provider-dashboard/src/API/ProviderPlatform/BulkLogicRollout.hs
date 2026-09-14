@@ -32,7 +32,7 @@ type API =
     :> ApiAuth
          'DRIVER_OFFER_BPP_MANAGEMENT
          'DSL
-         ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.APP_DYNAMIC_LOGIC_ROLLOUT)
+         ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT)
     :> ReqBody '[JSON] Lib.Yudhishthira.Types.BulkLogicRolloutReq
     :> Post '[JSON] Lib.Yudhishthira.Types.BulkLogicRolloutResult
 
