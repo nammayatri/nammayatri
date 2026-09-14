@@ -17,7 +17,6 @@ imports:
   LogicRolloutReq: Lib.Yudhishthira.Types
   MerchantCitiesEntry: Lib.Yudhishthira.Types
   BulkLogicRolloutReq: Lib.Yudhishthira.Types
-  BulkRolloutCitySuccess: Lib.Yudhishthira.Types
   BulkLogicRolloutResult: Lib.Yudhishthira.Types
   UpdateRolloutGroupReq: Lib.Yudhishthira.Types
   RolloutGroupInfo: Lib.Yudhishthira.Types

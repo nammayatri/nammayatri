@@ -50,6 +50,10 @@ module Lib.Yudhishthira.Types
     RolloutGroupInfo (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
+    MerchantCitiesEntry (..),
+    BulkLogicRolloutReq (..),
+    BulkRolloutCityFailure (..),
+    BulkLogicRolloutResult (..),
     TimeBoundResp,
     ConfigType (..),
     allValues,
@@ -874,14 +878,8 @@ data BulkRolloutCityFailure = BulkRolloutCityFailure
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data BulkRolloutCitySuccess = BulkRolloutCitySuccess
-  { merchantShortId :: Text,
-    cityId :: Text
-  }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data BulkLogicRolloutResult = BulkLogicRolloutResult
-  { succeeded :: [BulkRolloutCitySuccess],
+  { succeeded :: [Text],
     failures :: [BulkRolloutCityFailure]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
