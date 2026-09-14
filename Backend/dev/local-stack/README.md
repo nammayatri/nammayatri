@@ -2540,9 +2540,16 @@ in `restricted.js` and can change in the time it takes to restart a container.
 A number compiled into the binary would mean a 45-minute build every time the
 client revised it.
 
-    movin.subscription + ride counts          <- policy, in the shim
-      -> dynamic-offer-driver-app:movin:restricted   (JSON array of ids)
-        -> calculateDriverPool prefers everyone else <- one filter, in Haskell
+    movin.wallet + ride counts                <- policy, in the shim
+      -> dynamic-offer-driver-app:movin:unpaid       (JSON array of ids;
+         also written as :movin:restricted, the key the pre-2026-09-14 binary reads)
+        -> calculateDriverPool skips them entirely  <- one filter, in Haskell
+
+> **Superseded 2026-09-14 — the filter is HARD now.** Everything below about
+> an unpaid driver still being offered a job "as the only one in the area" was
+> the 2026-08-26 rule. The client's rule since 2026-09-14 is *no top-up, no
+> work*: `movinOnlyPaying` never offers an unpaid driver a job. See **No top-up,
+> no work** under the driver wallet.
 
 **The key name is the whole integration, and it was measured.** Hedis prefixes
 keys with the app name: plain calls land under `dynamic-offer-driver-app:`,
@@ -2622,7 +2629,7 @@ Two rules the client confirmed, both about someone's money:
 | | |
 |---|---|
 | The 30 comes off when a ride **starts**, not when it is accepted | a driver who accepted a ride the passenger then cancelled drove nothing |
-| A driver who starts a ride under 30 **goes negative** rather than being cut off | the dispatch restriction is soft, so this case is reachable, and the answer cannot be "the app stops working while there is a passenger in the car" |
+| A driver who starts a ride under 30 **goes negative** rather than being cut off | reachable only under the old soft restriction. Since 2026-09-14 accepting needs `canWork`, so a charge at ride start always finds the credit — two simulated drivers went to −60 / −90 MRU before that |
 
 ### The obvious condition was wrong, and the data said so
 
@@ -2655,8 +2662,9 @@ Asked whether an unpaid driver should be stopped or merely deprioritised, the
 client answered: *"Let's not allow him to go online."* So `canWork` no longer
 only orders the dispatch pool — **it decides whether he may go online at all.**
 
-Enforced in the app today, in `driver/duty.tsx`: the toggle re-reads
-`/wallet/status` and refuses. Two properties of that are deliberate.
+Enforced in the app, in `driver/duty.tsx` (and since 2026-09-14 in the guard
+and dispatch as well — see below): the toggle re-reads `/wallet/status` and
+refuses. Two properties of that are deliberate.
 
 **Unreachable does not block.** A wallet we cannot read is our failure, not his,
 and it must never be the thing that stops a man working.
@@ -2666,19 +2674,39 @@ just come back from the top-up screen, and refusing him over a figure fetched
 minutes ago would refuse him for a debt he has already settled — his money gone
 and the app still saying no.
 
-⚠ **The block is only in the app.** Its proper home is `auth-guard`, which
-already proxies `/ui/` and is where policy lives in this fork — refusing
-`POST /ui/driver/setActivity?active=true` when the wallet says no is about
-fifteen lines. Until that exists, a driver who installs an older APK is not
-stopped by anything.
+### No top-up, no work — 2026-09-14, and hard at every layer
 
-`restricted.js` is left in place. With the hard block the deprioritisation is
-mostly moot, but it costs nothing and covers the gap while the guard does not.
+The client's rule, stated because it had been half-understood:
 
-**Undecided:** a driver online for more than 24 hours whose day expires while he
-is still connected, with less than the price of a day. Pushing someone offline
-mid-session is a product decision, not a technical one, and the client has not
-been asked. The app does nothing about it.
+- **The wallet holds only what the driver loads** through Chargily Pay
+  (Algeria) or Moosyl (Mauritania). **Never ride money**: Movin takes **0 %**
+  on rides, the passenger pays the driver directly, and the two are entirely
+  separate. The ledger's kinds are `topup`, `day` and `adjustment` — no ride
+  fare ever enters it.
+- **A driver without the credit for a day (100 DA / 30 MRU) and no day already
+  paid for does not work** — however much he earned from rides.
+
+That closed the two gaps the 2026-09-07 block had left open:
+
+| Layer | What refuses | Since |
+|---|---|---|
+| Dispatch (Haskell) | `movinOnlyPaying`: an unpaid driver is **never** offered a job — the old `movinPreferPaying` still offered him one when no paid driver was in the pool | backend 09dc606410 |
+| `auth-guard` | `POST /ui/driver/setActivity?active=true` and `quote/respond` with `Accept` → **403 `WALLET_EMPTY`** when the driver's own `/wallet/status` says `canWork: false`. Holds for an older APK too. **Fails open** when the wallet cannot be read | 2026-09-14 10:01 |
+| App | the switch refuses; while online and between rides the wallet is re-read every minute, and a driver whose paid day ran out without credit for the next is **taken offline** with the reason. Never during a request or a ride | app 613517d |
+
+The "undecided" case of 2026-09-07 — a day expiring while he is still online —
+is therefore decided: he goes offline, and dispatch would skip him anyway.
+
+**Proving the binary.** The new rule reads a new key, `movin:unpaid`, and that
+string is the only thing in the binary that tells the hard rule from the soft
+one. `deploy-backend.sh` refuses to swap an image without it. `restricted.js`
+writes the same list under both key names, so the old binary and the new one
+each find theirs, and a rollback needs nothing.
+
+**The simulated fleets are not exempt** (the client's choice, 2026-09-14): they
+have no credit and get no rides. Test with a real driver account topped up
+through the gateway page — both keys are in TEST mode, so that is the real flow
+with no real money.
 
 ### The Moosyl contract, measured rather than read
 

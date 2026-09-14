@@ -262,6 +262,12 @@ the registry or the map.
   twelve `+213` drivers parked in Algiers under `algeria0`. Algerian test
   accounts that sign in without SMS: `./algerian-test-accounts.sh` — they must
   be removed before Algeria opens.
+- **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
+  only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
+  rides. Without credit for a day and no day paid for, he may not work, and
+  that is enforced at three layers: dispatch (`movinOnlyPaying`, key
+  `movin:unpaid`), the auth guard (403 `WALLET_EMPTY`), and the app. Never
+  soften any of them into a preference. README → *No top-up, no work*.
 - **With more than one merchant in one process, audit every per-message
   lock.** The search handler's `whenWithLockRedis` on the message id silently
   dropped whichever merchant arrived second; patched to merchant + message.
