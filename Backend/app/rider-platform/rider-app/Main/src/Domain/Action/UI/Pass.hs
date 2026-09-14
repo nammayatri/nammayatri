@@ -130,6 +130,8 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
+import Tools.Metrics.BAPMetrics (HasBAPMetrics)
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Wallet as TWallet
@@ -230,6 +232,7 @@ purchasePassWithPayment ::
     EsqDBFlow m r,
     EncFlow m r,
     EventStreamFlow m r,
+    HasBAPMetrics m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
@@ -439,6 +442,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId) False
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
+  Metrics.incrementFRFSPassPaymentCount
+    purchasedPassPayment.merchantId.getId
+    purchasedPassPayment.merchantOperatingCityId.getId
+    (passTypeLabel purchasedPassPayment.passEnum)
+    (show initialStatus)
   when (initialStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
     void $ withTryCatch "purchasePassWithPayment:registerHasPass" (FRFSPassOverride.registerHasPass personId endDate)
   return $
@@ -1037,9 +1045,12 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
       }
 
+passTypeLabel :: Maybe DPassType.PassEnum -> Text
+passTypeLabel = maybe "UNKNOWN" show
+
 -- Webhook Handler for Pass Payment Status Updates
 passOrderStatusHandler ::
-  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
+  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
@@ -1103,6 +1114,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           whenJust mbPassStatus $ \passStatus -> unless isPaymentInRefundFlow $ do
             when (purchasedPassPayment.status `notElem` activeLikeStatuses) $ do
               QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
+              Metrics.incrementFRFSPassPaymentCount purchasedPassPayment.merchantId.getId purchasedPassPayment.merchantOperatingCityId.getId (passTypeLabel purchasedPassPayment.passEnum) (show passStatus)
               when (passStatus == DPurchasedPass.Active) $ do
                 activatedAt <- getCurrentTime
                 QPurchasedPassPayment.updateActivatedAt (Just activatedAt) purchasedPassPayment.id

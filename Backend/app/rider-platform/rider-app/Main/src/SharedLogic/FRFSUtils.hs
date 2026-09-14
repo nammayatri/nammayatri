@@ -125,6 +125,8 @@ import Storage.Queries.StopFare as QRouteStopFare
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.Metrics as Metrics
+import Tools.Metrics.BAPMetrics.Types (HasBAPMetrics)
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
@@ -926,6 +928,7 @@ createPaymentOrder ::
     EncFlow m r,
     ServiceFlow m r,
     FinanceBeamFlow.BeamFlow m r,
+    HasBAPMetrics m r,
     HasField "isMetroTestTransaction" r Bool,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     Finance.HasActorInfo m r
@@ -959,6 +962,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
     let (ticketBookingPayments', allPaymentCategories) = unzip results
     QFRFSTicketBookingPaymentCategory.createMany (concat allPaymentCategories)
     QFRFSTicketBookingPayment.createMany ticketBookingPayments'
+    fork "FRFS booking payment created metrics" $
+      forM_ ticketBookingPayments' $ \tbp ->
+        countFRFSBookingPaymentStatus tbp.status "created" (listToMaybe $ filter (\b -> b.id == tbp.frfsTicketBookingId) bookings) tbp
     isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
     isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
     let isSingleMode = case bookings of
@@ -1111,7 +1117,7 @@ data CancellationQuota = CancellationQuota
 -- caller in while the first is still working, after which the first one's release deletes the
 -- second one's lock.
 claimBookingForConfirm ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, HasBAPMetrics m r) =>
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   UTCTime ->
   m (Maybe DFRFSTicketBooking.FRFSTicketBooking)
@@ -1126,7 +1132,7 @@ claimBookingForConfirm bookingId validTill =
           then pure Nothing
           else do
             void $ QFRFSTicketBooking.updateValidTillById validTill latest.id
-            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
+            markFRFSBookingStatus DFRFSTicketBooking.CONFIRMING "claimed_for_confirm" latest
             pure (Just latest {DFRFSTicketBooking.validTill = validTill})
 
 confirmClaimLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
@@ -1698,3 +1704,52 @@ getServiceTierTypeFromRouteStationsJson mbJson = do
 
 riderSpendKey :: Id DP.Person -> Text
 riderSpendKey personId = "rider:spend:" <> personId.getId
+
+-- Single place a booking's status is written, so frfs_booking_count cannot drift away from the write
+-- it is meant to count. `reason` is a fixed string per call site (bounded cardinality) naming the
+-- stage that caused the transition; pass "" where there is none.
+markFRFSBookingStatus ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasBAPMetrics m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBookingStatus ->
+  Text ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m ()
+markFRFSBookingStatus status reason booking = do
+  void $ QFRFSTicketBooking.updateStatusById status booking.id
+  unless (booking.status == status) $
+    fork "FRFS booking status metrics" $
+      Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show status) reason
+
+countFRFSBookingPaymentStatus ::
+  HasBAPMetrics m r =>
+  DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus ->
+  Text ->
+  Maybe DFRFSTicketBooking.FRFSTicketBooking ->
+  DFRFSTicketBookingPayment.FRFSTicketBookingPayment ->
+  m ()
+countFRFSBookingPaymentStatus status reason mbBooking bookingPayment = do
+  let merchantId = fromMaybe "unknown" $ (.getId) <$> (((.merchantId) <$> mbBooking) <|> bookingPayment.merchantId)
+      merchantOperatingCityId = fromMaybe "unknown" $ (.getId) <$> (((.merchantOperatingCityId) <$> mbBooking) <|> bookingPayment.merchantOperatingCityId)
+      vehicleCategory = maybe "unknown" (\booking -> show booking.vehicleType) mbBooking
+  Metrics.incrementFRFSBookingPaymentCount merchantId merchantOperatingCityId vehicleCategory (show status) reason
+
+markFRFSBookingPaymentStatus ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasBAPMetrics m r
+  ) =>
+  DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus ->
+  Text ->
+  Maybe DFRFSTicketBooking.FRFSTicketBooking ->
+  DFRFSTicketBookingPayment.FRFSTicketBookingPayment ->
+  m ()
+markFRFSBookingPaymentStatus status reason mbBooking bookingPayment = do
+  void $ QFRFSTicketBookingPayment.updateStatusById status bookingPayment.id
+  unless (bookingPayment.status == status) $
+    fork "FRFS booking payment status metrics" $
+      countFRFSBookingPaymentStatus status reason mbBooking bookingPayment
