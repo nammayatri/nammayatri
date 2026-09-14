@@ -768,11 +768,6 @@ changePasswordByAdmin ::
   ChangePasswordByAdminReq ->
   m APISuccess
 changePasswordByAdmin tokenInfo personId req = do
-  -- Password resets grant control of the target account across every merchant it can
-  -- reach (one person row = one credential), so this is SUPER_ADMIN-only rather than
-  -- merchant-ownership-scoped.
-  unlessM (isSuperAdmin tokenInfo.personId) $
-    throwError AccessDenied
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -862,10 +857,6 @@ deletePerson ::
   Maybe Text ->
   m APISuccess
 deletePerson tokenInfo personId mbDeleteReason = do
-  -- Every write below is keyed on personId alone and none is merchant-scoped; deletion
-  -- destroys the person across all merchants at once, so it is SUPER_ADMIN-only.
-  unlessM (isSuperAdmin tokenInfo.personId) $
-    throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
