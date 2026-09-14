@@ -10,13 +10,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import qualified Tools.MultiModal as MM
 
--- | TNSTC prices and books on a 3-char place *code* (PUU / CHE), while our stations are keyed
--- by the numeric stop code. The mapping lives on the station as `providerCode` and is static,
--- so it is cached for an hour and falls back to the caller's value when the feed has no code.
---
--- Lives here rather than in the select handler so both select and confirm can call it --
--- Order.hs cannot import Domain.Action.UI.FRFSTicketService without an import cycle, which is
--- the only reason the resolved codes were previously persisted on the quote.
 tnstcPlaceCode ::
   forall m r c.
   ( MonadFlow m,
@@ -37,6 +30,8 @@ tnstcPlaceCode integratedBPPConfig fallbackCode stopCode = do
       baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
       res <- try @_ @SomeException $ NandiFlow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
       return $ case res of
-        Right stop | not (T.null (T.strip stop.providerCode)) -> Just (T.strip stop.providerCode)
+        Right stop -> case stop.placeCode of
+          Just d | not (T.null (T.strip d)) -> Just (T.strip d)
+          _ -> Nothing
         _ -> Nothing
   return $ fromMaybe fallbackCode mbCode

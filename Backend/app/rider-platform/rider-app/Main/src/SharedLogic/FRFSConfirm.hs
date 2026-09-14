@@ -648,16 +648,15 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             search <- QFRFSSearch.findById quote'.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
             case ( listToMaybe (mapMaybe (.pickupPointPlaceId) paxRows),
                    quote'.providerServiceId,
-                   search.journeyDate,
-                   tnstcConfig.counterCode
+                   search.journeyDate
                  ) of
-              (Just placeId, Just serviceId, Just journeyDate, Just counterCode) -> do
+              (Just placeId, Just serviceId, Just journeyDate) -> do
                 let tripCode = fromMaybe "" quote'.providerTripCode
                 placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
                 points <-
                   TNSTCBooking.getPickupPointsCached tnstcConfig ibppConfig.id.getId $
                     TNSTCBooking.GetPickupPointsReq
-                      { rqppCounterCode = counterCode,
+                      { rqppCounterCode = tnstcConfig.counterCode,
                         rqppJourneyDate = journeyDate,
                         rqppServiceId = serviceId,
                         rqppPlaceId = placeCode,

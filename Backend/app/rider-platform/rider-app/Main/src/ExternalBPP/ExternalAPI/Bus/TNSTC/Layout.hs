@@ -39,7 +39,7 @@ el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: 
 
 data GetConcessionTypesReq = GetConcessionTypesReq
   { rqctClassId :: Text,
-    rqctCounterCode :: Text,
+    rqctCounterCode :: Maybe Text,
     rqctEndPlaceId :: Text,
     rqctJourneyDate :: Day,
     rqctSeatNumbers :: [Text],
@@ -54,7 +54,7 @@ instance ToXML GetConcessionTypesReq where
     element (op "GetAllConcessionTypesByServiceID") $
       element arg0 $ do
         el "classID" req.rqctClassId
-        el "counterCode" req.rqctCounterCode
+        whenJust req.rqctCounterCode (el "counterCode")
         el "endPlaceID" req.rqctEndPlaceId
         el "franchiseeUser" "false"
         el "journeyDate" (fmtDate req.rqctJourneyDate)
@@ -65,7 +65,7 @@ instance ToXML GetConcessionTypesReq where
         el "userName" req.rqctUserName
 
 data GetServiceSeatDetailsReq = GetServiceSeatDetailsReq
-  { rqssCounterCode :: Text,
+  { rqssCounterCode :: Maybe Text,
     rqssEndPlaceId :: Text,
     rqssJourneyDate :: Day,
     rqssServiceClass :: Text,
@@ -79,7 +79,7 @@ instance ToXML GetServiceSeatDetailsReq where
   toXML req =
     element (op "GetServiceSeatDetails") $
       element arg0 $ do
-        el "counterCode" req.rqssCounterCode
+        whenJust req.rqssCounterCode (el "counterCode")
         el "endPlaceID" req.rqssEndPlaceId
         el "journeyDate" (fmtDate req.rqssJourneyDate)
         el "serviceClass" req.rqssServiceClass
