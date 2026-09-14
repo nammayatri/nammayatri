@@ -129,6 +129,8 @@ instance Default DriverPoolConfig where
         driverToDestinationDistanceThreshold = Common.Meters 1000,
         driverToDestinationDuration = Common.Seconds 900,
         enableEarlyBatchAdvanceOnFullReject = Nothing,
+        batchingMode = Nothing,
+        nextBatchScheduleTime = Nothing,
         enableForwardBatching = True,
         id = Id "default-driver-pool-config-id",
         maxDriverQuotesRequired = 5,

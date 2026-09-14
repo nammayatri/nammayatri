@@ -34,9 +34,11 @@ import Lib.BehaviorTracker.Types
 -- Examples:
 --   "bt:DRIVER:RIDE_CANCELLATION:ACTION_COUNT:driver-abc-123"
 --   "bt:RIDER:BOOKING_CANCELLATION:ELIGIBLE_COUNT:rider-xyz-456"
-mkCounterKey :: EntityType -> Text -> CounterType -> Text -> Text
-mkCounterKey entityType actionType counterType entityId =
-  "bt:" <> show entityType <> ":" <> actionType <> ":" <> show counterType <> ":" <> entityId
+mkCounterKey :: Bool -> EntityType -> Text -> CounterType -> Text -> Text
+mkCounterKey hashTagEntityId entityType actionType counterType entityId =
+  "bt:" <> show entityType <> ":" <> actionType <> ":" <> show counterType <> ":" <> entityIdPart
+  where
+    entityIdPart = if hashTagEntityId then "{" <> entityId <> "}" else entityId
 
 -- | Increment a sliding window counter
 -- Uses CrossAppRedis to ensure counters are accessible across services
@@ -45,17 +47,18 @@ incrementCounter ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Bool ->
   EntityType ->
   Text -> -- actionType
   CounterType ->
   Text -> -- entityId
   Integer -> -- windowSizeDays
   m ()
-incrementCounter entityType actionType counterType entityId windowSizeDays =
+incrementCounter hashTagEntityId entityType actionType counterType entityId windowSizeDays =
   Redis.runInMultiCloudRedisWrite $
     Redis.withCrossAppRedis $
       SWC.incrementWindowCount
-        (mkCounterKey entityType actionType counterType entityId)
+        (mkCounterKey hashTagEntityId entityType actionType counterType entityId)
         (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
 
 -- | Decrement a sliding window counter in the bucket of the original event time.
@@ -67,6 +70,7 @@ decrementCounterInTimeBucket ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Bool ->
   EntityType ->
   Text -> -- actionType
   CounterType ->
@@ -74,13 +78,13 @@ decrementCounterInTimeBucket ::
   UTCTime -> -- when the event being reversed was originally counted
   Integer -> -- windowSizeDays
   m ()
-decrementCounterInTimeBucket entityType actionType counterType entityId eventTime windowSizeDays =
+decrementCounterInTimeBucket hashTagEntityId entityType actionType counterType entityId eventTime windowSizeDays =
   Redis.runInMultiCloudRedisWrite $
     Redis.withCrossAppRedis $
       SWC.decrementByValueInTimeBucket
         eventTime
         1
-        (mkCounterKey entityType actionType counterType entityId)
+        (mkCounterKey hashTagEntityId entityType actionType counterType entityId)
         (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
 
 -- | Get the count for a specific period within the window
@@ -91,6 +95,7 @@ getCountForPeriod ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Bool ->
   EntityType ->
   Text -> -- actionType
   CounterType ->
@@ -98,13 +103,13 @@ getCountForPeriod ::
   Integer -> -- periodDays: how many days to look back
   Integer -> -- windowSizeDays: SWC storage window
   m Integer
-getCountForPeriod entityType actionType counterType entityId periodDays windowSizeDays =
+getCountForPeriod hashTagEntityId entityType actionType counterType entityId periodDays windowSizeDays =
   Redis.runInMultiCloudRedisWrite $
     Redis.withCrossAppRedis $ do
       values <-
         SWC.getCurrentWindowValuesUptoLast
           periodDays
-          (mkCounterKey entityType actionType counterType entityId)
+          (mkCounterKey hashTagEntityId entityType actionType counterType entityId)
           (SWC.SlidingWindowOptions windowSizeDays SWC.Days)
       return $ sum $ map (fromMaybe 0) values
 
@@ -115,14 +120,15 @@ buildCounterValues ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Bool ->
   EntityType ->
   Text -> -- actionType
   Text -> -- entityId
   Integer -> -- periodDays
   Integer -> -- windowSizeDays
   m CounterValues
-buildCounterValues entityType actionType entityId periodDays windowSizeDays =
-  buildCounterValuesWithEligible entityType actionType Nothing entityId periodDays windowSizeDays
+buildCounterValues hashTagEntityId entityType actionType entityId periodDays windowSizeDays =
+  buildCounterValuesWithEligible hashTagEntityId entityType actionType Nothing entityId periodDays windowSizeDays
 
 -- | Like buildCounterValues, but the ELIGIBLE_COUNT (rate denominator) may be read
 -- from a different actionType. Use when several outcome-specific action types share
@@ -133,6 +139,7 @@ buildCounterValuesWithEligible ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Bool ->
   EntityType ->
   Text -> -- actionType for ACTION_COUNT
   Maybe Text -> -- actionType for ELIGIBLE_COUNT (Nothing = same as actionType)
@@ -140,9 +147,9 @@ buildCounterValuesWithEligible ::
   Integer -> -- periodDays
   Integer -> -- windowSizeDays
   m CounterValues
-buildCounterValuesWithEligible entityType actionType mbEligibleActionType entityId periodDays windowSizeDays = do
-  actionCnt <- getCountForPeriod entityType actionType ACTION_COUNT entityId periodDays windowSizeDays
-  eligibleCnt <- getCountForPeriod entityType (fromMaybe actionType mbEligibleActionType) ELIGIBLE_COUNT entityId periodDays windowSizeDays
+buildCounterValuesWithEligible hashTagEntityId entityType actionType mbEligibleActionType entityId periodDays windowSizeDays = do
+  actionCnt <- getCountForPeriod hashTagEntityId entityType actionType ACTION_COUNT entityId periodDays windowSizeDays
+  eligibleCnt <- getCountForPeriod hashTagEntityId entityType (fromMaybe actionType mbEligibleActionType) ELIGIBLE_COUNT entityId periodDays windowSizeDays
   let computedRate =
         if eligibleCnt > 0
           then (actionCnt * 100) `div` eligibleCnt

@@ -125,6 +125,7 @@ buildCounterMapForEntity config entityType actionType mbEligibleActionType entit
   pairs <- forM config.periods $ \period -> do
     values <-
       buildCounterValuesWithEligible
+        config.hashTagEntityId
         entityType
         actionType
         mbEligibleActionType

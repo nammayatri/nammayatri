@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DriverPoolConfig.DriverPoolConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.tripDistance) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe Domain.Types.DriverPoolConfig.DriverPoolConfig))
@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.area area,
       Se.Set Beam.batchSizeOnRide batchSizeOnRide,
       Se.Set Beam.batchSizeOnRideWithStraightLineDistance batchSizeOnRideWithStraightLineDistance,
+      Se.Set Beam.batchingMode batchingMode,
       Se.Set Beam.currentRideTripCategoryValidForForwardBatching currentRideTripCategoryValidForForwardBatching,
       Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
@@ -63,6 +64,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.minRadiusOfSearch minRadiusOfSearch,
+      Se.Set Beam.nextBatchScheduleTime nextBatchScheduleTime,
       Se.Set Beam.onRideBatchSplitConfig onRideBatchSplitConfig,
       Se.Set Beam.onRideRadiusConfig onRideRadiusConfig,
       Se.Set Beam.radiusShrinkValueForDriversOnRide radiusShrinkValueForDriversOnRide,
@@ -92,6 +94,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             area = area,
             batchSizeOnRide = batchSizeOnRide,
             batchSizeOnRideWithStraightLineDistance = batchSizeOnRideWithStraightLineDistance,
+            batchingMode = batchingMode,
             createdAt = createdAt,
             currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
             distanceBasedBatchSplit = distanceBasedBatchSplit,
@@ -116,6 +119,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             minRadiusOfSearch = minRadiusOfSearch,
+            nextBatchScheduleTime = nextBatchScheduleTime,
             onRideBatchSplitConfig = onRideBatchSplitConfig,
             onRideRadiusConfig = onRideRadiusConfig,
             radiusShrinkValueForDriversOnRide = radiusShrinkValueForDriversOnRide,
@@ -142,6 +146,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.area = area,
         Beam.batchSizeOnRide = batchSizeOnRide,
         Beam.batchSizeOnRideWithStraightLineDistance = batchSizeOnRideWithStraightLineDistance,
+        Beam.batchingMode = batchingMode,
         Beam.createdAt = createdAt,
         Beam.currentRideTripCategoryValidForForwardBatching = currentRideTripCategoryValidForForwardBatching,
         Beam.distanceBasedBatchSplit = distanceBasedBatchSplit,
@@ -166,6 +171,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.minRadiusOfSearch = minRadiusOfSearch,
+        Beam.nextBatchScheduleTime = nextBatchScheduleTime,
         Beam.onRideBatchSplitConfig = onRideBatchSplitConfig,
         Beam.onRideRadiusConfig = onRideRadiusConfig,
         Beam.radiusShrinkValueForDriversOnRide = radiusShrinkValueForDriversOnRide,

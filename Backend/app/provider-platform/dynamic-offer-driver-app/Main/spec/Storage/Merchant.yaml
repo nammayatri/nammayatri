@@ -1328,6 +1328,7 @@ TransporterConfig:
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     crossTravelCities: "[Kernel.Types.Beckn.City.City]"
     useSilentFCMForForwardBatch: Bool
+    enableDriverPoolEnrichment: Maybe Bool
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool

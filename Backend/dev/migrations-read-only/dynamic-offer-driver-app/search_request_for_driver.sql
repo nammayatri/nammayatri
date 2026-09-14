@@ -239,3 +239,13 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN preferen
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_auto_accepted boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN batching_mode text ;
+
+
+------- SQL updates -------
+

@@ -32,7 +32,7 @@ import qualified Data.List as DL
 import qualified Data.List as List
 import qualified Data.Map as M
 import qualified Data.Map as Map
-import Domain.Action.UI.Driver (AcceptDynamicOfferFlow, acceptDynamicOfferDriverRequest)
+import Domain.Action.UI.DriverAcceptOffer (AcceptDynamicOfferFlow, acceptDynamicOfferDriverRequest)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -78,7 +78,7 @@ import Lib.Scheduler.Environment
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Types
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum, incrementDriverRequestCount)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
@@ -155,6 +155,7 @@ sendSearchRequestToDrivers ::
     C.MonadCatch m
   ) =>
   Bool ->
+  Bool ->
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -163,7 +164,7 @@ sendSearchRequestToDrivers ::
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
 
   -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
@@ -233,7 +234,11 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   _ <- QSRD.createMany searchRequestsForDrivers
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
-  SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
+  if isTopUpDispatch
+    then do
+      SDP.incrementBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
+      incrementDriverRequestCount dispatchPool searchTry.id
+    else SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
     TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) sentCount
 
@@ -393,6 +398,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
   let searchRequestForDriver =
         SearchRequestForDriver
           { id = guid,
+            batchingMode = searchTry.batchingMode,
             requestId = searchReq.id,
             searchTryId = searchTry.id,
             vehicleCategory = searchTry.vehicleCategory,
