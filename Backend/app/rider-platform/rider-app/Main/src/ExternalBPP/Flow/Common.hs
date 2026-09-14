@@ -221,7 +221,8 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
       logDebug $ "Routes Info Debug: " <> show routesInfo
       let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeInfo.route.color}) routesInfo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
-      stations <- CallAPI.buildStations segments integratedBPPConfig
+      stationsPerSegment <- CallAPI.buildStationsPerSegment segments integratedBPPConfig
+      let stations = concat stationsPerSegment
       (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
       return $
         map
@@ -229,15 +230,15 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
               let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) categories)
                   adultBppItemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) (find (\category -> category.category == ADULT) categories)
                   routeStations =
-                    zipWith
-                      ( \routeSeqNum routeInfo ->
+                    zipWith3
+                      ( \routeSeqNum routeInfo segmentStations ->
                           DRouteStation
                             { routeCode = routeInfo.route.code,
                               routeLongName = routeInfo.route.longName,
                               routeShortName = routeInfo.route.shortName,
                               routeStartPoint = routeInfo.route.startPoint,
                               routeEndPoint = routeInfo.route.endPoint,
-                              routeStations = stations,
+                              routeStations = segmentStations,
                               routeTravelTime = routeInfo.travelTime,
                               routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
                               routePrice = adultPrice,
@@ -247,6 +248,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                       )
                       [1 ..]
                       routesInfo
+                      stationsPerSegment
                in DQuote
                     { bppItemId = adultBppItemId,
                       routeCode = (NE.head fareRoute.segments).routeCode,
