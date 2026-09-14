@@ -187,6 +187,7 @@ data RiderConfigT f = RiderConfigT
     sensitiveWordsForExactMatch :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     serviceTierRelationshipCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    silentReallocationWindowSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     singleModeWalkSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     sosTrackingLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),

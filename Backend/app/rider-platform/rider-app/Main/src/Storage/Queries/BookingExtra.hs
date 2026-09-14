@@ -285,6 +285,15 @@ findByTransactionIdAndStatus transactionId statusList =
     Nothing
     <&> listToMaybe
 
+findByTransactionIdAndStatusWithKVAndDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
+findByTransactionIdAndStatusWithKVAndDB transactionId statusList =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.riderTransactionId $ Se.Eq transactionId,
+      Se.Is BeamB.status $ Se.In statusList
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
+
 updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> m ()
 updateCommission rbId mbCommission = do
   now <- getCurrentTime

@@ -75,6 +75,7 @@ data RiderJobType
   | PassExpiryReminderMaster
   | SettlementReportIngestion
   | ReconcileRewardInflight
+  | SilentReallocationExpiry
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -121,6 +122,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
+  restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -465,3 +467,18 @@ data ReconcileRewardInflightJobData = ReconcileRewardInflightJobData
 instance JobInfoProcessor 'ReconcileRewardInflight
 
 type instance JobContent 'ReconcileRewardInflight = ReconcileRewardInflightJobData
+
+-- | Fires when a silent reallocation window ends. Sends the reallocation push that was
+-- held back on estimate-repetition, unless the window was already cleared by a new
+-- ride assignment or a rider cancel.
+data SilentReallocationExpiryJobData = SilentReallocationExpiryJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    personId :: Id Person,
+    bookingId :: Id Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SilentReallocationExpiry
+
+type instance JobContent 'SilentReallocationExpiry = SilentReallocationExpiryJobData
