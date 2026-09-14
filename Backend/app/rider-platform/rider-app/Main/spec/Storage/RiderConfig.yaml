@@ -107,6 +107,8 @@ RiderConfig:
     metroFareCachingAllowed: Maybe Bool
     suburbanFareCachingAllowed: Maybe Bool
     busFareCachingAllowed: Maybe Bool
+    enableSubwayFrfsSearch: Maybe Bool
+    enableMetroFrfsSearch: Maybe Bool
     ptCircuitBreakerConfig: Maybe Value
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool

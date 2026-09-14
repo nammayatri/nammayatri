@@ -348,20 +348,24 @@ getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
   return (viaPoints, changeOver, rawChangeOver)
 
 buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [DStation]
-buildStations basicRouteDetails integratedBPPConfig = do
+buildStations basicRouteDetails integratedBPPConfig = concat <$> buildStationsPerSegment basicRouteDetails integratedBPPConfig
+
+-- | One station list per segment, in segment order. START/TRANSIT/END are still decided
+-- against the whole route, so an interchange stays TRANSIT on both sides of the change and
+-- concatenating the result reproduces exactly what 'buildStations' returns.
+buildStationsPerSegment :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [[DStation]]
+buildStationsPerSegment basicRouteDetails integratedBPPConfig = do
   let lastStopIndex = length basicRouteDetails - 1
-  stationsArray <- do
-    mapWithIndexM
-      ( \idx routeDetail -> do
-          let startStopType = if idx == 0 then START else TRANSIT
-          let endStopType = if idx == lastStopIndex then END else TRANSIT
-          fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
-          toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
-          stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
-          return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType routeDetail.color)
-      )
-      basicRouteDetails
-  return $ concat stationsArray
+  mapWithIndexM
+    ( \idx routeDetail -> do
+        let startStopType = if idx == 0 then START else TRANSIT
+        let endStopType = if idx == lastStopIndex then END else TRANSIT
+        fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
+        toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
+        stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
+        return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType routeDetail.color)
+    )
+    basicRouteDetails
   where
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 

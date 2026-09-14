@@ -30,6 +30,11 @@ type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "
 
 type StopsByGtfsIdFuzzySearchAPI = "stops" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
+-- Stop codes contain a @|@, which is not URL safe; servant percent-encodes the query params
+-- for us. The server also takes a @date@, omitted deliberately: it defaults to today in IST,
+-- which is what a live search wants, and sending one from here could only disagree with it.
+type MetroHopAPI = "metro" :> "hop" :> Capture "gtfs_id" Text :> QueryParam "from" Text :> QueryParam "to" Text :> Get '[JSON] MetroHopResponse
+
 type VehicleServiceTypeAPI = "vehicle" :> Capture "gtfs_id" Text :> "service-type" :> Capture "vehicle_number" Text :> QueryParam "passVerifyReq" Bool :> Get '[JSON] VehicleServiceTypeResponse
 
 type VehicleMetadataAPI = "vehicle" :> Capture "gtfs_id" Text :> "metadata" :> Capture "vehicle_number" Text :> QueryParam "passVerifyReq" Bool :> Get '[JSON] VehicleMetadataResponse
@@ -103,6 +108,9 @@ nandiStopsByGtfsIdAndStopCodeAPI = Proxy
 
 nandiStopsByGtfsIdFuzzySearchAPI :: Proxy StopsByGtfsIdFuzzySearchAPI
 nandiStopsByGtfsIdFuzzySearchAPI = Proxy
+
+nandiMetroHopAPI :: Proxy MetroHopAPI
+nandiMetroHopAPI = Proxy
 
 nandiVehicleServiceTypeAPI :: Proxy VehicleServiceTypeAPI
 nandiVehicleServiceTypeAPI = Proxy
@@ -196,6 +204,9 @@ getNandiStopsByGtfsIdAndStopCode = ET.client nandiStopsByGtfsIdAndStopCodeAPI
 
 getNandiStopsByGtfsIdFuzzySearch :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiStopsByGtfsIdFuzzySearch = ET.client nandiStopsByGtfsIdFuzzySearchAPI
+
+getNandiMetroHop :: Text -> Maybe Text -> Maybe Text -> ET.EulerClient MetroHopResponse
+getNandiMetroHop = ET.client nandiMetroHopAPI
 
 getNandiVehicleServiceType :: Text -> Text -> Maybe Bool -> ET.EulerClient VehicleServiceTypeResponse
 getNandiVehicleServiceType = ET.client nandiVehicleServiceTypeAPI
