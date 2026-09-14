@@ -22,7 +22,7 @@ data GetAvailableServiceDetailsReq = GetAvailableServiceDetailsReq
   { rqStartPlaceId :: Text,
     rqEndPlaceId :: Text,
     rqJourneyDate :: Day,
-    rqCounterCode :: Text,
+    rqCounterCode :: Maybe Text,
     rqTotalSeats :: Int,
     rqUserName :: Text,
     rqUserId :: Text
@@ -35,7 +35,7 @@ instance ToXML GetAvailableServiceDetailsReq where
   toXML req =
     element (nm "GetAvailableServiceDetails") $
       element (XML.Name "arg0" Nothing Nothing) $ do
-        el "counterCode" req.rqCounterCode
+        whenJust req.rqCounterCode (el "counterCode")
         el "endPlaceID" req.rqEndPlaceId
         el "journeyDate" (formatJourneyDate req.rqJourneyDate)
         el "journeyFromTime" "00:00"

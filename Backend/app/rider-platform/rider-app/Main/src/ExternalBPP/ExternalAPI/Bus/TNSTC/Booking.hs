@@ -41,7 +41,7 @@ el :: Text -> Text -> XML
 el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
 
 data GetPickupPointsReq = GetPickupPointsReq
-  { rqppCounterCode :: Text,
+  { rqppCounterCode :: Maybe Text,
     rqppJourneyDate :: Day,
     rqppServiceId :: Text,
     rqppPlaceId :: Text,
@@ -52,7 +52,7 @@ instance ToXML GetPickupPointsReq where
   toXML req =
     element (op "GetAllServicePickupPointsByServiceID") $
       element arg0 $ do
-        el "counterCode" req.rqppCounterCode
+        whenJust req.rqppCounterCode (el "counterCode")
         el "franchiseeUser" "false"
         el "journeyDate" (fmtDate req.rqppJourneyDate)
         el "serviceID" req.rqppServiceId
@@ -61,7 +61,7 @@ instance ToXML GetPickupPointsReq where
 
 data AddBlockSeatsReq = AddBlockSeatsReq
   { rqbsClassId :: Text,
-    rqbsCounterCode :: Text,
+    rqbsCounterCode :: Maybe Text,
     rqbsCreatedBy :: Text,
     rqbsEndPlaceId :: Text,
     rqbsJourneyDate :: Day,
@@ -79,7 +79,7 @@ instance ToXML AddBlockSeatsReq where
     element (op "AddBlockSeats") $
       element arg0 $ do
         el "classID" req.rqbsClassId
-        el "counterCode" req.rqbsCounterCode
+        whenJust req.rqbsCounterCode (el "counterCode")
         el "createdBy" req.rqbsCreatedBy
         el "endPlaceID" req.rqbsEndPlaceId
         el "franchiseeUser" "false"
@@ -99,7 +99,7 @@ data GetTotalFareReq = GetTotalFareReq
     rqtfChildFemale :: Int,
     rqtfClassId :: Text,
     rqtfConcessionTypeId :: Text,
-    rqtfCounterCode :: Text,
+    rqtfCounterCode :: Maybe Text,
     rqtfCreatedBy :: Text,
     rqtfEndPlaceCode :: Text,
     rqtfEndPlaceId :: Text,
@@ -125,7 +125,7 @@ instance ToXML GetTotalFareReq where
         el "childMale" (show req.rqtfChildMale)
         el "classID" req.rqtfClassId
         el "concessionTypeId" req.rqtfConcessionTypeId
-        el "counterCode" req.rqtfCounterCode
+        whenJust req.rqtfCounterCode (el "counterCode")
         el "createdBy" req.rqtfCreatedBy
         el "endPlaceCode" req.rqtfEndPlaceCode
         el "endPlaceID" req.rqtfEndPlaceId
@@ -168,7 +168,7 @@ data ConfirmAdvSeatBookingReq = ConfirmAdvSeatBookingReq
     rqcTotalFare :: Text,
     rqcClassId :: Text,
     rqcConcessionTypeId :: Text,
-    rqcCounterCode :: Text,
+    rqcCounterCode :: Maybe Text,
     rqcCreatedBy :: Text,
     rqcEndPlaceCode :: Text,
     rqcEndPlaceId :: Text,
@@ -206,7 +206,7 @@ instance ToXML ConfirmAdvSeatBookingReq where
         el "childMale" (show req.rqcChildMale)
         el "classID" req.rqcClassId
         el "concessionTypeId" req.rqcConcessionTypeId
-        el "counterCode" req.rqcCounterCode
+        whenJust req.rqcCounterCode (el "counterCode")
         el "createdBy" req.rqcCreatedBy
         el "emailId" req.rqcEmailId
         el "endPlaceCode" req.rqcEndPlaceCode
@@ -232,7 +232,7 @@ instance ToXML ConfirmAdvSeatBookingReq where
         el "userName" req.rqcUserName
         el "WSRefNo" req.rqcWsRefNo
       element (XML.Name "arg1" Nothing Nothing) $ do
-        el "counterCode" req.rqcCounterCode
+        whenJust req.rqcCounterCode (el "counterCode")
         el "createdBy" req.rqcCreatedBy
         el "franchiseeUser" "false"
         el "idProofLookupId" req.rqcIdProofLookupId

@@ -164,16 +164,13 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       searchDetail <-
         tnstcSearchDetail
           & fromMaybeM (InvalidRequest "journeyDate is required for TNSTC search")
-      counterCode <-
-        config'.counterCode
-          & fromMaybeM (InternalError "TNSTC counterCode not configured")
       services <-
         TNSTCServices.getAvailableServiceDetails config' $
           TNSTCServices.GetAvailableServiceDetailsReq
             { rqStartPlaceId = startStopCode,
               rqEndPlaceId = endStopCode,
               rqJourneyDate = searchDetail.journeyDate,
-              rqCounterCode = counterCode,
+              rqCounterCode = config'.counterCode,
               rqTotalSeats = searchDetail.quantity,
               rqUserName = config'.username,
               rqUserId = riderId.getId
