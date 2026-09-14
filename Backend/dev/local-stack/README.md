@@ -292,6 +292,26 @@ international payment card.
 | Served by | `tileserver-gl` on `:8035` — tiles, style, and fonts from one origin |
 | Cost | **€0**, no key, no request limit |
 
+### The map in Arabic — `tiles-arabic.sh`, since 2026-09-14
+
+The image's bundled **"Noto Sans Regular" has no Arabic glyphs** — its
+`1536-1791.pbf` range is 32 bytes — so every Arabic label drew *nothing*,
+silently, although the tiles always carried `name:ar` (place, poi,
+transportation_name, water_name). `tiles-arabic.sh` switches the server from
+`--file` to `--config /config/config.json` (`./tiles-config`):
+
+| | |
+|---|---|
+| Fonts | OpenMapTiles font pack v2.0 — same family names, **96 kB** of Arabic |
+| `basic-preview` | the bundled style, unchanged ids and URLs — older APKs see no difference |
+| `movin-ar` | the same style, its 7 label layers `coalesce(name:ar, name)` — what the app loads when it is in Arabic (`tileStyleUrl()`) |
+
+It proves the new setup on a throwaway container on `127.0.0.1:8036` before the
+live server is touched, edits the compose file **in place** with a backup, and
+rolls back on its own if the public check fails. `bash tiles-arabic.sh
+rollback` returns to `--file`. The mbtiles name goes into `config.json` from
+`MAP_COUNTRY` — **after changing `MAP_COUNTRY`, run it again.**
+
 Verified by fetching tiles at computed coordinates — data inside the country,
 nothing outside it:
 

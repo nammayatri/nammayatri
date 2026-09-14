@@ -639,14 +639,22 @@ services:
     # Now the public HTTPS path, so one URL works from the phone, the browser
     # demos and a release APK alike. Override TILES_PUBLIC_URL to point a local
     # stack back at itself.
+    #
+    # Config mode since 2026-09-14, for the map in Arabic: ./tiles-config holds
+    # a font pack WITH Arabic glyphs (the image's bundled one has none) and two
+    # styles — `basic-preview` (unchanged ids and URLs) and `movin-ar` (labels
+    # read name:ar first). Built by ./tiles-arabic.sh, which also writes the
+    # mbtiles name from MAP_COUNTRY into config.json — re-run it after changing
+    # MAP_COUNTRY. `bash tiles-arabic.sh rollback` returns to --file mode.
     command: >-
-      --file /data/${MAP_COUNTRY:-algeria}.mbtiles
+      --config /config/config.json
       --port 8080
       --public_url ${TILES_PUBLIC_URL:-https://api.169-58-139-65.sslip.io/tiles/}
     ports:
       - "${BIND_ADDR:-0.0.0.0}:8035:8080"
     volumes:
       - ny-tiles-data:/data
+      - ./tiles-config:/config:ro
     restart: unless-stopped
 
   # Browser view of the database, for demos and screenshots. Nothing depends on
