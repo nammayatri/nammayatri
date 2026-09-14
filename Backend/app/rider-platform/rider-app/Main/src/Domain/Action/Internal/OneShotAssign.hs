@@ -25,7 +25,6 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types
-import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
