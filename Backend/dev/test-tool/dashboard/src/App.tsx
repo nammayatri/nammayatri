@@ -10,6 +10,7 @@ import { ConfigSyncPanel } from './components/ConfigSyncPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import { DialogHost } from './components/Dialogs';
+import { QaRunViewer } from './components/QaRunViewer';
 import axios from 'axios';
 import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog, startNewCoverageRun } from './services/api';
 import { buildApiCatalog } from './api-catalog';
@@ -981,6 +982,7 @@ function App() {
   return (
     <div className="app">
       <DialogHost />
+      <QaRunViewer />
       <div className="main">
         <div className="mode-tabs">
           <span className="app-brand" title="Full Stack Dev Box">
