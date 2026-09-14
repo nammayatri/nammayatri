@@ -27,10 +27,6 @@ import qualified Lib.Yudhishthira.Types
 import Servant
 import Tools.Auth.Api
 
--- Bare route (no merchant/city capture): a single request can span multiple
--- merchants, each with its own city list, so merchant identity lives entirely
--- in the request body (Lib.Yudhishthira.Types.MerchantCitiesEntry) instead of
--- the URL. Mirrors API.SpecialZone's shape for the same reason.
 type API =
   "nammaTag" :> "appDynamicLogic" :> "bulkUpsertLogicRollout"
     :> ApiAuth

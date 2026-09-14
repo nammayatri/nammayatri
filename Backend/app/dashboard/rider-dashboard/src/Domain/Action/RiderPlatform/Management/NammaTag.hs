@@ -164,7 +164,7 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout apiTokenInfo req = do
                 Kernel.Prelude.Left (e :: SomeException) ->
                   Kernel.Prelude.pure (Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityIdText (show e)))
                 Kernel.Prelude.Right Kernel.Types.APISuccess.Success ->
-                  Kernel.Prelude.pure (Kernel.Prelude.Right (Lib.Yudhishthira.Types.BulkRolloutCitySuccess entry.merchantShortId cityIdText))
+                  Kernel.Prelude.pure (Kernel.Prelude.Right (entry.merchantShortId <> ":" <> cityIdText))
   let flatResults = Kernel.Prelude.concat results
   Kernel.Prelude.pure
     Lib.Yudhishthira.Types.BulkLogicRolloutResult
