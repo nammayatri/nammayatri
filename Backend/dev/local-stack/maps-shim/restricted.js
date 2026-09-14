@@ -2,9 +2,13 @@
 /**
  * Who dispatch should skip, published where the driver binary can read it.
  *
- * ── The rule, from the client on 2026-08-26 ────────────────────────────────
- * A driver who has not paid **stays online**, but a request only reaches him
- * when no paying driver is in the pool. Plus a cap on rides per paid period:
+ * ── The rule, from the client on 2026-09-14 ────────────────────────────────
+ * **No top-up, no work.** The wallet holds only what a driver loads through
+ * Chargily or Moosyl -- never ride money, Movin takes 0 % on rides -- and a
+ * driver on this list is never offered a job (`movinOnlyPaying`), is refused
+ * going online and accepting by the auth guard, and is taken offline by the
+ * app. It replaced the 2026-08-26 rule, under which he still got a request
+ * when no paying driver was in the pool. Plus a cap on rides per paid day:
  * past it, he is treated the same way.
  *
  * ── Why the policy lives here and not in the binary ────────────────────────
@@ -49,6 +53,13 @@ const REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT || 6379);
 /** The key the binary reads, prefix included. See the header. */
 const KEY = 'dynamic-offer-driver-app:movin:restricted';
+/**
+ * The same list under the name the HARD gate reads (binary built 2026-09-14,
+ * `movinOnlyPaying`: an unpaid driver is never offered a job). Both are written
+ * so the old binary and the new one each find their key during the swap, and a
+ * rollback needs nothing here.
+ */
+const KEY_UNPAID = 'dynamic-offer-driver-app:movin:unpaid';
 
 /**
  * Who owes us something.
@@ -127,10 +138,10 @@ async function compute(pool) {
  * single SET, and the protocol for one command is ten lines. Written as an
  * array of bulk strings, which is the only form redis-cli itself uses.
  */
-function publish(ids) {
+function publish(key, ids) {
   return new Promise((resolve) => {
     const value = JSON.stringify(ids);
-    const parts = ['SET', KEY, value];
+    const parts = ['SET', key, value];
     const wire =
       `*${parts.length}\r\n` +
       parts.map((p) => `$${Buffer.byteLength(p)}\r\n${p}\r\n`).join('');
@@ -173,7 +184,9 @@ async function refresh(pool, why = 'timer') {
     console.error('[restricted] query failed, keeping the last published list:', e.message);
     return null;
   }
-  const ok = await publish(ids);
+  const old = await publish(KEY, ids);
+  const hard = await publish(KEY_UNPAID, ids);
+  const ok = old && hard;
   console.log(`[restricted] ${ids.length} driver(s) restricted (${why})${ok ? '' : ' -- NOT published'}`);
   return ids;
 }
@@ -245,4 +258,4 @@ async function ridesInPeriod(pool, driverId) {
   };
 }
 
-module.exports = { start, refresh, ridesInPeriod, RIDE_CAP, KEY };
+module.exports = { start, refresh, ridesInPeriod, RIDE_CAP, KEY, KEY_UNPAID };

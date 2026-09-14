@@ -61,6 +61,18 @@ for exe in rider-app-exe dynamic-offer-driver-app-exe; do
   fi
 done
 
+say "is the hard wallet gate inside the driver binary? (2026-09-14)"
+# `movinOnlyPaying` reads the key `movin:unpaid`; the old soft rule read
+# `movin:restricted`. The key string is the only thing in the binary that tells
+# the two apart, so it is the proof.
+nu=$(docker run --rm --entrypoint sh "$IMG" -c "grep -a -c 'movin:unpaid' /opt/app/dynamic-offer-driver-app-exe" 2>/dev/null || echo 0)
+if [ "${nu:-0}" -gt 0 ]; then
+  ok "movin:unpaid x$nu -- an unpaid driver is never offered a job"
+else
+  bad "movin:unpaid not in the driver binary -- still the soft rule, NOT swapping"
+  exit 1
+fi
+
 say "rollback tag, then swap"
 RB="rollback-$(date -u +%Y%m%d-%H%M)"
 docker tag ny-rider:patched "ny-rider:$RB" && ok "previous image kept as ny-rider:$RB"

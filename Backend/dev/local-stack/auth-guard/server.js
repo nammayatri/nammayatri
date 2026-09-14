@@ -627,6 +627,53 @@ const OPEN_COUNTRIES = new Set(
   (process.env.OPEN_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
 );
 
+/**
+ * ── The wallet gate, 2026-09-14 ─────────────────────────────────────────────
+ * The client's rule: **no top-up, no work.** The wallet holds only what a
+ * driver loads through Chargily or Moosyl -- never ride money, Movin takes 0 %
+ * on rides -- so a driver without the credit for a day (and no day already
+ * paid for) may neither go online nor accept a ride, however much he earned.
+ *
+ * The app refuses as well, but only here does it hold for an older APK too.
+ * Asked of maps-shim with the driver's OWN token, so it is his wallet and
+ * nobody else's, and `canWork` is the same expression dispatch uses.
+ *
+ * Fails OPEN: a wallet we cannot read is our failure, and it must never be
+ * what grounds a driver who has paid. Dispatch still skips him if he is unpaid.
+ */
+const WALLET_URL = strip(process.env.WALLET_URL || 'http://127.0.0.1:8030');
+
+/** Is this request a driver starting to work: going online, or accepting? */
+function isWork(pathname, url, body) {
+  if (pathname === '/ui/driver/setActivity') {
+    return new URLSearchParams(url.split('?')[1] || '').get('active') === 'true';
+  }
+  if (pathname === '/ui/driver/searchRequest/quote/respond') {
+    try {
+      return JSON.parse(body.toString('utf8')).response === 'Accept';
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** true / false from the wallet; null when it could not be asked. */
+async function walletAllows(token) {
+  if (!token) return null;
+  try {
+    const r = await fetch(`${WALLET_URL}/wallet/status`, {
+      headers: { token: String(token) },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!r.ok) return null;
+    const w = await r.json();
+    return typeof w.canWork === 'boolean' ? w.canWork : null;
+  } catch {
+    return null;
+  }
+}
+
 async function handle(req, res) {
   const pathname = req.url.split('?')[0];
 
@@ -961,6 +1008,14 @@ async function handle(req, res) {
     }
     res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
     return res.end(up.text);
+  }
+
+  /* ── the wallet gate: see `isWork` above ────────────────────────────────── */
+  if (route.name === 'driver' && req.method === 'POST' && isWork(pathname, req.url, body)) {
+    if ((await walletAllows(req.headers.token)) === false) {
+      console.log(`[guard] driver: ${pathname} refused, no credit for the day`);
+      return send(res, 403, refusal('WALLET_EMPTY'));
+    }
   }
 
   /* ── everything else: forwarded unchanged ───────────────────────────────── */
