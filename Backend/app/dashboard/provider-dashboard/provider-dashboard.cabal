@@ -32,6 +32,7 @@ library
       API.Fleet.Registration
       API.Person
       API.ProviderPlatform
+      API.ProviderPlatform.BulkLogicRollout
       API.ProviderPlatform.DriverInfoByPhoneNumber
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth

@@ -852,6 +852,43 @@ data LogicRolloutObject = LogicRolloutObject
 instance HideSecrets LogicRolloutObject where
   hideSecrets = identity
 
+data MerchantCitiesEntry = MerchantCitiesEntry
+  { merchantShortId :: Text,
+    cities :: [Text]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkLogicRolloutReq = BulkLogicRolloutReq
+  { merchantsAndCities :: [MerchantCitiesEntry],
+    rollout :: LogicRolloutReq
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutReq where
+  hideSecrets = identity
+
+data BulkRolloutCityFailure = BulkRolloutCityFailure
+  { merchantShortId :: Text,
+    cityId :: Text,
+    reason :: Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkRolloutCitySuccess = BulkRolloutCitySuccess
+  { merchantShortId :: Text,
+    cityId :: Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkLogicRolloutResult = BulkLogicRolloutResult
+  { succeeded :: [BulkRolloutCitySuccess],
+    failures :: [BulkRolloutCityFailure]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutResult where
+  hideSecrets = identity
+
 data RolloutVersion = RolloutVersion
   { version :: Int,
     rolloutPercentage :: Int,
