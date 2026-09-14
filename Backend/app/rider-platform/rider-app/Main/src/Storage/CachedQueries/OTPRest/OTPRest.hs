@@ -153,7 +153,7 @@ getRouteStopMappingByRouteCode ::
   m [RouteStopMapping]
 getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache ["RSM", routeCode, integratedBPPConfig.id.getId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
@@ -166,7 +166,7 @@ getRouteStopMappingByRouteCodeInMem ::
   m [RouteStopMappingInMemoryServer]
 getRouteStopMappingByRouteCodeInMem routeCode integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   return routeStopMapping'
 
@@ -175,9 +175,17 @@ getRouteStopMappingByStopCode ::
   Text ->
   IntegratedBPPConfig ->
   m [RouteStopMapping]
-getRouteStopMappingByStopCode stopCode integratedBPPConfig = do
+getRouteStopMappingByStopCode = getRouteStopMappingByStopCodeWithClusters Nothing
+
+getRouteStopMappingByStopCodeWithClusters ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe Bool ->
+  Text ->
+  IntegratedBPPConfig ->
+  m [RouteStopMapping]
+getRouteStopMappingByStopCodeWithClusters mbAllowClusters stopCode integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey Nothing (Just stopCode)
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey Nothing (Just stopCode) mbAllowClusters
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
@@ -211,7 +219,7 @@ getRouteStopMappingByStopCodeAndRouteCode ::
   m [RouteStopMapping]
 getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) (Just stopCode)
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) (Just stopCode) Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping

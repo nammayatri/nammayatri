@@ -860,5 +860,6 @@ apis:
         stopCode: Text
       query:
         routeCodes: Text
+        allowClusters: Bool
       response:
         type: "[PassingRoutes]"
