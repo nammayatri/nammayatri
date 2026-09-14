@@ -349,25 +349,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
-  OU.TollCrossedBuildReq OU.DTollCrossedBuildReq {..} -> do
-    let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.TOLL_CROSSED) isValueAddNP Nothing False 0
-    pure $
-      Spec.Order
-        { orderId = Just ride.bookingId.getId,
-          orderFulfillments = Just [fulfillment],
-          orderBilling = Nothing,
-          orderCancellation = Nothing,
-          orderCancellationTerms = Nothing,
-          orderItems = Nothing,
-          orderPayments = Nothing,
-          orderProvider = Nothing,
-          orderQuote = Nothing,
-          orderTags = Nothing,
-          orderStatus = Nothing,
-          orderCreatedAt = Just booking.createdAt,
-          orderUpdatedAt = Just booking.updatedAt
-        }
+  OU.TollCrossedBuildReq OU.DTollEventBuildReq {..} -> mkTollEventOrder Event.TOLL_CROSSED bookingDetails
+  OU.TollConfirmationRequiredBuildReq OU.DTollEventBuildReq {..} -> mkTollEventOrder Event.TOLL_CONFIRMATION_REQUIRED bookingDetails
   OU.RideEstimatedEndTimeRangeBuildReq OU.DRideEstimatedEndTimeRangeReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let estimatedEndTimeRangeTagGroup = Utils.mkEstimatedEndTimeRangeTagGroupV2 ride.estimatedEndTimeRange
@@ -545,3 +528,24 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           orderCreatedAt = Nothing,
           orderUpdatedAt = Nothing
         }
+
+-- Toll events carry only the fulfillment; TOLL_CONFIRMATION_REQUIRED relies on ride.endOtp being set so mkFulfillmentV2 puts it on the END stop.
+mkTollEventOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Event.OnUpdateEventType -> BookingDetails -> m Spec.Order
+mkTollEventOrder event BookingDetails {..} = do
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show event) isValueAddNP Nothing False 0
+  pure $
+    Spec.Order
+      { orderId = Just ride.bookingId.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing,
+        orderTags = Nothing,
+        orderStatus = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }

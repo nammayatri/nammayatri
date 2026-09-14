@@ -51,6 +51,7 @@ mkPersist
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
+      enableTollConfirmation Bool Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe
       fareSettlementType Domain.FareSettlementType Maybe

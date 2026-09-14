@@ -191,10 +191,7 @@ parseRideStartedEvent order msgId txnId = do
   bookingDetails <- parseBookingDetails order msgId
   stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
   start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
-  let endStopOtp =
-        Utils.getDropLocation stops
-          >>= (.stopAuthorization)
-          >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
+  let endStopOtp = getEndStopOtp stops
   let rideStartTime = start.stopTime >>= (.timeTimestamp)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
@@ -211,6 +208,13 @@ parseRideStartedEvent order msgId txnId = do
         startOdometerReading,
         ..
       }
+
+-- The BPP puts the ride end OTP on the END stop authorization token.
+getEndStopOtp :: [Spec.Stop] -> Maybe Text
+getEndStopOtp stops =
+  Utils.getDropLocation stops
+    >>= (.stopAuthorization)
+    >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
 
 getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Tag.BecknTagGroup -> Tag.BecknTag -> Tag.BecknTag -> Maybe Maps.LatLong
 getLocationFromTagV2 tagGroup key latKey lonKey =

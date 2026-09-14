@@ -89,6 +89,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ 
             DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking
             DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
             DOnUpdate.OUValidatedTollCrossedEventReq req -> return req.booking
+            DOnUpdate.OUValidatedTollConfirmationRequiredEventReq req -> return req.booking
             DOnUpdate.OUValidatedDestinationReachedReq req -> return req.booking
             DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
             DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking

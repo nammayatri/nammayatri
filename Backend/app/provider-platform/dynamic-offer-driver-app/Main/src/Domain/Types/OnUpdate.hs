@@ -46,7 +46,8 @@ data OnUpdateBuildReq
   | PhoneCallCompletedBuildReq DPhoneCallCompletedReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
-  | TollCrossedBuildReq DTollCrossedBuildReq
+  | TollCrossedBuildReq DTollEventBuildReq
+  | TollConfirmationRequiredBuildReq DTollEventBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
   | ParcelImageUploadedBuildReq DParcelImageUploadedReq
@@ -104,7 +105,7 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
     updateType :: UpdateType
   }
 
-newtype DTollCrossedBuildReq = DTollCrossedBuildReq
+newtype DTollEventBuildReq = DTollEventBuildReq
   { bookingDetails :: BookingDetails
   }
 

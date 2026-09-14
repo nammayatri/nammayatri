@@ -34,6 +34,7 @@ module Domain.Action.Beckn.OnUpdate
     EditDestConfirmUpdateReq (..),
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
+    TollConfirmationRequiredEventReq (..),
     PhoneCallRequestEventReq (..),
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
@@ -130,6 +131,7 @@ data OnUpdateReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
+  | OUTollConfirmationRequiredEventReq TollConfirmationRequiredEventReq
   | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUPhoneCallCompletedEventReq PhoneCallCompletedEventReq
   | OUEditDestError EditDestErrorReq
@@ -156,6 +158,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
+  | OUValidatedTollConfirmationRequiredEventReq ValidatedTollConfirmationRequiredEventReq
   | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedPhoneCallCompletedEventReq ValidatedPhoneCallCompletedEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
@@ -356,6 +359,19 @@ newtype TollCrossedEventReq = TollCrossedEventReq
 data ValidatedTollCrossedEventReq = ValidatedTollCrossedEventReq
   { booking :: DRB.Booking,
     person :: DPerson.Person
+  }
+
+-- The driver could not prove the estimated toll; the rider consents by sharing this end OTP.
+data TollConfirmationRequiredEventReq = TollConfirmationRequiredEventReq
+  { transactionId :: Text,
+    endOtp :: Text
+  }
+
+data ValidatedTollConfirmationRequiredEventReq = ValidatedTollConfirmationRequiredEventReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    person :: DPerson.Person,
+    endOtp :: Text
   }
 
 data PhoneCallRequestEventReq = PhoneCallRequestEventReq
@@ -596,6 +612,12 @@ onUpdate = \case
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+  OUValidatedTollConfirmationRequiredEventReq ValidatedTollConfirmationRequiredEventReq {..} -> do
+    QRide.updateEndOtp (Just endOtp) ride.id
+    mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CONFIRMATION_REQUIRED" Nothing Nothing person.language booking.configInExperimentVersions
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
@@ -739,6 +761,11 @@ validateRequest = \case
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
+  OUTollConfirmationRequiredEventReq TollConfirmationRequiredEventReq {..} -> do
+    booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
+    ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId - " <> booking.id.getId)
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    return $ OUValidatedTollConfirmationRequiredEventReq ValidatedTollConfirmationRequiredEventReq {..}
   OUPhoneCallRequestEventReq PhoneCallRequestEventReq {..} -> do
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)

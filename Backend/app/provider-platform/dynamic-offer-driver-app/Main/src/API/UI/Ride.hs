@@ -162,6 +162,7 @@ data StartRideReq = StartRideReq
 
 data EndRideReq = EndRideReq
   { endRideOtp :: Maybe Text,
+    endWithoutToll :: Maybe Bool,
     point :: LatLong,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
