@@ -298,9 +298,7 @@ data Context = Context
     -- | The encryption public key of the sender
     contextKey :: Maybe Text,
     -- |
-    contextCity :: Maybe Text,
-    -- |
-    contextCountry :: Maybe Text,
+    contextLocation :: Maybe Location,
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
     contextMessageId :: Maybe Text,
     -- | Time of request generation in RFC3339 format
@@ -309,8 +307,8 @@ data Context = Context
     contextTransactionId :: Maybe Text,
     -- | The duration in ISO8601 format after timestamp for which this message holds valid
     contextTtl :: Maybe Text,
-    -- | Version of Beckn core API specification being used.
-    contextCoreVersion :: Maybe Text
+    -- | Version of transaction protocol being used by the sender.
+    contextVersion :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -335,13 +333,12 @@ optionsContext =
         ("contextBppUri", "bpp_uri"),
         ("contextDomain", "domain"),
         ("contextKey", "key"),
-        ("contextCity", "city"),
-        ("contextCountry", "country"),
+        ("contextLocation", "location"),
         ("contextMessageId", "message_id"),
         ("contextTimestamp", "timestamp"),
         ("contextTransactionId", "transaction_id"),
         ("contextTtl", "ttl"),
-        ("contextCoreVersion", "core_version")
+        ("contextVersion", "version")
       ]
 
 -- | Describes a country

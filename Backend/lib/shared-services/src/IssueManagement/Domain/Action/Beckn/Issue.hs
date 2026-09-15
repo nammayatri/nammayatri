@@ -14,6 +14,7 @@
 
 module IssueManagement.Domain.Action.Beckn.Issue where
 
+import Control.Applicative ((<|>))
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec hiding (IssueSubCategory)
 import IGM.Utils (mkOrgName)
@@ -70,11 +71,11 @@ emptyOffUsDetails =
 
 data DIssue = DIssue
   { issueId :: Text,
-    issueCategory :: Text,
+    issueCategory :: Maybe Text,
     issueSubCategory :: Maybe Spec.IssueSubCategory,
-    issueTypeText :: Text,
+    issueTypeText :: Maybe Text,
     issueStatusText :: Text,
-    bookingId :: Text,
+    bookingId :: Maybe Text,
     issueRaisedBy :: Maybe Text,
     customerName :: Maybe Text,
     customerEmail :: Maybe Text,
@@ -112,7 +113,7 @@ data IssueRes = IssueRes
 
 data ValidatedDIssue = ValidatedDIssue
   { issueId :: Text,
-    issueCategory :: Text,
+    issueCategory :: Maybe Text,
     issueSubCategory :: Maybe Spec.IssueSubCategory,
     issueType :: DIGM.IssueType,
     issueStatus :: DIGM.Status,
@@ -141,15 +142,20 @@ validateRequest ::
   DIssue ->
   ServiceHandle m ->
   m ValidatedDIssue
-validateRequest merchantId dIssue@DIssue {..} iHandle = do
+validateRequest merchantId DIssue {issueCategory = mbIssueCategory, issueTypeText = mbIssueTypeText, bookingId = mbBookingId, ..} iHandle = do
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  booking <- iHandle.findByBookingId (Id dIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist dIssue.bookingId)
+  mbExistingIssue <- QIGM.findByPrimaryKey (Id issueId)
+  let resolvedBookingId = mbBookingId <|> ((.bookingId) <$> mbExistingIssue)
+  bookingIdText <- resolvedBookingId & fromMaybeM (InvalidRequest "BookingId not found")
+  booking <- iHandle.findByBookingId (Id bookingIdText) >>= fromMaybeM (BookingDoesNotExist bookingIdText)
   merchantOperatingCity <- iHandle.findMOCityById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  let resolvedIssueTypeText = mbIssueTypeText <|> (show . (.issueType) <$> mbExistingIssue)
+      issueCategory = mbIssueCategory <|> (mbExistingIssue >>= (.igmCategory))
   issueStatus <-
     if isValueAddNP
-      then mapStatusAndTypeToStatus issueStatusText issueTypeText
+      then mapStatusAndTypeToStatus issueStatusText (fromMaybe "ISSUE" resolvedIssueTypeText)
       else mapOffUsStatus issueStatusText
-  issueType <- mapType issueTypeText
+  issueType <- mapType (fromMaybe "ISSUE" resolvedIssueTypeText)
   igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
   let bppId = merchant.subscriberId.getShortId
   pure $ ValidatedDIssue {..}
@@ -163,20 +169,21 @@ handler ::
   ) =>
   ValidatedDIssue ->
   ServiceHandle m ->
-  m IssueRes
+  m (Maybe IssueRes)
 handler ValidatedDIssue {..} iHandle = do
   now <- getCurrentTime
   if isValueAddNP
-    then case issueStatus of
-      DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
-      DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now iHandle
-      DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
-      DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
+    then
+      Just <$> case issueStatus of
+        DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
+        DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now iHandle
+        DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
+        DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
     else case issueStatus of
       DIGM.OPEN
-        | issueType == DIGM.GRIEVANCE -> escalateBecknIssue ValidatedDIssue {..} now iHandle
-        | otherwise -> openBecknIssue ValidatedDIssue {..} iHandle
-      DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
+        | issueType == DIGM.GRIEVANCE -> Just <$> escalateBecknIssue ValidatedDIssue {..} now iHandle
+        | otherwise -> Just <$> openBecknIssue ValidatedDIssue {..} iHandle
+      DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle $> Nothing
       _ -> throwError $ InvalidRequest "Invalid issue status, must be OPEN or CLOSED"
 
 openBecknIssue ::
@@ -232,7 +239,8 @@ openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
       (rName, rPhone, rEmail, rpName, rpPhone, rpEmail) = mkResContactFields igmConfig
   ride <- iHandle.findOneByBookingId booking.id merchant.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   driverId <- fromMaybeM (RideFieldNotPresent "Driver not found") $ ride.driverId
-  category <- QIC.findByIGMIssueCategory issueCategory >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
+  issueCategoryText <- issueCategory & fromMaybeM (InvalidRequest "IssueCategory is required for new issues")
+  category <- QIC.findByIGMIssueCategory issueCategoryText >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
   transactionId <- case (isValueAddNP, contextTxnId) of
     (False, Just txnId) -> pure txnId
     _ -> generateGUID
@@ -287,7 +295,8 @@ openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
       description = fromMaybe (maybe "No description provided" (.option) mbOption) descShort
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing Nothing
+  let shouldCreateTicket = fromMaybe True igmConfig.createTicketOnIssueRaise
+      issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just shouldCreateTicket) Nothing Nothing
   void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   let issueRes =
         IssueRes
@@ -376,7 +385,8 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   when (igmIssue.issueStatus == DIGM.CLOSED) $
     throwError $ InvalidRequest "Issue is already closed"
-  let updatedIssue =
+  let alreadyResolved = igmIssue.respondentAction == Just (show Spec.RESOLVED)
+      updatedIssue =
         igmIssue
           { DIGM.issueStatus = DIGM.CLOSED,
             DIGM.updatedAt = fromMaybe now issueUpdatedAt,
@@ -407,7 +417,7 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
             isValueAddNP = isValueAddNP,
             ..
           }
-  storeRespondentAction issueRes
+  unless alreadyResolved $ storeRespondentAction issueRes
   pure issueRes
 
 mapStatusAndTypeToStatus :: MonadFlow m => Text -> Text -> m DIGM.Status
