@@ -46,7 +46,7 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
-      { contextVersion = Just "1.0.0",
+      { contextVersion = Just "2.1.0",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
         contextBapId = Just bapId,
@@ -67,13 +67,16 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
         String code -> pure code
         _ -> throwError $ InvalidRequest "Incorrect city"
 
+encodeToText' :: (ToJSON a) => a -> Maybe Text
+encodeToText' = A.decode . A.encode
+
 tfLocation :: Text -> Spec.Location
-tfLocation location_code =
+tfLocation cityCode =
   Spec.Location
     { locationCity =
         Just $
           Spec.City
-            { cityCode = Just location_code,
+            { cityCode = Just cityCode,
               cityName = Nothing
             },
       locationCountry =
@@ -83,9 +86,6 @@ tfLocation location_code =
               countryName = Nothing
             }
     }
-
-encodeToText' :: (ToJSON a) => a -> Maybe Text
-encodeToText' = A.decode . A.encode
 
 mapBecknIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
 mapBecknIssueStatus mbResp =
@@ -129,6 +129,28 @@ buildIGMIssue now issueId booking rider transactionId domain = do
       respondentPhone = Nothing,
       respondingMerchantId = Just booking.providerId,
       respondentEntityType = Nothing,
+      resolutionShortDesc = Nothing,
+      resolutionLongDesc = Nothing,
+      resolutionActionTriggered = Nothing,
+      resolutionRefundAmount = Nothing,
+      descriptionShort = Nothing,
+      descriptionLong = Nothing,
+      orderState = Nothing,
+      orderProviderId = Nothing,
+      orderMerchantOrderId = Nothing,
+      orderItemId = Nothing,
+      orderItemQuantity = Nothing,
+      orderFulfillmentId = Nothing,
+      orderFulfillmentState = Nothing,
+      igmCategory = Nothing,
+      igmSubCategory = Nothing,
+      sourceType = Nothing,
+      sourceNpId = Nothing,
+      contextTransactionId = Nothing,
+      contextDomain = Nothing,
+      expectedResponseTime = Nothing,
+      expectedResolutionTime = Nothing,
+      issueRating = Nothing,
       transactionId = transactionId,
       domain = domain,
       merchantOperatingCityId = cast <$> (Just booking.merchantOperatingCityId),

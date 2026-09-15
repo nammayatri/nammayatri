@@ -43,7 +43,6 @@ validateDomain expectedDomain context = do
 validateContextCommons :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
 validateContextCommons expectedAction context = do
   validateAction expectedAction context
-  validateCoreVersion context
 
 validateAction :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
 validateAction expectedAction context = do
@@ -51,13 +50,6 @@ validateAction expectedAction context = do
   action <- A.decode (A.encode actionText) & fromMaybeM (Error.InvalidRequest $ "Error in parsing contextAction: " <> actionText)
   unless (action == expectedAction) $
     throwError Error.InvalidAction
-
-validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
-validateCoreVersion context = do
-  let supportedVersion = "1.0.0"
-  version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
-    throwError Error.UnsupportedCoreVer
 
 durationToText :: NominalDiffTime -> Text
 durationToText duration = T.pack $ iso8601Show $ calendarTimeTime duration

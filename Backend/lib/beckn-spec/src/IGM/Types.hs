@@ -885,6 +885,8 @@ data IssueResolution = IssueResolution
     issueResolutionGroRemarks :: Maybe Text,
     -- | remarks of the resolution of the issue by the respondent
     issueResolutionLongDesc :: Maybe Text,
+    -- | refund amount if applicable
+    issueResolutionRefundAmount :: Maybe Text,
     -- | resolution
     issueResolutionShortDesc :: Text
   }
@@ -908,6 +910,7 @@ optionsIssueResolution =
         ("issueResolutionActionTriggered", "action_triggered"),
         ("issueResolutionGroRemarks", "gro_remarks"),
         ("issueResolutionLongDesc", "long_desc"),
+        ("issueResolutionRefundAmount", "refund_amount"),
         ("issueResolutionShortDesc", "short_desc")
       ]
 
@@ -1332,6 +1335,8 @@ optionsResolutionSupport =
 -- |
 data RespondentAction = RespondentAction
   { -- |
+    respondentActionCascadedLevel :: Maybe Int,
+    -- |
     respondentActionRespondentAction :: Maybe Text,
     -- | details of the remarks when the issue status is changed, can be captured when the respondent triggers an action
     respondentActionShortDesc :: Maybe Text,
@@ -1356,7 +1361,8 @@ optionsRespondentAction =
     }
   where
     table =
-      [ ("respondentActionRespondentAction", "respondent_action"),
+      [ ("respondentActionCascadedLevel", "cascaded_level"),
+        ("respondentActionRespondentAction", "respondent_action"),
         ("respondentActionShortDesc", "short_desc"),
         ("respondentActionUpdatedAt", "updated_at"),
         ("respondentActionUpdatedBy", "updated_by")
