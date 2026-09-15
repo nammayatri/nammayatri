@@ -199,6 +199,7 @@ apis:
         imeiNumber: Text
         profilePicture: Text
         passPhotoMediaId: Text
+        isMockPayment: Bool
       response:
         type: PassSelectionAPIEntity
 
@@ -207,6 +208,8 @@ apis:
       auth: TokenAuth
       params:
         passId: Id Pass
+      query:
+        isMockPayment: Bool
       request:
         type: PassSelectReq
       response:
