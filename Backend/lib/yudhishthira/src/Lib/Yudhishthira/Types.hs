@@ -50,6 +50,10 @@ module Lib.Yudhishthira.Types
     RolloutGroupInfo (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
+    MerchantCitiesEntry (..),
+    BulkLogicRolloutReq (..),
+    BulkRolloutCityFailure (..),
+    BulkLogicRolloutResult (..),
     TimeBoundResp,
     ConfigType (..),
     allValues,
@@ -850,6 +854,37 @@ data LogicRolloutObject = LogicRolloutObject
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets LogicRolloutObject where
+  hideSecrets = identity
+
+data MerchantCitiesEntry = MerchantCitiesEntry
+  { merchantShortId :: Text,
+    cities :: [Text]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkLogicRolloutReq = BulkLogicRolloutReq
+  { merchantsAndCities :: [MerchantCitiesEntry],
+    rollout :: LogicRolloutReq
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutReq where
+  hideSecrets = identity
+
+data BulkRolloutCityFailure = BulkRolloutCityFailure
+  { merchantShortId :: Text,
+    cityId :: Text,
+    reason :: Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BulkLogicRolloutResult = BulkLogicRolloutResult
+  { succeeded :: [Text],
+    failures :: [BulkRolloutCityFailure]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkLogicRolloutResult where
   hideSecrets = identity
 
 data RolloutVersion = RolloutVersion
