@@ -34,14 +34,16 @@ create dsReq = do
 createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> m ()
 createStopsLocation = QL.createMany
 
+-- | The search request id is new, so its mappings have no past versions to query.
+-- The drop order is the stop count plus one. The writes stay sequential.
 createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+  fromLocationMap <- SLM.buildFreshLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId) 0
   void $ QLM.create fromLocationMap
   void $ createStopsLocation searchRequest.stops
-  stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
+  stopsLocMapping <- SLM.buildFreshStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
   void $ QLM.createMany stopsLocMapping
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildFreshLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId) (length searchRequest.stops + 1)) searchRequest.toLocation
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create searchRequest
 
