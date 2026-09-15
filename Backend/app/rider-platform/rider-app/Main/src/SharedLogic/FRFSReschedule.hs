@@ -44,6 +44,7 @@ import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicket
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
@@ -103,6 +104,42 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
       windowEndUtc = Time.addUTCTime (negate tzDiff) (Time.UTCTime (Time.addDays 1 lastAllowedDayLocal) 0)
   when (newTripStart >= windowEndUtc) $
     throwError $ InvalidRequest "Selected trip is outside the allowed reschedule window"
+  validatePassTermCoversTrip oldBooking (Time.utctDay (Time.addUTCTime tzDiff newTripStart))
+
+-- | A pass-covered booking may only move to a day the pass itself still covers.
+--
+-- The reschedule path copies the parent booking's pass override verbatim rather than re-resolving it
+-- (see the note in SharedLogic.FRFSConfirm: re-resolving would strip the discount once the parent has
+-- spent the pass's last metered trip). That copy carries the fare but not the term, so without this a
+-- booking made inside an 11-17 Sep pass could be moved to the 10th and still travel pass-covered.
+--
+-- Deliberately only a date bound, not a re-resolve: it needs no trip ledger, so it cannot reintroduce
+-- the problem that copy exists to avoid. The predicate matches the one pass *selection* already uses in
+-- FRFSPassOverride.filterCandidatesForLeg, so both paths agree on what a pass covers.
+--
+-- The day is local, not UTC: startDate/endDate are calendar days in the city's timezone, so comparing
+-- against a UTC day would wrongly reject valid late-evening reschedules for the +5:30 hours either side
+-- of midnight.
+validatePassTermCoversTrip ::
+  (ServiceFlow m r) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Time.Day ->
+  m ()
+validatePassTermCoversTrip booking newTripDayLocal =
+  when (booking.overrideType == Just DFRFSTicketBooking.PassOverride) $
+    -- Non-pass bookings carry no entity id; nothing to bound.
+    whenJust booking.overrideAppliedEntityId $ \paymentId -> do
+      payment <-
+        QPurchasedPassPayment.findByPrimaryKey (Id paymentId)
+          >>= fromMaybeM (InvalidRequest $ "Pass term not found for booking override: " <> paymentId)
+      unless (payment.startDate <= newTripDayLocal && payment.endDate >= newTripDayLocal) $
+        throwError $
+          PassNotActiveForTripDate paymentId $
+            "Your pass is not active for the selected reschedule time. It is valid from "
+              <> show payment.startDate
+              <> " to "
+              <> show payment.endDate
+              <> "."
 
 getNewTripStartTime ::
   (ServiceFlow m r, HasShortDurationRetryCfg r c) =>
