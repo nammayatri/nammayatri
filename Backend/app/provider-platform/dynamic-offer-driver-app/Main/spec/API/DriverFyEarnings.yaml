@@ -1,0 +1,36 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+
+module: DriverFyEarnings
+
+# Driver-facing FY/quarter earnings. The dashboard equivalent lives in
+# ProviderPlatform/Management/API/Driver.yaml and takes an entityId; here the
+# driver is the requestor, so there is no entity parameter and no access check
+# beyond TokenAuth -- you can only ever read yourself.
+#
+# Drivers whose rides are attributed to a fleet owner are refused outright (see
+# Domain.Action.UI.DriverFyEarnings): the accumulator keys on
+# `fromMaybe ride.driverId ride.fleetOwnerId`, so a fleet driver has no rows and
+# a 200 with zeros would read as "you earned nothing" rather than "not yours".
+
+types:
+  FyQuarterEarningsEntity:
+    quarter: Int
+    netEarnings: HighPrecMoney
+    tdsDeducted: HighPrecMoney
+  DriverFyEarningsResp:
+    financialYear: Int
+    quarters: "[FyQuarterEarningsEntity]"
+    totalNetEarnings: HighPrecMoney
+    totalTdsDeducted: HighPrecMoney
+
+apis:
+  - GET:
+      endpoint: /driver/fyEarnings
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        - financialYear: Int
+      query:
+        - quarter: Int
+      response:
+        type: DriverFyEarningsResp
