@@ -58,6 +58,9 @@ type RideFunnelCounterMetric = P.Vector P.Label7 P.Counter
 -- Labels: (merchant, city, vehicle_service_tier, cancellation_source, distance_bucket, backend_version, pickup_zone, drop_zone)
 type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 
+-- Labels: (merchant, city, vehicle_service_tier, distance_bucket, backend_version, pickup_zone, drop_zone)
+type RideValueHistogram = P.Vector P.Label7 P.Histogram
+
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
@@ -71,7 +74,11 @@ data BPPMetricsContainer = BPPMetricsContainer
     rideCreatedCounter :: RideFunnelCounterMetric,
     rideStartedCounter :: RideFunnelCounterMetric,
     rideCompletedCounter :: RideFunnelCounterMetric,
-    rideCancelledCounter :: RideCancelledCounterMetric
+    rideCancelledCounter :: RideCancelledCounterMetric,
+    pricePerKmHist :: RideValueHistogram,
+    congestionChargeHist :: RideValueHistogram,
+    rideDistanceHist :: RideValueHistogram,
+    pickupDistanceHist :: RideValueHistogram
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
@@ -93,6 +100,10 @@ registerBPPMetricsContainer searchDurationTimeout = do
   rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
   rideCompletedCounter <- registerRideFunnelCounter "BPP_ride_completed_count" "Count of rides completed"
   rideCancelledCounter <- registerRideCancelledCounter
+  pricePerKmHist <- registerRideValueHistogram "BPP_price_per_km" "Realised fare per km at ride end (INR/km)" (P.linearBuckets 0 5 40)
+  congestionChargeHist <- registerRideValueHistogram "BPP_congestion_charge" "Congestion charge applied to the ride (INR); observed only when a congestion charge is present" (P.linearBuckets 0 5 40)
+  rideDistanceHist <- registerRideValueHistogram "BPP_ride_distance_meters" "Chargeable trip distance at ride end (meters)" (P.exponentialBuckets 500 2 12)
+  pickupDistanceHist <- registerRideValueHistogram "BPP_pickup_distance_meters" "Assigned driver distance to pickup at ride end (meters); observed only when distanceToPickup is populated" (P.exponentialBuckets 100 2 12)
   return $ BPPMetricsContainer {..}
 
 registerSearchRequestCounter :: IO SearchRequestCounterMetric
@@ -119,6 +130,11 @@ registerRideCancelledCounter :: IO RideCancelledCounterMetric
 registerRideCancelledCounter =
   P.register . P.vector ("merchant", "city", "vehicle_service_tier", "cancellation_source", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info "BPP_ride_cancelled_count" "Count of bookings cancelled, labelled by cancellation source"
+
+registerRideValueHistogram :: Text -> Text -> [Double] -> IO RideValueHistogram
+registerRideValueHistogram name description buckets =
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") $
+    P.histogram (P.Info name description) buckets
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =

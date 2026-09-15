@@ -196,6 +196,17 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DSC.recordOnRideChange booking.merchantOperatingCityId False
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance) pickupZone dropZone
+  let vstLabel = show booking.vehicleServiceTier
+      distBucketLabel = SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance
+      chargeableMeters = realToFrac (fromMaybe 0 ride.chargeableDistance) :: Double
+      rideFareValue = realToFrac (fromMaybe 0 ride.fare) :: Double
+  Metrics.observeRideDistanceMeters merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone chargeableMeters
+  when (chargeableMeters > 0) $
+    Metrics.observePricePerKm merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone (rideFareValue / (chargeableMeters / 1000))
+  whenJust newFareParams.congestionCharge $ \congestionChargeVal ->
+    Metrics.observeCongestionCharge merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone (realToFrac congestionChargeVal)
+  whenJust ride.distanceToPickup $ \pickupDistanceVal ->
+    Metrics.observePickupDistanceMeters merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone (realToFrac pickupDistanceVal)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
