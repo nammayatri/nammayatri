@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -552,15 +553,21 @@ verifyTicket _merchantId _merchantOperatingCity integratedBPPConfig _bapConfig e
   TicketPayload {..} <- CallAPI.verifyTicket integratedBPPConfig encryptedQrData
   return DTicketPayload {..}
 
-cancel :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Spec.CancellationType -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnCancel.DOnCancel
-cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking = do
+cancel :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Spec.CancellationType -> Maybe FRFSLiveTrip.LiveTripDecision -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnCancel.DOnCancel
+cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType mbLiveDecision booking = do
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id Not Found")
   let orderStatus = case cancellationType of
         Spec.SOFT_CANCEL -> Spec.SOFT_CANCELLED
         Spec.CONFIRM_CANCEL -> Spec.CANCELLED
   let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
-      departureTime = fromMaybe booking.validTill booking.startTime
-  (charges, refund) <- calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
+      scheduledDepartureTime = fromMaybe booking.validTill booking.startTime
+      tieredCharges departureTime = calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
+  (charges, refund) <- case mbLiveDecision of
+    Just decision
+      | not decision.canCancel -> throwError CancellationNotSupported
+      | decision.fullRefund -> pure (0, baseFare)
+      | otherwise -> tieredCharges decision.chargeAnchor
+    Nothing -> tieredCharges scheduledDepartureTime
   return $
     DOnCancel.DOnCancel
       { providerId = bapConfig.uniqueKeyId,

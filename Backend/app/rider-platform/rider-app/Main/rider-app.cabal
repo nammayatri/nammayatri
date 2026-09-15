@@ -535,6 +535,7 @@ library
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
+      SharedLogic.FRFSLiveTrip
       SharedLogic.FRFSPassConfirm
       SharedLogic.FRFSPassOverride
       SharedLogic.FRFSReschedule

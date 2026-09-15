@@ -32,6 +32,7 @@ import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto as DB
@@ -408,7 +409,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           )
           fares
 
-getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> Maybe [FRFSPassOverride.PassCandidate] -> m (Maybe JT.LegInfo)
+getInfo :: (ServiceFlow m r, HasShortDurationRetryCfg r c, Hedis.HedisLTSFlowEnv r, HasField "cloudType" r (Maybe CloudType)) => Id FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> Maybe [FRFSPassOverride.PassCandidate] -> m (Maybe JT.LegInfo)
 getInfo searchId journeyLeg journeyLegs mbPassCandidates = do
   mbBooking <- QTBooking.findBySearchId searchId
   case mbBooking of
@@ -472,7 +473,7 @@ cancel searchId cancellationType = do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False metroBooking
+    mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType CallExternalBPP.UserInitiated False Nothing metroBooking
     whenJust mbSideEffectData $ \(mRiderNumber, mRiderMobileCountryCode, fareParameters, updatedBooking) -> do
       FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney updatedBooking

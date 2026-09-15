@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
+import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
@@ -54,8 +55,10 @@ validateRescheduleEligibility ::
   Text -> -- new destination stop code (defaults upstream to the old one)
   Text -> -- new route code (defaults upstream to the old one)
   DIBC.IntegratedBPPConfig ->
+  -- | Live-trip eligibility, resolved by the handler. Nothing leaves the schedule-only checks in charge.
+  Maybe FRFSLiveTrip.LiveTripDecision ->
   m ()
-validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRouteCode integratedBppConfig = do
+validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRouteCode integratedBppConfig mbLiveDecision = do
   unless (oldBooking.status == DFRFSTicketBookingStatus.CONFIRMED) $
     throwError $ InvalidRequest "Booking is not confirmed, cannot be rescheduled"
   frfsConfig <-
@@ -73,10 +76,15 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
     throwError $ InvalidRequest "Reschedule is not enabled for this service tier"
   when (fromMaybe 0 oldBooking.rescheduleCount >= fromMaybe 1 vst.maxRescheduleCount) $
     throwError $ InvalidRequest "Maximum number of reschedules exceeded for this booking"
-  pastWindow <- isPastRescheduleWindow oldBooking (fromMaybe (Seconds 1800) vst.maxRescheduleTimeAfterStart)
-  when pastWindow $ throwError $ InvalidRequest "Reschedule window has passed for this booking"
-  when (oldBooking.finalBoardedVehicleNumberSource == Just DJourneyLeg.UserActivated) $
-    throwError $ InvalidRequest "Cannot reschedule a trip you have already boarded"
+  case mbLiveDecision of
+    Just decision ->
+      unless decision.canReschedule $
+        throwError $ InvalidRequest (fromMaybe "Reschedule is not available for this trip" decision.rescheduleDenyReason)
+    Nothing -> do
+      pastWindow <- isPastRescheduleWindow oldBooking (fromMaybe (Seconds 1800) vst.maxRescheduleTimeAfterStart)
+      when pastWindow $ throwError $ InvalidRequest "Reschedule window has passed for this booking"
+      when (oldBooking.finalBoardedVehicleNumberSource == Just DJourneyLeg.UserActivated) $
+        throwError $ InvalidRequest "Cannot reschedule a trip you have already boarded"
   -- When the rider moves to a different boarding/alighting stop, it must stay within the same cluster as the
   -- original (nearby-equivalent stop). Same-stop reschedules (trip-only) skip this. Fare is enforced separately.
   let stopsChanged = newFromCode /= oldBooking.fromStationCode || newToCode /= oldBooking.toStationCode
