@@ -212,6 +212,9 @@ tripCategoryToFulfillmentType = \case
   -- Only OnDemandStaticOffer is ever produced for EasyBooking currently, so unlike
   -- Rental (which special-cases RideOtp above), there's no as-pattern needed here yet.
   EasyBooking _ -> show Enums.RENTAL
+  -- On-us encoding so the BAP's readMaybe @TripCategory fast-path decodes back to
+  -- IntercityRental (not Rental) — otherwise same misidentification bug as EasyBooking.
+  ri@(IntercityRental _ _) -> show ri
   _ -> show Enums.DELIVERY
 
 -- | Map internal trip category to ONDC v2.1.0 category code
@@ -227,6 +230,7 @@ tripCategoryToCategoryCode = \case
   -- No wildcard on this function, so this was the first compile error EasyBooking's
   -- addition surfaced — new Beckn category code for the destination-less search.
   EasyBooking _ -> "ON_DEMAND_EASY_BOOKING"
+  IntercityRental _ _ -> "ON_DEMAND_RENTAL"
 
 mkCategory :: TripCategory -> Spec.Category
 mkCategory tc =
