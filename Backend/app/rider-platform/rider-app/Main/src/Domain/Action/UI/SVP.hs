@@ -401,6 +401,7 @@ handleExit mobileNum mId stationCode exitTime = do
       FRFSSpec.METRO
       Nothing
       Nothing
+      Nothing
   let fareAmount = case fares of
         (f : _) -> case f.categories of
           (cat : _) -> cat.offeredPrice.amount

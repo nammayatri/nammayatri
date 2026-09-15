@@ -743,6 +743,8 @@ data NandiStop = NandiStop
 data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     providerCode :: Kernel.Prelude.Text,
+    stateCode :: Maybe Text,
+    placeCode :: Maybe Text,
     routeCode :: Kernel.Prelude.Text,
     sequenceNum :: Kernel.Prelude.Int,
     stopCode :: Kernel.Prelude.Text,

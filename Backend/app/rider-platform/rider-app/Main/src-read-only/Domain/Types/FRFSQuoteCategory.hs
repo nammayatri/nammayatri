@@ -25,6 +25,7 @@ data FRFSQuoteCategory = FRFSQuoteCategory
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     offeredPrice :: Kernel.Types.Common.Price,
     price :: Kernel.Types.Common.Price,
+    providerBlockIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     seatLabels :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

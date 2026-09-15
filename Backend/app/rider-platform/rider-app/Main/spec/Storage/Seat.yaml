@@ -16,6 +16,7 @@ Seat:
     seatType: Maybe SeatType
     isBookable: Bool
     isLadiesOnly: Maybe Bool
+    isDifferentlyAbled: Maybe Bool
     seatLayoutId: Id SeatLayout
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
