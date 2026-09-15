@@ -45,6 +45,7 @@ data GateInfoFull = GateInfoFull
     walkDescription :: Maybe Text,
     entryFeeAmount :: Maybe Double,
     entryFeeDisabledServiceTiers :: Maybe [Text],
+    feeItems :: Maybe [GateFeeItem],
     minDriverThresholds :: Maybe (Map.Map Text Int),
     maxDriverThresholds :: Maybe (Map.Map Text Int),
     demandThresholds :: Maybe (Map.Map Text Int),

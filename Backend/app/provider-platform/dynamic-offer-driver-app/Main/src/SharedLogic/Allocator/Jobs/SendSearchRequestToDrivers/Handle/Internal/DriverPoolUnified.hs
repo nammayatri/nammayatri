@@ -164,7 +164,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       airportEntryFee <-
         if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
           then pure Nothing
-          else AirportEntryFee.requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId (listToMaybe tripQuoteDetails <&> (.vehicleServiceTier)) mbFareSettlementTypeForPool
+          else AirportEntryFee.requiredDriverWalletAmountForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId (listToMaybe tripQuoteDetails <&> (.vehicleServiceTier)) mbFareSettlementTypeForPool (Just searchReq.currency)
       isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId

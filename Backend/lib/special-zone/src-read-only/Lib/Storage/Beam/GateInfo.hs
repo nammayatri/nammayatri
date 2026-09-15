@@ -22,6 +22,7 @@ data GateInfoT f = GateInfoT
     enableQueueFilter :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entryFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     entryFeeDisabledServiceTiers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    feeItems :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gateConfig :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gateTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     gateType :: B.C f Lib.Types.GateInfo.GateType,
