@@ -302,13 +302,7 @@ processEndRideFinance ::
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
   -- Compute fare components
   let totalFare = fromMaybe 0 ride.fare
-      gstAmount = fromMaybe 0 newFareParams.govtCharges
-      tollAmount = fromMaybe 0 newFareParams.tollCharges
-      -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),
-      -- so subtracting it again here would double-count; zero it out in that case.
-      edcParkingCollected = SL.edcCollectsParking newFareParams.fareSettlementType
-      parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 newFareParams.parkingCharge
-      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
+      baseFare = FC.netRideFare newFareParams totalFare
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       -- When wallet isolation is enabled, scope all prepaid ops to the ride's vehicle category.

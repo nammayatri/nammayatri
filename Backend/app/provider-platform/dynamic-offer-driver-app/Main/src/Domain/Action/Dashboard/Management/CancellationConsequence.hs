@@ -267,6 +267,7 @@ toDomainDeduction = \case
   Common.MoneyDeductionAPIEntity m -> DExtra.MoneyDeduction (toDomainMoney m)
   Common.CoinAdditionAPIEntity c -> DExtra.CoinAddition {coins = c.coins, expirySeconds = c.expirySeconds}
   Common.MoneyAdditionAPIEntity m -> DExtra.MoneyAddition (toDomainMoney m)
+  Common.RideCreditDeductionAPIEntity m -> DExtra.RideCreditDeduction (toDomainMoney m)
 
 isCoinConsequence :: DExtra.ConsequenceDeduction -> Bool
 isCoinConsequence = \case
@@ -281,6 +282,7 @@ validateDeduction fieldName ded = case ded of
   DExtra.CoinDeduction {coins} -> unless (coins > 0) $ bad "coins must be positive"
   DExtra.CoinAddition {coins} -> unless (coins > 0) $ bad "coins must be positive"
   DExtra.MoneyDeduction m -> checkMoney m
+  DExtra.RideCreditDeduction m -> checkMoney m
   DExtra.MoneyAddition m -> do
     checkMoney m
     case m of
@@ -309,7 +311,8 @@ toDomainCommissionAndTax c =
       commission =
         c.commission <&> \case
           Common.FixedRateAPIEntity amt -> DExtra.FixedRate {amount = amt}
-          Common.PercentageRateAPIEntity pct -> DExtra.PercentageRate {percentage = pct}
+          Common.PercentageRateAPIEntity pct -> DExtra.PercentageRate {percentage = pct},
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax
     }
 
 toListItem :: DCCM.CancellationConsequenceMatrix -> Common.CancellationConsequenceListItem
@@ -352,6 +355,7 @@ toAPIDeduction = \case
   DExtra.MoneyDeduction m -> Common.MoneyDeductionAPIEntity (toAPIMoney m)
   DExtra.CoinAddition {coins, expirySeconds} -> Common.CoinAdditionAPIEntity (Common.CoinDeductionAPI {coins, expirySeconds})
   DExtra.MoneyAddition m -> Common.MoneyAdditionAPIEntity (toAPIMoney m)
+  DExtra.RideCreditDeduction m -> Common.RideCreditDeductionAPIEntity (toAPIMoney m)
 
 toAPIMoney :: DExtra.MoneyDeduction -> Common.MoneyDeductionAPI
 toAPIMoney = \case
@@ -365,5 +369,6 @@ toAPICommissionAndTax c =
       commission =
         c.commission <&> \case
           DExtra.FixedRate {amount} -> Common.FixedRateAPIEntity amount
-          DExtra.PercentageRate {percentage} -> Common.PercentageRateAPIEntity percentage
+          DExtra.PercentageRate {percentage} -> Common.PercentageRateAPIEntity percentage,
+      amountsInclusiveOfTax = c.amountsInclusiveOfTax
     }

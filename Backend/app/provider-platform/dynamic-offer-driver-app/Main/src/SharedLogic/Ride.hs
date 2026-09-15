@@ -142,10 +142,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     whenJust mbAccount $ \_ -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-        let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
-            tollAmount = fromMaybe 0 booking.fareParams.tollCharges
-            parkingAmount = fromMaybe 0 booking.fareParams.parkingCharge
-            rideFare = booking.estimatedFare - gstAmount - tollAmount - parkingAmount
+        let rideFare = FC.netRideFare booking.fareParams booking.estimatedFare
             threshold = fromMaybe 0 $ case mFleetOwnerId of
               Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold

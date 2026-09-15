@@ -193,28 +193,80 @@ data CustomerChargeBreakup = CustomerChargeBreakup
 --   * Coin variants on the customer side are meaningless (riders have no coin wallet)
 --     and yield no charge.
 computeCustomerCharge :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> CustomerChargeBreakup
-computeCustomerCharge row estimatedFare =
+computeCustomerCharge row fareBasis =
   case row.customerDeduction of
     Just (DExtra.MoneyDeduction money) ->
-      let (base, overdueFee) = moneyDeductionAmount money estimatedFare
-          tax = ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100
-          commission =
-            ((.commission) =<< row.customerCommissionAndTax) <&> \case
-              DExtra.FixedRate {amount} -> amount
-              DExtra.PercentageRate {percentage} -> base * percentage / 100
-       in CustomerChargeBreakup {fee = Just base, tax, commission, overdueFee}
+      let deduction = moneyDeductionAmount money fareBasis
+          (base, tax) =
+            if amountsAreInclusiveOfTax row
+              then splitTaxInclusiveTotal row deduction.amount
+              else (deduction.amount, (customerTaxAndCommission row deduction.amount).tax)
+       in CustomerChargeBreakup
+            { fee = Just base,
+              tax = tax,
+              commission = (customerTaxAndCommission row base).commission,
+              overdueFee = deduction.overdueAmount
+            }
     Just (DExtra.MoneyAddition money) ->
-      let (base, _overdue) = moneyDeductionAmount money estimatedFare
-       in CustomerChargeBreakup {fee = Just (negate (abs base)), tax = Nothing, commission = Nothing, overdueFee = Nothing}
+      let credit = moneyDeductionAmount money fareBasis
+       in CustomerChargeBreakup {fee = Just (negate (abs credit.amount)), tax = Nothing, commission = Nothing, overdueFee = Nothing}
     _ -> CustomerChargeBreakup Nothing Nothing Nothing Nothing
 
-moneyDeductionAmount :: DExtra.MoneyDeduction -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
-moneyDeductionAmount money estimatedFare = case money of
-  DExtra.FixedMoney {amount, overdueAmount} -> (amount, overdueAmount)
+shouldCarryForwardDues :: Maybe DCCM.CancellationConsequenceMatrix -> Bool
+shouldCarryForwardDues mbRow = (mbRow >>= (.collectionMode)) /= Just DCCM.ImmediateCapture
+
+amountsAreInclusiveOfTax :: DCCM.CancellationConsequenceMatrix -> Bool
+amountsAreInclusiveOfTax row = fromMaybe False ((.amountsInclusiveOfTax) =<< row.customerCommissionAndTax)
+
+customerIsCharged :: DCCM.CancellationConsequenceMatrix -> Bool
+customerIsCharged row = case row.customerDeduction of
+  Just (DExtra.MoneyDeduction _) -> True
+  _ -> False
+
+-- | Split a TAX-INCLUSIVE total back into (base, tax) using the row's tax percentage.
+-- ride.cancellationFeeIfCancelled stores the total quoted to the rider at soft-cancel
+-- (base + tax, see API.Beckn.Cancel), so the confirm path must divide it out rather
+-- than apply tax to it a second time.
+splitTaxInclusiveTotal :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> (HighPrecMoney, Maybe HighPrecMoney)
+splitTaxInclusiveTotal row total
+  | not (customerIsCharged row) = (total, Nothing)
+  | otherwise =
+    case (.taxPercentage) =<< row.customerCommissionAndTax of
+      Just p | 100 + p /= 0 -> let base = total * 100 / (100 + p) in (base, Just (total - base))
+      _ -> (total, Nothing)
+
+-- | Tax and commission for a base charge. Split out of 'computeCustomerCharge' because
+-- the confirm-cancel path has to rebuild them against the fee quoted at soft-cancel
+-- rather than the fee the row would compute now.
+data TaxAndCommission = TaxAndCommission
+  { tax :: Maybe HighPrecMoney,
+    commission :: Maybe HighPrecMoney
+  }
+
+customerTaxAndCommission :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> TaxAndCommission
+customerTaxAndCommission row base
+  | not (customerIsCharged row) = TaxAndCommission {tax = Nothing, commission = Nothing}
+  | otherwise =
+    TaxAndCommission
+      { tax = ((.taxPercentage) =<< row.customerCommissionAndTax) <&> \p -> base * p / 100,
+        commission =
+          ((.commission) =<< row.customerCommissionAndTax) <&> \case
+            DExtra.FixedRate {amount} -> amount
+            DExtra.PercentageRate {percentage} -> base * percentage / 100
+      }
+
+data MoneyAmounts = MoneyAmounts
+  { amount :: HighPrecMoney,
+    overdueAmount :: Maybe HighPrecMoney
+  }
+
+moneyDeductionAmount :: DExtra.MoneyDeduction -> HighPrecMoney -> MoneyAmounts
+moneyDeductionAmount money fareBasis = case money of
+  DExtra.FixedMoney {amount, overdueAmount} -> MoneyAmounts {amount, overdueAmount}
   DExtra.PercentageMoney {percentage, minAmount, maxAmount} ->
-    let raw = percentage * estimatedFare / 100
+    let raw = percentage * fareBasis / 100
         floored = maybe raw (max raw) minAmount
-     in (maybe floored (min floored) maxAmount, Nothing)
+     in MoneyAmounts {amount = maybe floored (min floored) maxAmount, overdueAmount = Nothing}
 
 -- | Driver coins from the row (Nothing when the driver consequence is money or absent).
 -- The matrix stores a POSITIVE count with the direction in the constructor; the coin
@@ -235,9 +287,9 @@ driverCoinDeduction row =
 -- timeBounds are deliberately IGNORED here: a row that only charges at peak still makes
 -- FEE_APPLIES the honest overlay copy, since the cancel may land inside the window.
 cityHasDriverCancelMoneyPenalty :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> HighPrecMoney -> m Bool
-cityHasDriverCancelMoneyPenalty merchantOpCityId estimatedFare = do
+cityHasDriverCancelMoneyPenalty merchantOpCityId fareBasis = do
   rows <- CQCCM.findAllByMerchantOpCityId merchantOpCityId
-  pure $ any (\r -> r.active && dimMatches r.cancelledBy (Just DCT2.CancellationByDriver) && maybe False (> 0) (driverMoneyDeduction r estimatedFare)) rows
+  pure $ any (\r -> r.active && dimMatches r.cancelledBy (Just DCT2.CancellationByDriver) && maybe False (> 0) (driverMoneyDeduction r fareBasis)) rows
 
 -- | Driver money from the row (Nothing when the driver consequence is coins or absent).
 -- The matrix stores POSITIVE amounts with the direction in the constructor; downstream
@@ -245,10 +297,16 @@ cityHasDriverCancelMoneyPenalty merchantOpCityId estimatedFare = do
 -- a penalty (DriverFee/wallet debit) and negative for an addition (wallet credit; the
 -- legacy DriverFee path cannot pay out and skips with a log).
 driverMoneyDeduction :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
-driverMoneyDeduction row estimatedFare =
+driverMoneyDeduction row fareBasis =
   row.driverDeduction >>= \case
-    DExtra.MoneyDeduction money -> Just (abs (fst (moneyDeductionAmount money estimatedFare)))
-    DExtra.MoneyAddition money -> Just (negate (abs (fst (moneyDeductionAmount money estimatedFare))))
+    DExtra.MoneyDeduction money -> Just (abs (moneyDeductionAmount money fareBasis).amount)
+    DExtra.MoneyAddition money -> Just (negate (abs (moneyDeductionAmount money fareBasis).amount))
+    _ -> Nothing
+
+driverRideCreditDeduction :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
+driverRideCreditDeduction row fareBasis =
+  row.driverDeduction >>= \case
+    DExtra.RideCreditDeduction money -> Just (abs (moneyDeductionAmount money fareBasis).amount)
     _ -> Nothing
 
 --------------------------------------------------------------------------------------
