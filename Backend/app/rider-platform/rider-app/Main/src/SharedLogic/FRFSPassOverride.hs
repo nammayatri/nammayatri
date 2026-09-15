@@ -41,6 +41,7 @@ module SharedLogic.FRFSPassOverride
     checkOverlappingBookingLimit,
     recordBookedTrip,
     recordAndDetectOverLimit,
+    withTripCountLock,
     releaseBookedTrip,
   )
 where
@@ -588,6 +589,10 @@ withOverlapRecordLock paymentId act = go overlapRecordLockRetries
             else do
               threadDelay overlapRecordLockRetryDelayMicros
               go (retriesLeft - 1)
+
+withTripCountLock :: (CacheFlow m r, EsqDBFlow m r, MonadMask m) => Id DPPP.PurchasedPassPayment -> m a -> m a
+withTripCountLock paymentId =
+  Redis.withWaitAndLockRedis ("FRFSPassOverride:TripCountLock-" <> paymentId.getId) 10 200000
 
 checkOverlappingBookingLimit ::
   (CacheFlow m r, EsqDBFlow m r) =>
