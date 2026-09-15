@@ -393,8 +393,6 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
                 specialLocationName = allFarePoliciesProduct.specialLocationName
               }
       addNammaTags tagData
-    fork "Updating Demand Hotspots on search" $ do
-      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
@@ -421,6 +419,12 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
 
   withTimeAPI "search" "createEstimates" $ QEst.createMany estimates
   withTimeAPI "search" "createQuotes" $ for_ quotes QQuote.create
+
+  -- QuoteBased flows have no Select, so demand is recorded on the search. EstimateBased on Select.
+  unless (sReq.isShadowSearch || possibleTripOption.isScheduled) $
+    unless (null quotes) $
+      fork "Updating Demand Hotspots on search (quote-based)" $
+        DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
   unless sReq.isShadowSearch $ do
     forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}

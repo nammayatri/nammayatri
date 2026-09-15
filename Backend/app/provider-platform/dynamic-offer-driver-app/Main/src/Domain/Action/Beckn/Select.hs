@@ -25,6 +25,7 @@ import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.Estimate as DEst
@@ -69,6 +70,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 
 data DSelectReq = DSelectReq
@@ -111,6 +113,14 @@ data DSelectReq = DSelectReq
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
   logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
+  -- EstimateBased demand signal and congestion multiplier. QuoteBased flows record demand on the search instead.
+  fork "Updating Demand Hotspots on select" $ do
+    let merchantOpCityId = searchReq.merchantOperatingCityId
+        pickup = Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon
+        tierMultipliers = mapMaybe (\e -> (\cm -> (e.vehicleServiceTier, realToFrac cm)) <$> e.congestionMultiplier) estimates
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig pickup
+    DemandHotspots.updateDemandHotspotMultiplierObservations merchantOpCityId transporterConfig pickup tierMultipliers
   whenJust (listToMaybe estimates) $ \primaryEstimate -> do
     cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
     distanceEdges <- SML.getDistanceBucketEdges searchReq.merchantOperatingCityId

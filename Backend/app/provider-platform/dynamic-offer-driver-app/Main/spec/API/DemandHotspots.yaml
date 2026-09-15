@@ -2,6 +2,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   UTCTime: Kernel.Prelude
   Int: Kernel.Prelude
+  Double: Kernel.Prelude
 
 module: DemandHotspots
 types:
@@ -12,6 +13,7 @@ types:
   HotspotsDetails:
     location: LatLong
     frequency: Int
+    multiplier: Maybe Double
 
 apis:
   - GET:
