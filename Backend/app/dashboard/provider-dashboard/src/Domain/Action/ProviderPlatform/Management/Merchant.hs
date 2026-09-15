@@ -54,6 +54,8 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     getMerchantConfigVendorSplitDetailsList,
     getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
+    postMerchantConfigAllowedDestinationStates,
+    getMerchantConfigAllowedDestinationStates,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
     postMerchantConfigVehicleServiceTierUpdate,
@@ -462,6 +464,17 @@ postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req
+
+postMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertAllowedDestinationStatesReq -> Environment.Flow APISuccess
+postMerchantConfigAllowedDestinationStates merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigAllowedDestinationStates) req
+
+getMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Environment.Flow Common.AllowedDestinationStatesResp
+getMerchantConfigAllowedDestinationStates merchantShortId opCity apiTokenInfo stateName = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigAllowedDestinationStates) stateName
 
 processMerchantCreateRequest ::
   ShortId DM.Merchant ->
