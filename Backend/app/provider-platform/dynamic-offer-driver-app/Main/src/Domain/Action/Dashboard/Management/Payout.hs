@@ -122,8 +122,9 @@ getPayoutPayoutOrder ::
   Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Text ->
+  Maybe Text ->
   Environment.Flow PayoutTypes.PayoutOrderResp
-getPayoutPayoutOrder merchantShortId opCity payoutOrderIdText = do
+getPayoutPayoutOrder merchantShortId opCity payoutOrderIdText _mbRequestorId = do
   (merchant, _merchantOpCity, _) <- resolveMerchantOpCityAndTz merchantShortId opCity
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderIdText >>= fromMaybeM (PayoutOrderNotFound payoutOrderIdText)
   unless (payoutOrder.merchantId == merchant.id.getId) $
@@ -198,8 +199,9 @@ getPayoutPayoutReferralHistory ::
   Maybe Int ->
   Maybe Int ->
   Maybe UTCTime ->
+  Maybe Text ->
   Environment.Flow ApiPayout.PayoutReferralHistoryRes
-getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId_ mbDriverPhoneCountryCode mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
+getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId_ mbDriverPhoneCountryCode mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo _mbRequestorId = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
       areActivatedRidesOnly = fromMaybe False areActivatedRidesOnly_
@@ -347,9 +349,10 @@ postPayoutPayoutVpaRefundRegistration merchantShortId opCity _mbRequestorId req 
 postPayoutPayoutScheduledPayoutConfigUpsert ::
   Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Maybe Text ->
   ApiPayout.UpdateScheduledPayoutConfigReq ->
   Environment.Flow APISuccess
-postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiReq = do
+postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity _mbRequestorId apiReq = do
   let domainReq =
         DashboardPayoutRequest.UpdateScheduledPayoutConfigReq
           { payoutCategory = apiReq.payoutCategory,
