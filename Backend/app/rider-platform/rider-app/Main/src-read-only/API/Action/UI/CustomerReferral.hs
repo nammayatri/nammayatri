@@ -72,7 +72,7 @@ getCustomerRefferalCount ::
     ) ->
     Environment.FlowHandler API.Types.UI.CustomerReferral.ReferredCustomers
   )
-getCustomerRefferalCount a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getCustomerRefferalCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getCustomerRefferalCount a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.CustomerReferral.getCustomerRefferalCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postPersonApplyReferral ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -81,7 +81,7 @@ postPersonApplyReferral ::
     API.Types.UI.CustomerReferral.ApplyCodeReq ->
     Environment.FlowHandler API.Types.UI.CustomerReferral.ReferrerInfo
   )
-postPersonApplyReferral a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.postPersonApplyReferral (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPersonApplyReferral a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.CustomerReferral.postPersonApplyReferral (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getReferralVerifyVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -90,7 +90,7 @@ getReferralVerifyVpa ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.CustomerReferral.VpaResp
   )
-getReferralVerifyVpa a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getReferralVerifyVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getReferralVerifyVpa a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.CustomerReferral.getReferralVerifyVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getReferralPayoutHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -100,7 +100,7 @@ getReferralPayoutHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.CustomerReferral.PayoutHistory
   )
-getReferralPayoutHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getReferralPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getReferralPayoutHistory a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.CustomerReferral.getReferralPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postPayoutVpaUpsert ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

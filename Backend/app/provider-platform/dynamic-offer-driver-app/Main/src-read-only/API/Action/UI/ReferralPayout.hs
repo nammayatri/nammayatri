@@ -89,7 +89,7 @@ getPayoutReferralEarnings ::
     Data.Time.Calendar.Day ->
     Environment.FlowHandler API.Types.UI.ReferralPayout.ReferralEarningsRes
   )
-getPayoutReferralEarnings a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutReferralEarnings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPayoutReferralEarnings a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.ReferralPayout.getPayoutReferralEarnings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postPayoutDeleteVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -98,7 +98,7 @@ postPayoutDeleteVpa ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPayoutDeleteVpa a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutDeleteVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postPayoutDeleteVpa a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.ReferralPayout.postPayoutDeleteVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postPayoutUpdateVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

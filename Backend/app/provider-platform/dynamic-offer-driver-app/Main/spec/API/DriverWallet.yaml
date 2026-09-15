@@ -104,7 +104,6 @@ apis:
         type: TopUpRequest
       response:
         type: PlanSubscribeRes
-      actorInfo: auth
   - GET:
       endpoint: /wallet/payoutHistory
       auth: TokenAuth PROVIDER_TYPE

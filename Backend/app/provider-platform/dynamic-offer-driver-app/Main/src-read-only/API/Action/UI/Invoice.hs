@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -42,4 +43,4 @@ getInvoice ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.Invoice.InvoiceRes]
   )
-getInvoice a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getInvoice a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

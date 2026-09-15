@@ -20,31 +20,32 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "dispatcher" :> Capture "fleetId" Kernel.Prelude.Text :> "getFleetInfo"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Dispatcher.DispatcherRes
       :<|> TokenAuth
       :> "dispatcher"
       :> "updateFleetSchedule"
-      :> ReqBody ('[JSON]) API.Types.UI.Dispatcher.DispatcherReq
+      :> ReqBody '[JSON] API.Types.UI.Dispatcher.DispatcherReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "dispatcher"
       :> "depotNames"
       :> Get
-           ('[JSON])
+           '[JSON]
            [Kernel.Prelude.Text]
       :<|> TokenAuth
       :> "dispatcher"
       :> "depotIds"
       :> Get
-           ('[JSON])
+           '[JSON]
            [Kernel.Prelude.Text]
       :<|> TokenAuth
       :> "dispatcher"
@@ -53,7 +54,7 @@ type API =
            "depotName"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DepotVehicle]
       :<|> TokenAuth
       :> "dispatcher"
@@ -62,7 +63,7 @@ type API =
            "depotId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DepotVehicle]
       :<|> TokenAuth
       :> "dispatcher"
@@ -71,7 +72,7 @@ type API =
            "depotId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.Prelude.Text
       :<|> TokenAuth
       :> "dispatcher"
@@ -83,7 +84,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 
@@ -97,7 +98,7 @@ getDispatcherGetFleetInfo ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.Dispatcher.DispatcherRes
   )
-getDispatcherGetFleetInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetFleetInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDispatcherGetFleetInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Dispatcher.getDispatcherGetFleetInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDispatcherUpdateFleetSchedule ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -106,13 +107,13 @@ postDispatcherUpdateFleetSchedule ::
     API.Types.UI.Dispatcher.DispatcherReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDispatcherUpdateFleetSchedule a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.postDispatcherUpdateFleetSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDispatcherUpdateFleetSchedule a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Dispatcher.postDispatcherUpdateFleetSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDispatcherDepotNames :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Kernel.Prelude.Text])
-getDispatcherDepotNames a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherDepotNames (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDispatcherDepotNames a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Dispatcher.getDispatcherDepotNames (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getDispatcherDepotIds :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Kernel.Prelude.Text])
-getDispatcherDepotIds a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherDepotIds (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDispatcherDepotIds a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Dispatcher.getDispatcherDepotIds (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getDispatcherGetVehiclesByDepotName ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -121,7 +122,7 @@ getDispatcherGetVehiclesByDepotName ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.Dispatcher.DepotVehicle]
   )
-getDispatcherGetVehiclesByDepotName a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetVehiclesByDepotName (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDispatcherGetVehiclesByDepotName a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Dispatcher.getDispatcherGetVehiclesByDepotName (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDispatcherGetVehiclesByDepotId ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -130,7 +131,7 @@ getDispatcherGetVehiclesByDepotId ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.Dispatcher.DepotVehicle]
   )
-getDispatcherGetVehiclesByDepotId a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetVehiclesByDepotId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDispatcherGetVehiclesByDepotId a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Dispatcher.getDispatcherGetVehiclesByDepotId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDispatcherGetDepotNameById ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -139,14 +140,14 @@ getDispatcherGetDepotNameById ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler Kernel.Prelude.Text
   )
-getDispatcherGetDepotNameById a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetDepotNameById (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDispatcherGetDepotNameById a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Dispatcher.getDispatcherGetDepotNameById (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDispatcherHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
-getDispatcherHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getDispatcherHistory a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Dispatcher.getDispatcherHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

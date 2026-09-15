@@ -22,12 +22,13 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "specialZoneQueue" :> "request"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
       :<|> TokenAuth
       :> "specialZoneQueue"
@@ -37,10 +38,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest)
       :> "respond"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRespondReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "specialZoneQueue"
@@ -50,7 +51,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest)
       :> "cancel"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -64,7 +65,7 @@ getSpecialZoneQueueRequest ::
     ) ->
     Environment.FlowHandler API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
   )
-getSpecialZoneQueueRequest a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialZoneQueue.getSpecialZoneQueueRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getSpecialZoneQueueRequest a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.SpecialZoneQueue.getSpecialZoneQueueRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postSpecialZoneQueueRequestRespond ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -75,7 +76,7 @@ postSpecialZoneQueueRequestRespond ::
     API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRespondReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSpecialZoneQueueRequestRespond a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialZoneQueue.postSpecialZoneQueueRequestRespond (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSpecialZoneQueueRequestRespond a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.SpecialZoneQueue.postSpecialZoneQueueRequestRespond (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postSpecialZoneQueueRequestCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -85,4 +86,4 @@ postSpecialZoneQueueRequestCancel ::
     Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSpecialZoneQueueRequestCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialZoneQueue.postSpecialZoneQueueRequestCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSpecialZoneQueueRequestCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SpecialZoneQueue.postSpecialZoneQueueRequestCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

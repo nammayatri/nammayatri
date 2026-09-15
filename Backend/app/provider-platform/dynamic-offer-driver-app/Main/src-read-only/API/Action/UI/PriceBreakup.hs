@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -54,7 +55,7 @@ postMeterRidePrice ::
     API.Types.UI.PriceBreakup.MeterRidePriceReq ->
     Environment.FlowHandler API.Types.UI.PriceBreakup.MeterRidePriceRes
   )
-postMeterRidePrice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PriceBreakup.postMeterRidePrice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMeterRidePrice a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PriceBreakup.postMeterRidePrice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getPriceBreakup ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -64,4 +65,4 @@ getPriceBreakup ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardItem]
   )
-getPriceBreakup a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PriceBreakup.getPriceBreakup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPriceBreakup a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PriceBreakup.getPriceBreakup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -28,6 +28,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -311,7 +312,7 @@ getOnboardingConfigs ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getOnboardingConfigs a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getDriverRateCard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -324,7 +325,7 @@ getDriverRateCard ::
     Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType ->
     Environment.FlowHandler [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
-getDriverRateCard a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getDriverRateCard a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverOnboardingV2.getDriverRateCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getDriverVehiclePhotos ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -334,7 +335,7 @@ getDriverVehiclePhotos ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
-getDriverVehiclePhotos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverVehiclePhotos a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverVehiclePhotosB64 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -352,7 +353,7 @@ getDriverVehiclePhotosB64 ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.VehiclePhotosResp
   )
-getDriverVehiclePhotosB64 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
+getDriverVehiclePhotosB64 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a10) $ Domain.Action.UI.DriverOnboardingV2.getDriverVehiclePhotosB64 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -362,7 +363,7 @@ postDriverUpdateAirCondition ::
     API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverUpdateAirCondition a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateAirCondition (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverUpdateAirCondition a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateAirCondition (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverVehicleServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -371,7 +372,7 @@ getDriverVehicleServiceTiers ::
     ) ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
   )
-getDriverVehicleServiceTiers a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverVehicleServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverVehicleServiceTiers a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverOnboardingV2.getDriverVehicleServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postDriverUpdateServiceTiers ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -381,7 +382,7 @@ postDriverUpdateServiceTiers ::
     API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverRegisterSsn ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -391,7 +392,7 @@ postDriverRegisterSsn ::
     API.Types.UI.DriverOnboardingV2.SSNReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterSsn (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverRegisterSsn a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterSsn (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverVerifyBankAccount ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -401,7 +402,7 @@ postDriverVerifyBankAccount ::
     API.Types.UI.DriverOnboardingV2.VerifyBankAccReq ->
     Environment.FlowHandler Kernel.External.Verification.Interface.Types.VerifyAsyncResp
   )
-postDriverVerifyBankAccount a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverVerifyBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverVerifyBankAccount a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverVerifyBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getInfoBankAccount ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -412,7 +413,7 @@ getInfoBankAccount ::
     Kernel.Types.Id.Id Domain.Types.Person.Driver ->
     Environment.FlowHandler Kernel.External.Verification.Types.BankAccountVerificationResponse
   )
-getInfoBankAccount a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getInfoBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getInfoBankAccount a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverOnboardingV2.getInfoBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverDeleteBankAccount ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -421,7 +422,7 @@ postDriverDeleteBankAccount ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverDeleteBankAccount a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDeleteBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postDriverDeleteBankAccount a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverOnboardingV2.postDriverDeleteBankAccount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postDriverBackgroundVerification ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -430,7 +431,7 @@ postDriverBackgroundVerification ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverBackgroundVerification a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverBackgroundVerification (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postDriverBackgroundVerification a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverOnboardingV2.postDriverBackgroundVerification (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postDriverRegisterPancard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -440,7 +441,7 @@ postDriverRegisterPancard ::
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterPancard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterPancard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverRegisterPancard a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterPancard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverRegisterBankAccountLink ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -451,7 +452,7 @@ getDriverRegisterBankAccountLink ::
     Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
-getDriverRegisterBankAccountLink a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getDriverRegisterBankAccountLink a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -461,7 +462,7 @@ getDriverRegisterBankAccountStatus ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountResp
   )
-getDriverRegisterBankAccountStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverRegisterBankAccountStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverRegisterGetLiveSelfie ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -471,7 +472,7 @@ getDriverRegisterGetLiveSelfie ::
     Domain.Types.Image.SelfieFetchStatus ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.GetLiveSelfieResp
   )
-getDriverRegisterGetLiveSelfie a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterGetLiveSelfie (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverRegisterGetLiveSelfie a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterGetLiveSelfie (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverRegisterAadhaarCard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -481,7 +482,7 @@ postDriverRegisterAadhaarCard ::
     API.Types.UI.DriverOnboardingV2.AadhaarCardReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterAadhaarCard a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterAadhaarCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverRegisterAadhaarCard a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterAadhaarCard (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverRegisterLogHvSdkCall ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -491,7 +492,7 @@ postDriverRegisterLogHvSdkCall ::
     API.Types.UI.DriverOnboardingV2.HVSdkCallLogReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterLogHvSdkCall a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterLogHvSdkCall (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverRegisterLogHvSdkCall a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterLogHvSdkCall (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverRegisterCommonDocument ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -501,7 +502,7 @@ postDriverRegisterCommonDocument ::
     API.Types.UI.DriverOnboardingV2.CommonDocumentReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterCommonDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterCommonDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverRegisterCommonDocument a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterCommonDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverFleetRcs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -513,7 +514,7 @@ getDriverFleetRcs ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.FleetRCListRes
   )
-getDriverFleetRcs a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverFleetRcs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getDriverFleetRcs a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.DriverOnboardingV2.getDriverFleetRcs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postDriverLinkToFleet ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -523,7 +524,7 @@ postDriverLinkToFleet ::
     API.Types.UI.DriverOnboardingV2.LinkToFleetReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverRegisterVehicleStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -534,7 +535,7 @@ getDriverRegisterVehicleStatus ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.RcVerifyStatusResp
   )
-getDriverRegisterVehicleStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterVehicleStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getDriverRegisterVehicleStatus a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterVehicleStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverDigilockerInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -544,7 +545,7 @@ postDriverDigilockerInitiate ::
     API.Types.UI.DriverOnboardingV2.DigiLockerInitiateReq ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
   )
-postDriverDigilockerInitiate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverDigilockerInitiate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverDigilockerPullDocuments ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -554,4 +555,4 @@ postDriverDigilockerPullDocuments ::
     API.Types.UI.DriverOnboardingV2.PullDocumentReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverDigilockerPullDocuments a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerPullDocuments (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverDigilockerPullDocuments a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerPullDocuments (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

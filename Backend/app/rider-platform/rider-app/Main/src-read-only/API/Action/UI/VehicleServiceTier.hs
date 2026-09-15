@@ -19,9 +19,10 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = (TokenAuth :> "vehicleServiceTiers" :> Get ('[JSON]) [API.Types.UI.VehicleServiceTier.VehicleServiceTierAPIEntity])
+type API = (TokenAuth :> "vehicleServiceTiers" :> Get '[JSON] [API.Types.UI.VehicleServiceTier.VehicleServiceTierAPIEntity])
 
 handler :: Environment.FlowServer API
 handler = getVehicleServiceTiers
@@ -32,4 +33,4 @@ getVehicleServiceTiers ::
     ) ->
     Environment.FlowHandler [API.Types.UI.VehicleServiceTier.VehicleServiceTierAPIEntity]
   )
-getVehicleServiceTiers a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleServiceTier.getVehicleServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getVehicleServiceTiers a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.VehicleServiceTier.getVehicleServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

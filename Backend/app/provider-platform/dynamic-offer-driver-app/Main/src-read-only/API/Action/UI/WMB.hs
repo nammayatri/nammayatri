@@ -27,6 +27,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -36,33 +37,33 @@ type API =
            Kernel.Prelude.Int
       :> MandatoryQueryParam "offset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.WMB.AvailableBadge]
       :<|> TokenAuth
       :> "wmb"
       :> "availableRoutes"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.AvailableRouteReq
       :> Post
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.WMB.AvailableRoute]
       :<|> TokenAuth
       :> "wmb"
       :> "qr"
       :> "start"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.TripQrStartReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.TripTransactionDetails
       :<|> TokenAuth
       :> "wmb"
       :> "trip"
       :> "active"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.ActiveTripTransaction
       :<|> TokenAuth
       :> "wmb"
@@ -72,7 +73,7 @@ type API =
            Data.Text.Text
       :> "details"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Fleet.Endpoints.Driver.RouteDetails
       :<|> TokenAuth
       :> "wmb"
@@ -88,7 +89,7 @@ type API =
            "status"
            Domain.Types.TripTransaction.TripStatus
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.WMB.TripTransactionDetails]
       :<|> TokenAuth
       :> "wmb"
@@ -98,10 +99,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "start"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.TripStartReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "wmb"
@@ -111,10 +112,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "end"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.TripEndReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.TripEndResp
       :<|> TokenAuth
       :> "wmb"
@@ -124,10 +125,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction)
       :> "request"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.RequestDetails
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.AlertReqResp
       :<|> TokenAuth
       :> "wmb"
@@ -137,7 +138,7 @@ type API =
            (Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert)
       :> "status"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.WMB.AlertRequestResp
       :<|> TokenAuth
       :> "wmb"
@@ -147,26 +148,26 @@ type API =
            (Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert)
       :> "cancel"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "fleet"
       :> "consent"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "fleet"
       :> "consent"
       :> "decline"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "fleet"
       :> "config"
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Types.FleetConfig.FleetConfig
   )
 
@@ -178,13 +179,13 @@ getWmbFleetBadges ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Domain.Types.FleetBadgeType.FleetBadgeType) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Domain.Types.FleetBadgeType.FleetBadgeType ->
     Kernel.Prelude.Int ->
     Kernel.Prelude.Int ->
     Environment.FlowHandler [API.Types.UI.WMB.AvailableBadge]
   )
-getWmbFleetBadges a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbFleetBadges (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getWmbFleetBadges a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.WMB.getWmbFleetBadges (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postWmbAvailableRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -194,7 +195,7 @@ postWmbAvailableRoutes ::
     API.Types.UI.WMB.AvailableRouteReq ->
     Environment.FlowHandler [API.Types.UI.WMB.AvailableRoute]
   )
-postWmbAvailableRoutes a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbAvailableRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWmbAvailableRoutes a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.postWmbAvailableRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postWmbQrStart ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -204,7 +205,7 @@ postWmbQrStart ::
     API.Types.UI.WMB.TripQrStartReq ->
     Environment.FlowHandler API.Types.UI.WMB.TripTransactionDetails
   )
-postWmbQrStart a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbQrStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWmbQrStart a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.postWmbQrStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getWmbTripActive ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -213,7 +214,7 @@ getWmbTripActive ::
     ) ->
     Environment.FlowHandler API.Types.UI.WMB.ActiveTripTransaction
   )
-getWmbTripActive a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbTripActive (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getWmbTripActive a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.getWmbTripActive (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getWmbRouteDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -223,19 +224,19 @@ getWmbRouteDetails ::
     Data.Text.Text ->
     Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Endpoints.Driver.RouteDetails
   )
-getWmbRouteDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbRouteDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getWmbRouteDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.getWmbRouteDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getWmbTripList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Domain.Types.TripTransaction.TripStatus) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Domain.Types.TripTransaction.TripStatus ->
     Environment.FlowHandler [API.Types.UI.WMB.TripTransactionDetails]
   )
-getWmbTripList a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbTripList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getWmbTripList a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.WMB.getWmbTripList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postWmbTripStart ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -246,7 +247,7 @@ postWmbTripStart ::
     API.Types.UI.WMB.TripStartReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postWmbTripStart a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripStart a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.WMB.postWmbTripStart (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postWmbTripEnd ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -257,7 +258,7 @@ postWmbTripEnd ::
     API.Types.UI.WMB.TripEndReq ->
     Environment.FlowHandler API.Types.UI.WMB.TripEndResp
   )
-postWmbTripEnd a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripEnd (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripEnd a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.WMB.postWmbTripEnd (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postWmbTripRequest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -268,7 +269,7 @@ postWmbTripRequest ::
     API.Types.UI.WMB.RequestDetails ->
     Environment.FlowHandler API.Types.UI.WMB.AlertReqResp
   )
-postWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postWmbTripRequest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.WMB.postWmbTripRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getWmbRequestsStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -278,7 +279,7 @@ getWmbRequestsStatus ::
     Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert ->
     Environment.FlowHandler API.Types.UI.WMB.AlertRequestResp
   )
-getWmbRequestsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getWmbRequestsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getWmbRequestsStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.getWmbRequestsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postWmbRequestsCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -288,7 +289,7 @@ postWmbRequestsCancel ::
     Kernel.Types.Id.Id DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWmbRequestsCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.WMB.postWmbRequestsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFleetConsent ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -297,7 +298,7 @@ postFleetConsent ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postFleetConsent a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postFleetConsent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postFleetConsent a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.postFleetConsent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postFleetConsentDecline ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -306,7 +307,7 @@ postFleetConsentDecline ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postFleetConsentDecline a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.postFleetConsentDecline (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postFleetConsentDecline a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.postFleetConsentDecline (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getFleetConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -315,4 +316,4 @@ getFleetConfig ::
     ) ->
     Environment.FlowHandler Domain.Types.FleetConfig.FleetConfig
   )
-getFleetConfig a1 = withFlowHandlerAPI $ Domain.Action.UI.WMB.getFleetConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getFleetConfig a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.WMB.getFleetConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

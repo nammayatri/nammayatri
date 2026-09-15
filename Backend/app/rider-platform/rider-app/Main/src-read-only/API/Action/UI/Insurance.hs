@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "insurance" :> Capture "referenceId" (Kernel.Types.Id.Id Domain.Types.Insurance.Insurance) :> Get '[JSON] API.Types.UI.Insurance.InsuranceAPIEntity)
@@ -34,4 +35,4 @@ getInsurance ::
     Kernel.Types.Id.Id Domain.Types.Insurance.Insurance ->
     Environment.FlowHandler API.Types.UI.Insurance.InsuranceAPIEntity
   )
-getInsurance a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Insurance.getInsurance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getInsurance a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Insurance.getInsurance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

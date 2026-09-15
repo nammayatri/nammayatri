@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -42,4 +43,4 @@ getReelsGetAllReelVideos ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.Reels.ReelsResp
   )
-getReelsGetAllReelVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Reels.getReelsGetAllReelVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getReelsGetAllReelVideos a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Reels.getReelsGetAllReelVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

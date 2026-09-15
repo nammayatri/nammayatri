@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -65,7 +66,7 @@ postKaptureCustomerLogin ::
     Kernel.External.Ticket.Interface.Types.TicketType ->
     Environment.FlowHandler API.Types.UI.TicketKapture.TicketKaptureResp
   )
-postKaptureCustomerLogin a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCustomerLogin (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postKaptureCustomerLogin a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketKapture.postKaptureCustomerLogin (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postKaptureCloseTicket ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -74,7 +75,7 @@ postKaptureCloseTicket ::
     Data.Text.Text ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postKaptureCloseTicket a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCloseTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postKaptureCloseTicket a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketKapture.postKaptureCloseTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getGetAllActiveTickets ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -82,7 +83,7 @@ getGetAllActiveTickets ::
     ) ->
     Environment.FlowHandler API.Types.UI.TicketKapture.GetAllActiveTicketsRes
   )
-getGetAllActiveTickets a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.getGetAllActiveTickets (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getGetAllActiveTickets a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.TicketKapture.getGetAllActiveTickets (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getGetClosedTicketIds ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -90,7 +91,7 @@ getGetClosedTicketIds ::
     ) ->
     Environment.FlowHandler API.Types.UI.TicketKapture.GetClosedTicketIdsRes
   )
-getGetClosedTicketIds a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.getGetClosedTicketIds (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getGetClosedTicketIds a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.TicketKapture.getGetClosedTicketIds (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getGetClosedTicketDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -99,4 +100,4 @@ getGetClosedTicketDetails ::
     Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.TicketKapture.GetClosedTicketDetailsRes
   )
-getGetClosedTicketDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.getGetClosedTicketDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getGetClosedTicketDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketKapture.getGetClosedTicketDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

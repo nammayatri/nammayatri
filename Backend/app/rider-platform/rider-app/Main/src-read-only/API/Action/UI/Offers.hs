@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.Offer
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -53,7 +54,7 @@ getOffersList ::
     Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
     Environment.FlowHandler [SharedLogic.Offer.OfferRespAPIEntity]
   )
-getOffersList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getOffersList a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Offers.getOffersList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getOffersListV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

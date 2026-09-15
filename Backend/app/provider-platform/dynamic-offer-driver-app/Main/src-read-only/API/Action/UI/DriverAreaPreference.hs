@@ -20,29 +20,30 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "driver" :> "areaPreference" :> "getInfo"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
       :<|> TokenAuth
       :> "driver"
       :> "areaPreference"
       :> "updateInfo"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
       :<|> TokenAuth
       :> "driver"
       :> "areaPreference"
       :> "list"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.DriverAreaPreference.GeohashAreaItem]
   )
 
@@ -56,7 +57,7 @@ getDriverAreaPreferenceGetInfo ::
     ) ->
     Environment.FlowHandler API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
   )
-getDriverAreaPreferenceGetInfo a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverAreaPreference.getDriverAreaPreferenceGetInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverAreaPreferenceGetInfo a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverAreaPreference.getDriverAreaPreferenceGetInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -66,7 +67,7 @@ postDriverAreaPreferenceUpdateInfo ::
     API.Types.UI.DriverAreaPreference.AreaPreferenceUpdateReq ->
     Environment.FlowHandler API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
   )
-postDriverAreaPreferenceUpdateInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverAreaPreference.postDriverAreaPreferenceUpdateInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverAreaPreferenceUpdateInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverAreaPreference.postDriverAreaPreferenceUpdateInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverAreaPreferenceList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -75,4 +76,4 @@ getDriverAreaPreferenceList ::
     ) ->
     Environment.FlowHandler [API.Types.UI.DriverAreaPreference.GeohashAreaItem]
   )
-getDriverAreaPreferenceList a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverAreaPreference.getDriverAreaPreferenceList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverAreaPreferenceList a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverAreaPreference.getDriverAreaPreferenceList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

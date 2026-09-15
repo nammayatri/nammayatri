@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -46,7 +47,9 @@ type API =
            "mappingId"
            (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping)
       :> "update"
-      :> ReqBody '[JSON] API.Types.UI.EDCMachine.UpdateEDCMachineReq
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.EDCMachine.UpdateEDCMachineReq
       :> Put
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -71,7 +74,7 @@ postEdcMachineAssign ::
     API.Types.UI.EDCMachine.AssignEDCMachineReq ->
     Environment.FlowHandler API.Types.UI.EDCMachine.AssignEDCMachineResp
   )
-postEdcMachineAssign a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EDCMachine.postEdcMachineAssign (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postEdcMachineAssign a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EDCMachine.postEdcMachineAssign (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getEdcMachineList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -81,7 +84,7 @@ getEdcMachineList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.EDCMachine.EDCMachineMappingListResp
   )
-getEdcMachineList a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EDCMachine.getEdcMachineList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getEdcMachineList a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.EDCMachine.getEdcMachineList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 putEdcMachineUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -91,7 +94,7 @@ putEdcMachineUpdate ::
     API.Types.UI.EDCMachine.UpdateEDCMachineReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-putEdcMachineUpdate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EDCMachine.putEdcMachineUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+putEdcMachineUpdate a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.EDCMachine.putEdcMachineUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 deleteEdcMachineDelete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -100,4 +103,4 @@ deleteEdcMachineDelete ::
     Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-deleteEdcMachineDelete a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EDCMachine.deleteEdcMachineDelete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+deleteEdcMachineDelete a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EDCMachine.deleteEdcMachineDelete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

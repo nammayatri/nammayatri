@@ -84,4 +84,3 @@ apis:
         type: API.Types.UI.CustomerReferral.UpdatePayoutVpaReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
-      actorInfo: auth

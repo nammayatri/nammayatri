@@ -20,9 +20,10 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = (TokenAuth :> "penalty" :> "check" :> ReqBody ('[JSON]) API.Types.UI.Penalty.PenaltyCheckReq :> Post ('[JSON]) API.Types.UI.Penalty.PenaltyCheckRes)
+type API = (TokenAuth :> "penalty" :> "check" :> ReqBody '[JSON] API.Types.UI.Penalty.PenaltyCheckReq :> Post '[JSON] API.Types.UI.Penalty.PenaltyCheckRes)
 
 handler :: Environment.FlowServer API
 handler = postPenaltyCheck
@@ -35,4 +36,4 @@ postPenaltyCheck ::
     API.Types.UI.Penalty.PenaltyCheckReq ->
     Environment.FlowHandler API.Types.UI.Penalty.PenaltyCheckRes
   )
-postPenaltyCheck a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Penalty.postPenaltyCheck (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPenaltyCheck a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Penalty.postPenaltyCheck (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

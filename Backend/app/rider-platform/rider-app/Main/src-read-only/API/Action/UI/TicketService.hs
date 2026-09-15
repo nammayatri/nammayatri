@@ -286,7 +286,7 @@ handler :: Environment.FlowServer API
 handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsV2 :<|> getTicketBookingsDetails :<|> postTicketBookingsVerifyV2 :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingsCashCollect :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel :<|> getTicketPlaceAvailability :<|> getTicketPlacesV2 :<|> getTicketPlace :<|> getTicketFleetVehicles :<|> getTicketFleetVehiclesV2 :<|> getTicketPlaceBookings
 
 getTicketPlaces :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Domain.Types.TicketPlace.TicketPlace])
-getTicketPlaces a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getTicketPlaces a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.TicketService.getTicketPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getTicketPlacesServices ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -297,7 +297,7 @@ getTicketPlacesServices ::
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketServiceResp]
   )
-getTicketPlacesServices a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlacesServices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTicketPlacesServices a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketPlacesServices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postTicketPlacesBook ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -318,7 +318,7 @@ getTicketBookings ::
     Domain.Types.TicketBooking.BookingStatus ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketBookingAPIEntity]
   )
-getTicketBookings a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTicketBookings a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketBookings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getTicketBookingsV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -329,7 +329,7 @@ getTicketBookingsV2 ::
     Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketBookingAPIEntityV2]
   )
-getTicketBookingsV2 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTicketBookingsV2 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketBookingsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getTicketBookingsDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -338,7 +338,7 @@ getTicketBookingsDetails ::
     Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketBookingDetails
   )
-getTicketBookingsDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getTicketBookingsDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.getTicketBookingsDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingsVerifyV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -349,7 +349,7 @@ postTicketBookingsVerifyV2 ::
     API.Types.UI.TicketService.TicketServiceVerificationReq ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketServiceVerificationResp
   )
-postTicketBookingsVerifyV2 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsVerifyV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postTicketBookingsVerifyV2 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.postTicketBookingsVerifyV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postTicketBookingsVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -361,7 +361,7 @@ postTicketBookingsVerify ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketServiceVerificationResp
   )
-postTicketBookingsVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postTicketBookingsVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.TicketService.postTicketBookingsVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getTicketBookingsStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -370,7 +370,7 @@ getTicketBookingsStatus ::
     Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
     Environment.FlowHandler Domain.Types.TicketBooking.BookingStatus
   )
-getTicketBookingsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getTicketBookingsStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.getTicketBookingsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingsCashCollect ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -379,7 +379,7 @@ postTicketBookingsCashCollect ::
     Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postTicketBookingsCashCollect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsCashCollect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postTicketBookingsCashCollect a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.postTicketBookingsCashCollect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -388,7 +388,7 @@ postTicketBookingCancel ::
     API.Types.UI.TicketService.TicketBookingCancelReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postTicketBookingCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postTicketBookingCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.postTicketBookingCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingsUpdateSeats ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -397,7 +397,7 @@ postTicketBookingsUpdateSeats ::
     API.Types.UI.TicketService.TicketBookingUpdateSeatsReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postTicketBookingsUpdateSeats a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsUpdateSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postTicketBookingsUpdateSeats a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.postTicketBookingsUpdateSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketServiceCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -406,7 +406,7 @@ postTicketServiceCancel ::
     API.Types.UI.TicketService.TicketServiceCancelReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postTicketServiceCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketServiceCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postTicketServiceCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.postTicketServiceCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getTicketPlaceAvailability ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -417,10 +417,10 @@ getTicketPlaceAvailability ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceAvailability]
   )
-getTicketPlaceAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaceAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTicketPlaceAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.TicketService.getTicketPlaceAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getTicketPlacesV2 :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceResp])
-getTicketPlacesV2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlacesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getTicketPlacesV2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.TicketService.getTicketPlacesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getTicketPlace ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -429,7 +429,7 @@ getTicketPlace ::
     Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketPlaceResp
   )
-getTicketPlace a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlace (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getTicketPlace a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.TicketService.getTicketPlace (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getTicketFleetVehicles ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -441,7 +441,7 @@ getTicketFleetVehicles ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketFleetVehicleResp]
   )
-getTicketFleetVehicles a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketFleetVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getTicketFleetVehicles a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.TicketService.getTicketFleetVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getTicketFleetVehiclesV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -453,7 +453,7 @@ getTicketFleetVehiclesV2 ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketFleetVehicleResp]
   )
-getTicketFleetVehiclesV2 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketFleetVehiclesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getTicketFleetVehiclesV2 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.TicketService.getTicketFleetVehiclesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getTicketPlaceBookings ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -465,4 +465,4 @@ getTicketPlaceBookings ::
     Domain.Types.TicketBooking.BookingStatus ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketPlaceBookingList
   )
-getTicketPlaceBookings a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaceBookings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getTicketPlaceBookings a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.TicketService.getTicketPlaceBookings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

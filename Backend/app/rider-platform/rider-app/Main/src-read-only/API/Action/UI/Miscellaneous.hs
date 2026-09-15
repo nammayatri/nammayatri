@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "misc" :> "testScanQR" :> ReqBody '[JSON] API.Types.UI.Miscellaneous.QRScanTestReq :> Post '[JSON] API.Types.UI.Miscellaneous.QRScanTestResp)
@@ -33,4 +34,4 @@ postMiscTestScanQR ::
     API.Types.UI.Miscellaneous.QRScanTestReq ->
     Environment.FlowHandler API.Types.UI.Miscellaneous.QRScanTestResp
   )
-postMiscTestScanQR a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Miscellaneous.postMiscTestScanQR (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMiscTestScanQR a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Miscellaneous.postMiscTestScanQR (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -91,7 +91,7 @@ postBbpsSession ::
     API.Types.UI.BBPS.BBPSSessionReq ->
     Environment.FlowHandler Domain.Types.BBPS.BBPSSessionPayload
   )
-postBbpsSession a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BBPS.postBbpsSession (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postBbpsSession a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.BBPS.postBbpsSession (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postBbpsCreateOrder ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -109,13 +109,13 @@ getBbpsGetOrderStatus ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
   )
-getBbpsGetOrderStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BBPS.getBbpsGetOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getBbpsGetOrderStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.BBPS.getBbpsGetOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postBbpsCrossCheckPayment :: (API.Types.UI.BBPS.BBPSServerReq -> Environment.FlowHandler API.Types.UI.BBPS.BBPSServerResp)
-postBbpsCrossCheckPayment a1 = withFlowHandlerAPI $ Domain.Action.UI.BBPS.postBbpsCrossCheckPayment a1
+postBbpsCrossCheckPayment a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.BBPS.postBbpsCrossCheckPayment a1
 
 postBbpsPaymentStatus :: (API.Types.UI.BBPS.BBPSServerReq -> Environment.FlowHandler API.Types.UI.BBPS.BBPSServerResp)
-postBbpsPaymentStatus a1 = withFlowHandlerAPI $ Domain.Action.UI.BBPS.postBbpsPaymentStatus a1
+postBbpsPaymentStatus a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.BBPS.postBbpsPaymentStatus a1
 
 getBbpsOrders ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -127,4 +127,4 @@ getBbpsOrders ::
     Kernel.Prelude.Maybe Domain.Types.BBPS.BBPSPaymentStatus ->
     Environment.FlowHandler [API.Types.UI.BBPS.BBPSInfoAPIRes]
   )
-getBbpsOrders a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BBPS.getBbpsOrders (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getBbpsOrders a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.BBPS.getBbpsOrders (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

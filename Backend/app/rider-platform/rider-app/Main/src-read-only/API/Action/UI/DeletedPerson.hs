@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "deleted" :> "person" :> ReqBody '[JSON] API.Types.UI.DeletedPerson.DeletedPersonReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -34,4 +35,4 @@ postDeletedPerson ::
     API.Types.UI.DeletedPerson.DeletedPersonReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDeletedPerson a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DeletedPerson.postDeletedPerson (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDeletedPerson a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DeletedPerson.postDeletedPerson (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

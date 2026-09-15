@@ -132,7 +132,7 @@ getLmsListAllModules ::
     Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetModuleRes
   )
-getLmsListAllModules a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllModules (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getLmsListAllModules a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.LmsModule.getLmsListAllModules (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getLmsListAllVideos ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -143,7 +143,7 @@ getLmsListAllVideos ::
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetVideosRes
   )
-getLmsListAllVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getLmsListAllVideos a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.LmsModule.getLmsListAllVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getLmsListAllQuiz ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -154,7 +154,7 @@ getLmsListAllQuiz ::
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetQuizRes
   )
-getLmsListAllQuiz a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllQuiz (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getLmsListAllQuiz a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.LmsModule.getLmsListAllQuiz (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getLmsGetCertificate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -164,7 +164,7 @@ getLmsGetCertificate ::
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsCertificateRes
   )
-getLmsGetCertificate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsGetCertificate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getLmsGetCertificate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.LmsModule.getLmsGetCertificate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getLmsGetAllCertificates ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -173,7 +173,7 @@ getLmsGetAllCertificates ::
     ) ->
     Environment.FlowHandler [API.Types.UI.LmsModule.CertificateInfo]
   )
-getLmsGetAllCertificates a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsGetAllCertificates (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getLmsGetAllCertificates a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.LmsModule.getLmsGetAllCertificates (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getLmsGetBonusCoins ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -183,7 +183,7 @@ getLmsGetBonusCoins ::
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
     Environment.FlowHandler API.Types.UI.LmsModule.BonusRes
   )
-getLmsGetBonusCoins a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsGetBonusCoins (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getLmsGetBonusCoins a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.LmsModule.getLmsGetBonusCoins (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postLmsMarkVideoAsStarted ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -193,7 +193,7 @@ postLmsMarkVideoAsStarted ::
     API.Types.UI.LmsModule.VideoUpdateAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postLmsMarkVideoAsStarted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.postLmsMarkVideoAsStarted (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postLmsMarkVideoAsStarted a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.LmsModule.postLmsMarkVideoAsStarted (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postLmsMarkVideoAsCompleted ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -203,7 +203,7 @@ postLmsMarkVideoAsCompleted ::
     API.Types.UI.LmsModule.VideoUpdateAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postLmsMarkVideoAsCompleted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.postLmsMarkVideoAsCompleted (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postLmsMarkVideoAsCompleted a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.LmsModule.postLmsMarkVideoAsCompleted (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postLmsQuestionConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
