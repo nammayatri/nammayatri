@@ -48,9 +48,6 @@ apis:
         type: SosReq
       response:
         type: SosRes
-      migrate:
-        endpoint: SosAPI CreateSosEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_SOS
   - POST:
       endpoint: /{customerId}/deleted/person
       auth: ApiAuthV2
@@ -60,9 +57,6 @@ apis:
         type: DeletedPersonReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: DeletedPersonAPI CreateDeletedPersonEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_DELETED_PERSON
   - GET:
       endpoint: /{customerId}/savedLocations
       auth: ApiAuthV2

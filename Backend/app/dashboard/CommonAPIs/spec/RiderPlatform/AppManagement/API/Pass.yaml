@@ -184,19 +184,10 @@ apis:
         type: PurchasedPassSelectReq
       response:
         type: PassSelectionAPIEntity
-      helperApi:
-        - POST:
-            endpoint: /customer/{customerId}/pass/{passId}/select
-            auth: ApiAuthV2
-            params:
-              customerId: Id Person
-              passId: Id Pass
-            query:
-              - requestorId: Text
-            request:
-              type: PurchasedPassSelectReq
-            response:
-              type: PassSelectionAPIEntity
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET:
       endpoint: customer/{customerId}/payment/{orderId}/status
@@ -206,17 +197,10 @@ apis:
         orderId: Id PaymentOrder
       response:
         type: PaymentStatusResp
-      helperApi:
-        - GET:
-            endpoint: customer/{customerId}/payment/{orderId}/status
-            auth: ApiAuthV2
-            params:
-              customerId: Id Person
-              orderId: Id PaymentOrder
-            query:
-              - requestorId: Text
-            response:
-              type: PaymentStatusResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST:
       endpoint: /customer/{customerId}/pass/{passId}/resetDeviceSwitchCount
@@ -266,6 +250,8 @@ apis:
         enable: Bool
       response:
         type: "[PassCatalogItem]"
+      migrate:
+        capability: city-operations.pass.read
 
   - POST:
       endpoint: /catalog/create
@@ -275,6 +261,8 @@ apis:
         type: PassCreateReq
       response:
         type: PassCreateResp
+      migrate:
+        capability: city-operations.pass.write
 
   - PUT:
       endpoint: /catalog/{passId}/update
@@ -286,6 +274,8 @@ apis:
         type: PassUpdateReq
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.pass.write
 
   # Soft delete (enable = false), matching deleteEDCMachine. A hard delete would
   # orphan purchased_pass rows that reference pass_id for rider history.
@@ -297,3 +287,5 @@ apis:
         passId: Id Pass
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.pass.write

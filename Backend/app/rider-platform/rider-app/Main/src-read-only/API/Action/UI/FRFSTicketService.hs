@@ -29,6 +29,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -580,7 +581,7 @@ postFrfsQuoteConfirm ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-postFrfsQuoteConfirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postFrfsQuoteConfirm a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsQuoteV2Confirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -591,7 +592,7 @@ postFrfsQuoteV2Confirm ::
     API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postFrfsQuotePaymentRetry ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -609,7 +610,7 @@ getFrfsBookingStatus ::
     Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-getFrfsBookingStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFrfsBookingStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSTicketService.getFrfsBookingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFrfsBookingList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -658,7 +659,7 @@ postFrfsBookingReschedule ::
     API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
-postFrfsBookingReschedule a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsBookingReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postFrfsBookingReschedule a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsBookingReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getFrfsBookingCancelStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

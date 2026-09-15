@@ -97,7 +97,6 @@ import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Tools.ActorInfo as ActorInfo
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
@@ -632,7 +631,7 @@ postRidePayoutOfferSync ::
   Maybe Text ->
   Common.MultipleRideSyncReq ->
   Flow Common.MultipleRideSyncResp
-postRidePayoutOfferSync merchantShortId _ mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) . withDynamicLogLevel "ride-payout-offer-sync" $ do
+postRidePayoutOfferSync merchantShortId _ _mbRequestorId req = withDynamicLogLevel "ride-payout-offer-sync" $ do
   withLogTag ("merchantShortId-" <> merchantShortId.getShortId) $ do
     logDebug $ "Starting ride payout offer sync for " <> show (length req.rides) <> " rides"
     runRequestValidation validateMultipleRideSyncReq req

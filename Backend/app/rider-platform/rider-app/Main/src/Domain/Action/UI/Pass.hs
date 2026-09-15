@@ -127,7 +127,6 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
-import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -477,7 +476,7 @@ postMultimodalPassSelect ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture =
-  ActorInfo.withMbPersonIdActorInfo mbPersonId . postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam)
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam)
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),

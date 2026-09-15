@@ -24,6 +24,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -212,4 +213,4 @@ postLmsQuestionConfirm ::
     API.Types.UI.LmsModule.QuestionConfirmReq ->
     Environment.FlowHandler API.Types.UI.LmsModule.QuestionConfirmRes
   )
-postLmsQuestionConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.postLmsQuestionConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postLmsQuestionConfirm a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.LmsModule.postLmsQuestionConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
