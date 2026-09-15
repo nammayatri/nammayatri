@@ -39,6 +39,7 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -1534,7 +1535,6 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
             -- other: the basket would then be discounted by applyBenefit while the order charged
             -- face fare, and keying off overriddenAmount alone would skip the check precisely in
             -- that case.
-            --
             -- Deliberately scoped to the override branch. The non-override basket only carries the
             -- ADULT and CHILD SKUs, so any further category -- or an unset CHILD SKU product id --
             -- makes basketTotal legitimately smaller than totalPrice, and checking it there would
@@ -1687,6 +1687,43 @@ getPaymentType isMultiModalBooking = \case
 
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
+
+-- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
+getScheduledTripWindow ::
+  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  Text -> -- tripId, "<waybillNo>-<tripNumber>"
+  Text -> -- routeCode
+  Text -> -- boarding stop code
+  Text -> -- alighting stop code
+  DIBC.IntegratedBPPConfig ->
+  m (Maybe UTCTime, Maybe UTCTime)
+getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
+  let (waybillNo, tripNo) = case T.splitOn "-" tripId of
+        [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
+        _ -> (tripId, 0 :: Int)
+  withTryCatch "getScheduledTripWindow:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
+    Left err -> do
+      logWarning $ "getScheduledTripWindow: no schedule for tripId=" <> tripId <> ": " <> show err
+      pure (Nothing, Nothing)
+    Right schedule -> case concatMap (.eta) schedule of
+      [] -> do
+        logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
+        pure (Nothing, Nothing)
+      allEtas -> do
+        let atStop stopCode = find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode stopCode) allEtas
+            --
+            bound name mbFallback stopCode = case atStop stopCode of
+              Just eta -> pure $ Just (unixToUTC eta.arrivalTimeUnix)
+              Nothing -> case mbFallback of
+                Just fallbackEta -> do
+                  logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", using the trip's earliest stop"
+                  pure $ Just (unixToUTC fallbackEta.arrivalTimeUnix)
+                Nothing -> do
+                  logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
+                  pure Nothing
+            earliestEta = minimumBy (comparing (.arrivalTimeUnix)) allEtas
+        (,) <$> bound "boarding" (Just earliestEta) boardingStopCode
+          <*> bound "alighting" Nothing alightingStopCode
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do

@@ -266,7 +266,10 @@ loadJourneyPassCandidates personId journeyId legs
   | not (any (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs) = pure (Just [])
   | otherwise = do
     journey <- getJourney journeyId
-    if journey.status >= DJourney.CONFIRMED
+    let alreadyPurchased =
+          journey.status > DJourney.CONFIRMED
+            || (journey.status == DJourney.CONFIRMED && journey.isPaymentSuccess == Just True)
+    if alreadyPurchased
       then pure (Just [])
       else do
         enabled <- anyPassOverrideEnabled journey

@@ -318,6 +318,8 @@ data PassError
   | PassInvalidVehicle Text Text -- passId, vehicleNumber
   | PassVerificationFailed Text Text -- passId, reason
   | PassAlreadyInProgress Text -- passId
+  | PassOverlappingFRFSBooking Text -- purchasedPassPaymentId
+  | PassNotActiveForTripDate Text Text -- purchasedPassPaymentId, reason
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -337,6 +339,8 @@ instance IsBaseError PassError where
   toMessage (PassInvalidVehicle _passId vehicleNumber) = Just $ "Entered Bus OTP: " <> vehicleNumber <> " is invalid. Please check again."
   toMessage (PassVerificationFailed _passId reason) = Just reason
   toMessage (PassAlreadyInProgress _passId) = Just "Pass purchase already in progress, please try again."
+  toMessage (PassOverlappingFRFSBooking _paymentId) = Just "You already have a ticket booked with this pass for this time period."
+  toMessage (PassNotActiveForTripDate _paymentId reason) = Just reason
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -354,6 +358,8 @@ instance IsHTTPError PassError where
     PassInvalidVehicle _ _ -> "PASS_INVALID_VEHICLE"
     PassVerificationFailed _ _ -> "PASS_VERIFICATION_FAILED"
     PassAlreadyInProgress _ -> "PASS_ALREADY_IN_PROGRESS"
+    PassOverlappingFRFSBooking _ -> "PASS_OVERLAPPING_FRFS_BOOKING"
+    PassNotActiveForTripDate _ _ -> "PASS_NOT_ACTIVE_FOR_TRIP_DATE"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
@@ -369,6 +375,8 @@ instance IsHTTPError PassError where
     PassInvalidVehicle _ _ -> E400
     PassVerificationFailed _ _ -> E400
     PassAlreadyInProgress _ -> E409
+    PassOverlappingFRFSBooking _ -> E400
+    PassNotActiveForTripDate _ _ -> E400
 
 instance IsAPIError PassError
 
