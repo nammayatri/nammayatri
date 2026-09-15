@@ -9,6 +9,7 @@ import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.FRFSAlerts
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
+import qualified API.Types.RiderPlatform.Management.IncentiveJourney
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Media
 import qualified API.Types.RiderPlatform.Management.Merchant
@@ -36,6 +37,7 @@ data ManagementAPIs = ManagementAPIs
     customerDSL :: API.Types.RiderPlatform.Management.Customer.CustomerAPIs,
     fRFSAlertsDSL :: API.Types.RiderPlatform.Management.FRFSAlerts.FRFSAlertsAPIs,
     fRFSTicketDSL :: API.Types.RiderPlatform.Management.FRFSTicket.FRFSTicketAPIs,
+    incentiveJourneyDSL :: API.Types.RiderPlatform.Management.IncentiveJourney.IncentiveJourneyAPIs,
     invoiceDSL :: API.Types.RiderPlatform.Management.Invoice.InvoiceAPIs,
     mediaDSL :: API.Types.RiderPlatform.Management.Media.MediaAPIs,
     merchantDSL :: API.Types.RiderPlatform.Management.Merchant.MerchantAPIs,
@@ -58,6 +60,7 @@ mkManagementAPIs merchantId city token = do
   let customerDSL = API.Types.RiderPlatform.Management.Customer.mkCustomerAPIs customerClientDSL
   let fRFSAlertsDSL = API.Types.RiderPlatform.Management.FRFSAlerts.mkFRFSAlertsAPIs fRFSAlertsClientDSL
   let fRFSTicketDSL = API.Types.RiderPlatform.Management.FRFSTicket.mkFRFSTicketAPIs fRFSTicketClientDSL
+  let incentiveJourneyDSL = API.Types.RiderPlatform.Management.IncentiveJourney.mkIncentiveJourneyAPIs incentiveJourneyClientDSL
   let invoiceDSL = API.Types.RiderPlatform.Management.Invoice.mkInvoiceAPIs invoiceClientDSL
   let mediaDSL = API.Types.RiderPlatform.Management.Media.mkMediaAPIs mediaClientDSL
   let merchantDSL = API.Types.RiderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
@@ -73,7 +76,7 @@ mkManagementAPIs merchantId city token = do
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> offerClientDSL :<|> payoutClientDSL :<|> rewardsClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> incentiveJourneyClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> offerClientDSL :<|> payoutClientDSL :<|> rewardsClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

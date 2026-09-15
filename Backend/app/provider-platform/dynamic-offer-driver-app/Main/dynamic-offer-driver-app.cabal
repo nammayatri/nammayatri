@@ -681,6 +681,7 @@ library
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RideEvents.DriverCoinsAndJourney
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
@@ -728,6 +729,7 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.GovtDataRC
+      Storage.Beam.IncentiveJourney
       Storage.Beam.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom
@@ -1400,9 +1402,6 @@ library
       Domain.Types.IdfyVerification
       Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
-      Domain.Types.IncentiveJourney
-      Domain.Types.IncentiveJourneyMilestone
-      Domain.Types.IncentiveJourneyStats
       Domain.Types.IntegratedBPPConfig
       Domain.Types.Invoice
       Domain.Types.KioskLocation
@@ -1596,9 +1595,6 @@ library
       Storage.Beam.IdfyVerification
       Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
-      Storage.Beam.IncentiveJourney
-      Storage.Beam.IncentiveJourneyMilestone
-      Storage.Beam.IncentiveJourneyStats
       Storage.Beam.IntegratedBPPConfig
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
@@ -1797,9 +1793,6 @@ library
       Storage.Queries.IdfyVerification
       Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
-      Storage.Queries.IncentiveJourney
-      Storage.Queries.IncentiveJourneyMilestone
-      Storage.Queries.IncentiveJourneyStats
       Storage.Queries.IntegratedBPPConfig
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
@@ -1885,7 +1878,6 @@ library
       Storage.Queries.OrphanInstances.FleetRcDailyStats
       Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
-      Storage.Queries.OrphanInstances.IncentiveJourneyStats
       Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
@@ -2092,6 +2084,7 @@ library
     , http-client-tls
     , http-conduit
     , http-types
+    , incentive-journey
     , json-logic-hs
     , jwt >=0.11
     , lens
@@ -2242,6 +2235,7 @@ executable dynamic-offer-driver-app-exe
     , http-client-tls
     , http-conduit
     , http-types
+    , incentive-journey
     , json-logic-hs
     , jwt >=0.11
     , lens

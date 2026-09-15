@@ -1,0 +1,29 @@
+imports: {}
+
+CohortDetails:
+  tableName: cohort_details
+
+  fields:
+    id: Id CohortDetails
+    name: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByName:
+      kvFunction: findOneWithKV
+      where: name
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"
