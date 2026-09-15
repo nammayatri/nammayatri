@@ -33,16 +33,19 @@ module SharedLogic.FRFSPassOverride
     remainingTrips,
     benefitFromPass,
     isUnlimitedBenefit,
+    seededRemainingTrips,
     consumeTrip,
     consumeTripOnce,
+    TripDebitResult (..),
     spendTripForBooking,
+    passLegsNotCoverable,
     refundTrip,
     BookedTripWindow (..),
     checkOverlappingBookingLimit,
     recordBookedTrip,
     recordAndDetectOverLimit,
-    withTripCountLock,
     releaseBookedTrip,
+    migrateTripDebitMarker,
   )
 where
 
@@ -490,12 +493,10 @@ overlappingBookedTrips person paymentId window = do
   pure $ nubBy (\a b -> a.bookingId == b.bookingId) clashing
 
 -- | Record the window, then report whether THIS booking took the pass past its cap.
---
 -- The entrance check runs before the booking exists, so anything that acquires a pass afterwards --
 -- a reconfirm, a payment that lands after the booking expired, two confirms racing on different
 -- searches -- is recorded but was never checked. Everything reaching a live ticket passes through
 -- here, so this is the one place a breach can be detected for certain.
---
 -- Records first: sAdd is atomic, so concurrent writers each see their own entry plus everyone
 -- else's, and only the one that actually crossed the line reports True.
 recordAndDetectOverLimit ::
@@ -559,13 +560,11 @@ overlapRecordLockRetryDelayMicros :: Int
 overlapRecordLockRetryDelayMicros = 100000
 
 -- | Serialise the read-modify-write of one term's window set, for a bounded time.
---
 -- Deliberately not Redis.withWaitAndLockRedis. That helper retries forever -- its Int argument is
 -- the lock's expiry, not a retry count -- and it sleeps after EVERY attempt, including one that
 -- took the lock uncontended. Both matter here: this runs on on_confirm, where an unbounded wait
 -- holds open a booking the rider has already paid for, and the unconditional sleep was a flat
 -- delay on every booking that reached this point.
---
 -- Giving up FAILS OPEN, running the action unlocked, and reports which happened: the caller needs
 -- to know, because a verdict reached without serialisation is not safe to act on. Refusing a paid
 -- booking because a lock was busy would be the wrong trade, but so is trusting an unlocked read --
@@ -589,10 +588,6 @@ withOverlapRecordLock paymentId act = go overlapRecordLockRetries
             else do
               threadDelay overlapRecordLockRetryDelayMicros
               go (retriesLeft - 1)
-
-withTripCountLock :: (CacheFlow m r, EsqDBFlow m r, MonadMask m) => Id DPPP.PurchasedPassPayment -> m a -> m a
-withTripCountLock paymentId =
-  Redis.withWaitAndLockRedis ("FRFSPassOverride:TripCountLock-" <> paymentId.getId) 10 200000
 
 checkOverlappingBookingLimit ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -681,6 +676,19 @@ hasUnreleasedDebit :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSS
 hasUnreleasedDebit searchId = do
   mbConsumed :: Maybe Bool <- Redis.get (tripMarkerKey "TripConsumed" searchId)
   pure (isJust mbConsumed)
+
+--
+--
+migrateTripDebitMarker :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> Id DFRFSSearch.FRFSSearch -> m ()
+migrateTripDebitMarker fromSearchId toSearchId = do
+  debited <- hasUnreleasedDebit fromSearchId
+  if not debited
+    then logInfo $ "FRFSPassOverride:migrateTripDebitMarker no debit on searchId=" <> fromSearchId.getId <> ", nothing to migrate"
+    else do
+      void $ claimTripMarker "TripConsumed" passMarkerTtl toSearchId
+      clearTripMarker "TripReleased" toSearchId
+      clearTripMarker "TripConsumed" fromSearchId
+      logInfo $ "FRFSPassOverride:migrateTripDebitMarker moved the trip debit searchId=" <> fromSearchId.getId <> " -> " <> toSearchId.getId
 
 hasPendingTripRefund :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
 hasPendingTripRefund searchId = do
@@ -779,13 +787,21 @@ refundTrip payment benefit quantity = unless (isUnlimitedBenefit benefit) $ do
 registerHasPass :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> T.Day -> m ()
 registerHasPass personId endDate = do
   now <- getCurrentTime
-  let key = makeHasPassKey personId
-      secondsTillEnd = max 0 . round $ diffUTCTime (T.UTCTime (T.addDays 1 endDate) 0) now
-      newTtl = secondsTillEnd + hasPassTtlBuffer
-  existingTtl <- fromInteger <$> Redis.ttl key
-  Redis.setExp key True (max newTtl existingTtl)
-  QPersonExtra.setHasPassTillIfUnset personId endDate
-  QPersonExtra.updateHasPassTill personId endDate
+  let expiry = T.UTCTime (T.addDays 1 endDate) 0
+  if expiry <= now
+    then
+      logInfo $
+        "FRFSPassOverride:registerHasPass skipping an expired pass personId=" <> personId.getId
+          <> " endDate="
+          <> show endDate
+    else do
+      let key = makeHasPassKey personId
+          secondsTillEnd = max 0 . round $ diffUTCTime expiry now
+          newTtl = secondsTillEnd + hasPassTtlBuffer
+      existingTtl <- fromInteger <$> Redis.ttl key
+      Redis.setExp key True (max newTtl existingTtl)
+      QPersonExtra.setHasPassTillIfUnset personId endDate
+      QPersonExtra.updateHasPassTill personId endDate
 
 makeHasPassKey :: Id DP.Person -> Text
 makeHasPassKey personId = "FRFSPassOverride:HasPass-" <> personId.getId
@@ -926,42 +942,125 @@ releasePassOverrideTripOnFailure booking =
 -- Debiting here rather than before the BPP call is what removes the class of bug where a trip was
 -- spent for a ticket that never materialised -- a thrown confirm, a pod restart, an abandoned
 -- journey -- with nothing left to release it.
-spendTripForBooking :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
-spendTripForBooking person booking = whenJust booking.overrideAppliedEntityId $ \entityId -> do
-  mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
-  tripDay <- localTripDay person (fromMaybe booking.createdAt booking.startTime)
-  let mbOwnedPayment = do
-        payment <- mbPayment
-        guard (payment.personId == booking.riderId)
-        guard (payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked])
-        pure payment
-  case mbOwnedPayment of
-    Nothing ->
-      logError $ "FRFSPassOverride:spendTripForBooking ticket issued but pass is missing or not the rider's, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
-    Just payment ->
-      toApplicablePass booking.vehicleType tripDay payment >>= \case
-        Nothing -> do
-          -- Separate the two ways this arrives, because they mean different things to whoever is
-          -- paged. filterCandidatesForLeg drops a pass with no trips left, so a pass drained by a
-          -- concurrent booking between creation and confirm lands HERE rather than in the
-          -- Exhausted branch below; reported as "not applicable" it would send an operator
-          -- hunting a config or window bug that does not exist. Neither case debits anything --
-          -- consumeTrip puts an overspend straight back -- so this is about where the alert
-          -- points, not about the money.
+data TripDebitResult
+  = -- | No pass on this booking, or an unlimited benefit: nothing to spend.
+    TripDebitNotRequired
+  | -- | A trip was taken now, or had already been taken for this search.
+    TripDebited
+  | -- | The pass resolved and could not cover this booking -- out of trips, or its term/tier does
+    TripPassExhausted
+  | -- | The pass did not resolve at all. Ambiguous -- a KV row that failed to read looks exactly
+    TripPassUnusable Text
+  deriving (Show, Eq)
+
+-- | Which of these bookings their pass can no longer cover, judged TOGETHER.
+--
+-- Two things a per-booking check gets wrong. Legs on one order can share a pass term, so each one
+-- measured on its own against the same remaining count both pass, and the second then fails its
+-- debit. And filterCandidatesForLeg only asks that a trip exists, while the debit takes one per
+-- TICKET -- a two-ticket leg against a one-trip pass passes the individual check and is refused at
+-- on_confirm. So group by term, sum the tickets, and compare that against what the term holds.
+--
+-- Ambiguity answers "coverable", as everywhere else: a read that failed must never refuse a booking
+-- the rider has already paid for.
+passLegsNotCoverable ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DP.Person ->
+  [DFRFSTicketBooking.FRFSTicketBooking] ->
+  m [Id DFRFSTicketBooking.FRFSTicketBooking]
+passLegsNotCoverable person bookings = do
+  let passLegs =
+        [ (entityId, booking)
+          | booking <- bookings,
+            isNothing booking.parentBookingId,
+            Just entityId <- [booking.overrideAppliedEntityId]
+        ]
+      termIds = nubBy (==) (map fst passLegs)
+  fmap concat . forM termIds $ \entityId -> do
+    let legs = [booking | (e, booking) <- passLegs, e == entityId]
+    mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
+    let riders = nubBy (==) (map (.riderId) legs)
+    case mbPayment of
+      -- A row that did not come back is genuinely ambiguous -- a failed read looks exactly like a
+      -- missing term -- so leave it to on_confirm rather than refuse a booking the rider has paid
+      -- for. The two cases below are not ambiguous: the read succeeded and the answer was no.
+      Nothing -> pure []
+      Just payment
+        | any (/= payment.personId) riders -> do
+          logError $ "FRFSPassOverride:passLegsNotCoverable term does not belong to this rider paymentId=" <> entityId
+          pure (map (.id) legs)
+        | payment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] -> do
+          logError $ "FRFSPassOverride:passLegsNotCoverable term is " <> show payment.status <> ", not usable paymentId=" <> entityId
+          pure (map (.id) legs)
+        | otherwise -> do
           mbCandidate <- toCandidate payment
-          if maybe False (maybe False (<= 0) . (.availableTripCount)) mbCandidate
-            then logError $ "FRFSPassOverride:spendTripForBooking ticket issued on an exhausted pass, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
-            else logError $ "FRFSPassOverride:spendTripForBooking ticket issued but pass no longer applicable, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
-        Just applicable -> do
-          quantity <- ticketQuantityForBooking booking
-          consumeTripOnce booking.searchId applicable.purchasedPassPayment applicable.benefit quantity >>= \case
-            -- Reachable when the pass had trips left but fewer than this booking needs, or when a
-            -- concurrent debit lands between the count read above and the DECRBY here.
-            Exhausted ->
-              logError $ "FRFSPassOverride:spendTripForBooking ticket issued on an exhausted pass paymentId=" <> entityId <> " needed=" <> show quantity
-            AlreadyConsumed ->
-              logInfo $ "FRFSPassOverride:spendTripForBooking already debited for searchId=" <> booking.searchId.getId
-            _ -> pure ()
+          case mbCandidate of
+            -- Did not resolve at all: ambiguous, leave it to on_confirm.
+            Nothing -> pure []
+            Just candidate -> do
+              -- Applicability is per leg (vehicle type and the term's date window); capacity is shared.
+              perLeg <-
+                forM legs $ \booking -> do
+                  tripDay <- localTripDay person (fromMaybe booking.createdAt booking.startTime)
+                  let applicable = not (null (filterCandidatesForLeg [candidate] booking.vehicleType tripDay))
+                  quantity <- ticketQuantityForBooking booking
+                  pure (booking, applicable, quantity)
+              let inapplicable = [booking.id | (booking, applicable, _) <- perLeg, not applicable]
+                  neededByApplicable = sum [quantity | (_, applicable, quantity) <- perLeg, applicable]
+                  shortOfCapacity = case candidate.availableTripCount of
+                    Nothing -> False -- unlimited benefit
+                    Just remaining -> remaining < neededByApplicable
+              when shortOfCapacity $
+                logError $
+                  "FRFSPassOverride:passLegsNotCoverable term holds " <> show candidate.availableTripCount
+                    <> " trip(s) but this order needs "
+                    <> show neededByApplicable
+                    <> " paymentId="
+                    <> entityId
+              unless (null inapplicable) $
+                logError $ "FRFSPassOverride:passLegsNotCoverable leg(s) no longer applicable to this term paymentId=" <> entityId <> " legs=" <> show (map (.getId) inapplicable)
+              pure $ if shortOfCapacity then map (.id) legs else inapplicable
+
+spendTripForBooking :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> DFRFSTicketBooking.FRFSTicketBooking -> m TripDebitResult
+spendTripForBooking person booking = case booking.overrideAppliedEntityId of
+  Nothing -> pure TripDebitNotRequired
+  Just entityId -> do
+    mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
+    tripDay <- localTripDay person (fromMaybe booking.createdAt booking.startTime)
+    let mbOwnedPayment = do
+          payment <- mbPayment
+          guard (payment.personId == booking.riderId)
+          guard (payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked])
+          pure payment
+    case mbOwnedPayment of
+      Nothing -> do
+        logError $ "FRFSPassOverride:spendTripForBooking ticket issued but pass is missing or not the rider's, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
+        pure $ TripPassUnusable "pass missing or not the rider's"
+      Just payment ->
+        toApplicablePass booking.vehicleType tripDay payment >>= \case
+          Nothing -> do
+            toCandidate payment >>= \case
+              Nothing -> do
+                logError $ "FRFSPassOverride:spendTripForBooking pass did not resolve, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
+                pure $ TripPassUnusable "pass did not resolve"
+              Just candidate -> do
+                let why
+                      | maybe False (<= 0) candidate.availableTripCount = "no trips left"
+                      | candidate.payment.endDate < tripDay = "term ended"
+                      | candidate.payment.startDate > tripDay = "term has not started"
+                      | otherwise = "pass is for " <> show candidate.pass.vehicleType <> ", booking is " <> show booking.vehicleType
+                logError $ "FRFSPassOverride:spendTripForBooking pass cannot cover this booking (" <> why <> "), NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
+                pure TripPassExhausted
+          Just applicable -> do
+            quantity <- ticketQuantityForBooking booking
+            consumeTripOnce booking.searchId applicable.purchasedPassPayment applicable.benefit quantity >>= \case
+              Exhausted -> do
+                logError $ "FRFSPassOverride:spendTripForBooking ticket issued on an exhausted pass paymentId=" <> entityId <> " needed=" <> show quantity
+                pure TripPassExhausted
+              AlreadyConsumed -> do
+                logInfo $ "FRFSPassOverride:spendTripForBooking already debited for searchId=" <> booking.searchId.getId
+                pure TripDebited
+              _ -> pure TripDebited
 
 -- | Tickets this booking covers, and therefore trips it costs.
 ticketQuantityForBooking :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Int
