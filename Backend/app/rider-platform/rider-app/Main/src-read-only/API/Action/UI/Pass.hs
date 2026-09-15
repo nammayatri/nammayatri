@@ -49,6 +49,9 @@ type API =
            "imeiNumber"
            Data.Text.Text
       :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "passPhotoMediaId"
            Data.Text.Text
       :> QueryParam
@@ -68,6 +71,9 @@ type API =
            "passId"
            (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
       :> "select"
+      :> QueryParam
+           "isMockPayment"
+           Kernel.Prelude.Bool
       :> ReqBody
            '[JSON]
            API.Types.UI.Pass.PassSelectReq
@@ -225,22 +231,24 @@ postMultimodalPassSelect ::
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+postMultimodalPassSelect a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.Pass.PassSelectReq ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassV2Select a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassV2Select (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalPassV2Select a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassV2Select (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalPassList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
