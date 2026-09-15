@@ -5,9 +5,9 @@ module DriverDocumentUploadUnitTests where
 
 -- Imports for the real function and types
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Common
 import Control.Exception (evaluate, try)
-import qualified "dashboard-helper-api" Dashboard.Common.Driver as DDriver
+import qualified "lib-dashboard" Dashboard.Common.Driver as DDriver
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)

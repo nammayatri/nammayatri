@@ -17,14 +17,14 @@ module API.Dashboard.Capability where
 import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
-import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI')
+import Kernel.Utils.Common (FlowHandlerR, FlowServerR)
 import Servant hiding (throwError)
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 -- Access-control capability surface (dashboard unification Phase 4).
 -- /user/capabilities is the contract every frontend/backend consumes for
@@ -73,7 +73,7 @@ type API =
                :> Delete '[JSON] APISuccess
          )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
   getUserCapabilities
     :<|> ( listCapabilities
@@ -85,26 +85,26 @@ handler =
              :<|> deletePersonCapability
          )
 
-getUserCapabilities :: BeamFlow' => TokenInfo -> FlowHandler DCap.UserCapabilitiesRes
-getUserCapabilities = withFlowHandlerAPI' . DCap.getUserCapabilities
+getUserCapabilities :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DCap.UserCapabilitiesRes
+getUserCapabilities = withDashboardDbFlowHandlerAPI . DCap.getUserCapabilities
 
-listCapabilities :: BeamFlow' => TokenInfo -> FlowHandler DCap.ListCapabilitiesRes
-listCapabilities = withFlowHandlerAPI' . DCap.listCapabilities
+listCapabilities :: DashboardLoginFlow (FlowR r) r => TokenInfo -> FlowHandlerR r DCap.ListCapabilitiesRes
+listCapabilities = withDashboardDbFlowHandlerAPI . DCap.listCapabilities
 
-getCapabilityEndpoints :: BeamFlow' => TokenInfo -> Text -> FlowHandler DCap.CapabilityEndpointsRes
-getCapabilityEndpoints tokenInfo = withFlowHandlerAPI' . DCap.getCapabilityEndpoints tokenInfo
+getCapabilityEndpoints :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Text -> FlowHandlerR r DCap.CapabilityEndpointsRes
+getCapabilityEndpoints tokenInfo = withDashboardDbFlowHandlerAPI . DCap.getCapabilityEndpoints tokenInfo
 
-getRoleCapabilities :: BeamFlow' => TokenInfo -> Id DRole.Role -> FlowHandler DCap.RoleCapabilitiesRes
-getRoleCapabilities tokenInfo = withFlowHandlerAPI' . DCap.getRoleCapabilities tokenInfo
+getRoleCapabilities :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DRole.Role -> FlowHandlerR r DCap.RoleCapabilitiesRes
+getRoleCapabilities tokenInfo = withDashboardDbFlowHandlerAPI . DCap.getRoleCapabilities tokenInfo
 
-updateRoleCapabilities :: BeamFlow' => TokenInfo -> Id DRole.Role -> DCap.UpdateRoleCapabilitiesReq -> FlowHandler APISuccess
-updateRoleCapabilities tokenInfo roleId = withFlowHandlerAPI' . DCap.updateRoleCapabilities tokenInfo roleId
+updateRoleCapabilities :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DRole.Role -> DCap.UpdateRoleCapabilitiesReq -> FlowHandlerR r APISuccess
+updateRoleCapabilities tokenInfo roleId = withDashboardDbFlowHandlerAPI . DCap.updateRoleCapabilities tokenInfo roleId
 
-getPersonCapabilities :: BeamFlow' => TokenInfo -> Id DP.Person -> FlowHandler DCap.PersonCapabilitiesRes
-getPersonCapabilities tokenInfo = withFlowHandlerAPI' . DCap.getPersonCapabilities tokenInfo
+getPersonCapabilities :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> FlowHandlerR r DCap.PersonCapabilitiesRes
+getPersonCapabilities tokenInfo = withDashboardDbFlowHandlerAPI . DCap.getPersonCapabilities tokenInfo
 
-upsertPersonCapability :: BeamFlow' => TokenInfo -> Id DP.Person -> DCap.UpsertPersonCapabilityReq -> FlowHandler APISuccess
-upsertPersonCapability tokenInfo personId = withFlowHandlerAPI' . DCap.upsertPersonCapability tokenInfo personId
+upsertPersonCapability :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> DCap.UpsertPersonCapabilityReq -> FlowHandlerR r APISuccess
+upsertPersonCapability tokenInfo personId = withDashboardDbFlowHandlerAPI . DCap.upsertPersonCapability tokenInfo personId
 
-deletePersonCapability :: BeamFlow' => TokenInfo -> Id DP.Person -> Text -> FlowHandler APISuccess
-deletePersonCapability tokenInfo personId = withFlowHandlerAPI' . DCap.deletePersonCapability tokenInfo personId
+deletePersonCapability :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Id DP.Person -> Text -> FlowHandlerR r APISuccess
+deletePersonCapability tokenInfo personId = withDashboardDbFlowHandlerAPI . DCap.deletePersonCapability tokenInfo personId

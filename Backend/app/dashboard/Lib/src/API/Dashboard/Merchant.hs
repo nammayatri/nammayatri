@@ -18,13 +18,13 @@ import qualified Domain.Action.Dashboard.Merchant as DMerchant
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
-import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.Common
 import Servant
-import Storage.Beam.BeamFlow
-import Tools.Auth
+import Tools.Auth.Dashboard
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHandlerAPI)
 
 type API =
   "admin"
@@ -56,7 +56,7 @@ type API =
              :> Post '[JSON] DPerson.CreatePersonRes
        )
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
   ( createMerchantWithAdmin
       :<|> createMerchant
@@ -65,22 +65,22 @@ handler =
     :<|> changeMerchantEnableState
     :<|> createUserForMerchant
 
-createMerchantWithAdmin :: BeamFlow' => TokenInfo -> DMerchant.CreateMerchantWithAdminReq -> FlowHandler DP.PersonAPIEntity
+createMerchantWithAdmin :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DMerchant.CreateMerchantWithAdminReq -> FlowHandlerR r DP.PersonAPIEntity
 createMerchantWithAdmin tokenInfo =
-  withFlowHandlerAPI' . DMerchant.createMerchantWithAdmin tokenInfo
+  withDashboardDbFlowHandlerAPI . DMerchant.createMerchantWithAdmin tokenInfo
 
-createMerchant :: BeamFlow' => TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
+createMerchant :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandlerR r DMerchant.MerchantAPIEntity
 createMerchant tokenInfo =
-  withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
+  withDashboardDbFlowHandlerAPI . DMerchant.createMerchant tokenInfo
 
-listMerchants :: BeamFlow' => TokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> FlowHandler DMerchant.ListMerchantResp
+listMerchants :: DashboardLoginFlow (FlowR r) r => TokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> FlowHandlerR r DMerchant.ListMerchantResp
 listMerchants tokenInfo mbLimit mbOffset mbShortId =
-  withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo mbLimit mbOffset mbShortId
+  withDashboardDbFlowHandlerAPI $ DMerchant.listMerchants tokenInfo mbLimit mbOffset mbShortId
 
-changeMerchantEnableState :: BeamFlow' => TokenInfo -> DMerchant.ChangeMerchantEnableStateReq -> FlowHandler APISuccess
+changeMerchantEnableState :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DMerchant.ChangeMerchantEnableStateReq -> FlowHandlerR r APISuccess
 changeMerchantEnableState tokenInfo req =
-  withFlowHandlerAPI' $ DMerchant.changeMerchantEnableState tokenInfo req
+  withDashboardDbFlowHandlerAPI $ DMerchant.changeMerchantEnableState tokenInfo req
 
-createUserForMerchant :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+createUserForMerchant :: DashboardLoginFlow (FlowR r) r => TokenInfo -> DPerson.CreatePersonReq -> FlowHandlerR r DPerson.CreatePersonRes
 createUserForMerchant tokenInfo req =
-  withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req
+  withDashboardDbFlowHandlerAPI $ DMerchant.createUserForMerchant tokenInfo req

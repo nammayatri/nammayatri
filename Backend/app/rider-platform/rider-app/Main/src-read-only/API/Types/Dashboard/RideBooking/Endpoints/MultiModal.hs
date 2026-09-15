@@ -98,24 +98,24 @@ type GetMultiModalList =
            "customerId"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            Domain.Action.UI.Booking.BookingListResV2
   )
 
-type PostMultiModalSendMessage = ("sendMessage" :> Capture "customerId" Kernel.Prelude.Text :> ReqBody '[JSON] CustomerSendMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMultiModalSendMessage = ("sendMessage" :> Capture "customerId" Kernel.Prelude.Text :> ReqBody ('[JSON]) CustomerSendMessageReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostMultiModalSendDirectMessage = ("sendDirectMessage" :> ReqBody '[JSON] CustomerSendDirectMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMultiModalSendDirectMessage = ("sendDirectMessage" :> ReqBody ('[JSON]) CustomerSendDirectMessageReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostMultiModalAddComment = ("addComment" :> Capture "customerId" Kernel.Prelude.Text :> ReqBody '[JSON] CustomerCommentReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMultiModalAddComment = ("addComment" :> Capture "customerId" Kernel.Prelude.Text :> ReqBody ('[JSON]) CustomerCommentReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type GetMultiModalGetComments = ("getComments" :> Capture "customerId" Kernel.Prelude.Text :> Get '[JSON] CustomerCommentsResp)
+type GetMultiModalGetComments = ("getComments" :> Capture "customerId" Kernel.Prelude.Text :> Get ('[JSON]) CustomerCommentsResp)
 
 data MultiModalAPIs = MultiModalAPIs
-  { getMultiModalList :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe [Domain.Types.BookingStatus.BookingStatus] -> Kernel.Prelude.Maybe [Domain.Types.Journey.JourneyStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.API.BookingRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListResV2,
-    postMultiModalSendMessage :: Kernel.Prelude.Text -> CustomerSendMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMultiModalSendDirectMessage :: CustomerSendDirectMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMultiModalAddComment :: Kernel.Prelude.Text -> CustomerCommentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getMultiModalGetComments :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient CustomerCommentsResp
+  { getMultiModalList :: (Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe ([Domain.Types.BookingStatus.BookingStatus]) -> Kernel.Prelude.Maybe ([Domain.Types.Journey.JourneyStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.Booking.API.BookingRequestType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListResV2),
+    postMultiModalSendMessage :: (Kernel.Prelude.Text -> CustomerSendMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postMultiModalSendDirectMessage :: (CustomerSendDirectMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postMultiModalAddComment :: (Kernel.Prelude.Text -> CustomerCommentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getMultiModalGetComments :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient CustomerCommentsResp)
   }
 
 mkMultiModalAPIs :: (Client EulerHS.Types.EulerClient API -> MultiModalAPIs)
@@ -132,4 +132,4 @@ data MultiModalUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''MultiModalUserActionType])
+$(Data.Singletons.TH.genSingletons [(''MultiModalUserActionType)])

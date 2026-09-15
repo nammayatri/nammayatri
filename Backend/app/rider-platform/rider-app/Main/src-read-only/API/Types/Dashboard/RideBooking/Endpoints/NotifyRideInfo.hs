@@ -34,13 +34,13 @@ instance Kernel.Types.HideSecrets.HideSecrets NotifyRideInfoRequest where
 type API = ("notifyRideInfo" :> PostNotifyRideInfoNotifyRideInfo)
 
 type PostNotifyRideInfoNotifyRideInfo =
-  ( "notifyRideInfo" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] NotifyRideInfoRequest
+  ( "notifyRideInfo" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody ('[JSON]) NotifyRideInfoRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
-newtype NotifyRideInfoAPIs = NotifyRideInfoAPIs {postNotifyRideInfoNotifyRideInfo :: Kernel.Types.Id.Id Domain.Types.Person.Person -> NotifyRideInfoRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
+newtype NotifyRideInfoAPIs = NotifyRideInfoAPIs {postNotifyRideInfoNotifyRideInfo :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> NotifyRideInfoRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
 
 mkNotifyRideInfoAPIs :: (Client EulerHS.Types.EulerClient API -> NotifyRideInfoAPIs)
 mkNotifyRideInfoAPIs notifyRideInfoClient = (NotifyRideInfoAPIs {..})
@@ -53,10 +53,10 @@ data NotifyRideInfoUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON NotifyRideInfoUserActionType where
-  toJSON POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO = Data.Aeson.String "POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO"
+  toJSON (POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO) = Data.Aeson.String "POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO"
 
 instance FromJSON NotifyRideInfoUserActionType where
   parseJSON (Data.Aeson.String "POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO") = pure POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO
   parseJSON _ = fail "POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO expected"
 
-$(Data.Singletons.TH.genSingletons [''NotifyRideInfoUserActionType])
+$(Data.Singletons.TH.genSingletons [(''NotifyRideInfoUserActionType)])

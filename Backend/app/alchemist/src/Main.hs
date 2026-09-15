@@ -73,6 +73,11 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
                     -- putStrLn $ show fileState ++ " " ++ inputFilePath
                     when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                       NammaDSL.runStorageGenerator configPath inputFilePath
+
+              -- A spec folder with its own config can still contain nested spec
+              -- folders with their own configs (spec/ProviderPlatform/<Folder>/dsl-config.dhall
+              -- inside an app's spec), so keep walking instead of stopping here.
+              processSpecFolders isGenAll isSpecDir entryPath
         else processSpecFolders isGenAll isSpecDir entryPath
 
 putStrLn' :: String -> String -> IO ()

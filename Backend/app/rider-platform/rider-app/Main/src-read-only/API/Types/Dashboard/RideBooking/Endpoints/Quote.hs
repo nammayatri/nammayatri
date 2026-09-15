@@ -24,10 +24,10 @@ type GetQuoteResult =
            "customerId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> "result"
-      :> Get '[JSON] Domain.Action.UI.Quote.GetQuotesRes
+      :> Get ('[JSON]) Domain.Action.UI.Quote.GetQuotesRes
   )
 
-newtype QuoteAPIs = QuoteAPIs {getQuoteResult :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Quote.GetQuotesRes}
+newtype QuoteAPIs = QuoteAPIs {getQuoteResult :: (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Quote.GetQuotesRes)}
 
 mkQuoteAPIs :: (Client EulerHS.Types.EulerClient API -> QuoteAPIs)
 mkQuoteAPIs quoteClient = (QuoteAPIs {..})
@@ -40,10 +40,10 @@ data QuoteUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON QuoteUserActionType where
-  toJSON GET_QUOTE_RESULT = Data.Aeson.String "GET_QUOTE_RESULT"
+  toJSON (GET_QUOTE_RESULT) = Data.Aeson.String "GET_QUOTE_RESULT"
 
 instance FromJSON QuoteUserActionType where
   parseJSON (Data.Aeson.String "GET_QUOTE_RESULT") = pure GET_QUOTE_RESULT
   parseJSON _ = fail "GET_QUOTE_RESULT expected"
 
-$(Data.Singletons.TH.genSingletons [''QuoteUserActionType])
+$(Data.Singletons.TH.genSingletons [(''QuoteUserActionType)])

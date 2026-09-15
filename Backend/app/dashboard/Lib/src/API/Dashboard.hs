@@ -12,37 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard where
+-- | The dashboard's own API surface: login/session plus the merchant-city
+-- lookup. The transaction listing lives in 'API.Dashboard.TransactionView',
+-- reached through 'API.DashboardLogin'.
+module API.Dashboard
+  ( API,
+    handler,
+  )
+where
 
-import qualified API.Dashboard.AccessMatrix as AccessMatrix
-import qualified API.Dashboard.Capability as Capability
-import qualified API.Dashboard.EmailVerification as EmailVerification
-import qualified API.Dashboard.Merchant as Merchant
-import qualified API.Dashboard.Person as Person
-import qualified API.Dashboard.Registration as Registration
-import qualified API.Dashboard.ResourceScope as ResourceScope
-import qualified API.Dashboard.Roles as Roles
-import Environment
+import qualified API.Dashboard.MerchantCityList as MerchantCityList
+import qualified API.DashboardLogin as DashboardLogin
+import Kernel.Types.App (FlowServerR)
+import Kernel.Types.Flow (FlowR)
 import Servant
-import Storage.Beam.BeamFlow
+import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow)
 
 type API =
-  Person.API
-    :<|> Registration.API
-    :<|> EmailVerification.API
-    :<|> AccessMatrix.API
-    :<|> Roles.API
-    :<|> Merchant.API
-    :<|> Capability.API
-    :<|> ResourceScope.API
+  DashboardLogin.API
+    :<|> MerchantCityList.API
 
-handler :: BeamFlow' => FlowServer API
+handler :: DashboardLoginFlow (FlowR r) r => FlowServerR r API
 handler =
-  Person.handler
-    :<|> Registration.handler
-    :<|> EmailVerification.handler
-    :<|> AccessMatrix.handler
-    :<|> Roles.handler
-    :<|> Merchant.handler
-    :<|> Capability.handler
-    :<|> ResourceScope.handler
+  DashboardLogin.handler
+    :<|> MerchantCityList.handler

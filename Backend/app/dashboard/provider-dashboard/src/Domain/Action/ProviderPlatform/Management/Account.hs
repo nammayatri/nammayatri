@@ -7,13 +7,14 @@ module Domain.Action.ProviderPlatform.Management.Account
 where
 
 import qualified API.Client.ProviderPlatform.Management
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as DP
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction
+import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -25,7 +26,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import qualified SharedLogic.Transaction
+import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
@@ -38,7 +39,6 @@ import "lib-dashboard" Storage.Queries.Person
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
-import Tools.Auth.Api
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
@@ -46,10 +46,16 @@ import "lib-dashboard" Tools.Error
     RoleError (RoleConversionNotAllowed, RoleDoesNotExist),
   )
 
+-- | The wire type is owned by the provider API package; lib-dashboard has its
+-- own domain equivalent so it stays independent of the app packages.
+castFleetOwnerStatus :: Common.FleetOwnerStatus -> DP.FleetOwnerStatus
+castFleetOwnerStatus Common.Approved = DP.Approved
+castFleetOwnerStatus Common.Rejected = DP.Rejected
+
 getAccountFetchUnverifiedAccounts ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
@@ -58,7 +64,7 @@ getAccountFetchUnverifiedAccounts ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow Common.UnverifiedAccountsResp
 getAccountFetchUnverifiedAccounts _merchantShortId _opCity _apiTokenInfo mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset = do
-  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber mbStatus mbLimit mbOffset
+  encryptPersonLs <- findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset mbFromDate mbToDate mbMobileNumber (castFleetOwnerStatus <$> mbStatus) mbLimit mbOffset
   res <- traverse convertPersonToPersonAPIEntity encryptPersonLs
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.UnverifiedAccountsResp {listItems = res, summary = summary}
@@ -103,7 +109,7 @@ castDashboardAccessType = \case
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Common.VerifyAccountReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
@@ -120,7 +126,7 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
       updatePersonApprovedBy personId apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.ProviderPlatform.Management.callManagementAPI
       checkedMerchantId
@@ -138,7 +144,7 @@ validateVerifyAccountReq Common.VerifyAccountReq {..} =
 putAccountUpdateRole ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
+  ApiTokenInfo UserActionType ->
   Kernel.Types.Id.Id Dashboard.Common.Person ->
   Kernel.Types.Id.Id Dashboard.Common.Role ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess

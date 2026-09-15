@@ -14,7 +14,7 @@ module Domain.Action.Dashboard.Management.Payout
 where
 
 import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
-import qualified "dashboard-helper-api" Dashboard.Common as DC
+import qualified "lib-dashboard" Dashboard.Common as DC
 import Data.Time (minutesToTimeZone, utcToLocalTime)
 import qualified Domain.Action.Common.PayoutRequest as CommonPayout
 import qualified Domain.Action.Dashboard.Common as DCommon

@@ -24,7 +24,7 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Domain.Types.Common

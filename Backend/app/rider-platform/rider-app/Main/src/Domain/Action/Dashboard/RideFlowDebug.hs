@@ -17,7 +17,7 @@ module Domain.Action.Dashboard.RideFlowDebug
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified "lib-dashboard" Dashboard.Common.RideDebug as Common
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEst

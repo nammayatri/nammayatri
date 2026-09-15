@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified Domain.Action.ProviderPlatform.Management.CoinsConfig
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.VehicleCategory
 import qualified "lib-dashboard" Environment
@@ -21,7 +22,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("coinsConfig" :> (GetCoinsConfigList :<|> PutCoinsConfigUpdate :<|> PostCoinsConfigCreate))
 
@@ -52,11 +52,11 @@ type PostCoinsConfigCreate =
       :> API.Types.ProviderPlatform.Management.CoinsConfig.PostCoinsConfigCreate
   )
 
-getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
+getCoinsConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigListRes)
 getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset eventName vehicleCategory = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.getCoinsConfigList merchantShortId opCity apiTokenInfo limit offset eventName vehicleCategory
 
-putCoinsConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.CoinsConfig.UpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+putCoinsConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.CoinsConfig.UpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putCoinsConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.putCoinsConfigUpdate merchantShortId opCity apiTokenInfo req
 
-postCoinsConfigCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.CoinsConfig.CreateCoinsConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCoinsConfigCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.CoinsConfig.CreateCoinsConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCoinsConfigCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.CoinsConfig.postCoinsConfigCreate merchantShortId opCity apiTokenInfo req

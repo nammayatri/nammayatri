@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.GeohashArea
 import qualified Dashboard.Common.GeohashArea
 import qualified Domain.Action.ProviderPlatform.Management.GeohashArea
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -20,7 +21,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("geohashArea" :> (GetGeohashAreaList :<|> PostGeohashAreaUpsert :<|> PostGeohashAreaUpsertCsv))
 
@@ -39,7 +39,7 @@ type PostGeohashAreaUpsert =
   ( ApiAuth
       ('DRIVER_OFFER_BPP_MANAGEMENT)
       ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.GEOHASH_AREA_BULK_UPSERT))
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT))
       :> API.Types.ProviderPlatform.Management.GeohashArea.PostGeohashAreaUpsert
   )
 
@@ -47,15 +47,15 @@ type PostGeohashAreaUpsertCsv =
   ( ApiAuth
       ('DRIVER_OFFER_BPP_MANAGEMENT)
       ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.GEOHASH_AREA_CSV_UPSERT))
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT_CSV))
       :> API.Types.ProviderPlatform.Management.GeohashArea.PostGeohashAreaUpsertCsv
   )
 
-getGeohashAreaList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler [Dashboard.Common.GeohashArea.GeohashAreaItem])
+getGeohashAreaList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler [Dashboard.Common.GeohashArea.GeohashAreaItem])
 getGeohashAreaList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.GeohashArea.getGeohashAreaList merchantShortId opCity apiTokenInfo
 
-postGeohashAreaUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postGeohashAreaUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postGeohashAreaUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.GeohashArea.postGeohashAreaUpsert merchantShortId opCity apiTokenInfo req
 
-postGeohashAreaUpsertCsv :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.GeohashArea.GeohashAreaCsvReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postGeohashAreaUpsertCsv :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.GeohashArea.GeohashAreaCsvReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postGeohashAreaUpsertCsv merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.GeohashArea.postGeohashAreaUpsertCsv merchantShortId opCity apiTokenInfo req

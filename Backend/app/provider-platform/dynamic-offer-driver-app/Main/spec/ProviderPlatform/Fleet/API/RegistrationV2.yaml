@@ -1,0 +1,219 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  BaseUrl: Kernel.Prelude
+  PaymentMode: Domain.Types.PaymentMode
+  RequirementsInfo: Kernel.External.Payment.Interface.Types
+  Language: Kernel.External.Types
+  IndianState: Kernel.Types.Beckn.Context
+  AddressDocumentType: Dashboard.Common.Driver
+  InitiatedBy: Domain.Types.InitiatedBy
+
+module: RegistrationV2
+apiPrefix: fleet
+
+apis:
+  - POST:
+      endpoint: /v2/login/otp
+      appServerHandler: custom
+      name: postRegistrationV2LoginOtp
+      auth: NoAuth
+      request:
+        type: FleetOwnerLoginReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /v2/login/otp
+            auth: NoAuth
+            mandatoryQuery:
+              - enabled: Bool
+            query:
+              - dashboardPersonId: Text
+            request:
+              type: FleetOwnerLoginReqV2
+            response:
+              type: FleetOwnerLoginResV2
+
+  - POST:
+      endpoint: /v2/verify/otp
+      appServerHandler: custom
+      name: postRegistrationV2VerifyOtp
+      auth: NoAuth
+      request:
+        type: FleetOwnerVerifyReqV2
+      response:
+        type: FleetOwnerVerifyResV2
+      helperApi:
+        - POST:
+            endpoint: /v2/verify/otp
+            auth: NoAuth
+            request:
+              type: FleetOwnerVerifyReqV2
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: /v2/register
+      appServerHandler: custom
+      name: postRegistrationV2Register
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerRegisterReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /v2/register
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerRegisterReqV2
+            response:
+              type: FleetOwnerRegisterResV2
+
+  - POST:
+      endpoint: /register/bankAccount/link
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - paymentMode: PaymentMode
+        - initiatedBy: InitiatedBy
+      response:
+        type: FleetBankAccountLinkResp
+      helperApi:
+        - POST:
+            endpoint: /register/bankAccount/link
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+              - paymentMode: PaymentMode
+              - initiatedBy: InitiatedBy
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetBankAccountLinkResp
+
+  - GET:
+      endpoint: /register/bankAccount/status
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+        - forceRefresh: Bool
+      response:
+        type: FleetBankAccountResp
+      helperApi:
+        - GET:
+            endpoint: /register/bankAccount/status
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+              - forceRefresh: Bool
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetBankAccountResp
+
+  - PUT:
+      endpoint: /profile/language
+      appServerHandler: custom
+      name: putRegistrationV2ProfileLanguage
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerUpdateLanguageReq
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /profile/language
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerUpdateLanguageReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /profile/language
+      name: getRegistrationV2ProfileLanguage
+      auth: ApiAuthV2
+      response:
+        type: FleetOwnerLanguageRes
+      helperApi:
+        - GET:
+            endpoint: /profile/language
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetOwnerLanguageRes
+
+types:
+  FleetOwnerLoginReqV2:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - fleetType: Maybe FleetType
+  FleetOwnerLoginResV2:
+    - personId: Id Person
+    - recordType: NewType
+    - derive: "'HideSecrets"
+  FleetOwnerVerifyReqV2:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Maybe Text
+  FleetOwnerVerifyResV2:
+    - authToken: Text
+    - recordType: NewType
+  FleetOwnerRegisterReqV2:
+    - firstName: Text
+    - lastName: Text
+    - personId: Maybe (Id Person)
+    - email: Maybe Text
+    - fleetType: Maybe FleetType
+    - businessLicenseNumber: Maybe Text
+    - businessLicenseImage: Maybe Text
+    - operatorReferralCode: Maybe Text
+    - adminApprovalRequired: Maybe Bool
+    - setIsEnabled: Maybe Bool
+    - fleetName: Maybe Text
+    - address: Maybe Text
+    - addressState: Maybe IndianState
+    - addressDocumentType: Maybe AddressDocumentType
+  FleetOwnerRegisterTReqV2: # hide secrets
+    - firstName: Text
+    - lastName: Text
+    - personId: Maybe (Id Person)
+    - fleetType: Maybe FleetType
+    - operatorReferralCode: Maybe Text
+    - adminApprovalRequired: Maybe Bool
+    - setIsEnabled: Maybe Bool
+  FleetType:
+    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+    - derive: "HttpInstance"
+  FleetOwnerRegisterResV2:
+    - enabled: Bool
+    - recordType: NewType
+  FleetBankAccountLinkResp:
+    - chargesEnabled: Bool
+    - payoutsEnabled: Maybe Bool
+    - detailsSubmitted: Bool
+    - accountLink: BaseUrl
+    - accountUrlExpiry: UTCTime
+    - paymentMode: PaymentMode
+  FleetBankAccountResp:
+    - chargesEnabled: Bool
+    - payoutsEnabled: Maybe Bool
+    - detailsSubmitted: Bool
+    - paymentMode: PaymentMode
+    - requirements: Maybe RequirementsInfo
+    - futureRequirements: Maybe RequirementsInfo
+  FleetOwnerUpdateLanguageReq:
+    - language: Language
+    - derive: "'HideSecrets"
+  FleetOwnerLanguageRes:
+    - language: Maybe Language
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

@@ -28,18 +28,18 @@ type API = ("stopRouteDetails" :> (StopRouteDetailsGetStops :<|> StopRouteDetail
 type StopRouteDetailsGetStops =
   ( "stops" :> QueryParam "includeClusterId" Kernel.Prelude.Bool :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [Domain.Types.Station.Station]
   )
 
-type StopRouteDetailsGetStop = ("stop" :> Capture "stopCode" Kernel.Prelude.Text :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get '[JSON] StationResp)
+type StopRouteDetailsGetStop = ("stop" :> Capture "stopCode" Kernel.Prelude.Text :> MandatoryQueryParam "vehicleCategory" BecknV2.OnDemand.Enums.VehicleCategory :> Get ('[JSON]) StationResp)
 
 type StopRouteDetailsGetRouteStopMappingByStop =
   ( "route-stop-mapping" :> "stop" :> Capture "stopCode" Kernel.Prelude.Text
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] [Domain.Types.RouteStopMapping.RouteStopMapping]
+      :> Get ('[JSON]) [Domain.Types.RouteStopMapping.RouteStopMapping]
   )
 
 type StopRouteDetailsGetRouteStopMappingByRoute =
@@ -47,14 +47,14 @@ type StopRouteDetailsGetRouteStopMappingByRoute =
       :> MandatoryQueryParam
            "vehicleCategory"
            BecknV2.OnDemand.Enums.VehicleCategory
-      :> Get '[JSON] RouteStopMappingWithPolyline
+      :> Get ('[JSON]) RouteStopMappingWithPolyline
   )
 
 data StopRouteDetailsAPIs = StopRouteDetailsAPIs
-  { stopRouteDetailsGetStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Domain.Types.Station.Station],
-    stopRouteDetailsGetStop :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient StationResp,
-    stopRouteDetailsGetRouteStopMappingByStop :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Domain.Types.RouteStopMapping.RouteStopMapping],
-    stopRouteDetailsGetRouteStopMappingByRoute :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient RouteStopMappingWithPolyline
+  { stopRouteDetailsGetStops :: (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Domain.Types.Station.Station]),
+    stopRouteDetailsGetStop :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient StationResp),
+    stopRouteDetailsGetRouteStopMappingByStop :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [Domain.Types.RouteStopMapping.RouteStopMapping]),
+    stopRouteDetailsGetRouteStopMappingByRoute :: (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient RouteStopMappingWithPolyline)
   }
 
 mkStopRouteDetailsAPIs :: (Client EulerHS.Types.EulerClient API -> StopRouteDetailsAPIs)
@@ -70,4 +70,4 @@ data StopRouteDetailsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''StopRouteDetailsUserActionType])
+$(Data.Singletons.TH.genSingletons [(''StopRouteDetailsUserActionType)])
