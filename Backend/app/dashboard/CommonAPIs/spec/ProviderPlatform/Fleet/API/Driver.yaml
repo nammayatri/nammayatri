@@ -415,7 +415,7 @@ apis:
       response:
         type: APISuccess
       migrate:
-        capability: city-operations.driver_management.write
+        capability: city-operations.driver.write
       helperApi:
         - POST:
             endpoint: /{requestorId}/fleet/cashRideUpdate

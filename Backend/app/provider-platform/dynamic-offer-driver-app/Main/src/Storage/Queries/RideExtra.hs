@@ -239,6 +239,10 @@ getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.drive
 getInProgressByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Ride]
 getInProgressByDriverIds driverIds = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
+getInProgressByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Ride]
+getInProgressByFleetOwnerId fleetOwnerId =
+  findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just fleetOwnerId), Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]] Nothing
+
 getActiveAdvancedRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getActiveAdvancedRideByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.NEW], Se.Is BeamR.isAdvanceBooking $ Se.Eq (Just True)]]
 
