@@ -287,7 +287,8 @@ openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
       description = fromMaybe (maybe "No description provided" (.option) mbOption) descShort
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing
+  let shouldCreateTicket = fromMaybe True igmConfig.createTicketOnIssueRaise
+      issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just shouldCreateTicket) Nothing
   void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   let issueRes =
         IssueRes

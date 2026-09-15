@@ -18,6 +18,7 @@ data IGMConfigT f = IGMConfigT
     resolutionProviderName :: B.C f (Maybe Text),
     resolutionProviderPhone :: B.C f (Maybe Text),
     resolutionProviderEmail :: B.C f (Maybe Text),
+    createTicketOnIssueRaise :: B.C f (Maybe Bool),
     id :: B.C f Text,
     merchantId :: B.C f Text,
     createdAt :: B.C f UTCTime,

@@ -746,7 +746,7 @@ triggerOnIssueStatusForOffUs issueReport' action issueHandle' =
     merchantOpCity <- issueReport'.merchantOperatingCityId & fromMaybeM (InvalidRequest "MerchantOperatingCityId not found") >>= \mocId -> issueHandle'.findMOCityById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     now <- getCurrentTime
     let issueStatusRes = mkIssueStatusRes igmIssue igmConfig merchant merchantOpCity bapId action igmIssue.resolutionShortDesc igmIssue.resolutionLongDesc igmIssue.resolutionActionTriggered igmIssue.resolutionRefundAmount now
-    txnId <- generateGUID
+    let txnId = igmIssue.transactionId
     msgId <- generateGUID
     onIssueStatusReq <- ISACL.buildOnIssueStatusReq txnId msgId bapId (showBaseUrl bapUri) issueStatusRes
     void $ CallAPI.callOnIssueStatus onIssueStatusReq bapUri merchant
@@ -2681,7 +2681,7 @@ igmIssueTriggerActionUpdate merchantShortId opCity issueReportId issueHandle req
       igmConfig <- QIGMConfig.findByMerchantId merchantOpCity.merchantId >>= fromMaybeM (InternalError "IGMConfig not found")
       now <- getCurrentTime
       let issueStatusRes = mkIssueStatusRes igmIssue igmConfig merchant merchantOpCity bapId req.action resShortDesc resLongDesc resActionTriggered resRefundAmount now
-      txnId <- generateGUID
+      let txnId = igmIssue.transactionId
       msgId <- generateGUID
       onIssueStatusReq <- ISACL.buildOnIssueStatusReq txnId msgId bapId (showBaseUrl bapUri) issueStatusRes
       void $ CallAPI.callOnIssueStatus onIssueStatusReq bapUri merchant
