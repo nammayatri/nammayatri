@@ -704,6 +704,9 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
     let maxDate = addDays (fromIntegral $ fromMaybe 60 tnstcConfig.maxAdvanceBookingDays) istToday
     when (jDate > maxDate) $
       throwError (InvalidRequest $ "journeyDate is beyond the advance booking window; latest bookable date is " <> show maxDate)
+    whenJust tnstcConfig.bookingEndTime $ \cutoff ->
+      when (Time.timeToTimeOfDay (Time.utctDayTime (addUTCTime 19800 now)) >= cutoff) $
+        throwError (InvalidRequest $ "Bookings are closed for today; TNSTC stops accepting bookings after " <> show cutoff <> " IST")
 
   let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       searchReq =
@@ -2305,19 +2308,12 @@ getFrfsQuoteSeats (mbPersonId, _merchantId) quoteId mbSeatNumbers = do
           availCount = length $ filter (\x -> x.status == API.Types.UI.FRFSTicketService.AVAILABLE) seatListWithStatus
       logInfo $ "FRFSTicketService:tnstcSeatLayout quoteId=" <> quoteId.getId <> " serviceID=" <> serviceId <> " layoutID=" <> layoutId <> " seats=" <> show (length seats) <> " available=" <> show availCount
       let tripCode = fromMaybe "" quote.providerTripCode
-          mkPointsReq placeId =
-            TNSTCBooking.GetPickupPointsReq
-              { rqppCounterCode = tnstcConfig.counterCode,
-                rqppJourneyDate = journeyDate,
-                rqppServiceId = serviceId,
-                rqppPlaceId = placeId,
-                rqppUserName = tnstcConfig.username
-              }
+          pointsAt = TNSTCBooking.boardingPointsAt tnstcConfig integratedBPPConfig.id.getId journeyDate serviceId
       startPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 4 tripCode)) search.fromStationCode
       endPlaceCode <- tnstcPlaceCode integratedBPPConfig (Data.Text.take 3 (Data.Text.drop 7 tripCode)) search.toStationCode
       idProofTypes <- TNSTCLayout.getIdProofTypes tnstcConfig integratedBPPConfig.id.getId
-      pickupPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq startPlaceCode)
-      dropOffPoints <- TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId (mkPointsReq endPlaceCode)
+      pickupPoints <- pointsAt startPlaceCode
+      dropOffPoints <- pointsAt endPlaceCode
       return $
         SeatLayoutResp
           { seatLayout = seatLayout,
@@ -2521,9 +2517,6 @@ findOwnedPassenger personId passengerId = do
   unless (passenger.riderId == personId) $ throwError AccessDenied
   return passenger
 
-tnstcHoldSeconds :: Int
-tnstcHoldSeconds = 420
-
 postFrfsQuoteSelect ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -2635,15 +2628,7 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = TNSTCError.surfaceTn
   unless (null missingCats) $
     throwError (InvalidRequest $ "This service has no fare category for: " <> Data.Text.intercalate ", " (map show missingCats))
 
-  let boardingPointsAt placeCode =
-        TNSTCBooking.getPickupPointsCached tnstcConfig integratedBPPConfig.id.getId $
-          TNSTCBooking.GetPickupPointsReq
-            { rqppCounterCode = tnstcConfig.counterCode,
-              rqppJourneyDate = journeyDate,
-              rqppServiceId = serviceId,
-              rqppPlaceId = placeCode,
-              rqppUserName = tnstcConfig.username
-            }
+  let boardingPointsAt = TNSTCBooking.boardingPointsAt tnstcConfig integratedBPPConfig.id.getId journeyDate serviceId
   offeredPickups <- boardingPointsAt startPlaceCode
   offeredDropOffs <- boardingPointsAt endPlaceCode
   unless (any (\p -> p.tppPlaceId == pickupPlaceId) offeredPickups) $
@@ -2760,5 +2745,5 @@ postFrfsQuoteSelect (mbPersonId, _merchantId) quoteId req = TNSTCError.surfaceTn
             fare.tfrComponents,
         totalFare = mkPriceAPIEntity totalPrice,
         seatBlockIds = if null seatBlockIds then Nothing else Just seatBlockIds,
-        blockExpiresAt = addUTCTime (fromIntegral tnstcHoldSeconds) now
+        blockExpiresAt = addUTCTime (fromIntegral $ fromMaybe 420 tnstcConfig.seatHoldSeconds) now
       }

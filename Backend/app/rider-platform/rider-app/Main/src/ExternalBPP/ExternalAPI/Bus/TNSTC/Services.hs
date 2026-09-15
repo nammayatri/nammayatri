@@ -6,17 +6,12 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Services
   )
 where
 
-import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
-import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (TnstcFlow, arg0, callTnstc, el, fmtDate, op)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Utils.Common
-import qualified Text.XML as XML
-import Text.XML.Writer (ToXML (..), element, elementA)
+import Text.XML.Writer (ToXML (..), element)
 
 data GetAvailableServiceDetailsReq = GetAvailableServiceDetailsReq
   { rqStartPlaceId :: Text,
@@ -28,16 +23,13 @@ data GetAvailableServiceDetailsReq = GetAvailableServiceDetailsReq
     rqUserId :: Text
   }
 
-formatJourneyDate :: Day -> Text
-formatJourneyDate = T.pack . formatTime defaultTimeLocale "%d/%m/%Y"
-
 instance ToXML GetAvailableServiceDetailsReq where
   toXML req =
-    element (nm "GetAvailableServiceDetails") $
-      element (XML.Name "arg0" Nothing Nothing) $ do
+    element (op "GetAvailableServiceDetails") $
+      element arg0 $ do
         whenJust req.rqCounterCode (el "counterCode")
         el "endPlaceID" req.rqEndPlaceId
-        el "journeyDate" (formatJourneyDate req.rqJourneyDate)
+        el "journeyDate" (fmtDate req.rqJourneyDate)
         el "journeyFromTime" "00:00"
         el "journeyToTime" "23:59"
         el "serviceClass" "0"
@@ -46,16 +38,9 @@ instance ToXML GetAvailableServiceDetailsReq where
         el "totMales" (show req.rqTotalSeats)
         el "userID" req.rqUserId
         el "userName" req.rqUserName
-    where
-      nm n = XML.Name n (Just setcNamespace) (Just "com")
-      el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
 
 getAvailableServiceDetails ::
-  ( MonadFlow m,
-    EncFlow m r,
-    Metrics.CoreMetrics m,
-    HasField "requestId" r (Maybe Text)
-  ) =>
+  TnstcFlow m r =>
   TNSTCConfig ->
   GetAvailableServiceDetailsReq ->
   m [TnstcServiceVO]

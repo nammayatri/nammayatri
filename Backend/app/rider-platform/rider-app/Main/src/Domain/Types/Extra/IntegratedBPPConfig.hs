@@ -132,6 +132,8 @@ data TNSTCConfig = TNSTCConfig
     soapActionPrefix :: Maybe Text,
     maxPassengersPerBooking :: Maybe Int,
     maxAdvanceBookingDays :: Maybe Int,
+    seatHoldSeconds :: Maybe Int,
+    bookingEndTime :: Maybe TimeOfDay,
     childMaxAge :: Int,
     createdBy :: Text,
     userId :: Text
