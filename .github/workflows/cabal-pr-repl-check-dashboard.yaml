@@ -60,7 +60,8 @@ jobs:
           FOUND_SHA=""
           for sha in $(git log --format='%H' "$BASE_SHA" | head -20); do
             if git tag --list "minio-pushed/$sha" | grep -q .; then
-              if mc stat "minio/haskell-cache/cabal-repl/$sha/dashboard-check.tar.zst" > /dev/null 2>&1; then
+              if mc stat "minio/haskell-cache/cabal-repl/$sha/dashboard-check.tar.zst" > /dev/null 2>&1 \
+                 && mc stat "minio/haskell-cache/cabal-repl/$sha/build-path.txt" > /dev/null 2>&1; then
                 FOUND_SHA="$sha"
                 break
               fi
@@ -82,7 +83,7 @@ jobs:
           ARTIFACTS_DIR=/tmp/ny-pr-artifacts-${{ github.run_id }}
           mkdir -p "$ARTIFACTS_DIR"
 
-          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                      "$ARTIFACTS_DIR/build-path.txt"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/build-path.txt"                       "$ARTIFACTS_DIR/build-path.txt"
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/cache-root.txt"                       "$ARTIFACTS_DIR/cache-root.txt"
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/dashboard-check.tar.zst"              "$ARTIFACTS_DIR/dashboard-check.tar.zst"
           mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst"                 "$ARTIFACTS_DIR/repl-support.tar.zst"
