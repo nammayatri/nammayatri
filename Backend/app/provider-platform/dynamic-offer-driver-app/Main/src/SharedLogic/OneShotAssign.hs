@@ -47,12 +47,14 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Metrics as Metrics
 
 data OneShotAssignReq = OneShotAssignReq
   { merchant :: DM.Merchant,
@@ -91,6 +93,12 @@ oneShotAssign OneShotAssignReq {..} = do
     booking <- DInit.buildBooking bArgs searchReq driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now Nothing Nothing (Just driverQuote.distanceToPickup) Nothing searchReq.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
     triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = merchant.id}
     QRB.createBooking booking
+    -- One-shot bypasses the Beckn confirm handler, whose mkDConfirmResp is the only other
+    -- BPP_booking_created_count site, so increment here too or one-shot bookings are uncounted.
+    cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
+    metricsDistanceBucketEdges <- SML.getDistanceBucketEdges booking.merchantOperatingCityId
+    let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+    Metrics.incrementBookingCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance) pickupZone dropZone
     -- Assignment gate, same transition Beckn init performs: any driver responding after
     -- this gets RideRequestAlreadyAccepted from respondQuote.
     QST.updateStatus DST.COMPLETED searchTry.id
