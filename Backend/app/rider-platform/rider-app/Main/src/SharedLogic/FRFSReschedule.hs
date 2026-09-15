@@ -106,20 +106,6 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
     throwError $ InvalidRequest "Selected trip is outside the allowed reschedule window"
   validatePassTermCoversTrip oldBooking (Time.utctDay (Time.addUTCTime tzDiff newTripStart))
 
--- | A pass-covered booking may only move to a day the pass itself still covers.
---
--- The reschedule path copies the parent booking's pass override verbatim rather than re-resolving it
--- (see the note in SharedLogic.FRFSConfirm: re-resolving would strip the discount once the parent has
--- spent the pass's last metered trip). That copy carries the fare but not the term, so without this a
--- booking made inside an 11-17 Sep pass could be moved to the 10th and still travel pass-covered.
---
--- Deliberately only a date bound, not a re-resolve: it needs no trip ledger, so it cannot reintroduce
--- the problem that copy exists to avoid. The predicate matches the one pass *selection* already uses in
--- FRFSPassOverride.filterCandidatesForLeg, so both paths agree on what a pass covers.
---
--- The day is local, not UTC: startDate/endDate are calendar days in the city's timezone, so comparing
--- against a UTC day would wrongly reject valid late-evening reschedules for the +5:30 hours either side
--- of midnight.
 validatePassTermCoversTrip ::
   (ServiceFlow m r) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
@@ -127,7 +113,6 @@ validatePassTermCoversTrip ::
   m ()
 validatePassTermCoversTrip booking newTripDayLocal =
   when (booking.overrideType == Just DFRFSTicketBooking.PassOverride) $
-    -- Non-pass bookings carry no entity id; nothing to bound.
     whenJust booking.overrideAppliedEntityId $ \paymentId -> do
       payment <-
         QPurchasedPassPayment.findByPrimaryKey (Id paymentId)
@@ -578,10 +563,15 @@ completeReschedule oldBookingId stagingBookingId = do
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.RESCHEDULED oldBookingId
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
   whenJust oldBooking.overrideAppliedEntityId $ \entityId -> do
-    mbRider <- QPerson.findById oldBooking.riderId
-    whenJust mbRider $ \rider ->
-      FRFSPassOverride.releaseBookedTrip rider (Id entityId) oldBookingId.getId
-        (fromMaybe oldBooking.createdAt oldBooking.startTime)
+    void . withTryCatch "completeReschedule:releaseWindow" $ do
+      mbRider <- QPerson.findById oldBooking.riderId
+      whenJust mbRider $ \rider ->
+        FRFSPassOverride.releaseBookedTrip rider (Id entityId) oldBookingId.getId
+          (fromMaybe oldBooking.createdAt oldBooking.startTime)
+    void . withTryCatch "completeReschedule:migrateDebitMarker" $ do
+      mbStaging <- QFRFSTicketBooking.findById stagingBookingId
+      whenJust mbStaging $ \staging ->
+        FRFSPassOverride.migrateTripDebitMarker oldBooking.searchId staging.searchId
 
 rollbackFailedReschedule ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
