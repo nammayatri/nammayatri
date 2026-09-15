@@ -18,6 +18,7 @@ data IGMConfig = IGMConfig
     resolutionProviderName :: Maybe Text,
     resolutionProviderPhone :: Maybe Text,
     resolutionProviderEmail :: Maybe Text,
+    createTicketOnIssueRaise :: Maybe Bool,
     id :: Id IGMConfig,
     merchantId :: Id Merchant,
     createdAt :: UTCTime,
