@@ -169,7 +169,8 @@ data BookingAPIEntity = BookingAPIEntity
     commissionCharge :: Maybe HighPrecMoney,
     refunds :: [RideRefundInfo],
     fareSettlementType :: Maybe SL.FareSettlementType,
-    cardInfo :: Maybe RideCardInfo
+    cardInfo :: Maybe RideCardInfo,
+    parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -438,7 +439,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         commissionCharge = booking.commission,
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
-        cardInfo = cardInfo
+        cardInfo = cardInfo,
+        parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
