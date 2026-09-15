@@ -172,6 +172,7 @@ handler merchantId req validatedReq = do
           transporter.shortId.getShortId
           cityLabel
           (show booking.vehicleServiceTier)
+          "special_zone"
           (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
           pickupZone
           dropZone
