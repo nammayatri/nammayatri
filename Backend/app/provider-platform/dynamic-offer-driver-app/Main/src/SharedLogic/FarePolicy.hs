@@ -45,6 +45,7 @@ import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (Transactionable)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
@@ -59,6 +60,7 @@ import SharedLogic.DynamicPricing
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified SharedLogic.Merchant as SMerchant
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
 import qualified SharedLogic.SurgeConfig as SSC
 import Storage.Beam.Yudhishthira ()
@@ -298,6 +300,8 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   case mbFarePolicy' of
     Nothing -> do
       logError $ "No fare policy found for farePolicyId: " <> show fareProduct.farePolicyId
+      cityLabel <- SML.getCityLabel fareProduct.merchantOperatingCityId
+      Metrics.incrementSystemConfigsFailedCounter $ "fare_policy_not_found_" <> cityLabel
       return Nothing
     Just farePolicy' -> do
       cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy'.cancellationFarePolicyId
