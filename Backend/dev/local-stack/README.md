@@ -3189,6 +3189,27 @@ and `enrol-driver.sh --revoke`. `enrol-driver.sh` takes Algerian numbers with
 `SMS_BYPASS` is a **folded scalar** (`>-`): a `#` line inside it is part of the
 value, not a comment, and would corrupt a number. Comments go above the key.
 
+### Which country the sign-in screen shows — `GET /geo/country`, since 2026-09-15
+
+The boss did not want users to see the other country, so the phone screen has
+**no picker**: the app detects the country — GPS matched on the phone against
+the two outlines (the position never leaves it), then this route, then the
+last country used on that phone. There is deliberately no way to switch on
+screen.
+
+`maps-shim/geo.js` answers `{"country": "DZ" | "MR" | null}` for the caller's
+address (`X-Real-IP`, set by nginx — a client cannot choose it), from
+`ip-countries.json`: AfriNIC's public delegation file, 54 IPv4 and 14 IPv6
+blocks for the two countries, held in memory. Nothing is stored; the log line
+carries only the answer. Rebuild the table with `./geo-ip-refresh.sh`, then
+deploy the shim. The nginx `/geo/` location is inserted into the deployed
+config in place by `edge/add-geo-location.py`.
+
+**Its blind spot:** an operator whose space is registered with RIPE rather
+than AfriNIC is not in the list. With GPS refused too, such a user gets the
+last-used country (Mauritania on a new install) and cannot switch — if a real
+user reports it, add the block; the fix is data, not UI.
+
 ### The wallet, per country
 
 `maps-shim/wallet.js` reads the driver's merchant on every call:
