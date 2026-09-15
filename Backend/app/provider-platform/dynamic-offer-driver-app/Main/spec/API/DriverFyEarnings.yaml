@@ -1,0 +1,50 @@
+imports:
+  PriceAPIEntity: Kernel.Types.Common
+
+module: DriverFyEarnings
+
+# Driver-facing FY/quarter earnings. The dashboard equivalent lives in
+# ProviderPlatform/Management/API/Driver.yaml and takes an entityId; here the
+# driver is the requestor, so there is no entity parameter and no access check
+# beyond TokenAuth -- you can only ever read yourself.
+#
+# Rows are attributed per ride, on `fromMaybe ride.driverId ride.fleetOwnerId`,
+# where ride.fleetOwnerId is the driver's active fleet association at the time
+# the ride was confirmed (Beckn/Confirm.hs -> SharedLogic/Ride.hs). It is NOT the
+# vehicle's RC -- that is RideDetails.fleetOwnerId, a different column.
+#
+# So a driver currently in a fleet has no rows of their own and gets an empty
+# result, while a driver who earned independently before joining a fleet still
+# sees those earlier quarters. Attribution is historical; membership is not.
+#
+# totalNetEarnings / totalTdsDeducted are totals over the RETURNED quarters:
+# the full-FY totals with no `quarter`, that quarter's totals with one. The
+# response always describes the scope that was requested.
+#
+# financialYear is named by its starting calendar year: with fyStartMonth = 4,
+# 2025 means 2025-04-01 .. 2026-03-31. The start month is merchant-city config
+# (transporterConfig.analyticsConfig.financialYearStartMonth), so the client
+# cannot know it: omit financialYear to get the current FY, and use the returned
+# fyStartMonth to label quarters (quarter 1 starts in fyStartMonth).
+
+types:
+  FyQuarterEarningsEntity:
+    quarter: Int
+    netEarnings: PriceAPIEntity
+    tdsDeducted: PriceAPIEntity
+  DriverFyEarningsResp:
+    financialYear: Int
+    fyStartMonth: Int
+    quarters: "[FyQuarterEarningsEntity]"
+    totalNetEarnings: PriceAPIEntity
+    totalTdsDeducted: PriceAPIEntity
+
+apis:
+  - GET:
+      endpoint: /driver/fyEarnings
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - financialYear: Int
+        - quarter: Int
+      response:
+        type: DriverFyEarningsResp
