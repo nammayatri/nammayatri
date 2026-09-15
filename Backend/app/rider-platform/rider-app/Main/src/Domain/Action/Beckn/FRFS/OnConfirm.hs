@@ -145,7 +145,9 @@ validateRequest DOrder {..} = do
       -- CONFIRMED internally, so it is a no-op on the ordinary pre-confirm expiry.
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
-      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
+      when (isNothing booking.parentBookingId) $
+        whenJust mbBookingPayment $ \bookingPayment ->
+          void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -187,7 +189,14 @@ onConfirmFailure bapConfig ticketBooking = do
   -- pass. Everywhere else is pre-CONFIRMED, where nothing has been spent. ticketBooking still
   -- holds the pre-FAILED status read above, so the guard sees the status that matters.
   void $ withTryCatch "onConfirmFailure:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure ticketBooking)
-  whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+  case ticketBooking.parentBookingId of
+    Just parentId ->
+      logInfo $
+        "onConfirmFailure: staging booking of " <> parentId.getId
+          <> " failed; leaving the parent's payment alone for rollbackFailedReschedule bookingId="
+          <> ticketBooking.id.getId
+    Nothing ->
+      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
   -- enforceCap=False: this is a Technical cancellation, so it must not consume the rider's
   -- cancellation allowance (see ExternalBPP.CallAPI.Cancel).
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False ticketBooking
@@ -244,12 +253,22 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- Guarded on the PRE-update status: validateRequest does not reject an already-CONFIRMED
   -- booking, so a replayed on_confirm re-runs this handler, and the TripConsumed marker only
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
-  -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
-  -- the debit here. NOTE: the parent's TripConsumed marker is NOT migrated onto the staging search -- nothing
-  -- does that today -- so a staging booking that later fails through a replayed on_confirm gets no trip credit.
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
-    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
+  passCouldNotCover <-
+    if booking.status == Booking.CONFIRMED || isJust booking.parentBookingId
+      then pure False
+      else
+        withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED}) >>= \case
+          Right FRFSPassOverride.TripPassExhausted -> pure True
+          Right other -> do
+            case other of
+              FRFSPassOverride.TripPassUnusable why ->
+                logError $ "FRFSPassOverride: not reversing on an ambiguous debit failure (" <> why <> ") bookingId=" <> booking.id.getId
+              _ -> pure ()
+            pure False
+          Left err -> do
+            logError $ "FRFSPassOverride: trip debit threw, leaving the booking alone bookingId=" <> booking.id.getId <> " error=" <> show err
+            pure False
   overCap <-
     if booking.status == Booking.CONFIRMED
       then pure False
@@ -260,9 +279,10 @@ onConfirm merchant booking' quoteCategories dOrder = do
               mbApplied <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
               case (,) <$> booking.overrideAppliedEntityId <*> mbApplied of
                 Nothing -> pure False
+                Just (_, (_, appliedPass)) | isNothing (mfilter (> 0) appliedPass.timeOverlappingFrfsBookingsLimit) -> pure False
                 Just (entityId, (_, appliedPass)) -> do
                   mbEnd <- case (booking.tripId, booking.routeCode) of
-                    (Just tripId, Just routeCode) -> FRFSUtils.getScheduledTripEndTime tripId routeCode booking.toStationCode integratedBPPConfig
+                    (Just tripId, Just routeCode) -> snd <$> FRFSUtils.getScheduledTripWindow tripId routeCode booking.fromStationCode booking.toStationCode integratedBPPConfig
                     _ -> pure Nothing
                   case ((,) <$> booking.startTime <*> mbEnd) of
                     Nothing -> do
@@ -276,14 +296,14 @@ onConfirm merchant booking' quoteCategories dOrder = do
             Left err -> do
               logError $ "FRFSPassOverride: could not record the booked window, cap not enforced for this booking bookingId=" <> booking.id.getId <> " error=" <> show err
               pure False
-  if overCap
+  if overCap || passCouldNotCover
     then do
-      logError $ "FRFSPassOverride: over-cap at on_confirm, failing booking bookingId=" <> booking.id.getId
-      -- The whole teardown is wrapped, lookups included. The window this booking just claimed is
-      -- released only as a side effect of the BPP cancel inside onConfirmFailure (cancel ->
-      -- handleCancelledStatus -> releaseBookedTrip); nothing here releases it directly. So a throw in
-      -- the merchant-city or Beckn-config lookup below would skip the cancel and strand the claim,
-      -- blocking the rider until trip end + 6h over a booking that was itself refused.
+      logError $
+        "FRFSPassOverride: reversing at on_confirm (" <> (if overCap then "over-cap" else "pass could not cover")
+          <> ") bookingId="
+          <> booking.id.getId
+      void $ withTryCatch "onConfirm:teardownCancelTickets" (QTicket.updateAllStatusByBookingId DFRFSTicketStatus.CANCELLED booking.id)
+      void $ withTryCatch "onConfirm:teardownReleaseSeats" (FRFSCancel.releaseSeatsIfHeld booking quoteCategories)
       teardownResult <-
         withTryCatch
           "onConfirm:overCapTeardown"
@@ -307,8 +327,6 @@ onConfirm merchant booking' quoteCategories dOrder = do
                   becknDimensions
                   (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
                   >>= fromMaybeM (InternalError "Beckn Config not found")
-              void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.CANCELLED booking.id
-              void $ withTryCatch "onConfirm:overCapReleaseSeats" (FRFSCancel.releaseSeatsIfHeld booking quoteCategories)
               -- Bound with `let` rather than written inline, matching the form used elsewhere in this
               -- module: as a statement of this `do` the record update parses as a construction applied to
               -- `booking` ("Not a record constructor: booking").
@@ -318,28 +336,12 @@ onConfirm merchant booking' quoteCategories dOrder = do
       case teardownResult of
         Right () -> pure ()
         Left err -> do
-          -- The cancel never ran, so nothing gave the window back. Do it here.
-          whenJust booking.overrideAppliedEntityId $ \entityId ->
-            void . withTryCatch "onConfirm:overCapReleaseWindow" $
-              FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
-                (fromMaybe booking.createdAt booking.startTime)
-          logError $ "FRFSPassOverride: over-cap teardown did not complete bookingId=" <> booking.id.getId <> " error=" <> show err
+          void $ withTryCatch "onConfirm:teardownFailBooking" (QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id)
+          void $ withTryCatch "onConfirm:teardownReleaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking {Booking.status = Booking.CONFIRMED})
+          logError $ "FRFSPassOverride: teardown did not complete, refund may need reconciling bookingId=" <> booking.id.getId <> " error=" <> show err
     else do
-      -- Everything below can throw (buildReconTable's station and config lookups, the wallet block's
-      -- PartnerOrgConfigNotFound). A throw here returns Left to the direct confirm flow, which marks the
-      -- booking FAILED -- but the overlapping-booking window was already claimed above, and no failure
-      -- path calls releaseBookedTrip: its only callers are cancel and reschedule. So the claim would
-      -- outlive the booking and block the rider until trip end + 6h, with no ticket to point at.
       --
-      -- Releasing and rethrowing rather than reordering the claim: the over-cap branch has to run before
-      -- any of this work, so the claim cannot simply move below it.
-      --
-      -- Bound to a name and run UNWRAPPED when no pass applied. A booking with no override has no window
-      -- to leak, so there is nothing for the handler to do -- and every booking on the platform runs this
-      -- block, pass or not. Wrapping it unconditionally would put a catch/rethrow in the path of traffic
-      -- this feature is not supposed to touch at all. Same instructions either way; only the pass case
-      -- gets the handler.
-      let postRecordWork = do
+      let postConfirmWork = do
             -- Update journey expiry time based on maximum ticket validity using the created tickets
             whenJust mbJourneyId $ \journeyId -> do
               QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
@@ -393,19 +395,20 @@ onConfirm merchant booking' quoteCategories dOrder = do
                         when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $
                           QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
             return ()
-      case booking.overrideAppliedEntityId of
-        -- No pass, no window, nothing to release: run exactly the instructions this path ran before.
-        Nothing -> postRecordWork
-        Just entityId ->
-          withTryCatch "onConfirm:postRecordWork" postRecordWork >>= \case
+      if isNothing booking.overrideAppliedEntityId
+        then postConfirmWork
+        else
+          withTryCatch "onConfirm:postConfirmWork" postConfirmWork >>= \case
             Right () -> pure ()
             Left err -> do
-              -- Give the window back before the caller writes FAILED, then rethrow so the booking still
-              -- fails exactly as it did: this changes what is left behind, not the outcome.
-              void . withTryCatch "onConfirm:releaseWindowOnPostRecordFailure" $
-                FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
-                  (fromMaybe booking.createdAt booking.startTime)
-              logError $ "FRFSPassOverride: released the booked window after a post-record failure bookingId=" <> booking.id.getId <> " error=" <> show err
+              logError $
+                "FRFSPassOverride: on_confirm threw after the ticket was issued, undoing tickets, seats, the debit and the claimed window bookingId="
+                  <> booking.id.getId
+                  <> " error="
+                  <> show err
+              void $ withTryCatch "onConfirm:postConfirmCancelTickets" (QTicket.updateAllStatusByBookingId DFRFSTicketStatus.CANCELLED booking.id)
+              void $ withTryCatch "onConfirm:postConfirmReleaseSeats" (FRFSCancel.releaseSeatsIfHeld booking quoteCategories)
+              void $ withTryCatch "onConfirm:postConfirmUndo" (FRFSPassOverride.releasePassOverrideTripOnFailure booking {Booking.status = Booking.CONFIRMED})
               throwM err
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =

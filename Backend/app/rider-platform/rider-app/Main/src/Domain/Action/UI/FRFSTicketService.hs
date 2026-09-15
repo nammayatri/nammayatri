@@ -964,6 +964,54 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
   logDebug $ "frfs ticket order bap webhookc call" <> orderShortId.getShortId
   order <- QPaymentOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
   bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
+  -- The loop below confirms each leg in turn, and evaluateConditions marks the whole fulfillment
+  -- FAILED if ANY leg failed -- which refunds the entire order. A pass leg refused partway through
+  -- therefore refunds legs that already confirmed and are holding live tickets. Settle it before
+  -- anything is issued: if the pass can no longer cover the order, fail every leg, so the full
+  -- refund is the correct outcome rather than a partial one. Marking FAILED is enough -- the FAILED
+  -- branch of frfsBookingStatus reports without confirming, so the loop needs no changes.
+  --
+  -- Only while EVERY leg is still pre-confirm. This handler also runs long after confirmation --
+  -- the refund-status job, the hourly order check, CheckMultimodalConfirmFail -- and by then a
+  -- drained pass would make an already-failed sibling look uncoverable and flip a CONFIRMED leg,
+  -- with its tickets still live, into FAILED. A booking in that state can no longer be cancelled
+  -- (soft cancel requires CONFIRMED), so its trip could never be credited back.
+  orderBookings <- mapMaybeM (QFRFSTicketBooking.findById . (.frfsTicketBookingId)) bookingPayments
+  let preConfirm booking =
+        booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+      passBackedLegs = filter (isJust . (.overrideAppliedEntityId)) orderBookings
+  case (listToMaybe passBackedLegs, all preConfirm orderBookings) of
+    (Just firstPassLeg, True) -> do
+      mbRider <- QP.findById firstPassLeg.riderId
+      whenJust mbRider $ \rider -> do
+        -- A fully covered leg has NO payment row (OnInit builds the order from payableBookings
+        -- only), so it is absent from orderBookings and its trips go uncounted. Confirming a paid
+        -- leg confirms the covered ones too, which can drain the very term the paid leg is about to
+        -- debit. Pull them in from the journey.
+        --
+        -- Restricted to covered legs sharing a term with a PAID leg on this order. A covered leg on
+        -- an unrelated exhausted term would otherwise fail every paid leg and refund the order --
+        -- where today it simply fails on its own, with no money involved.
+        (_, journeyBookings) <- getAllJourneyFrfsBookings firstPassLeg
+        let paidTerms = mapMaybe (.overrideAppliedEntityId) passBackedLegs
+            coveredLegs =
+              filter
+                ( \booking ->
+                    preConfirm booking
+                      && FRFSPassOverride.isFullyPassCovered booking.overriddenAmount
+                      && maybe False (`elem` paidTerms) booking.overrideAppliedEntityId
+                )
+                journeyBookings
+        uncoverablePassLegs <- FRFSPassOverride.passLegsNotCoverable rider (orderBookings <> coveredLegs)
+        unless (null uncoverablePassLegs) $ do
+          logError $
+            "FRFSPassOverride: pass leg(s) on this order can no longer be covered, failing every leg orderShortId="
+              <> orderShortId.getShortId
+              <> " legs="
+              <> show (map (.getId) uncoverablePassLegs)
+          forM_ (filter preConfirm orderBookings <> coveredLegs) $ \booking ->
+            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+    _ -> pure ()
   bookingsStatusWithBooking <-
     mapM
       ( \bookingPayment -> do
