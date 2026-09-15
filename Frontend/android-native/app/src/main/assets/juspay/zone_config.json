@@ -1,0 +1,34 @@
+{
+  "SureMetro_Pickup" : {
+    "backgroundColor" : "#CEDEF8",
+    "text" : "Metro Pickup",
+    "textColor" : "#0066FF",
+    "imageUrl" : "ic_metro_shape",
+    "assetZonePickupVisibility" : 0,
+    "assetZoneDropVisibility" : 8
+  },
+  "SureMetro_Drop" : {
+    "backgroundColor" : "#CEDEF8",
+    "text" : "Metro Drop",
+    "textColor" : "#0066FF",
+    "imageUrl" : "ic_metro_shape",
+    "assetZonePickupVisibility" : 8,
+    "assetZoneDropVisibility" : 0
+  },
+  "SureAirport_Pickup" : {
+    "backgroundColor" : "",
+    "text" : "",
+    "textColor" : "",
+    "imageUrl" : "",
+    "assetZonePickupVisibility" : 0,
+    "assetZoneDropVisibility" : 8
+  },
+  "SureAirport_Drop" : {
+    "backgroundColor" : "",
+    "text" : "",
+    "textColor" : "",
+    "imageUrl" : "",
+    "assetZonePickupVisibility" : 8,
+    "assetZoneDropVisibility" : 0
+  }
+}

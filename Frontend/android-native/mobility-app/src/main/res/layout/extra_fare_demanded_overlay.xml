@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:gravity="center"
+    android:id="@+id/dismiss_message"
+    android:paddingHorizontal="15dp">
+
+    <RelativeLayout
+        android:id="@+id/containerLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_marginHorizontal="10dp"
+        android:background="@android:color/transparent">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/white"
+            app:cardCornerRadius="16dp"
+            android:layout_marginTop="20dp"
+            android:clickable="true"
+            app:cardElevation="0dp">
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:paddingVertical="15dp"
+                    android:gravity="center"
+                    android:layout_marginHorizontal="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/extra_fare_demanded"
+                        android:gravity="center"
+                        android:layout_marginVertical="16dp"
+                        android:textFontWeight="700"
+                        android:textColor="@color/Black800"
+                        android:textSize="18sp"
+                        android:singleLine="false"/>
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginTop="10dp"
+                        android:id="@+id/image"
+                        android:layout_marginHorizontal="3dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ny_ic_extra_money_asked"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="@string/extra_fare_demanded_desc"
+                        android:gravity="center"
+                        android:id="@+id/description"
+                        android:paddingBottom="2dp"
+                        android:fontFamily="@font/plus_jakartasans_regular"
+                        android:textSize="16dp" />
+
+
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:flexWrap="wrap"
+                        app:alignItems="center"
+                        app:justifyContent="center"
+                        android:id="@+id/optionsList">
+
+                    </com.google.android.flexbox.FlexboxLayout>
+
+                    <LinearLayout
+                        android:layout_marginTop="10dp"
+                        android:layout_width="match_parent"
+                        android:id="@+id/button_view"
+                        android:orientation="vertical"
+                        android:layout_height="wrap_content">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_ok"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="#2C2F3A"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:paddingVertical="12dp"
+                            android:textColor="#FCC32C"
+                            android:text="@string/submit"
+                            android:textAllCaps="false"
+                            android:textFontWeight="700"
+                            android:textSize="16dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="8dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/secondary_button"
+                            android:gravity="center">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/did_not_demand_extra"
+                                android:gravity="center"
+                                android:textSize="16dp"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:textColor="@color/black650"
+                                android:padding="10dp"
+                                android:id="@+id/did_not_demand_extra" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </ScrollView>
+
+        </androidx.cardview.widget.CardView>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_logo_name" />
+
+    </RelativeLayout>
+
+
+</LinearLayout>
