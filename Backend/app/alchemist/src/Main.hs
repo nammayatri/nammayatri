@@ -73,6 +73,8 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
                     -- putStrLn $ show fileState ++ " " ++ inputFilePath
                     when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                       NammaDSL.runStorageGenerator configPath inputFilePath
+          -- WARNING: temp change for debug
+          processSpecFolders isGenAll isSpecDir entryPath
         else processSpecFolders isGenAll isSpecDir entryPath
 
 putStrLn' :: String -> String -> IO ()
