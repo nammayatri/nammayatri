@@ -118,6 +118,7 @@ handler merchant sReq searchReq estimates = do
       merchant.shortId.getShortId
       cityLabel
       (show primaryEstimate.vehicleServiceTier)
+      "normal"
       (SML.distanceBucketLabel distanceEdges primaryEstimate.estimatedDistance)
       pickupZone
       dropZone
