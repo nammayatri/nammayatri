@@ -1552,7 +1552,7 @@ getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requ
   person <- find (\e -> e.id == personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
   -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
   whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
-    isValid <- isAssociationWithDriver requestor person
+    isValid <- canReadFyEarnings requestor person
     unless isValid $ throwError AccessDenied
   rows <- QDFE.findAllByPersonIdAndFinancialYear personId financialYear
   let wanted = maybe rows (\q -> filter (\r -> r.quarter == q) rows) mbQuarter
@@ -1573,6 +1573,11 @@ getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requ
         totalNetEarnings = sum (map (.netEarnings) quarters),
         totalTdsDeducted = sum (map (.tdsDeducted) quarters)
       }
+
+canReadFyEarnings :: Monad m => DP.Person -> DP.Person -> m Bool
+canReadFyEarnings requestor target
+  | requestor.id == target.id = return True
+  | otherwise = return (requestor.role == DP.ADMIN)
 
 isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
 isAssociationWithDriver requestedPersonDetails driverDetails =
