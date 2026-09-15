@@ -177,11 +177,11 @@ processAssignment req = do
       -- @hemant: The BPP priced this ride without any BAP-side offer, so applying one here would
       -- make the customer's fare diverge from the driver's. Offers stay off for one-shot
       -- until the discount is carried in the round trip.
-      -- @Khuzema Commented out the below code block, as Offers can be Cashback Offers in which Price will not be updated for NY, 
-      -- for Discounts also as it is BAP giving Dicount so Fare on Driver will not be updated, 
-      -- except that Driver's Cash Collection from custoemr would be less, handled in UI for International use case, 
+      -- @Khuzema Commented out the below code block, as Offers can be Cashback Offers in which Price will not be updated for NY,
+      -- for Discounts also as it is BAP giving Dicount so Fare on Driver will not be updated,
+      -- except that Driver's Cash Collection from custoemr would be less, handled in UI for International use case,
       -- which NY also can use in Future.
-      -- let quote = quote' {DQuote.selectedOfferId = Nothing}      
+      -- let quote = quote' {DQuote.selectedOfferId = Nothing}
       triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
       QQuote.createMany [quote]
       dConfirmRes <-
