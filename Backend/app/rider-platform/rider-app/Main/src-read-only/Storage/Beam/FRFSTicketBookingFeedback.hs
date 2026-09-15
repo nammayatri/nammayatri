@@ -11,14 +11,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingFeedbackT f = FRFSTicketBookingFeedbackT
-  { bookingId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    feedbackDetails :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isFareAccepted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bookingId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    feedbackDetails :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    id :: B.C f Kernel.Prelude.Text,
+    isFareAccepted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +30,6 @@ instance B.Table FRFSTicketBookingFeedbackT where
 
 type FRFSTicketBookingFeedback = FRFSTicketBookingFeedbackT Identity
 
-$(enableKVPG (''FRFSTicketBookingFeedbackT) [('id)] [[('bookingId)]])
+$(enableKVPG ''FRFSTicketBookingFeedbackT ['id] [['bookingId]])
 
-$(mkTableInstances (''FRFSTicketBookingFeedbackT) "frfs_ticket_booking_feedback")
+$(mkTableInstances ''FRFSTicketBookingFeedbackT "frfs_ticket_booking_feedback")
