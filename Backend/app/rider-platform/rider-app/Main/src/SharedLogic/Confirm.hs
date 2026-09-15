@@ -419,6 +419,27 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
+  -- rider's original pickup/drop from the parent search (This is related to walk and save feature)
+  mbParentSearchRequestLocationInfo <- case searchRequest.parentSearchRequestId of
+    Nothing -> pure Nothing
+    Just parentSearchRequestId -> do
+      mbParentSearchRequest <- QSReq.findById parentSearchRequestId
+      case mbParentSearchRequest of
+        Nothing -> do
+          logWarning $ "SharedLogic.Confirm.buildBooking: parent search request " <> parentSearchRequestId.getId <> " not found for shadow " <> searchRequest.id.getId
+          pure Nothing
+        Just parent ->
+          pure $ do
+            parentToLocation <- parent.toLocation
+            pure
+              DRB.ParentSearchRequestLocationInfo
+                { sourceLat = parent.fromLocation.lat,
+                  sourceLon = parent.fromLocation.lon,
+                  sourceAddress = parent.fromLocation.address,
+                  destLat = parentToLocation.lat,
+                  destLon = parentToLocation.lon,
+                  destAddress = parentToLocation.address
+                }
   return $
     ( DRB.Booking
         { id = bookingId,
@@ -441,6 +462,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           riderId,
           fromLocation = fromLoc,
           initialPickupLocation = fromLoc,
+          parentSearchRequestLocationInfo = mbParentSearchRequestLocationInfo,
           estimatedFare = quote.estimatedFare,
           discount = quote.discount,
           estimatedTotalFare = quote.estimatedTotalFare,
