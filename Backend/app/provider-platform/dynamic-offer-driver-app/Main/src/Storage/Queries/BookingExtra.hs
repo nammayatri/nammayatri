@@ -291,6 +291,13 @@ updateDiscountAmount bookingId discount = do
     [Se.Set BeamB.discountAmount $ Just discount, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updateBookingDeposit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe HighPrecMoney -> Id Booking -> m ()
+updateBookingDeposit bookingDeposit bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.bookingDeposit bookingDeposit, Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 updateCustomerLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Maps.Language -> m ()
 updateCustomerLanguage bookingId lang = do
   now <- getCurrentTime
