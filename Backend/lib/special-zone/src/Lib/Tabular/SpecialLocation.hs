@@ -46,6 +46,7 @@ mkPersist
       enabled Bool
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
+      parkingFeeExemptionEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe

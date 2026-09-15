@@ -64,6 +64,13 @@ updateApproved ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateApproved approved id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.approved approved, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateExemptParkingFee ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateExemptParkingFee exemptParkingFee id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.exemptParkingFee exemptParkingFee, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -146,6 +153,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
+      Se.Set Beam.exemptParkingFee exemptParkingFee,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,

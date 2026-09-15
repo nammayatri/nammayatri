@@ -673,6 +673,7 @@ library
       SharedLogic.MobileNumberValidation
       SharedLogic.OneShotAssign
       SharedLogic.OTP
+      SharedLogic.ParkingFeeExemption
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonBankAccount

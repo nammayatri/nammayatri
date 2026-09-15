@@ -50,6 +50,7 @@ mkPersist
       enabled Bool
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
+      parkingFeeExemptionEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       supportNumber Text Maybe
       paymentModes (PostgresList Domain.PaymentMode) Maybe

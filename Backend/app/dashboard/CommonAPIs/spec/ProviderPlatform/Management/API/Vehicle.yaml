@@ -1,4 +1,5 @@
 imports:
+  APISuccess: Kernel.Types.APISuccess
   Summary: Dashboard.Common
   DriverAssociationInfo: Dashboard.Common.Driver
   ApprovalStatusFilter: Dashboard.Common.Driver
@@ -23,6 +24,18 @@ apis:
       response:
         type: VehicleListRes
 
+  - POST: # UpdateParkingFeeExemptionAPI
+      endpoint: /{rcId}/parkingFeeExemption
+      params:
+        rcId: Text
+      auth: ApiAuthV2
+      request:
+        type: ParkingFeeExemptionReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.onboarding.write
+
 types:
   VehicleListRes:
     - totalItems: Int
@@ -41,3 +54,9 @@ types:
     - createdAt: UTCTime
     - recentFleetInfo: Maybe DriverAssociationInfo
     - linkedDriverInfo: Maybe DriverAssociationInfo
+    - exemptParkingFee: Maybe Bool
+  ParkingFeeExemptionReq:
+    - exempt: Bool
+    - specialLocationId: Maybe Text
+    - reason: Maybe Text
+    - derive: "'HideSecrets"

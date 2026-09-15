@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.special_location ADD COLUMN parking_fee_exemption_enabled boolean;

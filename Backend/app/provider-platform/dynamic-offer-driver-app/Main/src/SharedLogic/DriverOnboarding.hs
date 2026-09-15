@@ -583,7 +583,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         vehicleImageId = Nothing,
         verified = Nothing,
         pendingChallan = Nothing,
-        initiatedBy = Nothing
+        initiatedBy = Nothing,
+        exemptParkingFee = Nothing
       }
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
