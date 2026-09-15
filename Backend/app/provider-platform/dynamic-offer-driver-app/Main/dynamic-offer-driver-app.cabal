@@ -322,6 +322,7 @@ library
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument
+      Domain.Action.UI.DriverFyEarnings
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverIncentiveCoins
@@ -672,8 +673,8 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
-      SharedLogic.OneShotAssign
       SharedLogic.OndcCancellationReason
+      SharedLogic.OneShotAssign
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
@@ -1174,6 +1175,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverDocument
+      API.Action.UI.DriverFyEarnings
       API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
@@ -1260,6 +1262,7 @@ library
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverAreaPreference
+      API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile

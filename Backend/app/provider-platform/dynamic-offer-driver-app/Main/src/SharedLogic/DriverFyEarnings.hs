@@ -29,9 +29,12 @@ module SharedLogic.DriverFyEarnings
   ( makeFyEarningsLockKey,
     getFyToDateNetEarnings,
     addQuarterNetEarnings,
+    validateQuarter,
+    getFyEarningsRows,
   )
 where
 
+import Data.List (sortOn)
 import Data.Time.Calendar (Day)
 import qualified Domain.Types.DriverFyEarnings as DFE
 import Domain.Types.FinancialYear (fyAndQuarterOf)
@@ -41,6 +44,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverFyEarnings as QDFE
+import Tools.Error
 
 -- | Serialises the read-decide-write around the accumulator.
 --
@@ -102,3 +106,26 @@ addQuarterNetEarnings personId fyStartMonth rideLocalDate netEarnings tdsAmount 
             createdAt = now,
             updatedAt = now
           }
+
+-- | Reject a quarter outside 1..4. Shared so the dashboard and driver-facing
+-- endpoints cannot drift apart on what they accept.
+validateQuarter :: MonadFlow m => Maybe Int -> m ()
+validateQuarter mbQuarter =
+  whenJust mbQuarter $ \q ->
+    unless (q >= 1 && q <= 4) $
+      throwError $ InvalidRequest "quarter must be between 1 and 4"
+
+-- | One person's rows for a financial year, optionally narrowed to a single
+-- quarter, ordered by quarter.
+--
+-- The caller maps these onto its own response type; the filtering and ordering
+-- live here so both endpoints answer identically for the same arguments.
+getFyEarningsRows ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Int ->
+  Maybe Int ->
+  m [DFE.DriverFyEarnings]
+getFyEarningsRows personId financialYear mbQuarter = do
+  rows <- QDFE.findAllByPersonIdAndFinancialYear personId financialYear
+  pure $ sortOn (.quarter) $ maybe rows (\q -> filter (\r -> r.quarter == q) rows) mbQuarter
