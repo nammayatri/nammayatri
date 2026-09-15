@@ -737,7 +737,7 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
   -- the guard for the case it's meant to catch.
 
   let scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId)
-      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
+      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> show (fromMaybe False isFeedback) <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
   -- Atomic claim (SETNX-style): only the request that actually creates the
   -- key proceeds to do the work. A plain GET-then-SET has a race window —
   -- two requests that both arrive before either has written the cache can
@@ -803,20 +803,40 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- issueHandle.findIssueConfig mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
-  let shouldCreateTicket = isNothing createTicket || fromJust createTicket
-      onCreateIssueMsgs = if shouldCreateTicket then issueConfig.onCreateIssueMsgs else []
+  -- FEEDBACK_TICKET: stored as CLOSED, no ticket raised
+  let isFeedbackFlow = fromMaybe False isFeedback
+      shouldCreateTicket = not isFeedbackFlow && (isNothing createTicket || fromJust createTicket)
+      -- auto reply: the submitted-from message's onSubmitReplyMsgs, else IssueConfig (tickets only)
+      submitLabels
+        | isFeedbackFlow = ["FEEDBACK_TICKET"]
+        | shouldCreateTicket = ["CREATE_TICKET", "AUTO_CREATE_TICKET"]
+        | otherwise = []
+  submitMessages <-
+    if null submitLabels
+      then pure []
+      else case optionId of
+        Just justOptionId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByOptionIdAndLanguage justOptionId language identifier
+        Nothing -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage categoryId language identifier
+  let shownIds = [c.chatId | c <- fromMaybe [] chats, c.chatType == IssueMessage]
+      labelled = [m | m <- submitMessages, m.label `elem` map Just submitLabels, Just ids <- [m.onSubmitReplyMsgs], not (null ids)]
+      -- prefer the labelled message the customer was actually shown (present in chats)
+      messageOverride = (.onSubmitReplyMsgs) =<< (listToMaybe [m | m <- labelled, m.id.getId `elem` shownIds] <|> listToMaybe labelled)
+      onCreateIssueMsgs
+        | isFeedbackFlow = fromMaybe [] messageOverride
+        | shouldCreateTicket = fromMaybe issueConfig.onCreateIssueMsgs messageOverride
+        | otherwise = []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
   now <- getCurrentTime
   mbRideInfoRes <- traverse (issueHandle.getRideInfo merchantId mocId) rideId
   let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
-      updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
+      updatedChats = updateChats chats_ (shouldCreateTicket || isFeedbackFlow) isFeedbackFlow messages uploadedMediaFiles now
   mbSubCategoryOptionId <- resolveSubCategoryOptionId chats_ optionId category.category identifier
   mbSubCategoryOption <- maybe (pure Nothing) (`CQIO.findById` identifier) mbSubCategoryOptionId
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide (Just config) True identifier issueHandle
-  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
+  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
     fork "notify on slack" $ do
@@ -874,7 +894,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
-    mkIssueReport mocId updatedChats shouldCreateTicket now = do
+    mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now = do
       id <- generateGUID
       shortId <- generateShortId
       pure $
@@ -891,7 +911,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             categoryId = Just categoryId,
             mediaFiles = mediaFiles,
             assignee = Nothing,
-            status = if shouldCreateTicket then OPEN else NOT_APPLICABLE,
+            status = if shouldCreateTicket then OPEN else (if isFeedbackFlow then CLOSED else NOT_APPLICABLE),
             deleted = False,
             ticketId = Nothing,
             additionalTicketIds = Nothing,
@@ -1127,8 +1147,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           area = (.area) =<< mbLocAPIEnt
         }
 
-    updateChats :: [Chat] -> Bool -> [Common.Message] -> [D.MediaFile] -> UTCTime -> [Chat]
-    updateChats issueChats shouldCreateTicket messages mediaFiles_ now =
+    updateChats :: [Chat] -> Bool -> Bool -> [Common.Message] -> [D.MediaFile] -> UTCTime -> [Chat]
+    updateChats issueChats shouldCreateTicket alwaysAppendReplies messages mediaFiles_ now =
       let issueDescriptionChats = [mkIssueChat IssueDescription "" now]
           issueMediaFileChats = map (\mediaFile -> mkIssueChat MediaFile mediaFile.id.getId now) mediaFiles_
           chatsWithDescAndMediaFiles =
@@ -1136,7 +1156,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
               then issueChats ++ issueDescriptionChats ++ issueMediaFileChats
               else issueChats
        in chatsWithDescAndMediaFiles
-            ++ ( if not $ null issueChats
+            ++ ( if not (null issueChats) || alwaysAppendReplies
                    then map (\message -> mkIssueChat IssueMessage message.id.getId now) messages
                    else []
                )
