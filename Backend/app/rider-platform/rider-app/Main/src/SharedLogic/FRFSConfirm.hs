@@ -173,7 +173,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
     let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
     -- The hold is taken above but only tracked against a booking below, so a throw in between leaves
     -- those seats held until their TTL, and repeated attempts block the trip.
-    --
     -- Scoped to requests that supplied a pass, because that is the throw this PR adds:
     -- resolvePassOverride rejects an inapplicable pass with InvalidRequest, after the hold exists.
     -- A non-pass booking keeps main's behaviour exactly -- the hold still leaks on an unrelated
@@ -914,6 +913,15 @@ buildJourneyAndLeg booking fareParameters = do
               merchantOperatingCityId = Just booking.merchantOperatingCityId
             }
 
+    --
+    mbPaymentOrderShortId <- do
+      mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+      mbPaymentOrder <- maybe (pure Nothing) (QPaymentOrder.findById . (.paymentOrderId)) mbPaymentBooking
+      forM mbPaymentOrder $ \paymentOrder -> do
+        isTestTransaction <- asks (.isMetroTestTransaction)
+        let paymentType = getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
+        pure $ ShortId $ DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
+
     let journey =
           DJ.Journey
             { id = journeyGuid,
@@ -942,7 +950,7 @@ buildJourneyAndLeg booking fareParameters = do
               hasPreferredTransitModes = Just False,
               fromLocation = fromLocation,
               toLocation = Just toLocation,
-              paymentOrderShortId = Nothing,
+              paymentOrderShortId = mbPaymentOrderShortId,
               journeyExpiryTime = Nothing,
               hasStartedTrackingWithoutBooking = Nothing,
               skipCreateOrderCall = Nothing
