@@ -46,15 +46,14 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
-      { contextCoreVersion = Just "1.0.0",
+      { contextVersion = Just "2.1.0",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just $ showBaseUrl bapUrl,
         contextBppId,
         contextBppUri,
-        contextCity = Just cityCode,
-        contextCountry = Just "IND",
+        contextLocation = Just $ tfLocation cityCode,
         contextKey = Nothing,
         contextMessageId = Just msgId,
         contextTimestamp = Just now,
@@ -70,6 +69,23 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
+
+tfLocation :: Text -> Spec.Location
+tfLocation cityCode =
+  Spec.Location
+    { locationCity =
+        Just $
+          Spec.City
+            { cityCode = Just cityCode,
+              cityName = Nothing
+            },
+      locationCountry =
+        Just $
+          Spec.Country
+            { countryCode = Just "IND",
+              countryName = Nothing
+            }
+    }
 
 mapBecknIssueStatus :: Maybe Common.CustomerResponse -> Maybe Text
 mapBecknIssueStatus mbResp =

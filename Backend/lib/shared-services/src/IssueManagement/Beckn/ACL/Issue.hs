@@ -22,10 +22,8 @@ buildIssueReq ::
 buildIssueReq req isValueAddNP = do
   Utils.validateContext Spec.ISSUE req.context
   let issue = req.issueReqMessage.issueReqMessageIssue
-  issueCategory <- issue.issueCategory & fromMaybeM (InvalidRequest "IssueCategory not found")
-  issueTypeText <- issue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
   issueStatusText <- issue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
-  bookingId <- issue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
+  (issueCategory, issueTypeText, bookingId, issueSubCategory) <- extractIssueFields issueStatusText issue
   let items = fromMaybe [] $ issue.issueOrderDetails >>= (.orderDetailsItems)
       fulfillments = fromMaybe [] $ issue.issueOrderDetails >>= (.orderDetailsFulfillments)
   when (length items > 1) $ throwError $ InvalidRequest "Multiple order items not supported for mobility"
@@ -37,7 +35,6 @@ buildIssueReq req isValueAddNP = do
   let issueRaisedBy = issue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
       issueId = issue.issueId
       createdAt = issue.issueCreatedAt
-  issueSubCategory <- maybe (throwError $ InvalidRequest "Invalid IssueSubCategory") pure $ decode $ encode issue.issueSubCategory
 
   let (customerName, customerEmail, customerPhone) =
         if isValueAddNP
@@ -100,6 +97,25 @@ buildOffUsDetails issue ctx =
       issueUpdatedAt = Just $ convertRFC3339ToUTC issue.issueUpdatedAt,
       complainantActions = fromMaybe [] $ issue.issueIssueActions >>= (.issueActionsComplainantActions)
     }
+
+extractIssueFields ::
+  (MonadFlow m) =>
+  Text ->
+  Spec.Issue ->
+  m (Maybe Text, Maybe Text, Maybe Text, Maybe Spec.IssueSubCategory)
+extractIssueFields "OPEN" issue = do
+  cat <- issue.issueCategory & fromMaybeM (InvalidRequest "IssueCategory not found")
+  typ <- issue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
+  bid <- issue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
+  subCat <- maybe (throwError $ InvalidRequest "Invalid IssueSubCategory") pure $ decode $ encode issue.issueSubCategory
+  pure (Just cat, Just typ, Just bid, subCat)
+extractIssueFields _ issue =
+  pure
+    ( issue.issueCategory,
+      issue.issueIssueType,
+      issue.issueOrderDetails >>= (.orderDetailsId),
+      join $ (decode . encode) <$> issue.issueSubCategory
+    )
 
 buildOnIssueReq ::
   ( MonadFlow m,
