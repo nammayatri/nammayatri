@@ -102,6 +102,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     enableQueueFilter :: Maybe Text,
     gateInfoEntryFeeDisabledServiceTiers :: Maybe Text,
     gateInfoGateConfig :: Maybe Text,
+    gateInfoFeeItems :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text,
     boothSpecificFleet :: Maybe Text
@@ -153,6 +154,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     enableQueueFilter <- optional (r .: "enable_queue_filter")
     gateInfoEntryFeeDisabledServiceTiers <- optional (r .: "gate_info_entry_fee_disabled_service_tiers")
     gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
+    gateInfoFeeItems <- optional (r .: "gate_info_fee_items")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
     boothSpecificFleet <- optional (r .: "booth_specific_fleet")
@@ -196,6 +198,22 @@ parseBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
 parseBoolMap mbT = do
   t <- mbT >>= cleanField
   Aeson.decodeStrict (TE.encodeUtf8 t)
+
+-- | Resolve the gate fee items CSV cell, rejecting the row when the JSON is invalid or
+--   when an item's currency does not match the operating city's currency.
+resolveGateFeeItems :: Int -> Currency -> Maybe Text -> Flow (Maybe [DGI.GateFeeItem])
+resolveGateFeeItems idx cityCurrency mbFieldValue =
+  case mbFieldValue >>= cleanField of
+    Nothing -> pure Nothing
+    Just t -> do
+      items <-
+        Aeson.decodeStrict (TE.encodeUtf8 t)
+          & fromMaybeM (InvalidRequest $ "Invalid Gate Info (fee_items): " <> t <> " at row: " <> show idx)
+      forM_ items $ \item ->
+        when (item.amountWithCurrency.currency /= cityCurrency) $
+          throwError $
+            InvalidRequest $ "Gate Info (fee_items) currency " <> show item.amountWithCurrency.currency <> " does not match city currency " <> show cityCurrency <> " at row: " <> show idx
+      pure $ Just items
 
 resolveGateConfig :: Int -> Maybe Text -> Flow (Maybe DGI.GateConfig)
 resolveGateConfig idx mbFieldValue =
@@ -320,6 +338,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       else return Nothing
   resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
   resolvedGateConfig <- resolveGateConfig idx row.gateInfoGateConfig
+  resolvedGateFeeItems <- resolveGateFeeItems idx merchantOpCity.currency row.gateInfoFeeItems
   let specialLocation =
         DSL.SpecialLocation
           { id = Id locationName,
@@ -364,6 +383,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             gateTags = gateInfoGateTags,
             walkDescription = gateInfoWalkDescription,
             entryFeeAmount = gateInfoEntryFeeAmount,
+            feeItems = resolvedGateFeeItems,
             minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
             maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
             demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,

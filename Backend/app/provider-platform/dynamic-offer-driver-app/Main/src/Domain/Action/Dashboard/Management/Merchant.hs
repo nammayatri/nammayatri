@@ -3632,6 +3632,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = mbGate >>= (.entryFeeAmount),
+            feeItems = reqT.feeItems <|> (mbGate >>= (.feeItems)),
             minDriverThresholds = mbGate >>= (.minDriverThresholds),
             maxDriverThresholds = mbGate >>= (.maxDriverThresholds),
             demandThresholds = mbGate >>= (.demandThresholds),

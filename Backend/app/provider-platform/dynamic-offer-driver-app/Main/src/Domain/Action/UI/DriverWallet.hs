@@ -213,7 +213,7 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferenceGateDriverFeeGST]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -243,7 +243,7 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferenceGateDriverFeeGST]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
 -- | Aggregate raw entries into the WalletSummary fields:
@@ -397,6 +397,8 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
+  | ref == walletReferenceGateDriverFee = "Gate Fee"
+  | ref == walletReferenceGateDriverFeeGST = "Gate Fee GST"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. Vat (Online)"

@@ -8,6 +8,7 @@ import qualified Data.OpenApi
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
@@ -24,6 +25,7 @@ data GateInfo = GateInfo
     enableQueueFilter :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Bool),
     entryFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     entryFeeDisabledServiceTiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    feeItems :: Kernel.Prelude.Maybe [Lib.Types.GateInfo.GateFeeItem],
     gateConfig :: Kernel.Prelude.Maybe Lib.Types.GateInfo.GateConfig,
     gateTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gateType :: Lib.Types.GateInfo.GateType,
@@ -50,6 +52,16 @@ data GateInfo = GateInfo
 data GateConfig = GateConfig {enableIsDemandHigh :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, enablePerKmFare :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
 
+data GateFeeCollectionType = CustomerFeeItem | DriverFeeItem deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data GateFeeItem = GateFeeItem {amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity, collectionType :: Lib.Types.GateInfo.GateFeeCollectionType, itemName :: Lib.Types.GateInfo.GateFeeItemName}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
+
+data GateFeeItemName = GateFeeItemName {customer :: Kernel.Prelude.Maybe Kernel.Prelude.Text, driver :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
+
 data GateType = Pickup | Drop | Parking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''GateFeeCollectionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''GateType)
