@@ -28,6 +28,7 @@ const wallet = require('./wallet');
 const identity = require('./identity');
 const restricted = require('./restricted');
 const deletion = require('./deletion');
+const geo = require('./geo');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -520,6 +521,14 @@ http.createServer((req, res) => {
     });
   }
   if (url.pathname === '/directions/json') return directions(url.searchParams, res);
+
+  // Which of our countries the caller's IP belongs to, for the sign-in
+  // screen's country detection (2026-09-14). The phone asks its own GPS first;
+  // this is the second opinion. See geo.js.
+  if (url.pathname === '/geo/country') {
+    if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
+    return geo.serve(req, res);
+  }
 
   // Who is nearby and what they drive. Nothing to do with Google, and kept in
   // its own file for that reason -- this shim answers as Google for the
