@@ -61,12 +61,13 @@ issue merchantId req issueHandle identifier isValueAddNP = do
       validatedIssueReq <- DIssue.validateRequest merchantId issueReq issueHandle
       fork "IGM issue processing" $ do
         Redis.whenWithLockRedis (issueProcessingLockKey message_id) 60 $ do
-          dIssueRes <- DIssue.handler validatedIssueReq issueHandle
-          let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
-          becknOnIssueReq <- IACL.buildOnIssueReq transaction_id message_id domainId domainUri dIssueRes
-          logInfo $ "IGM /on_issue response body: " <> encodeToText becknOnIssueReq
-          domainBaseUrl <- parseBaseUrl domainUri
-          void $ CallAPI.callOnIssue becknOnIssueReq domainBaseUrl dIssueRes.merchant
+          mbDIssueRes <- DIssue.handler validatedIssueReq issueHandle
+          whenJust mbDIssueRes $ \dIssueRes -> do
+            let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
+            becknOnIssueReq <- IACL.buildOnIssueReq transaction_id message_id domainId domainUri dIssueRes
+            logInfo $ "IGM /on_issue response body: " <> encodeToText becknOnIssueReq
+            domainBaseUrl <- parseBaseUrl domainUri
+            void $ CallAPI.callOnIssue becknOnIssueReq domainBaseUrl dIssueRes.merchant
   pure Utils.ack
 
 issueLockKey :: Text -> Text

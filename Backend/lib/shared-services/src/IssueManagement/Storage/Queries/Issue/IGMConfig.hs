@@ -36,6 +36,7 @@ updateByPrimaryKey (IGMConfig {..}) = do
       Set Beam.resolutionProviderName resolutionProviderName,
       Set Beam.resolutionProviderPhone resolutionProviderPhone,
       Set Beam.resolutionProviderEmail resolutionProviderEmail,
+      Set Beam.createTicketOnIssueRaise createTicketOnIssueRaise,
       Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Set Beam.createdAt createdAt,
       Set Beam.updatedAt _now
@@ -58,6 +59,7 @@ instance FromTType' Beam.IGMConfig IGMConfig where
             resolutionProviderName = resolutionProviderName,
             resolutionProviderPhone = resolutionProviderPhone,
             resolutionProviderEmail = resolutionProviderEmail,
+            createTicketOnIssueRaise = createTicketOnIssueRaise,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             createdAt = createdAt,
@@ -78,6 +80,7 @@ instance ToTType' Beam.IGMConfig IGMConfig where
         Beam.resolutionProviderName = resolutionProviderName,
         Beam.resolutionProviderPhone = resolutionProviderPhone,
         Beam.resolutionProviderEmail = resolutionProviderEmail,
+        Beam.createTicketOnIssueRaise = createTicketOnIssueRaise,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.createdAt = createdAt,
