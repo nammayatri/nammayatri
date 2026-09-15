@@ -285,7 +285,8 @@ getLiveTicketDef placeId = do
           serviceCategoryId = nub $ concatMap (.categoryId) $ filter (\bh -> any (\bhId -> bhId == bh.id) svc.businessHours) linkedBusinessHours,
           rules = svc.rules,
           subPlaceId = svc.subPlaceId,
-          maxSelection = svc.maxSelection
+          maxSelection = svc.maxSelection,
+          isClosed = Just svc.isClosed
         }
     toServiceCategoryDef :: [DBusinessHour.BusinessHour] -> DServiceCategory.ServiceCategory -> DEM.ServiceCategoryDef
     toServiceCategoryDef linkedBusinessHours sc =
@@ -298,7 +299,8 @@ getLiveTicketDef placeId = do
           businessHours = nub $ map toBusinessHourDef $ filter (\bh -> any (\cid -> cid == sc.id) bh.categoryId) linkedBusinessHours,
           peopleCategory = sc.peopleCategory,
           rules = sc.rules,
-          maxSelection = sc.maxSelection
+          maxSelection = sc.maxSelection,
+          isClosed = Just sc.isClosed
         }
     toBusinessHourDef :: DBusinessHour.BusinessHour -> DEM.BusinessHourDef
     toBusinessHourDef bh =
@@ -316,7 +318,8 @@ getLiveTicketDef placeId = do
           priceAmount = spc.pricePerUnit.amount,
           priceCurrency = spc.pricePerUnit.currency,
           rules = spc.rules,
-          iconUrl = spc.iconUrl
+          iconUrl = spc.iconUrl,
+          isClosed = Just spc.isClosed
         }
 
 getTicketDef :: Id DTicketPlace.TicketPlace -> Environment.Flow DEM.TicketPlaceDef
@@ -615,7 +618,7 @@ applyDraftChanges draftChange = do
                 placeId = fromMaybe (pure draftChange.id.getId) (existingSPC <&> (.placeId)),
                 updatedAt = now,
                 rules = spcDef.rules,
-                isClosed = fromMaybe False (existingSPC <&> (.isClosed)),
+                isClosed = fromMaybe (fromMaybe False (existingSPC <&> (.isClosed))) spcDef.isClosed,
                 iconUrl = spcDef.iconUrl
               }
       case existingSPC of
@@ -640,7 +643,7 @@ applyDraftChanges draftChange = do
                 createdAt = now,
                 updatedAt = now,
                 rules = scDef.rules,
-                isClosed = fromMaybe False (existingSC <&> (.isClosed)),
+                isClosed = fromMaybe (fromMaybe False (existingSC <&> (.isClosed))) scDef.isClosed,
                 remainingActions = fromMaybe Nothing (existingSC <&> (.remainingActions)),
                 inclusionPoints = scDef.inclusionPoints,
                 maxSelection = scDef.maxSelection
@@ -711,7 +714,7 @@ applyDraftChanges draftChange = do
                 createdAt = now,
                 updatedAt = now,
                 rules = existingService >>= (.rules),
-                isClosed = fromMaybe False (existingService <&> (.isClosed)),
+                isClosed = fromMaybe (fromMaybe False (existingService <&> (.isClosed))) serviceDef.isClosed,
                 serviceDetails = serviceDef.serviceDetails,
                 maxSelection = serviceDef.maxSelection,
                 note = existingService >>= (.note),

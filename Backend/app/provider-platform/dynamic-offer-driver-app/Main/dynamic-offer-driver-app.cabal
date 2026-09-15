@@ -672,8 +672,8 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
-      SharedLogic.OneShotAssign
       SharedLogic.OndcCancellationReason
+      SharedLogic.OneShotAssign
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
