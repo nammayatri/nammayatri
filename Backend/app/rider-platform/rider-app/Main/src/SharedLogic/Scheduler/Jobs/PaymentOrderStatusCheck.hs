@@ -137,7 +137,7 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
       fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast merchantId) paymentOrder.id
-  void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall Nothing
   where
     -- Helper to create fulfillment handler based on payment service type
     mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)

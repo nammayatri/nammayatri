@@ -1937,7 +1937,9 @@ intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ 
 intializeRefundProcess ticketBookingShortId ticketPlaceId _amountToRefund personMerchantId personMerchantOperatingCityId mRoutingId mSdkVersion = do
   let createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
   let commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity personMerchantOperatingCityId
-  void $ DPayment.createRefundService commonMerchantOperatingCityId (Kernel.Types.Id.ShortId ticketBookingShortId.getShortId) createRefundCall
+  -- Nothing = full-order refund, preserving existing behaviour. NOTE: _amountToRefund is
+  -- still unused here, so cancellation charges computed for place bookings are not applied.
+  void $ DPayment.createRefundService commonMerchantOperatingCityId (Kernel.Types.Id.ShortId ticketBookingShortId.getShortId) Nothing createRefundCall
 
 tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()
 tryUserTicketCancellationLock businessHourId date serviceCategoryId executeFunction = do

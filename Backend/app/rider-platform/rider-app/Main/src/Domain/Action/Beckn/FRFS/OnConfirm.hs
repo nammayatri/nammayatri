@@ -143,7 +143,7 @@ validateRequest DOrder {..} = do
       -- CONFIRMED internally, so it is a no-op on the ordinary pre-confirm expiry.
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
-      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
+      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId Nothing
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -185,7 +185,7 @@ onConfirmFailure bapConfig ticketBooking = do
   -- pass. Everywhere else is pre-CONFIRMED, where nothing has been spent. ticketBooking still
   -- holds the pre-FAILED status read above, so the guard sees the status that matters.
   void $ withTryCatch "onConfirmFailure:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure ticketBooking)
-  whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+  whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId Nothing
   -- enforceCap=False: this is a Technical cancellation, so it must not consume the rider's
   -- cancellation allowance (see ExternalBPP.CallAPI.Cancel).
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False ticketBooking
