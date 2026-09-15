@@ -165,6 +165,7 @@ RiderConfig:
     subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busApproachingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    frfsDriverDetailsLeadTime: Maybe Seconds
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
@@ -551,6 +552,7 @@ RiderConfig:
     payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
     multimodalTesting: "false"
     blockedUntilInMins: "1440"
+    frfsDriverDetailsLeadTime: "1800"
     busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
     enableMultiModalForAllUsers: "false"
     unifiedQREnabled: "false"
@@ -612,6 +614,7 @@ RiderConfig:
     specialLocationTierOrderConfig: "json"
     boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
+    frfsDriverDetailsLeadTime: int
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
     busTierSortingConfig: "json"

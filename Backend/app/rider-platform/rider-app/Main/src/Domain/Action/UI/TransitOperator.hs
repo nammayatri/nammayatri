@@ -253,7 +253,7 @@ fanOutWaybillRefresh baseUrl gtfsId waybillNo = do
                       routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
                       mbJourneyId = (.journeyId) <$> mbJourneyLeg
                   fork ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ do
-                    eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged
+                    eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged booking.startTime
                     case eNotify of
                       Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
                       Right _ -> pure ()

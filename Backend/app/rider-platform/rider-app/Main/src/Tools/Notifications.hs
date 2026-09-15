@@ -63,6 +63,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (getCurrentTime)
+import qualified Kernel.Utils.Common as KUC
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -2222,11 +2223,9 @@ notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNu
     Nothing
     Nothing
 
--- | Notify a passenger that the operator changed the driver and/or the assigned bus for their upcoming
--- FRFS bus trip (waybill-details update). Push-only. A single notification covers both fields; the
--- `updatedField` template variable carries the three-way wording (driver details / bus number / both) so
--- one configured template renders correctly for every case. The caller only invokes this when at least
--- one of driver/bus actually changed.
+-- | Notify a passenger that the operator changed the driver and/or bus for their FRFS trip. Push always
+-- fires (frontend refetches on it); visible only within frfsDriverDetailsLeadTime of departure, else
+-- DO_NOT_SHOW (silent refetch).
 notifyFrfsTripDetailsUpdated ::
   ServiceFlow m r =>
   Person.Person ->
@@ -2237,8 +2236,9 @@ notifyFrfsTripDetailsUpdated ::
   Maybe (Id Domain.Types.Journey.Journey) ->
   Bool ->
   Bool ->
+  Maybe UTCTime ->
   m ()
-notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId mbJourneyId driverChanged busChanged = do
+notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId mbJourneyId driverChanged busChanged mbStartTime = do
   let updatedField
         | driverChanged && busChanged = "driver and bus details"
         | busChanged = "bus number"
@@ -2255,9 +2255,18 @@ notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId m
             bookingId = Just bookingId
           }
       entity = Notification.Entity Notification.Product person.id.getId entityData
+  isWithinLeadWindow <- case mbStartTime of
+    Nothing -> pure False
+    Just startTime -> do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+      let leadWindow = maybe 1800 (\s -> fromIntegral s.getSeconds) (mbRiderConfig >>= (.frfsDriverDetailsLeadTime))
+      now <- KUC.getCurrentTime
+      let untilDeparture = diffUTCTime startTime now
+      pure $ untilDeparture >= 0 && untilDeparture <= leadWindow
+  let pushShowType = if isWithinLeadWindow then Notification.SHOW else Notification.DO_NOT_SHOW
   dynamicNotifyPerson
     person
-    (createNotificationReq "FRFS_TRIP_DETAILS_UPDATED" identity)
+    (createNotificationReq "FRFS_TRIP_DETAILS_UPDATED" (\r -> r {showType = pushShowType}))
     EmptyDynamicParam
     entity
     Nothing
@@ -2367,10 +2376,7 @@ notifyShuttleBookingConfirmed personId bookingId = do
             [("source", origin), ("destination", destination), ("pickupTime", departure)]
             Nothing
             Nothing
-          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation` expects 5 vars,
-          -- in order: name, source, destination, departure, vehicle. Non-empty fallbacks because
-          -- Meta rejects empty template variables (drops the whole message).
+          -- template `shuttle_booking_confirmation`: 4 vars (name, source, destination, departure), no vehicle/driver info
           let riderName = fromMaybe "Rider" person.firstName
-              vehicle = fromMaybe "your shuttle" booking.vehicleNumber
-          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just riderName, Just origin, Just destination, Just departure, Just vehicle]
+          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just riderName, Just origin, Just destination, Just departure]
           pure True

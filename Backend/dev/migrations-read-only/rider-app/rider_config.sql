@@ -850,3 +850,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_driver_details_lead_time int  default 1800;
