@@ -12,6 +12,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified SharedLogic.Type
 import qualified Storage.Beam.SearchTry as Beam
 import qualified Storage.Queries.Transformers.SearchRequestForDriver
@@ -23,7 +24,8 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
     pure $
       Just
         Domain.Types.SearchTry.SearchTry
-          { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
+          { addOnData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData),
+            baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
             batchingMode = batchingMode,
             billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             businessEmailDomain = businessEmailDomain,
@@ -60,7 +62,8 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
 instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
   toTType' (Domain.Types.SearchTry.SearchTry {..}) = do
     Beam.SearchTryT
-      { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
+      { Beam.addOnData = Just $ toJSON addOnData,
+        Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
         Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
         Beam.batchingMode = batchingMode,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,

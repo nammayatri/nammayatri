@@ -14,6 +14,7 @@
 
 module Storage.Beam.Quote where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types
 import Domain.Types.Common ()
@@ -46,7 +47,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     navigationInstruction :: B.C f (Maybe Text),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f LocalTime,
-    merchantOperatingCityId :: B.C f (Maybe Text)
+    merchantOperatingCityId :: B.C f (Maybe Text),
+    addOnData :: B.C f (Maybe Data.Aeson.Value)
   }
   deriving (Generic, B.Beamable)
 

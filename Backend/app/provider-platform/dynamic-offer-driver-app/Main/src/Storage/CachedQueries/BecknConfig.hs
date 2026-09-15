@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.BecknConfig
   ( findByMerchantIdDomainAndVehicle,
+    findAnyByMerchantIdAndDomain,
   )
 where
 
@@ -42,3 +43,22 @@ cacheMerchantIdDomainAndVehicle config = do
 
 makeMerchantIdDomainKey :: Id Merchant -> Text -> VehicleCategory -> Text
 makeMerchantIdDomainKey merchantId domain vehicle = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":Vehicle:" <> show vehicle
+
+findAnyByMerchantIdAndDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> m (Maybe BecknConfig)
+findAnyByMerchantIdAndDomain merchantId domain = do
+  Hedis.safeGet (makeMerchantIdDomainAnyKey merchantId domain) >>= \case
+    Just a -> return a
+    Nothing -> findAndCache
+  where
+    findAndCache = do
+      mbConfig <- listToMaybe <$> Queries.findByMerchantIdAndDomain (Just merchantId) domain
+      whenJust mbConfig cacheMerchantIdDomainAny
+      pure mbConfig
+
+cacheMerchantIdDomainAny :: (CacheFlow m r) => BecknConfig -> m ()
+cacheMerchantIdDomainAny config = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantIdDomainAnyKey (fromJust config.merchantId) config.domain) config expTime
+
+makeMerchantIdDomainAnyKey :: Id Merchant -> Text -> Text
+makeMerchantIdDomainAnyKey merchantId domain = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":Any"
