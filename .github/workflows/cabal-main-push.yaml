@@ -295,7 +295,7 @@ jobs:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64_prodHotPush-Common_pus
+    runs-on: x86_64_prodHotPush-Common_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
