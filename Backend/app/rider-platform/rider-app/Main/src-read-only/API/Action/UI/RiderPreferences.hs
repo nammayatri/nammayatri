@@ -24,9 +24,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "riderPreference" :> ReqBody ('[JSON]) API.Types.UI.RiderPreferences.RiderPreferenceReq
+  ( TokenAuth :> "riderPreference" :> ReqBody '[JSON] API.Types.UI.RiderPreferences.RiderPreferenceReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "riderPreference"
@@ -35,13 +35,13 @@ type API =
            "sourceLon"
            Kernel.Prelude.Double
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RiderPreferences.RiderPreferencesResp
       :<|> TokenAuth
       :> "riderPreference"
       :> "all"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RiderPreferences.AllRiderPreferencesResp
       :<|> TokenAuth
       :> "riderPreference"
@@ -49,12 +49,12 @@ type API =
            "preferenceId"
            (Kernel.Types.Id.Id Domain.Types.RiderPreferences.RiderPreferences)
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = postRiderPreference :<|> getRiderPreference :<|> getAllRiderPreferences :<|> deleteRiderPreference
+handler = postRiderPreference :<|> getRiderPreference :<|> getRiderPreferenceAll :<|> deleteRiderPreference
 
 postRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -69,19 +69,19 @@ getRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.RiderPreferencesResp
   )
 getRiderPreference a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getAllRiderPreferences ::
+getRiderPreferenceAll ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.AllRiderPreferencesResp
   )
-getAllRiderPreferences a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getAllRiderPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getRiderPreferenceAll a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 deleteRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

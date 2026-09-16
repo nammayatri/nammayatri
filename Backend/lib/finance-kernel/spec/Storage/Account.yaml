@@ -55,6 +55,14 @@ Account:
       where:
         and: [counterpartyType, counterpartyId, accountType, subLedger]
 
+    # Account identity including the owning merchant. counterpartyId alone is not
+    # sufficient once it holds a counterparty shared across merchants — two merchants
+    # served by the same Buyer App would otherwise resolve to one account.
+    findByMerchantCounterpartyAndTypeAndSubLedger:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, counterpartyType, counterpartyId, accountType, subLedger]
+
     updateBalance:
       kvFunction: updateWithKV
       params: [balance, updatedAt]

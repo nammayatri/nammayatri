@@ -202,6 +202,7 @@ import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Interface as IPayout
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (handle, intToNominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
@@ -346,6 +347,7 @@ import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
@@ -1728,7 +1730,7 @@ buildOperatorInfo person = do
         createdAt = person.createdAt
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r, ServiceFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
     if mbFleetInfo == Just True || driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER
@@ -1785,7 +1787,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
     if merchant.onlinePayment
       then do
         mbDriverBankAccount <- QDBA.findByPrimaryKey id
-        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, ..})
+        forM mbDriverBankAccount $ \DOBA.DriverBankAccount {..} -> do
+          stripeLegalEntityName <- TPayment.fetchLegalEntityName merchantOpCityId paymentMode
+          pure $ DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, stripeLegalEntityName, ..}
       else return Nothing
   (refCode, dynamicReferralCode) <-
     case referralCode of
@@ -3246,7 +3250,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
 
     possibleScheduledTripCategories :: [DTC.TripCategory]
-    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
 
     sortBookingsByDistance :: [ScheduleBooking] -> [ScheduleBooking]
     sortBookingsByDistance = sortBy (compareDistances `on` (\booking -> booking.bookingDetails.distanceToPickup))

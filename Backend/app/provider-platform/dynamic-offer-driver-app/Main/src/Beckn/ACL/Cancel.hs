@@ -37,6 +37,8 @@ buildCancelReqV2 req = do
       let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       let userReallocationEnabled = req.cancelReqMessage.cancelReqMessageReallocate
       let cancellationReason = getCancellationReason req
+      let ondcCancellationReasonId = getOndcCancellationReasonId req
+      let cancellationReasonLongDesc = getCancellationReasonLongDesc req
       return $
         DCancel.CancelRide $
           DCancel.CancelRideReq

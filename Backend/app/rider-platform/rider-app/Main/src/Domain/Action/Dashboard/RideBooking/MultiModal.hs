@@ -126,7 +126,7 @@ notifyCustomerFromDashboard customerId req = do
                 sound = Nothing,
                 overlayNotificationData = Nothing
               }
-      TNotifications.notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+      TNotifications.notifyPerson person.merchantId person.merchantOperatingCityId person.id Nothing notificationData Nothing
     API.Types.Dashboard.RideBooking.MultiModal.EMAIL ->
       throwError $ InvalidRequest "EMAIL channel is not supported for sendMessage; use sendDirectMessage"
 

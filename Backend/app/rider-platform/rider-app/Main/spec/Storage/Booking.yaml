@@ -40,6 +40,7 @@ imports:
   BillingCategory: SharedLogic.Type
   VehicleCategory : BecknV2.OnDemand.Enums
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  ParentSearchRequestLocationInfo: Domain.Types.Extra.Booking
 
 BookingLocation:
   tableName: booking_location
@@ -207,6 +208,7 @@ Booking:
     fromLocation: Location
     billingCategory: BillingCategory
     initialPickupLocation: Location|NoRelation
+    parentSearchRequestLocationInfo: Maybe ParentSearchRequestLocationInfo
     estimatedFare: Price
     estimatedDistance: Maybe Distance
     distanceUnit: DistanceUnit
@@ -333,6 +335,7 @@ Booking:
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
     requiresPaymentBeforeConfirm: Maybe Bool
+    parentSearchRequestLocationInfo: Maybe Value
 
 
   sqlType:
@@ -385,6 +388,7 @@ Booking:
     configInExperimentVersions: "json"
     displayBookingId: character varying(25)
     requiresPaymentBeforeConfirm: boolean
+    parentSearchRequestLocationInfo: jsonb
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -432,6 +436,7 @@ Booking:
     isPetRide: Kernel.Prelude.Just|I
     requiresPaymentBeforeConfirm: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just billingCategory|E
+    parentSearchRequestLocationInfo: fmap toJSON parentSearchRequestLocationInfo|E
 
   intermediateTransformers:
     toTType:
@@ -465,6 +470,7 @@ Booking:
     isPetRide: fromMaybe False isPetRide | E
     requiresPaymentBeforeConfirm: fromMaybe False requiresPaymentBeforeConfirm | E
     billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    parentSearchRequestLocationInfo: (Kernel.Utils.JSON.valueToMaybe =<< parentSearchRequestLocationInfo)|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

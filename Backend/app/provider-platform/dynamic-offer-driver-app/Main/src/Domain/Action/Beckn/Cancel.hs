@@ -25,6 +25,7 @@ module Domain.Action.Beckn.Cancel
 where
 
 import Data.Maybe
+import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -57,6 +58,7 @@ import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OndcCancellationReason as SOCR
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
@@ -87,7 +89,9 @@ data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
     userReallocationEnabled :: Maybe Bool,
-    cancellationReason :: Maybe Text
+    cancellationReason :: Maybe Text,
+    ondcCancellationReasonId :: Maybe Text,
+    cancellationReasonLongDesc :: Maybe Text
   }
   deriving (Show)
 
@@ -101,7 +105,7 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
+  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride, Maybe Text)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -123,8 +127,9 @@ cancel req merchant booking mbActiveSearchTry = do
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
+    bookingCR <- buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
+    let resolvedReasonCode = (\(DTCR.CancellationReasonCode code) -> code) <$> bookingCR.reasonCode
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
     Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
@@ -196,7 +201,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing, Nothing)
+        return (isReallocated, Nothing, Nothing, resolvedReasonCode)
       else do
         let cancellationTaxAmount = fromMaybe 0 (chargesOutcome >>= (.tax))
             -- base + tax kept separate; total built only here for the on_cancel
@@ -214,23 +219,43 @@ cancel req merchant booking mbActiveSearchTry = do
         updatedRide <- case mbRide of
           Just ride -> QRide.findById ride.id
           Nothing -> pure Nothing
-        return (isReallocated, cancelCharges, updatedRide)
+        return (isReallocated, cancelCharges, updatedRide, resolvedReasonCode)
   where
-    buildBookingCancellationReason disToPickup currentLocation mbRide = do
+    buildAdditionalInfo =
+      case catMaybes
+        [ ("ondcReasonId=" <>) <$> req.ondcCancellationReasonId,
+          ("shortDesc=" <>) <$> req.cancellationReason,
+          ("longDesc=" <>) <$> req.cancellationReasonLongDesc
+        ] of
+        [] -> Nothing
+        parts -> Just $ Text.intercalate "; " parts
+
+    buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide = do
+      when (isNothing req.cancellationReason && isNothing req.ondcCancellationReasonId) $
+        logError $
+          "No cancellation reason received for bookingId-" <> req.bookingId.getId
+      resolvedReasonCode <-
+        SOCR.resolveCancellationReasonCode
+          (Just transporterConfig)
+          req.ondcCancellationReasonId
+          req.cancellationReason
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
             rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
+            reasonCode = DTCR.CancellationReasonCode <$> resolvedReasonCode,
             driverId = (.driverId) <$> mbRide,
-            additionalInfo = Nothing,
+            additionalInfo = buildAdditionalInfo,
+            ondcCancellationReasonId = req.ondcCancellationReasonId,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
-            ..
+            createdAt = Just now,
+            updatedAt = Just now
           }
 
 -- Cancel Search is only allowed to be called before Init happens on Driver App (i.e, when booking is created)

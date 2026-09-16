@@ -72,6 +72,10 @@ findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limi
 findAllByTransactionIdLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [BookingLite]
 findAllByTransactionIdLite txnId = findAllWithKV [Se.Is Beam.transactionId $ Se.Eq txnId]
 
+findAllByTransactionIdsLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [BookingLite]
+findAllByTransactionIdsLite [] = pure []
+findAllByTransactionIdsLite txnIds = findAllWithKV [Se.Is Beam.transactionId $ Se.In txnIds]
+
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

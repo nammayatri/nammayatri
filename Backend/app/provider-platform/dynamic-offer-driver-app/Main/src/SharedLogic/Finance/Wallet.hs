@@ -609,8 +609,17 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
-        enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
+        enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+        buyerCounterpartyId = Just (normaliseBuyerCounterpartyId booking.bapId)
       }
+
+normaliseBuyerCounterpartyId :: Text -> Text
+normaliseBuyerCounterpartyId raw =
+  let lowered = T.toLower (T.strip raw)
+      withoutScheme = case T.stripPrefix "https://" lowered of
+        Just rest -> rest
+        Nothing -> fromMaybe lowered (T.stripPrefix "http://" lowered)
+   in T.dropWhileEnd (== '/') withoutScheme
 
 -- | Format a Stripe Address into a single text string for supplier_address on invoices.
 formatStripeAddress :: Stripe.Address -> Text
@@ -676,7 +685,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
-        enableWalletGatedTierCheck = False -- no transporterConfig in scope here; this function has no real callers today
+        enableWalletGatedTierCheck = False, -- no transporterConfig in scope here; this function has no real callers today
+        buyerCounterpartyId = Nothing
       }
 
 -- Wallet entry delta (for topup/payout)
@@ -839,7 +849,8 @@ buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId
       emitLedgerEntries = True,
       fromLocationAddress = Nothing,
       issuedToName = Nothing,
-      enableWalletGatedTierCheck = walletGateEnabled
+      enableWalletGatedTierCheck = walletGateEnabled,
+      buyerCounterpartyId = Nothing
     }
 
 -- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),

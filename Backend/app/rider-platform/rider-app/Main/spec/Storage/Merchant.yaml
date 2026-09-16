@@ -27,6 +27,7 @@ imports:
   Language: Kernel.External.Types
   Category: Kernel.External.Notification.Interface.Types
   SubCategory: Kernel.External.Notification.Interface.Types
+  NotificationCategory: Domain.Types.Extra.RiderPreferences
   PaymentService: Kernel.External.Payment.Types
   PayoutService: Kernel.External.Payout.Types
   TripCategory: Domain.Types.Trip
@@ -630,12 +631,20 @@ MerchantPushNotification:
     merchantOperatingCityId: Id MerchantOperatingCity
     tripCategory: Maybe TripCategory
     shouldTrigger: Bool
+    # User-facing opt-in bucket for this notification key. Nullable at the DB level so
+    # existing rows need no backfill at migration time; unclassified rows default to
+    # RIDE_RELATED (the safest bucket) until the classification script/dashboard sets
+    # an explicit value.
+    notificationCategory: NotificationCategory
   beamType:
     shouldTrigger: Maybe Bool
+    notificationCategory: Maybe NotificationCategory
   fromTType:
     shouldTrigger: Kernel.Prelude.fromMaybe True|I
+    notificationCategory: Kernel.Prelude.fromMaybe Domain.Types.Extra.RiderPreferences.RIDE_RELATED|I
   toTType:
     shouldTrigger: Kernel.Prelude.Just|I
+    notificationCategory: Kernel.Prelude.Just|I
   default:
     id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:

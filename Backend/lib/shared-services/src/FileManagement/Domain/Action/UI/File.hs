@@ -41,13 +41,12 @@ fileUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern FileUploadReq {..} = 
             & T.replace "<DOMAIN>" seg
             & T.replace "<FILE_PATH>" filePath
   uploadRes <- IssueAction.createMediaEntry (fromMaybe filePath url) fileType filePath
-  fork "S3 Put File Media" $ do
-    uploadOk <-
-      (S3.put (T.unpack filePath) mediaFile >> pure True)
-        `catch` \(e :: SomeException) -> do
-          logError $ "S3 upload failed for file media " <> uploadRes.fileId.getId <> ": " <> show e
-          pure False
-    QMF.updateStatusById (if uploadOk then D.COMPLETED else D.FAILED) uploadRes.fileId
+  uploadOk <-
+    (S3.put (T.unpack filePath) mediaFile >> pure True)
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for file media " <> uploadRes.fileId.getId <> ": " <> show e
+        pure False
+  QMF.updateStatusById (if uploadOk then D.COMPLETED else D.FAILED) uploadRes.fileId
   return $
     FileUploadRes
       { fileId = uploadRes.fileId,

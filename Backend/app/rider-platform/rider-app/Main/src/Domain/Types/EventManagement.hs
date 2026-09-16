@@ -81,7 +81,8 @@ data TicketServiceDef = TicketServiceDef
     subPlaceId :: Maybe (Id DTicketSubPlace.TicketSubPlace),
     serviceCategoryId :: [Id DServiceCategory.ServiceCategory],
     rules :: Maybe [Rule],
-    maxSelection :: Maybe Int
+    maxSelection :: Maybe Int,
+    isClosed :: Maybe Bool
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
@@ -100,7 +101,8 @@ data ServiceCategoryDef = ServiceCategoryDef
     businessHours :: [BusinessHourDef],
     peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
     rules :: Maybe [Rule],
-    maxSelection :: Maybe Int
+    maxSelection :: Maybe Int,
+    isClosed :: Maybe Bool
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
@@ -112,7 +114,8 @@ data ServicePeopleCategoryDef = ServicePeopleCategoryDef
     priceAmount :: HighPrecMoney,
     priceCurrency :: Currency,
     rules :: Maybe [Rule],
-    iconUrl :: Maybe Text
+    iconUrl :: Maybe Text,
+    isClosed :: Maybe Bool
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 

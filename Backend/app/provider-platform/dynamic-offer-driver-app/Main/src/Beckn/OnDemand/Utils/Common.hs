@@ -1002,6 +1002,7 @@ type MerchantShortId = Text
 tripCategoryToCategoryCode :: DT.TripCategory -> Text
 tripCategoryToCategoryCode = \case
   DT.Rental _ -> "ON_DEMAND_RENTAL"
+  DT.IntercityRental _ _ -> "ON_DEMAND_RENTAL"
   _ -> "ON_DEMAND_TRIP"
 
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
@@ -1429,6 +1430,14 @@ getRiderName req = do
 
 getCancellationReason :: Spec.CancelReq -> Maybe Text
 getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
+
+getOndcCancellationReasonId :: Spec.CancelReq -> Maybe Text
+getOndcCancellationReasonId req =
+  (req.cancelReqMessage.cancelReqMessageCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode))
+    <|> req.cancelReqMessage.cancelReqMessageCancellationReasonId
+
+getCancellationReasonLongDesc :: Spec.CancelReq -> Maybe Text
+getCancellationReasonLongDesc req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorLongDesc)
 
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState = mkFulfillmentStateCode . show
