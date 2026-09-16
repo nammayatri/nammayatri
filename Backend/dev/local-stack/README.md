@@ -1888,6 +1888,58 @@ minted them with `Math.random` as a stand-in while push was believed impossible.
 Firebase rejects every one. No existing rider receives anything until they open a
 build that registers a real token and posts it to `/v2/profile`.
 
+### iPhones — the push relay, `maps-shim/push-relay.js`, since 2026-09-16
+
+**`fcm_url` no longer points at Google.** Both sides point at the shim:
+
+```
+atlas_app.merchant                        http://localhost:8030/push/rider/v1/projects/movin-dz/messages:send
+atlas_driver_offer_bpp.transporter_config http://localhost:8030/push/driver/v1/projects/movin-dz/messages:send
+```
+
+iPhones received nothing, for two reasons that stack. iOS hands the app an
+**APNs** token, which Firebase rejects. And even with a real FCM token, iOS would
+draw the backend's own `apns.alert` itself — the English compiled into the binary,
+for **every** type, including the ones the client keeps silent. The payload has
+no `mutable-content` (searched in the binary: `FCMApnsConfig`, `FCMaps`,
+`FCMAlert` are there; `content-available` and `mutable-content` are not), so the
+app cannot rewrite it. Both fixes in the backend are rebuilds; the relay is not.
+
+What it does with each send:
+
+| Token | Goes to | Words |
+|---|---|---|
+| FCM (long, contains `:`) | Google, **byte for byte**, with the backend's own bearer | the app's, as before |
+| `apns:{fr\|ar\|en}:{hex}` (app since 2026-09-16) | APNs directly | the app's shown entries, in that language |
+| bare 64-hex (older iOS builds) | APNs directly | French |
+
+The words are a **copy** of the shown entries in the app's
+`src/lib/notifications.ts` — change a word or a `shown` flag there, then in
+`push-relay.js`. A silent type answers `200` and sends nothing. Loopback callers
+only; the edge does not expose `/push/`.
+
+**The APNs key** is not in git: `key.p8` and `config.json`
+(`keyId`, `teamId` `3T75H4J6T7`, `topic` `net.movinapp.app`) inside
+`ny-maps-shim:/data/avatars/.apns/` — the shim's one persistent volume, and a
+path `avatars.js` cannot serve (it only resolves hash-named `.jpg`/`.png`). Read
+on every send, so installing it needs no restart. `/healthz` → `push.apns`.
+
+**Proving it without an iPhone:** POST a send with a fake token
+`apns:fr:000…0` (64 zeros) to the relay. `400 BadDeviceToken` from Apple means
+the key was **accepted**; `InvalidProviderToken` means key id, team or key is
+wrong. Measured 2026-09-16: `BadDeviceToken`.
+
+**The switch needed a cache drop.** Both backends cache this config in Redis —
+`app-backend:CachedQueries:Merchant:Id-…` and
+`driver-offer:CachedQueries:TransporterConfig:MerchantId-…` — so an `UPDATE` and a
+restart alone would have changed nothing until the entries expired. True of every
+column on those two tables.
+
+Rollback: replace `http://localhost:8030/push/{rider,driver}/` with
+`https://fcm.googleapis.com/` in both tables, drop the two cache keys, restart
+`ny-rider ny-driver`. The pre-switch values are in
+`backups/fcm-url-pre-relay-20260916T102737Z.txt` on the server.
+
 ## The rider API — what the app uses, and what is sitting there unused
 
 The driver-API section above exists because the source tree lies about the
@@ -1983,7 +2035,10 @@ FCM costs nothing: no quota, no card, the free Spark plan is enough. Billing
 only starts if this project adopts *other* Firebase products (database, storage,
 hosting), and this stack has its own.
 
-iOS, when it exists, needs no second integration — FCM delivers to APNs itself.
+~~iOS, when it exists, needs no second integration — FCM delivers to APNs itself.~~
+Wrong, found 2026-09-16: FCM would deliver the backend's English `apns.alert`
+for every type, and the app's iOS token is not an FCM token anyway. iPhones go
+through the push relay — see *iPhones — the push relay* above.
 
 ### Switching off a driver who has not paid
 
@@ -3484,6 +3539,8 @@ switch-domain.sh       move the API onto a real domain.  Keeps the old hostname
                        every checkout at creation
 ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
 apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
+maps-shim/push-relay.js  what fcm_url points at since 2026-09-16: FCM for Android,
+                       APNs with the app's words for iPhones.  Key in the shim's volume
 enrol-driver.sh        who may sign in on /ui/, and with which code;  the code is
                        printed once and cannot be read back
 apply-search-window.sh how long a driver has to answer.  A Dhall value, so it is

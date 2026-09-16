@@ -330,3 +330,14 @@ the header of that script.
   quotes at 100. Running `--write` on two files rewrote 839 lines for a
   two-line change. A tool absent from `package.json` is not this project's
   standard.
+- **`merchant` and `transporter_config` are cached in Redis, so an `UPDATE` and
+  a restart change nothing.** `app-backend:CachedQueries:Merchant:Id-…` and
+  `driver-offer:CachedQueries:TransporterConfig:MerchantId-…` survive a
+  container restart and keep serving the old row until they expire. Found while
+  pointing `fcm_url` at the push relay (2026-09-16): two stale entries still
+  named Google. Drop the keys after writing either table.
+- **iPhone push does not go through Firebase.** `fcm_url` points at
+  `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
+  tokens to APNs with the app's own words. The notification text for iOS is a
+  copy of the app's `notifications.ts` — change both. local-stack README →
+  *iPhones — the push relay*.
