@@ -134,7 +134,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
                 -- Same pilot check, patches the already-built on_search reply's catalog.tags with BPP_TERMS.
                 onSearchReq <-
                   if isOndcScheduledRideSupportEnabled
-                    then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id dSearchReq.bapId dSearchRes onSearchReq'
+                    then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id moc.id dSearchReq.bapId dSearchRes onSearchReq'
                     else pure onSearchReq'
                 internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext

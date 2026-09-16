@@ -17,6 +17,7 @@ module API.Beckn.Confirm (API, handler) where
 import qualified API.UI.Ride as RAPI
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Confirm as OSRConfirm
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnConfirm as OSROnConfirm
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
@@ -40,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
@@ -48,8 +50,10 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -82,13 +86,18 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     city <- Utils.getContextCity context
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
-    dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
+    dConfirmReq' <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
+    -- transporterConfig is fetched once here (keyed on the wire request's city) and threaded through the rest of this flow -- the add-ons patch below, DConfirm.validateRequest, callOnConfirm and BP.sendOnConfirmToBAP.
+    moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+    -- Pilot merchants: patches in the wire item's add-ons before DConfirm.validateRequest verifies them against what was selected earlier.
+    let dConfirmReq =
+          if fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+            then OSRConfirm.buildOndcScheduledRideConfirmReq reqV2 dConfirmReq'
+            else dConfirmReq'
     Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
-      -- transporterConfig is fetched once, by DConfirm.validateRequest (keyed on the
-      -- booking's operating city), and threaded through the rest of this flow --
-      -- the pilot gate here, callOnConfirm and BP.sendOnConfirmToBAP below.
-      (transporter, eitherQuote, transporterConfig) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now transporterConfig
       -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
       -- against its BapMetadata row, so it's available to echo back on this
       -- same on_confirm response.

@@ -4,6 +4,7 @@
 
 module Storage.Queries.SearchTry (module Storage.Queries.SearchTry, module ReExport) where
 
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,6 +27,11 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m (Maybe Domain.Types.SearchTry.SearchTry))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateAddOnDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AddOnConfig.AddOnData] -> Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m ())
+updateAddOnDetails addOnData id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.addOnData (Just $ toJSON addOnData), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchTry.SearchTryStatus -> Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -36,7 +42,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
+    [ Se.Set Beam.addOnData (Just $ toJSON addOnData),
+      Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
       Se.Set Beam.baseFareAmount (Kernel.Prelude.Just baseFare),
       Se.Set Beam.batchingMode batchingMode,
       Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),

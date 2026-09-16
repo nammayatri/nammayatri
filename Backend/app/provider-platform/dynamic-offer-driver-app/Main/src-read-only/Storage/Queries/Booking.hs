@@ -4,6 +4,7 @@
 
 module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport) where
 
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Booking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -17,6 +18,11 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
 import Storage.Queries.BookingExtra as ReExport
 import Storage.Queries.Transformers.Booking
+
+updateAddOnDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AddOnConfig.AddOnData] -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updateAddOnDetails addOnData id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.addOnData (Just $ toJSON addOnData), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateEstimatedDistanceAndFare ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

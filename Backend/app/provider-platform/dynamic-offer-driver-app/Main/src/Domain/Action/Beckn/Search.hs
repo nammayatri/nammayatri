@@ -852,6 +852,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         distanceUnit = searchRequest.distanceUnit,
         merchantOperatingCityId = Just merchantOpCityId,
         area = fullFarePolicy.mbArea >>= (\a -> if a == SL.Default then Nothing else Just (SL.areaToText a)),
+        addOnData = [],
         ..
       }
 
