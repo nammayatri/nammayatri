@@ -1130,9 +1130,15 @@ claimBookingForConfirm bookingId validTill =
         if not gotPaymentLock
           then pure Nothing
           else do
-            void $ QFRFSTicketBooking.updateValidTillById validTill latest.id
-            void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
-            pure (Just latest {DFRFSTicketBooking.validTill = validTill})
+            -- Conditional: nothing that writes FAILED takes this lock, so an id-only flip to
+            -- CONFIRMING would overwrite a FAILED that landed after the read above.
+            claimed <- QFRFSTicketBooking.claimStatusForConfirm validTill latest.id
+            if not claimed
+              then do
+                logWarning $ "claimBookingForConfirm: lost the claim on booking " <> bookingId.getId <> ", status changed under us; skipping confirm"
+                releasePaymentSuccessLock bookingId
+                pure Nothing
+              else pure (Just latest {DFRFSTicketBooking.validTill = validTill})
 
 confirmClaimLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 confirmClaimLockKey bookingId = "FRFSConfirm:claimBooking-" <> bookingId.getId
@@ -1703,7 +1709,6 @@ getRouteStationsInfo routeStations =
     { serviceTierType = listToMaybe routeStations >>= (.vehicleServiceTier) <&> (._type),
       routes = map (\r -> SOfferSegment.RouteInfo {routeCode = r.code, routeShortName = r.shortName}) routeStations
     }
-
 
 -- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
 getScheduledTripWindow ::
