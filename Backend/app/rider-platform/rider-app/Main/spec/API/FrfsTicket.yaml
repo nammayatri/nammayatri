@@ -509,7 +509,6 @@ types:
   FRFSConcession:
     concessionId: Text
     concessionDesc: Text
-    categoryLookupId: Maybe Text
     derive: "Show"
 
   SeatLayoutResp:

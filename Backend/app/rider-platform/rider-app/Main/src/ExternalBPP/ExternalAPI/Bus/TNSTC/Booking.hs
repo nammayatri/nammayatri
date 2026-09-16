@@ -5,6 +5,7 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Booking
     confirmAdvSeatBooking,
     GetPickupPointsReq (..),
     getPickupPointsCached,
+    boardingPointsAt,
     AddBlockSeatsReq (..),
     GetTotalFareReq (..),
     getPickupPoints,
@@ -15,30 +16,14 @@ where
 
 import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime)
-import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
-import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
+import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig (..))
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (TnstcFlow, arg0, callTnstc, el, fmtDate, op)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML
-import Text.XML.Writer (ToXML (..), XML, element, elementA)
-
-type TnstcFlow m r = (MonadFlow m, EncFlow m r, Metrics.CoreMetrics m, HasField "requestId" r (Maybe Text))
-
-fmtDate :: Day -> Text
-fmtDate = T.pack . formatTime defaultTimeLocale "%d/%m/%Y"
-
-op :: Text -> XML.Name
-op n = XML.Name n (Just setcNamespace) (Just "com")
-
-arg0 :: XML.Name
-arg0 = XML.Name "arg0" Nothing Nothing
-
-el :: Text -> Text -> XML
-el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
+import Text.XML.Writer (ToXML (..), element)
 
 data GetPickupPointsReq = GetPickupPointsReq
   { rqppCounterCode :: Maybe Text,
@@ -143,7 +128,7 @@ instance ToXML GetTotalFareReq where
         el "totalNumberOfSeats" (show (length req.rqtfSeatNumbers))
         el "userName" req.rqtfUserName
         el "WSRefNo" req.rqtfWsRefNo
-      elementA (XML.Name "arg1" Nothing Nothing) ([] :: [(XML.Name, Text)]) ("O" :: Text)
+      el "arg1" "O"
 
 -- | ConfirmAdvSeatBooking. Field set follows the vendor's working sample; only serviceID,
 -- createdBy, totalFare, journeyDate, startPlaceID, WSRefNo and addnlAge are actually
@@ -253,6 +238,17 @@ getPickupPointsCached config cacheScope req = do
       points <- getPickupPoints config req
       unless (null points) $ Hedis.withCrossAppRedis $ Hedis.setExp key points 3600
       return points
+
+boardingPointsAt :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> Day -> Text -> Text -> m [TnstcPickupPoint]
+boardingPointsAt config cacheScope journeyDate serviceId placeCode =
+  getPickupPointsCached config cacheScope $
+    GetPickupPointsReq
+      { rqppCounterCode = config.counterCode,
+        rqppJourneyDate = journeyDate,
+        rqppServiceId = serviceId,
+        rqppPlaceId = placeCode,
+        rqppUserName = config.username
+      }
 
 mkPickupPointsKey :: Text -> GetPickupPointsReq -> Text
 mkPickupPointsKey cacheScope req =

@@ -10,32 +10,14 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Layout
   )
 where
 
-import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
-import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (TnstcFlow, arg0, callTnstc, el, fmtDate, op)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
-import qualified Text.XML as XML
-import Text.XML.Writer (ToXML (..), XML, element, elementA)
-
-type TnstcFlow m r = (MonadFlow m, EncFlow m r, Metrics.CoreMetrics m, HasField "requestId" r (Maybe Text))
-
-fmtDate :: Day -> Text
-fmtDate = T.pack . formatTime defaultTimeLocale "%d/%m/%Y"
-
-op :: Text -> XML.Name
-op n = XML.Name n (Just setcNamespace) (Just "com")
-
-arg0 :: XML.Name
-arg0 = XML.Name "arg0" Nothing Nothing
-
-el :: Text -> Text -> XML
-el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
+import Text.XML.Writer (ToXML (..), XML, element)
 
 data GetConcessionTypesReq = GetConcessionTypesReq
   { rqctClassId :: Text,
@@ -109,8 +91,8 @@ data GetLookupValuesReq = GetLookupValuesReq
 instance ToXML GetLookupValuesReq where
   toXML req =
     element (op "GetActivelookUpValues") $ do
-      elementA (XML.Name "arg0" Nothing Nothing) ([] :: [(XML.Name, Text)]) req.rqlvType
-      elementA (XML.Name "arg1" Nothing Nothing) ([] :: [(XML.Name, Text)]) req.rqlvContext
+      el "arg0" req.rqlvType
+      el "arg1" req.rqlvContext
 
 getIdProofTypes :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> m [TnstcLookupValue]
 getIdProofTypes config cacheScope =
