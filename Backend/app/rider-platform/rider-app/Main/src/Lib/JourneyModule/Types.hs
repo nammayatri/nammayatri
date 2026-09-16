@@ -90,7 +90,6 @@ import qualified SharedLogic.Search as SLSearch
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Estimate as QEstimate
@@ -100,7 +99,6 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
-import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
@@ -1471,16 +1469,12 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
             tripDay <- FRFSPassOverride.localTripDay person tripTime
             pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay
           Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass
-  overridePurchasedPassIds <-
-    if not shouldCheckPass
-      then pure []
-      else do
-        payments <- QPurchasedPassPayment.findAllByPersonIdAndStatuses Nothing Nothing riderId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
-        let ownedPassIds = nub $ mapMaybe (.passId) payments
-        overrideCatalogIds <-
-          filterM (fmap (maybe False (\p -> p.frfsPriceOverrideApplicable == Just True)) . CQPass.findById) ownedPassIds
-        pure [payment.purchasedPassId | payment <- payments, Just passId <- [payment.passId], passId `elem` overrideCatalogIds]
-  let adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
+  -- The UNFILTERED candidates, deliberately -- not overridePasses. toCandidate keeps every
+  -- override-applicable term whatever state it is in; filterCandidatesForLeg is what narrows to
+  -- usable-right-now, and taking that narrowed list is what made an exhausted pass read as a
+  -- free-ride pass and blocked the rider from buying a ticket.
+  let overridePurchasedPassIds = if shouldCheckPass then maybe [] (map (.payment.purchasedPassId)) mbPassCandidates else []
+      adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
       overridePriceItems = maybe [] (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) . (.priceItems)) mbFareParameters
       applicablePasses =
         maybe
