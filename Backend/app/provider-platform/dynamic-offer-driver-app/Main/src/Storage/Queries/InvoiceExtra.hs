@@ -165,6 +165,34 @@ findLatestNonAutopayActiveByDriverId driverId serviceName = do
     (Just 1)
     Nothing
 
+reactivateAutopayInvoiceByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m ()
+reactivateAutopayInvoiceByDriverFeeId driverFeeId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus Domain.ACTIVE_INVOICE,
+      Se.Set BeamI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq (getId driverFeeId),
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.invoiceStatus $ Se.In [Domain.ACTIVE_INVOICE, Domain.INACTIVE]
+        ]
+    ]
+
+retireAutopayInvoicesByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m ()
+retireAutopayInvoicesByDriverFeeIds driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.invoiceStatus Domain.EXPIRED,
+      Se.Set BeamI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.invoiceStatus $ Se.In [Domain.ACTIVE_INVOICE, Domain.INACTIVE]
+        ]
+    ]
+
 updateInvoiceStatusByInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
   now <- getCurrentTime

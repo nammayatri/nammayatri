@@ -1046,7 +1046,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
         unless (driverFee.status == CLEARED) $ do
           if driverFee.notificationRetryCount < transporterConfig.notificationRetryCountThreshold && fromWebhook && isRetryEligibleError
             then do
-              QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
+              QIN.reactivateAutopayInvoiceByDriverFeeId driverFeeId
               QDF.updateManualToAutoPay driverFeeId
               QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFeeId
               QDF.updateNotificationRetryCountById (driverFee.notificationRetryCount + 1) driverFeeId
@@ -1056,7 +1056,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
       Juspay.SUCCESS -> do
         --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
         unless (driverFee.status == CLEARED) $ do
-          QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
+          QIN.reactivateAutopayInvoiceByDriverFeeId driverFeeId
           QDF.updateManualToAutoPay driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) (Just now) driverFeeId
       _ -> pure ()
