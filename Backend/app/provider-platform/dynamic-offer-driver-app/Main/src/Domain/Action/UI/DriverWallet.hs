@@ -214,7 +214,7 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferenceGateDriverFeeGST]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -244,7 +244,7 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee, walletReferenceGateDriverFeeGST]
+  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
 -- | Aggregate raw entries into the WalletSummary fields:
@@ -401,7 +401,6 @@ referenceTypeToItemName isVat ref
   | ref == walletReferenceTDSDeductionCancellation = "TDS (Cancellation)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceGateDriverFee = "Gate Fee"
-  | ref == walletReferenceGateDriverFeeGST = "Gate Fee GST"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. " <> taxLabel <> " (Online)"
@@ -435,10 +434,10 @@ isVatMerchant transporterConfig = isJust transporterConfig.taxConfig.serviceVatP
 --   under the bucket label -- it groups by reference type and has no metadata.
 walletRowItemName :: Bool -> Text -> Maybe Text -> Text
 walletRowItemName isVat ref mbReason
-  | ref == walletReferenceGateDriverFee || ref == walletReferenceGateDriverFeeGST,
+  | ref == walletReferenceGateDriverFee,
     Just reason <- mbReason,
     not (T.null reason) =
-    if ref == walletReferenceGateDriverFeeGST then reason <> " GST" else reason
+    reason
   | otherwise = referenceTypeToItemName isVat ref
 
 --------------------------------------------------------------------------------

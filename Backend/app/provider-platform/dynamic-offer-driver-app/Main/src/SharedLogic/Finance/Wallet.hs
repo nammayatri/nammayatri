@@ -145,7 +145,6 @@ module SharedLogic.Finance.Wallet
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
     walletReferenceGateDriverFee,
-    walletReferenceGateDriverFeeGST,
     walletReferenceVATInput,
     walletReferenceCancellationVATInput,
     walletReferenceTips,
@@ -354,10 +353,6 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 -- | Reference type for the net portion of a gate DriverFeeItem deduction at EndRide
 walletReferenceGateDriverFee :: Text
 walletReferenceGateDriverFee = "GateDriverFee"
-
--- | Reference type for the GST portion of a gate DriverFeeItem deduction at EndRide
-walletReferenceGateDriverFeeGST :: Text
-walletReferenceGateDriverFeeGST = "GateDriverFeeGST"
 
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
