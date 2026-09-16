@@ -653,15 +653,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               (Just placeId, Just serviceId, Just journeyDate) -> do
                 let tripCode = fromMaybe "" quote'.providerTripCode
                 placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
-                points <-
-                  TNSTCBooking.getPickupPointsCached tnstcConfig ibppConfig.id.getId $
-                    TNSTCBooking.GetPickupPointsReq
-                      { rqppCounterCode = tnstcConfig.counterCode,
-                        rqppJourneyDate = journeyDate,
-                        rqppServiceId = serviceId,
-                        rqppPlaceId = placeCode,
-                        rqppUserName = tnstcConfig.username
-                      }
+                points <- TNSTCBooking.boardingPointsAt tnstcConfig ibppConfig.id.getId journeyDate serviceId placeCode
                 return $ find (\p -> p.tppPlaceId == placeId) points >>= (.tppTime) >>= istTimeOn journeyDate
               _ -> return Nothing
           case res of

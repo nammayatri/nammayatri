@@ -137,7 +137,7 @@ data FRFSCategorySelectionReq = FRFSCategorySelectionReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSConcession = FRFSConcession {categoryLookupId :: Data.Maybe.Maybe Data.Text.Text, concessionDesc :: Data.Text.Text, concessionId :: Data.Text.Text}
+data FRFSConcession = FRFSConcession {concessionDesc :: Data.Text.Text, concessionId :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
