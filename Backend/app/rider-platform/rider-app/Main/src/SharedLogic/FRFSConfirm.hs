@@ -1037,7 +1037,7 @@ buildJourneyAndLeg booking fareParameters = do
     subLegInputs <-
       case mbRouteStations of
         Just routeStations@(_ : _ : _)
-          | boundaries <- legBoundaries (maybe [] (.stations) (listToMaybe routeStations)),
+          | boundaries <- legBoundaries (concatMap (.stations) routeStations),
             length boundaries == length routeStations ->
             mapM
               ( \(sequenceNo', routeStation, (boardingStop, alightingStop)) -> do
