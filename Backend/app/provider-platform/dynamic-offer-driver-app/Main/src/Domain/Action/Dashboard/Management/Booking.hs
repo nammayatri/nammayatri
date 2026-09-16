@@ -37,12 +37,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 ---------------------------------------------------------------------
 
@@ -74,6 +76,16 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   QDrInfo.updateNotOnRideMultiple stuckDriverIds
+  -- ride_cancelled coverage gap (PRIMARY): this ops bulk-cancel path flips rides/bookings
+  -- to CANCELLED (QRide.updateStatusByIds + QBooking.cancelBookings) WITHOUT hitting any of
+  -- the 3 incrementRideCancelledCount sites, so these CANCELLED rows show up in CH but never
+  -- in VM. Emit once per cancelled booking (source = ByMerchant, matching the BCR above).
+  cityLabel <- SML.getCityLabel merchantOpCity.id
+  metricsDistanceBucketEdges <- SML.getDistanceBucketEdges merchantOpCity.id
+  stuckBookingsForMetrics <- B.runInReplica $ QRide.findBookingsById merchant merchantOpCity allStuckBookingIds
+  forM_ stuckBookingsForMetrics $ \stuckBooking -> do
+    let (pickupZone, dropZone) = SML.specialZoneLabels stuckBooking.area
+    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show stuckBooking.vehicleServiceTier) (show DBCR.ByMerchant) (SML.distanceBucketLabel metricsDistanceBucketEdges stuckBooking.estimatedDistance) pickupZone dropZone
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
@@ -126,6 +138,10 @@ postBookingSyncMultiple merchantShortId opCity req = do
       distanceUnit = merchantOpCity.distanceUnit
   now <- getCurrentTime
   rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant merchantOpCity reqBookingIds
+  -- Labels for the sync-reconcile CANCELLED gap paths below; constant for this opCity, so
+  -- resolved once here rather than per booking.
+  cityLabel <- SML.getCityLabel merchantOpCity.id
+  metricsDistanceBucketEdges <- SML.getDistanceBucketEdges merchantOpCity.id
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId
@@ -147,7 +163,13 @@ postBookingSyncMultiple merchantShortId opCity req = do
                       else Nothing
               unless (bookingNewStatus == booking.status) $ do
                 QBooking.updateStatus bookingId bookingNewStatus
-                whenJust mbCancellationReason QBCR.upsert
+                -- ride_cancelled coverage gap (secondary, booking-only): ops reconcile flips
+                -- the booking to CANCELLED with no increment. mbCancellationReason is Just
+                -- exactly when this is a fresh CANCELLED transition, so emit alongside it.
+                whenJust mbCancellationReason $ \bcr -> do
+                  QBCR.upsert bcr
+                  let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+                  Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bcr.source) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance) pickupZone dropZone
               let updBooking = booking{status = bookingNewStatus}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) (Just ride) updBooking merchant True
             Nothing -> do
@@ -157,7 +179,13 @@ postBookingSyncMultiple merchantShortId opCity req = do
                       else Nothing
               when (booking.status /= DBooking.CANCELLED) $ do
                 QBooking.updateStatus bookingId DBooking.CANCELLED
-                whenJust mbCancellationReason QBCR.upsert
+                -- ride_cancelled coverage gap (secondary, booking-only): no-ride sync cancels
+                -- the booking with no increment. mbCancellationReason is Just exactly on a
+                -- fresh CANCELLED transition here, so emit alongside it.
+                whenJust mbCancellationReason $ \bcr -> do
+                  QBCR.upsert bcr
+                  let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+                  Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bcr.source) (SML.distanceBucketLabel metricsDistanceBucketEdges booking.estimatedDistance) pickupZone dropZone
               let updBooking = booking{status = DBooking.CANCELLED}
               void $ SyncRide.rideSync (mbCancellationReason <&> (.source)) Nothing updBooking merchant True
           pure Common.SuccessItem

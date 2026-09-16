@@ -160,6 +160,16 @@ handler merchantId req validatedReq = do
         booking <- buildBooking (mkBuildBookingReq DRB.NEW Nothing Nothing) searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
+        cityLabel <- SML.getCityLabel searchRequest.merchantOperatingCityId
+        distanceEdges <- SML.getDistanceBucketEdges searchRequest.merchantOperatingCityId
+        let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+        BPPMetrics.incrementBookingCreatedCount
+          transporter.shortId.getShortId
+          cityLabel
+          (show booking.vehicleServiceTier)
+          (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
+          pickupZone
+          dropZone
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
@@ -173,6 +183,13 @@ handler merchantId req validatedReq = do
           cityLabel
           (show booking.vehicleServiceTier)
           "special_zone"
+          (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
+          pickupZone
+          dropZone
+        BPPMetrics.incrementBookingCreatedCount
+          transporter.shortId.getShortId
+          cityLabel
+          (show booking.vehicleServiceTier)
           (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
           pickupZone
           dropZone
