@@ -125,6 +125,7 @@
           json-logic-hs.source = inputs.json-logic-hs;
           google-cloud-pubsub.source = inputs.google-cloud-haskell + /lib/google-cloud-pubsub;
           google-cloud-common.source = inputs.google-cloud-haskell + /lib/google-cloud-common;
+          soap.source = "0.2.3.6";
         };
         settings = {
           alchemist.custom = cacConfig;
@@ -158,6 +159,10 @@
           zip-archive.check = false;
           google-cloud-pubsub.check = false;
           google-cloud-common.check = false;
+          soap = {
+            jailbreak = true;
+            check = false;
+          };
         };
       };
 

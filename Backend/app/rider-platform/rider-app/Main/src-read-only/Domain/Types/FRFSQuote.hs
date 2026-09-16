@@ -16,17 +16,24 @@ import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    arrivalDate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    arrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
+    concessionTypeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    departureTime :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    extraFees :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,
@@ -41,9 +48,14 @@ data FRFSQuote = FRFSQuote
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
+    providerClassId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
+    providerLayoutId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
+    providerRefNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    providerServiceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    providerTripCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
@@ -52,6 +64,7 @@ data FRFSQuote = FRFSQuote
     toStationCode :: Kernel.Prelude.Text,
     toStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
@@ -72,4 +85,10 @@ data FRFSFareDetails = FRFSFareDetails
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data FRFSTripCategory = INTRACITY | INTERCITY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTripCategory)
+
+$(mkHttpInstancesForEnum ''FRFSTripCategory)
