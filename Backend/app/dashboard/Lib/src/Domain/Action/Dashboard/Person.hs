@@ -442,11 +442,14 @@ ptList ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
   m ListPTEmployeeRes
-ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit mbOffset = do
+ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  -- tokenNo is stored encrypted, so it is matched on its hash rather than searched as text.
+  mbTokenNoDBHash <- getDbHash `traverse` (mbTokenNo >>= nonBlank)
   mbEntityId <- forM mbEntityShortId $ \shortId ->
     QEntity.findByMerchantAndShortId tokenInfo.merchantId (ShortId shortId)
       >>= fmap (.id) . fromMaybeM (InvalidRequest $ "Entity " <> shortId <> " does not exist for this merchant")
@@ -455,7 +458,7 @@ ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit mbOffset = do
   -- Only the upper bound was capped, so a negative limit or offset reached Postgres as LIMIT/OFFSET -1.
   let cappedLimit = max 0 $ min maxPTPageSize (fromMaybe maxPTPageSize mbLimit)
       safeOffset = max 0 <$> mbOffset
-  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset tokenInfo.merchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId (Just cappedLimit) safeOffset
+  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset tokenInfo.merchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbTokenNoDBHash (Just cappedLimit) safeOffset
   entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) tokenInfo.merchantId
   -- Retired depots stay visible here, unlike profile: staff on one must be findable to reassign.
   let grantedEntityIds = nub $ entityGrants <&> (.entityId)

@@ -49,6 +49,7 @@ type API =
              :> QueryParam "searchString" Text
              :> QueryParam "roleName" Text
              :> QueryParam "entityShortId" Text
+             :> QueryParam "tokenNo" Text
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] DPerson.ListPTEmployeeRes
@@ -194,9 +195,9 @@ listPerson :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Int
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
   withFlowHandlerAPI' . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
 
-ptList :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPTEmployeeRes
-ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit =
-  withFlowHandlerAPI' . DPerson.ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit
+ptList :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPTEmployeeRes
+ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit =
+  withFlowHandlerAPI' . DPerson.ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit
 
 createPerson :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
 createPerson tokenInfo = withFlowHandlerAPI' . DPerson.createPerson tokenInfo
