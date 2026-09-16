@@ -139,7 +139,9 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
   -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
   let igmIssue =
         DIGM.IGMIssue
-          { DIGM.createdAt = convertRFC3339ToUTC createdAt,
+          { DIGM.bapUri = Nothing,
+            DIGM.becknTransactionId = Nothing,
+            DIGM.createdAt = convertRFC3339ToUTC createdAt,
             DIGM.customerEmail = customerEmail,
             DIGM.customerName = customerName,
             DIGM.customerPhone = customerPhone,
