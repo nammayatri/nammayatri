@@ -216,11 +216,8 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
             void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
           forM_ gateFeeItems $ \item -> do
             let itemTotal = item.amountWithCurrency.amount
-                itemNetPortion = if gstRate >= 0 then itemTotal / (1 + realToFrac gstRate) else itemTotal
-                itemGstAmount = itemTotal - itemNetPortion
                 mbMetadata = mkGateFeeItemMetadata item
-            void $ transfer OwnerLiability GovtIndirect itemGstAmount Wallet.walletReferenceGateDriverFeeGST mbMetadata
-            void $ transfer OwnerLiability ParkingFeeRecipient itemNetPortion Wallet.walletReferenceGateDriverFee mbMetadata
+            void $ transfer OwnerLiability ParkingFeeRecipient itemTotal Wallet.walletReferenceGateDriverFee mbMetadata
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()

@@ -283,7 +283,15 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
 
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
-      gateFeeItemsBreakup = map (\item -> mkBreakupItem item.itemName $ mkPrice item.amount) fareParams.customerGateFeeItems
+      -- The itemName is operator-configured free text, not an ONDC v2.1.0 breakup
+      -- title, so this line goes only to our own apps -- an external NP validating
+      -- against the spec vocabulary would reject it. The amount still reaches every
+      -- BAP inside RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, so the fare total
+      -- and the canonical summary are unchanged either way.
+      gateFeeItemsBreakup =
+        if isValueAddNP
+          then map (\item -> mkBreakupItem (Enums.mkGateFeeBreakupTitle item.itemName) $ mkPrice item.amount) fareParams.customerGateFeeItems
+          else []
   catMaybes
     [ Just baseFareItem,
       mbCongestionChargeItem,
@@ -1310,21 +1318,22 @@ customerFeeItemsForGateId ::
 customerFeeItemsForGateId gateId currency = do
   mbGate <- QGI.findById gateId
   let configuredItems = fromMaybe [] (mbGate >>= (.feeItems))
-  fmap catMaybes $ forM configuredItems $ \item ->
-    if item.collectionType /= DGI.CustomerFeeItem || item.amountWithCurrency.amount <= 0
-      then pure Nothing
-      else
-        if item.amountWithCurrency.currency /= currency
-          then do
-            logWarning $ "customerFeeItemsForGateId: skipping gate fee item with currency " <> show item.amountWithCurrency.currency <> " on gate " <> gateId.getId
-            pure Nothing
-          else
-            pure $
-              Just
-                DFParams.CustomerGateFeeItem
-                  { itemName = fromMaybe defaultCustomerGateFeeItemName item.itemName.customer,
-                    amount = item.amountWithCurrency.amount
-                  }
+  fmap catMaybes $
+    forM configuredItems $ \item ->
+      if item.collectionType /= DGI.CustomerFeeItem || item.amountWithCurrency.amount <= 0
+        then pure Nothing
+        else
+          if item.amountWithCurrency.currency /= currency
+            then do
+              logWarning $ "customerFeeItemsForGateId: skipping gate fee item with currency " <> show item.amountWithCurrency.currency <> " on gate " <> gateId.getId
+              pure Nothing
+            else
+              pure $
+                Just
+                  DFParams.CustomerGateFeeItem
+                    { itemName = fromMaybe defaultCustomerGateFeeItemName item.itemName.customer,
+                      amount = item.amountWithCurrency.amount
+                    }
 
 defaultCustomerGateFeeItemName :: Text
 defaultCustomerGateFeeItemName = "GATE_FEE"

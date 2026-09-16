@@ -36,6 +36,7 @@ where
 import qualified API.Types.UI.DriverWallet as DriverWallet
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
@@ -420,6 +421,19 @@ referenceTypeToItemName ref
   | ref == walletReferenceConnectAccountCharges = "Connect Account Charge"
   | otherwise = ref
 
+-- | Per-row item name. A gate DriverFeeItem is booked under one shared reference
+--   type but is configured per gate, so its own name is carried on the ledger entry
+--   metadata and shown here in place of the generic bucket label. Every other
+--   reference type has a fixed name. The wallet summary still aggregates gate fees
+--   under the bucket label -- it groups by reference type and has no metadata.
+walletRowItemName :: Text -> Maybe Text -> Text
+walletRowItemName ref mbReason
+  | ref == walletReferenceGateDriverFee || ref == walletReferenceGateDriverFeeGST,
+    Just reason <- mbReason,
+    not (T.null reason) =
+    if ref == walletReferenceGateDriverFeeGST then reason <> " GST" else reason
+  | otherwise = referenceTypeToItemName ref
+
 --------------------------------------------------------------------------------
 -- getWalletTransactionHistory (paginated per-row ledger entries)
 --------------------------------------------------------------------------------
@@ -450,6 +464,7 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
       let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
       let mkItem e =
             let isTopup = e.referenceType == walletReferenceTopup
+                mbReason = e.metadataV2 >>= (.reason)
                 paymentOrder =
                   if isTopup
                     then
@@ -461,13 +476,13 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
                     else Nothing
              in DriverWallet.WalletTransactionHistoryItem
                   { itemReference = e.referenceType,
-                    itemName = referenceTypeToItemName e.referenceType,
+                    itemName = walletRowItemName e.referenceType mbReason,
                     itemValue = e.amount,
                     isCredit = e.toAccountId == walletAcc.id,
                     status = e.status,
                     paymentOrder = paymentOrder,
                     date = e.timestamp,
-                    reason = e.metadataV2 >>= (.reason)
+                    reason = mbReason
                   }
       pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
   where
