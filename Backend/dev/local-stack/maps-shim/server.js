@@ -29,6 +29,7 @@ const identity = require('./identity');
 const restricted = require('./restricted');
 const deletion = require('./deletion');
 const geo = require('./geo');
+const pushRelay = require('./push-relay');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -518,9 +519,16 @@ http.createServer((req, res) => {
       // False means a driver pressing "payer" gets "payments not configured".
       // Cheaper to notice here than in his hands. Never the key itself.
       payments: subscription.configured(),
+      // False means iPhones get no push; Android is unaffected either way.
+      push: pushRelay.status(),
     });
   }
   if (url.pathname === '/directions/json') return directions(url.searchParams, res);
+
+  // Both backends' FCM sends, since 2026-09-16: fcm_url points here. Android
+  // goes on to Google untouched; iPhones go to Apple with the app's words. Not
+  // exposed by the edge, and refused from anywhere but loopback. See push-relay.js.
+  if (url.pathname.startsWith('/push/')) return pushRelay.handle(req, res, url);
 
   // Which of our countries the caller's IP belongs to, for the sign-in
   // screen's country detection (2026-09-14). The phone asks its own GPS first;
