@@ -1,26 +1,11 @@
--- | MSIL pilot: /on_select builder for the new Quote-based (static/scheduled)
--- /select capability. There is no Layer 1 equivalent for this call at all --
--- /select is structurally skipped today for static-offer trips (a firm Quote
--- already exists from /search, so nothing to "select") -- so unlike
--- Beckn.OnDemand.Transformer.MSIL.Search/OnSearch, this module isn't patching
--- an existing builder's output, it *is* the first implementation. It mirrors
--- Beckn.ACL.OnSelect's existing DriverQuote-sourced mkOnSelectMessageV2 as
--- closely as the field differences allow, deliberately kept as a separate
--- small builder rather than a forced shared abstraction (see doc 23 s4): no
--- estimateId (Quote has none), no agent/driver fields (no driver assigned yet
--- at /select time for this flow -- assignment happens later, at Confirm-time
--- batching), vehicleServiceTier instead of vehicleVariant.
-module Beckn.OnDemand.Transformer.MSIL.OnSelect
+-- Builds the on_select message straight from a Quote, mirroring Beckn.ACL.OnSelect's DriverQuote-based builder, since the Quote-based (static/scheduled) /select flow has no Layer 1 on_select builder to patch.
+module Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect
   ( mkOnSelectMessageV2FromQuote,
   )
 where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
-import Beckn.OnDemand.Utils.MSIL.Category (scheduledCategoryCode)
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.RouteInfo as MSILRouteInfo
-import qualified Beckn.OnDemand.Utils.MSIL.VehicleEnergyType as MSILVehicleEnergyType
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
@@ -41,14 +26,7 @@ import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
--- | Building: also adds ROUTE_INFO (WAYPOINTS + ENCODED_POLYLINE, from the
--- fallback route cached at search time) to the fulfillment's tags, overrides
--- fulfillment.type per the RIDE_OTP->SELF_PICKUP/otherwise->DELIVERY rule
--- (Beckn.OnDemand.Utils.MSIL.FulfillmentType), and overrides
--- vehicle.energy_type to a valid ONDC v2.1.0 code
--- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType). This whole function only
--- ever runs for pilot merchants (gated at the API/Beckn/Select.hs dispatch
--- level), so this applies unconditionally -- no separate gate needed.
+-- | Builds the on_select order from a Quote and applies the ONDC overrides (route info, fulfillment.type, vehicle.energy_type).
 mkOnSelectMessageV2FromQuote ::
   (CacheFlow m r, MonadFlow m) =>
   Bool ->
@@ -65,15 +43,14 @@ mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchRequest quote
       fulfillment = mkFulfillmentFromQuote searchRequest quote
       paymentV2 = mkPaymentFromQuote bppConfig merchant quote
       order =
-        MSILVehicleEnergyType.patchOrderVehicleEnergyType . MSILFulfillmentType.patchOrderFulfillmentTypes $
-          emptyOrder
-            { Spec.orderFulfillments = Just [fulfillment],
-              Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy hasStops],
-              Spec.orderQuote = Just $ mkQuoteFromQuote isValueAddNP quote now,
-              Spec.orderPayments = Just [paymentV2],
-              Spec.orderProvider = mkProviderFromQuote bppConfig
-            }
-  patchedOrder <- MSILRouteInfo.patchOrderRouteInfo searchRequest.transactionId order
+        emptyOrder
+          { Spec.orderFulfillments = Just [fulfillment],
+            Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy hasStops],
+            Spec.orderQuote = Just $ mkQuoteFromQuote isValueAddNP quote now,
+            Spec.orderPayments = Just [paymentV2],
+            Spec.orderProvider = mkProviderFromQuote bppConfig
+          }
+  patchedOrder <- OSRCommon.applyOnSelectOrderOverrides searchRequest.transactionId order
   pure $ Spec.OnSelectReqMessage (Just patchedOrder)
 
 mkFulfillmentFromQuote :: SearchRequest -> DQuote.Quote -> Spec.Fulfillment
@@ -103,30 +80,22 @@ mkItemFromQuote :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.Quote -
 mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy hasStops = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   emptyItem
-    { -- Quote has no separate estimateId the way DriverQuote does -- item.id and
-      -- fulfillment.id both echo Quote.id (same value /on_search already sent).
+    { -- item.id/fulfillment.id both echo Quote.id -- Quote has no separate estimateId.
       Spec.itemId = Just quote.id.getId,
       Spec.itemFulfillmentIds = Just [fulfillmentId],
       Spec.itemPrice = Just $ mkPriceFromQuote quote,
       Spec.itemTags = mkItemTagsFromQuote quote mbFarePolicy hasStops,
       Spec.itemDescriptor = mkItemDescriptorFromQuote quote vehicleServiceTierItem,
-      -- Must agree with the provider-level category id on_search declared for
-      -- this catalog (Beckn.OnDemand.Transformer.MSIL.OnSearch): scheduled
-      -- quotes get SCHEDULED_TRIP/SCHEDULED_RENTAL, same as there; quotes from
-      -- a plain (non-scheduled) MSIL search keep the ordinary ON_DEMAND_* code.
+      -- Must agree with the category id on_search declared for this catalog.
       Spec.itemCategoryIds = Just [mkQuoteCategoryId quote]
     }
 
 mkQuoteCategoryId :: DQuote.Quote -> Text
 mkQuoteCategoryId quote =
   let baseCode = Utils.tripCategoryToCategoryCode quote.tripCategory
-   in if quote.isScheduled then scheduledCategoryCode baseCode else baseCode
+   in if quote.isScheduled then OSRCommon.scheduledCategoryCode baseCode else baseCode
 
--- | ONDC v2.1.0's TRV10 schema restricts items[*].descriptor.code to "RIDE" or
--- "RENTAL" -- the vehicle service tier (e.g. "COMFY") that used to be here
--- doesn't validate; the tier itself is still conveyed via descriptorName/
--- descriptorShortDesc, only the code changes. Same RIDE/RENTAL derivation as
--- on_search's Beckn.OnDemand.Transformer.MSIL.OnSearch.msilPatchCatalogCompliance.
+-- | ONDC restricts items[*].descriptor.code to "RIDE"/"RENTAL"; the tier name still goes in descriptorName.
 mkItemDescriptorFromQuote :: DQuote.Quote -> DVST.VehicleServiceTier -> Maybe Spec.Descriptor
 mkItemDescriptorFromQuote quote vehicleServiceTierItem =
   Just
@@ -176,10 +145,8 @@ mkQuoteBreakupFromQuote isValueAddNP quote = do
         { quotationBreakupInnerPrice = price,
           quotationBreakupInnerTitle = Just title
         }
-    -- ONDC v2.1.0's TRV10 schema restricts quote.breakup[*].title to a fixed
-    -- allowed vocabulary -- see Beckn.OnDemand.Utils.MSIL.Breakup for the
-    -- actual remap table and why.
-    remapBreakup breakup = case breakup.quotationBreakupInnerTitle >>= MSILBreakup.remapBreakupTitle of
+    -- ONDC restricts quote.breakup[*].title to a fixed vocabulary; see OSRCommon.remapBreakupTitle.
+    remapBreakup breakup = case breakup.quotationBreakupInnerTitle >>= OSRCommon.remapBreakupTitle of
       Nothing -> Nothing
       Just newTitle -> Just breakup {Spec.quotationBreakupInnerTitle = Just newTitle}
 
