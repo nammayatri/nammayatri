@@ -87,6 +87,13 @@ sellerContext operator = do
             }
       }
 
+-- Where an unsolicited on_issue would have to be addressed. Callbacks are otherwise
+-- built from the inbound request, so this is the only way a later push knows the BAP.
+data BecknOrigin = BecknOrigin
+  { originBapUri :: Text,
+    originTransactionId :: Text
+  }
+
 handleIssue :: Text -> IGMSpec.IssueReq -> Flow ()
 handleIssue operator req = do
   let ctx = req.context
@@ -97,14 +104,14 @@ handleIssue operator req = do
   bapUri <- parseBaseUrl bapUriText
   dIssue <- IssueACL.buildIssueReq req
   seller <- sellerContext operator
-  recordIssue seller dIssue >>= \case
+  recordIssue seller dIssue BecknOrigin {originBapUri = bapUriText, originTransactionId = transactionId} >>= \case
     Left failure -> logWarning $ "FRFS seller issue rejected: " <> failureMessage failure
     Right issueRes -> do
       onIssueReq <- IssueACL.buildOnIssueReq transactionId messageId bapId bapUriText issueRes
       void $ IGMCallAPI.callOnIssue onIssueReq bapUri seller.igmMerchant
 
-recordIssue :: SellerContext -> DIssue.DIssue -> Flow (Either IssueFailure DIssue.IssueRes)
-recordIssue seller dIssue = runExceptT $ do
+recordIssue :: SellerContext -> DIssue.DIssue -> BecknOrigin -> Flow (Either IssueFailure DIssue.IssueRes)
+recordIssue seller dIssue origin = runExceptT $ do
   issueStatus <- lift $ DIssue.mapStatusAndTypeToStatus dIssue.issueStatusText dIssue.issueTypeText
   issueType <- lift $ DIssue.mapType dIssue.issueTypeText
   booking <-
@@ -117,13 +124,13 @@ recordIssue seller dIssue = runExceptT $ do
       >>= maybe (throwE (Unprocessable $ "No IGM config for merchant " <> seller.merchant.id.getId <> " - seed igm_config for FRFS_SELLER_*")) pure
   now <- lift getCurrentTime
   case issueStatus of
-    DIGM.OPEN -> lift $ openIssue seller booking igmConfig dIssue issueType now
+    DIGM.OPEN -> lift $ openIssue seller booking igmConfig dIssue issueType now origin
     DIGM.ESCALATED -> escalateIssue seller igmConfig dIssue now
     DIGM.CLOSED -> throwE (UnsupportedTransition "A seller does not close an issue on the buyer's behalf")
     DIGM.RESOLVED -> throwE (UnsupportedTransition "Issue already resolved")
 
-openIssue :: SellerContext -> DBooking.FRFSTicketBooking -> IGMConfig -> DIssue.DIssue -> DIGM.IssueType -> UTCTime -> Flow DIssue.IssueRes
-openIssue seller booking igmConfig dIssue issueType now = do
+openIssue :: SellerContext -> DBooking.FRFSTicketBooking -> IGMConfig -> DIssue.DIssue -> DIGM.IssueType -> UTCTime -> BecknOrigin -> Flow DIssue.IssueRes
+openIssue seller booking igmConfig dIssue issueType now origin = do
   QIGM.findByPrimaryKey (Id (Common.sellerIssueId dIssue.issueId)) >>= \case
     Just existing -> do
       logInfo $ "FRFS seller issue: " <> dIssue.issueId <> " is already raised; re-answering its stored state"
@@ -135,7 +142,9 @@ openIssue seller booking igmConfig dIssue issueType now = do
       let becknSubscriberId = seller.igmMerchant.subscriberId.getShortId
       QIGM.create
         DIGM.IGMIssue
-          { DIGM.id = Id (Common.sellerIssueId dIssue.issueId),
+          { DIGM.bapUri = Just origin.originBapUri,
+            DIGM.becknTransactionId = Just origin.originTransactionId,
+            DIGM.id = Id (Common.sellerIssueId dIssue.issueId),
             DIGM.createdAt = convertRFC3339ToUTC dIssue.createdAt,
             DIGM.updatedAt = convertRFC3339ToUTC dIssue.createdAt,
             DIGM.customerEmail = dIssue.customerEmail,
