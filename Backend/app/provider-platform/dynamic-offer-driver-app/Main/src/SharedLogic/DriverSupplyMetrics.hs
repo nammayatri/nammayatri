@@ -84,7 +84,7 @@ seedCounter kind countFromCH mkKey cityId = do
     else do
       logInfo $ "seeding " <> kind <> " counter for city " <> cityId.getId <> " from ClickHouse"
       baseline <- countFromCH cityId
-      void $ Redis.incrby key (fromIntegral baseline)
+      void $ Redis.set key (fromIntegral baseline)
       Redis.set (seededMarkerKey kind cityId.getId) True
       fromMaybe baseline <$> Redis.safeGet key
 
