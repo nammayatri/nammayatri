@@ -146,6 +146,31 @@ findByOrderIdAndTxnType orderId txnType =
         ]
     ]
 
+findByTxnIdAndSettlementId ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  m (Maybe Domain.PgPaymentSettlementReport)
+findByTxnIdAndSettlementId txnId settlementId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.txnId $ Se.Eq (Just txnId),
+          Se.Is Beam.settlementId $ Se.Eq (Just settlementId)
+        ]
+    ]
+
+findOrderByTxnId ::
+  (BeamFlow m r) =>
+  Text ->
+  m (Maybe Domain.PgPaymentSettlementReport)
+findOrderByTxnId txnId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.txnId $ Se.Eq (Just txnId),
+          Se.Is Beam.txnType $ Se.Eq Domain.ORDER
+        ]
+    ]
+
 findByMerchantIdAndDateRange ::
   (BeamFlow m r) =>
   Text ->

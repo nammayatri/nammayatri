@@ -10,9 +10,8 @@ import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult,
 import Kernel.External.Settlement.Types (BillDeskApiConfig)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo, logWarning)
+import Kernel.Utils.Common (generateGUID, getCurrentTime, logInfo, logWarning)
 import Kernel.Utils.Servant.Client (HasRequestId)
 import qualified Lib.Finance.Domain.Types.PgSettlementBatch as PSB
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
@@ -30,21 +29,21 @@ fetchBillDeskSettlementData ::
   BillDeskApiConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  m ParsePaymentSettlementResult
-fetchBillDeskSettlementData apiCfg merchantId mocId mbStartTime mbEndTime = do
-  startTime <- mbStartTime & fromMaybeM (InternalError "Settlement ingestion requires startTime")
-  endTime <- mbEndTime & fromMaybeM (InternalError "Settlement ingestion requires endTime")
+  UTCTime ->
+  UTCTime ->
+  m (ParsePaymentSettlementResult, [Id PSB.PgSettlementBatch])
+fetchBillDeskSettlementData apiCfg merchantId mocId startTime endTime = do
   logInfo $ "BillDesk API: fetching settlements fromDate=" <> show startTime <> " toDate=" <> show endTime
   settlements <- getSettlements apiCfg (Just startTime) (Just endTime) Nothing
   logInfo $ "BillDesk API: found " <> show (length settlements) <> " settlement(s)"
-  forM_ settlements $ \settlement ->
+  batchResults <- forM settlements $ \settlement ->
     storeSettlementBatch "BILLDESK" merchantId mocId settlement
-  results <- forM settlements $ \settlement -> do
+  let pendingBatches = [(s, bId) | (s, (Just bId, False)) <- zip settlements batchResults]
+  logInfo $ "BillDesk API: " <> show (length pendingBatches) <> " pending, " <> show (length settlements - length pendingBatches) <> " already completed"
+  results <- forM pendingBatches $ \(settlement, _) -> do
     logInfo $ "BillDesk API: fetching details for pv_number=" <> settlement.pvNumber
     getSettlementDetailReports apiCfg settlement
-  pure $ mergeParseResults results
+  pure (mergeParseResults results, map snd pendingBatches)
 
 mergeParseResults :: [ParsePaymentSettlementResult] -> ParsePaymentSettlementResult
 mergeParseResults results =
@@ -61,22 +60,27 @@ storeSettlementBatch ::
   Text ->
   Text ->
   SettlementSummary ->
-  m ()
+  m (Maybe (Id PSB.PgSettlementBatch), Bool)
 storeSettlementBatch pgName merchantId mocId settlement = do
   mbExisting <- QPgSB.findByMerchantCityGatewayAndPvNumber merchantId mocId pgName settlement.pvNumber
   case mbExisting of
-    Just _ ->
-      logInfo $ "Settlement batch already exists for pvNumber=" <> settlement.pvNumber <> ", skipping"
+    Just existing -> do
+      let isCompleted = existing.ingestionStatus == PSB.COMPLETED
+      when isCompleted $
+        logInfo $ "Settlement batch already ingested for pvNumber=" <> settlement.pvNumber <> ", skipping"
+      pure (Just existing.id, isCompleted)
     Nothing -> do
       batchId <- generateGUID
       now <- getCurrentTime
       let batch = convertToSettlementBatch (Id batchId) pgName merchantId mocId now settlement
       result <- try @_ @SomeException $ QPgSB.create batch
       case result of
-        Right _ ->
+        Right _ -> do
           logInfo $ "Stored settlement batch pvNumber=" <> settlement.pvNumber
-        Left err ->
+          pure (Just (Id batchId), False)
+        Left err -> do
           logWarning $ "Failed to store settlement batch pvNumber=" <> settlement.pvNumber <> ": " <> show err
+          pure (Nothing, False)
 
 convertToSettlementBatch ::
   Id PSB.PgSettlementBatch ->
@@ -112,6 +116,7 @@ convertToSettlementBatch batchId pgName merchantId mocId now settlement =
           settlementDate = settlement.settlementDate,
           utr = settlement.utr,
           utrDate = settlement.utrDate,
+          ingestionStatus = PSB.PENDING,
           merchantId = merchantId,
           merchantOperatingCityId = mocId,
           createdAt = now,

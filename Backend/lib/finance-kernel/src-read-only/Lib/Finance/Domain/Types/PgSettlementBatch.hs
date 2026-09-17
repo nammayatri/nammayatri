@@ -17,6 +17,7 @@ data PgSettlementBatch = PgSettlementBatch
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch,
+    ingestionStatus :: Lib.Finance.Domain.Types.PgSettlementBatch.IngestionStatus,
     mercId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
@@ -39,3 +40,7 @@ data PgSettlementBatch = PgSettlementBatch
     utrDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic)
+
+data IngestionStatus = PENDING | COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''IngestionStatus)

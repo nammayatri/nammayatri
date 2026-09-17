@@ -17,14 +17,14 @@ INSERT INTO atlas_driver_offer_bpp.scheduler_job (
 )
 SELECT
     t.job_id,
-    'SettlementReportIngestion',
+    'PgSettlementIngestion',
     json_build_object(
         'merchantId', t.merchant_id,
         'merchantOperatingCityId', t.moc_id,
         'juspayServiceName', null,
         'settlementProvider', 'BillDesk',
-        'startTime', to_char((CURRENT_DATE - 1) AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-        'endTime', to_char((CURRENT_DATE - interval '1 second') AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        'startTime', to_char(CURRENT_DATE AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        'endTime', to_char((CURRENT_DATE + 1 - interval '1 second') AT TIME ZONE 'Asia/Kolkata' AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
         'scheduleNextJob', true
     )::text,
     0,

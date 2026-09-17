@@ -8,8 +8,10 @@ module Lib.Finance.Settlement.Store
 where
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Text as T
 import Kernel.Beam.Functions (ToTType' (..))
-import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..))
+import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..), TxnType (..))
+import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Utils.Common (logInfo, logWarning)
 import Lib.Finance.Audit.Interface (AuditInput (..))
@@ -59,19 +61,37 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
     logWarning $ "Parse errors: " <> show (errors parseResult)
 
   results <- forM (reports parseResult) $ \report -> do
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType report
-    result <- try @_ @SomeException $ QPgReport.create pgReport
-    case result of
-      Right _ -> do
-        auditCreate actorInfo pgReport
-        pure (Just pgReport, Nothing)
-      Left err -> pure (Nothing, Just $ "Store error for orderId " <> report.orderId <> ": " <> show err)
+    orderId' <-
+      if report.txnType == CHARGEBACK && T.null report.orderId
+        then case report.txnId of
+          Just refTxnId -> maybe report.orderId (.orderId) <$> QPgReport.findOrderByTxnId refTxnId
+          Nothing -> pure report.orderId
+        else pure report.orderId
+    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType (report {Ext.orderId = orderId'})
+    let isDuplicate = case (pgReport.txnId, pgReport.settlementId) of
+          (Just tId, Just sId) -> isJust <$> QPgReport.findByTxnIdAndSettlementId tId sId
+          _ -> pure False
+    isDup <- isDuplicate
+    if isDup
+      then do
+        logInfo $ "Duplicate skipped for orderId=" <> pgReport.orderId <> " txnId=" <> fromMaybe "" pgReport.txnId <> " settlementId=" <> fromMaybe "" pgReport.settlementId
+        pure (False, Nothing, True)
+      else do
+        result <- try @_ @SomeException $ QPgReport.create pgReport
+        case result of
+          Right _ -> do
+            auditCreate actorInfo pgReport
+            pure (True, Nothing, False)
+          Left err -> pure (False, Just $ "Store error for orderId " <> report.orderId <> ": " <> show err, False)
 
-  let stored = length [() | (Just _, _) <- results]
-      storeErrs = [e | (_, Just e) <- results]
+  let stored = length [() | (True, _, _) <- results]
+      storeErrs = [e | (_, Just e, _) <- results]
+      duplicates = length [() | (_, _, True) <- results]
 
   logInfo $
     "Ingestion complete. Stored: " <> show stored
+      <> ", Duplicates: "
+      <> show duplicates
       <> ", Store errors: "
       <> show (length storeErrs)
 
@@ -79,7 +99,7 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
     IngestionResult
       { totalParsed = totalRows parseResult,
         totalStored = stored,
-        totalDuplicates = 0,
+        totalDuplicates = duplicates,
         totalFailed = failedRows parseResult + length storeErrs,
         parseErrors = errors parseResult,
         storeErrors = storeErrs

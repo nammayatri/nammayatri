@@ -15,7 +15,8 @@ SET config_json = jsonb_build_object(
           'clientId', '<ENCRYPTED_CLIENT_ID>',
           'signingKey', '<ENCRYPTED_SIGNING_KEY>',
           'encryptionKey', '<ENCRYPTED_ENCRYPTION_KEY>',
-          'encryptionKeyId', '<ENCRYPTED_ENCRYPTION_KEY_ID>'
+          'encryptionKeyId', '<ENCRYPTED_ENCRYPTION_KEY_ID>',
+          'maxDateRangeDays', 7
         )
       ),
       'parserTypeMap', null,

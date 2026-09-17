@@ -8,6 +8,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.PgSettlementBatch
 import Tools.Beam.UtilsTH
 
 data PgSettlementBatchT f = PgSettlementBatchT
@@ -18,6 +19,7 @@ data PgSettlementBatchT f = PgSettlementBatchT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     id :: B.C f Kernel.Prelude.Text,
+    ingestionStatus :: B.C f Lib.Finance.Domain.Types.PgSettlementBatch.IngestionStatus,
     mercId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

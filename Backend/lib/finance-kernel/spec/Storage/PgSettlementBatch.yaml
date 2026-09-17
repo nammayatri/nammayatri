@@ -14,6 +14,10 @@ PgSettlementBatch:
   tableName: pg_settlement_batch
   derives: "Generic"
 
+  types:
+    IngestionStatus:
+      enum: "PENDING,COMPLETED"
+
   fields:
     id: Id PgSettlementBatch
 
@@ -49,6 +53,9 @@ PgSettlementBatch:
     utr: Maybe Text
     utrDate: Maybe UTCTime
 
+    # --- Ingestion tracking ---
+    ingestionStatus: IngestionStatus
+
     # --- Multi-tenancy ---
     merchantId: Text
     merchantOperatingCityId: Text
@@ -69,6 +76,14 @@ PgSettlementBatch:
       kvFunction: findOneWithKV
       where:
         and: [merchantId, merchantOperatingCityId, paymentGateway, pvNumber]
+
+    updateIngestionStatus:
+      kvFunction: updateWithKV
+      params: [ingestionStatus, updatedAt]
+      where: id
+
+  default:
+    ingestionStatus: "'PENDING'"
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
