@@ -404,10 +404,12 @@ findAllPTWithLimitOffset ::
   Maybe DbHash ->
   Maybe Text ->
   Maybe (Id DEntity.Entity) ->
+  Maybe DbHash ->
+  Maybe [Id Role] ->
   Maybe Integer ->
   Maybe Integer ->
   m ([(Person, Role)], Int)
-findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbLimit mbOffset = do
+findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbTokenNoDBHash mbVisibleRoleIds mbLimit mbOffset = do
   dbConf <- getReplicaBeamConfig
   pageRes <- L.runDB dbConf $
     L.findRows $
@@ -422,6 +424,8 @@ findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRol
                     )
                       -- A tokenNo is what makes an account a PT login, so it defines the base set.
                       B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\visibleRoleIds -> B.sqlBool_ (BeamR.id role `B.in_` (B.val_ . getId <$> visibleRoleIds))) mbVisibleRoleIds
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\tokenNoDBHash -> BeamP.tokenNoHash person B.==?. B.val_ (Just tokenNoDBHash)) mbTokenNoDBHash
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\roleName -> BeamR.name role B.==?. B.val_ roleName) mbRoleName
                       B.&&?. B.sqlBool_
                         ( B.exists_ $ do
@@ -457,6 +461,8 @@ findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRol
                       )
                         -- A tokenNo is what makes an account a PT login, so it defines the base set.
                         B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\visibleRoleIds -> B.sqlBool_ (BeamR.id role `B.in_` (B.val_ . getId <$> visibleRoleIds))) mbVisibleRoleIds
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\tokenNoDBHash -> BeamP.tokenNoHash person B.==?. B.val_ (Just tokenNoDBHash)) mbTokenNoDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\roleName -> BeamR.name role B.==?. B.val_ roleName) mbRoleName
                         B.&&?. B.sqlBool_
                           ( B.exists_ $ do
