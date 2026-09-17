@@ -283,7 +283,7 @@ parseStationsFromInMemoryServer ::
   Bool ->
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig needExtraInformation = do
-  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode clusterId) stations
+  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode clusterId locationType) stations
   parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig needExtraInformation
 
 parseStationsFromInMemoryServerWithPublicData ::
@@ -319,6 +319,7 @@ parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig needE
               timeBounds = Unbounded,
               vehicleType = BecknFRFSUtils.becknVehicleCategoryToFrfsVehicleCategory integratedBPPConfig.vehicleCategory,
               parentStopCode = station.parentStopCode,
+              locationType = station.locationType,
               clusterId = station.clusterId,
               createdAt = now,
               updatedAt = now
