@@ -42,7 +42,7 @@ import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -251,6 +251,33 @@ data CancellationPenaltyInformation = CancellationPenaltyInformation
     amount :: HighPrecMoney,
     gst :: HighPrecMoney,
     isBilled :: Bool
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data CancellationChargeState = PENDING | BILLED_UNPAID | PAID | WAIVED
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | One row of the cancellation-charge history log (incurred -> billed -> paid),
+-- driven off the canonical CANCELLATION_PENALTY rows so paid charges are never dropped.
+data CancellationChargeHistoryItem = CancellationChargeHistoryItem
+  { id :: Text,
+    incurredAt :: UTCTime,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    numRideCancelled :: Int,
+    amount :: HighPrecMoney,
+    currency :: Currency,
+    gst :: HighPrecMoney,
+    state :: CancellationChargeState,
+    paymentMode :: Maybe PaymentMode,
+    paidAt :: Maybe UTCTime,
+    parentFeeId :: Maybe Text,
+    planOfferTitle :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+newtype CancellationChargeHistoryRes = CancellationChargeHistoryRes
+  { charges :: [CancellationChargeHistoryItem]
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -1704,6 +1731,64 @@ getCancellationPenalties driverId serviceName = do
           paymentMode = payType,
           numRideCancelled = driverFee.numRides,
           amount = fromMaybe 0.0 driverFee.cancellationPenaltyAmount,
-          gst = if isBilled then (fromMaybe 0.0 driverFee.cancellationPenaltyAmount) * 0.18 / 1.18 else 0.0,
+          gst = if isBilled then cancellationGst (fromMaybe 0.0 driverFee.cancellationPenaltyAmount) else 0.0,
           ..
         }
+
+-- | GST component embedded in a (GST-inclusive) cancellation penalty amount.
+cancellationGst :: HighPrecMoney -> HighPrecMoney
+cancellationGst amount = amount * 0.18 / 1.18
+
+-- | Full chronological cancellation-charge history (incurred -> billed -> paid).
+-- Drives off every CANCELLATION_PENALTY row and resolves the parent invoice it was folded
+-- into, so paid charges remain visible after the invoice clears (which 'getCancellationPenalties'
+-- drops). Newest first, with optional offset/limit for parity with payment history.
+getCancellationChargeHistory ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id SP.Driver ->
+  ServiceNames ->
+  Maybe Int ->
+  Maybe Int ->
+  m CancellationChargeHistoryRes
+getCancellationChargeHistory driverId serviceName mbLimit mbOffset = do
+  -- Ordering (newest first), the zero/null-amount exclusion, and limit/offset are handled
+  -- in the storage query, so we only resolve parent invoices for the returned page.
+  penalties <- QDF.findAllCancellationPenaltiesForDriver driverId serviceName mbLimit mbOffset
+  let parentIds = nub $ mapMaybe (.addedToFeeId) penalties
+  parents <- QDF.findDriverFeesByIds parentIds
+  let parentMap = M.fromList $ map (\pf -> (pf.id, pf)) parents
+      charges = map (mkCancellationChargeHistoryItem parentMap) penalties
+  return $ CancellationChargeHistoryRes {charges}
+  where
+    paidStatuses = [DF.CLEARED, DF.COLLECTED_CASH, DF.CLEARED_BY_YATRI_COINS, DF.SETTLED]
+    mkCancellationChargeHistoryItem parentMap penalty =
+      let mbParent = penalty.addedToFeeId >>= (`M.lookup` parentMap)
+          chargeState
+            | penalty.status `elem` [DF.EXEMPTED, DF.INACTIVE] = WAIVED
+            | otherwise = case mbParent of
+              Nothing -> if isJust penalty.addedToFeeId then BILLED_UNPAID else PENDING
+              Just parent
+                | parent.status == DF.EXEMPTED -> WAIVED
+                | parent.status `elem` paidStatuses -> PAID
+                | otherwise -> BILLED_UNPAID
+          mbPaymentMode =
+            mbParent >>= \parent -> case parent.feeType of
+              DF.RECURRING_INVOICE -> Just MANUAL
+              DF.RECURRING_EXECUTION_INVOICE -> Just AUTOPAY
+              _ -> Nothing
+          penaltyAmount = fromMaybe 0.0 penalty.cancellationPenaltyAmount
+       in CancellationChargeHistoryItem
+            { id = penalty.id.getId,
+              incurredAt = penalty.createdAt,
+              startTime = penalty.startTime,
+              endTime = penalty.endTime,
+              numRideCancelled = penalty.numRides,
+              amount = penaltyAmount,
+              currency = penalty.currency,
+              gst = if chargeState `elem` [PENDING, WAIVED] then 0.0 else cancellationGst penaltyAmount,
+              state = chargeState,
+              paymentMode = mbPaymentMode,
+              paidAt = if chargeState == PAID then penalty.collectedAt <|> (mbParent >>= (.collectedAt)) <|> (mbParent <&> (.updatedAt)) else Nothing,
+              parentFeeId = penalty.addedToFeeId <&> (.getId),
+              planOfferTitle = mbParent >>= (.planOfferTitle)
+            }

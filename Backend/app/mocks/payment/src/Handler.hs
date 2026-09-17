@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTxn
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Beam.Offer as BeamOffer
+import qualified Lib.Payment.Storage.Beam.OfferFrequencyStatsHistory as BeamOfferFrequencyStatsHistory
 import qualified Lib.Payment.Storage.Beam.OfferStats as BeamOfferStats
 import qualified Lib.Payment.Storage.Beam.OfflineOffer as BeamOfflineOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -40,6 +41,7 @@ import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPersonDailyOfferStats
+import qualified Lib.Payment.Storage.Beam.PersonOfferFrequencyStats as BeamPersonOfferFrequencyStats
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
@@ -103,6 +105,12 @@ instance HasSchemaName BeamOffer.OfferT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPersonDailyOfferStats.PersonDailyOfferStatsT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamPersonOfferFrequencyStats.PersonOfferFrequencyStatsT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamOfferFrequencyStatsHistory.OfferFrequencyStatsHistoryT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamOfferStats.OfferStatsT where
@@ -305,7 +313,8 @@ buildJuspayWebhookPayload
             { order =
                 Just
                   Juspay.OrderData
-                    { order_id = getShortId orderShortId,
+                    { id = Nothing,
+                      order_id = getShortId orderShortId,
                       txn_uuid = txnUUID,
                       txn_id = txnId,
                       status_id = Just $ statusToId transactionStatus,
@@ -392,7 +401,8 @@ buildJuspayOrderData order mTxn refunds offers = do
 
   pure $
     Juspay.OrderData
-      { order_id =
+      { id = Nothing,
+        order_id =
           getShortId orderShortIdVal,
         txn_uuid = txnUUID,
         txn_id = txnId,

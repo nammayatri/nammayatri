@@ -26,18 +26,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessAudit as QAudit
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonResourceAccess as QPRA
 import Tools.Auth
+import Tools.Auth.Capability (isSuperAdmin)
 import Tools.Error
 
 -- Layer C management surface. `resourceType` is a closed enum (DRS.ResourceType);
 -- `resourceId` is opaque Text (route code, special-location id, zone name, …).
 -- Reset-then-insert so a
--- person's stored set for a (merchant, city, type) is exactly what was sent;
--- a DRS.wildcardResourceId ("*") id means full-MOC. /user/resourceScope is what
--- control-center analytics + the ops gate read.
+-- person's stored set for a (merchant, city, type) is exactly what was sent.
+-- Scope is opt-in: no rows = unscoped = allow-all; a DRS.wildcardResourceId ("*")
+-- row is the same allow-all; a specific list restricts. /user/resourceScope is
+-- what control-center analytics + the ops gate read.
 
 --------------------------------------------------------------------- types
 
@@ -54,7 +57,7 @@ newtype UserResourceScopeRes = UserResourceScopeRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AssignResourceAccessReq = AssignResourceAccessReq
-  { merchantId :: Id DMerchant.Merchant,
+  { merchantShortId :: ShortId DMerchant.Merchant,
     operatingCity :: City.City,
     resourceType :: DRS.ResourceType,
     resourceIds :: [Text]
@@ -62,14 +65,14 @@ data AssignResourceAccessReq = AssignResourceAccessReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ResetResourceAccessReq = ResetResourceAccessReq
-  { merchantId :: Id DMerchant.Merchant,
+  { merchantShortId :: ShortId DMerchant.Merchant,
     operatingCity :: City.City,
     resourceType :: DRS.ResourceType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ResourceAccessRow = ResourceAccessRow
-  { merchantId :: Id DMerchant.Merchant,
+  { merchantShortId :: ShortId DMerchant.Merchant,
     operatingCity :: City.City,
     resourceType :: DRS.ResourceType,
     resourceId :: Text
@@ -100,6 +103,12 @@ audit tokenInfo action targetId beforeValue afterValue = do
         createdAt = now
       }
 
+assertAdminMayManageMOC :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> City.City -> m ()
+assertAdminMayManageMOC tokenInfo mId city =
+  unless (mId == tokenInfo.merchantId && city == tokenInfo.city) $
+    unlessM (isSuperAdmin tokenInfo.personId) $
+      throwError AccessDenied
+
 ------------------------------------------------------------------ handlers
 
 getUserResourceScope :: BeamFlow m r => TokenInfo -> m UserResourceScopeRes
@@ -114,27 +123,43 @@ getUserResourceScope tokenInfo = do
   pure $ UserResourceScopeRes $ map entryFor types
 
 getPersonResourceAccess :: BeamFlow m r => TokenInfo -> Id DP.Person -> m PersonResourceAccessRes
-getPersonResourceAccess _ personId = do
+getPersonResourceAccess tokenInfo personId = do
   void $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   rows <- QPRA.findAllByPersonId personId
+  sa <- isSuperAdmin tokenInfo.personId
+  let visible =
+        if sa
+          then rows
+          else filter (\r -> r.merchantId == tokenInfo.merchantId && r.operatingCity == tokenInfo.city) rows
+  -- Resolve each merchant's short id once (one findById per DISTINCT merchant,
+  -- not per row) — a person can hold many rows across few merchants. Falls back
+  -- to the raw id only for an orphaned row whose merchant was deleted.
+  shortIdByMerchant <-
+    forM (nub (map (.merchantId) visible)) $ \mId -> do
+      mbMerchant <- QMerchant.findById mId
+      pure (mId, maybe (ShortId mId.getId) (.shortId) mbMerchant)
+  let shortIdOf mId = fromMaybe (ShortId mId.getId) (lookup mId shortIdByMerchant)
   pure $
     PersonResourceAccessRes $
       map
-        (\r -> ResourceAccessRow {merchantId = r.merchantId, operatingCity = r.operatingCity, resourceType = r.resourceType, resourceId = r.resourceId})
-        rows
+        (\r -> ResourceAccessRow {merchantShortId = shortIdOf r.merchantId, operatingCity = r.operatingCity, resourceType = r.resourceType, resourceId = r.resourceId})
+        visible
 
 -- | Reset-then-insert: the person's rows for this (merchant, city, type) become
--- exactly `resourceIds`. [] clears (deny-all); [DRS.wildcardResourceId] = full.
+-- exactly `resourceIds`. [] clears all rows → unrestricted (allow-all);
+-- [DRS.wildcardResourceId] is the explicit allow-all; a specific list restricts.
 assignResourceAccess :: BeamFlow m r => TokenInfo -> Id DP.Person -> AssignResourceAccessReq -> m APISuccess
 assignResourceAccess tokenInfo personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <- QMerchant.findByShortId req.merchantShortId >>= fromMaybeM (MerchantDoesNotExist req.merchantShortId.getShortId)
+  assertAdminMayManageMOC tokenInfo merchant.id req.operatingCity
   -- The grant is meaningless (and a privilege-escalation vector) unless the
   -- target person actually has access to this merchant + operating city. Reject
   -- a (merchant, city) the person isn't provisioned on via merchant_access.
   void $
-    QAccess.findByPersonIdAndMerchantIdAndCity personId req.merchantId req.operatingCity
+    QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
       >>= fromMaybeM (InvalidRequest "Target person has no access to this merchant / operating city.")
-  QPRA.deleteByPersonMerchantCityType personId req.merchantId req.operatingCity req.resourceType
+  QPRA.deleteByPersonMerchantCityType personId merchant.id req.operatingCity req.resourceType
   now <- getCurrentTime
   forM_ (nub req.resourceIds) $ \resourceId -> do
     guid <- generateGUID
@@ -142,7 +167,7 @@ assignResourceAccess tokenInfo personId req = do
       DRS.PersonResourceAccess
         { id = guid,
           personId,
-          merchantId = req.merchantId,
+          merchantId = merchant.id,
           operatingCity = req.operatingCity,
           resourceType = req.resourceType,
           resourceId,
@@ -153,17 +178,19 @@ assignResourceAccess tokenInfo personId req = do
     "PERSON_RESOURCE_ACCESS_ASSIGN"
     personId.getId
     Nothing
-    (Just $ show req.resourceType <> " @ " <> req.merchantId.getId <> "/" <> show req.operatingCity <> " = " <> show (nub req.resourceIds))
+    (Just $ show req.resourceType <> " @ " <> req.merchantShortId.getShortId <> "/" <> show req.operatingCity <> " = " <> show (nub req.resourceIds))
   pure Success
 
 resetResourceAccess :: BeamFlow m r => TokenInfo -> Id DP.Person -> ResetResourceAccessReq -> m APISuccess
 resetResourceAccess tokenInfo personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  QPRA.deleteByPersonMerchantCityType personId req.merchantId req.operatingCity req.resourceType
+  merchant <- QMerchant.findByShortId req.merchantShortId >>= fromMaybeM (MerchantDoesNotExist req.merchantShortId.getShortId)
+  assertAdminMayManageMOC tokenInfo merchant.id req.operatingCity
+  QPRA.deleteByPersonMerchantCityType personId merchant.id req.operatingCity req.resourceType
   audit
     tokenInfo
     "PERSON_RESOURCE_ACCESS_RESET"
     personId.getId
-    (Just $ show req.resourceType <> " @ " <> req.merchantId.getId <> "/" <> show req.operatingCity)
+    (Just $ show req.resourceType <> " @ " <> req.merchantShortId.getShortId <> "/" <> show req.operatingCity)
     Nothing
   pure Success

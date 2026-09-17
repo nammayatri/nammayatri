@@ -9,7 +9,7 @@ data AlertCategory
   = WMB_ALERT
   | ONBOARDING_UPDATE
   | FLEET_UPDATE
-  | GENERIC_NOTIFICATION
+  | CONFIG_CHANGE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''AlertCategory)

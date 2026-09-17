@@ -40,6 +40,11 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
     [ Se.Set Beam.domain domain,
       Se.Set Beam.logoUrl (Kernel.Prelude.fmap showBaseUrl logoUrl),
       Se.Set Beam.name name,
+      Se.Set Beam.offlineContract offlineContract,
+      Se.Set Beam.staticTermsUrl (Kernel.Prelude.fmap showBaseUrl staticTermsUrl),
+      Se.Set Beam.supportEmail supportEmail,
+      Se.Set Beam.supportPhone supportPhone,
+      Se.Set Beam.supportUrl (Kernel.Prelude.fmap showBaseUrl supportUrl),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -47,7 +52,9 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
 instance FromTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   fromTType' (Beam.BapMetadataT {..}) = do
     logoUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) logoUrl
-    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, createdAt = createdAt, updatedAt = updatedAt}
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
+    supportUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) supportUrl
+    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, offlineContract = offlineContract, staticTermsUrl = staticTermsUrl', supportEmail = supportEmail, supportPhone = supportPhone, supportUrl = supportUrl', createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   toTType' (Domain.Types.BapMetadata.BapMetadata {..}) = do
@@ -56,6 +63,11 @@ instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.logoUrl = Kernel.Prelude.fmap showBaseUrl logoUrl,
         Beam.name = name,
+        Beam.offlineContract = offlineContract,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
+        Beam.supportEmail = supportEmail,
+        Beam.supportPhone = supportPhone,
+        Beam.supportUrl = Kernel.Prelude.fmap showBaseUrl supportUrl,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

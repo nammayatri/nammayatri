@@ -39,6 +39,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPersonStats
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as PayoutTools
 
@@ -147,6 +148,9 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
                       Nothing
               void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
               Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_COMPLETED" payoutOrder.amount.amount
+              fork "event_tracking: offer_cashback_credited" $
+                ET.trackEvent merchantId merchantOperatingCityId $
+                  ET.OfferCashbackCredited payoutOrder.customerId payoutReq.id.getId payoutOrder.amount.amount
           else when (isPayoutStatusFailed payoutStatus) $
             whenJust mbPayoutRequestId $ \prId -> do
               mbPayoutReq <- QPR.findById (Id prId)
@@ -198,4 +202,4 @@ notifyPersonOnAmountCredit person = do
   mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
-    Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+    Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)

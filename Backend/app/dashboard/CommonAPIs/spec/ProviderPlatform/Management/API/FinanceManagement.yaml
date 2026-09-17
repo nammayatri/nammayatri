@@ -394,6 +394,7 @@ apis:
         tanNumber: Text
         quarter: TdsReimbursementQuarter
         assessmentYear: Text
+        excludeCurrentAdminMaker: Bool
         status: TdsReimbursementStatus
         from: UTCTime
         to: UTCTime
@@ -402,6 +403,25 @@ apis:
         type: TdsReimbursementListRes
       migrate:
         capability: finance.tds_reimbursement.read
+      helperApi:
+        - GET:
+            endpoint: /tdsReimbursement/list
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - fleetOwnerId: Text
+              - tanNumber: Text
+              - quarter: TdsReimbursementQuarter
+              - assessmentYear: Text
+              - excludeCurrentAdminMaker: Bool
+              - status: TdsReimbursementStatus
+              - from: UTCTime
+              - to: UTCTime
+            response:
+              type: TdsReimbursementListRes
 
   - GET: # TdsReimbursementDetailAPI
       endpoint: /tdsReimbursement/{requestId}
@@ -424,6 +444,19 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.tds_reimbursement.write
+      helperApi:
+        - POST:
+            endpoint: /tdsReimbursement/{requestId}/reject
+            params:
+              requestId: Id FinanceTdsReimbursementRequest
+            auth: ApiAuthV2
+            request:
+              type: TdsReimbursementRejectReq
+            mandatoryQuery:
+              - requestorId: Text
+              - requestorName: Text
+            response:
+              type: APISuccess
 
 types:
   SubscriptionPurchaseStatus:
@@ -990,6 +1023,10 @@ types:
     - requestId: Id FinanceTdsReimbursementRequest
     - fleetOwnerId: Text
     - fleetOwnerName: Maybe Text
+    - adminMakerId: Maybe (Id Person)
+    - adminCheckerId: Maybe (Id Person)
+    - adminMakerName: Maybe Text
+    - adminCheckerName: Maybe Text
     - tanNumber: Text
     - certNumber: Text
     - quarter: TdsReimbursementQuarter

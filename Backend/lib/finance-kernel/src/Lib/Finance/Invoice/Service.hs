@@ -340,8 +340,7 @@ createInvoice input entryIds = do
                   }
           void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
-          let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-              gstAmount = case input.gstBreakdown of
+          let gstAmount = case input.gstBreakdown of
                 Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
                 Nothing -> 0
               txnType = invoiceTypeToDirectTransactionType input.invoiceType
@@ -349,7 +348,7 @@ createInvoice input entryIds = do
                 DirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    grossAmount = totalAmount - extCharges - gstAmount,
+                    grossAmount = totalAmount - gstAmount,
                     tdsAmount = entry.amount,
                     tdsTreatment = DirectTax.Deducted,
                     counterpartyId = input.counterpartyId,

@@ -18,6 +18,14 @@ data BusTripScheduleResp = BusTripScheduleResp {schedules :: [FleetBusTripSchedu
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSActiveManifestReq = FRFSActiveManifestReq {routeId :: Kernel.Prelude.Maybe Data.Text.Text, tripId :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSActiveManifestResp = FRFSActiveManifestResp {manifest :: [PassengerStopManifest], routeId :: Kernel.Prelude.Maybe Data.Text.Text, tripId :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRouteAPI = FRFSRouteAPI
   { code :: Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,

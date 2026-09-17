@@ -203,6 +203,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
@@ -1281,7 +1282,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         -- Check if there's an active association before ending it
         mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
         SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
-          QRCAssociation.endAllRCAssociationsForDriver personId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         -- Only decrement analytics if there was an active association
@@ -2981,8 +2982,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QRCAssociation.endAllRCAssociationsForDriver person.id
-        void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
+        void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken, isOnboardingFlow = Nothing}
         whenJust mbOperator $ \referredOperator ->
           DOR.makeDriverReferredByOperator merchantOpCityId person.id referredOperator.id
 
@@ -3010,7 +3011,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QRCAssociation.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
         assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
         QFDV.create assoc
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
@@ -3652,7 +3653,11 @@ data CreateDriversCSVRow = CreateDriversCSVRow
     badgeRank :: Maybe Text,
     badgeType :: Maybe Text,
     driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text
+    fleetPhoneCountryCode :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    gender :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
@@ -3665,7 +3670,11 @@ data DriverDetails = DriverDetails
     badgeRank :: Maybe Text,
     badgeType :: Maybe DFBT.FleetBadgeType,
     driverPhoneCountryCode :: Maybe Text,
-    fleetPhoneCountryCode :: Maybe Text
+    fleetPhoneCountryCode :: Maybe Text,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    gender :: Maybe DP.Gender
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -3680,6 +3689,10 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> optional (r .: "badge_type")
       <*> optional (r .: "driver_phone_country_code")
       <*> optional (r .: "fleet_phone_country_code")
+      <*> optional (r .: "first_name")
+      <*> optional (r .: "last_name")
+      <*> optional (r .: "email")
+      <*> optional (r .: "gender")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -3817,13 +3830,12 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             unless isNew $ do
               SA.endDriverAssociations moc.id transporterConfig person
               when (merchant.overwriteAssociation == Just True) $
-                QRCAssociation.endAllRCAssociationsForDriver person.id
-            let driverMobile = req_.driverPhoneNumber
+                DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
-            fork "Sending Fleet Consent SMS to Driver" $
-              sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
+            fork "Sending onboarding link SMS to Driver" $
+              SOnbCommon.sendOnboardingLinkSms moc transporterConfig person (Just fleetOwner)
       pure person.id
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
@@ -3838,23 +3850,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $
               SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
       pure person.id
-
-    sendDeepLinkForAuth :: DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.Country -> DP.Person -> Flow ()
-    sendDeepLinkForAuth person mobileNumber merchantId merchantOpCityId country fleetOwner = do
-      let countryCode = fromMaybe (P.getCountryMobileCode country) person.mobileCountryCode
-          phoneNumber = countryCode <> mobileNumber
-      smsCfg <- asks (.smsCfg)
-      mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwner.id
-      withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
-        (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
-            MessageBuilder.BuildFleetDeepLinkAuthMessage
-              { fleetOwnerName = fleetOwner.firstName,
-                fleetOwnerId = fleetOwner.id.getId,
-                fleetName = fromMaybe fleetOwner.firstName ((.fleetName) =<< mbFleetOwnerInfo)
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
 
 mkAddDriverCounterKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
 mkAddDriverCounterKey merchantOpCityId driverId = "Fleet:AddDriverCount:" <> driverId.getId <> ":" <> merchantOpCityId.getId
@@ -3878,12 +3873,23 @@ validateDriverName mbDriverName isMandatory isStrongNameCheckRequired = do
       let validateFn = if isStrongNameCheckRequired then Common.validateUpdateDriverNameReq else Common.validateUpdateDriverNameReqWithLooseCheck
       result <- try (void $ runRequestValidation validateFn (Common.UpdateDriverNameReq {firstName = driverName, middleName = Nothing, lastName = Nothing}))
       case result of
-        Left (_ :: SomeException) -> throwError $ InvalidRequest "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
+        Left (_ :: SomeException) ->
+          throwError . InvalidRequest $
+            if isStrongNameCheckRequired
+              then "Driver name should not contain numbers and should have at least 1 letter and at most 50 letters"
+              else "Driver name must be 1 to 50 characters: letters, digits, spaces and ' \x2019 - . , & / ( ) + are allowed"
         Right _ -> pure ()
 
 parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
-  let driverName :: Maybe Text = row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name"
+  let firstName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.firstName) "First name"
+      lastName :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.lastName) "Last name"
+      email :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.email) "Email"
+      gender :: Maybe DP.Gender = Csv.readMaybeCSVField idx (fromMaybe "" row.gender) "Gender"
+      -- first_name/last_name win over the combined column; the combined form stays filled
+      -- either way since SMS, badges and name validation read it.
+      fullName = firstName <&> \fn -> maybe fn (\ln -> fn <> " " <> ln) lastName
+      driverName :: Maybe Text = fullName <|> (row.driverName >>= \name -> Csv.cleanMaybeCSVField idx name "Driver name")
       -- Do not hard-fail the whole upload on a blank phone; keep the row (with an empty
       -- phone) so it can be reported per-row in unprocessedEntities during processing.
       driverPhoneNumber :: Text = fromMaybe "" (Csv.cleanMaybeCSVField idx row.driverPhoneNumber "Mobile number")
@@ -3905,7 +3911,11 @@ parseDriverInfo idx row = do
         badgeRank = badgeRank,
         badgeType = badgeType,
         driverPhoneCountryCode = driverPhoneCountryCode,
-        fleetPhoneCountryCode = fleetPhoneCountryCode
+        fleetPhoneCountryCode = fleetPhoneCountryCode,
+        firstName = firstName,
+        lastName = lastName,
+        email = email,
+        gender = gender
       }
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
@@ -3930,8 +3940,12 @@ fetchOrCreatePerson moc req_ = do
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
     >>= \case
       Nothing -> do
+        whenJust req_.email $ \reqEmail -> do
+          runRequestValidation (\e -> validateField "email" e P.email) reqEmail
+          mbExistingByEmail <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) moc.merchantId DP.DRIVER
+          when (isJust mbExistingByEmail) $ throwError (EmailAlreadyLinked reqEmail)
         cloudType <- asks (.cloudType)
-        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True
+        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing cloudType moc.merchantId moc.id True req_.firstName req_.lastName req_.email req_.gender
         let isNew = True in pure (person, isNew)
       Just person -> do
         let isNew = False in pure (person, isNew)
@@ -4387,6 +4401,7 @@ postDriverFleetGetDriverDetails _ _ _fleetOwnerId req = do
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
+            gender = Just $ show person.gender,
             mobileCountryCode = person.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             email = person.email,
@@ -4707,7 +4722,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         SA.endDriverAssociations merchantOpCityId transporterConfig driver
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         when (merchant.overwriteAssociation == Just True) $ do
-          QRCAssociation.endAllRCAssociationsForDriver driverId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle driverId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4804,9 +4819,9 @@ validateUpdateDriverReq Common.UpdateDriverReq {..} =
 validateUpdateDriverReqWithLooseCheck :: Validate Common.UpdateDriverReq
 validateUpdateDriverReqWithLooseCheck Common.UpdateDriverReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.nameWithNumber,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
-      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.nameWithSymbols,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
+      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
       validateField "email" email $ InMaybe P.email
     ]
 
@@ -4838,8 +4853,11 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     isValid <- DDriver.isAssociationBetweenTwoPerson requestor driver
     unless isValid $ throwError AccessDenied
 
+  mbGender <- forM req.gender $ \genderText ->
+    readMaybe (T.unpack genderText) & fromMaybeM (InvalidRequest $ "Invalid gender: " <> genderText)
+
   -- Update basic profile fields (name, email, mobile) in one go
-  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
+  when (isJust req.firstName || isJust req.lastName || isJust req.gender || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
     -- Email uniqueness
     whenJust req.email $ \reqEmail -> do
       existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
@@ -4865,6 +4883,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           driver
             { DP.firstName = fromMaybe driver.firstName req.firstName,
               DP.lastName = req.lastName <|> driver.lastName,
+              DP.gender = fromMaybe driver.gender mbGender,
               DP.email = req.email <|> driver.email,
               DP.mobileCountryCode = newMobileCountryCode,
               DP.mobileNumber = newMobileNumber
@@ -5094,7 +5113,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
           let scheduledBookingListLimit = 10
               limit = min scheduledBookingListLimit $ fromMaybe scheduledBookingListLimit mbLimit
               offset = fromMaybe 0 mbOffset
-              possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+              possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
           cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
           let allServiceTiers = nub $ (.serviceTierType) <$> cityServiceTiers
@@ -5267,8 +5286,11 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            ondcCancellationReasonId = Nothing,
             distanceUnit = oldBooking.distanceUnit,
-            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
+            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
   RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner transporterConfig oldDriver
 

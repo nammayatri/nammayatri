@@ -641,6 +641,7 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         rcId = getId <$> mbRcId,
         workflowTransactionId,
         reviewerEmail = Nothing,
+        metadata = Nothing,
         documentExpiry = Nothing,
         createdAt = now,
         updatedAt = now,

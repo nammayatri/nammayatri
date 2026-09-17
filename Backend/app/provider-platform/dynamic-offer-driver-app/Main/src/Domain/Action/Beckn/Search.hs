@@ -48,6 +48,7 @@ import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import Domain.Types.FareParameters ()
+import qualified Domain.Types.FareParameters as DFareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -179,6 +180,10 @@ data DSearchReq = DSearchReq
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
+    -- | Nothing from the base parser -- only the MSIL layer (Beckn.OnDemand.Transformer.MSIL.Search.msilParser)
+    -- ever sets this, from the incoming category descriptor code. Everyone else's search
+    -- carries Nothing all the way through, unread.
+    isSchedule :: Maybe Bool,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
     -- | Set only by the internal sync_search endpoint when the BAP is pricing a
@@ -543,6 +548,11 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             domain = Just $ show Domain.MOBILITY,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
+            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
+            offlineContract = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
+            supportEmail = Nothing,
+            supportPhone = Nothing,
+            supportUrl = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -693,6 +703,7 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         estimatedDuration = mbDuration,
         estimatedStaticDuration = mbStaticDuration,
         riderId = Nothing,
+        riderName = Nothing,
         createdAt = now,
         driverDefaultExtraFee = mbDefaultDriverExtra,
         pickupZoneGateId = mbSpecialZoneGateId,
@@ -792,6 +803,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           vehicleAge = Nothing,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
+          negativeFareAdjustment = Nothing,
           petCharges = Nothing,
           nightShiftCharge = Nothing,
           estimatedCongestionCharge = Nothing,
@@ -888,6 +900,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               vehicleAge = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
+              negativeFareAdjustment = Nothing,
               petCharges = Nothing,
               nightShiftCharge = Nothing,
               customerCancellationDues = mbSearchReq >>= (.customerCancellationDues),
@@ -952,6 +965,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         fareParams = Just maxFareParams,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tipOptions = fullFarePolicy.tipOptions,
+        negativeFareSuggestion = mkNegativeFareSuggestion transporterConfig fullFarePolicy mbDistance maxFareParams,
         specialLocationTag = specialLocationTag,
         specialLocationName = mbSpecialLocName,
         isScheduled = isScheduled,
@@ -986,6 +1000,30 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         ..
       }
 
+mkNegativeFareSuggestion ::
+  DTMT.TransporterConfig ->
+  DFP.FullFarePolicy ->
+  Maybe Meters ->
+  DFareParameters.FareParameters ->
+  Maybe HighPrecMoney
+mkNegativeFareSuggestion transporterConfig fullFarePolicy mbDistance fareParams = do
+  threshold <- transporterConfig.negativeFareAdjustmentCongestionThreshold
+  minDistanceMeters <- transporterConfig.negativeFareAdjustmentMinDistanceMeters
+  maxAmount <- transporterConfig.negativeFareAdjustmentMaxAmount
+  distance <- mbDistance
+  congestionChargeMultiplier <- fullFarePolicy.congestionChargeMultiplier
+  let (partOfNightShiftCharge, _, _) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+      fullRideCost = fareParams.baseFare + partOfNightShiftCharge
+      congestionBase = case congestionChargeMultiplier of
+        DFP.BaseFareAndExtraDistanceFare _ -> fullRideCost
+        DFP.ExtraDistanceFare _ -> partOfNightShiftCharge
+      congestion = realToFrac (DFP.congestionChargeMultiplierToCentesimal congestionChargeMultiplier) :: Double
+  if distance.getMeters < minDistanceMeters || congestion <= threshold
+    then Nothing
+    else
+      let rawDiscount = negate (congestion - threshold) * realToFrac congestionBase.getHighPrecMoney :: Double
+       in Just $ HighPrecMoney (realToFrac (max rawDiscount (fromIntegral maxAmount)))
+
 validateRequest :: DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
 validateRequest merchant sReq = do
   isValueAddNP <- CQVAN.isValueAddNP sReq.bapId
@@ -995,7 +1033,8 @@ validateRequest merchant sReq = do
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sReq.toSpecialLocationId sourceCity merchant
+  let stopsForIntercityCheck = if sReq.riderPreferredOption == DRPO.Rental then map (.gps) sReq.stops else []
+  (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation stopsForIntercityCheck sReq.toSpecialLocationId sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
       isMeterRideSearch = sReq.isMeterRideSearch
@@ -1035,16 +1074,19 @@ getIsInterCity merchantId apiKey IsIntercityReq {..} = do
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
-  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong Nothing sourceCity merchant
+  (isInterCity, isCrossCity, _) <- checkForIntercityOrCrossCity transporterConfig mbDropLatLong [] Nothing sourceCity merchant
   return $ IsIntercityResp {..}
 
-checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
-checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocationId sourceCity merchant = do
+checkForIntercityOrCrossCity :: DTMT.TransporterConfig -> Maybe LatLong -> [LatLong] -> Maybe (Id SL.SpecialLocation) -> CityState -> DM.Merchant -> Flow (Bool, Bool, Maybe Text)
+checkForIntercityOrCrossCity transporterConfig mbDropLocation stops mbToSpecialLocationId sourceCity merchant = do
   case (mbDropLocation, mbToSpecialLocationId) of
     (Just dropLoc, Nothing) -> do
       (destinationCityState, mbDestinationTravelCityName) <- getDestinationCity merchant dropLoc -- This checks for destination serviceability too
       if destinationCityState.city == sourceCity.city && destinationCityState.city /= Context.City "AnyCity"
-        then return (False, False, Nothing)
+        then
+          findFirstCrossCityStop stops >>= \case
+            Just city -> pure (True, False, Just city)
+            Nothing -> pure (False, False, Nothing)
         else do
           mbMerchantState <- CQMS.findByMerchantIdAndState merchant.id sourceCity.state
           let allowedStates = maybe [sourceCity.state] (.allowedDestinationStates) mbMerchantState
@@ -1056,10 +1098,17 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
                 else return (True, False, mbDestinationTravelCityName)
             else throwError (RideNotServiceableInState $ show destinationCityState.state)
     _ -> pure (False, False, Nothing)
+  where
+    findFirstCrossCityStop [] = pure Nothing
+    findFirstCrossCityStop (s : rest) = do
+      (stopCityState, mbStopCityName) <- getDestinationCity merchant s
+      if stopCityState.city /= sourceCity.city && stopCityState.city /= Context.City "AnyCity"
+        then pure (mbStopCityName <|> Just (show stopCityState.city))
+        else findFirstCrossCityStop rest
 
 isScheduledForSearch :: DTMT.TransporterConfig -> UTCTime -> DSearchReq -> Bool
 isScheduledForSearch tConf now dsReq =
-  maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+  maybe True not dsReq.isMultimodalSearch && (tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime || dsReq.isSchedule == Just True)
 
 validateScheduledBookingWindowForSearch :: Id DMOC.MerchantOperatingCity -> DSearchReq -> Flow ()
 validateScheduledBookingWindowForSearch merchantOpCityId sReq = do
@@ -1100,17 +1149,22 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
           then [OneWay MeterRide]
           else do
             case dsReq.dropLocation of
-              Just _ -> do
-                if isInterCity
-                  then do
-                    if isCrossCity
-                      then do
-                        [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                      else do
-                        [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
-                          <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                  else localBundleForPreference
+              Just _ -> case dsReq.riderPreferredOption of
+                DRPO.Rental
+                  | isInterCity ->
+                    [IntercityRental OnDemandStaticOffer destinationTravelCityName]
+                      <> [IntercityRental RideOtp destinationTravelCityName | not isScheduled]
+                _ ->
+                  if isInterCity
+                    then
+                      if isCrossCity
+                        then
+                          [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                        else
+                          [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                            <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    else localBundleForPreference
               -- FIX (per review): rerouting this whole branch through localBundleForPreference
               -- had a much bigger blast radius than intended — riderPreferredOption falls
               -- back to OneWay in several places (no tag, unparseable tag, unrecognized
@@ -1221,7 +1275,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               area = loc.ward,
               full_address = decodeAddress loc
             }
-    _ -> getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
+    _ -> do
+      logError $ "Reverse geocoding location " <> show latLong <> " as the BAP address is unusable, bapAddress: " <> show address <> ", customerLanguage: " <> show customerLanguage
+      getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -1299,6 +1355,7 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
         navigationInstruction = Nothing,
         shadowSurgeMultiplier = Nothing,
         shadowSurgeVersion = Nothing,
+        negativeFareSuggestion = Nothing,
         ..
       }
 

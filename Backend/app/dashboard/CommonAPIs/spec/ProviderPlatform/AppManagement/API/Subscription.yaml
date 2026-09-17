@@ -10,6 +10,7 @@ imports:
   Invoice: Domain.Types.Invoice
   PaymentStatusResp: Domain.Action.UI.Payment
   HistoryEntityV2: Domain.Action.UI.Driver
+  CancellationChargeHistoryRes: Domain.Action.UI.Plan
   DriverFee: Domain.Types.DriverFee
   InvoicePaymentMode: Domain.Types.Invoice
   HistoryEntryDetailsEntityV2: Domain.Action.UI.Driver
@@ -343,6 +344,34 @@ apis:
               type: HistoryEntryDetailsEntityV2
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_ENTITY_DETAILS_V2
+  - GET: # CancellationChargeHistory
+      endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
+      name: GetSubscriptionCancellationChargeHistory
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: CancellationChargeHistoryRes
+      helperApi:
+        - GET:
+            endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
+            name: GetSubscriptionCancellationChargeHistory
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              serviceName: ServiceNames
+            query:
+              - limit: Int
+              - offset: Int
+              - requestorId: Text
+            response:
+              type: CancellationChargeHistoryRes
+      migrate:
+        capability: city-operations.subscription.read
   - POST: # CollectManualPayments
       endpoint: /{driverId}/{serviceName}/collect
       name: PostSubscriptionCollectManualPayments

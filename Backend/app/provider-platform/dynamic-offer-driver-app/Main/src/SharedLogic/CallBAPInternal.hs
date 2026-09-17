@@ -21,7 +21,10 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Types (EulerClient, client)
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -30,6 +33,7 @@ import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
+import qualified SharedLogic.Type as SLT
 import Tools.Metrics (CoreMetrics)
 
 data FeedbackAnswer = FeedbackAnswer
@@ -281,6 +285,96 @@ getPickupInstructions apiKey internalUrl rideId = do
   logInfo $ "CallBAPInternal: Calling BAP internal API for pickup instructions, rideId: " <> rideId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient rideId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
+
+-- One-shot assignment (dev/docs/one-shot-assign-plan.md): the single callback that
+-- replaces on_select/init/on_init/confirm/on_confirm for enabled value-add-NP BAPs.
+-- Carries everything the BAP needs to create quote + booking + ride in one go.
+type OneShotAssignAPI =
+  "internal"
+    :> "oneShotAssign"
+    :> Header "token" Text
+    :> ReqBody '[JSON] OneShotAssignReq
+    :> Post '[JSON] APISuccess
+
+data OneShotAssignReq = OneShotAssignReq
+  { transactionId :: Text,
+    bppEstimateId :: Text,
+    bppQuoteId :: Text,
+    bppBookingId :: Text,
+    bppRideId :: Text,
+    currency :: Currency,
+    estimatedFare :: HighPrecMoney,
+    commission :: Maybe HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text,
+    fareBreakups :: [OneShotFareBreakupItem],
+    quoteValidTill :: UTCTime,
+    otp :: Text,
+    driverDetails :: OneShotDriverDetails,
+    vehicleDetails :: OneShotVehicleDetails,
+    distanceToPickup :: Maybe Meters,
+    durationToPickup :: Maybe Seconds,
+    previousRideEndPos :: Maybe Maps.LatLong,
+    isAlreadyFav :: Bool,
+    favCount :: Maybe Int,
+    isSafetyPlus :: Bool,
+    isFreeRide :: Bool,
+    specialLocationTag :: Maybe Text,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text,
+    billingCategory :: SLT.BillingCategory
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data OneShotDriverDetails = OneShotDriverDetails
+  { name :: Text,
+    mobileCountryCode :: Maybe Text,
+    mobileNumber :: Text,
+    rating :: Maybe Centesimal,
+    registeredAt :: Maybe UTCTime,
+    image :: Maybe Text,
+    isDriverBirthDay :: Bool,
+    accountId :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data OneShotVehicleDetails = OneShotVehicleDetails
+  { number :: Text,
+    color :: Maybe Text,
+    model :: Maybe Text,
+    variant :: DVeh.VehicleVariant,
+    serviceTierType :: DVST.ServiceTierType,
+    serviceTierName :: Maybe Text,
+    vehicleAge :: Maybe Months
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data OneShotFareBreakupItem = OneShotFareBreakupItem
+  { title :: Text,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+oneShotAssignClient :: Maybe Text -> OneShotAssignReq -> EulerClient APISuccess
+oneShotAssignClient = client (Proxy @OneShotAssignAPI)
+
+oneShotAssignAPI :: Proxy OneShotAssignAPI
+oneShotAssignAPI = Proxy
+
+oneShotAssign ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  OneShotAssignReq ->
+  m APISuccess
+oneShotAssign apiKey internalUrl request = do
+  logInfo $ "CallBAPInternal: oneShotAssign for txn: " <> request.transactionId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (oneShotAssignClient (Just apiKey) request) "OneShotAssign" oneShotAssignAPI
 
 type EKDLiveCallFeedbackAPI =
   "internal"

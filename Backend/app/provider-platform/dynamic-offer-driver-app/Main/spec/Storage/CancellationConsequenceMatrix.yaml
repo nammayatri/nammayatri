@@ -8,6 +8,8 @@ imports:
   CommissionAndTax: Domain.Types.Extra.CancellationConsequenceMatrix
   CancellationType: Lib.DriverCoins.Types
   PaymentInstrument: Domain.Types.MerchantPaymentMethod
+  TimeBound: Kernel.Types.TimeBound
+  Centesimal: Kernel.Types.Common
 
 # One row = "given who was at fault and why, in this city, for this kind of trip — what
 # exactly happens to whom and how it is collected". Replaces the USER_CANCELLATION_DUES
@@ -22,6 +24,12 @@ imports:
 # cancelledBy values: show CancellationType (CancellationByDriver/CancellationByCustomer).
 # faultRule values: names from cancellation_fault_rule_registry (global).
 # paymentInstrument values: show PaymentInstrument (e.g. Cash, UPI).
+# timeBounds (Unbounded = wildcard) gates the row to city-local time windows (peak-hour
+# penalties); a matching bounded row beats an otherwise-identical Unbounded row but never
+# outranks a more specific dimension match.
+# min/maxDriverRating (both null = wildcard) gate the row to a DriverStats.rating band:
+# min is INCLUSIVE, max is EXCLUSIVE (so "< 4.5" and ">= 4.5" rows tile without overlap).
+# An unrated driver only matches rows with no rating band.
 # See dev/docs/cancellation-consequence-matrix-plan.md.
 CancellationConsequenceMatrix:
   tableName: cancellation_consequence_matrix
@@ -43,6 +51,9 @@ CancellationConsequenceMatrix:
     vehicleServiceTier: Maybe ServiceTierType
     area: Maybe Area
     paymentInstrument: Maybe PaymentInstrument
+    minDriverRating: Maybe Centesimal
+    maxDriverRating: Maybe Centesimal
+    timeBounds: TimeBound
     customerDeduction: Maybe ConsequenceDeduction
     customerCommissionAndTax: Maybe CommissionAndTax
     driverDeduction: Maybe ConsequenceDeduction
@@ -67,6 +78,20 @@ CancellationConsequenceMatrix:
     driverDeduction: text
     cancelledBy: text
     paymentInstrument: text
+    timeBounds: text
+    minDriverRating: double precision
+    maxDriverRating: double precision
+
+  # the generator forbids new NOT NULL columns, so the column is nullable and
+  # NULL (all pre-existing rows) reads as Unbounded — the domain type stays total
+  beamType:
+    timeBounds: Maybe TimeBound
+
+  fromTType:
+    timeBounds: Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded|I
+
+  toTType:
+    timeBounds: Kernel.Prelude.Just|I
 
   queries:
     findAllByMerchantOperatingCityId:

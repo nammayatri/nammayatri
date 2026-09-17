@@ -61,7 +61,7 @@ data RefundLedgerComponent = RefundLedgerComponent
 -- | Mirrors rider-app's Domain.Types.FareBreakup.FareComponent (can't be cross-imported) with
 --   identical constructors, so the Generic JSON wire is byte-compatible and FromJSON rejects any
 --   unknown tag at decode.
-data RefundFareComponent = RIDE_FARE | TOLL | PARKING | CANCELLATION_FEE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data RefundFareComponent = RIDE_FARE | TOLL | PARKING | CANCELLATION_FEE | PAYMENT_CHARGE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Field names must match the BAP-side request verbatim (Generic JSON wire).
 data RefundLedgerReq = RefundLedgerReq
@@ -221,6 +221,9 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
               CANCELLATION_FEE -> cancellationFeeLegs comp baseRef vatRef
               TOLL -> driverOnlyLegs comp baseRef vatRef
               PARKING -> driverOnlyLegs comp baseRef vatRef
+              -- The driver was debited the gateway fee at ride end, so refunding
+              -- it to the rider reverses that debit, exactly like toll/parking.
+              PAYMENT_CHARGE -> driverOnlyLegs comp baseRef vatRef
 
 -- | (base refType, VAT refType) for a refunded component — exhaustive over the enum.
 refundRefTypesForComponent :: RefundFareComponent -> (Text, Text)
@@ -229,6 +232,7 @@ refundRefTypesForComponent fc = case fc of
   TOLL -> (Wallet.walletReferenceTollRefund, Wallet.walletReferenceTollRefundVAT)
   PARKING -> (Wallet.walletReferenceParkingRefund, Wallet.walletReferenceParkingRefundVAT)
   CANCELLATION_FEE -> (Wallet.walletReferenceCancellationFeeRefund, Wallet.walletReferenceCancellationFeeRefundVAT)
+  PAYMENT_CHARGE -> (Wallet.walletReferencePaymentChargeRefund, Wallet.walletReferencePaymentChargeRefundVAT)
 
 -- | The legs of one refund request. Every entry here is a leg: BPP refund legs are real debits
 --   against the driver or the platform, so nothing reverses them (the zero-out is BAP-only).
@@ -323,6 +327,7 @@ refundInvoiceLineMeta fc = case fc of
   TOLL -> ("Toll Refund", InvoiceI.TollRefund, "Toll Refund VAT", InvoiceI.TollRefundTax, "g-refund-toll")
   PARKING -> ("Parking Refund", InvoiceI.ParkingRefund, "Parking Refund VAT", InvoiceI.ParkingRefundTax, "g-refund-parking")
   CANCELLATION_FEE -> ("Cancellation Fee Refund", InvoiceI.CancellationFeeRefund, "Cancellation Fee Refund VAT", InvoiceI.CancellationFeeRefundTax, "g-refund-cancellation")
+  PAYMENT_CHARGE -> ("Payment Charge Refund", InvoiceI.PaymentChargeRefund, "Payment Charge Refund VAT", InvoiceI.PaymentChargeRefundTax, "g-refund-payment")
 
 -- | On a driver-deducted refund, record the returned commission slice(s) — ride fare and/or
 --   cancellation fee — as a NEGATIVE Commission invoice, left Draft so the commission-aggregation

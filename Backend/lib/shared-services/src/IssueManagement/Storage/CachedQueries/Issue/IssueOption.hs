@@ -30,13 +30,20 @@ findAllByCategoryAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> 
 findAllByCategoryAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier /=<< Queries.findAllByCategoryAndLanguage issueCategoryId language
+    Nothing -> do
+      -- never cache an empty list
+      result <- Queries.findAllByCategoryAndLanguage issueCategoryId language
+      unless (null result) $ cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier result
+      pure result
 
 findAllActiveByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m [(IssueOption, Maybe IssueTranslation)]
 findAllActiveByMessageAndLanguage issueMessageId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier /=<< Queries.findAllActiveByMessageAndLanguage issueMessageId language
+    Nothing -> do
+      result <- Queries.findAllActiveByMessageAndLanguage issueMessageId language
+      unless (null result) $ cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier result
+      pure result
 
 findById :: BeamFlow m r => Id IssueOption -> Identifier -> m (Maybe IssueOption)
 findById issueOptionId identifier =
@@ -59,7 +66,7 @@ findByIdAndCategoryId issueOptionId issueCategoryId identifier =
 --------- Caching logic for issue option by issueCategoryId & language -------------------
 
 clearIssueOptionByCategoryAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> m ()
-clearIssueOptionByCategoryAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier
+clearIssueOptionByCategoryAndLanguageCache issueCategoryId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier
 
 cacheAllIssueOptionByCategoryAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueOption, Maybe IssueTranslation)] -> m ()
 cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier issueOptionTranslation = do
@@ -72,7 +79,7 @@ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier = sh
 --------- Caching logic for issue option by id -------------------
 
 clearIssueOptionByIdCache :: CacheFlow m r => Id IssueOption -> Identifier -> m ()
-clearIssueOptionByIdCache issueOptionId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdKey issueOptionId identifier
+clearIssueOptionByIdCache issueOptionId identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdKey issueOptionId identifier
 
 cacheIssueOptionById :: CacheFlow m r => Id IssueOption -> Identifier -> Maybe IssueOption -> m ()
 cacheIssueOptionById issueOptionId identifier issueOption = do
@@ -90,7 +97,7 @@ clearAllIssueOptionByIdAndLanguageCache issueOptionId identifier =
     clearIssueOptionByIdAndLanguageCache issueOptionId language identifier
 
 clearIssueOptionByIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> m ()
-clearIssueOptionByIdAndLanguageCache issueOptionId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdAndLanguageKey issueOptionId language identifier
+clearIssueOptionByIdAndLanguageCache issueOptionId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdAndLanguageKey issueOptionId language identifier
 
 cacheIssueOptionByIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> Maybe (IssueOption, Maybe IssueTranslation) -> m ()
 cacheIssueOptionByIdAndLanguage issueOptionId language identifier issueOptionTranslation = do
@@ -103,7 +110,7 @@ makeIssueOptionByIdAndLanguageKey id language identifier = show identifier <> ":
 --------- Caching logic for issue option by id and issueCategoryId -------------------
 
 clearIssueOptionByIdAndIssueCategoryIdCache :: CacheFlow m r => Id IssueOption -> Id IssueCategory -> Identifier -> m ()
-clearIssueOptionByIdAndIssueCategoryIdCache issueOptionId issueCategoryId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId identifier
+clearIssueOptionByIdAndIssueCategoryIdCache issueOptionId issueCategoryId identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId identifier
 
 cacheIssueOptionByIdAndIssueCategoryId :: CacheFlow m r => Id IssueOption -> Id IssueCategory -> Identifier -> Maybe IssueOption -> m ()
 cacheIssueOptionByIdAndIssueCategoryId issueOptionId issueCategoryId identifier issueOptionTranslation = do
@@ -121,7 +128,7 @@ clearAllIssueOptionByMessageAndLanguageCache issueMessageId identifier =
     clearIssueOptionByMessageAndLanguageCache issueMessageId language identifier
 
 clearIssueOptionByMessageAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> m ()
-clearIssueOptionByMessageAndLanguageCache issueMessageId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier
+clearIssueOptionByMessageAndLanguageCache issueMessageId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier
 
 cacheAllIssueOptionByMessageAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> [(IssueOption, Maybe IssueTranslation)] -> m ()
 cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier issueOption = do

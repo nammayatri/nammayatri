@@ -164,7 +164,6 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
-    onboardingStages: Maybe [DocumentOnboardingStageAPIEntity]
   # Stage metadata for the onboarding hub, ordered by `order` with hidden stages already dropped.
   # Documents carry the same `documentOnboardingStage`, so that value IS the join key. The wire
   # form is the tagged object {"tag":..,"contents":..}; its DB/show spelling
@@ -179,6 +178,7 @@ types:
     order: Int
     stageDependency: '[DocumentOnboardingStage]'
     media: Maybe [MediaInfo]
+    guidelines: Maybe [ImageInfo]
   # Generic on purpose: an entry may be an image or a video, inferred from the URL.
   MediaInfo:
     title: Text
@@ -191,6 +191,7 @@ types:
     documentFields: Maybe [FieldInfo]
     documentFlowGrouping: DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
+    onboardingStage: Maybe DocumentOnboardingStageAPIEntity
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -208,6 +209,7 @@ types:
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
     doNotValidateDuringOnboarding: Maybe Bool
+    doStrictVerification: Bool
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training,Fleet"
   DocumentFlowGrouping:
@@ -215,7 +217,7 @@ types:
   # FieldObject: children in `fields` become a nested object under `requestKey`.
   # FieldArray:  `fields` describe the shape of EACH element of the array under `requestKey`.
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear,FieldBool"
   # `requestKey` = the JSON key this field's value occupies in register's documentData; `_type` = its JSON value type.
   # Simple:  { _type: FieldText,   requestKey: "identifierNumber" }                    -> { "identifierNumber": "..." }
   # Nested:  { _type: FieldObject, requestKey: "registration", fields: [ ...leaves ] } -> { "registration": { ... } }
@@ -227,6 +229,7 @@ types:
     isMandatory: Bool
     regexValidation: Maybe Text
     description: Maybe Text
+    descriptionUrl: Maybe Text
     placeholder: Maybe Text
     hint: Maybe Text
     dropdownValues: Maybe [Text]
@@ -267,7 +270,7 @@ types:
     metadata: Maybe DocumentMetadata
     commonDocumentData: Maybe Text
   DocumentMetadata:
-    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | VehicleNOCMetadata VehicleNOCDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
   UDYAMDocumentMetadata:
     udyamNumber: Maybe Text
     tdsRate: Maybe Double
@@ -278,7 +281,7 @@ types:
   DLDocumentMetadata:
     driverLicenseNumber: Text
     driverDateOfBirth: Maybe UTCTime
-    dateOfExpiry: UTCTime
+    dateOfExpiry: Maybe UTCTime
   AadhaarDocumentMetadata:
     aadhaarNumber: Maybe Text
     nameOnCard: Maybe Text
@@ -307,7 +310,7 @@ types:
   GSTDocumentMetadata:
     gstNumber: Text
   RCDocumentMetadata:
-    fitnessExpiry: UTCTime
+    fitnessExpiry: Maybe UTCTime
     vehicleNumberPlate: Text
     vehicleVariant: Maybe Text
     vehicleManufacturer: Maybe Text
@@ -330,6 +333,10 @@ types:
     permitNumber: Text
     permitExpiry: UTCTime
     regionCovered: Text
+    rcNumber: Text
+  VehicleNOCDocumentMetadata:
+    nocNumber: Text
+    nocExpiry: UTCTime
     rcNumber: Text
   ResponseStatus:
     enum: "NO_DOC_AVAILABLE,PENDING,VALID,FAILED,INVALID,LIMIT_EXCEED,MANUAL_VERIFICATION_REQUIRED,UNAUTHORIZED,PULL_REQUIRED,CONSENT_DENIED"

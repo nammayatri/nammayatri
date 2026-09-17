@@ -17,7 +17,8 @@
 --   * dimension values must parse (verdict/cancelledBy constructor names, TripCategory,
 --     ServiceTierType, Area, collection mode);
 --   * a referenced faultRule must be an ACTIVE entry of the global registry;
---   * no two ACTIVE rows may share an identical dimension tuple (ambiguous resolution).
+--   * no two ACTIVE rows may share an identical dimension tuple (ambiguous resolution) —
+--     unless their timeBounds make them mutually exclusive (base row + peak-hour override).
 module Domain.Action.Dashboard.Management.CancellationConsequence
   ( getCancellationConsequenceList,
     postCancellationConsequenceCreate,
@@ -41,6 +42,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest), TransporterError (TransporterConfigNotFound))
 import qualified Kernel.Types.Id as ID
+import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Types as DCT
@@ -142,6 +144,16 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
   whenJust apiRow.faultRule $ \ruleName -> do
     registered <- CancellationConsequence.isRegisteredFaultRule ruleName
     unless registered $ throwError (InvalidRequest $ "faultRule '" <> ruleName <> "' is not an active entry of the global fault-rule registry — register it first via /registry/upsert")
+  let timeBounds = fromMaybe TB.Unbounded apiRow.timeBounds
+  validateTimeBounds timeBounds
+  -- rating band: min inclusive, max exclusive, both on the 0–5 rating scale
+  forM_ [("minDriverRating", apiRow.minDriverRating), ("maxDriverRating", apiRow.maxDriverRating)] $ \(name, mbV) ->
+    whenJust mbV $ \v ->
+      unless (v >= 0 && v <= 5) $ throwError (InvalidRequest $ name <> " must be within [0, 5]")
+  case (apiRow.minDriverRating, apiRow.maxDriverRating) of
+    (Just lo, Just hi) ->
+      unless (lo < hi) $ throwError (InvalidRequest "minDriverRating must be strictly below maxDriverRating (min is inclusive, max exclusive)")
+    _ -> pure ()
   let mbCustomerDeduction = toDomainDeduction <$> apiRow.customerDeduction
       mbDriverDeduction = toDomainDeduction <$> apiRow.driverDeduction
   whenJust mbCustomerDeduction $ validateDeduction "customerDeduction"
@@ -168,6 +180,9 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
         vehicleServiceTier = vehicleServiceTier,
         area = area,
         paymentInstrument = paymentInstrument,
+        minDriverRating = apiRow.minDriverRating,
+        maxDriverRating = apiRow.maxDriverRating,
+        timeBounds = timeBounds,
         customerDeduction = mbCustomerDeduction,
         customerCommissionAndTax = toDomainCommissionAndTax <$> apiRow.customerCommissionAndTax,
         driverDeduction = mbDriverDeduction,
@@ -187,13 +202,20 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
       }
 
 -- Two ACTIVE rows with the same dimension tuple would tie in resolution — reject.
+-- timeBounds and the rating band relax this: a bounded/banded row NEXT TO the
+-- unrestricted base row with the same dimensions is the intended override pattern (it
+-- outranks the base inside its window/band), so a clash needs the same restriction class
+-- AND an actual overlap. Caveats: timeBoundsOverlap can't compare BoundedByWeekday vs
+-- BoundedByDay (kernel limitation) — such a pair is admitted and a real overlap ties by
+-- lowest id; likewise a banded-vs-bounded mixed pair is admitted (they differ in
+-- specificity, so resolution stays deterministic).
 validateRow :: ID.Id DMOC.MerchantOperatingCity -> Maybe (ID.Id DCCM.CancellationConsequenceMatrix) -> DCCM.CancellationConsequenceMatrix -> Environment.Flow ()
 validateRow merchantOpCityId mbSelfId row =
   when row.active $ do
     rows <- CQCCM.findAllByMerchantOpCityId merchantOpCityId
-    let clashes = filter (\r -> r.active && Just r.id /= mbSelfId && sameDimensions r row) rows
+    let clashes = filter (\r -> r.active && Just r.id /= mbSelfId && sameDimensions r row && ambiguousRatingBands r row && ambiguousTimeBounds r row) rows
     unless (null clashes) $
-      throwError (InvalidRequest $ "An active row with the same dimension tuple already exists: " <> Text.intercalate ", " (map (.id.getId) clashes))
+      throwError (InvalidRequest $ "An active row with the same dimension tuple (and overlapping rating band / time bounds) already exists: " <> Text.intercalate ", " (map (.id.getId) clashes))
   where
     sameDimensions a b =
       a.faultVerdict == b.faultVerdict
@@ -204,6 +226,37 @@ validateRow merchantOpCityId mbSelfId row =
         && a.vehicleServiceTier == b.vehicleServiceTier
         && a.area == b.area
         && a.paymentInstrument == b.paymentInstrument
+    ambiguousTimeBounds a b =
+      ((a.timeBounds == TB.Unbounded) == (b.timeBounds == TB.Unbounded))
+        && TB.timeBoundsOverlap a.timeBounds b.timeBounds
+    -- [min, max) intervals with Nothing = unbounded on that side: bands overlap unless
+    -- one ends at or below where the other starts
+    ambiguousRatingBands a b =
+      (hasBand a == hasBand b) && bandsOverlap a b
+    hasBand r = isJust r.minDriverRating || isJust r.maxDriverRating
+    bandsOverlap a b = below a.minDriverRating b.maxDriverRating && below b.minDriverRating a.maxDriverRating
+    below mbLo mbHi = case (mbLo, mbHi) of
+      (Just lo, Just hi) -> lo < hi
+      _ -> True
+
+-- A bounded TimeBound with no usable window can never match — reject the misconfig
+-- instead of storing a row that silently never fires.
+validateTimeBounds :: TB.TimeBound -> Environment.Flow ()
+validateTimeBounds = \case
+  TB.Unbounded -> pure ()
+  TB.BoundedByWeekday peaks -> do
+    let windows = concat [peaks.monday, peaks.tuesday, peaks.wednesday, peaks.thursday, peaks.friday, peaks.saturday, peaks.sunday]
+    when (null windows) $ bad "BoundedByWeekday has no time windows on any day"
+    checkWindows windows
+  TB.BoundedByDay days -> do
+    let windows = concatMap snd days
+    when (null days || null windows) $ bad "BoundedByDay has no dates/time windows"
+    checkWindows windows
+  where
+    -- start == end never matches (interval ends are strict); start > end is the
+    -- legitimate midnight-wrap form and is allowed
+    checkWindows = mapM_ (\(s, e) -> when (s == e) $ bad "a time window has equal start and end, it would never match")
+    bad msg = throwError (InvalidRequest $ "timeBounds: " <> msg)
 
 allowedFaultVerdicts :: [Text]
 allowedFaultVerdicts = ["DriverAtFault", "CustomerAtFault", "SharedFault", "NoFault"]
@@ -273,6 +326,9 @@ toListItem row =
             vehicleServiceTier = show <$> row.vehicleServiceTier,
             area = show <$> row.area,
             paymentInstrument = show <$> row.paymentInstrument,
+            minDriverRating = row.minDriverRating,
+            maxDriverRating = row.maxDriverRating,
+            timeBounds = Just row.timeBounds,
             customerDeduction = toAPIDeduction <$> row.customerDeduction,
             customerCommissionAndTax = toAPICommissionAndTax <$> row.customerCommissionAndTax,
             driverDeduction = toAPIDeduction <$> row.driverDeduction,

@@ -40,7 +40,7 @@ findAllInForIssueReportId mediaFileIds issueReportId identifier =
 --------- Caching logic for media file by id -------------------
 
 clearMediaFileByIdCache :: CacheFlow m r => Identifier -> Id MediaFile -> m ()
-clearMediaFileByIdCache identifier mediaFileId = Hedis.withCrossAppRedis . Hedis.del $ makeMediaFileByIdKey mediaFileId identifier
+clearMediaFileByIdCache identifier mediaFileId = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeMediaFileByIdKey mediaFileId identifier
 
 cacheMediaFileById :: CacheFlow m r => Id MediaFile -> Identifier -> Maybe MediaFile -> m ()
 cacheMediaFileById mediaFileId identifier mediaFile = do
@@ -53,7 +53,7 @@ makeMediaFileByIdKey id identifier = show identifier <> ":CachedQueries:MediaFil
 --------- Caching logic for media files by issue report id -------------------
 
 clearMediaFileByIssueReportIdCache :: CacheFlow m r => Identifier -> Id IssueReport -> m ()
-clearMediaFileByIssueReportIdCache identifier issueReportId = Hedis.withCrossAppRedis . Hedis.del $ makeMediaFileByIssueReportIdKey issueReportId identifier
+clearMediaFileByIssueReportIdCache identifier issueReportId = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeMediaFileByIssueReportIdKey issueReportId identifier
 
 cacheMediaFileByIssueReportId :: CacheFlow m r => Id IssueReport -> Identifier -> [MediaFile] -> m ()
 cacheMediaFileByIssueReportId issueReportId identifier mediaFiles = do

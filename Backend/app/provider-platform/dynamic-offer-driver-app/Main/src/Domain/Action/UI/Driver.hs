@@ -246,6 +246,7 @@ import Lib.Payment.Domain.Types.PaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTransaction
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (ExecutionResult (..))
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -281,6 +282,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OneShotAssign as OneShot
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -344,6 +346,7 @@ import qualified Tools.Auth as Auth
 import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
@@ -704,9 +707,9 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 validateUpdateDriverReqWithLooseCheck :: Validate UpdateDriverReq
 validateUpdateDriverReqWithLooseCheck UpdateDriverReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ NotEmpty `And` P.nameWithNumber,
-      validateField "middleName" middleName $ InMaybe P.nameWithNumber,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithNumber
+    [ validateField "firstName" firstName $ InMaybe $ NotEmpty `And` P.nameWithSymbols,
+      validateField "middleName" middleName $ InMaybe P.nameWithSymbols,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.nameWithSymbols
     ]
 
 type UpdateDriverRes = DriverInformationRes
@@ -1004,6 +1007,8 @@ checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId mbC
 
 setActivity ::
   ( BeamFlow m r,
+    OnboardingFlow m r,
+    Forkable m,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -1024,7 +1029,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   unless isLocked $ throwError $ DriverActivityUpdateInProgress personId.getId
   finally
     ( do
-        void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let driverId = cast personId
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1095,6 +1100,11 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                           }
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+          when (driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER) $ do
+            mbAnyFleetAssociation <- QFDA.findOneByDriverIdWithStatus driverId
+            when (isNothing mbAnyFleetAssociation) $
+              fork "setActivity:resetOnboardingAs" $
+                SOnboardingComms.setOnboardingAs transporterConfig person DriverInfo.INDIVIDUAL
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline
@@ -1719,7 +1729,7 @@ buildOperatorInfo person = do
         createdAt = person.createdAt
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
     if mbFleetInfo == Just True || driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER
@@ -1776,7 +1786,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
     if merchant.onlinePayment
       then do
         mbDriverBankAccount <- QDBA.findByPrimaryKey id
-        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, ..})
+        forM mbDriverBankAccount $ \DOBA.DriverBankAccount {..} -> do
+          stripeLegalEntityName <- TPayment.fetchLegalEntityName merchantOpCityId paymentMode
+          pure $ DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, stripeLegalEntityName, ..}
       else return Nothing
   (refCode, dynamicReferralCode) <-
     case referralCode of
@@ -1969,7 +1981,19 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
+              DTC.EstimateBased _ -> do
+                let oneShotAssignAction driverQuote =
+                      OneShot.oneShotAssign
+                        OneShot.OneShotAssignReq
+                          { merchant = merchant,
+                            searchReq = searchReq,
+                            searchTry = searchTry,
+                            driverQuote = driverQuote,
+                            driver = driver,
+                            clientId = clientId,
+                            transporterConfig = transporterConfig
+                          }
+                acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
@@ -2098,13 +2122,29 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                   <> show sReqFD.batchNumber
                   <> " epoch="
                   <> show epoch
-              createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 $
-                SendSearchRequestToDriverJobData
-                  { searchTryId = searchTry.id,
-                    estimatedRideDistance = searchReq.estimatedDistance,
-                    batchEpoch = Just epoch,
-                    topUpSize = Nothing
-                  }
+              let advanceJobData =
+                    SendSearchRequestToDriverJobData
+                      { searchTryId = searchTry.id,
+                        estimatedRideDistance = searchReq.estimatedDistance,
+                        batchEpoch = Just epoch,
+                        topUpSize = Nothing
+                      }
+              -- Dispatch the next batch inline (we are already inside a fork), like the
+              -- continuous-batching top-up above, instead of paying the scheduler's
+              -- enqueue -> producer-poll round trip exactly when every driver has already
+              -- rejected. The job's ReSchedule result must be converted back into a
+              -- scheduled job here, or the batch chain would end with this batch.
+              res <- withTryCatch "inlineEarlyBatchAdvance" $ SSRD.processSendSearchRequestJob ("inline-early-advance-" <> searchTry.id.getId) advanceJobData
+              case res of
+                Right (ReSchedule scheduleTime) -> do
+                  now' <- getCurrentTime
+                  createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) (max 1 (diffUTCTime scheduleTime now')) advanceJobData
+                Right _ -> pure ()
+                Left err -> do
+                  -- The epoch is already bumped (the pending job is orphaned), so the chain
+                  -- must survive an inline failure: fall back to the scheduler path.
+                  logError $ "inlineEarlyBatchAdvance failed, falling back to scheduled dispatch: " <> show err
+                  createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 advanceJobData
     callWithErrorHandling func = do
       exep <- withTryCatch "callWithErrorHandling:respondQuote" func
       case exep of
@@ -2156,11 +2196,11 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
             CS.markBookingAssignmentCompleted booking.id
             void $ addScheduledBookingInRedis booking
             throwM exc
-        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
         -- gate write stays under the lock so concurrent accepts/releases cannot lose the min
         updateLatestScheduledAsMin booking
         pure res
-      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
@@ -2698,7 +2738,13 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   --------- to crub up cases related to double debit ----------
   successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
-  forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
+  -- collectedAt must be when the payment actually succeeded (the SUCCESS
+  -- invoice's updatedAt), not "now": this path can run days after a missed
+  -- clear, and stamping "now" lands the fee in the wrong collection window
+  -- in finance reports.
+  forM_ allPaidFeeNotMarkedCleared $ \feeId -> do
+    let paidAt = maybe now minimum $ nonEmpty [inv.updatedAt | inv <- concat successfulInvoices, inv.driverFeeId == feeId]
+    QDF.updateClearedStatusByIdsWithCollectedAt [feeId] paidAt now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
   Redis.runInMasterCloudRedisCell $
@@ -3203,7 +3249,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}
 
     possibleScheduledTripCategories :: [DTC.TripCategory]
-    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.IntercityRental DTC.OnDemandStaticOffer Nothing, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
 
     sortBookingsByDistance :: [ScheduleBooking] -> [ScheduleBooking]
     sortBookingsByDistance = sortBy (compareDistances `on` (\booking -> booking.bookingDetails.distanceToPickup))

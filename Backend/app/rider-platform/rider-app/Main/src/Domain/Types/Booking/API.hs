@@ -60,6 +60,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -171,7 +172,8 @@ data BookingAPIEntity = BookingAPIEntity
     cardInfo :: Maybe RideCardInfo,
     -- | True while the rider is inside a silent reallocation window: the driver cancelled
     -- and a new one is being found, but the app should keep showing the trip as assigned.
-    isSilentReallocation :: Maybe Bool
+    isSilentReallocation :: Maybe Bool,
+    parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -441,7 +443,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
         cardInfo = cardInfo,
-        isSilentReallocation = Nothing
+        isSilentReallocation = Nothing,
+        parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -682,34 +685,39 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
       let currency = booking.estimatedFare.currency
           mkPriceEntity = mkPriceAPIEntity . mkPrice (Just currency)
       case mbOfferEntity of
-        Just offerEntity ->
+        Just offerEntity -> do
           let estimatedOfferEntity = fromMaybe offerEntity mbBookingOfferEntity
-           in return $
-                Just $
-                  SOffer.OffersRespAPIEntity
-                    { offers =
-                        [ SOffer.OfferRespAPIEntity
-                            { offerId = offerEntity.offerId,
-                              offerTitle = offerEntity.offerTitle,
-                              offerDescription = offerEntity.offerDescription,
-                              offerTnc = offerEntity.offerTnc,
-                              offerSponsoredBy = offerEntity.offerSponsoredBy,
-                              offerCode = offerEntity.offerCode,
-                              autoApply = offerEntity.autoApply,
-                              isHidden = offerEntity.isHidden,
-                              amountSaved = offerEntity.amountSaved,
-                              postOfferAmount = offerEntity.postOfferAmount,
-                              estimatedAmountSaved = estimatedOfferEntity.amountSaved,
-                              estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount
-                            }
-                        ],
-                      totalAmountSaved = offerEntity.amountSaved,
-                      totalPostOfferAmount = offerEntity.postOfferAmount,
-                      totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
-                      totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
-                      estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
-                      estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
-                    }
+          return $
+            Just $
+              SOffer.OffersRespAPIEntity
+                { offers =
+                    [ SOffer.OfferRespAPIEntity
+                        { offerId = offerEntity.offerId,
+                          offerTitle = offerEntity.offerTitle,
+                          offerDescription = offerEntity.offerDescription,
+                          offerTnc = offerEntity.offerTnc,
+                          offerSponsoredBy = offerEntity.offerSponsoredBy,
+                          offerCode = offerEntity.offerCode,
+                          autoApply = offerEntity.autoApply,
+                          isHidden = offerEntity.isHidden,
+                          amountSaved = offerEntity.amountSaved,
+                          postOfferAmount = offerEntity.postOfferAmount,
+                          estimatedAmountSaved = estimatedOfferEntity.amountSaved,
+                          estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount,
+                          offerType = Just (if offerEntity.payoutAmount > 0 then DOffer.CASHBACK else DOffer.DISCOUNT),
+                          minimumAmount = Nothing,
+                          frequencyType = offerEntity.frequencyType,
+                          appliedCount = offerEntity.appliedCount,
+                          maxApplyCount = offerEntity.maxApplyCount
+                        }
+                    ],
+                  totalAmountSaved = offerEntity.amountSaved,
+                  totalPostOfferAmount = offerEntity.postOfferAmount,
+                  totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
+                  totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
+                  estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
+                  estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
+                }
         Nothing -> return Nothing
   return $
     RideAPIEntity

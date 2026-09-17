@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride_related_notification_config ADD COLUMN o
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride_related_notification_config ADD COLUMN event_time text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride_related_notification_config ADD COLUMN repeat_interval integer ;

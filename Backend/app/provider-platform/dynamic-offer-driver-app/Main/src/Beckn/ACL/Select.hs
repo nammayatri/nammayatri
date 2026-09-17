@@ -67,6 +67,7 @@ buildSelectReqV2 subscriber req = do
   let customerExtraFeeFromTag = getCustomerExtraFeeV2 item.itemTags
       customerExtraFeeFromBreakup = getCustomerSelectedFareFromBreakup order.orderQuote
       customerExtraFee = customerExtraFeeFromTag <|> customerExtraFeeFromBreakup
+      negativeFareAdjustment = getNegativeFareAdjustmentV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
@@ -85,6 +86,7 @@ buildSelectReqV2 subscriber req = do
     _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
+      customerName = getCustomerName fulfillment
   paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   -- Use contextBapUri if present, otherwise fall back to subscriber.subscriber_url
   bapUri <- case context.contextBapUri of
@@ -99,8 +101,14 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
+        -- Layer 1 has no notion of a Quote-based negotiated bid; only the MSIL
+        -- pilot's Layer 2 parser (Beckn.OnDemand.Transformer.MSIL.Select) fills
+        -- this in, from item.price.value, for pilot merchants.
+        negotiatedFare = Nothing,
+        negativeFareAdjustment = negativeFareAdjustment,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
+        customerName = customerName,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
@@ -118,6 +126,11 @@ getBookAnyEstimates tagGroups = do
 getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
 getCustomerExtraFeeV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.CUSTOMER_TIP tagGroups
+  highPrecMoneyFromText tagValue
+
+getNegativeFareAdjustmentV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
+getNegativeFareAdjustmentV2 tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.NEGATIVE_FARE_ADJUSTMENT tagGroups
   highPrecMoneyFromText tagValue
 
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
@@ -202,6 +215,9 @@ cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do
   let msgKey = mkTxnIdKey transactionId
   Hedis.setExp msgKey messageId 3600
+
+getCustomerName :: Maybe Spec.Fulfillment -> Maybe Text
+getCustomerName mbFulfillment = mbFulfillment >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
 
 getCustomerPhoneNumber :: Maybe Spec.Fulfillment -> Maybe Text
 getCustomerPhoneNumber (Just fulfillment) = fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone)

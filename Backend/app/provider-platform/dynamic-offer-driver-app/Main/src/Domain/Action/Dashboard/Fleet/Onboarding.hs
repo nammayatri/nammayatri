@@ -78,11 +78,11 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
     Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just [FLEET_BUSINESS]}) Nothing
     _ -> pure []
 
-  fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
-
   let requestorRole = (castFleetRoleToPersonRole <$> role) <|> ((.role) <$> mbPerson)
 
-  Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle requestorRole
+  (Onboarding.DocumentVerificationConfigList {..}, onboardingStages) <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle requestorRole
+  let fleetStages = map castOnboardingStageAPIEntity onboardingStages
+  fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage fleetStages) fleetConfigsRaw
   let castConfigs = fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
@@ -94,8 +94,7 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
         cabs = fmap castConfigs cabs,
         trucks = fmap castConfigs trucks,
         boat = fmap castConfigs boat,
-        toto = fmap castConfigs toto,
-        onboardingStages = fmap (map castOnboardingStageAPIEntity) onboardingStages
+        toto = fmap castConfigs toto
       }
 
 castFleetRoleToPersonRole :: CommonOnboarding.Role -> Role
@@ -134,7 +133,9 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       isReminderSupported = isReminderSupported,
       isApprovalSupported = isApprovalSupported,
       rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
-      doNotValidateDuringOnboarding = doNotValidateDuringOnboarding
+      doNotValidateDuringOnboarding = doNotValidateDuringOnboarding,
+      doStrictVerification = doStrictVerification,
+      onboardingStage = castOnboardingStageAPIEntity <$> onboardingStage
     }
 
 castOnboardingStageAPIEntity :: Onboarding.DocumentOnboardingStageAPIEntity -> CommonOnboarding.DocumentOnboardingStageAPIEntity
@@ -144,6 +145,7 @@ castOnboardingStageAPIEntity Onboarding.DocumentOnboardingStageAPIEntity {..} =
       stageDependency = map SDO.castDocumentOnboardingStage stageDependency,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
       media = fmap (map castMediaInfo) media,
+      guidelines = fmap (map SDO.castImageInfo) guidelines,
       ..
     }
 
@@ -383,6 +385,13 @@ castDocumentMetadata = \case
           permitExpiry = p.permitExpiry,
           regionCovered = p.regionCovered,
           rcNumber = p.rcNumber
+        }
+  VehicleDocs.VehicleNOCMetadata n ->
+    CommonOnboarding.VehicleNOCMetadata
+      CommonOnboarding.VehicleNOCDocumentMetadata
+        { nocNumber = n.nocNumber,
+          nocExpiry = n.nocExpiry,
+          rcNumber = n.rcNumber
         }
   VehicleDocs.UDYAMMetadata u ->
     CommonOnboarding.UDYAMMetadata

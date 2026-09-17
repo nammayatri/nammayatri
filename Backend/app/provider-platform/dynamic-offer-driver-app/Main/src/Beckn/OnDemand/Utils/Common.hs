@@ -70,11 +70,13 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
 data Pricing = Pricing
@@ -107,6 +109,7 @@ data Pricing = Pricing
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    negativeFareSuggestion :: Maybe HighPrecMoney,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double,
@@ -565,9 +568,38 @@ mkStopsOUS booking ride rideOtp mEndOtp =
 
 type IsValueAddNP = Bool
 
+-- | ONDC v2.1.0 fulfillments.agent.person.creds. MEMBERSHIP_TIER is only sent for
+-- cities piloting the scheduled-category signal (see TransporterConfig.enableOndcScheduledRideSupport).
+-- ACHIEVEMENTS/BADGES are intentionally omitted -- no domain source for them yet.
+mkAgentCreds :: UTCTime -> Bool -> SP.Person -> Maybe DDriverStats.DriverStats -> [Spec.Cred]
+mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats =
+  catMaybes
+    [ if isOndcScheduledRideSupportEnabled
+        then Just Spec.Cred {Spec.credType = Just "MEMBERSHIP_TIER", Spec.credId = Just "Verified"}
+        else Nothing,
+      Just Spec.Cred {Spec.credType = Just "ACTIVE_SINCE", Spec.credId = Just (activeSinceDuration now driver.createdAt)},
+      mbDriverStats <&> \driverStats ->
+        Spec.Cred {Spec.credType = Just "TOTAL_NUMBER_OF_TRIPS", Spec.credId = Just (show driverStats.totalRides)}
+    ]
+
+-- | ISO-8601 period broken into years, months, and days (e.g. "P5Y3M10D"),
+-- matching the ONDC doc's example format. Uses a 365-day year and 30-day
+-- month approximation; omits any component that's zero, falling back to
+-- "P0D" when the whole span is under a day.
+activeSinceDuration :: UTCTime -> UTCTime -> Text
+activeSinceDuration now createdAt =
+  let totalDays = max 0 (floor (diffUTCTime now createdAt / 86400) :: Int)
+      (years, remAfterYears) = totalDays `divMod` 365
+      (months, days) = remAfterYears `divMod` 30
+      durationParts =
+        [(years, "Y" :: Text), (months, "M"), (days, "D")]
+          & filter ((> 0) . fst)
+          & map (\(n, unit) -> show n <> unit)
+   in "P" <> if null durationParts then "0D" else mconcat durationParts
+
 -- common for on_update & on_status
 mkFulfillmentV2 ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Maybe SP.Person ->
   Maybe DDriverStats.DriverStats ->
   DRide.Ride ->
@@ -587,7 +619,10 @@ mkFulfillmentV2 ::
   m Spec.Fulfillment
 mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
-  let rideOtp = fromMaybe ride.otp ride.endOtp
+  now <- getCurrentTime
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
@@ -607,7 +642,8 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                             emptyImage {Spec.imageUrl = Just mbImage'},
                         Spec.personGender = mbDriver <&> \driver -> show driver.gender,
                         Spec.personName = mbDInfo >>= Just . (.name),
-                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
+                        Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
                       }
               },
         fulfillmentVehicle =
@@ -877,6 +913,10 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
@@ -912,6 +952,10 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
@@ -946,6 +990,10 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
         _ -> True
 
@@ -955,6 +1003,7 @@ type MerchantShortId = Text
 tripCategoryToCategoryCode :: DT.TripCategory -> Text
 tripCategoryToCategoryCode = \case
   DT.Rental _ -> "ON_DEMAND_RENTAL"
+  DT.IntercityRental _ _ -> "ON_DEMAND_RENTAL"
   _ -> "ON_DEMAND_TRIP"
 
 tfItems :: DBooking.Booking -> MerchantShortId -> Maybe Meters -> Maybe FarePolicyD.FarePolicy -> Maybe Text -> Maybe [Spec.Item]
@@ -1047,6 +1096,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
+      negativeFareSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
@@ -1077,6 +1127,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fareSettlementType = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
+      negativeFareSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
@@ -1107,6 +1158,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
           Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
+          Tags.NEGATIVE_FARE_SUGGESTION Tags.~=? guardVNP (show <$> pricing.negativeFareSuggestion),
           Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar)
         ]
   where
@@ -1223,7 +1275,7 @@ tfProvider becknConfig =
       }
 
 mkFulfillmentV2SoftUpdate ::
-  (MonadFlow m, EncFlow m r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   Maybe SP.Person ->
   Maybe DDriverStats.DriverStats ->
   DRide.Ride ->
@@ -1243,7 +1295,10 @@ mkFulfillmentV2SoftUpdate ::
   m Spec.Fulfillment
 mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP newDestination isAlreadyFav favCount = do
   mbDInfo <- driverInfo
-  let rideOtp = fromMaybe ride.otp ride.endOtp
+  now <- getCurrentTime
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
@@ -1266,7 +1321,8 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                             emptyImage {Spec.imageUrl = Just mbImage'},
                         Spec.personGender = mbDriver <&> \driver -> show driver.gender, -- ONDC v2.1.0: populate driver gender
                         Spec.personName = mbDInfo >>= Just . (.name),
-                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                        Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
+                        Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
                       }
               },
         fulfillmentVehicle =
@@ -1378,6 +1434,14 @@ getRiderName req = do
 
 getCancellationReason :: Spec.CancelReq -> Maybe Text
 getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
+
+getOndcCancellationReasonId :: Spec.CancelReq -> Maybe Text
+getOndcCancellationReasonId req =
+  (req.cancelReqMessage.cancelReqMessageCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode))
+    <|> req.cancelReqMessage.cancelReqMessageCancellationReasonId
+
+getCancellationReasonLongDesc :: Spec.CancelReq -> Maybe Text
+getCancellationReasonLongDesc req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorLongDesc)
 
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState = mkFulfillmentStateCode . show

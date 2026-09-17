@@ -37,6 +37,8 @@ data SearchTryT f = SearchTryT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f Kernel.Prelude.Text,
+    negativeFareAdjustment :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
+    negativeFareAdjustmentAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     petCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     petChargesAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

@@ -103,7 +103,7 @@ tfPerson taggings riderGender = do
         (Just base, _ : _) -> Just (base <> disabilityTagGroups)
         (Nothing, _ : _) -> Just disabilityTagGroups
         _ -> basePersonTags
-      returnData = BecknV2.OnDemand.Types.Person {personGender = riderGender, personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
+      returnData = BecknV2.OnDemand.Types.Person {personCreds = Nothing, personGender = riderGender, personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing

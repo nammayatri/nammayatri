@@ -631,12 +631,12 @@ onUpdate = \case
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
-      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing Nothing person.language booking.configInExperimentVersions
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
-      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
   OUValidatedPhoneCallCompletedEventReq ValidatedPhoneCallCompletedEventReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     whenJust mbRide $ \ride -> QRide.updateTalkedWithDriver (Just True) ride.id

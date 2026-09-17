@@ -39,6 +39,14 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 findAllBySearchRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m [Quote]
 findAllBySearchRequestId (Id srId) = findAllWithKV [Se.Is BeamQSZ.searchRequestId $ Se.Eq srId]
 
+updateEstimatedFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> HighPrecMoney -> m ()
+updateEstimatedFare (Id quoteId) estimatedFare =
+  updateOneWithKV
+    [ Se.Set BeamQSZ.estimatedFare $ roundToIntegral estimatedFare,
+      Se.Set BeamQSZ.estimatedFareAmount $ Just estimatedFare
+    ]
+    [Se.Is BeamQSZ.id $ Se.Eq quoteId]
+
 {-
   The table named quote_special_zone in the QuoteT database was originally created exclusively for handling
   data pertaining to special zones. This naming convention has been retained for reasons of backward compatibility.

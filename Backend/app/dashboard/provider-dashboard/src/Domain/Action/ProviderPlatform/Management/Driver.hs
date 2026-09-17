@@ -16,6 +16,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
   ( getDriverDocumentsInfo,
     getDriverAadhaarInfo,
     getDriverAadhaarInfobyMobileNumber,
+    getDriverLoginOtp,
     getDriverList,
     getDriverActivity,
     postDriverDisable,
@@ -55,6 +56,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverBulkSubscriptionServiceUpdate,
     getDriverStats,
     getDriverEarnings,
+    getDriverFyEarnings,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
@@ -116,6 +118,11 @@ getDriverAadhaarInfobyMobileNumber :: ShortId DM.Merchant -> City.City -> ApiTok
 getDriverAadhaarInfobyMobileNumber merchantShortId opCity apiTokenInfo phoneNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAadhaarInfobyMobileNumber) phoneNo
+
+getDriverLoginOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverLoginOtpRes
+getDriverLoginOtp merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbDriverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverLoginOtp) mbMobileNumber mbMobileCountryCode mbDriverId
 
 getDriverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow Common.DriverListRes
 getDriverList merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo mbFleetSeeker = do
@@ -451,3 +458,8 @@ postDriverAssociationChange merchantShortId opCity apiTokenInfo subjectId req = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just (Id subjectId)) Nothing (Just req)
   T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAssociationChange) apiTokenInfo.personId.getId subjectId req)
+
+getDriverFyEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Int -> Id Common.Driver -> Environment.Flow Common.FyEarningsRes)
+getDriverFyEarnings merchantShortId opCity apiTokenInfo mbQuarter financialYear entityId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverFyEarnings) mbQuarter financialYear entityId apiTokenInfo.personId.getId

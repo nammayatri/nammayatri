@@ -62,7 +62,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Map as Map
-import Kernel.Beam.Functions (ToTType' (..), findAllWithKV, updateWithKV)
+import Kernel.Beam.Functions (ToTType' (..), findAllWithKV, findAllWithOptionsKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
@@ -635,6 +635,11 @@ findByAccountWithFilters accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceT
       )
       entries
 
+-- | Newest-first (createdAt DESC) entries touching an account, with limit/offset
+--   applied by the query itself. Callers must NOT slice the result themselves:
+--   the plain findAll has no ORDER BY, so slicing it hands back an arbitrary
+--   window of the account's history (physical row order in practice, i.e. the
+--   oldest entries) and recent entries never surface on the first page.
 findByAccountWithFiltersAndConcernedIndividual ::
   (BeamFlow.BeamFlow m r) =>
   Id Account ->
@@ -645,9 +650,11 @@ findByAccountWithFiltersAndConcernedIndividual ::
   Maybe EntryStatus ->
   Maybe [Text] ->
   Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
   m [LedgerEntry]
-findByAccountWithFiltersAndConcernedIndividual accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes mbConcernedIndividualId =
-  findAllWithKV
+findByAccountWithFiltersAndConcernedIndividual accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes mbConcernedIndividualId mbLimit mbOffset =
+  findAllWithOptionsKV
     [ Se.And $
         [ Se.Or
             [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
@@ -662,6 +669,9 @@ findByAccountWithFiltersAndConcernedIndividual accountId mbFrom mbTo mbMin mbMax
           <> [Se.Is BeamLE.referenceType $ Se.In refs | Just refs <- [mbReferenceTypes]]
           <> [Se.Is BeamLE.concernedIndividualId $ Se.Eq (Just cid) | Just cid <- [mbConcernedIndividualId]]
     ]
+    (Se.Desc BeamLE.createdAt)
+    mbLimit
+    mbOffset
 
 --------------------------------------------------------------------------------
 -- AGGREGATIONS (Common operations domain needs)

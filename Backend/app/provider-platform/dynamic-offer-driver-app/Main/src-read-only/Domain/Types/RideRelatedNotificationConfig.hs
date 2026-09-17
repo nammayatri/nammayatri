@@ -8,6 +8,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -21,6 +22,7 @@ data RideRelatedNotificationConfig = RideRelatedNotificationConfig
     onBookingStatus :: Domain.Types.Booking.BookingStatus,
     onScheduledBooking :: Kernel.Prelude.Bool,
     onlyIfOffline :: Kernel.Prelude.Bool,
+    repeatInterval :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     timeDiffEvent :: Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -34,8 +36,8 @@ data NotificationType = SMS | PN | WHATSAPP | OVERLAY | CALL deriving (Eq, Ord, 
 
 data TimeDiffEvent = RIDE_ASSIGNED | PICKUP_TIME | START_TIME | END_TIME deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EventTime))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EventTime)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TimeDiffEvent))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TimeDiffEvent)

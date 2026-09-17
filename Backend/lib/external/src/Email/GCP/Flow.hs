@@ -18,6 +18,7 @@ module Email.GCP.Flow
     sendMagicLinkEmail,
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
+    sendEmailWithAttachments,
   )
 where
 
@@ -196,3 +197,24 @@ sendEmailWithAttachment apiUrl from to subject bodyText pdfPath fileName = do
       emailData = buildEmail from to subject bodyText (Just [attachment])
 
   sendViaSendGrid apiUrl emailData
+
+sendEmailWithAttachments ::
+  String ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  [Email.EmailAttachment] ->
+  IO ()
+sendEmailWithAttachments apiUrl from to subject bodyText attachments = do
+  let sgAttachments = map toSg attachments
+      emailData = buildEmail from to subject bodyText (Just sgAttachments)
+  sendViaSendGrid apiUrl emailData
+  where
+    toSg a =
+      Attachment
+        { attachmentContent = TE.decodeUtf8 . B64.encode $ a.content,
+          filename = a.filename,
+          attachmentType = a.contentType,
+          disposition = "attachment"
+        }

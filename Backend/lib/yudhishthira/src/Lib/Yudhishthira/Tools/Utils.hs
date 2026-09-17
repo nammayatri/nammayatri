@@ -101,8 +101,30 @@ mkTagNameValueExpiry ::
   Maybe Hours ->
   UTCTime ->
   LYT.TagNameValueExpiry
-mkTagNameValueExpiry (LYT.TagName tagName) tagValue mbValidity now = do
-  let mbExpiredAt = mbValidity <&> (\validity -> addUTCTime (3600 * fromIntegral validity) now)
+mkTagNameValueExpiry tagName tagValue mbValidity now =
+  mkTagNameValueExpiryAt tagName tagValue $
+    mbValidity <&> \validity -> addUTCTime (3600 * fromIntegral validity) now
+
+-- | Minute-granularity sibling of 'mkTagNameValueExpiry', for tags whose lifetime is
+-- shorter than the 'Hours' the NammaTag validity column carries (the stored expiry is
+-- an ISO timestamp, so the wire format is unchanged).
+mkTagNameValueExpiryInMinutes ::
+  LYT.TagName ->
+  LYT.TagValue ->
+  Maybe Minutes ->
+  UTCTime ->
+  LYT.TagNameValueExpiry
+mkTagNameValueExpiryInMinutes tagName tagValue mbValidity now =
+  mkTagNameValueExpiryAt tagName tagValue $
+    mbValidity <&> \validity -> addUTCTime (60 * fromIntegral validity.getMinutes) now
+
+-- | Shared builder: 'Nothing' expiry means the tag never expires on its own.
+mkTagNameValueExpiryAt ::
+  LYT.TagName ->
+  LYT.TagValue ->
+  Maybe UTCTime ->
+  LYT.TagNameValueExpiry
+mkTagNameValueExpiryAt (LYT.TagName tagName) tagValue mbExpiredAt = do
   let showTagValue = case tagValue of
         LYT.TextValue tagValueText -> tagValueText
         LYT.NumberValue tagValueDouble -> show tagValueDouble
@@ -217,6 +239,14 @@ elemTagNameValue tag tags = convertToTagNameValue tag `elem` (convertToTagNameVa
 -- | Match only by tagName
 elemTagName :: (HasTagNameValue tag1, HasTagNameValue tag2) => tag1 -> [tag2] -> Bool
 elemTagName tag tags = parseTagName tag `elem` (parseTagName <$> tags)
+
+-- | True if `value` is one of the "&"-separated values stored under `tagName`.
+elemTagValue :: HasTagNameValue tag => LYT.TagName -> Text -> [tag] -> Bool
+elemTagValue (LYT.TagName name) value tags = any matches tags
+  where
+    matches tag = case T.splitOn "#" (LYT.getTagNameValue (convertToTagNameValue tag)) of
+      (tagName : tagValue : _) -> tagName == name && value `elem` T.splitOn "&" tagValue
+      _ -> False
 
 -- this way older value will be replaced to new one with upated expiry
 replaceTagNameValue :: HasTagNameValue tag => Maybe [tag] -> tag -> [tag]

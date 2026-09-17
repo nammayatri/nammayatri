@@ -325,7 +325,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         whenJust mbPersonId $ \personId -> do
           mbVehicle <- QVehicle.findById personId
           when (isNothing mbVehicle && allVehicleDocsVerified) $
-            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity.merchantId merchantOpCity.id registrationNo)
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -678,7 +678,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QDRC.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -714,7 +714,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          QDRC.endAllRCAssociationsForDriver person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
         verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success

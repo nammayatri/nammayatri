@@ -30,6 +30,7 @@ data FareParameters = FareParameters
   { id :: Id FareParameters,
     driverSelectedFare :: Maybe HighPrecMoney,
     customerExtraFee :: Maybe HighPrecMoney,
+    negativeFareAdjustment :: Maybe HighPrecMoney,
     serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     stopCharges :: Maybe HighPrecMoney,
@@ -59,22 +60,29 @@ data FareParameters = FareParameters
     platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
+    tdsAmount :: Maybe HighPrecMoney,
+    tdsRate :: Maybe Double,
+    tdsProcessedAt :: Maybe UTCTime,
     platformFeeChargesBy :: FP.PlatformFeeMethods,
     currency :: Currency,
     updatedAt :: UTCTime,
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
+    customerGateFeeItems :: [CustomerGateFeeItem],
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     driverCancellationNotAllowed :: Maybe Bool,
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available
     paymentProcessingFee :: Maybe HighPrecMoney,
+    -- | VAT on the payment charge. 'Nothing' on rows priced before the split,
+    --   where 'paymentProcessingFee' still holds the VAT-inclusive blend.
+    paymentProcessingFeeVat :: Maybe HighPrecMoney,
     isVatTaxType :: Maybe Bool,
-    -- | Canonical eight-slot fare-breakup partition, populated by
+    -- | Canonical fare-breakup partition, populated by
     --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
-    --   the 10 equals the fare sum. Ride is split by whether the
+    --   the 10, plus the payment charge and its VAT above, equals the fare sum. Ride is split by whether the
     --   customer offer discount applies; toll and cancellation are
     --   separate buckets. Each slot is 'Maybe' so pure GST mode
     --   (no V2 classification) can leave them 'Nothing'.
@@ -88,13 +96,24 @@ data FareParameters = FareParameters
     cancellationTax :: Maybe HighPrecMoney,
     parkingChargeTaxExclusive :: Maybe HighPrecMoney,
     parkingChargeTax :: Maybe HighPrecMoney,
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    -- | The BAP-negotiated fare's delta from the estimated fare at
+    -- /select (ONDC v2.1.0 Pre-Order Bid, MSIL pilot only) -- kept as its
+    -- own field rather than folded into baseFare, so how much was
+    -- negotiated for this transaction stays visible on its own.
+    negotiatedFareDelta :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data CardCharge = CardCharge
   { onFare :: Maybe HighPrecMoney,
     fixed :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data CustomerGateFeeItem = CustomerGateFeeItem
+  { itemName :: Text,
+    amount :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

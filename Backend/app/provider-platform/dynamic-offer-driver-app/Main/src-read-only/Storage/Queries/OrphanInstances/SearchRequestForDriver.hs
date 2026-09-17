@@ -22,10 +22,10 @@ import qualified Storage.Queries.Transformers.SearchRequestForDriver
 
 instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDriver.SearchRequestForDriver where
   fromTType' (Beam.SearchRequestForDriverT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId
     pure $
       Just
@@ -41,11 +41,11 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             cancellationRatio = cancellationRatio,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientSdkVersion = clientSdkVersion',
             coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
             commissionCharges = commissionCharges,
-            conditionalCharges = Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges,
+            conditionalCharges = (Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges),
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = getCustomerCancellationDues customerCancellationDues,
@@ -66,6 +66,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             fleetOwnerId = Kernel.Types.Id.Id <$> fleetOwnerId,
             fromLocGeohash = fromLocGeohash,
             goHomeRequestId = Kernel.Types.Id.Id <$> goHomeRequestId,
+            hasAvailableForRidesTag = hasAvailableForRidesTag,
             id = Kernel.Types.Id.Id id,
             isAutoAccepted = isAutoAccepted,
             isFavourite = isFavourite,
@@ -128,10 +129,10 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.cancellationRatio = cancellationRatio,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
         Beam.commissionCharges = commissionCharges,
@@ -160,6 +161,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.fleetOwnerId = Kernel.Types.Id.getId <$> fleetOwnerId,
         Beam.fromLocGeohash = fromLocGeohash,
         Beam.goHomeRequestId = Kernel.Types.Id.getId <$> goHomeRequestId,
+        Beam.hasAvailableForRidesTag = hasAvailableForRidesTag,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoAccepted = isAutoAccepted,
         Beam.isFavourite = isFavourite,

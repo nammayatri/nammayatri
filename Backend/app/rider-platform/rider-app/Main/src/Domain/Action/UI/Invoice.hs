@@ -5,6 +5,7 @@ module Domain.Action.UI.Invoice
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
@@ -66,6 +67,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                 ]
           mbInfoItems <- CHFBI.findFareBreakupItemsByEntityIdAndType booking.id.getId DFareBreakup.BOOKING booking.createdAt
           fareBreakups <- mapM (getFareBreakup booking mbInfoItems) breakupItems
+          gateFeeBreakups <- getGateFeeBreakups booking mbInfoItems
           mbSource <- case booking.fromLocationId of
             Just fromLocId -> CHL.findLocationById fromLocId booking.createdAt
             Nothing -> return Nothing
@@ -76,13 +78,13 @@ getInvoice (mbPersonId, merchantId) from to = do
             Just $
               DTInvoice.InvoiceRes
                 { date = booking.createdAt,
-                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.fullAddress) mbDestination,
+                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.ward) mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
-                  faresList = catMaybes fareBreakups,
+                  faresList = catMaybes fareBreakups <> gateFeeBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
-                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.fullAddress) mbSource,
+                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.ward) mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
@@ -98,6 +100,22 @@ getInvoice (mbPersonId, merchantId) from to = do
           case fareBreakup of
             Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
             Nothing -> return Nothing
+    -- A gate fee item's title carries an operator-configured name, so it cannot be
+    -- in the fixed list above. Pick them out of the stored breakups by their
+    -- GATE_FEE: prefix and show each under its configured name. Matching on the
+    -- prefix rather than "anything unrecognised" keeps the internal summary tags
+    -- (RIDE_FARE_*, PAYMENT_CHARGE_*, ...) off the invoice.
+    getGateFeeBreakups booking mbInfoItems = do
+      titledAmounts <- case mbInfoItems of
+        Just infoItems -> return [(item.description, show item.amount) | item <- infoItems]
+        Nothing -> do
+          breakups <- CHFB.findFareBreakupsByBookingId booking.id booking.createdAt
+          return [(breakup.description, maybe notAvailableText show breakup.amount) | breakup <- breakups]
+      return
+        [ DTInvoice.FareBreakup {price, title}
+          | (description, price) <- titledAmounts,
+            Just title <- [Enums.gateFeeBreakupItemName description]
+        ]
     notAvailableText = "N/A"
 
 -- | List finance-kernel invoices (Ride, RideCancellation) for the authenticated rider.

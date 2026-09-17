@@ -164,7 +164,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       airportEntryFee <-
         if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
           then pure Nothing
-          else AirportEntryFee.requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId mbFareSettlementTypeForPool
+          else AirportEntryFee.requiredDriverWalletAmountForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId (listToMaybe tripQuoteDetails <&> (.vehicleServiceTier)) mbFareSettlementTypeForPool (Just searchReq.currency)
       isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId
@@ -172,7 +172,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       -- Blocklisted drivers are excluded at LTS-level inside calculateDriverPoolWithActualDist;
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
-      (allDriversNotOnRide', allOnRideDriverPoolResults) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
+      (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
       favDrivers <- maybe (pure []) (`QFavDrivers.findFavDriversForRider` True) searchReq.riderId
       let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
@@ -314,7 +315,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
           addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit
@@ -414,6 +415,34 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         batchSize = getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
+
+filterTollRouteBlockedDrivers ::
+  (MonadFlow m) =>
+  DSR.SearchRequest ->
+  Id DST.SearchTry ->
+  PoolBatchNum ->
+  [DriverPoolWithActualDistResult] ->
+  [DriverPoolResult] ->
+  m ([DriverPoolWithActualDistResult], [DriverPoolResult])
+filterTollRouteBlockedDrivers searchReq searchTryId batchNum notOnRidePool onRidePool
+  | not isTollRide = pure (notOnRidePool, onRidePool)
+  | otherwise = do
+    let eligibleNotOnRide = filter (\dp -> dp.driverPoolResult.isTollRouteEligible) notOnRidePool
+        eligibleOnRide = filter (\dpr -> dpr.isTollRouteEligible) onRidePool
+        droppedCount = (length notOnRidePool - length eligibleNotOnRide) + (length onRidePool - length eligibleOnRide)
+    when (droppedCount > 0) $
+      logInfo $
+        "TollRouteBlockedDriversExcluded: searchTryId=" <> searchTryId.getId
+          <> " batchNum="
+          <> show batchNum
+          <> " dropped="
+          <> show droppedCount
+    pure (eligibleNotOnRide, eligibleOnRide)
+  where
+    isTollRide =
+      isJust searchReq.tollCharges
+        || maybe False (not . null) searchReq.tollNames
+        || maybe False (not . null) searchReq.tollIds
 
 assignDriverGateTags ::
   ( EncFlow m r,
@@ -539,12 +568,14 @@ hasAnyPriorityTag tagNames dp = case dp.driverPoolResult.driverTags of
   Object keymap -> any (\name -> AKM.member (AK.fromText name) keymap) tagNames
   _ -> False
 
--- | driverTags is keyed by bare category (e.g. {"AutoAssign": "COMFY"}), so this checks
--- the value equals the tier name, unlike hasAnyPriorityTag's key-membership check above.
+-- | True if the driver's AutoAssign tag names this tier. Matches on the value, unlike
+-- hasAnyPriorityTag above which checks key membership. convertTags renders a single value as a
+-- string and a multi-tier "TierA&TierB" tag as an array, so both shapes are accepted.
 hasPriorityTag :: Text -> DriverPoolWithActualDistResult -> Bool
 hasPriorityTag tierName dp = case dp.driverPoolResult.driverTags of
   Object keymap -> case AKM.lookup (AK.fromString "AutoAssign") keymap of
     Just (String v) -> v == tierName
+    Just (Array vs) -> String tierName `elem` vs
     _ -> False
   _ -> False
 

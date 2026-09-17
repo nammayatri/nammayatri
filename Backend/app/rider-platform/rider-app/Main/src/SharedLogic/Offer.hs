@@ -34,10 +34,13 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPDOS
+import qualified Lib.Payment.Offer.Counters as Counters
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -70,7 +73,9 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerSponsoredBy :: [Text],
     offerIds :: [Text],
     offerListResp :: Payment.OfferListResp,
-    metadata :: Maybe A.Value
+    metadata :: Maybe A.Value,
+    promoCard :: Maybe PromoCard,
+    greetingLottieUrl :: Maybe Text
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -122,7 +127,11 @@ data OfferEligibilityInput = OfferEligibilityInput
     deviceOfferStats :: [DOfferStats.OfferStats],
     personDailyOfferStats :: Maybe DPDOS.PersonDailyOfferStats,
     personStats :: Maybe DPS.PersonStats,
-    serviceTierType :: Maybe Text
+    serviceTierType :: Maybe Text,
+    searchReq :: Maybe Y.SearchRequestData,
+    hasTakenValidRide :: Bool,
+    totalRidesCount :: Maybe Int,
+    personTags :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -146,6 +155,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   req <- mkOfferListReq person price
   let customerId = fromMaybe person.id.getId (req.customer <&> (.customerId))
       version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      rider = Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing DOrder.RideHailing
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
   offerListResp <-
@@ -178,9 +188,13 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             deviceOfferStats = deviceOfferStats,
                             personDailyOfferStats = mbPersonDailyOfferStats,
                             personStats = mbPersonStats,
-                            serviceTierType = mbServiceTierType
+                            serviceTierType = mbServiceTierType,
+                            searchReq = Nothing,
+                            hasTakenValidRide = person.hasTakenValidRide,
+                            totalRidesCount = person.totalRidesCount,
+                            personTags = offerEligibilityTags person.customerNammaTags
                           }
-              DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext
+              DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
         DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
       else do
         let offerListCall = TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just customerId) person.clientSdkVersion
@@ -193,9 +207,9 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
 --   offer.finalOrderAmount is used as-is (FRFS / pass flows etc.).
 type OfferFareCtx = Maybe RD.ProjectFareParamsBreakup
 
--- | Recompute the post-offer amount: VAT-aware when fare context + discount
---   are both present, falls back to the payment-library's
---   finalOrderAmount otherwise.
+-- | Recompute the post-offer amount: VAT-aware and payment-charge-aware when
+--   fare context + discount are both present, falls back to the payment
+--   library's finalOrderAmount otherwise.
 --
 --   When @offer.discountAmount > 0@ but no fare context was threaded
 --   through, we emit a warning — that path produces a stale figure that
@@ -209,12 +223,11 @@ recomputePostOfferAmount ::
 recomputePostOfferAmount mbCtx offer = case mbCtx of
   Just b
     | offer.discountAmount > 0 ->
-      let r = RD.applyRideDiscount b offer.discountAmount
-          updatedBreakup =
-            b
-              { RD.discountApplicableRideFareTaxExclusive = r.postDiscountApplicableTaxExclusive,
-                RD.discountApplicableRideFareTax = r.postDiscountApplicableTax
-              }
+      -- The payment charge is levied on what the rider actually pays, so it is
+      -- re-priced on the post-discount fare rather than carried through or
+      -- rescaled. This is why the saving exceeds the offer's face value, and it
+      -- must match what the BPP captures.
+      let (updatedBreakup, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
        in pure $ RD.projectFareParamsBreakupTotal updatedBreakup
   Nothing | offer.discountAmount > 0 -> do
     logWarning $
@@ -263,8 +276,21 @@ deriveComputedOfferAmount mbFareCtx offer = do
       { discountAmount = offer.discountAmount,
         payoutAmount = offer.cashbackAmount,
         postOfferAmount = postOfferAmount,
-        amountSaved = offer.discountAmount + offer.cashbackAmount
+        amountSaved = offerAmountSaved mbFareCtx offer
       }
+
+-- | What the rider actually saves. Discounting the fare also removes the payment
+--   charge that sat on it, so the saving exceeds the offer's face value; and the
+--   raw offer.discountAmount is unclamped, so it can exceed what was applied.
+--   Both are why this is derived from the two totals rather than added up.
+offerAmountSaved :: OfferFareCtx -> Payment.OfferResp -> HighPrecMoney
+offerAmountSaved mbCtx offer =
+  case mbCtx of
+    Just b
+      | offer.discountAmount > 0 ->
+        let (updated, _) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b offer.discountAmount
+         in max 0 (RD.projectFareParamsBreakupTotal b - RD.projectFareParamsBreakupTotal updated) + offer.cashbackAmount
+    _ -> offer.discountAmount + offer.cashbackAmount
 
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Ride Payout Offer (entity + payout job) ---------------------------
@@ -324,6 +350,9 @@ processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx 
                       payoutAmount = computed.payoutAmount,
                       amountSaved = computed.amountSaved,
                       postOfferAmount = computed.postOfferAmount,
+                      frequencyType = offerDetails.frequencyType,
+                      appliedCount = if computed.amountSaved > 0 then (+ 1) <$> offerDetails.appliedCount else offerDetails.appliedCount,
+                      maxApplyCount = offerDetails.maxApplyCount,
                       merchantId = booking.merchantId,
                       merchantOperatingCityId = booking.merchantOperatingCityId,
                       createdAt = now,
@@ -335,19 +364,18 @@ processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx 
       Nothing -> pure Nothing
   let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
       ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
-  -- Cash-ride offer apply-without-payment: records offer usage/stats. Online
-  -- rides apply the offer through the payment-intent flow instead.
   whenJust mbOfferStatsInput $ \offerStatsInput ->
     whenJust booking.selectedOfferId $ \offerId ->
-      whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-        when riderConfig.enableRideHailingOffers $ do
-          useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
-          let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
-              mbProduct = Just (show booking.vehicleServiceTierType, offerBasePrice.amount)
-          void $
-            withTryCatch "applyOfferWithoutPayment:cashRide" $
-              DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) offerBasePrice.amount offerBasePrice.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
+      whenJust mbRideOfferEntity $ \rideOfferEntity ->
+        when (rideDiscountAmount + ridePayoutAmount > 0) $ do
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+          when riderConfig.enableRideHailingOffers $ do
+            useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
+            let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
+                mbProduct = Just (show booking.vehicleServiceTierType, offerBasePrice.amount)
+            void $
+              withTryCatch "applyOfferWithoutPayment:cashRide" $
+                DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) offerBasePrice.amount offerBasePrice.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
   pure mbRideOfferEntity
 
 -- | Schedule the delayed cashback-payout job for a completed ride that earned a
@@ -419,6 +447,9 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx mb
 autoApplyOfferTagName :: Text
 autoApplyOfferTagName = "AutoApplyOffer"
 
+offerEligibilityTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
+offerEligibilityTags = maybe [] (map ((.getTagNameValue) . LYTUtils.removeTagExpiry))
+
 getAutoApplyOfferCodes :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
 getAutoApplyOfferCodes mbTags = do
   validTags <- LYTUtils.filterExpiredTags (fromMaybe [] mbTags)
@@ -471,6 +502,90 @@ listOffersForPerson merchantId person mbAmount = do
   let offerResps = concatMap (\(_, resp) -> resp.offerResp) productOffers
   mapM (mkOfferRespAPIEntity Nothing) offerResps
 
+cumulativeOffersForPerson ::
+  (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, BeamFlow m r, ClickhouseFlow m r) =>
+  Id Merchant.Merchant ->
+  Person.Person ->
+  Maybe HighPrecMoney ->
+  m CumulativeOfferResp
+cumulativeOffersForPerson merchantId person mbAmount = do
+  let price = mkPrice (Just INR) (fromMaybe 1 mbAmount)
+  productOffers <- offerListWithBasket merchantId person.id person.merchantOperatingCityId DOrder.RideHailing [("offers-list", price)] Nothing Nothing Nothing
+  let offerListResp = Payment.OfferListResp {Payment.bestOfferCombination = Nothing, Payment.offerResp = concatMap (\(_, resp) -> resp.offerResp) productOffers}
+  mbResp <- mkCumulativeOfferResp person.merchantOperatingCityId offerListResp [] Nothing Nothing
+  case mbResp of
+    Just resp -> pure resp
+    Nothing -> do
+      offers <- mapM (mkOfferRespAPIEntity Nothing) offerListResp.offerResp
+      pure
+        CumulativeOfferResp
+          { offerTitle = "",
+            offerDescription = "",
+            offerSponsoredBy = [],
+            offerIds = map (.offerId) offers,
+            offerListResp = offers,
+            metadata = Nothing,
+            promoCard = Nothing,
+            greetingLottieUrl = Nothing
+          }
+
+listUsedOffersForPerson ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m [UsedOfferAPIEntity]
+listUsedOffersForPerson person merchantOperatingCityId = do
+  statsRows <- QOfferStats.findAllByEntityIdAndEntityType person.id.getId DOfferStats.Person
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": applied offers fall back to lifetime counts"
+  let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = person.id.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
+  now <- getCurrentTime
+  fmap catMaybes $
+    forM (mergeStatsByOffer statsRows) $ \stats -> do
+      mbOffer <- QOffer.findById stats.offerId
+      forM mbOffer $ \offer -> do
+        uses <- case mbRider of
+          Just rider -> Counters.countUses rider now offer.id offer.frequencyType
+          Nothing -> pure stats.offerAppliedCount
+        pure $ mkUsedOfferAPIEntity stats offer uses
+
+-- Rows can be fragmented across several ids for one offer (see ddl-migration
+-- 1567); collapse them so an offer is listed once with its total.
+mergeStatsByOffer :: [DOfferStats.OfferStats] -> [DOfferStats.OfferStats]
+mergeStatsByOffer = foldr insertMerged []
+  where
+    insertMerged row [] = [row]
+    insertMerged row (acc : rest)
+      | acc.offerId == row.offerId = combine acc row : rest
+      | otherwise = acc : insertMerged row rest
+    combine a b =
+      a
+        { DOfferStats.offerAppliedCount = a.offerAppliedCount + b.offerAppliedCount,
+          DOfferStats.totalDiscountAmount = addMoney a.totalDiscountAmount b.totalDiscountAmount,
+          DOfferStats.totalCashbackAmount = addMoney a.totalCashbackAmount b.totalCashbackAmount,
+          DOfferStats.updatedAt = max a.updatedAt b.updatedAt
+        }
+    addMoney Nothing Nothing = Nothing
+    addMoney a b = Just (fromMaybe 0 a + fromMaybe 0 b)
+
+mkUsedOfferAPIEntity :: DOfferStats.OfferStats -> DOffer.Offer -> Int -> UsedOfferAPIEntity
+mkUsedOfferAPIEntity stats offer uses =
+  UsedOfferAPIEntity
+    { offerId = offer.id.getId,
+      offerCode = offer.offerCode,
+      offerTitle = offer.title,
+      offerDescription = offer.description,
+      offerType = Just offer.offerType,
+      appliedCount = uses,
+      totalAppliedCount = stats.offerAppliedCount,
+      maxApplyCount = offer.maxApplyCount,
+      frequencyType = offer.frequencyType,
+      isUsedUp = Counters.isUsedUp offer.maxApplyCount uses,
+      totalDiscountAmount = stats.totalDiscountAmount,
+      totalCashbackAmount = stats.totalCashbackAmount,
+      lastAppliedAt = stats.updatedAt
+    }
+
 mkOfferRespAPIEntity ::
   (MonadFlow m) =>
   OfferFareCtx ->
@@ -488,10 +603,15 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         offerCode = offerCode,
         autoApply = fromMaybe False (uiConfigs >>= (.autoApply)),
         isHidden = fromMaybe True (uiConfigs >>= (.isHidden)),
-        amountSaved = discountAmount + cashbackAmount,
+        amountSaved = offerAmountSaved mbFareCtx offer,
         postOfferAmount = postOfferAmount,
-        estimatedAmountSaved = discountAmount + cashbackAmount,
-        estimatedPostOfferAmount = postOfferAmount
+        estimatedAmountSaved = offerAmountSaved mbFareCtx offer,
+        estimatedPostOfferAmount = postOfferAmount,
+        offerType = readMaybe (T.unpack benefitType),
+        minimumAmount = minimumAmount,
+        frequencyType = counters >>= (.frequencyType) >>= readMaybe . T.unpack,
+        appliedCount = counters >>= (.appliedCount),
+        maxApplyCount = counters >>= (.maxApplyCount)
       }
 
 -- | Replace each offer's display text (title/description/tnc) with the rider's
@@ -582,10 +702,14 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
   let isDriverNumberSameAsCustomer = mkIsDriverNumberSameAsCustomer person mbRide
   useDomainOffers <- TPayment.useDomainOffers merchantId merchantOperatingCityId Nothing paymentServiceType
   autoApplyOfferCodes <- getAutoApplyOfferCodes person.customerNammaTags
+  let mbSearchReqData = mkSearchRequestData <$> mbSearchReq
   productOffers <-
     if useDomainOffers
       then do
         let productsWithAmount = map (\(pid, p) -> (pid, p.amount)) products
+        mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+        when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": offers with a maxApplyCount are withheld"
+        let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = personId.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
         staticPersonOfferStats <- do
           personPhone <- mapM decrypt person.mobileNumber
           case personPhone of
@@ -609,13 +733,16 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       deviceOfferStats = deviceOfferStats,
                       personDailyOfferStats = mbPersonDailyOfferStats,
                       personStats = mbPersonStats,
-                      serviceTierType = Nothing
+                      serviceTierType = Nothing,
+                      searchReq = mbSearchReqData,
+                      hasTakenValidRide = person.hasTakenValidRide,
+                      totalRidesCount = person.totalRidesCount,
+                      personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
-        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext
+        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
             language = fromMaybe ENGLISH person.language
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
@@ -631,7 +758,6 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
         let offersByProduct = DPayment.splitOfferRespByProduct productsWithAmount resp
             mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
-            mbSearchReqData = mkSearchRequestData <$> mbSearchReq
         forM offersByProduct $ \(productId, offersForProduct) -> do
           filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
           pure (productId, filteredOffers)

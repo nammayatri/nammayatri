@@ -78,6 +78,8 @@ data LineItemDescription
   | CancellationCommissionTax
   | CancellationFeeRefund
   | CancellationFeeRefundTax
+  | PaymentChargeRefund
+  | PaymentChargeRefundTax
   | CancellationCommissionRefund
   | CancellationCommissionRefundTax
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)

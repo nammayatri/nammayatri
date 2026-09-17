@@ -483,12 +483,14 @@ priceSuggestedSearch parentRes suggestedRes alternatives = do
 suggestedFare :: (Id Person.Person, Id Merchant.Merchant) -> SuggestedFareReq -> FlowHandler DQuote.SuggestedEstimates
 suggestedFare (personId, merchantId) req = withFlowHandlerAPIPersonId personId $ suggestedFare' (personId, merchantId) req
 
+-- | How /rideSearch/ paid for a shape it offered: priced before the search answered, or
+-- left to the background pass. All this decides is whether a fare that has not arrived yet
+-- is still on its way and worth waiting for.
+data OfferedShapePricing = PricedInline | PricedInBackground
+
 suggestedFare' :: (Id Person.Person, Id Merchant.Merchant) -> SuggestedFareReq -> Flow DQuote.SuggestedEstimates
 suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
   withTimeAPI "suggestedFare" "total" $ do
-    -- Each call here is a real provider search, so it draws on the same allowance a
-    -- /rideSearch does rather than being a free way around it.
-    checkSearchRateLimit personId
     when (isNothing req.suggestedPickup && isNothing req.suggestedDrop) $
       throwError (InvalidRequest "A suggested fare needs a moved pickup, a moved drop, or both")
     parent <- QSearchRequest.findById req.parentSearchId >>= fromMaybeM (SearchRequestDoesNotExist req.parentSearchId.getId)
@@ -499,18 +501,92 @@ suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
     -- Without the context there is no route to trim and no way to know this search ever
     -- had a suggestion, so there is nothing to price.
     ctx <- BRPC.getSuggestedSearchCtx req.parentSearchId >>= fromMaybeM (InvalidRequest "No walk-and-save suggestion is available for this search")
-    merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = parent.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound parent.merchantOperatingCityId.getId)
-    parentRes <- BRPC.restoreSearchRes ctx parent merchant
-    betterRoute <- BRPS.resolveBetterRoute riderConfig parentRes ((.gps) <$> req.suggestedPickup) ((.gps) <$> req.suggestedDrop)
-    -- Whatever name the app already has for the point, and no lookup when it has none:
-    -- naming costs a reverse-geocode, and select is where that is worth paying, for the
-    -- one point the customer actually chose.
-    shadowRes <- BRPS.buildShadowSearchRes parentRes betterRoute ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop)
-    -- The other shapes stay on offer: pricing one is not choosing it, and the customer
-    -- should still be able to go back and price another.
-    priceSuggestedSearch parentRes shadowRes (DQuote.mkSuggestedOption <$> ctx.alternates)
-      >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
+    -- The other shapes stay on offer whichever way this is answered: pricing one is not
+    -- choosing it, and the customer should still be able to go back and price another.
+    let offeredAlternatives = DQuote.mkSuggestedOption <$> ctx.alternates
+        mbChosenPickup = (.gps) <$> req.suggestedPickup
+        mbChosenDrop = (.gps) <$> req.suggestedDrop
+    -- /rideSearch already sent the provider a search for every shape it offered, so a
+    -- request for one of those is answered from that search -- waiting for it while it is
+    -- still in flight -- and never by running a second one for the same shape.
+    offeredShadowFor ctx mbChosenPickup mbChosenDrop >>= \case
+      Just offered -> fareForOfferedShape parent offered offeredAlternatives
+      Nothing -> priceFreshShadow ctx parent offeredAlternatives mbChosenPickup mbChosenDrop
+  where
+    -- The shadow /rideSearch made for this shape, paired with whether its fare was left to
+    -- the background pass. An alternate carries its shape in the context and is matched
+    -- without touching storage; the shape priced inline does not, so it is read back and
+    -- compared -- one lookup, and only when no alternate matched.
+    offeredShadowFor ctx mbChosenPickup mbChosenDrop = runMaybeT $
+      case BRPS.offeredAlternateFor ctx.alternates mbChosenPickup mbChosenDrop of
+        Just alternate -> do
+          alternateShadow <- MaybeT $ QSearchRequest.findById alternate.searchId
+          pure (alternateShadow, PricedInBackground)
+        Nothing -> do
+          inlineSearchId <- hoistMaybe ctx.inlineSearchId
+          inlineShadow <- MaybeT $ QSearchRequest.findById inlineSearchId
+          guard $ BRPS.isShadowForShape mbChosenPickup mbChosenDrop inlineShadow
+          pure (inlineShadow, PricedInline)
+
+    fareForOfferedShape parent (offeredShadow, howPriced) offeredAlternatives = do
+      shadowEstimates <- case howPriced of
+        -- The inline shape was priced before the search answered, so by the time anyone can
+        -- ask about it there is nothing left to wait for: it either has a fare or the
+        -- provider declined to give it one.
+        PricedInline -> QEstimate.findAllBySRId offeredShadow.id
+        PricedInBackground -> awaitBackgroundFare parent.id offeredShadow.id
+      logInfo $
+        "better_route_point: answering suggested fare for parent " <> req.parentSearchId.getId
+          <> " from the search already run for this shape, "
+          <> offeredShadow.id.getId
+      DQuote.mkSuggestedEstimates
+        (BRPS.withChosenAddresses ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop) offeredShadow)
+        shadowEstimates
+        offeredAlternatives
+        -- The provider was already asked about this exact shape and gave no fare for it.
+        -- Asking again is the duplicate search this endpoint is here to stop making, so the
+        -- customer is told the same thing a failed pricing has always told them.
+        >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
+
+    -- Waits out the background pass when it has not priced this shape yet. The pass takes a
+    -- provider round trip per shape and marks itself dispatched only once it has finished
+    -- with all of them, so no estimates and no marker means the fare is still coming, and
+    -- waiting for it is the whole job.
+    --
+    -- Twenty attempts at 250ms is ~5s, the same budget the sync search path allows itself,
+    -- and 97% of shadow fares have landed by then (median 1s, 90th percentile 3s, measured
+    -- over a day of them). Waiting is bounded rather than unbounded because the customer is
+    -- sitting in front of it; what the wait must never become is a second search.
+    awaitBackgroundFare parentId shadowId = go (20 :: Int)
+      where
+        go attemptsLeft = do
+          shadowEstimates <- QEstimate.findAllBySRId shadowId
+          if not (null shadowEstimates) || attemptsLeft <= 0
+            then pure shadowEstimates
+            else do
+              dispatched <- BRPC.alternatesDispatched parentId
+              -- The marker is written after the last alternate has been through the provider,
+              -- so re-reading here cannot miss a fare that landed between the two reads.
+              if dispatched
+                then QEstimate.findAllBySRId shadowId
+                else threadDelayMilliSec 250 >> go (attemptsLeft - 1)
+
+    -- A shape of the customer's own -- a marker they dragged somewhere we never offered --
+    -- has no search behind it, so this one does reach the provider. It is also the only
+    -- branch that spends the search allowance: answering from a search /rideSearch already
+    -- ran is not a new search, and should not cost the customer one.
+    priceFreshShadow ctx parent offeredAlternatives mbChosenPickup mbChosenDrop = do
+      checkSearchRateLimit personId
+      merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = parent.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound parent.merchantOperatingCityId.getId)
+      parentRes <- BRPC.restoreSearchRes ctx parent merchant
+      betterRoute <- BRPS.resolveBetterRoute riderConfig parentRes mbChosenPickup mbChosenDrop
+      -- Whatever name the app already has for the point, and no lookup when it has none:
+      -- naming costs a reverse-geocode, and select is where that is worth paying, for the
+      -- one point the customer actually chose.
+      shadowRes <- BRPS.buildShadowSearchRes parentRes betterRoute ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop)
+      priceSuggestedSearch parentRes shadowRes offeredAlternatives
+        >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
 
 -- | Joins on the shadow search. It shares the real search's timeout budget, so a slow
 -- suggestion degrades to no suggestion rather than delaying the estimates the customer

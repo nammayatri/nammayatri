@@ -155,10 +155,16 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
             instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
         if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
           then do
+            dispatchStartTime <- getCurrentTime
             (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
+            afterDispatchTime <- getCurrentTime
             let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral (getNextBatchScheduleTime driverPoolConfig)) fromIntegral mbNewScheduleTimeIn
+                -- Anchor batch 2 on batch 1's START: the inline dispatch above (pool
+                -- computation + fan-out) can take seconds, and scheduling relative to
+                -- its end would push the whole batch chain back by that much.
+                inTime' = max 1 (inTime - diffUTCTime afterDispatchTime dispatchStartTime)
             case res of
-              (ReSchedule _) -> scheduleBatching searchTry inTime
+              (ReSchedule _) -> scheduleBatching searchTry inTime'
               _ -> return ()
             SharedRedisKeys.setBatchConfig searchReq.transactionId $
               SharedRedisKeys.BatchConfig
@@ -236,7 +242,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           searchTry <- case mbLastSearchTry of
             Nothing -> do
               mbBatchingMode <- resolveBatchingMode serviceTier tripCategory DST.INITIAL 0
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -248,7 +254,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
               mbBatchingMode <- resolveBatchingMode serviceTier tripCategory searchRepeatType (oldSearchTry.searchRepeatCounter + 1)
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -283,6 +289,7 @@ buildSearchTry ::
   SLT.BillingCategory ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Text ->
   [Text] ->
   DVST.ServiceTierType ->
@@ -293,7 +300,7 @@ buildSearchTry ::
   DTTC.TransporterConfig ->
   Maybe BatchingMode ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))

@@ -68,6 +68,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
+import qualified SharedLogic.DriverSupplyMetrics as DSM
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
@@ -141,6 +142,7 @@ runDynamicOfferDriverApp' appCfg = do
         L.setOption KBT.Tables kvConfigs
         _ <- liftIO $ createCAC appCfg
         initCityMaps
+        fork "driver supply metrics publisher" DSM.runDriverSupplyMetricsPublisher
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "

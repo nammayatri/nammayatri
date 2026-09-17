@@ -51,6 +51,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.PinbixSms -> Domain.SmsServiceConfig . Sms.PinbixSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.KaleyraSms -> Domain.SmsServiceConfig . Sms.KaleyraSmsConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.CerfSms -> Domain.SmsServiceConfig . Sms.CerfSmsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.Karix -> Domain.WhatsappServiceConfig . Whatsapp.KarixConfig <$> valueToMaybe configJSON
@@ -98,6 +99,7 @@ getServiceConfigFromDomain serviceName configJSON = do
       _ -> Nothing
     Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
     Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> valueToMaybe configJSON
+    Domain.EventTrackingService EventTracking.FirebaseAnalytics -> Domain.EventTrackingServiceConfig . EventTrackingInterface.FirebaseAnalyticsConfig <$> valueToMaybe configJSON
     Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
     Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
 
@@ -134,6 +136,7 @@ getServiceNameConfigJson = \case
     Sms.KarixSmsConfig cfg -> (Domain.SmsService Sms.KarixSms, toJSON cfg)
     Sms.PinbixSmsConfig cfg -> (Domain.SmsService Sms.PinbixSms, toJSON cfg)
     Sms.KaleyraSmsConfig cfg -> (Domain.SmsService Sms.KaleyraSms, toJSON cfg)
+    Sms.CerfSmsConfig cfg -> (Domain.SmsService Sms.CerfSms, toJSON cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
     Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
@@ -197,6 +200,7 @@ getServiceNameConfigJson = \case
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
     EventTrackingInterface.ClevertapConfig cfg -> (Domain.EventTrackingService EventTracking.Clevertap, toJSON cfg)
+    EventTrackingInterface.FirebaseAnalyticsConfig cfg -> (Domain.EventTrackingService EventTracking.FirebaseAnalytics, toJSON cfg)
   Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)

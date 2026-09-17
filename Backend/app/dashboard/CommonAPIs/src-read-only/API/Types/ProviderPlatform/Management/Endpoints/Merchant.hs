@@ -199,6 +199,7 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
+  | TermsAndConditions
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -549,6 +550,9 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     scheduledRideMinLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -598,7 +602,10 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     maxScheduledHoldsPerDriver :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Int),
     scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
     scheduledRideMinLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
-    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
+    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
+    negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
+    negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
+    negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

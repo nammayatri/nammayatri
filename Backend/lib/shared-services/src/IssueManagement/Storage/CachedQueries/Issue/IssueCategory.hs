@@ -53,7 +53,7 @@ clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOpCityId identif
 
 clearIssueCategoryByMerchantOpCityIdAndLanguageCache :: BeamFlow m r => Id MerchantOperatingCity -> Language -> Identifier -> m ()
 clearIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOpCityId language identifier = do
-  Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language identifier
+  Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language identifier
 
 cacheAllIssueCategoryByMerchantOpCityIdAndLanguage :: CacheFlow m r => Id MerchantOperatingCity -> Language -> Identifier -> [(IssueCategory, Maybe IssueTranslation)] -> m ()
 cacheAllIssueCategoryByMerchantOpCityIdAndLanguage merchantOpCityId language identifier issueCategoryTranslation = do
@@ -66,7 +66,7 @@ makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language iden
 --------- Caching logic for issue category by id -------------------
 
 clearIssueCategoryByIdCache :: CacheFlow m r => Id IssueCategory -> Identifier -> m ()
-clearIssueCategoryByIdCache issueCategoryId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdKey issueCategoryId identifier
+clearIssueCategoryByIdCache issueCategoryId identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdKey issueCategoryId identifier
 
 cacheIssueCategoryById :: CacheFlow m r => Id IssueCategory -> Identifier -> Maybe IssueCategory -> m ()
 cacheIssueCategoryById issueCategoryId identifier issueCategory = do
@@ -83,7 +83,7 @@ clearAllIssueCategoryByIdAndLanguageCache issueCategoryId identifier = forM_ all
   clearIssueCategoryByIdAndLanguageCache issueCategoryId language identifier
 
 clearIssueCategoryByIdAndLanguageCache :: (CacheFlow m r) => Id IssueCategory -> Language -> Identifier -> m ()
-clearIssueCategoryByIdAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier
+clearIssueCategoryByIdAndLanguageCache issueCategoryId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier
 
 cacheIssueCategoryByIdAndLanguage :: (CacheFlow m r) => Id IssueCategory -> Language -> Identifier -> Maybe (IssueCategory, Maybe IssueTranslation) -> m ()
 cacheIssueCategoryByIdAndLanguage issueCategoryId language identifier issueCategoryTranslation = do

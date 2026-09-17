@@ -40,6 +40,12 @@ FinanceTdsReimbursementRequest:
     rejectionReason: Maybe Text
     # Set once wired into WS3 (ledger adjustment integration)
     # ledgerAdjustmentRequestId: Maybe (Id LedgerAdjustmentRequest)
+    # Denormalized from the associated LedgerAdjustmentRequest maker/checker, kept in sync at
+    # submit (maker) / approve+reject (checker) time so the list API can filter/display without a join.
+    adminMakerId: Maybe Text
+    adminMakerName: Maybe Text
+    adminCheckerId: Maybe Text
+    adminCheckerName: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -67,6 +73,26 @@ FinanceTdsReimbursementRequest:
     updateStatusAndRejectionReason:
       kvFunction: updateOneWithKV
       params: [status, rejectionReason]
+      where: id
+
+    updateAdminMaker:
+      kvFunction: updateOneWithKV
+      params: [adminMakerId, adminMakerName]
+      where: id
+
+    updateStatusRejectionReasonAndAdminMaker:
+      kvFunction: updateOneWithKV
+      params: [status, rejectionReason, adminMakerId, adminMakerName]
+      where: id
+
+    updateAdminChecker:
+      kvFunction: updateOneWithKV
+      params: [adminCheckerId, adminCheckerName]
+      where: id
+
+    updateStatusRejectionReasonAndAdminChecker:
+      kvFunction: updateOneWithKV
+      params: [status, rejectionReason, adminCheckerId, adminCheckerName]
       where: id
 
     # updateLedgerAdjustmentRequestId:

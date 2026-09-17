@@ -19,7 +19,9 @@
 -- driver reappears closer than his previous best, counted as fault otherwise; while dark
 -- only the gentle non-terminal dark ladder runs. A demonstrably-driving driver who is
 -- not (yet) getting closer (U-turns, one-way overshoots) burns a bounded detour credit
--- before his time starts counting as fault.
+-- before his time starts counting as fault. A scheduled ride can instead run — mutually
+-- exclusively, per city config — an ETA-feasibility check: predicted lateness vs the pickup
+-- grace window, recomputed fresh each tick (warn within grace, reallocate past it).
 module SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress where
 
 import qualified AWS.S3 as S3
@@ -30,6 +32,8 @@ import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Trip as DTrip
+import Kernel.External.Maps.Interface.Types
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types
 import Kernel.Prelude
@@ -47,7 +51,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
-import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (cancelOrReallocate)
+import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (cancelOrReallocate, errorCatchAndHandle, resultFailed, sumDuration)
 import SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.CallBAPInternal
 import SharedLogic.CancellationConsequence (cityHasDriverCancelMoneyPenalty)
@@ -61,6 +65,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.Maps as TMaps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
@@ -135,129 +140,191 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
         return Complete
       | otherwise -> do
         mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-        case mbTransporterConfig >>= (.pickupStallMonitoringConfig) of
-          Nothing -> do
+        mbBooking <- QBooking.findById bookingId
+        case (mbBooking, mbTransporterConfig >>= (.pickupStallMonitoringConfig)) of
+          -- config checked first (as upstream): an unconfigured city always flushes the journey
+          (_, Nothing) -> do
             PickupStall.flushPickupJourney ride Nothing
             return $ Terminate "Pickup stall monitoring is not configured"
-          Just cfg -> do
-            mbBooking <- QBooking.findById bookingId
-            case mbBooking of
-              Nothing -> return $ Terminate "Booking not found"
-              Just booking -> do
-                now <- getCurrentTime
-                let rescheduleResult = ReSchedule $ addUTCTime (fromIntegral cfg.tickIntervalSec) now
-                    saveState st = Redis.setExp (pickupProgressStateKey rideId) st pickupProgressStateTtl
-                mbDriverInfo <- QDI.findById driverId
-                mbActiveRide <- QRide.getLatestActiveByDriverId driverId
-                -- Forward-batch guard: while the driver is still finishing a previous ride he is
-                -- expected to move toward that ride's drop, possibly away from our pickup. His
-                -- pickup phase for this ride has not started: keep a clean slate.
-                let onAnotherRide = (mbDriverInfo <&> (.onRide)) == Just True && (mbActiveRide <&> (.id)) /= Just rideId
-                if onAnotherRide
-                  then do
-                    saveState emptyPickupProgressState
-                    return rescheduleResult
-                  else do
-                    mbDriverLocation <- do
-                      driverLocations <- withTryCatch "driversLocation:checkDriverPickupProgress" $ LTF.driversLocation [driverId]
-                      case driverLocations of
-                        Left err -> do
-                          logWarning $ "driversLocation failed in pickup progress monitor: " <> show err
-                          return Nothing
-                        Right locations -> return $ listToMaybe locations
-                    -- The LTS last-known-location key has a long TTL and is never cleared when a
-                    -- driver's GPS goes dark, so an absent key is not the only signal for "dark" —
-                    -- a stale ping means we're reading an old position, not a live one.
-                    let staleAfter = fromIntegral (fromMaybe (2 * cfg.tickIntervalSec) cfg.staleFixAfterSec) :: NominalDiffTime
-                        mbFreshFix =
-                          mbDriverLocation >>= \dloc ->
-                            if diffUTCTime now dloc.coordinatesCalculatedAt <= staleAfter then Just dloc else Nothing
-                    state <- fromMaybe emptyPickupProgressState <$> Redis.safeGet (pickupProgressStateKey rideId)
-                    let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-                        progressThreshold = fromIntegral $ fromMaybe defaultProgressThresholdMeters cfg.progressThresholdMeters :: Double
-                        deviationAllowance = fromIntegral $ fromMaybe defaultDeviationAllowanceMeters cfg.deviationAllowanceMeters :: Double
-                        detourDisplacement = fromIntegral $ fromMaybe defaultDetourDisplacementMeters cfg.detourDisplacementMeters :: Double
-                        detourCredit = fromMaybe defaultDetourCreditSec cfg.detourCreditSec
-                        elapsedSec = maybe cfg.tickIntervalSec (\t -> max 0 . round $ diffUTCTime now t) state.lastTickAt
-                    situation <- rideSituation booking
-                    case mbFreshFix of
-                      Nothing -> do
-                        -- Dark tick: judgment pending. The fault clock freezes; only the gentle
-                        -- dark ladder (GPS nudges, never terminal) advances.
-                        let darkSince' = fromMaybe now state.darkSince
-                            darkSpanSec = max 0 . round $ diffUTCTime now darkSince' :: Int
-                            state' = state {darkSince = Just darkSince', behaviour = DRide.GPS_DARK, lastTickAt = Just now}
-                        logInfo $ pickupTickLog rideId (Nothing :: Maybe Double) state' darkSpanSec
-                        case listToMaybe (drop state'.firedDarkStageCount cfg.darkStages) of
-                          Just stage | darkSpanSec >= stage.afterDarkSec -> do
-                            sendStallNudge ride stage.channel (fromMaybe [] stage.chatSuggestions) (stage.overlayKey <> "_" <> situation)
-                            saveState state' {firedDarkStageCount = state'.firedDarkStageCount + 1}
-                          _ -> saveState state'
-                        return rescheduleResult
-                      Just gpsFix -> do
-                        let currentDistance = realToFrac $ distanceBetweenInMeters (LatLong gpsFix.lat gpsFix.lon) pickupLoc :: Double
-                            madeProgress = maybe True (\best -> currentDistance <= best - progressThreshold) state.bestDistance
-                            withFix st =
-                              st
-                                { lastFixLat = Just gpsFix.lat,
-                                  lastFixLon = Just gpsFix.lon,
-                                  lastTickAt = Just now,
-                                  darkSince = Nothing,
-                                  firedDarkStageCount = 0
-                                }
-                        if madeProgress
-                          then do
-                            -- Progress (or first baseline fix). Any pending dark span is forgiven —
-                            -- he provably drove toward the pickup through it. faultSeconds is the
-                            -- lifetime total for this pickup and is deliberately NOT reset.
-                            let state' = (withFix state) {bestDistance = Just currentDistance, behaviour = DRide.PROGRESSING}
-                            logInfo $ pickupTickLog rideId (Just currentDistance) state' (0 :: Int)
-                            saveState state'
-                            return rescheduleResult
+          (Nothing, _) -> return $ Terminate "Booking not found"
+          (Just booking, Just cfg)
+            -- Per-ride check gates: ad-hoc always runs the distance clock and never ETA (no
+            -- pickup-time/grace concept); scheduled opts into each independently per city.
+            | not (etaCheckOn booking cfg || distanceCheckOn booking cfg) -> do
+              PickupStall.flushPickupJourney ride Nothing
+              return $ Terminate "No pickup checks enabled for this ride"
+            | otherwise -> do
+              now <- getCurrentTime
+              let rescheduleResult = ReSchedule $ addUTCTime (fromIntegral cfg.tickIntervalSec) now
+                  saveState st = Redis.setExp (pickupProgressStateKey rideId) st pickupProgressStateTtl
+                  etaEnabled = etaCheckOn booking cfg
+              mbDriverInfo <- QDI.findById driverId
+              mbActiveRide <- QRide.getLatestActiveByDriverId driverId
+              -- Forward-batch guard: while the driver is still finishing a previous ride he is
+              -- expected to move toward that ride's drop, possibly away from our pickup. His
+              -- pickup phase for this ride has not started: keep a clean slate.
+              let onAnotherRide = (mbDriverInfo <&> (.onRide)) == Just True && (mbActiveRide <&> (.id)) /= Just rideId
+              if onAnotherRide
+                then do
+                  saveState emptyPickupProgressState
+                  return rescheduleResult
+                else do
+                  mbDriverLocation <- do
+                    driverLocations <- withTryCatch "driversLocation:checkDriverPickupProgress" $ LTF.driversLocation [driverId]
+                    case driverLocations of
+                      Left err -> do
+                        logWarning $ "driversLocation failed in pickup progress monitor: " <> show err
+                        return Nothing
+                      Right locations -> return $ listToMaybe locations
+                  -- The LTS last-known-location key has a long TTL and is never cleared when a
+                  -- driver's GPS goes dark, so an absent key is not the only signal for "dark" —
+                  -- a stale ping means we're reading an old position, not a live one.
+                  let staleAfter = fromIntegral (fromMaybe (2 * cfg.tickIntervalSec) cfg.staleFixAfterSec) :: NominalDiffTime
+                      mbFreshFix =
+                        mbDriverLocation >>= \dloc ->
+                          if diffUTCTime now dloc.coordinatesCalculatedAt <= staleAfter then Just dloc else Nothing
+                  state0 <- fromMaybe emptyPickupProgressState <$> Redis.safeGet (pickupProgressStateKey rideId)
+                  let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                      progressThreshold = fromIntegral $ fromMaybe defaultProgressThresholdMeters cfg.progressThresholdMeters :: Double
+                      deviationAllowance = fromIntegral $ fromMaybe defaultDeviationAllowanceMeters cfg.deviationAllowanceMeters :: Double
+                      detourDisplacement = fromIntegral $ fromMaybe defaultDetourDisplacementMeters cfg.detourDisplacementMeters :: Double
+                      detourCredit = fromMaybe defaultDetourCreditSec cfg.detourCreditSec
+                      elapsedSec = maybe cfg.tickIntervalSec (\t -> max 0 . round $ diffUTCTime now t) state0.lastTickAt
+                  -- Terminal scope: action + ride kind + category decide reallocation; warns are never
+                  -- gated. Scheduled verdicts are merchant-attributed (as at activation); ad-hoc stays
+                  -- app-attributed. Behaviour Engine for scheduled is per-city opt-in.
+                  let behaviourEngineOn = runBehaviourEngineForRide booking.isScheduled cfg.runBehaviourEngineForScheduled
+                      requestor = if booking.isScheduled then RideCancel.MerchantRequestorId (booking.providerId, ride.merchantOperatingCityId) else RideCancel.ApplicationRequestorId id.getId
+                      shouldReallocate action =
+                        terminalActionReallocates action booking.isScheduled
+                          && (not booking.isScheduled || DTrip.isReallocatableCategory booking.tripCategory)
+                      reallocateRide reason = PickupStall.flushPickupJourney ride Nothing >> cancelOrReallocate ride reason True requestor
+                  -- ETA (scheduled TIME mode): faultSeconds = fresh deficit vs grace each tick; firedStageCount =
+                  -- consecutive troubled ticks, so we nudge once on entry and reallocate only after >= 2.
+                  let bestTimeSec = maybe maxBound (\tc -> round tc.graceTimeForScheduledRidePickup) mbTransporterConfig :: Int
+                      etaWarnStage = listToMaybe cfg.stages
+                      runEtaTick gpsFix (st :: PickupProgressState) = do
+                        let req = TMaps.GetDistanceReq {origin = LatLong {lat = gpsFix.lat, lon = gpsFix.lon}, destination = pickupLoc, travelMode = Just TMaps.CAR, distanceUnit = Meter, sourceDestinationMapping = Nothing}
+                            -- fresh-fix bookkeeping; a TIME-mode ride never touches the distance-clock progress fields.
+                            saveAndReschedule s = saveState (s {lastFixLat = Just gpsFix.lat, lastFixLon = Just gpsFix.lon, lastTickAt = Just now, darkSince = Nothing, firedDarkStageCount = 0, behaviour = DRide.PROGRESSING}) >> return rescheduleResult
+                            -- nudge once on entry (no spam); ETA uses the flat overlay key (no situation variants)
+                            nudgeOnEntry = when (st.firedStageCount == 0) $ whenJust etaWarnStage $ \stage -> sendStallNudge ride stage.channel (fromMaybe [] stage.chatSuggestions) stage.overlayKey
+                        responseArray <- errorCatchAndHandle [req] (TMaps.getDistanceForScheduledRides booking.providerId ride.merchantOperatingCityId (Just ride.id.getId))
+                        if any resultFailed responseArray
+                          then logWarning "pickup monitor ETA: getDistance failed; skipping this tick" >> saveAndReschedule st
                           else do
-                            -- No progress. A pending dark span is resolved against him: he was at
-                            -- bestDistance-or-worse before it and still is, so the whole span counts
-                            -- (elapsedSec would only re-count the tail of that span, hence either/or).
-                            let darkPenaltySec = maybe 0 (\since -> max 0 . round $ diffUTCTime now since) state.darkSince :: Int
-                                displacement = case (state.lastFixLat, state.lastFixLon) of
-                                  (Just lastLat, Just lastLon) -> realToFrac $ distanceBetweenInMeters (LatLong lastLat lastLon) (LatLong gpsFix.lat gpsFix.lon) :: Double
-                                  _ -> 0
-                                -- extra fairness for U-turns/one-ways: a driver demonstrably driving
-                                -- (real displacement, judged on consecutive fixes only) pauses the
-                                -- clock until the bounded credit runs out
-                                isDetour = isNothing state.darkSince && displacement >= detourDisplacement && state.detourCreditUsedSec + elapsedSec <= detourCredit
-                                candidateBehaviour
-                                  | isDetour = DRide.DETOURING
-                                  | maybe False (\best -> currentDistance > best + deviationAllowance) state.bestDistance = DRide.MOVING_AWAY
-                                  | otherwise = DRide.STALLED
-                                accrualSec = if isDetour then 0 else (if darkPenaltySec > 0 then darkPenaltySec else elapsedSec)
-                                state' =
-                                  (withFix state)
-                                    { behaviour = candidateBehaviour,
-                                      faultSeconds = state.faultSeconds + accrualSec,
-                                      detourCreditUsedSec = state.detourCreditUsedSec + (if isDetour then elapsedSec else 0)
-                                    }
-                            logInfo $ pickupTickLog rideId (Just currentDistance) state' accrualSec
-                            case listToMaybe (drop state'.firedStageCount cfg.stages) of
-                              Just stage | state'.faultSeconds >= stage.afterFaultSec -> do
-                                sendStallNudge ride stage.channel (fromMaybe [] stage.chatSuggestions) (stage.overlayKey <> "_" <> situation)
-                                case stage.terminalAction of
-                                  Nothing -> do
-                                    saveState state' {firedStageCount = state'.firedStageCount + 1}
-                                    return rescheduleResult
-                                  Just terminalAction -> do
-                                    saveState state' {firedStageCount = state'.firedStageCount + 1}
-                                    whenJust mbTransporterConfig $ \transporterConfig ->
-                                      PickupStall.recordPickupStall transporterConfig driverId ride.merchantOperatingCityId rideId (behaviourLabel candidateBehaviour) (if terminalAction == DTC.REALLOCATE_RIDE then PickupStall.SystemReallocation else PickupStall.SystemDetection)
-                                    PickupStall.flushPickupJourney ride Nothing
-                                    if terminalAction == DTC.REALLOCATE_RIDE
+                            let durationSec = sumDuration responseArray
+                                deficitSec = max 0 (round (secondsToNominalDiffTime durationSec - diffUTCTime booking.startTime now)) :: Int
+                                st' = st {faultSeconds = deficitSec, firedStageCount = st.firedStageCount + 1} :: PickupProgressState
+                                warn tag = nudgeOnEntry >> stampScheduledEtaTag ride tag >> saveAndReschedule st'
+                            logInfo $ "PickupEtaTick rideId=" <> rideId.getId <> " deficitSec=" <> show deficitSec <> " graceSec=" <> show bestTimeSec <> " troubledTicks=" <> show st'.firedStageCount
+                            if deficitSec == 0
+                              then saveAndReschedule (st {faultSeconds = 0, firedStageCount = 0}) -- on time / recovered: reset the trouble clock
+                              else
+                                if deficitSec <= bestTimeSec
+                                  then warn "AT_RISK" -- within grace: warn once per troubled episode
+                                  else
+                                    if st.firedStageCount >= 1 && shouldReallocate DTC.REALLOCATE_SCHEDULED_RIDE
                                       then do
-                                        cancelOrReallocate ride ("Ride is Reallocated because driver did not proceed to pickup (" <> behaviourLabel candidateBehaviour <> ")") True (RideCancel.ApplicationRequestorId id.getId)
+                                        -- >= 2 troubled ticks + in scope; ETA breach isn't misconduct, so no recordPickupStall
+                                        stampScheduledEtaTag ride "BREACHED"
+                                        saveState st'
+                                        reallocateRide ("Ride is Reallocated because driver can't reach the scheduled pickup on time (predicted " <> show deficitSec <> "s late)")
+                                        return (Terminate "Ride reallocated due to ETA infeasibility")
+                                      else warn "BREACHED" -- first breach tick (awaiting confirmation) or out of scope: warn-only, keep monitoring
+                  case mbFreshFix of
+                    Nothing -> do
+                      situation <- rideSituation booking
+                      -- Dark tick: judgment pending. The fault clock freezes; only the gentle
+                      -- dark ladder (GPS nudges, never terminal) advances. ETA also skips (no live origin).
+                      let darkSince' = fromMaybe now state0.darkSince
+                          darkSpanSec = max 0 . round $ diffUTCTime now darkSince' :: Int
+                          state' = state0 {darkSince = Just darkSince', behaviour = DRide.GPS_DARK, lastTickAt = Just now}
+                      logInfo $ pickupTickLog rideId (Nothing :: Maybe Double) state' darkSpanSec
+                      case listToMaybe (drop state'.firedDarkStageCount cfg.darkStages) of
+                        Just stage | darkSpanSec >= stage.afterDarkSec -> do
+                          sendStallNudge ride stage.channel (fromMaybe [] stage.chatSuggestions) (stage.overlayKey <> "_" <> situation)
+                          saveState state' {firedDarkStageCount = state'.firedDarkStageCount + 1}
+                        _ -> saveState state'
+                      return rescheduleResult
+                    Just gpsFix -> do
+                      -- Mutually exclusive per ride; on a mid-ride mode flip wipe the other clock's residue (distance sets bestDistance, ETA doesn't).
+                      if etaEnabled
+                        then runEtaTick gpsFix (if isJust state0.bestDistance then state0 {bestDistance = Nothing, faultSeconds = 0, firedStageCount = 0, detourCreditUsedSec = 0} else state0)
+                        else do
+                          situation <- rideSituation booking
+                          let state = if isNothing state0.bestDistance && (state0.faultSeconds /= 0 || state0.firedStageCount /= 0) then state0 {faultSeconds = 0, firedStageCount = 0} else state0
+                              currentDistance = realToFrac $ distanceBetweenInMeters (LatLong gpsFix.lat gpsFix.lon) pickupLoc :: Double
+                              madeProgress = maybe True (\best -> currentDistance <= best - progressThreshold) state.bestDistance
+                              withFix st =
+                                st
+                                  { lastFixLat = Just gpsFix.lat,
+                                    lastFixLon = Just gpsFix.lon,
+                                    lastTickAt = Just now,
+                                    darkSince = Nothing,
+                                    firedDarkStageCount = 0
+                                  }
+                          if madeProgress
+                            then do
+                              -- Progress (or first baseline fix). Any pending dark span is forgiven —
+                              -- he provably drove toward the pickup through it. faultSeconds is the
+                              -- lifetime total for this pickup and is deliberately NOT reset.
+                              let state' = (withFix state) {bestDistance = Just currentDistance, behaviour = DRide.PROGRESSING}
+                              logInfo $ pickupTickLog rideId (Just currentDistance) state' (0 :: Int)
+                              saveState state'
+                              return rescheduleResult
+                            else do
+                              -- No progress. A pending dark span is resolved against him: he was at
+                              -- bestDistance-or-worse before it and still is, so the whole span counts
+                              -- (elapsedSec would only re-count the tail of that span, hence either/or).
+                              let darkPenaltySec = maybe 0 (\since -> max 0 . round $ diffUTCTime now since) state.darkSince :: Int
+                                  displacement = case (state.lastFixLat, state.lastFixLon) of
+                                    (Just lastLat, Just lastLon) -> realToFrac $ distanceBetweenInMeters (LatLong lastLat lastLon) (LatLong gpsFix.lat gpsFix.lon) :: Double
+                                    _ -> 0
+                                  -- extra fairness for U-turns/one-ways: a driver demonstrably driving
+                                  -- (real displacement, judged on consecutive fixes only) pauses the
+                                  -- clock until the bounded credit runs out
+                                  isDetour = isNothing state.darkSince && displacement >= detourDisplacement && state.detourCreditUsedSec + elapsedSec <= detourCredit
+                                  candidateBehaviour
+                                    | isDetour = DRide.DETOURING
+                                    | maybe False (\best -> currentDistance > best + deviationAllowance) state.bestDistance = DRide.MOVING_AWAY
+                                    | otherwise = DRide.STALLED
+                                  accrualSec = if isDetour then 0 else (if darkPenaltySec > 0 then darkPenaltySec else elapsedSec)
+                                  state' =
+                                    (withFix state)
+                                      { behaviour = candidateBehaviour,
+                                        faultSeconds = state.faultSeconds + accrualSec,
+                                        detourCreditUsedSec = state.detourCreditUsedSec + (if isDetour then elapsedSec else 0)
+                                      }
+                              logInfo $ pickupTickLog rideId (Just currentDistance) state' accrualSec
+                              case listToMaybe (drop state'.firedStageCount cfg.stages) of
+                                Just stage | state'.faultSeconds >= stage.afterFaultSec -> do
+                                  sendStallNudge ride stage.channel (fromMaybe [] stage.chatSuggestions) (stage.overlayKey <> "_" <> situation)
+                                  case stage.terminalAction of
+                                    Nothing -> do
+                                      saveState state' {firedStageCount = state'.firedStageCount + 1}
+                                      return rescheduleResult
+                                    Just terminalAction
+                                      | shouldReallocate terminalAction -> do
+                                        saveState state' {firedStageCount = state'.firedStageCount + 1}
+                                        when behaviourEngineOn $
+                                          whenJust mbTransporterConfig $ \transporterConfig ->
+                                            PickupStall.recordPickupStall transporterConfig driverId ride.merchantOperatingCityId rideId (behaviourLabel candidateBehaviour) PickupStall.SystemReallocation
+                                        reallocateRide ("Ride is Reallocated because driver did not proceed to pickup (" <> behaviourLabel candidateBehaviour <> ")")
                                         return $ Terminate "Ride reallocated due to no pickup progress"
-                                      else return $ Terminate "Pickup stall recorded; monitoring stopped"
-                              _ -> do
-                                saveState state'
-                                return rescheduleResult
+                                      | terminalAction == DTC.RECORD_ONLY && not booking.isScheduled -> do
+                                        saveState state' {firedStageCount = state'.firedStageCount + 1}
+                                        whenJust mbTransporterConfig $ \transporterConfig ->
+                                          PickupStall.recordPickupStall transporterConfig driverId ride.merchantOperatingCityId rideId (behaviourLabel candidateBehaviour) PickupStall.SystemDetection
+                                        PickupStall.flushPickupJourney ride Nothing
+                                        return $ Terminate "Pickup stall recorded; monitoring stopped"
+                                      -- warn sent, no terminal action (out of scope, or RECORD_ONLY on scheduled): keep monitoring, exit via ride-status pre-checks
+                                      | otherwise -> do
+                                        saveState state' {firedStageCount = state'.firedStageCount + 1}
+                                        return rescheduleResult
+                                _ -> do
+                                  saveState state'
+                                  return rescheduleResult
   where
     pickupTickLog rideId mbCurrentDistance st accrualSec =
       "PickupProgressTick rideId=" <> rideId.getId
@@ -299,13 +366,23 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
           Just overlay -> TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay
           Nothing -> logWarning $ "No merchant_overlay row found for pickup stall overlay key: " <> overlayKey
 
+    etaCheckOn booking cfg = booking.isScheduled && cfg.scheduledMonitoringMode == Just DTC.TIME_BASED
+    distanceCheckOn booking cfg = not booking.isScheduled || cfg.scheduledMonitoringMode == Just DTC.DISTANCE_BASED
+
+    -- Sticky dashboard tag (ScheduledPickupEta#AT_RISK / #BREACHED): never cleared; ride.status
+    -- is the recovery signal. Idempotent — the ride row is re-fetched every tick.
+    stampScheduledEtaTag ride status = do
+      let etaTag = mkScheduledEtaRideTag status
+          existingTags = fromMaybe [] ride.rideTags
+      when (etaTag `notElem` existingTags) $
+        QRide.updateRideTags (Just $ etaTag : existingTags) ride.id
+
 situationNonCancellable, situationFeeApplies, situationFreeCancel :: Text
 situationNonCancellable = "NON_CANCELLABLE"
 situationFeeApplies = "FEE_APPLIES"
 situationFreeCancel = "FREE_CANCEL"
 
--- Overlay copy varies by how "expensive" cancelling is for the driver on this ride;
--- full overlay key = <stage.overlayKey>_<situation>, seeded per city and language.
+-- distance/dark stall overlay key = <stage.overlayKey>_<situation> (varies by cancel cost); ETA warns flat.
 rideSituation :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m Text
 rideSituation booking
   | booking.fareParams.driverCancellationNotAllowed == Just True = pure situationNonCancellable

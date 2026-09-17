@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Image where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Image
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.Image as Beam
 
 instance FromTType' Beam.Image Domain.Types.Image.Image where
@@ -23,6 +25,7 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
             imageType = imageType,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            metadata = Kernel.Utils.JSON.valueToMaybe =<< metadata,
             personId = Kernel.Types.Id.Id personId,
             rcId = rcId,
             reviewerEmail = reviewerEmail,
@@ -42,6 +45,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
         Beam.imageType = imageType,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.metadata = Data.Aeson.toJSON <$> metadata,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.rcId = rcId,
         Beam.reviewerEmail = reviewerEmail,

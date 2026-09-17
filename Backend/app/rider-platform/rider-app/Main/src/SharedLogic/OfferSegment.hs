@@ -18,6 +18,7 @@ module SharedLogic.OfferSegment
     OfferSegmentContext (..),
     DimensionSummary (..),
     StationPair (..),
+    RouteInfo (..),
     OfferSegmentResp (..),
     ticketContext,
     passContext,
@@ -60,23 +61,33 @@ data StationPair = StationPair
   }
   deriving (Show, Generic)
 
+data RouteInfo = RouteInfo
+  { routeCode :: Text,
+    routeShortName :: Text
+  }
+  deriving (Show, Generic)
+
 data OfferSegmentContext = OfferSegmentContext
   { productType :: Maybe DPUS.FRFSProductType,
     vehicleType :: Maybe Spec.VehicleCategory,
     vehicleServiceTierType :: Maybe Spec.ServiceTierType,
     passTypeId :: Maybe (Id PassType.PassType),
-    stations :: Maybe StationPair
+    stations :: Maybe StationPair,
+    routes :: [RouteInfo],
+    vehicleNumber :: Maybe Text
   }
   deriving (Show, Generic)
 
-ticketContext :: Maybe Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe StationPair -> OfferSegmentContext
-ticketContext vehicleType vehicleServiceTierType stations =
+ticketContext :: Maybe Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe StationPair -> [RouteInfo] -> Maybe Text -> OfferSegmentContext
+ticketContext vehicleType vehicleServiceTierType stations routes vehicleNumber =
   OfferSegmentContext
     { productType = Just DPUS.TICKET,
       vehicleType = vehicleType,
       vehicleServiceTierType = vehicleServiceTierType,
       passTypeId = Nothing,
-      stations = stations
+      stations = stations,
+      routes = routes,
+      vehicleNumber = vehicleNumber
     }
 
 passContext :: Id PassType.PassType -> OfferSegmentContext
@@ -86,7 +97,9 @@ passContext passTypeId =
       vehicleType = Nothing,
       vehicleServiceTierType = Nothing,
       passTypeId = Just passTypeId,
-      stations = Nothing
+      stations = Nothing,
+      routes = [],
+      vehicleNumber = Nothing
     }
 
 data CurrentPurchase = CurrentPurchase
@@ -96,6 +109,10 @@ data CurrentPurchase = CurrentPurchase
     passTypeId :: Maybe Text,
     fromStationId :: Maybe Text,
     toStationId :: Maybe Text,
+    vehicleNumber :: Text,
+    routeCodes :: [Text],
+    routeShortNames :: [Text],
+    routeCount :: Int,
     ticketCount :: Int,
     purchaseCount :: Int,
     daysSinceLastPurchase :: Maybe Int
@@ -199,6 +216,10 @@ mkInput now person rows ctx =
           passTypeId = (.getId) <$> ctx.passTypeId,
           fromStationId = (.fromStationId) <$> ctx.stations,
           toStationId = (.toStationId) <$> ctx.stations,
+          vehicleNumber = fromMaybe "NO_BUS" ctx.vehicleNumber,
+          routeCodes = map (.routeCode) ctx.routes,
+          routeShortNames = map (.routeShortName) ctx.routes,
+          routeCount = length ctx.routes,
           ticketCount = maybe 0 (fromMaybe 0 . (.ticketCount)) mbCurrentRow,
           purchaseCount = maybe 0 (.purchaseCount) mbCurrentRow,
           daysSinceLastPurchase = case mbCurrentRow of

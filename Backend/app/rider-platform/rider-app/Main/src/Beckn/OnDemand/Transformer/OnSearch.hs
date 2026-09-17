@@ -130,6 +130,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
       let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
+      let negativeFareSuggestion = Beckn.OnDemand.Utils.OnSearch.getNegativeFareSuggestion item
       pure $
         Left $
           Domain.Action.Beckn.OnSearch.EstimateInfo
@@ -168,6 +169,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleIconUrl = vehicleIconUrl,
               tipOptions,
               smartTipSuggestion,
+              negativeFareSuggestion,
               qar = qar_,
               smartTipReason,
               area = area_,
@@ -178,6 +180,9 @@ tfQuotesInfo provider fulfillments validTill item = do
       quoteDetails_ <-
         case tripCategory of
           Rental _ -> do
+            quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
+            pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
+          IntercityRental _ _ -> do
             quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
             pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
           OneWay OneWayRideOtp -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})

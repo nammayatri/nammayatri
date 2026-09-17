@@ -601,9 +601,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
     finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
     let appliedCharge = case mbUpdatedFareParams of
-          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee
-          Nothing -> Fare.customerBorneCharge booking.paymentCharge booking.paymentChargeBearer
-        chargeRes = Fare.finalisePaymentCharge (Just thresholdConfig.driverWalletConfig) finalFare appliedCharge baseFareParams
+          Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeVat
+          Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeVat
+        chargeRes = Fare.finalisePaymentCharge (Just thresholdConfig.driverWalletConfig) finalFare appliedCharge discountAmount baseFareParams
         finalFareWithPaymentCharge = chargeRes.adjustedFare
         mbPaymentCharge = chargeRes.paymentCharge
         mbPaymentChargeBearer = chargeRes.paymentChargeBearer
@@ -990,6 +990,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               estimatedRideStaticDuration = booking.estimatedStaticDuration,
               driverSelectedFare = booking.fareParams.driverSelectedFare,
               customerExtraFee = booking.fareParams.customerExtraFee,
+              negativeFareAdjustment = booking.fareParams.negativeFareAdjustment,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
               petCharges = booking.fareParams.petCharges,
               estimatedCongestionCharge = endRideCongestionCharge,

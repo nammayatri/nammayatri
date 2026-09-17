@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantPaymentMethod
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import qualified Lib.DriverCoins.Types
 import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
@@ -34,10 +35,13 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
     faultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix,
     isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    maxDriverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     maxWaiveOffsPerPeriod :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    minDriverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.MerchantPaymentMethod.PaymentInstrument,
+    timeBounds :: Kernel.Types.TimeBound.TimeBound,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     vehicleServiceTier :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,
     waiveOffAllowed :: Kernel.Prelude.Bool,
@@ -49,4 +53,4 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
 
 data ConsequenceCollectionMode = NextRideDues | ImmediateCapture deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ConsequenceCollectionMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConsequenceCollectionMode)

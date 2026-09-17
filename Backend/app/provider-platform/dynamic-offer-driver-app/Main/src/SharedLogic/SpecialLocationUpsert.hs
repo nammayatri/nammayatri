@@ -77,6 +77,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoGateTags :: Text,
     gateInfoWalkDescription :: Text,
     gateInfoEntryFeeAmount :: Maybe Text,
+    gateInfoMinBalanceRequired :: Maybe Text,
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
@@ -100,7 +101,9 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
+    gateInfoEntryFeeDisabledServiceTiers :: Maybe Text,
     gateInfoGateConfig :: Maybe Text,
+    gateInfoFeeItems :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text,
     boothSpecificFleet :: Maybe Text
@@ -127,6 +130,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     gateInfoGateTags <- r .: "gate_info_tags"
     gateInfoWalkDescription <- r .: "gate_info_walk_description"
     gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
+    gateInfoMinBalanceRequired <- optional (r .: "gate_info_min_balance_required")
     priority <- r .: "priority"
     pickupPriority <- r .: "pickup_priority"
     dropPriority <- r .: "drop_priority"
@@ -150,7 +154,9 @@ instance FromNamedRecord SpecialLocationCSVRow where
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    gateInfoEntryFeeDisabledServiceTiers <- optional (r .: "gate_info_entry_fee_disabled_service_tiers")
     gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
+    gateInfoFeeItems <- optional (r .: "gate_info_fee_items")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
     boothSpecificFleet <- optional (r .: "booth_specific_fleet")
@@ -194,6 +200,22 @@ parseBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
 parseBoolMap mbT = do
   t <- mbT >>= cleanField
   Aeson.decodeStrict (TE.encodeUtf8 t)
+
+-- | Resolve the gate fee items CSV cell, rejecting the row when the JSON is invalid or
+--   when an item's currency does not match the operating city's currency.
+resolveGateFeeItems :: Int -> Currency -> Maybe Text -> Flow (Maybe [DGI.GateFeeItem])
+resolveGateFeeItems idx cityCurrency mbFieldValue =
+  case mbFieldValue >>= cleanField of
+    Nothing -> pure Nothing
+    Just t -> do
+      items <-
+        Aeson.decodeStrict (TE.encodeUtf8 t)
+          & fromMaybeM (InvalidRequest $ "Invalid Gate Info (fee_items): " <> t <> " at row: " <> show idx)
+      forM_ items $ \item ->
+        when (item.amountWithCurrency.currency /= cityCurrency) $
+          throwError $
+            InvalidRequest $ "Gate Info (fee_items) currency " <> show item.amountWithCurrency.currency <> " does not match city currency " <> show cityCurrency <> " at row: " <> show idx
+      pure $ Just items
 
 resolveGateConfig :: Int -> Maybe Text -> Flow (Maybe DGI.GateConfig)
 resolveGateConfig idx mbFieldValue =
@@ -318,6 +340,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       else return Nothing
   resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
   resolvedGateConfig <- resolveGateConfig idx row.gateInfoGateConfig
+  resolvedGateFeeItems <- resolveGateFeeItems idx merchantOpCity.currency row.gateInfoFeeItems
   let specialLocation =
         DSL.SpecialLocation
           { id = Id locationName,
@@ -362,6 +385,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             gateTags = gateInfoGateTags,
             walkDescription = gateInfoWalkDescription,
             entryFeeAmount = gateInfoEntryFeeAmount,
+            feeItems = resolvedGateFeeItems,
+            minBalanceRequired = row.gateInfoMinBalanceRequired >>= \v -> readMaybeCSVField idx v "Gate Info (min_balance_required)",
             minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
             maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
             demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
@@ -375,6 +400,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
             notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
             enableQueueFilter = parseBoolMap row.enableQueueFilter,
+            entryFeeDisabledServiceTiers = fromMaybe [] . parseGateTags <$> row.gateInfoEntryFeeDisabledServiceTiers,
             gateConfig = resolvedGateConfig
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
@@ -492,6 +518,7 @@ mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
 mergeGateInfoWithExisting new Nothing = new
 mergeGateInfoWithExisting new (Just old) =
   new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+      DGI.minBalanceRequired = new.minBalanceRequired <|> old.minBalanceRequired,
       DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
       DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
       DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
@@ -506,5 +533,6 @@ mergeGateInfoWithExisting new (Just old) =
       -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
       DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
       DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+      DGI.entryFeeDisabledServiceTiers = new.entryFeeDisabledServiceTiers <|> old.entryFeeDisabledServiceTiers,
       DGI.gateConfig = new.gateConfig <|> old.gateConfig
      }

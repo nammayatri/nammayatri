@@ -59,6 +59,27 @@ updateCancellationCharges cancellationFeeTaxExclusive cancellationTax (Id farePa
 findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
+-- | Record the TDS applied to this ride's fare.
+--
+-- Targeted rather than reusing 'updateFareParameters', which rewrites every
+-- column: TDS is decided at ride end / cancellation, long after the rest of the
+-- fare was computed, so rewriting the whole row risks clobbering values that
+-- were recalculated in between.
+updateTdsDeduction ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe HighPrecMoney ->
+  Maybe Double ->
+  UTCTime ->
+  Id FareParameters ->
+  m ()
+updateTdsDeduction tdsAmount tdsRate processedAt fareParametersId =
+  updateOneWithKV
+    [ Se.Set BeamFP.tdsAmount tdsAmount,
+      Se.Set BeamFP.tdsRate tdsRate,
+      Se.Set BeamFP.tdsProcessedAt (Just processedAt)
+    ]
+    [Se.Is BeamFP.id $ Se.Eq (getId fareParametersId)]
+
 updateFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParameters -> Id FareParameters -> m ()
 updateFareParameters FareParameters {..} id_ = do
   now <- getCurrentTime
@@ -67,6 +88,8 @@ updateFareParameters FareParameters {..} id_ = do
       Se.Set BeamFP.driverSelectedFareAmount driverSelectedFare,
       Se.Set BeamFP.customerExtraFee $ roundToIntegral <$> customerExtraFee,
       Se.Set BeamFP.customerExtraFeeAmount customerExtraFee,
+      Se.Set BeamFP.negativeFareAdjustment $ roundToIntegral <$> negativeFareAdjustment,
+      Se.Set BeamFP.negativeFareAdjustmentAmount negativeFareAdjustment,
       Se.Set BeamFP.serviceCharge $ roundToIntegral <$> serviceCharge,
       Se.Set BeamFP.serviceChargeAmount serviceCharge,
       Se.Set BeamFP.govtCharges $ roundToIntegral <$> govtCharges,
@@ -81,6 +104,7 @@ updateFareParameters FareParameters {..} id_ = do
       Se.Set BeamFP.nightShiftCharge $ roundToIntegral <$> nightShiftCharge,
       Se.Set BeamFP.nightShiftChargeAmount nightShiftCharge,
       Se.Set BeamFP.currency $ Just currency,
+      Se.Set BeamFP.negotiatedFareDelta negotiatedFareDelta,
       Se.Set BeamFP.updatedAt (Just now)
     ]
     [Se.Is BeamFP.id (Se.Eq id_.getId)]
@@ -132,6 +156,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
             Nothing -> return Nothing
     now <- getCurrentTime
     let conditionalCharges' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges
+        customerGateFeeItems' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerGateFeeItems
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $
@@ -140,6 +165,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
               { id = Id id,
                 driverSelectedFare = mkAmountWithDefault driverSelectedFareAmount <$> driverSelectedFare,
                 customerExtraFee = mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
+                negativeFareAdjustment = mkAmountWithDefault negativeFareAdjustmentAmount <$> negativeFareAdjustment,
                 serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
                 parkingCharge = parkingCharge,
                 stopCharges = stopCharges,
@@ -172,7 +198,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 merchantId = Id <$> merchantId,
                 merchantOperatingCityId = Id <$> merchantOperatingCityId,
                 conditionalCharges = conditionalCharges',
+                customerGateFeeItems = customerGateFeeItems',
                 paymentProcessingFee = paymentProcessingFee,
+                paymentProcessingFeeVat = paymentProcessingFeeVat,
                 isVatTaxType = isVatTaxType,
                 businessDiscount = businessDiscount,
                 personalDiscount = personalDiscount,
@@ -184,6 +212,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 platformFee = platformFee,
                 sgst = sgst,
                 cgst = cgst,
+                tdsAmount = tdsAmount,
+                tdsRate = tdsRate,
+                tdsProcessedAt = tdsProcessedAt,
                 driverCancellationNotAllowed = driverCancellationNotAllowed,
                 discountApplicableRideFareTaxExclusive = discountApplicableRideFareTaxExclusive,
                 discountApplicableRideFareTax = discountApplicableRideFareTax,
@@ -195,7 +226,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 cancellationTax = cancellationTax,
                 parkingChargeTaxExclusive = parkingChargeTaxExclusive,
                 parkingChargeTax = parkingChargeTax,
-                fareSettlementType = fareSettlementType
+                fareSettlementType = fareSettlementType,
+                negotiatedFareDelta = negotiatedFareDelta
               }
       Nothing -> return Nothing
 
@@ -205,6 +237,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
       { BeamFP.id = getId id,
         BeamFP.driverSelectedFare = roundToIntegral <$> driverSelectedFare,
         BeamFP.customerExtraFee = roundToIntegral <$> customerExtraFee,
+        BeamFP.negativeFareAdjustment = roundToIntegral <$> negativeFareAdjustment,
         BeamFP.serviceCharge = roundToIntegral <$> serviceCharge,
         BeamFP.parkingCharge = parkingCharge,
         BeamFP.priorityCharges = priorityCharges,
@@ -212,6 +245,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.govtCharges = roundToIntegral <$> govtCharges,
         BeamFP.driverSelectedFareAmount = driverSelectedFare,
         BeamFP.customerExtraFeeAmount = customerExtraFee,
+        BeamFP.negativeFareAdjustmentAmount = negativeFareAdjustment,
         BeamFP.serviceChargeAmount = serviceCharge,
         BeamFP.govtChargesAmount = govtCharges,
         BeamFP.nightShiftRateIfApplies = nightShiftRateIfApplies,
@@ -239,7 +273,9 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
+        BeamFP.customerGateFeeItems = Just $ toJSON customerGateFeeItems,
         BeamFP.paymentProcessingFee = paymentProcessingFee,
+        BeamFP.paymentProcessingFeeVat = paymentProcessingFeeVat,
         BeamFP.isVatTaxType = isVatTaxType,
         BeamFP.commission = Nothing,
         BeamFP.discountApplicableRideFareTaxExclusive = discountApplicableRideFareTaxExclusive,
@@ -265,6 +301,10 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.platformFee = platformFee,
         BeamFP.sgst = sgst,
         BeamFP.cgst = cgst,
+        BeamFP.tdsAmount = tdsAmount,
+        BeamFP.tdsRate = tdsRate,
+        BeamFP.tdsProcessedAt = tdsProcessedAt,
         BeamFP.driverCancellationNotAllowed = driverCancellationNotAllowed,
-        BeamFP.fareSettlementType = fareSettlementType
+        BeamFP.fareSettlementType = fareSettlementType,
+        BeamFP.negotiatedFareDelta = negotiatedFareDelta
       }

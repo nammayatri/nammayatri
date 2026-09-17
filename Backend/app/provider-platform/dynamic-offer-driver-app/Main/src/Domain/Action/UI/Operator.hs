@@ -4,6 +4,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -25,7 +26,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
-import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
 import Tools.Error
@@ -50,7 +50,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id (cast driverId)) SGuard.LinkToOperator (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     when (merchant.overwriteAssociation == Just True) $
-      QRCAssociation.endAllRCAssociationsForDriver driverId
+      DomainRC.endAllRCAssociationsAndRemoveVehicle driverId
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
     QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
     Analytics.handleDriverAnalyticsAndFlowStatus

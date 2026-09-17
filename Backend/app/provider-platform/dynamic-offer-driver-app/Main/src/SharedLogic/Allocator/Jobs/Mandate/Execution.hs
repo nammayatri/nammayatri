@@ -3,6 +3,7 @@ module SharedLogic.Allocator.Jobs.Mandate.Execution where
 import qualified Control.Monad.Catch as C
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Domain.Types.DriverFee as DF
 import Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan as DP
@@ -21,6 +22,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (Id), cast)
@@ -193,21 +195,33 @@ asyncExecutionCall ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
-  driverFeeForExecution <- QDF.findById driverFee.id
-  driver <- QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-  let serviceName = invoice.serviceName
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
-  paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id merchantOperatingCityId subscriptionConfig.serviceName
-  if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
-    then do
-      exec <- withTryCatch "createExecutionService:asyncExecutionCall" (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
-      case exec of
-        Left err -> do
+  lockAcquired <- Redis.tryLockRedis (DF.mandateExecutionInProgressKey driverFee.id.getId) DF.mandateExecutionInProgressTtl
+  if not lockAcquired
+    then logWarning ("Skipping execution for driverFeeId : " <> driverFee.id.getId <> " as an execution is already in progress for it")
+    else executeMandate
+  where
+    executeMandate = do
+      driverFeeForExecution <- QDF.findById driverFee.id
+      driver <- QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      let serviceName = invoice.serviceName
+      subscriptionConfig <-
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
+          >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
+      paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id merchantOperatingCityId subscriptionConfig.serviceName
+      if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
+        then do
+          exec <- withTryCatch "createExecutionService:asyncExecutionCall" (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
+          case exec of
+            Left err
+              | isDuplicateOrderIdError err ->
+                logError ("Execution already done for driverFeeId : " <> invoice.driverFeeId.getId <> ", keeping it on autopay. error : " <> show err)
+              | otherwise -> do
+                QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing
+                QDF.updateAutoPayToManual driverFee.id
+                logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
+            Right _ -> pure ()
+        else do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing
-          QDF.updateAutoPayToManual driverFee.id
-          logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
-        Right _ -> pure ()
-    else do
-      QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing
+
+isDuplicateOrderIdError :: SomeException -> Bool
+isDuplicateOrderIdError err = any (`T.isInfixOf` T.pack (show err)) ["DUPLICATE_ORDER_ID", "Order already exists with the given order_id"]

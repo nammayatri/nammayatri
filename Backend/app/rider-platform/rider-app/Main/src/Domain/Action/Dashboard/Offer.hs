@@ -37,6 +37,9 @@ postOfferCreate ::
 postOfferCreate merchantShortId opCity req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  validateMinimumAmount req.minimumAmount
+  validateMaxApplyCount req.maxApplyCount
+  validateValidityWindow req.validFrom req.validTill
   now <- getCurrentTime
   offerId <- generateGUID
   let offer =
@@ -52,9 +55,15 @@ postOfferCreate merchantShortId opCity req = do
             sponsoredBy = req.sponsoredBy,
             tnc = req.tnc,
             offerEligibilityJsonLogic = req.offerEligibilityJsonLogic,
+            validFrom = req.validFrom,
             validTill = req.validTill,
             currency = req.currency,
             isActive = True,
+            minimumAmount = req.minimumAmount,
+            autoApply = req.autoApply,
+            isHidden = req.isHidden,
+            frequencyType = req.frequencyType,
+            maxApplyCount = req.maxApplyCount,
             merchantId = merchant.id.getId,
             merchantOperatingCityId = merchantOpCity.id.getId,
             createdAt = now,
@@ -73,6 +82,8 @@ postOfferUpdate merchantShortId opCity offerId req = do
   _merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity _merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _merchant.id.getId <> "-city-" <> show opCity)
   offer <- QOffer.findById offerId >>= fromMaybeM (InvalidRequest $ "Offer not found: " <> offerId.getId)
+  validateMinimumAmount req.minimumAmount
+  validateMaxApplyCount req.maxApplyCount
   now <- getCurrentTime
   let updatedOffer =
         offer
@@ -83,12 +94,34 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.sponsoredBy = req.sponsoredBy <|> offer.sponsoredBy,
             DOffer.tnc = req.tnc <|> offer.tnc,
             DOffer.offerEligibilityJsonLogic = req.offerEligibilityJsonLogic <|> offer.offerEligibilityJsonLogic,
+            DOffer.validFrom = req.validFrom <|> offer.validFrom,
             DOffer.validTill = req.validTill <|> offer.validTill,
             DOffer.isActive = fromMaybe offer.isActive req.isActive,
+            DOffer.minimumAmount = req.minimumAmount <|> offer.minimumAmount,
+            DOffer.autoApply = req.autoApply <|> offer.autoApply,
+            DOffer.isHidden = req.isHidden <|> offer.isHidden,
+            DOffer.frequencyType = req.frequencyType <|> offer.frequencyType,
+            DOffer.maxApplyCount = req.maxApplyCount <|> offer.maxApplyCount,
             DOffer.updatedAt = now
           }
+  validateValidityWindow updatedOffer.validFrom updatedOffer.validTill
   QOffer.updateByPrimaryKey updatedOffer
   pure Success
+
+validateMinimumAmount :: Maybe HighPrecMoney -> Flow ()
+validateMinimumAmount mbMinimumAmount =
+  whenJust mbMinimumAmount $ \minimumAmount ->
+    when (minimumAmount < 0) $ throwError (InvalidRequest "minimumAmount cannot be negative")
+
+validateMaxApplyCount :: Maybe Int -> Flow ()
+validateMaxApplyCount mbMaxApplyCount =
+  whenJust mbMaxApplyCount $ \maxApplyCount ->
+    when (maxApplyCount < 1) $ throwError (InvalidRequest "maxApplyCount must be at least 1")
+
+validateValidityWindow :: Maybe UTCTime -> Maybe UTCTime -> Flow ()
+validateValidityWindow mbValidFrom mbValidTill =
+  when (fromMaybe False ((>=) <$> mbValidFrom <*> mbValidTill)) $
+    throwError (InvalidRequest "validFrom must be before validTill")
 
 getOfferList ::
   ShortId DM.Merchant ->
@@ -115,9 +148,15 @@ mkOfferResp offer =
       sponsoredBy = offer.sponsoredBy,
       tnc = offer.tnc,
       offerEligibilityJsonLogic = offer.offerEligibilityJsonLogic,
+      validFrom = offer.validFrom,
       validTill = offer.validTill,
       currency = offer.currency,
       isActive = offer.isActive,
+      minimumAmount = offer.minimumAmount,
+      autoApply = offer.autoApply,
+      isHidden = offer.isHidden,
+      frequencyType = offer.frequencyType,
+      maxApplyCount = offer.maxApplyCount,
       createdAt = offer.createdAt,
       updatedAt = offer.updatedAt
     }

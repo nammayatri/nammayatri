@@ -22,16 +22,47 @@ import qualified SharedLogic.Offer
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "offers" :> "list" :> QueryParam "amount" Kernel.Types.Common.HighPrecMoney :> Get ('[JSON]) [SharedLogic.Offer.OfferRespAPIEntity])
+type API =
+  ( TokenAuth :> "offers" :> "list" :> QueryParam "amount" Kernel.Types.Common.HighPrecMoney
+      :> Get
+           '[JSON]
+           [SharedLogic.Offer.OfferRespAPIEntity]
+      :<|> TokenAuth
+      :> "offers"
+      :> "list"
+      :> "v2"
+      :> QueryParam "amount" Kernel.Types.Common.HighPrecMoney
+      :> Get
+           '[JSON]
+           SharedLogic.Offer.CumulativeOfferResp
+      :<|> TokenAuth
+      :> "offers"
+      :> "applied"
+      :> Get
+           '[JSON]
+           [SharedLogic.Offer.UsedOfferAPIEntity]
+  )
 
 handler :: Environment.FlowServer API
-handler = getOffersList
+handler = getOffersList :<|> getOffersListV2 :<|> getOffersApplied
 
 getOffersList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
     Environment.FlowHandler [SharedLogic.Offer.OfferRespAPIEntity]
   )
 getOffersList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getOffersListV2 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
+    Environment.FlowHandler SharedLogic.Offer.CumulativeOfferResp
+  )
+getOffersListV2 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersListV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getOffersApplied :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [SharedLogic.Offer.UsedOfferAPIEntity])
+getOffersApplied a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersApplied (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

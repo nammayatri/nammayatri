@@ -30,6 +30,8 @@ data IssueMessage = IssueMessage
     -- (IssueApiIntegration) and the flow auto-descends into the branch option whose
     -- condition matches the extracted response fields.
     apiAction :: Maybe Text,
+    -- | Auto reply posted after submit from a CREATE_TICKET / AUTO_CREATE_TICKET / FEEDBACK_TICKET message.
+    onSubmitReplyMsgs :: Maybe [Id IssueMessage],
     isActive :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

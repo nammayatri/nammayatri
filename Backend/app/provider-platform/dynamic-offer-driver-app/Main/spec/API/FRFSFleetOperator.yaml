@@ -103,6 +103,23 @@ types:
     manifest: "[PassengerStopManifest]"
     derive: "Show"
 
+  FRFSActiveManifestReq:
+    # Client's last-known trip/route -- used as the fallback when GIMS resolution fails (or the
+    # caller's own GIMS identity can't be resolved), so a GIMS blip degrades to stale-but-working
+    # instead of losing the passenger list entirely. No GIMS identity fields here -- the driver
+    # calling this is always resolved server-side from the authenticated session.
+    tripId: Maybe Text
+    routeId: Maybe Text
+    derive: "Show"
+
+  FRFSActiveManifestResp:
+    # Both Maybe: no active trip (between trips), and GIMS resolution failed with no client fallback
+    # supplied, both resolve to Nothing rather than an error.
+    tripId: Maybe Text
+    routeId: Maybe Text
+    manifest: "[PassengerStopManifest]"
+    derive: "Show"
+
   FleetBusStopETA:
     stopCode: Text
     stopName: Maybe Text
@@ -163,6 +180,14 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/activeManifest
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: FRFSActiveManifestReq
+      response:
+        type: FRFSActiveManifestResp
 
   - GET:
       endpoint: /v2/frfs/busTripSchedule/{routeId}

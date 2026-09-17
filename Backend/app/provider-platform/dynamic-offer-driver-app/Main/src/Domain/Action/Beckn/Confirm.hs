@@ -41,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
@@ -55,6 +56,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -134,7 +136,7 @@ handler merchant req validatedQuote = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mFleetOwnerId <- QFDA.findByDriverId driver.id True
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) True False
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) Nothing
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       -- Booking confirmed: decrement demand at this pickup gate AND complete any
@@ -166,7 +168,7 @@ handler merchant req validatedQuote = do
           Just dr -> pure dr.dynamicReferralCode
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mFleetOwnerId <- QFDA.findByDriverId driver.id True
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       fork "specialZoneCompletePickupZoneOnMeterConfirm" $
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show $ DV.castServiceTierToVariant uBooking2.vehicleServiceTier)
@@ -205,6 +207,7 @@ handler merchant req validatedQuote = do
                 searchReq,
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
+                negativeFareAdjustment = Nothing,
                 messageId = booking.id.getId,
                 billingCategory = booking.billingCategory,
                 isRepeatSearch = False,
@@ -311,15 +314,25 @@ validateRequest subscriber transporterId req now = do
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
-  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
+  -- Verifying: MSIL pilot merchants are expected to be non-value-add NPs
+  -- (isValueAddNP is legitimately False for them) yet still need scheduled
+  -- trip categories (e.g. OneWay OneWayOnDemandStaticOffer) allowed through
+  -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
+  -- them specifically, instead of registering them as value-add NPs just to
+  -- satisfy this unrelated check.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     Rental RideOtp -> getRideOtpQuoteDetails booking transporter
+    IntercityRental RideOtp _ -> getRideOtpQuoteDetails booking transporter
     RideShare RideOtp -> getRideOtpQuoteDetails booking transporter
     OneWay OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Rental OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    IntercityRental OnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
     RideShare OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     InterCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
     InterCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter

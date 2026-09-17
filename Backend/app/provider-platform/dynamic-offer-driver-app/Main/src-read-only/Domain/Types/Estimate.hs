@@ -53,6 +53,7 @@ data Estimate = Estimate
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     minFare :: Kernel.Types.Common.HighPrecMoney,
     navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    negativeFareSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     personalDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     shadowSurgeMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,

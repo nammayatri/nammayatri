@@ -27,6 +27,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as Map
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Lib.Types.GateInfo
 import Lib.Types.SpecialLocation
@@ -44,6 +45,9 @@ data GateInfoFull = GateInfoFull
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     entryFeeAmount :: Maybe Double,
+    entryFeeDisabledServiceTiers :: Maybe [Text],
+    feeItems :: Maybe [GateFeeItem],
+    minBalanceRequired :: Maybe HighPrecMoney,
     minDriverThresholds :: Maybe (Map.Map Text Int),
     maxDriverThresholds :: Maybe (Map.Map Text Int),
     demandThresholds :: Maybe (Map.Map Text Int),
@@ -76,3 +80,8 @@ demandThresholdFor gate variant =
 navigationInstructionFor :: GateInfo -> Text -> Maybe Text
 navigationInstructionFor gate key =
   (Map.lookup key =<< gate.navigationInstructions) <|> gate.walkDescription
+
+gateEntryFeeFor :: GateInfo -> Maybe Text -> Double
+gateEntryFeeFor gate mbServiceTier
+  | maybe False (`elem` fromMaybe [] gate.entryFeeDisabledServiceTiers) mbServiceTier = 0
+  | otherwise = fromMaybe 0 gate.entryFeeAmount

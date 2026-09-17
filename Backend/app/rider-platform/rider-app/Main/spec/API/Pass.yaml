@@ -78,6 +78,7 @@ types:
     referenceNumber: Maybe Int
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
     derive: "Show"
 
   PassInfoAPIEntity:
@@ -131,6 +132,7 @@ types:
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
     futureRenewals: [PurchasedPassTransactionAPIEntity]
+    overlappingPasses: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
     derive: "Show"
 
@@ -197,6 +199,7 @@ apis:
         imeiNumber: Text
         profilePicture: Text
         passPhotoMediaId: Text
+        isMockPayment: Bool
       response:
         type: PassSelectionAPIEntity
 
@@ -205,6 +208,8 @@ apis:
       auth: TokenAuth
       params:
         passId: Id Pass
+      query:
+        isMockPayment: Bool
       request:
         type: PassSelectReq
       response:

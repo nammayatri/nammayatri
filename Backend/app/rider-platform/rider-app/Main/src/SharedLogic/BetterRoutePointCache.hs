@@ -87,8 +87,10 @@ data SuggestedSearchCtx = SuggestedSearchCtx
 -- | One alternate shape and the shadow search created for it during /rideSearch.
 --
 -- The shadow exists from the moment the shape is found -- pricing it is dispatched in the
--- background rather than waited on -- so the customer's app can ask for its fare by search
--- id instead of describing the geometry back to us.
+-- background rather than waited on. The route is kept beside it because that is how the
+-- app asks about a shape: it describes the points back to us, and
+-- 'SharedLogic.BetterRoutePointSearch.offeredAlternateFor' reads them to this alternate
+-- rather than letting a second search be run for a shape already being priced.
 data AlternateShadow = AlternateShadow
   { searchId :: Id DSearchReq.SearchRequest,
     route :: BRP.BetterRoute,

@@ -41,12 +41,54 @@ findAllByIds ::
   ([Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest] -> m [Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest])
 findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
+updateAdminChecker ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ())
+updateAdminChecker adminCheckerId adminCheckerName id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.adminCheckerId adminCheckerId, Se.Set Beam.adminCheckerName adminCheckerName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateAdminMaker ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ())
+updateAdminMaker adminMakerId adminMakerName id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.adminMakerId adminMakerId, Se.Set Beam.adminMakerName adminMakerName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusAndRejectionReason ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ())
 updateStatusAndRejectionReason status rejectionReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.rejectionReason rejectionReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusRejectionReasonAndAdminChecker ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ())
+updateStatusRejectionReasonAndAdminChecker status rejectionReason adminCheckerId adminCheckerName id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.rejectionReason rejectionReason,
+      Se.Set Beam.adminCheckerId adminCheckerId,
+      Se.Set Beam.adminCheckerName adminCheckerName,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusRejectionReasonAndAdminMaker ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest -> m ())
+updateStatusRejectionReasonAndAdminMaker status rejectionReason adminMakerId adminMakerName id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.rejectionReason rejectionReason,
+      Se.Set Beam.adminMakerId adminMakerId,
+      Se.Set Beam.adminMakerName adminMakerName,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -57,7 +99,11 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.assessmentYear assessmentYear,
+    [ Se.Set Beam.adminCheckerId adminCheckerId,
+      Se.Set Beam.adminCheckerName adminCheckerName,
+      Se.Set Beam.adminMakerId adminMakerId,
+      Se.Set Beam.adminMakerName adminMakerName,
+      Se.Set Beam.assessmentYear assessmentYear,
       Se.Set Beam.certAmount certAmount,
       Se.Set Beam.certNumber certNumber,
       Se.Set Beam.documentId (Kernel.Types.Id.getId documentId),

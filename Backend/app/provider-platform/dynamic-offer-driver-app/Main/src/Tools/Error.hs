@@ -41,14 +41,23 @@ instanceExceptionWithParent 'HTTPException ''RatingError
 
 data ScheduledBookingError
   = ScheduledBookingWindowInvalid Text
+  | ScheduledBookingOpsNoteEmpty
+  | ScheduledBookingOpsNoteTooLong Int
   deriving (Eq, Show)
 
 instance IsBaseError ScheduledBookingError where
-  toMessage (ScheduledBookingWindowInvalid reason) = Just reason
+  toMessage = \case
+    ScheduledBookingWindowInvalid reason -> Just reason
+    ScheduledBookingOpsNoteEmpty -> Just "Scheduled booking operations note cannot be empty"
+    ScheduledBookingOpsNoteTooLong maxLength ->
+      Just $ "Scheduled booking operations note cannot exceed " <> show maxLength <> " characters"
 
 instance IsHTTPError ScheduledBookingError where
-  toErrorCode (ScheduledBookingWindowInvalid _) = "SCHEDULED_BOOKING_WINDOW_INVALID"
-  toHttpCode (ScheduledBookingWindowInvalid _) = E400
+  toErrorCode = \case
+    ScheduledBookingWindowInvalid _ -> "SCHEDULED_BOOKING_WINDOW_INVALID"
+    ScheduledBookingOpsNoteEmpty -> "SCHEDULED_BOOKING_OPS_NOTE_EMPTY"
+    ScheduledBookingOpsNoteTooLong _ -> "SCHEDULED_BOOKING_OPS_NOTE_TOO_LONG"
+  toHttpCode _ = E400
 
 instance IsAPIError ScheduledBookingError
 
@@ -230,6 +239,8 @@ data DriverError
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
   | DriverNotEnabledForAirport
   | DriverAirportAlreadyBlocked
+  | AvailableForRidesNotEnabled
+  | AvailableForRidesDailyLimitExceeded Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -254,6 +265,8 @@ instance IsBaseError DriverError where
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
   toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
   toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
+  toMessage AvailableForRidesNotEnabled = Just "Available for rides is not enabled for this city."
+  toMessage (AvailableForRidesDailyLimitExceeded dailyLimit) = Just $ "Available for rides can be used at most " <> show dailyLimit <> " times a day."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -276,6 +289,8 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
     DriverNotEnabledForAirport -> "DRIVER_NOT_ENABLED_FOR_AIRPORT"
     DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
+    AvailableForRidesNotEnabled -> "AVAILABLE_FOR_RIDES_NOT_ENABLED"
+    AvailableForRidesDailyLimitExceeded _ -> "AVAILABLE_FOR_RIDES_DAILY_LIMIT_EXCEEDED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -296,6 +311,8 @@ instance IsHTTPError DriverError where
     InsufficientAirportBalance _ _ -> E402
     DriverNotEnabledForAirport -> E403
     DriverAirportAlreadyBlocked -> E403
+    AvailableForRidesNotEnabled -> E400
+    AvailableForRidesDailyLimitExceeded _ -> E429
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
@@ -780,6 +797,27 @@ instance IsHTTPError EstimateError where
     EstimateCancelled _ -> E403
 
 instance IsAPIError EstimateError
+
+data NegotiatedFareError
+  = NegotiatedFareNotAcceptable Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'HTTPException ''NegotiatedFareError
+
+instance IsBaseError NegotiatedFareError where
+  toMessage = \case
+    NegotiatedFareNotAcceptable quoteId -> Just $ "Negotiated fare for quoteId \"" <> show quoteId <> "\" is outside the acceptable range."
+
+instance IsHTTPError NegotiatedFareError where
+  toErrorCode = \case
+    NegotiatedFareNotAcceptable _ -> "NEGOTIATED_FARE_NOT_ACCEPTABLE" -- TODO: swap for ONDC spec numeric code once confirmed
+  toHttpCode = \case
+    NegotiatedFareNotAcceptable _ -> E400
+
+instance IsAPIError NegotiatedFareError
+
+instance IsBecknAPIError NegotiatedFareError where
+  toType _ = DOMAIN_ERROR
 
 -- TODO move to lib
 data MerchantPaymentMethodError
@@ -1804,6 +1842,43 @@ instance IsHTTPError FRFSTripErrors where
 
 instance IsAPIError FRFSTripErrors
 
+-------- FRFS Fleet Operator Trip Action Errors ------------
+data FRFSFleetOperatorTripActionError
+  = TripActionLockNotAcquired Text Text (Maybe Text) -- action label, waybillNo, vehicleNumber
+  | NoMoreTripsAvailable Text (Maybe Text) -- waybillNo, vehicleNumber
+  | NoActiveTripToEnd Text (Maybe Text) -- waybillNo, vehicleNumber
+  | TripGeofenceViolation Text Text (Maybe Text) -- reason, waybillNo, vehicleNumber
+  | TripStartTooEarly Text Text (Maybe Text) -- reason, waybillNo, vehicleNumber
+  | NoTripToRollback Text (Maybe Text) -- waybillNo, vehicleNumber
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSFleetOperatorTripActionError
+
+instance IsBaseError FRFSFleetOperatorTripActionError where
+  toMessage = \case
+    TripActionLockNotAcquired label waybillNo vehicleNumber -> Just $ "Could not acquire lock for trip " <> label <> " action." <> tripActionMetadata waybillNo vehicleNumber
+    NoMoreTripsAvailable waybillNo vehicleNumber -> Just $ "No more trips available for this waybill." <> tripActionMetadata waybillNo vehicleNumber
+    NoActiveTripToEnd waybillNo vehicleNumber -> Just $ "No active trip to end." <> tripActionMetadata waybillNo vehicleNumber
+    TripGeofenceViolation reason waybillNo vehicleNumber -> Just $ reason <> tripActionMetadata waybillNo vehicleNumber
+    TripStartTooEarly reason waybillNo vehicleNumber -> Just $ reason <> tripActionMetadata waybillNo vehicleNumber
+    NoTripToRollback waybillNo vehicleNumber -> Just $ "No trip to rollback." <> tripActionMetadata waybillNo vehicleNumber
+    where
+      tripActionMetadata waybillNo vehicleNumber = " [waybillNo: " <> waybillNo <> ", vehicleNumber: " <> fromMaybe "unknown" vehicleNumber <> "]"
+
+instance IsHTTPError FRFSFleetOperatorTripActionError where
+  toErrorCode = \case
+    TripActionLockNotAcquired {} -> "TRIP_ACTION_LOCK_NOT_ACQUIRED"
+    NoMoreTripsAvailable {} -> "NO_MORE_TRIPS_AVAILABLE"
+    NoActiveTripToEnd {} -> "NO_ACTIVE_TRIP_TO_END"
+    TripGeofenceViolation {} -> "TRIP_GEOFENCE_VIOLATION"
+    TripStartTooEarly {} -> "TRIP_START_TOO_EARLY"
+    NoTripToRollback {} -> "NO_TRIP_TO_ROLLBACK"
+  toHttpCode = \case
+    TripActionLockNotAcquired {} -> E409
+    _ -> E400
+
+instance IsAPIError FRFSFleetOperatorTripActionError
+
 ---------- WMB ERRORS --------------------
 
 data RouteNotFoundError
@@ -1886,6 +1961,7 @@ data WMBErrors
   | NoActiveFleetAssociated Text
   | FleetConfigNotFound Text
   | InactiveFleetDriverAssociationNotFound Text
+  | FleetConsentAlreadyGiven Text
   | InactiveOperatorDriverAssociationNotFound Text -- TODO separate error type
   | VehicleRouteMappingNotFound Text Text
   | InvalidTripStatus Text
@@ -1944,6 +2020,7 @@ instance IsBaseError WMBErrors where
     NoActiveFleetAssociated id -> Just $ "No Active Fleet Associated for driver :" <> id
     FleetConfigNotFound id -> Just $ "Fleet Config Info not found for owner id : " <> id
     InactiveFleetDriverAssociationNotFound id -> Just $ "Inactive Fleet Driver Association Not Found for driver : " <> id
+    FleetConsentAlreadyGiven id -> Just $ "Fleet consent already given for driver : " <> id
     InactiveOperatorDriverAssociationNotFound id -> Just $ "Inactive Operator Driver Association Not Found for driver : " <> id
     VehicleRouteMappingNotFound vhclNo routeCode -> Just $ "Vehicle Route Mapping not found for vehicle no hash : " <> vhclNo <> " and route code :" <> routeCode
     InvalidTripStatus id -> Just $ "Invalid trip status, current status : " <> id
@@ -2000,6 +2077,7 @@ instance IsHTTPError WMBErrors where
     NoActiveFleetAssociated _ -> "NO_ACTIVE_FLEET_ASSOCIATED"
     FleetConfigNotFound _ -> "FLEET_CONFIG_NOT_FOUND"
     InactiveFleetDriverAssociationNotFound _ -> "INACTIVE_FLEET_DRIVER_ASSOCIATION_NOT_FOUND"
+    FleetConsentAlreadyGiven _ -> "FLEET_CONSENT_ALREADY_GIVEN"
     InactiveOperatorDriverAssociationNotFound _ -> "INACTIVE_OPERATOR_DRIVER_ASSOCIATION_NOT_FOUND"
     VehicleRouteMappingNotFound _ _ -> "VEHICLE_ROUTE_MAPPING_NOT_FOUND"
     InvalidTripStatus _ -> "INVALID_TRIP_STATUS"
@@ -2052,6 +2130,7 @@ instance IsHTTPError WMBErrors where
     NoActiveFleetAssociated _ -> E400
     FleetConfigNotFound _ -> E404
     InactiveFleetDriverAssociationNotFound _ -> E404
+    FleetConsentAlreadyGiven _ -> E400
     InactiveOperatorDriverAssociationNotFound _ -> E404
     VehicleRouteMappingNotFound _ _ -> E404
     InvalidTripStatus _ -> E400

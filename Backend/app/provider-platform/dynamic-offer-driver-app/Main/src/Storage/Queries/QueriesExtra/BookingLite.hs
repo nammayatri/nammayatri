@@ -72,6 +72,10 @@ findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limi
 findAllByTransactionIdLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [BookingLite]
 findAllByTransactionIdLite txnId = findAllWithKV [Se.Is Beam.transactionId $ Se.Eq txnId]
 
+findAllByTransactionIdsLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [BookingLite]
+findAllByTransactionIdsLite [] = pure []
+findAllByTransactionIdsLite txnIds = findAllWithKV [Se.Is Beam.transactionId $ Se.In txnIds]
+
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -88,6 +92,7 @@ data BookingLite = BookingLite
     currency :: Kernel.Utils.Common.Currency,
     tripCategory :: Domain.Types.Common.TripCategory,
     startTime :: Kernel.Prelude.UTCTime,
+    isScheduled :: Kernel.Prelude.Bool,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -114,5 +119,6 @@ instance FromTType' BookingLiteTable BookingLite where
             currency = fromMaybe Kernel.Types.Common.INR currency,
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
             startTime = startTime,
+            isScheduled = fromMaybe False isScheduled,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }

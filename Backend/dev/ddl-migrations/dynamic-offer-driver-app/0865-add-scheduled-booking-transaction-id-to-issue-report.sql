@@ -1,0 +1,6 @@
+ALTER TABLE atlas_driver_offer_bpp.issue_report
+ADD COLUMN scheduled_booking_transaction_id text;
+
+CREATE UNIQUE INDEX issue_report_scheduled_booking_transaction_id_idx
+ON atlas_driver_offer_bpp.issue_report (merchant_operating_city_id, scheduled_booking_transaction_id)
+WHERE scheduled_booking_transaction_id IS NOT NULL AND deleted = false;

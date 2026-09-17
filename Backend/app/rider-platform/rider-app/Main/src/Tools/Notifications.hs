@@ -27,6 +27,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.Extra.RiderPreferences as RP
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
@@ -80,6 +81,7 @@ import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.RiderPreferences as CQRP
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -143,7 +145,10 @@ buildTemplate paramVars template =
 buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
 buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
 
-notifyPerson ::
+-- Raw FCM dispatch, NO rider-preference gate. Exists only so notifyPerson can dispatch
+-- after the gate passes -- do not call this from anywhere else. Every genuine send site
+-- must go through the gated notifyPerson below.
+notifyPersonUnchecked ::
   ( ServiceFlow m r,
     ToJSON a,
     ToJSON b
@@ -154,7 +159,34 @@ notifyPerson ::
   Notification.NotificationReq a b ->
   Maybe FCMType.LiveActivityReq ->
   m ()
-notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
+notifyPersonUnchecked = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
+{-# WARNING notifyPersonUnchecked "Sends a push with no rider-preference check. Use Tools.Notifications.notifyPerson instead." #-}
+
+-- THE sanctioned entry point for sending a push -- always enforces
+-- notificationSendMode. mbCategory should be `Just <precise category>` when the
+-- caller already knows it (e.g. dynamicNotifyPerson has merchantPN.notificationCategory
+-- in scope); pass `Nothing` to fall back to deriveNotificationCategory req.category.
+notifyPerson ::
+  ( ServiceFlow m r,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Id Person ->
+  Maybe RP.NotificationCategory ->
+  Notification.NotificationReq a b ->
+  Maybe FCMType.LiveActivityReq ->
+  m ()
+notifyPerson merchantId merchantOperatingCityId personId mbCategory req liveActivityReq = do
+  category <- maybe (deriveNotificationCategory merchantOperatingCityId req.category) pure mbCategory
+  sendMode <- notificationSendMode personId merchantOperatingCityId category
+  case sendMode of
+    Suppress -> logInfo $ "NOTIF_SUPPRESSED_BY_PREFERENCE - category:" <> show category <> " fcmCategory:" <> show req.category <> " personId:" <> personId.getId <> " title:" <> req.title
+    SendSilent -> do
+      logInfo $ "NOTIF_SILENCED_BY_PREFERENCE - category:" <> show category <> " fcmCategory:" <> show req.category <> " personId:" <> personId.getId <> " title:" <> req.title
+      notifyPersonUnchecked merchantId merchantOperatingCityId personId req {Notification.showNotification = Notification.DO_NOT_SHOW} liveActivityReq
+    SendNormal -> notifyPersonUnchecked merchantId merchantOperatingCityId personId req liveActivityReq
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = Person.clearDeviceTokenByPersonId
@@ -217,7 +249,42 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
                 overlayNotificationData = Nothing
               }
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-      notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
+      notifyPerson person.merchantId merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData liveActivityReq
+
+data NotificationSendMode
+  = SendNormal
+  | SendSilent
+  | Suppress
+  deriving (Show, Eq)
+
+-- Checked in order: the rider's own preference first (always needed to decide
+-- SendNormal vs. not, and typically the only Hedis read on the hot path -- most
+-- notifications aren't disabled by the rider), then
+-- RiderConfig.alwaysAllowedNotificationCategories only when the rider has disabled the
+-- category, to decide SendSilent vs. Suppress. A missing RiderConfig row (lookup
+-- failure) is treated as "no override" (Suppress), not as an error -- this gate must
+-- never throw and block a send outright over a config-fetch hiccup.
+notificationSendMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> RP.NotificationCategory -> m NotificationSendMode
+notificationSendMode personId merchantOperatingCityId category = do
+  mbPref <- CQRP.findNotificationPreferenceByRiderId personId
+  let riderEnabled = case mbPref of
+        Nothing -> True
+        Just pref -> case pref.preferenceData of
+          RP.NotificationPreference d -> category `elem` d.enabledCategories
+          RP.LocationPickupPreference _ -> True
+  if riderEnabled
+    then pure SendNormal
+    else do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      let alwaysAllowed = maybe False ((category `elem`) . (.alwaysAllowedNotificationCategories)) mbRiderConfig
+      pure $ if alwaysAllowed then SendSilent else Suppress
+
+-- Fallback classification used by notifyPerson when a call site doesn't already know
+-- its precise RP.NotificationCategory (i.e. passes mbCategory = Nothing).
+deriveNotificationCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Notification.Category -> m RP.NotificationCategory
+deriveNotificationCategory merchantOperatingCityId category = do
+  merchantPNs <- CPN.findAllByMerchantOpCityId merchantOperatingCityId Nothing
+  pure $ maybe RP.RIDE_RELATED (.notificationCategory) (L.find (\pn -> pn.fcmNotificationType == category) merchantPNs)
 
 --------------------------------------------------------------------------------------------------
 
@@ -354,7 +421,7 @@ notifyOnRideAssigned booking ride = do
                 dynamicParams = dynamicParams,
                 overlayNotificationData = Nothing
               }
-      notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id customNotificationData Nothing
+      notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id Nothing customNotificationData Nothing
 
     -- Always send the normal DRIVER_ASSIGNMENT notification
     dynamicNotifyPerson
@@ -509,7 +576,7 @@ notifyOnScheduledRideAccepted booking ride = do
             "will be your driver for your scheduled trip starting at ",
             showTimeIst booking.startTime
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
+  notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
@@ -1350,7 +1417,7 @@ notifyOnIssueChatMessage personId payload = do
             sound = notificationSound,
             overlayNotificationData = Nothing
           }
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
+  notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
 notifyOnNewMessage ::
   ( ServiceFlow m r,
@@ -1384,7 +1451,7 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
+  notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
 notifySafetyAlert ::
   ServiceFlow m r =>
@@ -1560,8 +1627,9 @@ notifyPersonOnEvents ::
   Person ->
   NotifReq ->
   Notification.Category ->
+  Maybe RP.NotificationCategory ->
   m ()
-notifyPersonOnEvents person entityData notifType = do
+notifyPersonOnEvents person entityData notifType mbCategory = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType notifType merchantOperatingCityId
   let notificationSound = NSC.defaultSound =<< notificationSoundFromConfig
@@ -1585,7 +1653,7 @@ notifyPersonOnEvents person entityData notifType = do
         unwords
           [ entityData.message
           ]
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
+  notifyPerson person.merchantId merchantOperatingCityId person.id mbCategory notificationData Nothing
 
 notifyRiderPayoutStatus ::
   (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -1599,7 +1667,7 @@ notifyRiderPayoutStatus person pnKey amount = do
     when merchantPN.shouldTrigger $ do
       let params = [("amount", show amount)]
           entityData = NotifReq {title = buildTemplate params merchantPN.title, message = buildTemplate params merchantPN.body}
-      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
 
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
@@ -1728,7 +1796,7 @@ notifyOnTripUpdate booking mbRide err = do
                   }
             _ -> Nothing
         )
-  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
+  notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData liveActivityReq
 
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
@@ -1752,7 +1820,7 @@ notifyAboutScheduledRide booking title body = do
             sound = notificationSound,
             overlayNotificationData = Nothing
           }
-  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id Nothing notificationData Nothing
 
 notifyPaymentFulfillment :: (ServiceFlow m r) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
 notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceType = do
@@ -1780,7 +1848,7 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
                 sound = notificationSound,
                 overlayNotificationData = Nothing
               }
-      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData Nothing
   where
     mkRefundNotificationKey :: Text
     mkRefundNotificationKey =
@@ -1815,7 +1883,7 @@ notifyCancellationConsequence personId bookingId pnKey = do
                 sound = notificationSound,
                 overlayNotificationData = Nothing
               }
-      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData Nothing
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do

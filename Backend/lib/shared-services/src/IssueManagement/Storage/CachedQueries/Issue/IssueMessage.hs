@@ -47,21 +47,21 @@ findAllActiveByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Lang
 findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) >>= \case
     Just a -> pure a
-    Nothing ->
-      cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier
-        /=<< ( appendMediaFiles identifier
-                 =<< Queries.findAllActiveByCategoryIdAndLanguage issueCategoryId language
-             )
+    Nothing -> do
+      -- never cache an empty list (KV drainer lag after a dashboard write)
+      result <- appendMediaFiles identifier =<< Queries.findAllActiveByCategoryIdAndLanguage issueCategoryId language
+      unless (null result) $ cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier result
+      pure result
 
 findAllActiveByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> Identifier -> m [(IssueMessage, DetailedTranslation, [Text])]
 findAllActiveByOptionIdAndLanguage issueOptionId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueMessageByLanguageAndOption issueOptionId language identifier) >>= \case
     Just a -> pure a
-    Nothing ->
-      cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier
-        /=<< ( appendMediaFiles identifier
-                 =<< Queries.findAllActiveByOptionIdAndLanguage issueOptionId language
-             )
+    Nothing -> do
+      -- never cache an empty list
+      result <- appendMediaFiles identifier =<< Queries.findAllActiveByOptionIdAndLanguage issueOptionId language
+      unless (null result) $ cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier result
+      pure result
 
 appendMediaFiles :: BeamFlow m r => Identifier -> [(IssueMessage, DetailedTranslation)] -> m [(IssueMessage, DetailedTranslation, [Text])]
 appendMediaFiles identifier =
@@ -80,8 +80,11 @@ appendMediaFiles identifier =
 
 -- --------- Caching logic for issue message by id -------------------
 
+-- Cache deletes run on both clouds' Redis (primary + secondary): app reads may be
+-- served from either cloud's cross-app Redis, so a single-cloud delete leaves the
+-- other cloud serving the stale message until configsExpTime (24h) expires.
 clearIssueMessageByIdCache :: CacheFlow m r => Id IssueMessage -> Identifier -> m ()
-clearIssueMessageByIdCache issueMessageId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageById issueMessageId identifier
+clearIssueMessageByIdCache issueMessageId identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageById issueMessageId identifier
 
 cacheIssueMessageById :: CacheFlow m r => Id IssueMessage -> Identifier -> Maybe IssueMessage -> m ()
 cacheIssueMessageById issueMessageId identifier issueMessage = do
@@ -99,7 +102,7 @@ clearAllIssueMessageByIdAndLanguageCache issueMessageId identifier =
     clearIssueMessageByIdAndLanguageCache issueMessageId language identifier
 
 clearIssueMessageByIdAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> m ()
-clearIssueMessageByIdAndLanguageCache issueMessageId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByIdAndLanguage issueMessageId language identifier
+clearIssueMessageByIdAndLanguageCache issueMessageId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByIdAndLanguage issueMessageId language identifier
 
 cacheIssueMessageByIdAndLanguage :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> Maybe (IssueMessage, DetailedTranslation, [Text]) -> m ()
 cacheIssueMessageByIdAndLanguage issueMessageId language identifier issueMessageTranslation = do
@@ -117,7 +120,7 @@ clearAllIssueMessageByCategoryIdAndLanguageCache issueCategoryId identifier =
     clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier
 
 clearIssueMessageByCategoryIdAndLanguageCache :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> m ()
-clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier
+clearIssueMessageByCategoryIdAndLanguageCache issueCategoryId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndCategory issueCategoryId language identifier
 
 cacheAllIssueMessageByCategoryIdAndLanguage :: CacheFlow m r => Id IssueCategory -> Language -> Identifier -> [(IssueMessage, DetailedTranslation, [Text])] -> m ()
 cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier issueMessageTranslation = do
@@ -135,7 +138,7 @@ clearAllIssueMessageByOptionIdAndLanguageCache issueOptionId identifier =
     clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier
 
 clearIssueMessageByOptionIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> m ()
-clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndOption issueOptionId language identifier
+clearIssueMessageByOptionIdAndLanguageCache issueOptionId language identifier = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis . Hedis.del $ makeIssueMessageByLanguageAndOption issueOptionId language identifier
 
 cacheAllIssueMessageByOptionIdAndLanguage :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> [(IssueMessage, DetailedTranslation, [Text])] -> m ()
 cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier issueMessageTranslation = do

@@ -19,6 +19,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AvailableForRides as AvailableForRides
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
@@ -193,6 +194,7 @@ type API =
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
+           :<|> AvailableForRides.API
        )
 
 handler :: FlowServer API
@@ -276,3 +278,4 @@ handler =
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler
+    :<|> AvailableForRides.handler

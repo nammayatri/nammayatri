@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByEntityIdAndEntityType ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m ([Lib.Payment.Domain.Types.OfferStats.OfferStats]))
+  (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m [Lib.Payment.Domain.Types.OfferStats.OfferStats])
 findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq (Kernel.Prelude.Just entityType)]]
 
 findByOfferIdAndEntityIdAndEntityType ::
@@ -47,10 +47,13 @@ updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.P
 updateByPrimaryKey (Lib.Payment.Domain.Types.OfferStats.OfferStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.personId entityId,
+    [ Se.Set Beam.currency currency,
+      Se.Set Beam.personId entityId,
       Se.Set Beam.entityType (Kernel.Prelude.Just entityType),
       Se.Set Beam.offerAppliedCount offerAppliedCount,
       Se.Set Beam.offerId (Kernel.Types.Id.getId offerId),
+      Se.Set Beam.totalCashbackAmount totalCashbackAmount,
+      Se.Set Beam.totalDiscountAmount totalDiscountAmount,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -61,11 +64,14 @@ instance FromTType' Beam.OfferStats Lib.Payment.Domain.Types.OfferStats.OfferSta
       Just
         Lib.Payment.Domain.Types.OfferStats.OfferStats
           { createdAt = createdAt,
+            currency = currency,
             entityId = personId,
             entityType = Kernel.Prelude.fromMaybe Lib.Payment.Domain.Types.OfferStats.Person entityType,
             id = Kernel.Types.Id.Id id,
             offerAppliedCount = offerAppliedCount,
             offerId = Kernel.Types.Id.Id offerId,
+            totalCashbackAmount = totalCashbackAmount,
+            totalDiscountAmount = totalDiscountAmount,
             updatedAt = updatedAt
           }
 
@@ -73,10 +79,13 @@ instance ToTType' Beam.OfferStats Lib.Payment.Domain.Types.OfferStats.OfferStats
   toTType' (Lib.Payment.Domain.Types.OfferStats.OfferStats {..}) = do
     Beam.OfferStatsT
       { Beam.createdAt = createdAt,
+        Beam.currency = currency,
         Beam.personId = entityId,
         Beam.entityType = Kernel.Prelude.Just entityType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.offerAppliedCount = offerAppliedCount,
         Beam.offerId = Kernel.Types.Id.getId offerId,
+        Beam.totalCashbackAmount = totalCashbackAmount,
+        Beam.totalDiscountAmount = totalDiscountAmount,
         Beam.updatedAt = updatedAt
       }

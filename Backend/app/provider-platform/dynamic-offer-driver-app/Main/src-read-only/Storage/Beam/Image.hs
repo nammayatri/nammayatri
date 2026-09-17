@@ -3,6 +3,7 @@
 
 module Storage.Beam.Image where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DocumentVerificationConfig
@@ -20,6 +21,7 @@ data ImageT f = ImageT
     imageType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     personId :: (B.C f Kernel.Prelude.Text),
     rcId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     reviewerEmail :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

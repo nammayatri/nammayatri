@@ -70,6 +70,7 @@ library
       Beckn.Types.Core.Taxi.API.OnSearch
       Beckn.Types.Core.Taxi.API.OnSelect
       Beckn.Types.Core.Taxi.API.OnStatus
+      Beckn.Types.Core.Taxi.API.OnSupport
       Beckn.Types.Core.Taxi.API.OnTrack
       Beckn.Types.Core.Taxi.API.OnUpdate
       Beckn.Types.Core.Taxi.API.Rating

@@ -65,6 +65,7 @@ library
       API.Internal.InMemManagement
       API.Internal.NotificationWebhook
       API.Internal.OfferDiscount
+      API.Internal.OneShotAssign
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.SendEmailOTP
@@ -249,6 +250,7 @@ library
       Domain.Action.Internal.GetPickupInstructions
       Domain.Action.Internal.NotificationWebhook
       Domain.Action.Internal.OfferDiscount
+      Domain.Action.Internal.OneShotAssign
       Domain.Action.Internal.Payout
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
@@ -673,6 +675,7 @@ library
       Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.RideRelatedNotificationConfig
+      Storage.CachedQueries.RiderPreferences
       Storage.CachedQueries.RoutePolylines
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
@@ -1131,6 +1134,7 @@ library
       Domain.Types.ClientPersonInfo
       Domain.Types.CrisRdsBalanceHistory
       Domain.Types.CrisRecon
+      Domain.Types.CustomerBlockTransactions
       Domain.Types.DeletedPerson
       Domain.Types.Depot
       Domain.Types.DepotManager
@@ -1304,6 +1308,7 @@ library
       Storage.Beam.ClientPersonInfo
       Storage.Beam.CrisRdsBalanceHistory
       Storage.Beam.CrisRecon
+      Storage.Beam.CustomerBlockTransactions
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
       Storage.Beam.DepotManager
@@ -1482,6 +1487,7 @@ library
       Storage.Queries.ClientPersonInfo
       Storage.Queries.CrisRdsBalanceHistory
       Storage.Queries.CrisRecon
+      Storage.Queries.CustomerBlockTransactions
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
       Storage.Queries.DepotManager

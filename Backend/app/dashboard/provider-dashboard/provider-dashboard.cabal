@@ -32,6 +32,7 @@ library
       API.Fleet.Registration
       API.Person
       API.ProviderPlatform
+      API.ProviderPlatform.BulkLogicRollout
       API.ProviderPlatform.DriverInfoByPhoneNumber
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
@@ -40,7 +41,6 @@ library
       API.SpecialZone
       App
       Domain.Action.Entity
-      Domain.Action.Person
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.DriverWallet

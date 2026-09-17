@@ -3,6 +3,7 @@ module Storage.Queries.PersonExtra where
 import Control.Applicative ((<|>))
 import qualified Data.Time as T
 import Domain.Action.UI.Person
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -18,6 +19,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Queries.CustomerBlockTransactions as QCBT
 import Storage.Queries.OrphanInstances.Person ()
 
 -- Extra code goes here --
@@ -237,12 +239,47 @@ findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow 
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
-updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe Text -> m ()
-updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked blockedReason = do
+-- | Appends an immutable row to customer_block_transactions for every block/unblock event,
+-- mirroring the driver's driver_block_transactions audit trail.
+logCustomerBlockTransaction ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Person ->
+  DCBT.ActionType ->
+  DCBT.BlockedBy ->
+  Maybe Text -> -- blockReason
+  Maybe Text -> -- requestorId (dashboard user name for dashboard actions)
+  Maybe (Id Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Maybe Int -> -- blockTimeInHours (suspension duration, when known)
+  Maybe UTCTime -> -- blockLiftTime
+  m ()
+logCustomerBlockTransaction customerId actionType blockedBy blockReason requestorId merchantId merchantOperatingCityId blockTimeInHours blockLiftTime = do
+  now <- getCurrentTime
+  newId <- generateGUID
+  QCBT.create $
+    DCBT.CustomerBlockTransactions
+      { id = newId,
+        customerId = customerId,
+        actionType = Just actionType,
+        blockedBy = blockedBy,
+        blockReason = blockReason,
+        reasonCode = Nothing,
+        blockTimeInHours = blockTimeInHours,
+        reportedAt = now,
+        blockLiftTime = blockLiftTime,
+        requestorId = requestorId,
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe Text -> DCBT.BlockedBy -> Maybe Text -> m ()
+updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked blockedReason blockedBy requestorId = do
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
-    Just driverP -> do
+    Just customerP -> do
       now <- getCurrentTime
       updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
@@ -250,14 +287,20 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked blockedReas
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
             Se.Set BeamP.blockedReason blockedReason,
             Se.Set BeamP.updatedAt now,
+            -- Clear any stale temporary-block deadline so an expired blockedUntil can't later
+            -- auto-lift a subsequent permanent/dashboard block (mirrors driver's blockExpiryTime reset).
+            Se.Set BeamP.blockedUntil Nothing,
             Se.Set BeamP.blockedCount $
               if isBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
+                then Just $ (fromMaybe 0 customerP.blockedCount) + 1
+                else customerP.blockedCount
           ]
             <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
         )
         [Se.Is BeamP.id (Se.Eq personId)]
+      -- Append an audit row for every block/unblock action (incl. re-blocks with a new reason),
+      -- mirroring the driver ledger which records each call unconditionally.
+      logCustomerBlockTransaction (Id personId) (if isBlocked then DCBT.BLOCK else DCBT.UNBLOCK) blockedBy blockedReason requestorId (Just customerP.merchantId) (Just customerP.merchantOperatingCityId) Nothing Nothing
 
 unblockIfExpired :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m ()
 unblockIfExpired (Id personId) = do
@@ -296,12 +339,12 @@ updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blo
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
-updatingBlockedStateWithUntil :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe UTCTime -> m ()
-updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil = do
+updatingBlockedStateWithUntil :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe UTCTime -> DCBT.BlockedBy -> Maybe Text -> m ()
+updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil blockedBy requestorId = do
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
-    Just driverP -> do
+    Just customerP -> do
       now <- getCurrentTime
       updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
@@ -311,12 +354,15 @@ updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil
             Se.Set BeamP.blockedUntil blockedUntil,
             Se.Set BeamP.blockedCount $
               if isBlocked
-                then Just $ (fromMaybe 0 driverP.blockedCount) + 1
-                else driverP.blockedCount
+                then Just $ (fromMaybe 0 customerP.blockedCount) + 1
+                else customerP.blockedCount
           ]
             <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
         )
         [Se.Is BeamP.id (Se.Eq personId)]
+      -- Derive the suspension duration (hours) from blockedUntil so the audit column is populated.
+      let blockTimeInHours = (\untilT -> round (realToFrac (T.diffUTCTime untilT now) / 3600 :: Double)) <$> blockedUntil
+      logCustomerBlockTransaction (Id personId) (if isBlocked then DCBT.BLOCK else DCBT.UNBLOCK) blockedBy Nothing requestorId (Just customerP.merchantId) (Just customerP.merchantOperatingCityId) blockTimeInHours blockedUntil
 
 findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m [Person]
 findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash mbCountryCode mbPersonId = do

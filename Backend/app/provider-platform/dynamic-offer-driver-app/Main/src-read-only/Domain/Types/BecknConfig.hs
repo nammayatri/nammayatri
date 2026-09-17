@@ -28,10 +28,12 @@ data BecknConfig = BecknConfig
     onSearchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onSelectTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onStatusTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onSupportTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onTrackTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onUpdateTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
+    sendOndcCancellationCodes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     staticTermsUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
@@ -48,4 +50,4 @@ data BecknConfig = BecknConfig
 
 data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentCollectedBy))

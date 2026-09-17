@@ -91,6 +91,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationDues as SCD
@@ -165,7 +166,7 @@ decideCancellationConsequences ::
 decideCancellationConsequences booking ride transporterConfig source reasonCode disToPickup = do
   let cancelledBy = cancellationSourceToType source
   (signals, mbFaultVerdict) <- buildCancellationContext booking ride transporterConfig cancelledBy reasonCode disToPickup
-  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy
+  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy transporterConfig.timeDiffFromUtc ride.driverId
   mbConsequenceRow <- CancellationConsequence.resolveConsequence consequenceInput
   pure
     CancellationDecision
@@ -359,7 +360,8 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   cancellationCommission = outcome.commission,
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
-                  collectionMode = outcome.collectionMode
+                  collectionMode = outcome.collectionMode,
+                  carryForwardEnabled = transporterConfig.canAddCancellationFee
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
@@ -450,7 +452,8 @@ buildRideCancellationSignals booking ride transporterConfig cancellationDisToPic
         fallbackDurationToPickup = booking.dqDurationToPickup,
         initialDisToPickup = booking.distanceToPickup,
         cancellationDisToPickup = cancellationDisToPickup,
-        arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
+        arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold,
+        includePickupJourney = PickupStallState.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
       }
 
 -- | Dry-run twin of 'decideCancellationConsequences' for previews (driver penalty check,
@@ -475,7 +478,7 @@ previewCancellationConsequences booking ride transporterConfig source reasonCode
   mbFaultVerdict <-
     CancellationFault.computeFaultVerdictDryRun ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $
       CancellationFault.mkFaultVerdictData signals cancelledBy reasonCode
-  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy
+  consequenceInput <- CancellationConsequence.buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy transporterConfig.timeDiffFromUtc ride.driverId
   mbConsequenceRow <- CancellationConsequence.resolveConsequence consequenceInput
   pure
     CancellationDecision

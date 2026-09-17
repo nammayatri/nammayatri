@@ -83,6 +83,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -203,7 +204,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
-  languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty dispatchPool
+  languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
@@ -232,6 +233,15 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
         TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
       QSRD.setInactiveAndPulledByIds reOfferedSRFDs
   _ <- QSRD.createMany searchRequestsForDrivers
+  -- Charge this dispatch against the "available for rides" budget of every driver that
+  -- reached the batch on that boost, dropping the tag from whoever just spent theirs.
+  -- Forked because it is bookkeeping for a small minority of drivers and must never add
+  -- latency to (or fail) the dispatch itself.
+  let boostedSearchRequests = filter (fromMaybe False . (.hasAvailableForRidesTag)) searchRequestsForDrivers
+  unless (null boostedSearchRequests) $
+    whenJust ((,) <$> transporterConfig.availableForRidesTagValidityMinutes <*> transporterConfig.availableForRidesMaxSearchRequests) $ \(validity, maxRequests) ->
+      fork "availableForRidesRequestBudget" $
+        forM_ boostedSearchRequests $ \sReqFD -> AvailableForRides.recordRequestSent sReqFD.driverId validity maxRequests
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
   if isTopUpDispatch
@@ -331,6 +341,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           isScheduled = searchReq.isScheduled,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
+          negativeFareAdjustment = Nothing,
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,
           nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
@@ -411,7 +422,12 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             tripEstimatedDuration = searchReq.estimatedDuration,
             vehicleAge = dpRes.vehicleAge,
             merchantOperatingCityId = searchReq.merchantOperatingCityId,
-            searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
+            -- Extend the response window by the split-stagger delay for EVERY delayed
+            -- split (not just pickup zones): the driver's countdown otherwise starts
+            -- before the popup is even shown, so a 10s-staggered driver on a 25s window
+            -- sees a card with 15s left — measured as a 3.2% -> 1.1% accept-rate decay
+            -- across stagger buckets.
+            searchRequestValidTill = addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill,
             driverId = cast dpRes.driverId,
             fleetOwnerId = Id <$> dpRes.fleetOwnerId,
             vehicleNumber = dpRes.vehicleNumber,
@@ -477,6 +493,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             commissionCharges = tripQuoteDetail.commissionCharges,
             driverCancellationNotAllowed = tripQuoteDetail.driverCancellationNotAllowed,
             isAutoAccepted = Just isAutoAccepted,
+            hasAvailableForRidesTag = Just $ AvailableForRides.hasAvailableForRidesTag dpRes.driverTags,
             ..
           }
   pure searchRequestForDriver
@@ -546,13 +563,13 @@ addLanguageToDictionary ::
     EncFlow m r,
     EsqDBFlow m r
   ) =>
+  DTR.TransporterConfig ->
   DSR.SearchRequest ->
   LanguageDictionary ->
   SDP.DriverPoolWithActualDistResult ->
   m LanguageDictionary
-addLanguageToDictionary searchReq dict dPoolRes = do
+addLanguageToDictionary transporterConfig searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if language `elem` transporterConfig.languagesToBeTranslated
     then
       if isJust $ M.lookup language dict
@@ -618,8 +635,14 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- treated as the standing guarantee of eligibility. A stale selection in the ms
             -- window between debit commit and revoke strip is the accepted trade-off, chosen
             -- over one wallet DB read per candidate in the dispatch hot loop.
-            let isStillLive =
-                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && d.subscribed && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+            -- Mirrors the pool-time guard in GetNearestDrivers.buildDriverResult: a fleet
+            -- driver on a prepaid merchant is settled at the fleet-owner level and never
+            -- carries its own `subscribed` flag, so re-checking it here would reject at
+            -- dispatch every driver that pooling just admitted.
+            let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+                isSubscribedOrFleetPrepaid d = d.subscribed || (isPrepaidEnabled && isJust d.fleetOwnerId)
+                isStillLive =
+                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isSubscribedOrFleetPrepaid d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
@@ -643,7 +666,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                   QSRD.createMany [sReqFD]
                   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
                   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
-                  driverFCMPulledList <- acceptDynamicOfferDriverRequest Nothing merchant.id searchReq.merchantOperatingCityId merchant searchTry searchReq driver sReqFD Nothing Nothing Nothing Nothing Nothing Nothing driverStats transporterConfig
+                  driverFCMPulledList <- acceptDynamicOfferDriverRequest Nothing merchant.id searchReq.merchantOperatingCityId merchant searchTry searchReq driver sReqFD Nothing Nothing Nothing Nothing Nothing Nothing driverStats transporterConfig Nothing
                   respondedAt <- getCurrentTime
                   QSRD.updateDriverResponse (Just Accept) Inactive Nothing (Just respondedAt) (Just respondedAt) sReqFD.id
                   -- The same post-accept bundle respondQuote runs, so silent and manual accepts

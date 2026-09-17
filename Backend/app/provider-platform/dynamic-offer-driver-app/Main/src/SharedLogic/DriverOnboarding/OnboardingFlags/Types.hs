@@ -71,30 +71,32 @@ data EntityFlagChange = EntityFlagChange
 
 data FlagTransition = FlagTransition
   { ftAction :: DOnboardingAlertAction.OnboardingAlertAction,
-    ftTitle :: Text,
-    ftBody :: Text
+    ftParams :: [(Text, Text)]
   }
   deriving (Show, Eq)
 
 flagTransitions :: EntityFlagChange -> [FlagTransition]
 flagTransitions change =
   catMaybes
-    [ transition (not old.fsVerified && new.fsVerified && isNothing new.fsApproved) DOnboardingAlertAction.DocumentApprovalPendingAction "Document approval pending" ("Documents verified for " <> subject <> ", awaiting approval."),
-      transition (isNothing old.fsApproved && new.fsApproved == Just False) DOnboardingAlertAction.RejectAction "Document rejected" ("One or more documents for " <> subject <> " were rejected."),
-      transition (old.fsApproved /= Just True && new.fsApproved == Just True) DOnboardingAlertAction.ApproveAction "Documents approved" ("Documents for " <> subject <> " were approved."),
-      transition (rose fsEnabled) DOnboardingAlertAction.EnableAction "Onboarding complete" (subject <> " is now enabled."),
-      transition (fell fsEnabled) DOnboardingAlertAction.DisableAction "Account disabled" (subject <> " has been disabled."),
-      transition (rose fsBlocked) DOnboardingAlertAction.BlockAction "Account blocked" (subject <> " has been blocked."),
-      transition (fell fsBlocked) DOnboardingAlertAction.UnblockAction "Account unblocked" (subject <> " has been unblocked."),
-      transition (isNothing old.fsDisabledReasonFlag && isJust new.fsDisabledReasonFlag) DOnboardingAlertAction.DisableAction "Account disabled" (subject <> " was disabled" <> maybe "." (\flag -> " (" <> show flag <> ").") new.fsDisabledReasonFlag)
+    [ transition (not old.fsVerified && new.fsVerified && isNothing new.fsApproved) DOnboardingAlertAction.DocumentApprovalPendingAction subjectParams,
+      transition (isNothing old.fsApproved && new.fsApproved == Just False) DOnboardingAlertAction.RejectAction subjectParams,
+      transition (old.fsApproved /= Just True && new.fsApproved == Just True) DOnboardingAlertAction.ApproveAction subjectParams,
+      transition (rose fsEnabled) DOnboardingAlertAction.EnableAction subjectParams,
+      transition (fell fsEnabled) DOnboardingAlertAction.DisableAction disabledParams,
+      transition (rose fsBlocked) DOnboardingAlertAction.BlockAction subjectParams,
+      transition (fell fsBlocked) DOnboardingAlertAction.UnblockAction subjectParams,
+      transition (isNothing old.fsDisabledReasonFlag && isJust new.fsDisabledReasonFlag) DOnboardingAlertAction.DisableAction disabledParams
     ]
   where
     old = change.efcOld
     new = change.efcNew
     subject = change.efcSubject
 
+    subjectParams = [("subject", subject)]
+    disabledParams = subjectParams <> [("disabledReason", maybe "" show new.fsDisabledReasonFlag)]
+
     rose field = not (fromMaybe False (field old)) && fromMaybe False (field new)
     fell field = fromMaybe False (field old) && not (fromMaybe False (field new))
 
-    transition cond action title body =
-      if cond then Just (FlagTransition action title body) else Nothing
+    transition cond action params =
+      if cond then Just (FlagTransition action params) else Nothing

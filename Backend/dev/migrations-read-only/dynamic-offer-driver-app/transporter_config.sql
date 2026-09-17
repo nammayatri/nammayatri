@@ -1067,6 +1067,21 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payo
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_min_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_max_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_ondc_scheduled_ride_support boolean  default false;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
@@ -1149,3 +1164,33 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_estimate
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_surge_config_pricing boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_health_check_debug boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_tag_validity_minutes integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_max_search_requests integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_daily_limit integer ;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}' :: json;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_onboarding_link_expiry_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_pool_enrichment boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prefer_ondc_cancellation_reason_id boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_min_distance_meters integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_max_amount integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_congestion_threshold double precision ;

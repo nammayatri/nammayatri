@@ -30,3 +30,11 @@ ALTER TABLE atlas_app.offer_entity ALTER COLUMN merchant_id TYPE character varyi
 
 ALTER TABLE atlas_app.offer_entity ADD COLUMN auto_apply boolean;
 ALTER TABLE atlas_app.offer_entity ADD COLUMN is_hidden boolean;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer_entity ADD COLUMN max_apply_count integer ;
+ALTER TABLE atlas_app.offer_entity ADD COLUMN frequency_type text ;
+ALTER TABLE atlas_app.offer_entity ADD COLUMN applied_count integer ;

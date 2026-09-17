@@ -110,6 +110,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import Domain.Types
+import qualified Domain.Types.Alert.AlertRequestData as DAlertData
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -194,7 +195,8 @@ import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool -- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -404,6 +406,9 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                popupDelayToAddAsPenalty = maybe config.popupDelayToAddAsPenalty (.value) req.popupDelayToAddAsPenalty,
                thresholdCancellationScore = maybe config.thresholdCancellationScore (.value) req.thresholdCancellationScore,
                minRidesForCancellationScore = maybe config.minRidesForCancellationScore (.value) req.minRidesForCancellationScore,
+               negativeFareAdjustmentCongestionThreshold = maybe config.negativeFareAdjustmentCongestionThreshold (.value) req.negativeFareAdjustmentCongestionThreshold,
+               negativeFareAdjustmentMinDistanceMeters = maybe config.negativeFareAdjustmentMinDistanceMeters (.value) req.negativeFareAdjustmentMinDistanceMeters,
+               negativeFareAdjustmentMaxAmount = maybe config.negativeFareAdjustmentMaxAmount (.value) req.negativeFareAdjustmentMaxAmount,
                mediaFileUrlPattern = maybe config.mediaFileUrlPattern (.value) req.mediaFileUrlPattern,
                mediaFileSizeUpperLimit = maybe config.mediaFileSizeUpperLimit (.value) req.mediaFileSizeUpperLimit,
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
@@ -1161,6 +1166,7 @@ castDDocumentType = \case
   DVC.LegalEntityLegalEntityId -> Common.LegalEntityLegalEntityId
   DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
   DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
+  DVC.TermsAndConditions -> Common.TermsAndConditions
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1280,6 +1286,7 @@ castDocumentType = \case
   Common.LegalEntityLegalEntityId -> DVC.LegalEntityLegalEntityId
   Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
   Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
+  Common.TermsAndConditions -> DVC.TermsAndConditions
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -2871,7 +2878,19 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             success = "Fare Policies updated successfully"
           }
   case result of
-    Right res -> return res
+    Right res -> do
+      SDA.notifyDashboardConfigChange
+        SDA.dashboardAudiences
+        merchantOpCity.id.getId
+        DAlertData.FareConfigUpdated
+        [ ("merchantName", merchant.name),
+          ("cityName", show opCity),
+          ("unprocessedCount", show (length res.unprocessedFarePolicies))
+        ]
+        (Id "system")
+        merchant.id
+        merchantOpCity.id
+      return res
     Left e -> throwError $ InvalidRequest (show e)
   where
     readCsv merchantId distanceUnit csvFile merchantOpCity = do
@@ -3434,6 +3453,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
       Rental _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
+      IntercityRental _ _ -> unless (farePolicyType == FarePolicy.Rental) $ throwError $ InvalidRequest "Fare Policy Type not supported for rental"
       Ambulance _ -> unless (farePolicyType == FarePolicy.Ambulance) $ throwError $ InvalidRequest "Fare Policy Type not supported for ambulance"
       _ -> pure ()
 
@@ -3616,6 +3636,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = mbGate >>= (.entryFeeAmount),
+            feeItems = reqT.feeItems <|> (mbGate >>= (.feeItems)),
+            minBalanceRequired = reqT.minBalanceRequired <|> (mbGate >>= (.minBalanceRequired)),
             minDriverThresholds = mbGate >>= (.minDriverThresholds),
             maxDriverThresholds = mbGate >>= (.maxDriverThresholds),
             demandThresholds = mbGate >>= (.demandThresholds),
@@ -3628,6 +3650,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            entryFeeDisabledServiceTiers = mbGate >>= (.entryFeeDisabledServiceTiers),
             gateConfig = mbGate >>= (.gateConfig),
             navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
@@ -4134,6 +4157,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
+
+  SDA.notifyDashboardConfigChange
+    SDA.dashboardAudiences
+    newMerchantOperatingCityId.getId
+    DAlertData.OperatingCityCreated
+    [ ("merchantName", baseRequestedCityMerchant.name),
+      ("cityName", show req.city),
+      ("baseCityName", show baseMerchantCity)
+    ]
+    (Id "system")
+    baseRequestedCityMerchant.id
+    baseOperatingCityId
 
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
@@ -4880,7 +4915,9 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
   whiteListOrgId <- generateGUID
   let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, supportedBecknProtocols = Nothing, createdAt = now, updatedAt = now}
-      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
+      -- enableOneShotAssign deliberately Nothing at onboarding: the one-shot assignment
+      -- fast path is opted in per subscriber during rollout, never by default.
+      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, enableOneShotAssign = Nothing, createdAt = now, updatedAt = now}
       registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
   existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
   when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq

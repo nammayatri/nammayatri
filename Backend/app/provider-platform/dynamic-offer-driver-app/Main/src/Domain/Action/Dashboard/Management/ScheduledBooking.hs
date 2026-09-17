@@ -19,13 +19,16 @@ module Domain.Action.Dashboard.Management.ScheduledBooking
     getScheduledBookingNearbyDrivers,
     postScheduledBookingAssign,
     postScheduledBookingUnassign,
+    postScheduledBookingOpsNote,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.ScheduledBooking as Common
+import qualified API.UI.Issue as AUI
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (nubBy, sortOn)
+import Data.List (nub, nubBy, sortOn)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
@@ -33,15 +36,26 @@ import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRideStatus
 import qualified Domain.Types.RiderDetails as DRD
 import Environment
+import qualified IssueManagement.Common as Issue
+import qualified IssueManagement.Common.UI.Issue as IssueUI
+import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
+import qualified IssueManagement.Domain.Types.Issue.Comment as DComment
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIssueCategory
+import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIssueReport
+import qualified IssueManagement.Storage.Queries.Issue.Comment as QComment
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (getCoordinates)
 import qualified Kernel.External.Maps.Types as KEMT
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -54,6 +68,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -76,9 +91,21 @@ import qualified Tools.Maps as Maps
 graceWindowSeconds :: Int
 graceWindowSeconds = 30 * 60
 
+scheduledBookingIssuePersonId :: Id DP.Person
+scheduledBookingIssuePersonId = Id "00000000-0000-0000-0000-000000000000"
+
+scheduledBookingIssueDriverId :: Id Issue.Person
+scheduledBookingIssueDriverId = Id "driver-0000000-0000-1"
+
+scheduledBookingIssueCategoryId :: Id DIssueCategory.IssueCategory
+scheduledBookingIssueCategoryId = Id "Schedule_Booking_Issue"
+
+maxOpsNoteLength :: Int
+maxOpsNoteLength = 255
+
 -- | Upper bound used when the caller does not pass a `to` filter.
 defaultLookaheadSeconds :: Int
-defaultLookaheadSeconds = 90 * 24 * 60 * 60
+defaultLookaheadSeconds = 2 * 24 * 60 * 60
 
 -- | Default search radius for the ops "nearby eligible drivers" lookup when the dashboard
 -- does not pass one.
@@ -117,44 +144,81 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbLimit
   liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
   let pageRows = take limit liteBookings
       hasMorePages = length liteBookings > limit
-  bookings <- forM pageRows $ \b -> do
-    mbRide <- QRideLite.findActiveByRBIdLite b.id
-    buildListItem b mbRide
+  ctx <- buildListPageContext pageRows
+  let bookings = map (buildListItem ctx) pageRows
   pure Common.ScheduledBookingListRes {totalItems = offset + length pageRows + (if hasMorePages then 1 else 0), bookings}
 
-buildListItem :: QBookingLite.BookingLite -> Maybe QRideLite.RideLite -> Flow Common.ScheduledBookingListItem
-buildListItem booking mbRide = do
-  mbPickup <- resolvePickupLocation booking.id
-  mbRiderPhoneNo <- fetchRiderPhone booking.riderId
-  (mbDriverName, mbDriverPhoneNo) <- fetchDriverNameAndPhone (mbRide <&> (.driverId))
-  txnBookings <- QBookingLite.findAllByTransactionIdLite booking.transactionId
-  pure
-    Common.ScheduledBookingListItem
-      { transactionId = booking.transactionId,
-        bookingId = booking.id.getId,
-        tripCategory = booking.tripCategory,
-        scheduledAt = booking.startTime,
-        fromLocation = maybe emptyLocationAPIEntity mkLocationAPIEntity mbPickup,
-        toLocation = Nothing, -- list shows pickup only; the detail endpoint resolves the drop
-        riderName = booking.riderName,
-        riderPhoneNo = mbRiderPhoneNo,
-        driverName = mbDriverName,
-        driverPhoneNo = mbDriverPhoneNo,
-        driverId = (\r -> r.driverId.getId) <$> mbRide,
-        bookingStatus = castBookingStatus booking.status,
-        rideStatus = castRideStatus . (.status) <$> mbRide,
-        reallocationCount = max 0 (length txnBookings - 1),
-        estimatedFare = booking.estimatedFare,
-        currency = booking.currency,
-        vehicleServiceTier = booking.vehicleServiceTier,
-        vehicleServiceTierName = booking.vehicleServiceTierName
-      }
+-- | Per-page lookups for the list, batched into one read per entity type instead of one per row,
+-- so the response cost is a fixed number of round trips regardless of page size.
+data ListPageContext = ListPageContext
+  { ridesByBookingId :: HashMap.HashMap Text QRideLite.RideLite,
+    pickupByBookingId :: HashMap.HashMap Text DLoc.Location,
+    phoneByRiderId :: HashMap.HashMap Text Text,
+    driverByDriverId :: HashMap.HashMap Text (Text, Maybe Text),
+    bookingCountByTxnId :: HashMap.HashMap Text Int
+  }
 
--- Resolve just the pickup location for one booking (2 reads: latest pickup mapping + location).
-resolvePickupLocation :: Id SRB.Booking -> Flow (Maybe DLoc.Location)
-resolvePickupLocation bookingId = do
-  mbMapping <- QLM.getLatestStartByEntityId bookingId.getId
-  maybe (pure Nothing) (QL.findById . (.locationId)) mbMapping
+buildListPageContext :: [QBookingLite.BookingLite] -> Flow ListPageContext
+buildListPageContext pageRows = do
+  let bookingIds = map (.id) pageRows
+      txnIds = nub $ map (.transactionId) pageRows
+      riderIds = nub $ mapMaybe (.riderId) pageRows
+
+  rides <- QRideLite.findAllActiveByRBIdsLite bookingIds
+  let ridesByBookingId = HashMap.fromList [(ride.bookingId.getId, ride) | ride <- rides]
+
+  mappings <- QLM.getLatestStartByEntityIds (map (.getId) bookingIds)
+  locations <- QL.getBookingLocs (map (.locationId) mappings)
+  let locationById = HashMap.fromList [(loc.id.getId, loc) | loc <- locations]
+      pickupByBookingId =
+        HashMap.fromList
+          [ (mapping.entityId, loc)
+            | mapping <- mappings,
+              Just loc <- [HashMap.lookup mapping.locationId.getId locationById]
+          ]
+
+  riderDetails <- QRiderDetails.findAllByIds riderIds
+  phoneByRiderId <-
+    HashMap.fromList
+      <$> forM riderDetails (\rd -> (rd.id.getId,) <$> decrypt rd.mobileNumber)
+
+  drivers <- QPerson.findAllByPersonIds (map (.getId) . nub $ map (.driverId) rides)
+  driverByDriverId <-
+    HashMap.fromList
+      <$> forM drivers (\p -> (p.id.getId,) . (personName p,) <$> mapM decrypt p.mobileNumber)
+
+  txnBookings <- QBookingLite.findAllByTransactionIdsLite txnIds
+  let bookingCountByTxnId = HashMap.fromListWith (+) [(b.transactionId, 1 :: Int) | b <- txnBookings]
+
+  pure ListPageContext {..}
+
+buildListItem :: ListPageContext -> QBookingLite.BookingLite -> Common.ScheduledBookingListItem
+buildListItem ctx booking =
+  let mbRide = HashMap.lookup booking.id.getId ctx.ridesByBookingId
+      mbPickup = HashMap.lookup booking.id.getId ctx.pickupByBookingId
+      mbRiderPhoneNo = flip HashMap.lookup ctx.phoneByRiderId . (.getId) =<< booking.riderId
+      mbDriver = flip HashMap.lookup ctx.driverByDriverId . (.getId) . (.driverId) =<< mbRide
+      txnBookingCount = fromMaybe 1 $ HashMap.lookup booking.transactionId ctx.bookingCountByTxnId
+   in Common.ScheduledBookingListItem
+        { transactionId = booking.transactionId,
+          bookingId = booking.id.getId,
+          tripCategory = booking.tripCategory,
+          scheduledAt = booking.startTime,
+          fromLocation = maybe emptyLocationAPIEntity mkLocationAPIEntity mbPickup,
+          toLocation = Nothing, -- list shows pickup only; the detail endpoint resolves the drop
+          riderName = booking.riderName,
+          riderPhoneNo = mbRiderPhoneNo,
+          driverName = fst <$> mbDriver,
+          driverPhoneNo = snd =<< mbDriver,
+          driverId = (\r -> r.driverId.getId) <$> mbRide,
+          bookingStatus = castBookingStatus booking.status,
+          rideStatus = castRideStatus . (.status) <$> mbRide,
+          reallocationCount = max 0 (txnBookingCount - 1),
+          estimatedFare = booking.estimatedFare,
+          currency = booking.currency,
+          vehicleServiceTier = booking.vehicleServiceTier,
+          vehicleServiceTierName = booking.vehicleServiceTierName
+        }
 
 getScheduledBookingInfo ::
   ShortId DM.Merchant ->
@@ -174,12 +238,15 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
   (mbDriverName, mbDriverPhoneNo) <- fetchDriverNameAndPhone (mbRide <&> (.driverId))
   (mbDistanceToPickup, mbEtaDuration, mbDriverLocation) <- maybe (pure (Nothing, Nothing, Nothing)) (getDriverProximityToPickup booking) mbRide
   reallocationHistory <- buildReallocationHistory booking.transactionId
+  opsNotes <- getScheduledBookingOpsNotes booking.merchantOperatingCityId booking.transactionId
   pure
     Common.ScheduledBookingInfoRes
       { transactionId = booking.transactionId,
         bookingId = booking.id.getId,
         tripCategory = booking.tripCategory,
         scheduledAt = booking.startTime,
+        roundTrip = booking.roundTrip,
+        returnTime = booking.returnTime,
         fromLocation = mkLocationAPIEntity booking.fromLocation,
         toLocation = mkLocationAPIEntity <$> booking.toLocation,
         riderName = booking.riderName,
@@ -199,7 +266,8 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
         currency = booking.currency,
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,
-        reallocationHistory
+        reallocationHistory,
+        opsNotes
       }
 
 -- | Reconstruct the reallocation timeline: every booking that has ever shared this
@@ -372,6 +440,7 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
   unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
     throwError (BookingNotFound transactionId)
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (InvalidRequest "No driver assigned to this booking")
+  now <- getCurrentTime
   let bookingCReason =
         DBCReason.BookingCancellationReason
           { driverId = Just ride.driverId,
@@ -383,11 +452,118 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
+            ondcCancellationReasonId = Nothing,
             distanceUnit = booking.distanceUnit,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
   cancelRideImpl ride.id DRide.Dashboard bookingCReason True Nothing False
   pure APISuccess.Success
+
+postScheduledBookingOpsNote ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.OpsNoteReq ->
+  Flow APISuccess.APISuccess
+postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId req = do
+  requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "requestorId is required")
+  note <- validateOpsNote req.content
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
+  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
+    throwError (BookingNotFound transactionId)
+  Redis.withWaitOnLockRedisWithExpiry (opsNoteLockKey merchantOpCity.id transactionId) 10 10 $ do
+    issueReportId <- getOrCreateScheduledBookingIssueReport booking
+    commentId <- generateGUID
+    now <- getCurrentTime
+    QComment.create
+      DComment.Comment
+        { id = commentId,
+          issueReportId,
+          authorId = Id requestorId,
+          comment = note,
+          createdAt = now,
+          merchantId = Just $ cast booking.providerId
+        }
+  pure APISuccess.Success
+
+getScheduledBookingOpsNotes :: Id DMOC.MerchantOperatingCity -> Text -> Flow [Common.OpsNote]
+getScheduledBookingOpsNotes merchantOperatingCityId transactionId = do
+  mbIssueReport <- QIssueReport.findByScheduledBookingTransactionId (cast merchantOperatingCityId) transactionId
+  maybe (pure []) (fmap (map toOpsNote) . QComment.findAllByIssueReportId . (.id)) mbIssueReport
+  where
+    toOpsNote comment =
+      Common.OpsNote
+        { id = comment.id.getId,
+          authorId = comment.authorId.getId,
+          authorName = Nothing,
+          content = comment.comment,
+          createdAt = comment.createdAt
+        }
+
+getOrCreateScheduledBookingIssueReport :: SRB.Booking -> Flow (Id DIssueReport.IssueReport)
+getOrCreateScheduledBookingIssueReport booking =
+  QIssueReport.findByScheduledBookingTransactionId (cast booking.merchantOperatingCityId) booking.transactionId >>= \case
+    Just issueReport -> pure issueReport.id
+    Nothing -> do
+      response <-
+        IssueAction.createIssueReportWithContext
+          ( Just
+              IssueAction.IssueReportCreationContext
+                { person = scheduledBookingIssuePerson booking,
+                  driverId = Just scheduledBookingIssueDriverId,
+                  merchantOperatingCityId = cast booking.merchantOperatingCityId,
+                  scheduledBookingTransactionId = Just booking.transactionId
+                }
+          )
+          (cast scheduledBookingIssuePersonId, cast booking.providerId)
+          (Just ENGLISH)
+          IssueUI.IssueReportReq
+            { rideId = Nothing,
+              mediaFiles = [],
+              optionId = Nothing,
+              categoryId = scheduledBookingIssueCategoryId,
+              description = "Scheduled booking operations notes",
+              chats = Nothing,
+              createTicket = Just False,
+              isFeedback = Nothing,
+              ticketBookingId = Nothing
+            }
+          AUI.driverIssueHandle
+          Issue.DRIVER
+          Nothing
+      pure response.issueReportId
+
+scheduledBookingIssuePerson :: SRB.Booking -> Issue.Person
+scheduledBookingIssuePerson booking =
+  Issue.Person
+    { id = cast scheduledBookingIssuePersonId,
+      language = Nothing,
+      firstName = Just "Scheduled Booking Operations",
+      middleName = Nothing,
+      lastName = Nothing,
+      mobileNumber = Nothing,
+      merchantOperatingCityId = cast booking.merchantOperatingCityId,
+      merchantId = cast booking.providerId,
+      blocked = Nothing
+    }
+
+validateOpsNote :: Text -> Flow Text
+validateOpsNote rawNote = do
+  let note = T.strip rawNote
+  when (T.null note) $ throwError ScheduledBookingOpsNoteEmpty
+  when (T.length note > maxOpsNoteLength) $ throwError (ScheduledBookingOpsNoteTooLong maxOpsNoteLength)
+  pure note
+
+opsNoteLockKey :: Id DMOC.MerchantOperatingCity -> Text -> Text
+opsNoteLockKey merchantOperatingCityId transactionId =
+  "ScheduledBookingOpsNote:" <> merchantOperatingCityId.getId <> ":" <> transactionId
 
 -- Live driver proximity to pickup via OSRM (Maps.getDistance -> .getDistances config): one LTS
 -- location fetch + one distance call that returns both distance and duration.

@@ -43,6 +43,24 @@ findBySubscriberIdAndDomain' subscriberId domain =
     Just a -> return $ Just a
     Nothing -> flip whenJust (cacheBapMetadata subscriberId domain) /=<< Queries.findBySubscriberIdAndDomain subscriberId (Just domain)
 
+-- | MSIL: store the BAP's own declared BAP_TERMS.STATIC_TERMS URL (parsed at
+-- /search, /init, /confirm) against its BapMetadata row. Update-only, no
+-- insert -- if no row exists yet for this subscriber+domain (e.g. this is the
+-- very first request ever seen from a brand-new BAP, before Layer 1's own
+-- createIfNotPresent has had a chance to run), this is a deliberate no-op: it
+-- doesn't fabricate a row with placeholder name/logo data, it just waits for
+-- the next request from the same BAP, by which point Layer 1 will have
+-- created the row properly.
+updateStaticTermsUrlIfChanged :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id BapMetadata -> Domain -> BaseUrl -> m ()
+updateStaticTermsUrlIfChanged subscriberId domain newStaticTermsUrl = do
+  mbExisting <- findBySubscriberIdAndDomain' subscriberId domain
+  case mbExisting of
+    Just existing | existing.staticTermsUrl /= Just newStaticTermsUrl -> do
+      let updated = existing {staticTermsUrl = Just newStaticTermsUrl}
+      Queries.updateByPrimaryKey updated
+      cacheBapMetadata subscriberId domain updated
+    _ -> pure ()
+
 cacheBapMetadata :: (CacheFlow m r) => Id BapMetadata -> Domain -> BapMetadata -> m ()
 cacheBapMetadata subscriberId domain bapMetadata = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

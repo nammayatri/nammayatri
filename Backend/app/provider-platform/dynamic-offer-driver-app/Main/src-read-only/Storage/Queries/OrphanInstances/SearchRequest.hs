@@ -38,7 +38,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
-    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
+    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
     userBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)
     userSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)
     pure $
@@ -92,6 +92,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             providerId = Kernel.Types.Id.Id providerId,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
+            riderName = riderName,
             riderPreferredOption = fromMaybe Domain.Types.RiderPreferredOption.OneWay riderPreferredOption,
             roundTrip = roundTrip,
             searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType searchTags,
@@ -165,6 +166,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
+        Beam.riderName = riderName,
         Beam.riderPreferredOption = Just riderPreferredOption,
         Beam.roundTrip = roundTrip,
         Beam.searchTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags,
@@ -172,7 +174,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
+        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
         Beam.tollCharges = tollCharges,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,

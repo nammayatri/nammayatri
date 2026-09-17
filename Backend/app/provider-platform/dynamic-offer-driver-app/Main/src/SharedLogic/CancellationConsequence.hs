@@ -31,6 +31,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Extra.CancellationConsequenceMatrix as DExtra
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions (createWithKV, updateOneWithKV)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
@@ -38,6 +39,7 @@ import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
 import qualified Kernel.Storage.Queries.SystemConfigs as KSQS
 import Kernel.Types.Id
 import qualified Kernel.Types.SystemConfigs as KTSC
+import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT2
 import qualified Lib.Types.SpecialLocation as SL
@@ -45,6 +47,7 @@ import qualified Sequelize as Se
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.Queries.DriverStats as QDriverStats
 import Tools.Error
 
 data ConsequenceInput = ConsequenceInput
@@ -56,7 +59,13 @@ data ConsequenceInput = ConsequenceInput
     vehicleServiceTier :: DTC.ServiceTierType,
     area :: Maybe SL.Area,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
-    isDashboardBooking :: Bool
+    isDashboardBooking :: Bool,
+    -- city-LOCAL wall-clock time of the cancellation (UTC + transporterConfig
+    -- timeDiffFromUtc) — timeBounds windows are authored in local time
+    localTime :: UTCTime,
+    -- DriverStats.rating of the assigned driver; Nothing (unrated / stats missing)
+    -- only matches rows without a rating band
+    driverRating :: Maybe Centesimal
   }
   deriving (Generic, Show)
 
@@ -75,6 +84,8 @@ resolveConsequence input = do
           && dimMatches row.vehicleServiceTier (Just input.vehicleServiceTier)
           && dimMatches row.area input.area
           && dimMatches row.paymentInstrument input.paymentInstrument
+          && ratingBandMatches row input.driverRating
+          && timeBoundMatches row input.localTime
       candidates = filter matches rows
       mbWinner = listToMaybe $ sortOn (\r -> (Down (specificity r), r.id.getId)) candidates
   case mbWinner of
@@ -94,9 +105,30 @@ dimMatches Nothing _ = True
 dimMatches (Just rowVal) (Just eventVal) = rowVal == eventVal
 dimMatches (Just _) Nothing = False
 
+-- No band (both bounds null) = wildcard. min is INCLUSIVE, max is EXCLUSIVE, so
+-- adjacent bands ("< 4.5" / ">= 4.5") tile the rating scale without overlap. An
+-- unrated driver does NOT match a row with a band (absent event value vs set dimension).
+ratingBandMatches :: DCCM.CancellationConsequenceMatrix -> Maybe Centesimal -> Bool
+ratingBandMatches row mbRating
+  | isNothing row.minDriverRating && isNothing row.maxDriverRating = True
+  | otherwise = case mbRating of
+    Nothing -> False
+    Just r -> maybe True (<= r) row.minDriverRating && maybe True (r <) row.maxDriverRating
+
+-- Unbounded = wildcard; a bounded row applies only when the city-local time falls inside
+-- one of its windows (findBoundedDomain semantics: per-weekday/per-day windows, midnight
+-- wrap split, strict interval ends). NOTE: a BoundedByWeekday and a BoundedByDay row can
+-- both match the same instant — that tie resolves by lowest id like any equal-score pair.
+timeBoundMatches :: DCCM.CancellationConsequenceMatrix -> UTCTime -> Bool
+timeBoundMatches row localTime =
+  row.timeBounds == TB.Unbounded || not (null (TB.findBoundedDomain [row] localTime))
+
 -- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > isAutoAccepted
--- > vehicleServiceTier > area/paymentInstrument
-specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Int)
+-- > vehicleServiceTier > area/paymentInstrument > driverRating band > timeBounds.
+-- Rating band and time are the LEAST significant on purpose: they are conditional
+-- overrides of an otherwise-identical base row, never a trump over a more specific
+-- dimension match.
+specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Int, Bool, Bool)
 specificity row =
   ( isJust row.faultRule,
     isJust row.faultVerdict,
@@ -104,17 +136,25 @@ specificity row =
     isJust row.tripCategory,
     isJust row.isAutoAccepted,
     isJust row.vehicleServiceTier,
-    fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument)
+    fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument),
+    isJust row.minDriverRating || isJust row.maxDriverRating,
+    row.timeBounds /= TB.Unbounded
   )
 
 -- | Build the resolver input from a full booking — the ONE place the dimension values
 -- come from, so every resolution site (charge calc, side effects, coin fork when it has
 -- the full booking) produces identical inputs and the per-ride cache stays coherent.
-buildConsequenceInputFromBooking :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe CancellationFault.FaultVerdict -> DCT2.CancellationType -> m ConsequenceInput
-buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy = do
+-- timeDiffFromUtc comes from the city's transporterConfig (callers already hold it);
+-- timeBounds windows are matched against the resulting city-local NOW. driverId is the
+-- ride's assigned driver — their DriverStats.rating feeds the rating-band dimension
+-- (missing stats/rating just means band rows don't match; never an error).
+buildConsequenceInputFromBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe CancellationFault.FaultVerdict -> DCT2.CancellationType -> Seconds -> Id DP.Person -> m ConsequenceInput
+buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy timeDiffFromUtc driverId = do
   mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
     CQMPM.findByIdAndMerchantOpCityId pmId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound pmId.getId)
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  driverRating <- QDriverStats.findById (cast driverId) <&> (>>= (.rating))
   -- a booking without a payment method is treated as Cash
   let bookingPaymentInstrument = maybe DMPM.Cash (.paymentInstrument) mbPaymentMethod
   pure
@@ -127,7 +167,9 @@ buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy = do
         vehicleServiceTier = booking.vehicleServiceTier,
         area = booking.area,
         paymentInstrument = Just bookingPaymentInstrument,
-        isDashboardBooking = booking.isDashboardRequest
+        isDashboardBooking = booking.isDashboardRequest,
+        localTime = localTime,
+        driverRating = driverRating
       }
 
 data CustomerChargeBreakup = CustomerChargeBreakup
@@ -190,6 +232,8 @@ driverCoinDeduction row =
 -- not known yet: True when ANY active row a driver cancel could match (cancelledBy
 -- wildcard or CancellationByDriver) carries a positive MONEY driver deduction. Replaces
 -- the retired farePolicy.driverCancellationPenaltyAmount fare-params snapshot.
+-- timeBounds are deliberately IGNORED here: a row that only charges at peak still makes
+-- FEE_APPLIES the honest overlay copy, since the cancel may land inside the window.
 cityHasDriverCancelMoneyPenalty :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> HighPrecMoney -> m Bool
 cityHasDriverCancelMoneyPenalty merchantOpCityId estimatedFare = do
   rows <- CQCCM.findAllByMerchantOpCityId merchantOpCityId

@@ -68,6 +68,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     logDebug "Executing payment intent"
     -- Check if payment is already completed (idempotent check using invoice status)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    let ridePaymentChargeAmount = SPayment.paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
     -- Check if payment is already settled (idempotent check using ledger entry status)
     isPaymentSettled <- RidePaymentFinance.isRidePaymentSettled rideId.getId
     if isPaymentSettled
@@ -92,6 +93,12 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
             mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
             let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+                -- What Stripe must take off is larger than the offer's face value:
+                -- discounting the fare also removes the payment charge that sat on it.
+                -- amountSaved carries that combined reduction (payoutAmount is a separate
+                -- payout, not a discount). The face value still drives the fare maths
+                -- below, so the two must not be conflated.
+                rideCaptureDiscount = maybe rideDiscountAmount (\e -> max 0 (e.amountSaved - e.payoutAmount)) mbRideOfferEntity
                 ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
             (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
             driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
@@ -100,7 +107,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   DPayment.CreatePaymentIntentServiceReq
                     { amount = fareWithTip.amount,
                       applicationFeeAmount,
-                      discountAmount = rideDiscountAmount,
+                      discountAmount = rideCaptureDiscount,
                       offerId = Id <$> booking.selectedOfferId,
                       currency = fareWithTip.currency,
                       customer = customerPaymentId,
@@ -114,7 +121,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
+            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount ridePaymentChargeAmount 0 ledgerCtx
             let ledgerInfo =
                   fromMaybe
                     SPayment.RidePaymentLedgerInfo
@@ -125,6 +132,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                         parkingCharge = 0,
                         parkingChargeVat = 0,
                         platformFee = applicationFeeAmount,
+                        paymentCharge = ridePaymentChargeAmount,
+                        paymentChargeVat = 0,
                         offerDiscountAmount = rideDiscountAmount,
                         cashbackPayoutAmount = ridePayoutAmount,
                         rideVatAbsorbedOnDiscount = 0,

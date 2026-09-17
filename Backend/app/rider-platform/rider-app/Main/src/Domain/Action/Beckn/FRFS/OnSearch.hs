@@ -359,10 +359,11 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   startStation <- OTPRest.getStationByGtfsIdAndStopCode dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   endStation <- OTPRest.getStationByGtfsIdAndStopCode dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map (castStationToAPI integratedBPPConfig.id) & encodeToText
-  let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
+  let routeStationsAPI = routeStations & map (castRouteStationToAPI integratedBPPConfig.id)
+      routeStationsJSON = encodeToText routeStationsAPI
   uid <- generateGUID
   now <- getCurrentTime
-  offerSegment <- SFU.getQuoteOfferSegment search.riderId search.merchantOperatingCityId vehicleType (Just routeStationsJSON) (Just (startStation, endStation))
+  offerSegment <- SFU.getQuoteOfferSegment search.riderId search.merchantOperatingCityId vehicleType routeStationsAPI (Just (startStation, endStation)) search.vehicleNumber
   let mbAdultPrice = find (\category -> category.category == ADULT) categories <&> (.price)
       (discountedTickets, eventDiscountAmount) =
         case mbAdultPrice of

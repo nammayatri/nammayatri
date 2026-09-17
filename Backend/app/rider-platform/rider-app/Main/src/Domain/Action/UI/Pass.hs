@@ -81,6 +81,7 @@ import qualified Kernel.Types.Id as Id
 import Kernel.Types.Version (Version, textToVersion)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
@@ -193,9 +194,13 @@ postMultimodalPassSelectUtil ::
   Maybe Text ->
   Maybe (Id.Id DMF.MediaFile) ->
   Maybe DT.Day ->
+  Bool ->
   Environment.Flow PassAPI.PassSelectionAPIEntity
-postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay = do
+postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay isMockPayment = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  unless isDashboard $ do
+    rateLimitOptions <- asks (.passSelectAPIRateLimitOptions)
+    checkSlidingWindowLimitWithOptions ("PassSelect:PersonId:" <> personId.getId) rateLimitOptions
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
@@ -219,7 +224,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
 
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -245,8 +250,9 @@ purchasePassWithPayment ::
   Maybe Text ->
   Maybe Text ->
   Maybe (Id.Id DMF.MediaFile) ->
+  Bool ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId = do
+purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -432,11 +438,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
-            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion Nothing
+            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just staticCustomerId) person.clientSdkVersion (Just isMockPayment)
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isMetroTestTransaction <- asks (.isMetroTestTransaction)
         let createWalletCall = TWallet.createWallet merchantId person.merchantOperatingCityId
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId) False
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment (Just purchasedPassId.getId) False
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
   when (initialStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
@@ -471,24 +477,26 @@ postMultimodalPassSelect ::
     Id.Id DPass.Pass ->
     Maybe Text ->
     Maybe Text ->
+    Maybe Bool ->
     Maybe Text ->
     Maybe Text ->
     Maybe DT.Day ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture =
-  ActorInfo.withMbPersonIdActorInfo mbPersonId . postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam)
+postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbIsMockPayment mbPassPhotoMediaIdParam mbProfilePicture mbStartDay =
+  ActorInfo.withMbPersonIdActorInfo mbPersonId $ postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay (fromMaybe False mbIsMockPayment)
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
     Id.Id DPass.Pass ->
+    Maybe Bool ->
     PassAPI.PassSelectReq ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassV2Select (mbPersonId, merchantId) passId req =
-  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate)
+postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate) (fromMaybe False mbIsMockPayment)
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
@@ -671,10 +679,9 @@ createPassCatalog merchantShortId opCity req = do
             minFare = req.minFare,
             maxFare = req.maxFare,
             formVerificationConfig = req.formVerificationConfig,
-            -- Overlap threshold and renewal hint are set out of band, like the FRFS override
-            -- columns below: the catalog create API does not carry them.
             minTripsAllowingOverlap = Nothing,
             minDaysToSuggestRenewal = Nothing,
+            timeOverlappingFrfsBookingsLimit = Nothing,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
             -- FRFS fare/cancellation override columns are owned by the override flow,
@@ -878,7 +885,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         formVerificationConfig = pass.formVerificationConfig,
         referenceNumber = (.referenceNumber) =<< mbPassDetails,
         minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
-        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal
+        minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
+        timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -940,7 +948,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         referenceNumber = Nothing,
         -- Built from the PurchasedPass snapshot, which carries no catalog config columns.
         minTripsAllowingOverlap = Nothing,
-        minDaysToSuggestRenewal = Nothing
+        minDaysToSuggestRenewal = Nothing,
+        timeOverlappingFrfsBookingsLimit = Nothing
       }
 
 -- Build PurchasedPass API Entity
@@ -966,14 +975,15 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  mbLivePayment <-
-    listToMaybe
+  liveTerms <-
+    sortOn (\p -> (p.startDate, Down (fromMaybe maxBound p.availableTripCount)))
       <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-        (Just 1)
+        Nothing
         Nothing
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
+  let mbLivePayment = listToMaybe liveTerms
   mbPayment <-
     case mbLivePayment of
       Just live -> pure (Just live)
@@ -1010,6 +1020,11 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
   futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
+  let overlappingTerms = case mbLivePayment of
+        Nothing -> []
+        Just primary ->
+          filter (\t -> hasDateOverlap (t.startDate, t.endDate) (primary.startDate, primary.endDate)) (drop 1 liveTerms)
+  overlappingPassEntities <- buildPurchasedPassPaymentAPIEntities overlappingTerms
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -1032,6 +1047,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
         futureRenewals = futureRenewalEntities,
+        overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
         maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
@@ -1204,13 +1220,15 @@ updatePurchasedPass ::
 updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
   mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
 
+  let liveStatuses = [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
   latestPayments <-
-    QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-      (Just 1)
-      (Just 0)
-      purchasedPass.id
-      [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
-      today
+    sortOn (\p -> (p.startDate, Down (fromMaybe maxBound p.availableTripCount)))
+      <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+        Nothing
+        Nothing
+        purchasedPass.id
+        liveStatuses
+        today
 
   photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
 
@@ -1264,13 +1282,11 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
               || purchasedPass.activatedAt /= newActivatedAt
               || isChangedProfilePicture
        in return (newPass, Just newPassPayment, hasChanged)
-    Nothing ->
-      let newPass =
-            purchasedPass
-              { DPurchasedPass.status = DPurchasedPass.Expired,
-                DPurchasedPass.updatedAt = now
-              }
-       in return (newPass, Nothing, True)
+    Nothing
+      | purchasedPass.status `elem` liveStatuses
+          && purchasedPass.endDate < today ->
+        return (purchasedPass {DPurchasedPass.status = DPurchasedPass.Expired, DPurchasedPass.updatedAt = now}, Nothing, True)
+      | otherwise -> return (purchasedPass, Nothing, False)
 
 -- ToDo: needs to be removed once the desired state is attained.
 refillProfilePictureFromS3 ::

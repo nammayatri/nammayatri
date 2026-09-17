@@ -77,7 +77,8 @@ data BankAccountResp = BankAccountResp
     futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    stripeLegalEntityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -102,6 +103,7 @@ data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel
 data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    guidelines :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
     hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     media :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationStagesConfig.MediaInfo],
     order :: Kernel.Prelude.Int,
@@ -121,6 +123,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    doStrictVerification :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
@@ -133,6 +136,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    onboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStageAPIEntity,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
@@ -148,7 +152,6 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
-    onboardingStages :: Kernel.Prelude.Maybe [DocumentOnboardingStageAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }

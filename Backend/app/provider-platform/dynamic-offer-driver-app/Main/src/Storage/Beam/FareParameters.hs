@@ -27,6 +27,7 @@ data FareParametersT f = FareParametersT
     baseFare :: B.C f Money,
     driverSelectedFare :: B.C f (Maybe Money),
     customerExtraFee :: B.C f (Maybe Money),
+    negativeFareAdjustment :: B.C f (Maybe Money),
     waitingCharge :: B.C f (Maybe Money),
     rideExtraTimeFare :: B.C f (Maybe Money),
     nightShiftCharge :: B.C f (Maybe Money),
@@ -41,6 +42,7 @@ data FareParametersT f = FareParametersT
     priorityCharges :: B.C f (Maybe HighPrecMoney),
     driverSelectedFareAmount :: B.C f (Maybe HighPrecMoney),
     customerExtraFeeAmount :: B.C f (Maybe HighPrecMoney),
+    negativeFareAdjustmentAmount :: B.C f (Maybe HighPrecMoney),
     waitingChargeAmount :: B.C f (Maybe HighPrecMoney),
     rideExtraTimeFareAmount :: B.C f (Maybe HighPrecMoney),
     nightShiftChargeAmount :: B.C f (Maybe HighPrecMoney),
@@ -67,14 +69,19 @@ data FareParametersT f = FareParametersT
     platformFee :: B.C f (Maybe HighPrecMoney),
     sgst :: B.C f (Maybe HighPrecMoney),
     cgst :: B.C f (Maybe HighPrecMoney),
+    tdsAmount :: B.C f (Maybe HighPrecMoney),
+    tdsRate :: B.C f (Maybe Double),
+    tdsProcessedAt :: B.C f (Maybe UTCTime),
     platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
     conditionalCharges :: B.C f (Maybe Value),
+    customerGateFeeItems :: B.C f (Maybe Value),
     currency :: B.C f (Maybe Currency),
     driverCancellationNotAllowed :: B.C f (Maybe Bool),
     updatedAt :: B.C f (Maybe UTCTime),
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     paymentProcessingFee :: B.C f (Maybe HighPrecMoney),
+    paymentProcessingFeeVat :: B.C f (Maybe HighPrecMoney),
     isVatTaxType :: B.C f (Maybe Bool),
     commission :: B.C f (Maybe HighPrecMoney),
     discountApplicableRideFareTaxExclusive :: B.C f (Maybe HighPrecMoney),
@@ -87,7 +94,8 @@ data FareParametersT f = FareParametersT
     cancellationTax :: B.C f (Maybe HighPrecMoney),
     parkingChargeTaxExclusive :: B.C f (Maybe HighPrecMoney),
     parkingChargeTax :: B.C f (Maybe HighPrecMoney),
-    fareSettlementType :: B.C f (Maybe SL.FareSettlementType)
+    fareSettlementType :: B.C f (Maybe SL.FareSettlementType),
+    negotiatedFareDelta :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

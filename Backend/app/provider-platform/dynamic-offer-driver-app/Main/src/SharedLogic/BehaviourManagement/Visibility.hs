@@ -37,7 +37,8 @@ defaultDriverDomainConfig =
             BTT.CounterConfig
               { windowSizeDays = 30,
                 counters = [BTT.ACTION_COUNT],
-                periods = [BTT.mkPeriodConfig "window" 15]
+                periods = [BTT.mkPeriodConfig "window" 15],
+                hashTagEntityId = False
               }
           ),
           -- window/periods come from the SAME config the writers and snapshots use,
@@ -50,28 +51,32 @@ defaultDriverDomainConfig =
                 periods =
                   [ BTT.mkPeriodConfig "daily" 1,
                     BTT.mkPeriodConfig "weekly" 7
-                  ]
+                  ],
+                hashTagEntityId = False
               }
           ),
           ( "DRUNK_AND_DRIVE",
             BTT.CounterConfig
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
-                periods = []
+                periods = [],
+                hashTagEntityId = False
               }
           ),
           ( "TOLL_RELATED_ISSUE",
             BTT.CounterConfig
               { windowSizeDays = 30,
                 counters = [BTT.ACTION_COUNT],
-                periods = [BTT.mkPeriodConfig "window" 30]
+                periods = [BTT.mkPeriodConfig "window" 30],
+                hashTagEntityId = False
               }
           ),
           ( "AC_RESTRICTION",
             BTT.CounterConfig
               { windowSizeDays = 365,
                 counters = [BTT.ACTION_COUNT],
-                periods = []
+                periods = [],
+                hashTagEntityId = False
               }
           ),
           ( "PICKUP_STALL",
@@ -82,7 +87,8 @@ defaultDriverDomainConfig =
                   [ BTT.mkPeriodConfig "daily" 1,
                     BTT.mkPeriodConfig "weekly" 7,
                     BTT.mkPeriodConfig "monthly" 30
-                  ]
+                  ],
+                hashTagEntityId = False
               }
           ),
           (DP.quoteResponseAcceptActionType, DP.quoteResponseCounterConfig),

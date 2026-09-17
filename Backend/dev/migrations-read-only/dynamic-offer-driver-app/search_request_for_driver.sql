@@ -249,3 +249,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN batching
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN has_available_for_rides_tag boolean ;

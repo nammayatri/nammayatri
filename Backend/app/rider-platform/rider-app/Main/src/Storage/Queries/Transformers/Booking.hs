@@ -172,6 +172,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            IntercityRental _ _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
             EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
@@ -216,6 +217,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            IntercityRental _ _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
             EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops

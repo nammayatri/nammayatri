@@ -12,7 +12,11 @@ import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest
 import Tools.Beam.UtilsTH
 
 data FinanceTdsReimbursementRequestT f = FinanceTdsReimbursementRequestT
-  { assessmentYear :: (B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear),
+  { adminCheckerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    adminCheckerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    adminMakerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    adminMakerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    assessmentYear :: (B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear),
     certAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     certNumber :: (B.C f Kernel.Prelude.Text),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),

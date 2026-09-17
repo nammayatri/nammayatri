@@ -7,6 +7,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import Data.Aeson
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -182,6 +183,13 @@ data DocumentRegisterMetadata
   | GSTData RegisterGstReq
   | UDYAMData RegisterUdyamReq
   | CommonData CommonDocumentCreateReq
+  | VehiclePermitData VPermitApproveDetails
+  | VehiclePUCData VPUCApproveDetails
+  | VehicleFitnessData FitnessApproveDetails
+  | VehicleInsuranceData VInsuranceRegisterReq
+  | VehicleNOCData NOCApproveDetails
+  | GSTCertificateData GSTApproveDetails
+  | BusinessLicenseData BusinessLicenseApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -277,6 +285,7 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
+  | TermsAndConditions
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
@@ -376,7 +385,8 @@ data GetDocumentResponse = GetDocumentResponse
     status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    metadata :: Kernel.Prelude.Maybe Data.Aeson.Value
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -660,6 +670,22 @@ data VInsuranceApproveDetails = VInsuranceApproveDetails
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VInsuranceRegisterReq = VInsuranceRegisterReq
+  { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    policyNumber :: Kernel.Prelude.Text,
+    policyExpiry :: Kernel.Prelude.UTCTime,
+    policyProvider :: Kernel.Prelude.Text,
+    rcNumber :: Kernel.Prelude.Text,
+    insuredName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    issueDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    limitsOfLiability :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets VInsuranceRegisterReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data VPUCApproveDetails = VPUCApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,

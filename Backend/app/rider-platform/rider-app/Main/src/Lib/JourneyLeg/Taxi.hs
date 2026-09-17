@@ -131,6 +131,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
                   { customerExtraFee = Nothing,
                     isPetRide = Nothing,
                     customerExtraFeeWithCurrency = Nothing,
+                    negativeFareAdjustment = Nothing,
+                    negativeFareAdjustmentWithCurrency = Nothing,
                     autoAssignEnabled = True,
                     autoAssignEnabledV2 = Just True,
                     paymentMethodId = Nothing,

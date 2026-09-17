@@ -20,6 +20,7 @@ import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.OfferDiscount as OfferDiscount
+import qualified API.Internal.OneShotAssign as OneShotAssign
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
@@ -47,6 +48,7 @@ type API =
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
+           :<|> OneShotAssign.API
            :<|> GetPickupInstructions.API
            :<|> AlertWebhook.API
            :<|> EKDLiveCallFeedback.API
@@ -79,6 +81,7 @@ handler =
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
+    :<|> OneShotAssign.handler
     :<|> GetPickupInstructions.handler
     :<|> AlertWebhook.handler
     :<|> EKDLiveCallFeedback.handler

@@ -29,7 +29,10 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
                 fmap (Is BeamIR.createdAt . GreaterThanOrEq . T.utcToLocalTime T.utc) mbFromDate,
                 fmap (Is BeamIR.createdAt . LessThanOrEq . T.utcToLocalTime T.utc) mbToDate
               ]
-              <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId), Is BeamIR.categoryId $ Not $ Eq Nothing]
+              <> [ Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId),
+                   Is BeamIR.categoryId $ Not $ Eq Nothing,
+                   Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
+                 ]
         ]
   issueReports <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   return (length issueReports, issueReports)
@@ -57,7 +60,13 @@ findAllCreatedAfter mbSince mbLimit mbOffset = do
         Nothing -> []
         Just ts -> [Is BeamIR.createdAt $ GreaterThan (T.utcToLocalTime T.utc ts)]
   findAllWithOptionsDb
-    [And ([Is BeamIR.deleted $ Eq False] <> sinceCond)]
+    [ And
+        ( [ Is BeamIR.deleted $ Eq False,
+            Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
+          ]
+            <> sinceCond
+        )
+    ]
     (Asc BeamIR.createdAt)
     mbLimit
     mbOffset
@@ -175,6 +184,16 @@ updateChats issueId chats = do
 findByBecknIssueId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByBecknIssueId becknIssueId = findOneWithKV [Is BeamIR.becknIssueId $ Eq (Just becknIssueId)]
 
+findByScheduledBookingTransactionId :: BeamFlow m r => Id MerchantOperatingCity -> Text -> m (Maybe IssueReport)
+findByScheduledBookingTransactionId merchantOperatingCityId transactionId =
+  findOneWithKV
+    [ And
+        [ Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId),
+          Is BeamIR.scheduledBookingTransactionId $ Eq (Just transactionId),
+          Is BeamIR.deleted $ Eq False
+        ]
+    ]
+
 instance FromTType' BeamIR.IssueReport IssueReport where
   fromTType' BeamIR.IssueReportT {..} = do
     pure $
@@ -186,6 +205,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
             ticketBookingId = Id <$> ticketBookingId,
+            scheduledBookingTransactionId = scheduledBookingTransactionId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             categoryId = Id <$> categoryId,
             optionId = Id <$> optionId,
@@ -208,6 +228,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.driverId = getId <$> driverId,
         BeamIR.rideId = getId <$> rideId,
         BeamIR.ticketBookingId = getId <$> ticketBookingId,
+        BeamIR.scheduledBookingTransactionId = scheduledBookingTransactionId,
         BeamIR.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamIR.description = description,
         BeamIR.assignee = assignee,

@@ -41,6 +41,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -55,6 +56,7 @@ import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
+import Domain.Types.FinancialYear (financialYearOf)
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
@@ -107,7 +109,9 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
+import qualified SharedLogic.DriverFyEarnings as SDFE
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -189,6 +193,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
+  DSC.recordOnRideChange booking.merchantOperatingCityId False
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance) pickupZone dropZone
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
@@ -496,7 +501,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       mbProjectedBreakup = FC.projectFareParamsBreakup fareParams
       rawBaseFare = case mbProjectedBreakup of
         Just b -> b.discountApplicableRideFareTaxExclusive + b.nonDiscountApplicableRideFareTaxExclusive
-        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - fromMaybe 0 fareParams.paymentProcessingFee
+        Nothing -> totalFare - rawTaxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - fromMaybe 0 fareParams.paymentProcessingFee - fromMaybe 0 fareParams.paymentProcessingFeeVat
       customerDiscountAmount = fromMaybe 0 ride.discountAmount
       tipAmount = fromMaybe 0 ride.tipAmount
       -- ServiceVAT (international): platform-service VAT input credit. The base
@@ -567,23 +572,43 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         pure $ (Nothing,) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-    -- For threshold-benefit gating (section 194O), look up the counterparty's
-    -- cumulative earnings. Driver rides use driver_stats.totalEarnings (lifetime
-    -- ride.fare sum, interim — TODO(MSIL-TDS-FY) switch to FY-scoped).
-    -- Fleet rides return Nothing → applyThresholdBenefit skips the gate (always
-    -- deducts) until a fleet accumulator is added.
-    mbCumulativeEarnings <- case ride.fleetOwnerId of
-      Just _ -> pure Nothing
-      Nothing -> do
-        mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
-        pure $ (.totalEarnings) <$> mbStats
-    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
-        baseFareForTds = max 0 baseFare
-        mbTdsAmount = do
-          rate <- effectiveTdsRate
-          let rawAmount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
-              gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseFareForTds rawAmount
-          if gatedAmount > 0 then Just gatedAmount else Nothing
+    -- TDS base = Total Ride Fare - GST. Tolls and parking stay IN the base (they
+    -- are part of the amount paid/credited); only tax comes out. Summing the
+    -- tax-exclusive components gets that on both the GST and the VAT path, where
+    -- the tax figure differs -- see the (taxAmount, baseFare, absorbedVat) binding
+    -- above. NOTE: distinct from 'baseFare', which excludes tolls/parking and
+    -- drives the walletReferenceBaseRide ledger posting; do not conflate them.
+    let tdsBaseAmount = max 0 (baseFare + tollAmount + parkingAmount)
+        effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
+        fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+    -- Bucket by the ride's own merchant-local date, never by "now" elsewhere.
+    rideLocalDate <- utctDay <$> getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    -- Threshold gating (section 194O) against FY-to-date net take home.
+    -- Keyed on driverOrFleetPersonId so a fleet owner's threshold is their own;
+    -- this read-decide-write must be serialised per person, hence the dedicated
+    -- lock -- the enclosing wallet lock is keyed on driverId and so would not
+    -- serialise two drivers of the same fleet.
+    mbTdsAmount <-
+      -- withWaitAndLockRedis (not withWaitOnLockRedisWithExpiry) because the gate's
+      -- decision has to come back out of the lock. 10s expiry, 1ms retry backoff --
+      -- note it sleeps once even on an uncontended acquire, so keep the delay small.
+      Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey driverOrFleetPersonId.getId) 10 1000 $ do
+        mbPersistedFareParams <- join <$> forM ride.fareParametersId QFare.findById
+        case mbPersistedFareParams of
+          Just fp | isJust fp.tdsProcessedAt -> pure fp.tdsAmount
+          _ -> do
+            fyToDate <- SDFE.getFyToDateNetEarnings driverOrFleetPersonId (financialYearOf fyStartMonth rideLocalDate)
+            let mbAmount = do
+                  rate <- effectiveTdsRate
+                  let rawAmount = tdsBaseAmount * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+                      gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just fyToDate) mbPanCard tdsBaseAmount rawAmount
+                  if gatedAmount > 0 then Just gatedAmount else Nothing
+            -- Net take home = TDS base - TDS. Written after the gate, since the
+            -- deduction is not known until it runs.
+            SDFE.addQuarterNetEarnings driverOrFleetPersonId fyStartMonth rideLocalDate (tdsBaseAmount - fromMaybe 0 mbAmount) (fromMaybe 0 mbAmount)
+            processedAt <- getCurrentTime
+            whenJust ride.fareParametersId $ QFare.updateTdsDeduction mbAmount effectiveTdsRate processedAt
+            pure mbAmount
 
     let serviceVatAmount =
           case transporterConfig.taxConfig.serviceVatPercentage of
@@ -592,7 +617,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 let baseForServiceVat =
                       if isOnline
                         then case mbProjectedBreakup of
-                          Just b -> RD.projectFareParamsBreakupTotal b - commissionAmount
+                          -- fareOnlyTotal, not the full twelve slots: the payment
+                          -- charge is a pass-through, not driver taxable earning,
+                          -- and including it would over-credit the VAT input.
+                          Just b -> RD.fareOnlyTotal b - commissionAmount
                           Nothing -> totalFare - commissionAmount
                         else max 0 (customerDiscountAmount - commissionAmount)
                  in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
@@ -609,11 +637,17 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
-    let mbPaymentBearer = transporterConfig.driverWalletConfig.paymentChargeBearer
+    let mbPaymentBearer =
+          (Kernel.Prelude.readMaybe . T.unpack =<< ride.paymentChargeBearer)
+            <|> transporterConfig.driverWalletConfig.paymentChargeBearer
         paymentChargeGross = fromMaybe 0 ride.paymentCharge
         (paymentChargeAmt, paymentChargeVatAmt) =
           splitGrossByVatPct transporterConfig.driverWalletConfig.paymentChargeVat paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
+        -- The OwnerLiability -> SellerLiability deduction legs below fire for the
+        -- driver bearer as well as the customer one, so the driver funds the
+        -- gateway fee either way and their invoice must show it as a deduction.
+        driverBearsPayment = mbPaymentBearer `elem` [Just PAYMENT_CUSTOMER, Just PAYMENT_DRIVER]
     let mkRideLineItems clubVatInclusive issuedToType =
           let rideInclusiveLine = rawBaseFare + rawTaxAmount
               tollInclusiveLine = tollAmount + tollVatAmount
@@ -691,8 +725,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing,
-                  if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge paymentChargeAmt else Nothing,
-                  if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing
+                  -- Customer copy: part of what the rider paid, so a positive Fare/Tax pair.
+                  if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge paymentChargeAmt else Nothing,
+                  if issuedToType == CUSTOMER && customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax paymentChargeVatAmt else Nothing,
+                  -- Supplier copy: a deduction, like commission above.
+                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge" PaymentCharge (negate paymentChargeAmt) else Nothing,
+                  if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge VAT" PaymentChargeTax (negate paymentChargeVatAmt) else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —

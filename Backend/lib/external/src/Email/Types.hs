@@ -17,6 +17,7 @@ module Email.Types
     EmailMagicLinkConfig (..),
     EmailBusinessVerificationConfig (..),
     EmailServiceConfig (..),
+    EmailAttachment (..),
   )
 where
 
@@ -33,9 +34,16 @@ import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 
 data EmailServiceConfig = EmailServiceConfig
   { sendGridUrl :: Maybe Text,
-    isForcedAWS :: Bool
+    isForcedAWS :: Bool,
+    maxAttachmentBytes :: Int
   }
   deriving (Generic, FromDhall)
+
+data EmailAttachment = EmailAttachment
+  { content :: ByteString,
+    filename :: Text,
+    contentType :: Text
+  }
 
 data EmailOTPConfig = EmailOTPConfig
   { fromEmail :: Text,

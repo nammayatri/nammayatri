@@ -182,6 +182,7 @@ instance YTH.GenericDefaults DDVC.FieldInfo where
     [ DDVC.FieldInfo
         { DDVC._type = DDVC.FieldText,
           DDVC.description = Just "defaultText",
+          DDVC.descriptionUrl = Just "defaultText",
           DDVC.dropdownValues = Just ["defaultText"],
           DDVC.fields = Nothing,
           DDVC.isMandatory = True,
@@ -487,6 +488,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) transporterConfig.referralLinkPassword req logicData
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
+    LYT.RIDE_FOOTNOTES_DISPLAY -> do
+      logicData :: A.Value <- YudhishthiraFlow.createLogicData (A.object []) (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
     LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
       defaultConfig <- fromMaybeM (InvalidRequest "MerchantServiceUsageConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMSUC.MerchantServiceUsageConfig))

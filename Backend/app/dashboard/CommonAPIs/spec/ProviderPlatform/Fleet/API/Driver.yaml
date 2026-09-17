@@ -1646,6 +1646,7 @@ types:
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text
     - dob: Maybe Day
+    - gender: Maybe Text
     - email: Maybe Text
     - address: Maybe Text
     - addressDocumentType: Maybe AddressDocumentType
@@ -2324,6 +2325,7 @@ types:
     - firstName: Text
     - middleName: Maybe Text
     - lastName: Maybe Text
+    - gender: Maybe Text
     - mobileCountryCode: Maybe Text
     - mobileNumber: Maybe Text
     - email: Maybe Text

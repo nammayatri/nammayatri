@@ -202,8 +202,8 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType merchantId = 
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        vpa = Nothing
       }
 
 -- | The merchant is resolved and access-checked by the caller, before the outbound registration

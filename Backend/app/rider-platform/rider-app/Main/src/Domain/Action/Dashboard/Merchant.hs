@@ -485,6 +485,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantId = specialLocation.merchantId,
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = mbGate >>= (.entryFeeAmount),
+            feeItems = reqT.feeItems <|> (mbGate >>= (.feeItems)),
+            minBalanceRequired = reqT.minBalanceRequired <|> (mbGate >>= (.minBalanceRequired)),
             minDriverThresholds = mbGate >>= (.minDriverThresholds),
             maxDriverThresholds = mbGate >>= (.maxDriverThresholds),
             demandThresholds = mbGate >>= (.demandThresholds),
@@ -497,6 +499,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            entryFeeDisabledServiceTiers = mbGate >>= (.entryFeeDisabledServiceTiers),
             gateConfig = mbGate >>= (.gateConfig),
             navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
@@ -1678,6 +1681,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
+    gateInfoEntryFeeDisabledServiceTiers :: Maybe Text,
     gateInfoGateConfig :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text
@@ -1729,6 +1733,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    gateInfoEntryFeeDisabledServiceTiers <- optional (r .: "gate_info_entry_fee_disabled_service_tiers")
     gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
@@ -1855,6 +1860,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 gateTags = gateInfoGateTags,
                 walkDescription = gateInfoWalkDescription,
                 entryFeeAmount = row.gateInfoEntryFeeAmount >>= \v -> readMaybeCSVField idx v "Gate Info (entry_fee_amount)",
+                feeItems = Nothing,
+                minBalanceRequired = Nothing,
                 minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
                 maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
                 demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
@@ -1868,6 +1875,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
                 notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
                 enableQueueFilter = parseBoolMap row.enableQueueFilter,
+                entryFeeDisabledServiceTiers = fromMaybe [] . parseGateTags <$> row.gateInfoEntryFeeDisabledServiceTiers,
                 gateConfig = resolvedGateConfig
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
@@ -1937,6 +1945,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeGateInfoWithExisting new Nothing = new
     mergeGateInfoWithExisting new (Just old) =
       new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+          DGI.feeItems = new.feeItems <|> old.feeItems,
+          DGI.minBalanceRequired = new.minBalanceRequired <|> old.minBalanceRequired,
           DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
           DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
           DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
@@ -1951,6 +1961,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
           DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
           DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+          DGI.entryFeeDisabledServiceTiers = new.entryFeeDisabledServiceTiers <|> old.entryFeeDisabledServiceTiers,
           DGI.gateConfig = new.gateConfig <|> old.gateConfig
          }
 

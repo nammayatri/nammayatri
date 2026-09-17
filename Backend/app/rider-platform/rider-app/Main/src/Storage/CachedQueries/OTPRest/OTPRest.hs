@@ -66,6 +66,24 @@ getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInM
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
 
+-- | Same lookup as 'getBusTripSchedule', but with a 10s TTL instead of 7200s. Kernel.Storage.InMem
+-- has no cross-instance invalidation, so the long-TTL cache is fine for callers that only read
+-- static schedule fields (stop times, sequence), but is_active_trip is live status -- reading it
+-- through a 2-hour-stale per-pod cache means a rider's boarding check can be denied by whichever
+-- pod happened to cache "not active yet" early, and only start succeeding once a retry lands on a
+-- pod with a fresher fetch, even though nothing about the trip changed. Kept as a separate function
+-- (rather than shortening getBusTripSchedule's TTL) so its other callers keep the cheaper long cache.
+getBusTripScheduleForBoardingCheck ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Int ->
+  Text ->
+  IntegratedBPPConfig ->
+  m BusScheduleDetails
+getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripScheduleForBoardingCheck", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 10 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+
 getWaybillMetadata ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->

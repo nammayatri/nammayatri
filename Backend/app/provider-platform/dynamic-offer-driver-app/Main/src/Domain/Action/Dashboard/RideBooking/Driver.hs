@@ -562,6 +562,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,
+        gender = Just $ show person.gender,
         numberOfRides = fromMaybe 0 ridesCount,
         mobileNumber,
         mobileCountryCode = person.mobileCountryCode,

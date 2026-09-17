@@ -155,7 +155,7 @@ convertToAutoPay ::
 convertToAutoPay eligibleStages driverFees = do
   let driverFeeIds = driverFees <&> (.id)
   QNTF.updateSuccessToFailedByDriverFeeIds driverFeeIds
-  QINV.updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode INV.INACTIVE driverFeeIds INV.AUTOPAY_INVOICE
+  QINV.retireAutopayInvoicesByDriverFeeIds driverFeeIds
   forM driverFees convertDriverFee
   where
     convertDriverFee driverFee = do

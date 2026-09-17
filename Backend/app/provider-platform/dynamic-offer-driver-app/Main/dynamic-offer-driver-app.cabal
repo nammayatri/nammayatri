@@ -145,6 +145,7 @@ library
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
+      Beckn.ACL.OnSupport
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
@@ -154,12 +155,30 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.MSIL.Init
+      Beckn.OnDemand.Transformer.MSIL.OnConfirm
+      Beckn.OnDemand.Transformer.MSIL.OnInit
+      Beckn.OnDemand.Transformer.MSIL.OnSearch
+      Beckn.OnDemand.Transformer.MSIL.OnSelect
+      Beckn.OnDemand.Transformer.MSIL.OnStatus
+      Beckn.OnDemand.Transformer.MSIL.Search
+      Beckn.OnDemand.Transformer.MSIL.Select
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate
       Beckn.OnDemand.Transformer.Search
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.MSIL.Breakup
+      Beckn.OnDemand.Utils.MSIL.Category
+      Beckn.OnDemand.Utils.MSIL.FulfillmentId
+      Beckn.OnDemand.Utils.MSIL.FulfillmentState
+      Beckn.OnDemand.Utils.MSIL.FulfillmentType
+      Beckn.OnDemand.Utils.MSIL.ItemCompliance
+      Beckn.OnDemand.Utils.MSIL.RouteInfo
+      Beckn.OnDemand.Utils.MSIL.StopAuthorization
+      Beckn.OnDemand.Utils.MSIL.Terms
+      Beckn.OnDemand.Utils.MSIL.VehicleEnergyType
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search
@@ -287,6 +306,7 @@ library
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
+      Domain.Action.UI.AvailableForRides
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -461,6 +481,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FinancialYear
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
@@ -563,6 +584,7 @@ library
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
+      SharedLogic.DriverFyEarnings
       SharedLogic.DriverIdentityInfo
       SharedLogic.DriverIdleTime
       SharedLogic.DriverOnboarding
@@ -578,12 +600,15 @@ library
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool
       SharedLogic.DriverPool.AreaPreference
+      SharedLogic.DriverPool.AvailableForRides
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverSupplyCounter
+      SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
@@ -620,6 +645,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
+      SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
@@ -646,6 +672,8 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
+      SharedLogic.OndcCancellationReason
+      SharedLogic.OneShotAssign
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
@@ -1054,6 +1082,7 @@ library
       Tools.Metrics.ARDUBPPMetrics.Types
       Tools.Metrics.DriverSearchRequestResponseMetrics
       Tools.Metrics.DriverSearchRequestResponseMetrics.Types
+      Tools.Metrics.DriverSupplyMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
@@ -1138,6 +1167,7 @@ library
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
+      API.Action.UI.AvailableForRides
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
@@ -1225,6 +1255,7 @@ library
       API.Types.Dashboard.RideBooking.Ride
       API.Types.Dashboard.RideBooking.SearchRequest
       API.Types.Dashboard.RideBooking.Volunteer
+      API.Types.UI.AvailableForRides
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
@@ -1316,6 +1347,7 @@ library
       Domain.Types.DriverBlockReason
       Domain.Types.DriverBlockTransactions
       Domain.Types.DriverFee
+      Domain.Types.DriverFyEarnings
       Domain.Types.DriverGoHomeRequest
       Domain.Types.DriverGstin
       Domain.Types.DriverGullakAssociation
@@ -1511,6 +1543,7 @@ library
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverBlockTransactions
       Storage.Beam.DriverFee
+      Storage.Beam.DriverFyEarnings
       Storage.Beam.DriverGoHomeRequest
       Storage.Beam.DriverGstin
       Storage.Beam.DriverGullakAssociation
@@ -1711,6 +1744,7 @@ library
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverBlockTransactions
       Storage.Queries.DriverFee
+      Storage.Queries.DriverFyEarnings
       Storage.Queries.DriverGoHomeRequest
       Storage.Queries.DriverGstin
       Storage.Queries.DriverGullakAssociation

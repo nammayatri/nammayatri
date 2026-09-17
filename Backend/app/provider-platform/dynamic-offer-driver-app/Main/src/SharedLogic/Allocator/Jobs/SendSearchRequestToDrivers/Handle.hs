@@ -33,7 +33,7 @@ import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool
 
-type HandleMonad m r = (MonadClock m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r)
+type HandleMonad m r = (MonadClock m, MonadTime m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r)
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),
@@ -47,7 +47,9 @@ data Handle m r = Handle
     getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
     logDriversExhausted :: m (),
-    getRescheduleTime :: m UTCTime,
+    -- | Takes the batch-start time as anchor so slow pool computation doesn't
+    -- push every subsequent batch back.
+    getRescheduleTime :: UTCTime -> m UTCTime,
     metrics :: MetricsHandle m,
     isSearchTryValid :: m Bool,
     isBookingValid :: Bool,
@@ -115,8 +117,17 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
           cancelBookingIfApplies
           return (Complete, NormalPool, Nothing)
     else do
+      batchStartTime <- getCurrentTime
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-      if not $ null driverPoolWithFlags.driverPoolWithActualDistResult
-        then sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-        else logDriversExhausted -- ran out of drivers mid-search (empty pool before batch limit); mark for analytics
-      ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
+      -- Pool computation can take seconds; an accept or customer cancel landing in that
+      -- window must not produce a batch of offers for a ride that is already gone.
+      isStillValid <- isSearchTryValid
+      if not isStillValid
+        then do
+          logInfo "Search try became invalid during pool computation; skipping dispatch."
+          return (Complete, driverPoolWithFlags.poolType, Nothing)
+        else do
+          if not $ null driverPoolWithFlags.driverPoolWithActualDistResult
+            then sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+            else logDriversExhausted -- ran out of drivers mid-search (empty pool before batch limit); mark for analytics
+          ReSchedule <$> getRescheduleTime batchStartTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)

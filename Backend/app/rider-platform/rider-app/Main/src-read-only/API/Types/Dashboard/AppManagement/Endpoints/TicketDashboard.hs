@@ -8,7 +8,6 @@ import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time.Calendar
-import qualified "this" Domain.Types.MerchantOnboarding
 import qualified "this" Domain.Types.TicketPlace
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -61,16 +60,12 @@ data UploadPublicFileResponse = UploadPublicFileResponse {publicUrl :: Kernel.Pr
 type API = (TicketDashboardUploadAsset :<|> TicketDashboardDeleteAsset :<|> TicketDashboardCurrentSeatStatus :<|> TicketDashboardSeatManagement)
 
 type TicketDashboardUploadAsset =
-  ( "ticketdashboard" :> "ticketplace" :> Capture "ticketPlaceId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "uploadAsset"
-      :> QueryParam
-           "requestorId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "requestorRole"
-           Domain.Types.MerchantOnboarding.RequestorRole
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           UploadPublicFileRequest
+  ( "ticketdashboard" :> "ticketplace"
+      :> Capture
+           "ticketPlaceId"
+           (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
+      :> "uploadAsset"
+      :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UploadPublicFileRequest
       :> Post
            '[JSON]
            UploadPublicFileResponse
@@ -78,18 +73,10 @@ type TicketDashboardUploadAsset =
 
 type TicketDashboardDeleteAsset =
   ( "ticketdashboard" :> "ticketplace" :> Capture "ticketPlaceId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "deleteAsset"
-      :> QueryParam
-           "requestorId"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "requestorRole"
-           Domain.Types.MerchantOnboarding.RequestorRole
       :> ReqBody
            '[JSON]
            DeletePublicFileRequest
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type TicketDashboardCurrentSeatStatus =
@@ -98,48 +85,28 @@ type TicketDashboardCurrentSeatStatus =
            "ticketPlaceId"
            (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
       :> "currentSeatStatus"
-      :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> QueryParam
-           "requestorRole"
-           Domain.Types.MerchantOnboarding.RequestorRole
-      :> ReqBody
-           '[JSON]
-           CurrentSeatStatusReq
-      :> Post
-           '[JSON]
-           CurrentSeatStatusResp
+      :> ReqBody '[JSON] CurrentSeatStatusReq
+      :> Post '[JSON] CurrentSeatStatusResp
   )
 
 type TicketDashboardSeatManagement =
-  ( "ticketdashboard" :> "ticketplace"
-      :> Capture
-           "ticketPlaceId"
-           (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
-      :> "seatManagement"
-      :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> QueryParam
-           "requestorRole"
-           Domain.Types.MerchantOnboarding.RequestorRole
+  ( "ticketdashboard" :> "ticketplace" :> Capture "ticketPlaceId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "seatManagement"
       :> ReqBody
            '[JSON]
            SeatManagementReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 data TicketDashboardAPIs = TicketDashboardAPIs
   { ticketDashboardUploadAsset ::
       Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-      Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-      Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
       ( Data.ByteString.Lazy.ByteString,
         UploadPublicFileRequest
       ) ->
       EulerHS.Types.EulerClient UploadPublicFileResponse,
-    ticketDashboardDeleteAsset :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> DeletePublicFileRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    ticketDashboardCurrentSeatStatus :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> CurrentSeatStatusReq -> EulerHS.Types.EulerClient CurrentSeatStatusResp,
-    ticketDashboardSeatManagement :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> SeatManagementReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    ticketDashboardDeleteAsset :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> DeletePublicFileRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    ticketDashboardCurrentSeatStatus :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> CurrentSeatStatusReq -> EulerHS.Types.EulerClient CurrentSeatStatusResp,
+    ticketDashboardSeatManagement :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> SeatManagementReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkTicketDashboardAPIs :: (Client EulerHS.Types.EulerClient API -> TicketDashboardAPIs)

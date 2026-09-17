@@ -793,6 +793,9 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe Double
     - scheduledRideMinLeadTime: Maybe Seconds
     - scheduledRideMaxLeadTime: Maybe Seconds
+    - negativeFareAdjustmentCongestionThreshold: Maybe Double
+    - negativeFareAdjustmentMinDistanceMeters: Maybe Int
+    - negativeFareAdjustmentMaxAmount: Maybe Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -839,6 +842,9 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe (OptionalValue Double)
     - scheduledRideMinLeadTime: Maybe (OptionalValue Seconds)
     - scheduledRideMaxLeadTime: Maybe (OptionalValue Seconds)
+    - negativeFareAdjustmentCongestionThreshold: Maybe (OptionalValue Double)
+    - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
+    - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
@@ -1033,7 +1039,7 @@ types:
   VehicleClassCheckType:
     - enum: "Infix, Prefix, Suffix, Exact"
   DocumentType:
-    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails"
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails,TermsAndConditions"
     - derive: "HttpInstance"
   DocumentFlowGrouping:
     - enum: "COMMON, STANDARD"

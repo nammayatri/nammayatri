@@ -19,6 +19,7 @@ data DocumentVerificationStagesConfigT f = DocumentVerificationStagesConfigT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentCategory :: B.C f Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentOnboardingStage :: B.C f Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
+    guidelinesJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     hint :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isHidden :: B.C f Kernel.Prelude.Bool,
     mediaJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

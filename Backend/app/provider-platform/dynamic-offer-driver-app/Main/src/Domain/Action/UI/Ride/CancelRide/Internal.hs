@@ -30,13 +30,15 @@ import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
-import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingCancellationReason as SBCR
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
+import Data.Time.Clock (utctDay)
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
+import Domain.Types.FinancialYear (financialYearOf)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -71,6 +73,8 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
+import qualified SharedLogic.DriverFyEarnings as SDFE
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.GstBreakdown
@@ -272,6 +276,9 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   void $ LF.rideDetails ride.id DRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason
+  -- Only a ride that started was ever counted; `ride` here is the pre-update snapshot,
+  -- so its status still reflects whether the trip was in progress.
+  when (ride.status == DRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
@@ -285,9 +292,17 @@ createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
+    BeamFlow m r,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -312,12 +327,6 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
           pure (mbFleetInfo', mbFleetInfo' >>= (.tdsRate))
         Nothing -> pure (Nothing, mbDriverInfo >>= (.tdsRate))
-
-      mbCumulativeEarnings <- case ride.fleetOwnerId of
-        Just _ -> pure Nothing
-        Nothing -> do
-          mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
-          pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           cancelIsVat = fromMaybe False booking.fareParams.isVatTaxType
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
@@ -330,11 +339,27 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             if panAadhaarLinkTdsEnabled transporterConfig.taxConfig
               then computeEffectiveTdsRate mbPanCard mbStoredTdsRate transporterConfig.taxConfig
               else (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
-          mbTdsAmount = do
-            rate <- mbTdsRate
-            let rawAmount = baseCancellation * realToFrac rate
-                gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseCancellation rawAmount
-            if gatedAmount > 0 then Just gatedAmount else Nothing
+          fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+      -- Cancellation charges the driver / FO receives are earnings and are subject
+      -- to TDS, treated like ride fare. baseCancellation is already net of GST
+      -- (gstOnCancellation is separate), so it is the TDS base as-is.
+      cancelLocalDate <- utctDay <$> getLocalCurrentTime transporterConfig.timeDiffFromUtc
+      mbTdsAmount <-
+        Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey driverOrFleetPersonId.getId) 10 1000 $ do
+          mbPersistedFareParams <- QFP.findById booking.fareParams.id
+          case mbPersistedFareParams of
+            Just fp | isJust fp.tdsProcessedAt -> pure fp.tdsAmount
+            _ -> do
+              fyToDate <- SDFE.getFyToDateNetEarnings driverOrFleetPersonId (financialYearOf fyStartMonth cancelLocalDate)
+              let mbAmount = do
+                    rate <- mbTdsRate
+                    let rawAmount = baseCancellation * realToFrac rate
+                        gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just fyToDate) mbPanCard baseCancellation rawAmount
+                    if gatedAmount > 0 then Just gatedAmount else Nothing
+              SDFE.addQuarterNetEarnings driverOrFleetPersonId fyStartMonth cancelLocalDate (baseCancellation - fromMaybe 0 mbAmount) (fromMaybe 0 mbAmount)
+              processedAt <- getCurrentTime
+              QFP.updateTdsDeduction mbAmount mbTdsRate processedAt booking.fareParams.id
+              pure mbAmount
       -- Resolve rider's payment-mode choice from booking.paymentMethodId — same logic as EndRide.
       -- Cash → "CASH", anything else (Card/UPI/Wallet/NetBanking/BoothOnline) → "ONLINE".
       isOnline <- do

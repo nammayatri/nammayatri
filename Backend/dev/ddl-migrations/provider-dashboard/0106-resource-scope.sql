@@ -2,8 +2,9 @@
 -- resources (routes, special zones, special locations, ticket places, …) a
 -- person may see/act on, under a merchant + operating city. resource_type and
 -- resource_id are open text tags (no enum / no CHECK) so a new resource kind is
--- pure data. A '*' resource_id row = full-MOC; no rows = deny-all (ops gate) /
--- unscoped (analytics). Exposed to consumers via GET /user/resourceScope.
+-- pure data. Scope is OPT-IN: no rows = unscoped = allow-all; a '*' resource_id
+-- row = the same allow-all (explicit); specific rows = restricted to those.
+-- Exposed to consumers via GET /user/resourceScope.
 
 CREATE TABLE atlas_dashboard.person_resource_access (
 id character(36) NOT NULL,

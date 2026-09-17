@@ -5,6 +5,7 @@ imports:
   Offer: Lib.Payment.Domain.Types.Offer
   OfferType: Lib.Payment.Domain.Types.Offer
   DiscountType: Lib.Payment.Domain.Types.Offer
+  OfferFrequency: Lib.Payment.Domain.Types.Offer
   UTCTime: Kernel.Prelude
 
 module: Offer
@@ -68,8 +69,14 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - currency: Currency
+    - minimumAmount: Maybe HighPrecMoney
+    - autoApply: Maybe Bool
+    - isHidden: Maybe Bool
+    - frequencyType: Maybe OfferFrequency
+    - maxApplyCount: Maybe Int
     - derive: "'HideSecrets"
 
   UpdateOfferReq:
@@ -80,8 +87,14 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - isActive: Maybe Bool
+    - minimumAmount: Maybe HighPrecMoney
+    - autoApply: Maybe Bool
+    - isHidden: Maybe Bool
+    - frequencyType: Maybe OfferFrequency
+    - maxApplyCount: Maybe Int
     - derive: "'HideSecrets"
 
   OfferResp:
@@ -96,9 +109,15 @@ types:
     - sponsoredBy: Maybe Text
     - tnc: Maybe Text
     - offerEligibilityJsonLogic: Maybe Value
+    - validFrom: Maybe UTCTime
     - validTill: Maybe UTCTime
     - currency: Currency
     - isActive: Bool
+    - minimumAmount: Maybe HighPrecMoney
+    - autoApply: Maybe Bool
+    - isHidden: Maybe Bool
+    - frequencyType: Maybe OfferFrequency
+    - maxApplyCount: Maybe Int
     - createdAt: UTCTime
     - updatedAt: UTCTime
 

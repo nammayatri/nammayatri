@@ -45,3 +45,8 @@ ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN document_expiry timestamp wi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.image ADD COLUMN metadata json ;

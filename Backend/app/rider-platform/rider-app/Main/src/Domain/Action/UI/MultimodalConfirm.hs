@@ -2454,8 +2454,44 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
     handleOtpRoute ctx userRequestedCodes srcCode destCode = do
       (effectiveStops, resolvedLegs) <-
         JMU.measureLatency (resolveLegsViaOtpCached ctx srcCode destCode) ("resolveLegsViaOtpCached src=" <> srcCode <> " dest=" <> destCode)
+      clusteredLegs <-
+        if fromMaybe False req.allowClusteredStops
+          then
+            JMU.measureLatency
+              (mapConcurrently (applyClusterRoutesToLeg ctx) resolvedLegs)
+              ("applyClusterRoutesToLeg legsCount=" <> show (length resolvedLegs))
+          else pure resolvedLegs
+      JMU.measureLatency (getRouteServiceability effectiveStops Nothing userRequestedCodes ctx clusteredLegs) ("getRouteServiceability legsCount=" <> show (length clusteredLegs))
 
-      JMU.measureLatency (getRouteServiceability effectiveStops Nothing userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+    applyClusterRoutesToLeg ::
+      RouteServiceabilityContext ->
+      ResolvedLeg ->
+      Environment.Flow ResolvedLeg
+    applyClusterRoutesToLeg ctx leg
+      | T.null leg.rlFromStopCode || T.null leg.rlToStopCode = pure leg
+      | otherwise = do
+        mbConnections <-
+          JMU.measureLatency
+            (JLU.getClusterRoutesFromTo leg.rlFromStopCode leg.rlToStopCode ctx.integratedBPPConfig)
+            ("applyClusterRoutesToLeg: getClusterRoutesFromTo legOrder=" <> show leg.rlOrder <> " src=" <> leg.rlFromStopCode <> " dest=" <> leg.rlToStopCode)
+        case mbConnections of
+          Just connections@(_ : _) -> do
+            let sortedConnections = sortOn (.routeCode) connections
+                clusterRouteCodes = nub $ map (.routeCode) sortedConnections
+                stopsByRoute = map (\c -> (c.routeCode, (c.sourceStopCode, c.destinationStopCode))) sortedConnections
+            logInfo $
+              "applyClusterRoutesToLeg: legOrder="
+                <> show leg.rlOrder
+                <> " src="
+                <> leg.rlFromStopCode
+                <> " dest="
+                <> leg.rlToStopCode
+                <> " otpRoutes="
+                <> show leg.rlRouteCodes
+                <> " clusterRoutes="
+                <> show clusterRouteCodes
+            pure leg {rlRouteCodes = nub (leg.rlRouteCodes <> clusterRouteCodes), rlStopsByRoute = stopsByRoute}
+          _ -> pure leg
 
     makeOtpResolvedRouteKey ::
       RouteServiceabilityContext ->
@@ -2535,8 +2571,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
               <$> mapConcurrently
                 ( \(r, s) -> do
                     let (routeFromStopCode, routeToStopCode) = fromMaybe (rlFromStopCode, rlToStopCode) (lookup r.routeId rlStopsByRoute)
-                        mbOverrideSource = if routeFromStopCode == rlFromStopCode then Nothing else Just routeFromStopCode
-                        mbOverrideDest = if routeToStopCode == rlToStopCode then Nothing else Just routeToStopCode
+                        mbOverrideSource = if T.null routeFromStopCode then Nothing else Just routeFromStopCode
+                        mbOverrideDest = if T.null routeToStopCode then Nothing else Just routeToStopCode
                     routeSourceLatLong <-
                       if routeFromStopCode == rlFromStopCode
                         then pure mbSourceLatLong

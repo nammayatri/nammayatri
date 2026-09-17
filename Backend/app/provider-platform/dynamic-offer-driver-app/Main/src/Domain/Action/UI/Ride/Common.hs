@@ -70,18 +70,21 @@ import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeter
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
+import SharedLogic.Finance.Wallet (splitGrossByVatPct)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc
@@ -298,17 +301,20 @@ buildRideEarnings ::
   DFareParams.FareParameters ->
   Maybe DFareParams.FareParameters ->
   HighPrecMoney ->
+  HighPrecMoney ->
+  Bool ->
   Bool ->
   Bool ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam ridePaymentChargeAmt customerBearsCharge driverBearsCharge = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam paymentChargeNet paymentChargeVat customerBearsCharge driverBearsCharge clubPaymentCharge = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
-      amountPaidByCustomer = fare - (if customerBearsCharge then ridePaymentChargeAmt else 0) - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge} = labels
+      paymentChargeGross = paymentChargeNet + paymentChargeVat
+      amountPaidByCustomer = fare - (if customerBearsCharge then paymentChargeGross else 0) - discount + tips
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge, lblPaymentCharge, lblPaymentChargeVat, lblPaymentChargePaid} = labels
       cancellationDues =
         fromMaybe 0 $
           case finalFareParam of
@@ -329,13 +335,20 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam rid
                   section = sec
                 }
           else Nothing
+      chargeBorneByDriver = customerBearsCharge || driverBearsCharge
       fareBreakupItems =
         catMaybes
           [ mkComp FareBreakup "FARE_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge ridePaymentChargeAmt ((customerBearsCharge || driverBearsCharge) && ridePaymentChargeAmt > 0),
+            -- Addition: only the customer bearer routes the charge through the
+            -- rider, so only there does the driver see it arrive before it leaves.
+            mkComp FareBreakup "PAYMENT_CHARGE_PAID_BY_CUSTOMER" lblPaymentChargePaid paymentChargeGross (customerBearsCharge && paymentChargeGross > 0),
+            -- Deduction: the driver funds the gateway fee under both bearers.
+            -- Clubbed into one row or split into charge + VAT, per city config.
+            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge (if clubPaymentCharge then paymentChargeGross else paymentChargeNet) (chargeBorneByDriver && (if clubPaymentCharge then paymentChargeGross else paymentChargeNet) > 0),
+            mkComp FareBreakup "PAYMENT_CHARGE_VAT" lblPaymentChargeVat paymentChargeVat (not clubPaymentCharge && chargeBorneByDriver && paymentChargeVat > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
             mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0)
@@ -443,7 +456,9 @@ data EarningsLabels = EarningsLabels
     lblFare :: Maybe Text,
     lblAirportConvenienceFee :: Maybe Text,
     lblServiceCharge :: Maybe Text,
-    lblPaymentCharge :: Maybe Text
+    lblPaymentCharge :: Maybe Text,
+    lblPaymentChargeVat :: Maybe Text,
+    lblPaymentChargePaid :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -462,6 +477,8 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
     <*> resolveLabel lang "SERVICE_CHARGE"
     <*> resolveLabel lang "PAYMENT_CHARGE"
+    <*> resolveLabel lang "PAYMENT_CHARGE_VAT"
+    <*> resolveLabel lang "PAYMENT_CHARGE_PAID_BY_CUSTOMER"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
@@ -501,7 +518,14 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       ridePaymentCharge = fromMaybe 0 ride.paymentCharge
       bookingPaymentCharge = fromMaybe 0 booking.paymentCharge
       rideAppFeeP = driverBorneAppFee ride.paymentCharge ride.paymentChargeBearer
-      bookingAppFeeP = if chargeInAppFee then bookingPaymentCharge else 0
+      -- Under the customer bearer the charge is inside fareSum, so remove the
+      -- row's own pre-discount figure. Under the driver bearer it never entered
+      -- the fare, so remove what the booking says the driver was charged.
+      quoteTimeCharge = fromMaybe 0 estimatedFareParams.paymentProcessingFee + fromMaybe 0 estimatedFareParams.paymentProcessingFeeVat
+      bookingAppFeeP
+        | customerBearsCharge = quoteTimeCharge
+        | driverBearsCharge = bookingPaymentCharge
+        | otherwise = 0
       estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- driverSelectedFare should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
       estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission - bookingAppFeeP)
@@ -516,6 +540,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
+    DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
 
@@ -575,7 +600,17 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
                 Nothing -> Nothing
 
   mbRideEarningsVal <- case mbEarningsLabels of
-    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams ridePaymentCharge customerBearsCharge driverBearsCharge
+    Just earningsLabels -> do
+      -- Cached lookup; the ride list hits the same city repeatedly.
+      mbTc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+      let mbDwc = (.driverWalletConfig) <$> mbTc
+          -- ride.paymentCharge is the VAT-inclusive gross; splitGrossByVatPct
+          -- reverses the rate the same way EndRide/Internal does for the ledger.
+          (chargeNet, chargeVat) = splitGrossByVatPct (mbDwc >>= (.paymentChargeVat)) ridePaymentCharge
+          -- Listing a component means "show it as one row"; omitting it means
+          -- "show its parts separately". Default is separate.
+          clubCharge = maybe False (elem DTConf.PAYMENT_CHARGE) (mbDwc >>= (.clubProjectFareInEarnings))
+      Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams chargeNet chargeVat customerBearsCharge driverBearsCharge clubCharge
     Nothing -> pure Nothing
 
   return $
@@ -684,7 +719,12 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         pickupZoneGateId = booking.pickupGateId,
         pickupZoneGateName = mbGateInfo <&> (.name),
         pickupZoneGateType = mbGateInfo <&> (pack . show . (.gateType)),
-        pickupZoneEntryFeeAmount = mbGateInfo >>= (.entryFeeAmount),
+        -- What this booking's service tier is actually charged: a gate can exempt
+        -- individual tiers from its entry fee.
+        pickupZoneEntryFeeAmount =
+          mbGateInfo >>= \gate ->
+            let fee = DGI.gateEntryFeeFor gate (Just . pack . show $ booking.vehicleServiceTier)
+             in if fee > 0 then Just fee else Nothing,
         specialLocationName = mbSpecialLoc <&> (.locationName),
         specialLocationCategory = mbSpecialLoc <&> (.category),
         isValidRide = Just $ Tools.isValidRide ride,

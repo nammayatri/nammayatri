@@ -17,6 +17,7 @@ module SharedLogic.Scheduler.Jobs.UnblockCustomer
   )
 where
 
+import qualified Domain.Types.CustomerBlockTransactions as DCBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
@@ -34,6 +35,6 @@ unblockCustomer ::
 unblockCustomer Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let customerId = jobData.customerId
-  void $ QPExtra.updatingBlockedStateWithUntil customerId Nothing False Nothing
+  void $ QPExtra.updatingBlockedStateWithUntil customerId Nothing False Nothing DCBT.Application Nothing
   logInfo $ "Automatically unblocked customer, customerId: " <> customerId.getId
   return Complete

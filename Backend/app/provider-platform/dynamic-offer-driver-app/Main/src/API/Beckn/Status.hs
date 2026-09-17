@@ -18,6 +18,10 @@ import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.Status as ACL
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
+import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
@@ -34,9 +38,12 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
+import Tools.Error
 import TransactionLogs.PushLogs
 
 type API =
@@ -69,7 +76,25 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
         void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       msgId <- Utils.getMessageId context
-      onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+      onStatusReq' <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+      -- MSIL pilot: Beckn.ACL.Common.Order's builders (tfAssignedReqToOrder/
+      -- tfStartReqToOrder/tfCompleteReqToOrder/tfCancelReqToOrder -- all of
+      -- which /status can route through, depending on the ride's current
+      -- state) share the same ONDC-non-compliance gaps as on_confirm/on_update's
+      -- ride-assigned push: SETTLEMENT_TERMS in order.tags, internal breakup
+      -- titles, NammaYatri's larger fulfillment.type vocabulary, and (for
+      -- scheduled bookings) ON_DEMAND_* category_ids. Same fixes, same gate.
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = dStatusRes.booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist dStatusRes.booking.merchantOperatingCityId.getId)
+      let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+          fixOrder =
+            MSILTerms.dropNonConformingOrderTags
+              . MSILFulfillmentType.patchOrderFulfillmentTypes
+              . MSILCategory.overrideOrderCategoryIds dStatusRes.booking.isScheduled
+              . MSILBreakup.overrideOrderBreakupTitles
+          onStatusReq =
+            if isOndcScheduledRideSupportEnabled
+              then onStatusReq' {Spec.onStatusReqMessage = (\msg -> msg {Spec.confirmReqMessageOrder = fixOrder msg.confirmReqMessageOrder}) <$> onStatusReq'.onStatusReqMessage}
+              else onStatusReq'
       logDebug $ "BPP_STATUS_API_DEBUG: Built on_status request with messageId: " <> msgId <> " for booking: " <> dStatusRes.booking.id.getId
       Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
         pure onStatusReq

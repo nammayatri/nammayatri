@@ -135,7 +135,8 @@ tfCustomer res =
       riderName <- res.riderName
       return $
         BecknV2.OnDemand.Types.Person
-          { personGender = res.riderGender, -- ONDC v2.1.0: rider gender from DConfirmRes
+          { personCreds = Nothing,
+            personGender = res.riderGender, -- ONDC v2.1.0: rider gender from DConfirmRes
             personId = Nothing,
             personImage = Nothing,
             personName = Just riderName,

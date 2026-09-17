@@ -18,6 +18,7 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Database.Redis as Hedis
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DI
@@ -183,17 +184,17 @@ processCandidatesChunk ::
 processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  -- Parallel-cap filter (one Redis ZCOUNT per driver in the chunk).
+  -- Parallel-cap filter (one pipelined Redis ZCOUNT per driver in the chunk).
   filteredChunk <-
     if applyParallelRequestFilter
-      then filterM (parallelRequestsFilterForDriver req . (.driverId) . driverLoc) chunk
+      then filterByParallelRequestCap req chunk
       else pure chunk
   -- Pool-data MGET for chunk survivors only.
   let chunkDriverIds = (.driverId) . driverLoc <$> filteredChunk
   poolDataList <- fetchPoolData onlinePayment isPrepaidEnabled chunkDriverIds
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
-      results = concat $ mapMaybe (buildDriverResult req poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
+      results = concat $ mapMaybe (buildDriverResult req isPrepaidEnabled poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
   filterByWalletBalance req isPrepaidEnabled results
 
 -- | Wrapper for non-chunked callers (Estimate stage): fetch then process all as one chunk.
@@ -215,14 +216,15 @@ getNearestDrivers req fetchPoolData = do
 -- `selectedServiceTiers` alone for a cohort-gated tier. The cohort tag itself is always
 -- ops-assigned (via the dashboard); no tier-selection change ever writes it.
 --
--- The cohort tag's value is always "Cohort#<tier>" -- the same string as the tier itself, not a
--- separately configured short code -- so no Redis-backed short-code-to-tier mapping is needed
--- anywhere (Haskell or location-tracking-service) to answer "which tier does this cohort gate."
+-- The cohort tag's value is the tier name itself -- "Cohort#<tier>", or "Cohort#<tierA>&<tierB>"
+-- for a driver in several cohorts -- not a separately configured short code, so no Redis-backed
+-- short-code-to-tier mapping is needed anywhere (Haskell or location-tracking-service) to answer
+-- "which tier does this cohort gate." elemTagValue matches the tier within that "&"-separated set.
 isTierEligibleForDriver :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> HashMap.HashMap ServiceTierType DVST.VehicleServiceTier -> ServiceTierType -> Bool
 isTierEligibleForDriver now driverTag tierConfigs tier =
   case HashMap.lookup tier tierConfigs >>= (.availabilityCheckConfig) of
     Nothing -> True
-    Just _ -> Yudhishthira.elemTagNameValue (LYT.TagNameValue ("Cohort#" <> show tier)) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
+    Just _ -> Yudhishthira.elemTagValue (LYT.TagName "Cohort") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
 
 -- | Whether the driver is eligible for a scheduled booking of the given tier: not a scheduled ride
 -- at all, within the R4 open-to-all threshold, or the tier's configured eligibility tags intersect
@@ -237,16 +239,24 @@ scheduledTierEligibleForDriver isScheduled scheduledOpenToAll driverTagTexts cit
 
 buildDriverResult ::
   NearestDriversReq ->
+  Bool ->
   HashMap.HashMap (Id Person.Driver) DPD.DriverPoolData ->
   HashMap.HashMap ServiceTierType DVST.VehicleServiceTier ->
   DriverLocation ->
   Maybe [NearestDriversResult]
-buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap location = do
+buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServiceTiersHashMap location = do
   dpd <- HashMap.lookup location.driverId poolDataMap
   guard $ not dpd.blocked
   guard $ dpd.enabled
   guard $ not (fromMaybe False dpd.isDisabledReasonFlag)
-  guard $ dpd.subscribed
+  -- Fleet drivers under prepaid billing are settled at the fleet-owner level (the wallet
+  -- filter below redirects dues to `fleetOwnerId` via `resolveOwnerAndThreshold`), so the
+  -- per-driver `subscribed` flag is not the authority on their eligibility -- nothing in the
+  -- fleet flow ever sets it. `fleetOwnerId` is only populated from an association that is
+  -- already `isActive = True` and unexpired (`associatedTill > now`, see
+  -- FleetDriverAssociationExtra.findAllByDriverIds), so its presence IS the active-association
+  -- check. Solo drivers, and fleet drivers on non-prepaid merchants, still gate on `subscribed`.
+  guard $ dpd.subscribed || (isPrepaidEnabled && isJust dpd.fleetOwnerId)
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
@@ -329,7 +339,10 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         latestScheduledBooking = dpd.latestScheduledBooking,
         latestScheduledPickup = dpd.latestScheduledPickup,
         selectedAutoAcceptTiers = fromMaybe [] dpd.selectedAutoAcceptTiers,
-        driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ fromMaybe [] dpd.driverTag),
+        -- Expiry-filtered, like the cohort and scheduled-eligibility checks above: the pool
+        -- data is a long-lived Redis cache, so a tag that has already run out of time is
+        -- still sitting in `dpd.driverTag` until the driver's next tag write.
+        driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ Yudhishthira.filterExpiredTags' now (fromMaybe [] dpd.driverTag)),
         score = Nothing,
         tripDistanceMinThreshold = dpd.tripDistanceMinThreshold,
         tripDistanceMaxThreshold = dpd.tripDistanceMaxThreshold,
@@ -344,13 +357,14 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         distanceFromDriverToDestination = mbDistToDestination
       }
 
-parallelRequestsFilterForDriver :: (Redis.HedisFlow m r) => NearestDriversReq -> Id Person.Driver -> m Bool
-parallelRequestsFilterForDriver NearestDriversReq {..} driverId = do
-  currentCount <- Redis.withMasterRedis $
-    Redis.withCrossAppRedis $ do
-      validCount <- Redis.zCount (DPD.mkParallelSearchRequestKey merchantId driverId) ((realToFrac . utcTimeToPOSIXSeconds) now) ((realToFrac . utcTimeToPOSIXSeconds) (addUTCTime 5000 now))
-      pure (fromIntegral validCount :: Int)
-  pure $ currentCount < maxParallelSearchRequests
+filterByParallelRequestCap :: (Redis.HedisFlow m r, MonadFlow m) => NearestDriversReq -> [SortedLTSCandidate] -> m [SortedLTSCandidate]
+filterByParallelRequestCap NearestDriversReq {..} chunk = do
+  let toScore = realToFrac . utcTimeToPOSIXSeconds :: UTCTime -> Double
+      parallelKeys = DPD.mkParallelSearchRequestKey merchantId . (.driverId) . driverLoc <$> chunk
+  activeCounts <-
+    Redis.withMasterRedis . Redis.withCrossAppRedis $
+      Redis.runPipelinedByKey "zCountPipelined" (\key -> Hedis.zcount key (toScore now) (toScore (addUTCTime 5000 now))) parallelKeys
+  pure [candidate | (candidate, activeCount) <- zip chunk activeCounts, maybe True ((< maxParallelSearchRequests) . fromIntegral) activeCount]
 
 isDriverModeEligibleHelper :: Maybe DriverInfo.DriverMode -> Bool -> Bool
 isDriverModeEligibleHelper Nothing active = active

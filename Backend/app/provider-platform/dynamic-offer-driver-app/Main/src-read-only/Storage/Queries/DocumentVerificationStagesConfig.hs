@@ -49,6 +49,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationStagesConfig.DocumentVerifi
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
+      Se.Set Beam.guidelinesJSON (Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkGuidelinesJSON guidelines),
       Se.Set Beam.hint hint,
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.mediaJSON (Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkMediaJSON media),
@@ -69,6 +70,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationStagesConfig.DocumentVerifi
 
 instance FromTType' Beam.DocumentVerificationStagesConfig Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig where
   fromTType' (Beam.DocumentVerificationStagesConfigT {..}) = do
+    guidelines' <- Storage.Queries.Transformers.DocumentVerificationStagesConfig.getGuidelinesFromJSON guidelinesJSON
     media' <- Storage.Queries.Transformers.DocumentVerificationStagesConfig.getMediaFromJSON mediaJSON
     pure $
       Just
@@ -77,6 +79,7 @@ instance FromTType' Beam.DocumentVerificationStagesConfig Domain.Types.DocumentV
             description = description,
             documentCategory = documentCategory,
             documentOnboardingStage = documentOnboardingStage,
+            guidelines = guidelines',
             hint = hint,
             isHidden = isHidden,
             media = media',
@@ -97,6 +100,7 @@ instance ToTType' Beam.DocumentVerificationStagesConfig Domain.Types.DocumentVer
         Beam.description = description,
         Beam.documentCategory = documentCategory,
         Beam.documentOnboardingStage = documentOnboardingStage,
+        Beam.guidelinesJSON = Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkGuidelinesJSON guidelines,
         Beam.hint = hint,
         Beam.isHidden = isHidden,
         Beam.mediaJSON = Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkMediaJSON media,

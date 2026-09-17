@@ -48,6 +48,11 @@ import Tools.DynamicLogic (getAppDynamicLogic)
 pickupStallActionType :: Text
 pickupStallActionType = "PICKUP_STALL"
 
+terminalActionReallocates :: DTC.PickupStallTerminalAction -> Bool -> Bool
+terminalActionReallocates DTC.RECORD_ONLY _ = False
+terminalActionReallocates DTC.REALLOCATE_RIDE isScheduled = not isScheduled
+terminalActionReallocates DTC.REALLOCATE_SCHEDULED_RIDE isScheduled = isScheduled
+
 -- Cooldown tags exposed to rules (e.g. {"var": "cooldowns.PICKUP_STALL_FEE"}) so a
 -- fee/block consequence fires at most once per cooldown window.
 pickupStallCooldownTags :: [Text]
@@ -58,7 +63,8 @@ pickupStallCounterConfig =
   BTT.CounterConfig
     { windowSizeDays = 30,
       counters = [BTT.ACTION_COUNT],
-      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7, BTT.mkPeriodConfig "monthly" 30]
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7, BTT.mkPeriodConfig "monthly" 30],
+      hashTagEntityId = False
     }
 
 data PickupStallSource = SystemReallocation | SystemDetection | CustomerCancelledDriverAtFault

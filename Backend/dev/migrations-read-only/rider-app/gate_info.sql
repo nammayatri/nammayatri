@@ -40,3 +40,18 @@ ALTER TABLE atlas_app.gate_info ADD COLUMN navigation_instructions_json text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.gate_info ADD COLUMN gate_config text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.gate_info ADD COLUMN entry_fee_disabled_service_tiers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.gate_info ADD COLUMN fee_items text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.gate_info ADD COLUMN min_balance_required double precision ;

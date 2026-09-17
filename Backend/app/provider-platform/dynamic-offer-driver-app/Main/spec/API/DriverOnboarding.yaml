@@ -7,6 +7,7 @@ imports:
   DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
   DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
   MediaInfo: Domain.Types.DocumentVerificationStagesConfig
+  ImageInfo: Domain.Types.DocumentVerificationConfig
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
@@ -57,7 +58,6 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
-    onboardingStages: Maybe [DocumentOnboardingStageAPIEntity]
   # Stage metadata for the onboarding hub, ordered by `order` with hidden stages already dropped.
   # Documents carry the same `documentOnboardingStage`, so that value IS the join key -- it needs
   # no separate string field. Note the wire form is the tagged object {"tag":..,"contents":..};
@@ -72,11 +72,13 @@ types:
     order: Int
     stageDependency: '[DocumentOnboardingStage]'
     media: Maybe [MediaInfo]
+    guidelines: Maybe [ImageInfo]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
     documentFlowGrouping: DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
+    onboardingStage: Maybe DocumentOnboardingStageAPIEntity
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -98,6 +100,7 @@ types:
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
     doNotValidateDuringOnboarding: Maybe Bool
+    doStrictVerification: Bool
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
@@ -191,6 +194,7 @@ types:
     paymentMode: PaymentMode
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
+    stripeLegalEntityName: Maybe Text
   FleetInfo:
     id: Text
     ownerName: Text

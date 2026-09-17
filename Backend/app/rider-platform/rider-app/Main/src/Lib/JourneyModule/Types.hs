@@ -973,8 +973,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         legExtraInfo = legExtraInfo,
         actualDistance = journeyLeg.distance,
         totalFare = Just $ mkPriceAPIEntity booking.totalPrice,
-        entrance = Nothing,
-        exit = Nothing,
+        entrance = journeyLeg.osmEntrance,
+        exit = journeyLeg.osmExit,
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
         hasApplicablePasses = Nothing,
         observingFailures = Nothing,
@@ -1469,7 +1469,11 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
             tripDay <- FRFSPassOverride.localTripDay person tripTime
             pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay
           Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass
-  let overridePurchasedPassIds = map (.purchasedPassPayment.purchasedPassId) overridePasses
+  -- The UNFILTERED candidates, deliberately -- not overridePasses. toCandidate keeps every
+  -- override-applicable term whatever state it is in; filterCandidatesForLeg is what narrows to
+  -- usable-right-now, and taking that narrowed list is what made an exhausted pass read as a
+  -- free-ride pass and blocked the rider from buying a ticket.
+  let overridePurchasedPassIds = if shouldCheckPass then maybe [] (map (.payment.purchasedPassId)) mbPassCandidates else []
       adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
       overridePriceItems = maybe [] (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) . (.priceItems)) mbFareParameters
       applicablePasses =
@@ -1549,8 +1553,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         legExtraInfo = legExtraInfo,
         actualDistance = Nothing,
         totalFare = Nothing,
-        entrance = Nothing,
-        exit = Nothing,
+        entrance = journeyLeg.osmEntrance,
+        exit = journeyLeg.osmExit,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
         hasApplicablePasses = Just hasTicketFreePass,
         observingFailures = Just observingFailures,

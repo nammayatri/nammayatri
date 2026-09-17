@@ -409,6 +409,8 @@ let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 let seatBookingConfirmAPIRateLimitOptions =
       { limit = +1, limitResetTimeInSec = +30 }
 
+let passSelectAPIRateLimitOptions = { limit = +10, limitResetTimeInSec = +300 }
+
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
 let erssStatusUpdateRateLimitOptions =
@@ -428,6 +430,7 @@ let noSignatureSubscribers =
 let emailServiceConfig =
       { sendGridUrl = Some "https://api.sendgrid.com/v3/mail/send"
       , isForcedAWS = True
+      , maxAttachmentBytes = +10485760
       }
 
 in  { esqDBCfg
@@ -535,6 +538,7 @@ in  { esqDBCfg
     , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
+    , passSelectAPIRateLimitOptions
     , sosTrackingRateLimitOptions
     , erssStatusUpdateRateLimitOptions
     , inMemConfig

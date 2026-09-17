@@ -144,6 +144,13 @@ data ServiceHandle m = ServiceHandle
     mbUpdateTicketCsat :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> m ())
   }
 
+data IssueReportCreationContext = IssueReportCreationContext
+  { person :: Person,
+    driverId :: Maybe (Id Person),
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    scheduledBookingTransactionId :: Maybe Text
+  }
+
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
 getLanguage personId mbLanguage issueHandle = do
   extractLanguage <-
@@ -704,7 +711,23 @@ createIssueReport ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReport = createIssueReportWithContext Nothing
+
+createIssueReportWithContext ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r,
+    HasField "slackNotificationConfig" r SlackNotificationConfig
+  ) =>
+  Maybe IssueReportCreationContext ->
+  (Id Person, Id Merchant) ->
+  Maybe Language ->
+  Common.IssueReportReq ->
+  ServiceHandle m ->
+  Identifier ->
+  Maybe Text ->
+  m Common.IssueReportRes
+createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   -- Guard against a client retrying the same submission (e.g. after a
   -- timeout on a request carrying an attachment) and ending up with two
   -- tickets for what the customer experienced as one submit. Keyed on the
@@ -713,7 +736,8 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
   -- failed upload being dropped/retried), so keying on them would defeat
   -- the guard for the case it's meant to catch.
 
-  let dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> T.take 200 description
+  let scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId)
+      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> show (fromMaybe False isFeedback) <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
   -- Atomic claim (SETNX-style): only the request that actually creates the
   -- key proceeds to do the work. A plain GET-then-SET has a race window —
   -- two requests that both arrive before either has written the cache can
@@ -722,7 +746,7 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
   wonClaim <- Redis.setNxExpire dedupKey 60 (Nothing :: Maybe Common.IssueReportRes)
   if wonClaim
     then do
-      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl args mbLanguage req issueHandle identifier becknIssueId)
+      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl creationContext args mbLanguage req issueHandle identifier becknIssueId)
       case result of
         Right response -> do
           Redis.setExp dedupKey (Just response) 60
@@ -739,7 +763,7 @@ createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReport
         Just Nothing -> do
           threadDelaySec $ Seconds 1
           awaitDedupedResponse dedupKey
-        Nothing -> createIssueReport args mbLanguage req issueHandle identifier becknIssueId
+        Nothing -> createIssueReportWithContext creationContext args mbLanguage req issueHandle identifier becknIssueId
 
 createIssueReportImpl ::
   ( EsqDBReplicaFlow m r,
@@ -747,6 +771,7 @@ createIssueReportImpl ::
     BeamFlow m r,
     HasField "slackNotificationConfig" r SlackNotificationConfig
   ) =>
+  Maybe IssueReportCreationContext ->
   (Id Person, Id Merchant) ->
   Maybe Language ->
   Common.IssueReportReq ->
@@ -754,7 +779,7 @@ createIssueReportImpl ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
@@ -770,27 +795,48 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
     _ -> pure Nothing
   uploadedMediaFiles <- forM mediaFiles $ \mediaFile ->
     CQMF.findById mediaFile identifier >>= fromMaybeM (FileDoesNotExist mediaFile.getId)
-  person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let mocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+  person <- maybe (issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)) (pure . (.person)) creationContext
+  let defaultMocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+      mocId = maybe defaultMocId (.merchantOperatingCityId) creationContext
   moCity <-
     issueHandle.findMOCityById mocId
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- issueHandle.findIssueConfig mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
-  let shouldCreateTicket = isNothing createTicket || fromJust createTicket
-      onCreateIssueMsgs = if shouldCreateTicket then issueConfig.onCreateIssueMsgs else []
+  -- FEEDBACK_TICKET: stored as CLOSED, no ticket raised
+  let isFeedbackFlow = fromMaybe False isFeedback
+      shouldCreateTicket = not isFeedbackFlow && (isNothing createTicket || fromJust createTicket)
+      -- auto reply: the submitted-from message's onSubmitReplyMsgs, else IssueConfig (tickets only)
+      submitLabels
+        | isFeedbackFlow = ["FEEDBACK_TICKET"]
+        | shouldCreateTicket = ["CREATE_TICKET", "AUTO_CREATE_TICKET"]
+        | otherwise = []
+  submitMessages <-
+    if null submitLabels
+      then pure []
+      else case optionId of
+        Just justOptionId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByOptionIdAndLanguage justOptionId language identifier
+        Nothing -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage categoryId language identifier
+  let shownIds = [c.chatId | c <- fromMaybe [] chats, c.chatType == IssueMessage]
+      labelled = [m | m <- submitMessages, m.label `elem` map Just submitLabels, Just ids <- [m.onSubmitReplyMsgs], not (null ids)]
+      -- prefer the labelled message the customer was actually shown (present in chats)
+      messageOverride = (.onSubmitReplyMsgs) =<< (listToMaybe [m | m <- labelled, m.id.getId `elem` shownIds] <|> listToMaybe labelled)
+      onCreateIssueMsgs
+        | isFeedbackFlow = fromMaybe [] messageOverride
+        | shouldCreateTicket = fromMaybe issueConfig.onCreateIssueMsgs messageOverride
+        | otherwise = []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
   now <- getCurrentTime
   mbRideInfoRes <- traverse (issueHandle.getRideInfo merchantId mocId) rideId
   let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
-      updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
+      updatedChats = updateChats chats_ (shouldCreateTicket || isFeedbackFlow) isFeedbackFlow messages uploadedMediaFiles now
   mbSubCategoryOptionId <- resolveSubCategoryOptionId chats_ optionId category.category identifier
   mbSubCategoryOption <- maybe (pure Nothing) (`CQIO.findById` identifier) mbSubCategoryOptionId
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide (Just config) True identifier issueHandle
-  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
+  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
     fork "notify on slack" $ do
@@ -848,7 +894,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
-    mkIssueReport mocId updatedChats shouldCreateTicket now = do
+    mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now = do
       id <- generateGUID
       shortId <- generateShortId
       pure $
@@ -856,15 +902,16 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
           { id,
             shortId = Just shortId,
             personId,
-            driverId = if identifier == CUSTOMER then Nothing else Just personId,
+            driverId = maybe (if identifier == CUSTOMER then Nothing else Just personId) (.driverId) creationContext,
             rideId = rideId,
             ticketBookingId = ticketBookingId,
+            scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId),
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
             categoryId = Just categoryId,
             mediaFiles = mediaFiles,
             assignee = Nothing,
-            status = if shouldCreateTicket then OPEN else NOT_APPLICABLE,
+            status = if shouldCreateTicket then OPEN else (if isFeedbackFlow then CLOSED else NOT_APPLICABLE),
             deleted = False,
             ticketId = Nothing,
             additionalTicketIds = Nothing,
@@ -1100,8 +1147,8 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
           area = (.area) =<< mbLocAPIEnt
         }
 
-    updateChats :: [Chat] -> Bool -> [Common.Message] -> [D.MediaFile] -> UTCTime -> [Chat]
-    updateChats issueChats shouldCreateTicket messages mediaFiles_ now =
+    updateChats :: [Chat] -> Bool -> Bool -> [Common.Message] -> [D.MediaFile] -> UTCTime -> [Chat]
+    updateChats issueChats shouldCreateTicket alwaysAppendReplies messages mediaFiles_ now =
       let issueDescriptionChats = [mkIssueChat IssueDescription "" now]
           issueMediaFileChats = map (\mediaFile -> mkIssueChat MediaFile mediaFile.id.getId now) mediaFiles_
           chatsWithDescAndMediaFiles =
@@ -1109,7 +1156,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
               then issueChats ++ issueDescriptionChats ++ issueMediaFileChats
               else issueChats
        in chatsWithDescAndMediaFiles
-            ++ ( if not $ null issueChats
+            ++ ( if not (null issueChats) || alwaysAppendReplies
                    then map (\message -> mkIssueChat IssueMessage message.id.getId now) messages
                    else []
                )
@@ -1175,6 +1222,8 @@ issueInfo ::
 issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
   let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)

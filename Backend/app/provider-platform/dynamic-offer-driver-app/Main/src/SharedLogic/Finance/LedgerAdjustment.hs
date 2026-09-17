@@ -4,6 +4,7 @@ module SharedLogic.Finance.LedgerAdjustment
     ledgerAdjustmentApproveAndPost,
     ledgerAdjustmentReject,
     ledgerAdjustmentLockKey,
+    mkAdminName,
   )
 where
 
@@ -13,8 +14,11 @@ import qualified Dashboard.Common
 import Data.List (sortOn)
 import qualified Data.Ord
 import qualified Data.Text as T
+import Data.Time.Clock (utctDay)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.DriverPanCard as DPanCard
+import Domain.Types.FinancialYear (financialYearOf)
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.LedgerAdjustmentRequest as DLA
 import qualified Domain.Types.Merchant as DM
@@ -44,6 +48,7 @@ import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as Q
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
+import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.Finance.LedgerAdjustmentCast
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
@@ -55,7 +60,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Image as QImage
@@ -149,17 +153,20 @@ ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req = Ac
         adminMakerName
         req
     QLedgerAdjustmentRequest.create adjustmentRequest
+    h.submitSideEffect adjustmentRequest
   pure Success
 
 --------------------------------------------------------------------------------
 -- Category handlers
 --------------------------------------------------------------------------------
 
--- | Per-category dispatch: expected direction, submit-time validation, checker
---   post action and reject side effect, all defined in one place per category.
+-- | Per-category dispatch: expected direction, submit-time validation, submit-time
+--   side effect, checker post action and reject side effect, all defined in one
+--   place per category.
 data CategoryHandlers = CategoryHandlers
   { expectedDirection :: DLA.AdjustmentDirection,
     validateCategory :: ValidateLedgerAdjustment,
+    submitSideEffect :: SubmitLedgerAdjustmentSideEffect,
     postCategory :: PostLedgerAdjustment,
     rejectSideEffect :: RejectLedgerAdjustmentSideEffect
   }
@@ -173,12 +180,15 @@ type ValidateLedgerAdjustment =
   API.SubmitLedgerAdjustmentReq ->
   Flow ()
 
+-- | Category-specific side effect after maker submit (request already created).
+type SubmitLedgerAdjustmentSideEffect = DLA.LedgerAdjustmentRequest -> Flow ()
+
 -- | Category-specific post ledger adjustment action
-type PostLedgerAdjustment = DTC.TransporterConfig -> DLA.LedgerAdjustmentRequest -> Flow (Maybe (Id DLE.LedgerEntry))
+type PostLedgerAdjustment = DTC.TransporterConfig -> Id DP.Person -> Text -> DLA.LedgerAdjustmentRequest -> Flow (Maybe (Id DLE.LedgerEntry))
 
 -- | Category-specific side effects after checker reject (mirror of ledgerAdjustmentPostAction).
 --   Does not reverse ledger / wallet — only optional domain sync.
-type RejectLedgerAdjustmentSideEffect = DLA.LedgerAdjustmentRequest -> Flow ()
+type RejectLedgerAdjustmentSideEffect = Id DP.Person -> Text -> DLA.LedgerAdjustmentRequest -> Flow ()
 
 categoryHandlers :: DLA.AdjustmentCategory -> CategoryHandlers
 categoryHandlers category = case category of
@@ -190,6 +200,7 @@ categoryHandlers category = case category of
     CategoryHandlers
       { expectedDirection = DLA.Credit,
         validateCategory = validateTdsReimbursement,
+        submitSideEffect = tdsReimbursementSubmitSideEffect,
         postCategory = postTdsReimbursementAdjustment,
         rejectSideEffect = rejectTdsReimbursementSideEffect
       }
@@ -199,7 +210,7 @@ categoryHandlers category = case category of
     mkCategoryHandlers
       DLA.Debit
       (\_ _ _ _ _ -> throwError $ LedgerAdjustmentCategoryNotSupported (show category))
-      (\_transporterConfig adjustmentRequest -> unsupportedLedgerAdjustmentCategory adjustmentRequest)
+      (\_transporterConfig _checkerId _adminCheckerName adjustmentRequest -> unsupportedLedgerAdjustmentCategory adjustmentRequest)
   DLA.IncentiveCredit -> mkCategoryHandlers DLA.Credit validateIncentive postIncentiveAdjustment
   DLA.IncentiveDebit -> mkCategoryHandlers DLA.Debit validateIncentive postIncentiveAdjustment
   DLA.MiscellaneousCredit -> mkCategoryHandlers DLA.Credit validateMiscellaneous postMiscellaneousAdjustment
@@ -222,9 +233,13 @@ mkCategoryHandlers expectedDirection validateCategory postCategory =
   CategoryHandlers
     { expectedDirection,
       validateCategory,
+      submitSideEffect = noopSubmitSideEffect,
       postCategory,
       rejectSideEffect = noopRejectSideEffect
     }
+
+noopSubmitSideEffect :: SubmitLedgerAdjustmentSideEffect
+noopSubmitSideEffect _ = pure ()
 
 --------------------------------------------------------------------------------
 -- Category validation
@@ -282,7 +297,7 @@ validateBaseRideAdjustment personId direction booking req = do
     throwError (InvalidRequest "Invalid personId")
 
   when (direction == DLA.Debit) $ do
-    totalFare <- ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+    totalFare <- ride.fare & fromMaybeM (InvalidRequest "Ride fare is not present.")
     fareParams <- case ride.fareParametersId of
       Just fareParametersId | fareParametersId /= booking.fareParams.id -> do
         B.runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
@@ -311,12 +326,12 @@ validateCancellationAdjustment isDriverCancellation transporterConfig direction 
     throwError (InvalidRequest "Invalid personId")
   if isDriverCancellation
     then do
-      maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InternalError "Driver cancellation penalty amount is not present.")
+      maxAmount <- ride.driverCancellationPenaltyAmount & fromMaybeM (InvalidRequest "Driver cancellation penalty amount is not present.")
       -- Credit increases driver balance and reduces driver penalty (vice versa for Debit).
       when (direction == DLA.Credit && amount > maxAmount) $
         throwError (InvalidRequest "Could not credit more than cancellation penalty amount")
     else do
-      maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InternalError "User cancellation amount is not present.")
+      maxAmountWithGst <- ride.cancellationChargesOnCancel & fromMaybeM (InvalidRequest "User cancellation amount is not present.")
       let mbGstRate = SFC.computeTotalGstRate transporterConfig.taxConfig.rideGst
           gstPct :: Double = fromMaybe 0.0 mbGstRate
           maxAmountExcludingGst =
@@ -355,7 +370,7 @@ validatePayoutRelatedAdjustment merchantOpCity personId direction req = do
 
   payoutAmount <-
     payoutRequest.amount
-      & fromMaybeM (InternalError "Payout request amount is not present.")
+      & fromMaybeM (InvalidRequest "Payout request amount is not present.")
   when (direction == DLA.Debit && req.amount.amount > payoutAmount) $
     throwError (InvalidRequest $ "Could not adjust more than payout amount: " <> show payoutAmount)
 
@@ -476,6 +491,15 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
               <> show payableAmount
               <> ")"
 
+-- | Denormalize maker onto the TDS request row so the list API can filter/display without a join.
+tdsReimbursementSubmitSideEffect :: SubmitLedgerAdjustmentSideEffect
+tdsReimbursementSubmitSideEffect adjustmentRequest =
+  whenJust adjustmentRequest.referenceId $ \referenceId ->
+    QTdsReq.updateAdminMaker
+      (Just adjustmentRequest.adminMakerId.getId)
+      (Just adjustmentRequest.adminMakerName)
+      (Id @DTdsReq.FinanceTdsReimbursementRequest referenceId)
+
 -- | Shared PENDING / idempotency / invoice-claim checks for TDS reimbursement
 --   Credit adjustments, run at submit validation and re-run at post time (TOCTOU).
 --   'afterStatusCheck' runs between the PENDING check and the idempotency checks.
@@ -528,53 +552,59 @@ validateTdsDeductionAdjustment transporterConfig personId req = do
   unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
     throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
 
+  (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig personId person
+  unless (maybe False (> 0) mbEffectiveTdsRate) $
+    throwError (InvalidRequest "TDS rate is not configured for this person")
+
+  validateWalletDebitAmountForPerson person req.amount.amount
+  assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate req.amount.amount
+
+assertTdsDeductionWithinThresholdCap ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  Maybe DPanCard.DriverPanCard ->
+  Maybe Double ->
+  HighPrecMoney ->
+  Flow ()
+assertTdsDeductionWithinThresholdCap transporterConfig personId mbPanCard mbEffectiveTdsRate amount = do
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let fyStartMonth = transporterConfig.analyticsConfig.financialYearStartMonth
+  cumulativeEarnings <-
+    Redis.withWaitAndLockRedis (SDFE.makeFyEarningsLockKey personId.getId) 10 1000 $
+      SDFE.getFyToDateNetEarnings personId (financialYearOf fyStartMonth (utctDay localNow))
+
+  let mbThresholdAmount = Wallet.selectTds mbPanCard transporterConfig.taxConfig >>= (.thresholdAmount)
+  whenJust mbThresholdAmount $ \thresh ->
+    when (cumulativeEarnings <= thresh) $
+      throwError $
+        InvalidRequest $
+          "TDS threshold not crossed yet: FY-to-date earnings "
+            <> show cumulativeEarnings
+            <> " <= "
+            <> show thresh
+
+  let maxTdsAmount = maxThresholdTdsDeductionAmount mbEffectiveTdsRate cumulativeEarnings mbThresholdAmount
+  when (maxTdsAmount <= 0) $
+    throwError (InvalidRequest "No TDS deduction is due for this person")
+  when (amount > maxTdsAmount) $
+    throwError (InvalidRequest $ "Could not debit more than TDS deduction amount: " <> show maxTdsAmount)
+
+resolveEffectiveTdsRate ::
+  DTC.TransporterConfig ->
+  Id DP.Person ->
+  DP.Person ->
+  Flow (Maybe DPanCard.DriverPanCard, Maybe Double)
+resolveEffectiveTdsRate transporterConfig personId person = do
   let panLinkTdsEnabled = Wallet.panAadhaarLinkTdsEnabled transporterConfig.taxConfig
       configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
-
   mbMaterializedTdsRate <- case person.role of
     DP.FLEET_OWNER -> lookupFleetOwnerTdsRate personId panLinkTdsEnabled configTdsRate
     DP.FLEET_BUSINESS -> lookupFleetOwnerTdsRate personId panLinkTdsEnabled configTdsRate
     _ -> do
       driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
       pure $ if panLinkTdsEnabled then driverInfo.tdsRate else driverInfo.tdsRate <|> configTdsRate
-
   mbPanCard <- QPanCard.findByDriverId personId
-  let mbEffectiveTdsRate = Wallet.computeEffectiveTdsRate mbPanCard mbMaterializedTdsRate transporterConfig.taxConfig
-  unless (maybe False (> 0) mbEffectiveTdsRate) $
-    throwError (InvalidRequest "TDS rate is not configured for this person")
-
-  -- Fleet: no cumulative earnings accumulator yet (same as EndRide / CancelRide).
-  -- Threshold "crossed?" check and rate×(cumulative−threshold) cap below are skipped —
-  -- fleet can debit any amount up to wallet balance as long as a TDS rate is set.
-  mbCumulativeEarnings <- case person.role of
-    DP.FLEET_OWNER -> pure Nothing
-    DP.FLEET_BUSINESS -> pure Nothing
-    _ -> do
-      mbStats <- B.runInReplica $ QDriverStats.findByPrimaryKey (cast personId)
-      pure $ (.totalEarnings) <$> mbStats
-
-  let mbThresholdAmount = Wallet.selectTds mbPanCard transporterConfig.taxConfig >>= (.thresholdAmount)
-  case (mbThresholdAmount, mbCumulativeEarnings) of
-    (Just thresh, Just cumulative) ->
-      when (cumulative <= thresh) $
-        throwError $
-          InvalidRequest $
-            "TDS threshold not crossed yet: cumulative earnings "
-              <> show cumulative
-              <> " <= "
-              <> show thresh
-    _ -> pure ()
-
-  validateWalletDebitAmountForPerson person req.amount.amount
-
-  case mbCumulativeEarnings of
-    Nothing -> pure ()
-    Just cumulative -> do
-      let maxTdsAmount = maxThresholdTdsDeductionAmount mbEffectiveTdsRate cumulative mbThresholdAmount
-      when (maxTdsAmount <= 0) $
-        throwError (InvalidRequest "No TDS deduction is due for this person")
-      when (req.amount.amount > maxTdsAmount) $
-        throwError (InvalidRequest $ "Could not debit more than TDS deduction amount: " <> show maxTdsAmount)
+  pure (mbPanCard, Wallet.computeEffectiveTdsRate mbPanCard mbMaterializedTdsRate transporterConfig.taxConfig)
 
 -- | Upper bound for manual threshold TDS debit (rate × earnings above threshold).
 maxThresholdTdsDeductionAmount ::
@@ -788,7 +818,7 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
           checkerId = Id @DP.Person requestorId
       res <-
         withTryCatch "ledgerAdjustmentPostAction" $
-          ledgerAdjustmentPostAction transporterConfig adjustmentRequest
+          ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest
       case res of
         Right mbLedgerEntryId -> do
           now <- getCurrentTime
@@ -819,14 +849,17 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
 -- | Checker approve: wallet lock + category-specific ledger posts (stubs below).
 ledgerAdjustmentPostAction ::
   DTC.TransporterConfig ->
+  Id DP.Person ->
+  Text ->
   DLA.LedgerAdjustmentRequest ->
   Flow (Maybe (Id DLE.LedgerEntry))
-ledgerAdjustmentPostAction transporterConfig adjustmentRequest =
+ledgerAdjustmentPostAction transporterConfig checkerId adminCheckerName adjustmentRequest =
   Redis.withLockRedisAndReturnValue (makeWalletRunningBalanceLockKey adjustmentRequest.personId.getId) 10 $ do
     logInfo $
       "Ledger adjustment post triggered: "
         <> adjustmentRequest.id.getId
-        <> maybe "" (\adminCheckerId -> "; admin checker: " <> adminCheckerId.getId) adjustmentRequest.adminCheckerId
+        <> "; admin checker: "
+        <> checkerId.getId
         <> "; category: "
         <> show adjustmentRequest.category
         <> "; direction: "
@@ -835,7 +868,7 @@ ledgerAdjustmentPostAction transporterConfig adjustmentRequest =
         <> "; amount: "
         <> show adjustmentRequest.amount
     let h = categoryHandlers adjustmentRequest.category -- Per-category handler
-    h.postCategory transporterConfig adjustmentRequest
+    h.postCategory transporterConfig checkerId adminCheckerName adjustmentRequest
 
 -- | Common direction mapping for category-specific manual adjustments.
 --   Uses the collecting finance helper because the request stores ledgerEntryId.
@@ -884,7 +917,7 @@ postSimpleAdjustment ::
   Finance.AccountRole ->
   (DP.Person -> Flow ()) ->
   PostLedgerAdjustment
-postSimpleAdjustment adjustmentName fromRole personGuard transporterConfig adjustmentRequest = do
+postSimpleAdjustment adjustmentName fromRole personGuard transporterConfig _checkerId _adminCheckerName adjustmentRequest = do
   person <-
     QP.findById adjustmentRequest.personId
       >>= fromMaybeM (PersonNotFound adjustmentRequest.personId.getId)
@@ -912,7 +945,7 @@ buildRideAdjustmentCtx transporterConfig booking ride = do
     True
 
 postRideRelatedAdjustment :: PostLedgerAdjustment
-postRideRelatedAdjustment transporterConfig adjustmentRequest = do
+postRideRelatedAdjustment transporterConfig _checkerId _adminCheckerName adjustmentRequest = do
   referenceId <-
     adjustmentRequest.referenceId
       & fromMaybeM (InvalidRequest "Reference id required for RideRelated adjustments")
@@ -928,7 +961,7 @@ postRideRelatedAdjustment transporterConfig adjustmentRequest = do
   runLedgerAdjustment "ride" ctx Finance.SellerExpense adjustmentRequest
 
 postPayoutRelatedAdjustment :: PostLedgerAdjustment
-postPayoutRelatedAdjustment transporterConfig adjustmentRequest = do
+postPayoutRelatedAdjustment transporterConfig checkerId adminCheckerName adjustmentRequest = do
   referenceId <-
     adjustmentRequest.referenceId
       & fromMaybeM (InvalidRequest "Reference id required for PayoutRelated adjustments")
@@ -939,14 +972,14 @@ postPayoutRelatedAdjustment transporterConfig adjustmentRequest = do
 
   validatePayoutRequestStatus payoutRequest
 
-  postSimpleAdjustment "payout" Finance.PlatformAsset (\_ -> pure ()) transporterConfig adjustmentRequest
+  postSimpleAdjustment "payout" Finance.PlatformAsset (\_ -> pure ()) transporterConfig checkerId adminCheckerName adjustmentRequest
 
 -- | Credit-only FO TDS-cert reimbursement post (Debit → unsupportedLedgerAdjustmentCategory).
 --   Chart: Dr GovtDirectAsset (TDS Receivable) / Cr OwnerLiability (FO wallet).
 --   Also records standalone DirectTaxTransaction rows (tdsTreatment=Reimbursed) per
 --   invoice mapping — no new invoice; links to original subscription invoiceNumber.
 postTdsReimbursementAdjustment :: PostLedgerAdjustment
-postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
+postTdsReimbursementAdjustment transporterConfig checkerId adminCheckerName adjustmentRequest = do
   unless (adjustmentRequest.direction == DLA.Credit) $
     void $ unsupportedLedgerAdjustmentCategory adjustmentRequest
 
@@ -999,11 +1032,17 @@ postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
       forM_ directTaxConfigs $ \cfg -> void $ Finance.recordDirectTax cfg
       pure mbLedgerEntryId
   mbLedgerEntryId <- unwrapFinanceResult "TDS reimbursement" result
-  QTdsReq.updateStatusAndRejectionReason DTdsReq.APPROVED Nothing tdsRequest.id
+  -- Denormalize checker onto the TDS request row so the list API can filter/display without a join.
+  QTdsReq.updateStatusRejectionReasonAndAdminChecker
+    DTdsReq.APPROVED
+    Nothing
+    (Just checkerId.getId)
+    (Just adminCheckerName)
+    tdsRequest.id
   pure mbLedgerEntryId
 
 postIncentiveAdjustment :: PostLedgerAdjustment
-postIncentiveAdjustment transporterConfig adjustmentRequest = do
+postIncentiveAdjustment transporterConfig _checkerId _adminCheckerName adjustmentRequest = do
   referenceId <-
     adjustmentRequest.referenceId
       & fromMaybeM (InvalidRequest "Reference id required for Incentive adjustments")
@@ -1023,7 +1062,7 @@ postIncentiveAdjustment transporterConfig adjustmentRequest = do
     adjustmentRequest
 
 postMiscellaneousAdjustment :: PostLedgerAdjustment
-postMiscellaneousAdjustment transporterConfig adjustmentRequest =
+postMiscellaneousAdjustment transporterConfig checkerId adminCheckerName adjustmentRequest =
   -- Chart: Misc Control ↔ Driver-FO Balance. SellerExpense stands in for Misc Control
   -- until a dedicated account role / subLedger exists.
   postSimpleAdjustment
@@ -1036,10 +1075,12 @@ postMiscellaneousAdjustment transporterConfig adjustmentRequest =
           validateWalletDebitAmountForPerson person adjustmentRequest.amount
     )
     transporterConfig
+    checkerId
+    adminCheckerName
     adjustmentRequest
 
 postTdsDeductionAdjustment :: PostLedgerAdjustment
-postTdsDeductionAdjustment transporterConfig adjustmentRequest =
+postTdsDeductionAdjustment transporterConfig checkerId adminCheckerName adjustmentRequest =
   -- Credit pair GovtDirect → OwnerLiability; Debit reverses to OwnerLiability → GovtDirect
   -- (Dr driver balance, Cr TDS payable) — same legs as EndRide TDS transfer.
   -- Only Debit category possible currently
@@ -1050,8 +1091,12 @@ postTdsDeductionAdjustment transporterConfig adjustmentRequest =
         unless (person.role `elem` [DP.DRIVER, DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
           throwError (InvalidRequest "TDS deduction is only supported for drivers and fleet owners")
         validateWalletDebitAmountForPerson person adjustmentRequest.amount
+        (mbPanCard, mbEffectiveTdsRate) <- resolveEffectiveTdsRate transporterConfig adjustmentRequest.personId person
+        assertTdsDeductionWithinThresholdCap transporterConfig adjustmentRequest.personId mbPanCard mbEffectiveTdsRate adjustmentRequest.amount
     )
     transporterConfig
+    checkerId
+    adminCheckerName
     adjustmentRequest
 
 mkFinanceContextWithoutInvoice ::
@@ -1096,7 +1141,8 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
           fromLocationAddress = Nothing,
           issuedToName = Nothing,
-          enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
+          enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+          buyerCounterpartyId = Nothing
         }
 
 unsupportedLedgerAdjustmentCategory ::
@@ -1142,28 +1188,32 @@ ledgerAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId re
         throwError (InvalidRequest $ "Request already " <> show adjustmentRequest.status)
       mbAdminChecker <- QP.findById (Id @DP.Person requestorId)
       let adminCheckerName = mkAdminName requestorName mbAdminChecker
+          checkerId = Id @DP.Person requestorId
       QLedgerAdjustmentRequest.updateStatusAndChecker
         DLA.REJECTED
-        (Just $ Id @DP.Person requestorId)
+        (Just checkerId)
         (Just adminCheckerName)
         Nothing
         adjustmentRequest.id
       let h = categoryHandlers adjustmentRequest.category -- Per-category handler
-      h.rejectSideEffect adjustmentRequest
+      h.rejectSideEffect checkerId adminCheckerName adjustmentRequest
     pure Success
 
 noopRejectSideEffect :: RejectLedgerAdjustmentSideEffect
-noopRejectSideEffect _ = pure ()
+noopRejectSideEffect _ _ _ = pure ()
 
 -- | Currently we don't have reimbursement request reject api, hence adj reject is currently the only admin path to close a PENDING cert claim,
 --   so we mark the TDS request REJECTED (FO can resubmit for the same Q/AY).
 rejectTdsReimbursementSideEffect :: RejectLedgerAdjustmentSideEffect
-rejectTdsReimbursementSideEffect adjustmentRequest = do
+rejectTdsReimbursementSideEffect checkerId adminCheckerName adjustmentRequest = do
   whenJust adjustmentRequest.referenceId $ \referenceId -> do
     mbTdsRequest <- QTdsReq.findByPrimaryKey (Id @DTdsReq.FinanceTdsReimbursementRequest referenceId)
     whenJust mbTdsRequest $ \tdsRequest ->
       when (tdsRequest.status == DTdsReq.PENDING) $
-        QTdsReq.updateStatusAndRejectionReason
+        -- Denormalize checker onto the TDS request row so the list API can filter/display without a join.
+        QTdsReq.updateStatusRejectionReasonAndAdminChecker
           DTdsReq.REJECTED
           (Just "Rejected via ledger adjustment")
+          (Just checkerId.getId)
+          (Just adminCheckerName)
           tdsRequest.id

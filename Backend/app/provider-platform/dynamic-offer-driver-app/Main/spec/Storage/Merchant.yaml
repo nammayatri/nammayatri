@@ -212,7 +212,7 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP,DOCUMENT_VALID
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP,DOCUMENT_VALID,DRIVER_ONBOARDING_DEEPLINK_MESSAGE,FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
       derive: "Bounded, Enum"
 
     MediaChannel:
@@ -920,7 +920,7 @@ TransporterConfig:
       weeklySlabs: "[SlabType]"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallTerminalAction:
-      enum: "REALLOCATE_RIDE,RECORD_ONLY"
+      enum: "REALLOCATE_RIDE,RECORD_ONLY,REALLOCATE_SCHEDULED_RIDE"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupNudgeChannel:
       enum: "OVERLAY,CHAT_MESSAGE"
@@ -938,6 +938,9 @@ TransporterConfig:
       channel: Maybe PickupNudgeChannel
       chatSuggestions: Maybe [Text]
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    ScheduledPickupMonitoringMode:
+      enum: "DISTANCE_BASED,TIME_BASED"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
       stages: "[PickupStallStage]"
@@ -947,6 +950,8 @@ TransporterConfig:
       detourDisplacementMeters: Maybe Int
       detourCreditSec: Maybe Int
       staleFixAfterSec: Maybe Int
+      scheduledMonitoringMode: Maybe ScheduledPickupMonitoringMode
+      runBehaviourEngineForScheduled: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     # Per-field overrides for bulk-operation caps that were previously
     # hardcoded in the handlers (see call sites for each field's default
@@ -1027,6 +1032,7 @@ TransporterConfig:
     AnalyticsConfig:
       weekStartMode: Int
       earningsWindowSize: Int
+      financialYearStartMonth: Int # calendar month the financial year begins; 4 = April (India)
       allowCacheDriverFlowStatus: Bool
       enableFleetOperatorDashboardAnalytics: Bool
       maxOnlineDurationDays: Int
@@ -1043,6 +1049,11 @@ TransporterConfig:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
       enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
+    # The components of the ten-slot fare partition, plus the payment charge, that
+    # a surface may club together rather than itemise. Listing a component means
+    # "show it as one row"; omitting it means "show its parts separately".
+    ProjectFareParamsComponent:
+      enum: "RIDE_FARE, TOLL_FARE, CANCELLATION_FARE, PARKING_CHARGE, PAYMENT_CHARGE"
     PayoutChargeBearer:
       enum: "DRIVER_BEARER, PLATFORM_BEARER"
     ConnectChargeBearer:
@@ -1078,7 +1089,10 @@ TransporterConfig:
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
-      # Stripe connect-account maintenance charge (scheduled deduction).
+      clubProjectFareInRideInvoice: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInRefundsInvoice: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInEarnings: Maybe [ProjectFareParamsComponent]
+      clubProjectFareInPayouts: Maybe [ProjectFareParamsComponent]
       connectAccountCharge: Maybe HighPrecMoney
       connectAccountChargeFrequency: Maybe ChargeFrequency
       connectAccountChargeBearer: Maybe ConnectChargeBearer
@@ -1191,6 +1205,9 @@ TransporterConfig:
     # replays the pinned surge version regardless of this flag.
     useSurgeConfigPricing: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
+    negativeFareAdjustmentCongestionThreshold: Maybe Double
+    negativeFareAdjustmentMinDistanceMeters: Maybe Int
+    negativeFareAdjustmentMaxAmount: Maybe Int
     enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
@@ -1203,6 +1220,14 @@ TransporterConfig:
     # Fewest cells a driver must select for a preferred-area (cells method) selection
     # to be accepted.
     areaPreferenceMinCells: Maybe Int
+    # Driver-initiated "available for rides" boost, stored as the AvailableForRides
+    # tag on person.driverTag. All three are Maybe so the feature stays off for a
+    # city until it is explicitly configured; a missing validity disables it.
+    availableForRidesTagValidityMinutes: Maybe Minutes
+    # How many times a driver may switch the boost on within one local day.
+    availableForRidesDailyLimit: Maybe Int
+    # How many search requests the boost survives before the tag is dropped.
+    availableForRidesMaxSearchRequests: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
@@ -1264,6 +1289,7 @@ TransporterConfig:
     aadhaarImageResizeConfig: Maybe AadhaarImageResizeConfig
     enableFaceVerification: Bool
     enableTollCrossedNotifications: Bool
+    enableDriverHealthCheckDebug: Maybe Bool
     specialZoneBookingOtpExpiry: Int
     isPlanMandatory: Bool
     freeTrialDays: Int
@@ -1301,6 +1327,7 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
+    preferOndcCancellationReasonId: Maybe Bool
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1339,6 +1366,7 @@ TransporterConfig:
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     crossTravelCities: "[Kernel.Types.Beckn.City.City]"
     useSilentFCMForForwardBatch: Bool
+    enableDriverPoolEnrichment: Maybe Bool
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool
@@ -1384,6 +1412,7 @@ TransporterConfig:
     unifiedOnboardingFlagsRecompute: Maybe Bool
     forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
+    driverOnboardingLinkExpiryHours: Maybe Int # Lifetime of the onboarding-link SMS code (and its short link). NULL ⇒ 24.
     preProcessDocumentIdentifiers: Bool
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
@@ -1495,6 +1524,9 @@ TransporterConfig:
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
     metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
+    enableOndcScheduledRideSupport: Maybe Bool # City-level gate for the MSIL-style Quote-based (static/scheduled) /select capability
+    negotiationFareMinTolerancePct: Maybe Double # Lower bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
+    negotiationFareMaxTolerancePct: Maybe Double # Upper bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
 
   beamType:
     currency: Maybe Currency
@@ -1841,6 +1873,7 @@ TransporterConfig:
     addDriverCountWindow: json
     authIpBlockedUntilInMins: integer
     scheduledRideOpenToAllThresholdMinutes: integer
+    availableForRidesTagValidityMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     tripStartLeadTime: integer
@@ -1916,6 +1949,9 @@ TransporterConfig:
     stclConfig: json
     defaultOnboardingAs: character varying(255)
     metricsDistanceBucketsKm: "integer[]"
+    enableOndcScheduledRideSupport: boolean
+    negotiationFareMinTolerancePct: double precision
+    negotiationFareMaxTolerancePct: double precision
 
   default:
     mediaFileUrlPattern: |-
@@ -2086,7 +2122,7 @@ TransporterConfig:
       "allowCacheDriverFlowStatus": false,
       "enableFleetOperatorDashboardAnalytics": false,
       "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null,
-      "useDbForEarningAndMetrics": false}'' :: json'
+      "useDbForEarningAndMetrics": false, "financialYearStartMonth": 4}'' :: json'
     subscriptionConfig: '''{"prepaidSubscriptionThreshold":
       null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
@@ -2106,6 +2142,9 @@ TransporterConfig:
     isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
     forceDirectCalling: "false"
+    enableOndcScheduledRideSupport: "false"
+    negotiationFareMinTolerancePct: "0.1"
+    negotiationFareMaxTolerancePct: "0.1"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
@@ -2168,6 +2207,9 @@ TransporterConfig:
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
         - areaPreferenceMinCells
+        - availableForRidesTagValidityMinutes
+        - availableForRidesDailyLimit
+        - availableForRidesMaxSearchRequests
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
@@ -2319,6 +2361,7 @@ RideRelatedNotificationConfig:
     onScheduledBooking: Bool
     onlyIfOffline: Bool
     eventTime: EventTime
+    repeatInterval: Maybe Seconds
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   beamType:

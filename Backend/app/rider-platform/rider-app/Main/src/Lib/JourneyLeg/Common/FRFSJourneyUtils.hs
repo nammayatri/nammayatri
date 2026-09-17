@@ -130,7 +130,7 @@ checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTi
                   isSameActiveTrip <- case (mbRouteCode, mbBookingTripId) of
                     (Just routeCode, Just bookingTripId) -> do
                       let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId bookingTripId
-                      scheduleDetails <- OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBppConfig
+                      scheduleDetails <- OTPRest.getBusTripScheduleForBoardingCheck waybillNo tripNo routeCode integratedBppConfig
                       -- getBusTripSchedule is already scoped to this exact waybill+trip, but don't rely on that
                       -- implicitly -- confirm the returned detail really is the requested trip before trusting
                       -- its is_active_trip flag.

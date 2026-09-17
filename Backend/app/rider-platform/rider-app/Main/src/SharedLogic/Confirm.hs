@@ -92,7 +92,20 @@ data DConfirmReq = DConfirmReq
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     merchant :: DM.Merchant,
-    requiresPaymentBeforeConfirm :: Bool
+    requiresPaymentBeforeConfirm :: Bool,
+    -- | One-shot assignment (internal oneShotAssign API): the BPP booking already
+    -- exists, so the booking row is born TRIP_ASSIGNED with the BPP-known fields set —
+    -- no NEW -> TRIP_ASSIGNED staircase. Nothing on every Beckn/UI path.
+    mbOneShotDetails :: Maybe OneShotConfirmDetails
+  }
+
+-- | BPP-computed booking fields that legacy receives via init/on_init but one-shot
+-- must set at build time (single write).
+data OneShotConfirmDetails = OneShotConfirmDetails
+  { bppBookingId :: Id DRB.BPPBooking,
+    commission :: Maybe HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
@@ -188,7 +201,7 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   let driverPreference = extractDriverPreference person.customerNammaTags
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference
+  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails
   mbBookingOfferEntity <-
     case booking.selectedOfferId of
       Just offerId -> do
@@ -219,6 +232,9 @@ confirm DConfirmReq {..} = do
                     payoutAmount = computed.payoutAmount,
                     amountSaved = computed.amountSaved,
                     postOfferAmount = computed.postOfferAmount,
+                    frequencyType = offerDetails.frequencyType,
+                    appliedCount = offerDetails.appliedCount,
+                    maxApplyCount = offerDetails.maxApplyCount,
                     merchantId = searchRequest.merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
                     createdAt = now,
@@ -392,8 +408,10 @@ buildBooking ::
   Maybe Text ->
   Bool ->
   Maybe [Text] ->
+  -- | One-shot assignment: booking is born TRIP_ASSIGNED with the BPP fields set (single write)
+  Maybe OneShotConfirmDetails ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails = do
   id <- generateGUID
   let bookingId = Id id
   displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
@@ -401,17 +419,42 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
+  -- rider's original pickup/drop from the parent search (This is related to walk and save feature)
+  mbParentSearchRequestLocationInfo <- case searchRequest.parentSearchRequestId of
+    Nothing -> do
+      logDebug $ "SharedLogic.Confirm.buildBooking: no parent search request for search request " <> searchRequest.id.getId
+      pure Nothing
+    Just parentSearchRequestId -> do
+      mbParentSearchRequest <- QSReq.findById parentSearchRequestId
+      case mbParentSearchRequest of
+        Nothing -> do
+          logDebug $ "SharedLogic.Confirm.buildBooking: parent search request " <> parentSearchRequestId.getId <> " not found for shadow " <> searchRequest.id.getId
+          pure Nothing
+        Just parent -> do
+          let mbOriginalLocationInfo = do
+                parentToLocation <- parent.toLocation
+                pure
+                  DRB.ParentSearchRequestLocationInfo
+                    { sourceLat = parent.fromLocation.lat,
+                      sourceLon = parent.fromLocation.lon,
+                      sourceAddress = parent.fromLocation.address,
+                      destLat = parentToLocation.lat,
+                      destLon = parentToLocation.lon,
+                      destAddress = parentToLocation.address
+                    }
+          logDebug $ "SharedLogic.Confirm.buildBooking: resolved walk-and-save parent search request location info " <> searchRequest.id.getId <> " from parent " <> parentSearchRequestId.getId <> ": " <> show mbOriginalLocationInfo
+          pure mbOriginalLocationInfo
   return $
     ( DRB.Booking
         { id = bookingId,
           clientId = searchRequest.clientId,
           transactionId = searchRequest.id.getId,
-          bppBookingId = Nothing,
+          bppBookingId = mbOneShotDetails <&> (.bppBookingId),
           fulfillmentId = Just bppQuoteId,
           quoteId = Just quote.id,
           paymentMethodId,
           paymentUrl = Nothing,
-          status = DRB.NEW,
+          status = maybe DRB.NEW (const DRB.TRIP_ASSIGNED) mbOneShotDetails,
           providerId = quote.providerId,
           primaryExophone = exophone.primaryPhone,
           providerUrl = quote.providerUrl,
@@ -423,6 +466,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           riderId,
           fromLocation = fromLoc,
           initialPickupLocation = fromLoc,
+          parentSearchRequestLocationInfo = mbParentSearchRequestLocationInfo,
           estimatedFare = quote.estimatedFare,
           discount = quote.discount,
           estimatedTotalFare = quote.estimatedTotalFare,
@@ -472,12 +516,12 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           vehicleCategory = Just $ fromMaybe (BecknUtils.mapServiceTierToCategory quote.vehicleServiceTierType) searchRequest.vehicleCategory,
           dashboardAgentId,
           requiresPaymentBeforeConfirm,
-          -- Commission is calculated on BPP side (requires fare policy config).
-          -- BAP doesn't have access to fare policy, so commission remains Nothing here.
-          -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
-          commission = Nothing,
-          paymentCharge = Nothing,
-          paymentChargeBearer = Nothing,
+          -- Commission is calculated on BPP side (requires fare policy config). Legacy
+          -- receives it via on_init (updateCommission/updatePaymentCharge); one-shot
+          -- carries it in the internal payload and sets it at build time.
+          commission = mbOneShotDetails >>= (.commission),
+          paymentCharge = mbOneShotDetails >>= (.paymentCharge),
+          paymentChargeBearer = mbOneShotDetails >>= (.paymentChargeBearer),
           selectedOfferId = quote.selectedOfferId,
           offersFraudCheckFailureReason = Nothing,
           issuedById = Nothing,

@@ -378,6 +378,7 @@ data BecknTag
     DISTANCE_TO_NEAREST_DRIVER_METER
   | DURATION_TO_NEAREST_DRIVER_MINUTES
   | SMART_TIP_SUGGESTION
+  | NEGATIVE_FARE_SUGGESTION
   | QAR
   | SMART_TIP_REASON
   | ETA_TO_NEAREST_DRIVER_MIN
@@ -398,6 +399,7 @@ data BecknTag
   | COURT_JURISDICTION
   | DELAY_INTEREST
   | STATIC_TERMS
+  | OFFLINE_CONTRACT
   | SETTLEMENT_AMOUNT
   | -- Stripe tags --
     STRIPE_TEST
@@ -512,6 +514,7 @@ data BecknTag
     DURATION_TO_PICKUP_IN_S
   | -- Customer tip info tags
     CUSTOMER_TIP
+  | NEGATIVE_FARE_ADJUSTMENT
   | -- Auto assign enabled tags
     IS_AUTO_ASSIGN_ENABLED
   | -- Safety alert tags
@@ -642,6 +645,7 @@ instance CompleteTag BecknTag where
     MANDATORY_ARBITRATION -> (Just "Mandatory Arbitration", Nothing)
     COURT_JURISDICTION -> (Just "Court Jurisdiction", Nothing)
     STATIC_TERMS -> (Just "Static Terms", Nothing)
+    OFFLINE_CONTRACT -> (Just "Offline Contract", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
@@ -696,6 +700,7 @@ instance CompleteTag BecknTag where
     MANDATORY_ARBITRATION -> BPP_TERMS
     COURT_JURISDICTION -> BPP_TERMS
     STATIC_TERMS -> BPP_TERMS
+    OFFLINE_CONTRACT -> BPP_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     COMMISSION -> SETTLEMENT_DETAILS
     PAYMENT_CHARGE -> SETTLEMENT_DETAILS
@@ -793,6 +798,7 @@ instance CompleteTag BecknTag where
     BPP_QUOTE_ID -> GENERAL_INFO
     DURATION_TO_PICKUP_IN_S -> AGENT_INFO
     CUSTOMER_TIP -> CUSTOMER_TIP_INFO
+    NEGATIVE_FARE_ADJUSTMENT -> CUSTOMER_TIP_INFO
     IS_AUTO_ASSIGN_ENABLED -> AUTO_ASSIGN_ENABLED
     SAFETY_REASON_CODE -> SAFETY_ALERT
     MESSAGE -> DRIVER_NEW_MESSAGE
@@ -905,6 +911,7 @@ instance CompleteTag BecknTag where
     NO_CHARGES -> FARE_POLICY
     -- Info tags
     SMART_TIP_SUGGESTION -> INFO
+    NEGATIVE_FARE_SUGGESTION -> INFO
     QAR -> INFO
     SMART_TIP_REASON -> INFO
     BUYER_FINDER_FEES_TYPE -> INFO

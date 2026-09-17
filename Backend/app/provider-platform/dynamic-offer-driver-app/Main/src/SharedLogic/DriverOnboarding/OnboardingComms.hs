@@ -202,8 +202,7 @@ notifyFlagChanges actor changes =
           change.efcEntityType
           change.efcEntityId
           transition.ftAction
-          transition.ftTitle
-          transition.ftBody
+          transition.ftParams
           (fromMaybe (Id "system") change.efcFleetOwnerId)
           change.efcMerchantId
           change.efcMerchantOperatingCityId

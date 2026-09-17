@@ -142,8 +142,10 @@ data SuggestedEstimates = SuggestedEstimates
     walkDistanceFromDrop :: Maybe Meters,
     -- | How much shorter the ride becomes.
     rideDistanceSaved :: Meters,
-    -- | The other ways this ride could be reshaped, unpriced. Fares for these are only
-    -- fetched when the customer asks for one, via /rideSearch/suggestedFare.
+    -- | The other ways this ride could be reshaped, without their fares. Not unpriced: a
+    -- search was dispatched for each during /rideSearch, and its fare arrives through
+    -- 'alternateSuggestions' on a results poll, or through /rideSearch/suggestedFare, which
+    -- answers from that same search rather than running another.
     alternatives :: [SuggestedOption]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -584,7 +586,10 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
           )
       products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
   productOffers <-
-    if enableRideHailingOffers
+    -- No products means no basket to price, and the response is only ever read back by
+    -- productId, so the provider can have nothing to say. Skipping saves a full round trip
+    -- on every search that returns estimates but no quotes (the common on-demand case).
+    if enableRideHailingOffers && not (null products)
       then
         withTryCatch
           "getOffers:offerListWithBasket"
@@ -646,7 +651,8 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
           sortedEstimates
       products = map (\(e, _, price) -> (show e.vehicleServiceTierType, price)) estimatesWithCtx
   productOffers <-
-    if enableRideHailingOffers
+    -- Same as the quotes path: an empty basket can only come back empty.
+    if enableRideHailingOffers && not (null products)
       then
         withTryCatch
           "getEstimates:offerListWithBasket"

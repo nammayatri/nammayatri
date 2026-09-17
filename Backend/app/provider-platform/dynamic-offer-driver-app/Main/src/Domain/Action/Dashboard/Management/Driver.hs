@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Management.Driver
   ( getDriverDocumentsInfo,
     getDriverAadhaarInfo,
     getDriverAadhaarInfobyMobileNumber,
+    getDriverLoginOtp,
     getDriverList,
     getDriverActivity,
     postDriverDisable,
@@ -58,6 +59,7 @@ module Domain.Action.Dashboard.Management.Driver
     checkFleetOperatorAssociation,
     checkFleetDriverAssociation,
     getDriverEarnings,
+    getDriverFyEarnings,
     isAssociationBetweenTwoPerson,
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
@@ -171,6 +173,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
+import qualified Storage.Queries.DriverFyEarnings as QDFE
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
@@ -319,6 +322,34 @@ getDriverAadhaarInfobyMobileNumber merchantShortId _ phoneNumber = do
             driverImage = aadhaarData.driverImage
           }
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
+
+---------------------------------------------------------------------
+getDriverLoginOtp :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverLoginOtpRes
+getDriverLoginOtp merchantShortId _ mbMobileNumber mbCountryCode mbDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- case mbDriverId of
+    Just driverId -> do
+      person <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonDoesNotExist driverId)
+      unless (person.merchantId == merchant.id && person.role == DP.DRIVER) $ throwError (PersonDoesNotExist driverId)
+      pure person
+    Nothing -> do
+      mobileNumber <- fromMaybeM (InvalidRequest "Provide driverId or mobileNumber") mbMobileNumber
+      let countryCode = fromMaybe "+91" mbCountryCode
+      mobileNumberHash <- getDbHash mobileNumber
+      QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Driver not found")
+  tokens <- QR.findUnverifiedOtpByPersonId driver.id.getId
+  now <- getCurrentTime
+  let notExpired t = addUTCTime (fromIntegral (t.authExpiry * 60)) t.updatedAt > now
+      mbToken = listToMaybe . sortOn (Down . (.updatedAt)) $ filter notExpired tokens
+  token <- fromMaybeM (InvalidRequest "No active login OTP for this driver") mbToken
+  pure
+    Common.DriverLoginOtpRes
+      { driverId = cast driver.id,
+        otp = token.authValueHash,
+        attemptsLeft = token.attempts,
+        generatedAt = token.updatedAt,
+        authExpiryMinutes = token.authExpiry
+      }
 
 ---------------------------------------------------------------------
 castCommonOnboardingAsToDomain :: Common.OnboardingAs -> DrInfo.OnboardingAs
@@ -1185,15 +1216,19 @@ postDriverClearFee _merchantShortId _opCity mbRequestorId driverId req = ActorIn
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = DCommon.mapServiceName req.serviceName
-  let feeType = castCommonFeeTypeToDomainFeeType req.feeType
+  feeType <- castCommonFeeTypeToDomainFeeType req.feeType
   let currency = fromMaybe INR req.currency
       gstPercentages = (,) <$> req.sgstPercentage <*> req.cgstPercentage
   void $ DDriver.clearDriverFeeWithCreate (personId, driver.merchantId, merchantOpCityId) serviceName (gstBreakup gstPercentages req.platformFee) feeType currency Nothing req.sendManualLink
   return Kernel.Types.APISuccess.Success
   where
     castCommonFeeTypeToDomainFeeType feeTypeCommon = case feeTypeCommon of
-      Common.PAYOUT_REGISTRATION -> PAYOUT_REGISTRATION
-      Common.ONE_TIME_SECURITY_DEPOSIT -> ONE_TIME_SECURITY_DEPOSIT
+      -- Payout registration moved to the app flow (Lib.Payment.Payout.Registration),
+      -- which creates only a payment_order — no driver_fee/invoice. The dashboard
+      -- never used this arm; reports source app-flow registrations from
+      -- payment_order directly.
+      Common.PAYOUT_REGISTRATION -> throwError $ InvalidRequest "PAYOUT_REGISTRATION collection via dashboard clearFee is discontinued; payout registration is app-driven"
+      Common.ONE_TIME_SECURITY_DEPOSIT -> pure ONE_TIME_SECURITY_DEPOSIT
     gstBreakup gstPercentages fee = case gstPercentages of
       Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
       _ -> (fee, Nothing, Nothing)
@@ -1494,6 +1529,59 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
   DDriver.findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
 
+-- | FY / quarter earnings for a driver or fleet owner, read from the
+-- driver_fy_earnings accumulator.
+--
+--   netEarnings = Total Ride Fare - GST - TDS      (what the driver takes home)
+--
+-- The TDS base (Total Ride Fare - GST) is not returned; it is netEarnings +
+-- tdsDeducted if a caller needs it.
+--
+-- Omit @quarter@ for the whole financial year; pass 1..4 for a single quarter.
+getDriverFyEarnings :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Int -> Id Common.Driver -> Text -> Flow Common.FyEarningsRes
+getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requestorId = do
+  whenJust mbQuarter $ \q ->
+    unless (q >= 1 && q <= 4) $
+      throwError $ InvalidRequest "quarter must be between 1 and 4"
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- entityId is a person id: a driver, or a fleet owner. The accumulator is
+  -- keyed on personId, so both resolve the same way.
+  let personId = cast @Common.Driver @DP.Person entityId
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, personId] merchantOpCityId
+  person <- find (\e -> e.id == personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
+  -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- isAssociationWithDriver requestor person
+    unless isValid $ throwError AccessDenied
+  rows <- QDFE.findAllByPersonIdAndFinancialYear personId financialYear
+  let wanted = maybe rows (\q -> filter (\r -> r.quarter == q) rows) mbQuarter
+      quarters =
+        map
+          ( \r ->
+              Common.FyQuarterEarnings
+                { quarter = r.quarter,
+                  netEarnings = r.netEarningsTotal,
+                  tdsDeducted = r.tdsAmountTotal
+                }
+          )
+          (sortOn (.quarter) wanted)
+  pure
+    Common.FyEarningsRes
+      { financialYear = financialYear,
+        quarters = quarters,
+        totalNetEarnings = sum (map (.netEarnings) quarters),
+        totalTdsDeducted = sum (map (.tdsDeducted) quarters)
+      }
+
+isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+isAssociationWithDriver requestedPersonDetails driverDetails =
+  case (requestedPersonDetails.role, driverDetails.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+    _ -> return False
+
 getDriverEarnings :: ShortId DM.Merchant -> Context.City -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Text -> Flow Common.EarningPeriodStatsRes
 getDriverEarnings merchantShortId opCity from to earningType dId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -1506,14 +1594,6 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
     isValid <- isAssociationWithDriver requestor driver
     unless isValid $ throwError AccessDenied
   DDriver.getEarnings (driverId, merchant.id, merchantOpCityId) from to earningType
-  where
-    isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
-    isAssociationWithDriver requestedPersonDetails driverDetails = do
-      case (requestedPersonDetails.role, driverDetails.role) of
-        (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
-        (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
-        (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
-        _ -> return False
 
 ---------------------------------------------------------------------
 postDriverTdsRateUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateTdsRateReq -> Flow APISuccess

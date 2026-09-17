@@ -12,6 +12,7 @@ module Domain.Action.Dashboard.AppManagement.Subscription
     getSubscriptionOrderStatus,
     getSubscriptionDriverPaymentHistoryAPIV2,
     getSubscriptionDriverPaymentHistoryEntityDetailsV2,
+    getSubscriptionCancellationChargeHistory,
     postSubscriptionCollectManualPayments,
     postSubscriptionFeeWaiveOff,
     getSubscriptionPurchaseList,
@@ -224,6 +225,23 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity driver
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id, merchantOpCityId) invoiceId.getId serviceName
+
+getSubscriptionCancellationChargeHistory ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
+  Domain.Types.Plan.ServiceNames ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Environment.Flow Domain.Action.UI.Plan.CancellationChargeHistoryRes
+getSubscriptionCancellationChargeHistory merchantShortId opCity driverId serviceName limit offset mbRequestorId = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  Domain.Action.UI.Plan.getCancellationChargeHistory (cast personId) serviceName limit offset
 
 postSubscriptionCollectManualPayments ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
