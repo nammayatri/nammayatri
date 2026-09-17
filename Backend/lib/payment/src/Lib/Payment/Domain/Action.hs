@@ -1597,7 +1597,14 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
       mbStats <- QOfferStats.findByOfferIdAndEntityIdAndEntityType offerId entityId entityType
       case mbStats of
         Just stats ->
-          QOfferStats.updateByPrimaryKey stats {DOfferStats.offerAppliedCount = stats.offerAppliedCount + 1, DOfferStats.updatedAt = now}
+          QOfferStats.updateByPrimaryKey
+            stats
+              { DOfferStats.offerAppliedCount = stats.offerAppliedCount + 1,
+                DOfferStats.totalDiscountAmount = Just (fromMaybe 0.0 stats.totalDiscountAmount + fromMaybe 0.0 discountAmount),
+                DOfferStats.totalCashbackAmount = Just (fromMaybe 0.0 stats.totalCashbackAmount + fromMaybe 0.0 payoutAmount),
+                DOfferStats.currency = Just payoutCurr,
+                DOfferStats.updatedAt = now
+              }
         Nothing -> do
           statsId <- generateGUID
           QOfferStats.create $
@@ -1607,6 +1614,9 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
                 entityId = entityId,
                 entityType = entityType,
                 offerAppliedCount = 1,
+                totalDiscountAmount = Just (fromMaybe 0.0 discountAmount),
+                totalCashbackAmount = Just (fromMaybe 0.0 payoutAmount),
+                currency = Just payoutCurr,
                 createdAt = now,
                 updatedAt = now
               }

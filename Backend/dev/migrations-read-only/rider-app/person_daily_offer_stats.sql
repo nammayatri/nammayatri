@@ -13,3 +13,11 @@ ALTER TABLE atlas_app.person_daily_offer_stats ADD COLUMN total_cashback_amount 
 ALTER TABLE atlas_app.person_daily_offer_stats ADD COLUMN total_discount_amount double precision NOT NULL;
 ALTER TABLE atlas_app.person_daily_offer_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.person_daily_offer_stats ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY person_daily_offer_stats_idx_date_payout_status ON atlas_app.person_daily_offer_stats USING btree (date, payout_status);
+CREATE INDEX CONCURRENTLY person_daily_offer_stats_idx_date_person_id ON atlas_app.person_daily_offer_stats USING btree (date, person_id);
+CREATE INDEX CONCURRENTLY person_daily_offer_stats_idx_person_id ON atlas_app.person_daily_offer_stats USING btree (person_id);

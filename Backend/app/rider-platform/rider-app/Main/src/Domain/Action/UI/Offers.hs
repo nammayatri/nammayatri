@@ -1,4 +1,4 @@
-module Domain.Action.UI.Offers (getOffersList, getOffersListV2) where
+module Domain.Action.UI.Offers (getOffersList, getOffersListV2, getOffersApplied) where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -32,3 +32,13 @@ getOffersListV2 (mbPersonId, merchantId) mbAmount = do
   personId <- mbPersonId & fromMaybeM (PersonDoesNotExist "personId missing from token")
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   SOffer.cumulativeOffersForPerson merchantId person mbAmount
+
+getOffersApplied ::
+  ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Environment.Flow [SOffer.UsedOfferAPIEntity]
+getOffersApplied (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (PersonDoesNotExist "personId missing from token")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  SOffer.listUsedOffersForPerson person person.merchantOperatingCityId

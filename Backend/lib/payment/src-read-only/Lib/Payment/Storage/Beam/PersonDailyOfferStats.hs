@@ -34,6 +34,6 @@ instance B.Table PersonDailyOfferStatsT where
 
 type PersonDailyOfferStats = PersonDailyOfferStatsT Identity
 
-$(enableKVPG ''PersonDailyOfferStatsT ['id] [])
+$(enableKVPG ''PersonDailyOfferStatsT ['id] [['personId]])
 
 $(mkTableInstancesGenericSchema ''PersonDailyOfferStatsT "person_daily_offer_stats")

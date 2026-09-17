@@ -35,10 +35,16 @@ type API =
       :> Get
            '[JSON]
            SharedLogic.Offer.CumulativeOfferResp
+      :<|> TokenAuth
+      :> "offers"
+      :> "applied"
+      :> Get
+           '[JSON]
+           [SharedLogic.Offer.UsedOfferAPIEntity]
   )
 
 handler :: Environment.FlowServer API
-handler = getOffersList :<|> getOffersListV2
+handler = getOffersList :<|> getOffersListV2 :<|> getOffersApplied
 
 getOffersList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -57,3 +63,6 @@ getOffersListV2 ::
     Environment.FlowHandler SharedLogic.Offer.CumulativeOfferResp
   )
 getOffersListV2 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersListV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getOffersApplied :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [SharedLogic.Offer.UsedOfferAPIEntity])
+getOffersApplied a1 = withFlowHandlerAPI $ Domain.Action.UI.Offers.getOffersApplied (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
