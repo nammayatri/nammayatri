@@ -1,6 +1,6 @@
 -- Notification-preference feature: classifies existing atlas_app.merchant_push_notification
 -- rows into the new user-facing notification_category bucket
--- (RIDE_RELATED | PROMOTIONAL | OFFERS | PAYMENTS | SAFETY | ACCOUNT), based on their
+-- (RIDE_RELATED | PROMOTIONAL | PAYMENTS | SAFETY | ACCOUNT), based on their
 -- existing fcm_notification_type (Kernel.External.Notification.Interface.Types.Category).
 --
 -- Idempotent: only touches rows that haven't been classified yet, so re-running after a
@@ -66,14 +66,14 @@ SET notification_category = CASE fcm_notification_type
   WHEN 'REFUND_REQUEST_APPROVED' THEN 'PAYMENTS'
   WHEN 'REFUND_REQUEST_REJECTED' THEN 'PAYMENTS'
 
-  -- Offers / rewards / coins / passes
-  WHEN 'DISCOUNT_CHANGED' THEN 'OFFERS'
-  WHEN 'COINS_SUCCESS' THEN 'OFFERS'
-  WHEN 'PAYOUT_REWARD' THEN 'OFFERS'
-  WHEN 'TO_METRO_COINS' THEN 'OFFERS'
-  WHEN 'FROM_METRO_COINS' THEN 'OFFERS'
-  WHEN 'END_RIDE_OFFERS' THEN 'OFFERS'
-  WHEN 'PASS_RELATED' THEN 'OFFERS'
+  -- Offers / rewards / coins / passes -- folded into PROMOTIONAL
+  WHEN 'DISCOUNT_CHANGED' THEN 'PROMOTIONAL'
+  WHEN 'COINS_SUCCESS' THEN 'PROMOTIONAL'
+  WHEN 'PAYOUT_REWARD' THEN 'PROMOTIONAL'
+  WHEN 'TO_METRO_COINS' THEN 'PROMOTIONAL'
+  WHEN 'FROM_METRO_COINS' THEN 'PROMOTIONAL'
+  WHEN 'END_RIDE_OFFERS' THEN 'PROMOTIONAL'
+  WHEN 'PASS_RELATED' THEN 'PROMOTIONAL'
 
   -- Promotional / engagement / marketing
   WHEN 'REFERRAL_ACTIVATED' THEN 'PROMOTIONAL'

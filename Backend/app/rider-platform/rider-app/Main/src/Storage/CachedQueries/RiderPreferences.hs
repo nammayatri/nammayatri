@@ -30,7 +30,7 @@ import qualified Storage.Queries.RiderPreferences as QRP
 -- Cached lookup of a rider's NOTIFICATION_PREFERENCE row (at most one per rider,
 -- enforced at the application layer in Domain.Action.UI.RiderPreferences -- there is
 -- no DB unique constraint). Read on every outbound notification
--- (Tools.Notifications.isNotificationCategoryAllowed), so caching this avoids a DB
+-- (Tools.Notifications.notificationSendMode), so caching this avoids a DB
 -- round trip per send. The absence of a row (a legacy rider, or one who has never
 -- opened the preference popup -- the common case) is cached too, not just a hit, so
 -- that path also skips the DB on repeat sends rather than only speeding up riders who

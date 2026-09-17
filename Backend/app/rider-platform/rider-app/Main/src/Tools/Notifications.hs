@@ -163,7 +163,7 @@ notifyPersonUnchecked = runWithServiceConfig Notification.notifyPerson (.notifyP
 {-# WARNING notifyPersonUnchecked "Sends a push with no rider-preference check. Use Tools.Notifications.notifyPerson instead." #-}
 
 -- THE sanctioned entry point for sending a push -- always enforces
--- isNotificationCategoryAllowed. mbCategory should be `Just <precise category>` when the
+-- notificationSendMode. mbCategory should be `Just <precise category>` when the
 -- caller already knows it (e.g. dynamicNotifyPerson has merchantPN.notificationCategory
 -- in scope); pass `Nothing` to fall back to deriveNotificationCategory req.category.
 notifyPerson ::
@@ -180,10 +180,13 @@ notifyPerson ::
   m ()
 notifyPerson merchantId merchantOperatingCityId personId mbCategory req liveActivityReq = do
   category <- maybe (deriveNotificationCategory merchantOperatingCityId req.category) pure mbCategory
-  isCategoryAllowed <- isNotificationCategoryAllowed personId merchantOperatingCityId category
-  if not isCategoryAllowed
-    then logInfo $ "NOTIF_SUPPRESSED_BY_PREFERENCE - category:" <> show category <> " fcmCategory:" <> show req.category <> " personId:" <> personId.getId <> " title:" <> req.title
-    else notifyPersonUnchecked merchantId merchantOperatingCityId personId req liveActivityReq
+  sendMode <- notificationSendMode personId merchantOperatingCityId category
+  case sendMode of
+    Suppress -> logInfo $ "NOTIF_SUPPRESSED_BY_PREFERENCE - category:" <> show category <> " fcmCategory:" <> show req.category <> " personId:" <> personId.getId <> " title:" <> req.title
+    SendSilent -> do
+      logInfo $ "NOTIF_SILENCED_BY_PREFERENCE - category:" <> show category <> " fcmCategory:" <> show req.category <> " personId:" <> personId.getId <> " title:" <> req.title
+      notifyPersonUnchecked merchantId merchantOperatingCityId personId req {Notification.showNotification = Notification.DO_NOT_SHOW} liveActivityReq
+    SendNormal -> notifyPersonUnchecked merchantId merchantOperatingCityId personId req liveActivityReq
 
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = Person.clearDeviceTokenByPersonId
@@ -248,30 +251,33 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
       notifyPerson person.merchantId merchantOperatingCityId person.id (Just merchantPN.notificationCategory) notificationData liveActivityReq
 
--- Rider-level opt-out gate. A rider with no NOTIFICATION_PREFERENCE row has never
--- responded to the in-app permission popup (legacy rider, or opted-in-by-default),
--- so every category is allowed — this keeps existing riders unaffected.
---
--- A category listed in RiderConfig.alwaysAllowedNotificationCategories (default
--- RIDE_RELATED, SAFETY) is sent regardless of what the rider chose — for
--- notifications that drive in-app behaviour (state sync, live tracking, etc.) rather
--- than being purely informational, where suppressing the send would break the app,
--- not just annoy the rider. Checked before the rider's own preference, and a missing
--- RiderConfig row (lookup failure) is treated as "no override", not as an error —
--- this gate must never throw and block a send outright over a config-fetch hiccup.
-isNotificationCategoryAllowed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> RP.NotificationCategory -> m Bool
-isNotificationCategoryAllowed personId merchantOperatingCityId category = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
-  let alwaysAllowed = maybe False ((category `elem`) . (.alwaysAllowedNotificationCategories)) mbRiderConfig
-  if alwaysAllowed
-    then pure True
-    else do
-      mbPref <- CQRP.findNotificationPreferenceByRiderId personId
-      pure $ case mbPref of
+data NotificationSendMode
+  = SendNormal
+  | SendSilent
+  | Suppress
+  deriving (Show, Eq)
+
+-- Checked in order: the rider's own preference first (always needed to decide
+-- SendNormal vs. not, and typically the only Hedis read on the hot path -- most
+-- notifications aren't disabled by the rider), then
+-- RiderConfig.alwaysAllowedNotificationCategories only when the rider has disabled the
+-- category, to decide SendSilent vs. Suppress. A missing RiderConfig row (lookup
+-- failure) is treated as "no override" (Suppress), not as an error -- this gate must
+-- never throw and block a send outright over a config-fetch hiccup.
+notificationSendMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> RP.NotificationCategory -> m NotificationSendMode
+notificationSendMode personId merchantOperatingCityId category = do
+  mbPref <- CQRP.findNotificationPreferenceByRiderId personId
+  let riderEnabled = case mbPref of
         Nothing -> True
         Just pref -> case pref.preferenceData of
           RP.NotificationPreference d -> category `elem` d.enabledCategories
           RP.LocationPickupPreference _ -> True
+  if riderEnabled
+    then pure SendNormal
+    else do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      let alwaysAllowed = maybe False ((category `elem`) . (.alwaysAllowedNotificationCategories)) mbRiderConfig
+      pure $ if alwaysAllowed then SendSilent else Suppress
 
 -- Fallback classification used by notifyPerson when a call site doesn't already know
 -- its precise RP.NotificationCategory (i.e. passes mbCategory = Nothing).
