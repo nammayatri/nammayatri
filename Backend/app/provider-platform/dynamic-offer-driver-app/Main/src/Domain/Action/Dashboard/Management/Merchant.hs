@@ -439,6 +439,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                scheduledRideSearchRepeatLimit = maybe config.scheduledRideSearchRepeatLimit (.value) req.scheduledRideSearchRepeatLimit,
                enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
                disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
+               driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
                scheduledRideConfig =
                  DTC.ScheduledRideConfig
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,

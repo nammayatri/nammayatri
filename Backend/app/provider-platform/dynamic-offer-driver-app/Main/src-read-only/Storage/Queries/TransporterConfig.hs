@@ -98,6 +98,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
       Se.Set Beam.metricsDistanceBucketsKm metricsDistanceBucketsKm,
+      Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -219,6 +220,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverAutoPayExecutionTimeFallBack (Kernel.Utils.Common.nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack),
       Se.Set Beam.driverAutoPayNotificationTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverAutoPayNotificationTime),
       Se.Set Beam.driverCallingOption driverCallingOption,
+      Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
       Se.Set Beam.driverDistanceToPickupThresholdOnCancel driverDistanceToPickupThresholdOnCancel,
       Se.Set Beam.driverDistanceTravelledOnPickupThresholdOnCancel driverDistanceTravelledOnPickupThresholdOnCancel,
       Se.Set Beam.driverDrivenSearchReqExpiry (Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry),
