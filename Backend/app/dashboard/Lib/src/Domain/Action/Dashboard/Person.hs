@@ -413,8 +413,9 @@ listPerson ::
   Maybe Integer ->
   Maybe (Id DP.Person) ->
   m ListPersonRes
-listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
-  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+listPerson _ mbSearchStringRaw mbLimit mbOffset mbPersonId = do
+  let mbSearchString = (T.strip <$> mbSearchStringRaw) >>= \s -> if T.null s then Nothing else Just s
+  mbSearchStrDBHash <- traverse (getDbHash . T.toLower) mbSearchString
   personAndRoleList <- B.runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
@@ -445,8 +446,9 @@ ptList ::
   Maybe Integer ->
   Maybe Integer ->
   m ListPTEmployeeRes
-ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit mbOffset = do
-  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+ptList tokenInfo mbSearchStringRaw mbRoleName mbEntityShortId mbLimit mbOffset = do
+  let mbSearchString = (T.strip <$> mbSearchStringRaw) >>= \s -> if T.null s then Nothing else Just s
+  mbSearchStrDBHash <- traverse (getDbHash . T.toLower) mbSearchString
   mbEntityId <- forM mbEntityShortId $ \shortId ->
     QEntity.findByMerchantAndShortId tokenInfo.merchantId (ShortId shortId)
       >>= fmap (.id) . fromMaybeM (InvalidRequest $ "Entity " <> shortId <> " does not exist for this merchant")

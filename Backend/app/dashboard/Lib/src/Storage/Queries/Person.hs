@@ -340,8 +340,9 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
             B.orderBy_ (\(person, _, _) -> B.desc_ person.createdAt) $
               B.filter_'
                 ( \(person, _role, _) ->
-                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> escapeLikeLiteral searchString <> "%"))) mbSearchString
+                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
                         B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
                     )
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultPerson -> person.id B.==?. B.val_ (getId defaultPerson)) personId
                 )
@@ -393,8 +394,8 @@ escapeLikeLiteral = T.concatMap $ \c -> case c of
 
 -- Not KV: Sequelize's Clause is single-table (Is binds one Column table value) with no join,
 -- subquery or aggregate constructor. This needs person x role, a correlated EXISTS on
--- merchant_access (tenancy) and on entity_access (depot filter), concat_ [firstName, lastName]
--- LIKE, and COUNT(*) for totalCount. Decomposing into ID-set lookups would move the tenancy
+-- merchant_access (tenancy) and on entity_access (depot filter), lower(concat_ [firstName, ' ', lastName])
+-- LIKE (case-insensitive, space-separated so "First Last" matches), and COUNT(*) for totalCount. Decomposing into ID-set lookups would move the tenancy
 -- filter out of SQL and pull every merchant_access row for the merchant on each page.
 -- Filter is duplicated, not shared: aggregate_ nests at a different Beam scope than the paged select, so one local binding cannot serve both. Keep the copies in sync.
 findAllPTWithLimitOffset ::
@@ -417,8 +418,9 @@ findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRol
             B.orderBy_ (\(person, _role) -> B.desc_ person.createdAt) $
               B.filter_'
                 ( \(person, role) ->
-                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> escapeLikeLiteral searchString <> "%"))) mbSearchString
+                    ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
                         B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                        B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
                     )
                       -- A tokenNo is what makes an account a PT login, so it defines the base set.
                       B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
@@ -452,8 +454,9 @@ findAllPTWithLimitOffset callerMerchantId mbSearchString mbSearchStrDBHash mbRol
               B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
                 B.filter_'
                   ( \(person, role) ->
-                      ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, person.lastName] `B.like_` B.val_ ("%" <> escapeLikeLiteral searchString <> "%"))) mbSearchString
+                      ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
                           B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                          B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
                       )
                         -- A tokenNo is what makes an account a PT login, so it defines the base set.
                         B.&&?. B.sqlBool_ (B.isJust_ (BeamP.tokenNoHash person))
