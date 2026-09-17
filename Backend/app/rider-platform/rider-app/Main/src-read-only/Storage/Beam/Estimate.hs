@@ -60,6 +60,7 @@ data EstimateT f = EstimateT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    negativeFareSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     nightShiftCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     nightShiftChargeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     nightShiftEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),

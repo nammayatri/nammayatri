@@ -533,3 +533,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN has_better_point_suggestion bool
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN discovered_drop_special_location_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment_amount double precision ;
+ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment integer ;

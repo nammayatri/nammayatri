@@ -30,6 +30,7 @@ data FareParameters = FareParameters
   { id :: Id FareParameters,
     driverSelectedFare :: Maybe HighPrecMoney,
     customerExtraFee :: Maybe HighPrecMoney,
+    negativeFareAdjustment :: Maybe HighPrecMoney,
     serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     stopCharges :: Maybe HighPrecMoney,

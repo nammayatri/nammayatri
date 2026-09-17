@@ -77,6 +77,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     boostSearchPreSelectionServiceTierConfig :: Maybe [DVST.ServiceTierType],
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    negativeFareSuggestion :: Maybe HighPrecMoney,
     isReferredRide :: Bool,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,

@@ -56,6 +56,7 @@ data EstimateT f = EstimateT
     minFare :: B.C f Kernel.Types.Common.Money,
     minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    negativeFareSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     personalDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
     shadowSurgeMultiplier :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),

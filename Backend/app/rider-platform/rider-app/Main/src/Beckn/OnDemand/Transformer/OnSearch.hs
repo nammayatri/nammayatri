@@ -130,6 +130,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
       let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
+      let negativeFareSuggestion = Beckn.OnDemand.Utils.OnSearch.getNegativeFareSuggestion item
       pure $
         Left $
           Domain.Action.Beckn.OnSearch.EstimateInfo
@@ -168,6 +169,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleIconUrl = vehicleIconUrl,
               tipOptions,
               smartTipSuggestion,
+              negativeFareSuggestion,
               qar = qar_,
               smartTipReason,
               area = area_,

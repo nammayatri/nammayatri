@@ -275,6 +275,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               vehicleAge = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
+              negativeFareAdjustment = Nothing,
               petCharges = Nothing,
               nightShiftCharge = Nothing,
               estimatedCongestionCharge = Nothing,

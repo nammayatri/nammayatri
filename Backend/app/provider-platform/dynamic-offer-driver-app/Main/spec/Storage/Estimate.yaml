@@ -48,6 +48,7 @@ Estimate:
       mbCongestionCityPast : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
+      negativeFareSuggestion: Maybe HighPrecMoney
       congestionMultiplier : Maybe Centesimal
       shadowSurgeMultiplier : Maybe Centesimal
       shadowSurgeVersion : Maybe Int
