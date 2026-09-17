@@ -186,5 +186,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             registrationNo = v.registrationNo,
             cloudType = p.cloudType,
             schemaVersion = Just Migrations.currentSchemaVersion,
-            lastUpdatedAt = Just now
+            lastUpdatedAt = Just now,
+            -- Redis-only field, no driver_information column to recover it from on a cold rebuild.
+            lastRideEndedAt = Nothing
           }

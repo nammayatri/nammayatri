@@ -88,6 +88,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     -- On-ride / forward batching fields
     driverTripEndLocation :: SetField (Maybe Maps.LatLong),
     hasRideStarted :: SetField (Maybe Bool),
+    lastRideEndedAt :: SetField (Maybe UTCTime),
     -- Vehicle attributes for service tier usage restriction
     airConditionScore :: SetField (Maybe Double),
     airConditioned :: SetField (Maybe Bool),
@@ -145,6 +146,7 @@ emptyUpdate =
       fleetOwnerId = Unchanged,
       driverTripEndLocation = Unchanged,
       hasRideStarted = Unchanged,
+      lastRideEndedAt = Unchanged,
       airConditionScore = Unchanged,
       airConditioned = Unchanged,
       luggageCapacity = Unchanged,
@@ -282,6 +284,7 @@ applyUpdate now u d =
       DPD.fleetOwnerId = applyField u.fleetOwnerId d.fleetOwnerId,
       DPD.driverTripEndLocation = applyField u.driverTripEndLocation d.driverTripEndLocation,
       DPD.hasRideStarted = applyField u.hasRideStarted d.hasRideStarted,
+      DPD.lastRideEndedAt = applyField u.lastRideEndedAt d.lastRideEndedAt,
       DPD.airConditionScore = applyField u.airConditionScore d.airConditionScore,
       DPD.airConditioned = applyField u.airConditioned d.airConditioned,
       DPD.luggageCapacity = applyField u.luggageCapacity d.luggageCapacity,
