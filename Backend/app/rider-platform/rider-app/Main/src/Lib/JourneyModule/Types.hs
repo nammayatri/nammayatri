@@ -933,7 +933,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsBooking booking) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters integratedBPPConfig
   (isCancellable, isReschedulable, remainingRescheduleCount) <- computeIsCancellableAndReschedulable booking integratedBPPConfig
   mbAppliedPass <-
     if booking.overrideType == Just DFRFSBooking.PassOverride
@@ -984,13 +984,13 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         remainingRescheduleCount = remainingRescheduleCount
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount integratedBPPConfig = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters integratedBPPConfig = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
       let paymentOrderIds = nub $ map (.paymentOrderId) bookingPayments
       paymentOrders <- mapMaybeM QPaymentOrder.findById paymentOrderIds
       let orderShortIds = map (.shortId) paymentOrders
       refunds <- concat <$> mapM HQRefunds.findAllByOrderId orderShortIds
-      let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = totalBookingAmount.amount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
+      let refunds' = map (\refundEntry -> LegRefundInfo {id = refundEntry.id, amount = refundEntry.refundAmount, status = refundEntry.status, arn = refundEntry.arn, completedAt = refundEntry.completedAt, updatedAt = refundEntry.updatedAt, createdAt = refundEntry.createdAt}) refunds
       let refundBloc = listToMaybe refunds'
       let adultTicketQuantity = find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
           childTicketQuantity = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
