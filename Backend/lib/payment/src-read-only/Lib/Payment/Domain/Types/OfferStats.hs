@@ -5,21 +5,25 @@ module Lib.Payment.Domain.Types.OfferStats where
 
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.Offer
 import qualified Tools.Beam.UtilsTH
 
 data OfferStats = OfferStats
   { createdAt :: Kernel.Prelude.UTCTime,
+    currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     entityId :: Kernel.Prelude.Text,
     entityType :: Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfferStats.OfferStats,
     offerAppliedCount :: Kernel.Prelude.Int,
     offerId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer,
+    totalCashbackAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    totalDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Read), (ToJSON), (FromJSON))
+  deriving (Generic, Show, Read, ToJSON, FromJSON)
 
 data OfferStatsEntityType = Person | StaticPerson | Device | Offer deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OfferStatsEntityType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OfferStatsEntityType)

@@ -83,6 +83,9 @@ OfferStats:
     entityId: Text
     entityType: OfferStatsEntityType
     offerAppliedCount: Int
+    totalDiscountAmount: Maybe HighPrecMoney
+    totalCashbackAmount: Maybe HighPrecMoney
+    currency: Maybe Currency
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -115,12 +118,16 @@ OfferStats:
 
   constraints:
     id: PrimaryKey
+    personId: SecondaryKey
 
   extraIndexes:
     - columns: [offerId, personId, entityType]
       unique: true
     - columns: [personId, entityType]
       unique: false
+
+  extraOperations:
+    - GENERATE_INDEXES
 
   queries:
     findByOfferIdAndEntityIdAndEntityType:
@@ -157,20 +164,20 @@ PersonDailyOfferStats:
 
   constraints:
     id: PrimaryKey
+    personId: SecondaryKey
 
   extraIndexes:
     - columns: [personId, date]
-    - columns: [date]
     - columns: [date, payoutStatus]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
   queries:
     findByPersonIdAndDate:
       kvFunction: findOneWithKV
       where:
         and: [personId, date]
-    findAllByDate:
-      kvFunction: findAllWithKV
-      where: date
     findAllByDateAndPayoutStatus:
       kvFunction: findAllWithKV
       where:
@@ -209,6 +216,9 @@ OfferFrequencyStatsHistory:
   extraIndexes:
     - columns: [entityId, entityType, offerId, frequencyType, periodStart]
       unique: true
+
+  extraOperations:
+    - GENERATE_INDEXES
 
   queries:
     findByEntityIdEntityTypeOfferIdFrequencyTypeAndPeriodStart:
@@ -252,6 +262,9 @@ PersonOfferFrequencyStats:
     - columns: [entityId, entityType, offerId]
       unique: true
 
+  extraOperations:
+    - GENERATE_INDEXES
+
   queries:
     findByEntityIdOfferIdEntityType:
       kvFunction: findOneWithKV
@@ -282,7 +295,10 @@ OfflineOffer:
     referenceId: SecondaryKey
 
   extraIndexes:
-    - columns: [referenceId, offerId]
+    - columns: [referenceId]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
   queries:
     findById:
