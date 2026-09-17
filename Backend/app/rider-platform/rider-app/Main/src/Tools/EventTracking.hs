@@ -32,6 +32,7 @@ data TrackingEvent
   | VehicleRideCompleted Text Text Int HighPrecMoney -- riderId, categorySlug (cab|auto|bike), catRideCount, fare
   | VehicleFirstRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
   | VehicleFifthRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
+  | OfferCashbackCredited Text Text HighPrecMoney -- riderId, payoutRequestId, amount
 
 trackEvent ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -136,6 +137,8 @@ eventToAction = \case
     (riderId, "ny_" <> slug <> "_first_ride_completed", object ["fare" .= fare])
   VehicleFifthRideCompleted riderId slug fare ->
     (riderId, "ny_" <> slug <> "_user_5_ride_completed", object ["fare" .= fare])
+  OfferCashbackCredited riderId payoutRequestId amount ->
+    (riderId, "ny_user_offer_cashback_credited", object ["payout_request_id" .= payoutRequestId, "amount" .= amount])
 
 -- | Per-vehicle ride-completion events (+ first/fifth milestones). No-op for
 -- unsupported categories. Does not fork; call it from within a fork.
