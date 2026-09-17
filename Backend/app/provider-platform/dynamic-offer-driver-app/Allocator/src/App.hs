@@ -76,7 +76,7 @@ import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
-import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettlementReportIngestionJob)
+import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runPgSettlementIngestionJob, runSettlementReportIngestionJob)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify (triggerSpecialZoneNotify)
 import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
@@ -183,6 +183,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
+          & putJobHandlerInListWrapper flowRt env runPgSettlementIngestionJob
           & putJobHandlerInListWrapper flowRt env runSAPSubscriptionPurchaseDispatchJob
           & putJobHandlerInListWrapper flowRt env runSAPPGSettlementDispatchJob
           & putJobHandlerInListWrapper flowRt env runSAPRideRevenueDispatchJob

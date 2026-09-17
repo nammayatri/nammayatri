@@ -315,6 +315,7 @@ let AllocatorJobType =
       | Reconciliation
       | ScheduledBatchPayout
       | SettlementReportIngestion
+      | PgSettlementIngestion
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
       | IffcoTokioInsurance
@@ -400,6 +401,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
+      , { mapKey = AllocatorJobType.PgSettlementIngestion, mapValue = True }
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
       , { mapKey = AllocatorJobType.IffcoTokioInsurance, mapValue = True }
