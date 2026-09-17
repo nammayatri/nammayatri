@@ -16,6 +16,7 @@ module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -358,3 +359,20 @@ data EnergyType
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 $(mkHttpInstancesForEnum ''EnergyType)
+
+-- | Namespace for the breakup title of a gate-configured customer fee item.
+--   The item name is operator-supplied free text, so it is never emitted bare:
+--   consumers look breakups up by exact title (TOLL_CHARGES, BUYER_ADDITIONAL_AMOUNT,
+--   the RIDE_FARE_* summary tags), and an unprefixed name could shadow one of those
+--   on a booking where the real component is absent. The prefix is also what lets
+--   the rider invoice tell a gate fee apart from an internal summary tag.
+gateFeeBreakupTitlePrefix :: Text
+gateFeeBreakupTitlePrefix = "GATE_FEE:"
+
+mkGateFeeBreakupTitle :: Text -> Text
+mkGateFeeBreakupTitle itemName = gateFeeBreakupTitlePrefix <> itemName
+
+-- | The configured item name behind a title built by 'mkGateFeeBreakupTitle',
+--   or 'Nothing' when the title is not a gate fee item.
+gateFeeBreakupItemName :: Text -> Maybe Text
+gateFeeBreakupItemName = T.stripPrefix gateFeeBreakupTitlePrefix

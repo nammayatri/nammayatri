@@ -45,3 +45,13 @@ ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN gate_config text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN entry_fee_disabled_service_tiers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN fee_items text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN min_balance_required double precision ;

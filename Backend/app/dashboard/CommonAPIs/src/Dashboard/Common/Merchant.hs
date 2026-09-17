@@ -47,6 +47,7 @@ import Kernel.Types.Predicate
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified Lib.Types.GateInfo as GIT
 import qualified Lib.Types.SpecialLocation as SLT
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
@@ -795,7 +796,9 @@ data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
     address :: Maybe Text,
     canQueueUpOnGate :: Maybe Bool,
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    feeItems :: Maybe [GIT.GateFeeItem],
+    minBalanceRequired :: Maybe HighPrecMoney
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -814,6 +817,8 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
       <*> parseMaybeInput "canQueueUpOnGate" form
       <*> parseMaybeInput "gateTags" form
       <*> parseMaybeInput "walkDescription" form
+      <*> parseMaybeJsonInput "feeItems" form
+      <*> parseMaybeInput "minBalanceRequired" form
 
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
@@ -827,7 +832,9 @@ data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
     address :: Maybe Text,
     canQueueUpOnGate :: Maybe Bool,
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    feeItems :: Maybe [GIT.GateFeeItem],
+    minBalanceRequired :: Maybe HighPrecMoney
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
