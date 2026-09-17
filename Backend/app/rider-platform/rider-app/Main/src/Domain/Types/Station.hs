@@ -44,6 +44,9 @@ data Station = Station
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     parentStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    -- GTFS location_type: "0" platform, "1" station. Riders are shown stations,
+    -- so callers filter on this and send the station code onward.
+    locationType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clusterId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

@@ -275,6 +275,11 @@ types:
     gj: Maybe Value
     gi: Maybe [Gate]
     ibc: Id IntegratedBPPConfig
+    # lty: GTFS location_type — "0" platform, "1" station. The app lists
+    # stations and hides the platforms beneath them, and sends the station code
+    # in search. psc: the station a platform belongs to, for that grouping.
+    lty: Maybe Text
+    psc: Maybe Text
     derive': "Generic, ToSchema"
 
   TransportRouteStopMapping:

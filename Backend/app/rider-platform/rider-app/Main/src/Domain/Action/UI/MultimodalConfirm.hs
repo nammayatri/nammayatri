@@ -1234,7 +1234,12 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                               hin = s.hindiName,
                               gj = s.geoJson,
                               gi = s.gates,
-                              ibc = bppConfig.id
+                              ibc = bppConfig.id,
+                              -- The app lists stations and folds platforms under
+                              -- them, so it needs to know which kind each stop is
+                              -- and, for a platform, which station owns it.
+                              lty = s.locationType,
+                              psc = s.parentStopCode
                             }
                       _ -> Nothing
                   )

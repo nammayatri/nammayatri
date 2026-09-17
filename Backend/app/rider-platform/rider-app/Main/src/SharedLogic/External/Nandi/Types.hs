@@ -753,7 +753,10 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     regionalName :: Maybe Text,
     parentStopCode :: Maybe Text,
     gates :: Maybe [Gate],
-    clusterId :: Maybe Text
+    clusterId :: Maybe Text,
+    -- GTFS location_type: "0" platform, "1" station. Maybe, so a Nandi build
+    -- predating the station layer still parses.
+    locationType :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -780,7 +783,8 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
     hindiName :: Maybe Text,
     regionalName :: Maybe Text,
     parentStopCode :: Maybe Text,
-    clusterId :: Maybe Text
+    clusterId :: Maybe Text,
+    locationType :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
