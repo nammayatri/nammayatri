@@ -91,6 +91,6 @@ postIssueListTicketStatusCallBack _ _ reqJson = do
   req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
   mbTicket <- QIssue.findByTicketId req.ticketId
   case mbTicket of
-    Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus req
+    Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus False req
     Nothing -> void $ DCommon.ticketStatusCallBack reqJson ADI.dashboardIssueHandle Common.CUSTOMER
   return Success

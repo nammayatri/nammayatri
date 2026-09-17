@@ -20,10 +20,12 @@ import qualified IGM.Types as Spec
 import qualified IssueManagement.API.Beckn.Issue as BI
 import qualified IssueManagement.Common as Common
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 
 type API = BI.IssueAPI
 
@@ -42,13 +44,19 @@ handler = onDemandHandler :<|> publicTransportHandler
       onIssue merchantId sigAuth :<|> onIssueStatus merchantId sigAuth
 
 issue :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueReq -> FlowHandler Spec.AckResponse
-issue merchantId _ issueReq = withFlowHandlerAPI $ BI.issue (cast merchantId) issueReq AUI.driverIssueHandle Common.DRIVER
+issue merchantId _ issueReq = withFlowHandlerAPI $ do
+  bapId <- issueReq.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  isValueAddNP <- CQVAN.isValueAddNP bapId
+  BI.issue (cast merchantId) issueReq AUI.driverIssueHandle Common.DRIVER isValueAddNP
 
 onIssue :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueReq -> FlowHandler Spec.AckResponse
 onIssue merchantId _ onIssueReq = withFlowHandlerAPI $ BI.onIssue (cast merchantId) onIssueReq AUI.driverIssueHandle Common.DRIVER
 
 issueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueStatusReq -> FlowHandler Spec.AckResponse
-issueStatus merchantId _ issueStatusReq = withFlowHandlerAPI $ BI.issueStatus (cast merchantId) issueStatusReq AUI.driverIssueHandle Common.DRIVER
+issueStatus merchantId _ issueStatusReq = withFlowHandlerAPI $ do
+  bapId <- issueStatusReq.issueStatusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  isValueAddNP <- CQVAN.isValueAddNP bapId
+  BI.issueStatus (cast merchantId) issueStatusReq AUI.driverIssueHandle Common.DRIVER isValueAddNP
 
 onIssueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueStatusReq -> FlowHandler Spec.AckResponse
 onIssueStatus merchantId _ onIssueStatusReq = withFlowHandlerAPI $ BI.onIssueStatus (cast merchantId) onIssueStatusReq AUI.driverIssueHandle Common.DRIVER
