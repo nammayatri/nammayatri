@@ -15,7 +15,26 @@ data CumulativeOfferResp = CumulativeOfferResp
     -- passes it through from CUMULATIVE_OFFER_POLICY untouched so new client
     -- fields never need a backend change.
     metadata :: Maybe Data.Aeson.Value,
-    promoCard :: Maybe PromoCard
+    promoCard :: Maybe PromoCard,
+    greetingLottieUrl :: Maybe Text
+  }
+  deriving (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UsedOfferAPIEntity = UsedOfferAPIEntity
+  { offerId :: Text,
+    offerCode :: Text,
+    offerTitle :: Maybe Text,
+    offerDescription :: Maybe Text,
+    offerType :: Maybe DOffer.OfferType,
+    appliedCount :: Int,
+    totalAppliedCount :: Int,
+    maxApplyCount :: Maybe Int,
+    frequencyType :: Maybe DOffer.OfferFrequency,
+    isUsedUp :: Bool,
+    totalDiscountAmount :: Maybe HighPrecMoney,
+    totalCashbackAmount :: Maybe HighPrecMoney,
+    lastAppliedAt :: UTCTime
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

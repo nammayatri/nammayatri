@@ -17,3 +17,8 @@ ALTER TABLE atlas_driver_offer_bpp.offline_offer ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.offline_offer ADD COLUMN payout_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.offline_offer ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY offline_offer_idx_reference_id ON atlas_driver_offer_bpp.offline_offer USING btree (reference_id);

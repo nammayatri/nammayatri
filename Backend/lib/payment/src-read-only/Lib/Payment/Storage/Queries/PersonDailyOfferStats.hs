@@ -24,12 +24,9 @@ create = createWithKV
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats] -> m ())
 createMany = traverse_ create
 
-findAllByDate :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Data.Time.Calendar.Day -> m ([Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats]))
-findAllByDate date = do findAllWithKV [Se.Is Beam.date $ Se.Eq date]
-
 findAllByDateAndPayoutStatus ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Data.Time.Calendar.Day -> Lib.Payment.Domain.Types.Common.PayoutStatus -> m ([Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats]))
+  (Data.Time.Calendar.Day -> Lib.Payment.Domain.Types.Common.PayoutStatus -> m [Lib.Payment.Domain.Types.PersonDailyOfferStats.PersonDailyOfferStats])
 findAllByDateAndPayoutStatus date payoutStatus = do findAllWithKV [Se.And [Se.Is Beam.date $ Se.Eq date, Se.Is Beam.payoutStatus $ Se.Eq payoutStatus]]
 
 findByPersonIdAndDate ::
