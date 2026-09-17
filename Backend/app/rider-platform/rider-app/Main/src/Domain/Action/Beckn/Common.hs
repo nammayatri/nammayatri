@@ -121,6 +121,7 @@ import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
+import qualified SharedLogic.SilentReallocation as SilentRealloc
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -511,6 +512,8 @@ rideAssignedReqHandler req = do
     Just ride -> do
       QERIDE.updateStatus ride.id rideStatus
       QERIDE.updateIsSafetyPlus ride.id req.isSafetyPlus
+      -- a real driver is assigned: close any silent reallocation window for this rider
+      SilentRealloc.clearSilentReallocation booking.riderId
       unless isInitiatedByCronJob $ do
         Notify.notifyOnRideAssigned booking ride
         when req.isDriverBirthDay $

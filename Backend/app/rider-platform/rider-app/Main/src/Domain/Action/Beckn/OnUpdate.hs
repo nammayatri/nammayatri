@@ -87,6 +87,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -496,9 +497,44 @@ onUpdate = \case
     -- make all the booking parties inactive during rellocation
     QBPL.makeAllInactiveByBookingId booking.id
     SharedCancel.releaseCancellationLock booking.transactionId
-    fork "estimateRepetition: cancel payment intent and notify customer" $ do
+    fork "estimateRepetition: cancel payment intent" $
       void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-      Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
+    -- Silent reallocation window: for a driver-initiated cancel before arrival on an
+    -- auto-assign search, hold the reallocation push for the configured window so a new
+    -- driver can pick the trip up while the rider still sees a driver on the way.
+    -- ride/list keeps returning the old booking (flagged) while the Redis key lives; the
+    -- expiry job sends the held push if nobody was assigned in time.
+    mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+    let windowSeconds = fromMaybe (Seconds 0) (mbRiderConfig >>= (.silentReallocationWindowSeconds))
+        silentWindowEligible =
+          windowSeconds.getSeconds > 0
+            && cancellationSource == DBCR.ByDriver
+            && isNothing ride.driverArrivalTime
+            && searchReq.autoAssignEnabledV2 == Just True
+    if silentWindowEligible
+      then do
+        now <- getCurrentTime
+        -- job first, then key: a job without a key is a no-op, a key without a job would
+        -- leave the rider with no push at all
+        createJobIn @_ @'SilentReallocationExpiry (Just booking.merchantId) (Just booking.merchantOperatingCityId) (fromIntegral windowSeconds.getSeconds) $
+          SilentReallocationExpiryJobData
+            { merchantId = booking.merchantId,
+              merchantOperatingCityId = booking.merchantOperatingCityId,
+              personId = booking.riderId,
+              bookingId = booking.id
+            }
+        SilentRealloc.setSilentReallocation
+          booking.riderId
+          SilentRealloc.SilentReallocationCtx
+            { bookingId = booking.id,
+              rideId = ride.id,
+              estimateId = estimate.id,
+              cancellationSource = cancellationSource,
+              expiresAt = addUTCTime (fromIntegral windowSeconds.getSeconds) now
+            }
+          windowSeconds
+        logInfo $ "Silent reallocation window of " <> show windowSeconds <> " opened for booking " <> booking.id.getId
+      else fork "estimateRepetition: notify customer" $ Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
     when (cancellationSource /= DBCR.ByUser) $ do
       -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step

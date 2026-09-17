@@ -170,6 +170,9 @@ data BookingAPIEntity = BookingAPIEntity
     refunds :: [RideRefundInfo],
     fareSettlementType :: Maybe SL.FareSettlementType,
     cardInfo :: Maybe RideCardInfo,
+    -- | True while the rider is inside a silent reallocation window: the driver cancelled
+    -- and a new one is being found, but the app should keep showing the trip as assigned.
+    isSilentReallocation :: Maybe Bool,
     parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -440,6 +443,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         refunds = refunds,
         fareSettlementType = booking.fareSettlementType,
         cardInfo = cardInfo,
+        isSilentReallocation = Nothing,
         parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo
       }
   where

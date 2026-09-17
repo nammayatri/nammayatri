@@ -854,13 +854,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  defaul
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN silent_reallocation_window_seconds integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN always_allowed_notification_categories text [] ;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_categories SET DEFAULT '{RIDE_RELATED,SAFETY}';
-
-
-------- SQL updates -------
 

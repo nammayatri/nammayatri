@@ -151,6 +151,7 @@ RiderConfig:
     enablePaymentRefunds: Maybe Bool
     syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
     validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
+    silentReallocationWindowSeconds: Maybe Seconds
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers

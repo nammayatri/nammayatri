@@ -71,6 +71,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+import "rider-app" SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
@@ -111,6 +112,7 @@ schedulerHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInListWrapper flowRt env checkPNAndSendSMS
           & putJobHandlerInListWrapper flowRt env sendScheduledRideNotificationsToRider
+          & putJobHandlerInListWrapper flowRt env silentReallocationExpiry
           & putJobHandlerInListWrapper flowRt env sendTagActionNotification
           & putJobHandlerInListWrapper flowRt env sendSafetyIVR
           & putJobHandlerInListWrapper flowRt env sendCallPoliceApi
