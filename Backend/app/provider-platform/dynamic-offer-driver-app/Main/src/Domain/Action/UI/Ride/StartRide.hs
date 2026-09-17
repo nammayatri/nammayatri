@@ -278,11 +278,15 @@ startRideHandler ServiceHandle {..} rideId req = do
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
 
       DSC.recordOnRideChange booking.merchantOperatingCityId True
-      fork "Push Start Ride Metric" $ do
-        incrementRideStartCounter "startRide"
-        (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
-        let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
-        TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
+      -- Ride-started metric is emitted INLINE in the awaited request path (NOT a bare
+      -- fire-and-forget fork) so it cannot be silently dropped on pod churn while the
+      -- durable INPROGRESS/tripStartTime write persists (see StartRide.Internal), which
+      -- was making VM ride_started read below CH rides-with-trip_start_time and even below
+      -- ride_completed. Mirrors endRideTransaction's inline incrementRideCompletedCount.
+      incrementRideStartCounter "startRide"
+      (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
+      let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
+      TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
       when
