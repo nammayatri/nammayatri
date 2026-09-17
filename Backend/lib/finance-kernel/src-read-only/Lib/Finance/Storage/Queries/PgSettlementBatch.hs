@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -40,6 +41,46 @@ findByMerchantCityGatewayAndPvNumber merchantId merchantOperatingCityId paymentG
         ]
     ]
 
+updateIngestionStatus ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.PgSettlementBatch.IngestionStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch -> m ())
+updateIngestionStatus ingestionStatus id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.ingestionStatus ingestionStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSettlementBatchOnProcessed ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.PgSettlementBatch.SettlementBatchStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch -> m ())
+updateSettlementBatchOnProcessed status settlementAmount refundAmount chargebackAmount refundReversalAmount chargebackReversalAmount adjustmentAmount charges taxes otherAdjustments payoutAmount settlementDate utr utrDate currency payoutMercId pvFile pvFileDate id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.settlementAmount settlementAmount,
+      Se.Set Beam.refundAmount refundAmount,
+      Se.Set Beam.chargebackAmount chargebackAmount,
+      Se.Set Beam.refundReversalAmount refundReversalAmount,
+      Se.Set Beam.chargebackReversalAmount chargebackReversalAmount,
+      Se.Set Beam.adjustmentAmount adjustmentAmount,
+      Se.Set Beam.charges charges,
+      Se.Set Beam.taxes taxes,
+      Se.Set Beam.otherAdjustments otherAdjustments,
+      Se.Set Beam.payoutAmount payoutAmount,
+      Se.Set Beam.settlementDate settlementDate,
+      Se.Set Beam.utr utr,
+      Se.Set Beam.utrDate utrDate,
+      Se.Set Beam.currency currency,
+      Se.Set Beam.payoutMercId payoutMercId,
+      Se.Set Beam.pvFile pvFile,
+      Se.Set Beam.pvFileDate pvFileDate,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatus ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.PgSettlementBatch.SettlementBatchStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch -> m ())
+updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch -> m (Maybe Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch))
@@ -54,6 +95,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch
       Se.Set Beam.chargebackReversalAmount chargebackReversalAmount,
       Se.Set Beam.charges charges,
       Se.Set Beam.currency currency,
+      Se.Set Beam.ingestionStatus ingestionStatus,
       Se.Set Beam.mercId mercId,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
@@ -89,6 +131,7 @@ instance FromTType' Beam.PgSettlementBatch Lib.Finance.Domain.Types.PgSettlement
             createdAt = createdAt,
             currency = currency,
             id = Kernel.Types.Id.Id id,
+            ingestionStatus = ingestionStatus,
             mercId = mercId,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
@@ -121,6 +164,7 @@ instance ToTType' Beam.PgSettlementBatch Lib.Finance.Domain.Types.PgSettlementBa
         Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.ingestionStatus = ingestionStatus,
         Beam.mercId = mercId,
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,

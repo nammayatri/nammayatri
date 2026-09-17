@@ -8,36 +8,38 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.PgSettlementBatch
 import Tools.Beam.UtilsTH
 
 data PgSettlementBatchT f = PgSettlementBatchT
-  { adjustmentAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    chargebackAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    chargebackReversalAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    charges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    id :: B.C f Kernel.Prelude.Text,
-    mercId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    objectId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    otherAdjustments :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    paymentGateway :: B.C f Kernel.Prelude.Text,
-    payoutAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    payoutMercId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    pvFile :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    pvFileDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    pvNumber :: B.C f Kernel.Prelude.Text,
-    refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    refundReversalAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    settlementAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    settlementDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    status :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    taxes :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    utr :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    utrDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
+  { adjustmentAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    chargebackAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    chargebackReversalAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    charges :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
+    id :: (B.C f Kernel.Prelude.Text),
+    ingestionStatus :: (B.C f Lib.Finance.Domain.Types.PgSettlementBatch.IngestionStatus),
+    mercId :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    objectId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    otherAdjustments :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    paymentGateway :: (B.C f Kernel.Prelude.Text),
+    payoutAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    payoutMercId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    pvFile :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    pvFileDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    pvNumber :: (B.C f Kernel.Prelude.Text),
+    refundAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    refundReversalAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    settlementAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    settlementDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    status :: (B.C f Lib.Finance.Domain.Types.PgSettlementBatch.SettlementBatchStatus),
+    taxes :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    utr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    utrDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
   }
   deriving (Generic, B.Beamable)
 
@@ -47,6 +49,6 @@ instance B.Table PgSettlementBatchT where
 
 type PgSettlementBatch = PgSettlementBatchT Identity
 
-$(enableKVPG ''PgSettlementBatchT ['id] [['pvNumber], ['utr]])
+$(enableKVPG (''PgSettlementBatchT) [('id)] [[('pvNumber)], [('utr)]])
 
-$(mkTableInstancesGenericSchema ''PgSettlementBatchT "pg_settlement_batch")
+$(mkTableInstancesGenericSchema (''PgSettlementBatchT) "pg_settlement_batch")

@@ -82,6 +82,7 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         chargebackId = chargebackId,
         chargebackReasonCode = chargebackReasonCode,
         chargebackStatus = chargebackStatus,
+        chargebackDate = report.chargebackDate,
         disputeId = report.disputeId,
         disputeType = mapDisputeType <$> report.disputeType,
         orderType = orderType,

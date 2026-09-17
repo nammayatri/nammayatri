@@ -12,21 +12,25 @@ import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult,
 import Kernel.External.Settlement.Types (JuspayOrderStatusConfig, SettlementServiceConfig (..), SettlementSourceConfig (..))
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Utils.Common (getCurrentTime, logInfo)
+import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common (logInfo)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Servant.Client (HasRequestId)
+import qualified Lib.Finance.Domain.Types.PgSettlementBatch as PSB
 import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileStatus (..))
 import Lib.Finance.Settlement.Fetch (SftpFetchMeta (..), fetchSettlementCsv)
 import Lib.Finance.Settlement.Helpers (dayLevelDedupKey)
 import Lib.Finance.Settlement.Sources.BillDeskApi (fetchBillDeskSettlementData)
+import Lib.Finance.Settlement.Store (IngestionResult (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Queries.PgSettlementBatch as QPgSB
 import qualified Lib.Finance.Storage.Queries.SettlementFileInfo as QSFI
 
 data FetchResult m = FetchResult
   { parseResult :: ParsePaymentSettlementResult,
     bankCode :: Maybe Text,
     dedupKey :: Maybe Text,
-    finalize :: Bool -> m ()
+    finalize :: IngestionResult -> m ()
   }
 
 resolveAndFetch ::
@@ -42,38 +46,43 @@ resolveAndFetch ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
   m (Either Text (FetchResult m))
-resolveAndFetch cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime =
+resolveAndFetch cfg mbJuspayCfg merchantId mocId startTime endTime =
   case cfg.sourceConfig of
     BillDeskApiSourceConfig apiCfg ->
-      fetchViaApi "BillDeskApi" cfg.bankCode $
-        fetchBillDeskSettlementData apiCfg merchantId mocId mbStartTime mbEndTime
+      fetchViaApi
+        "BillDeskApi"
+        cfg.bankCode
+        endTime
+        (fetchBillDeskSettlementData apiCfg merchantId mocId startTime endTime)
+        (\batchIds result -> when (null result.storeErrors) $ markBatchesCompleted batchIds)
     _csvSource ->
-      fetchViaCsv cfg mbJuspayCfg merchantId mocId
+      fetchViaCsv cfg mbJuspayCfg merchantId mocId startTime endTime
 
 fetchViaApi ::
   (BeamFlow.BeamFlow m r, MonadIO m) =>
   Text ->
   Maybe Text ->
-  m ParsePaymentSettlementResult ->
+  UTCTime ->
+  m (ParsePaymentSettlementResult, a) ->
+  (a -> IngestionResult -> m ()) ->
   m (Either Text (FetchResult m))
-fetchViaApi prefix bankCode fetchAction = do
-  now <- getCurrentTime
-  let key = dayLevelDedupKey prefix now
+fetchViaApi prefix bankCode dedupTime fetchAction mkFinalize = do
+  let key = dayLevelDedupKey prefix dedupTime
   logInfo $ "API strategy: fetching with dedupKey=" <> key
   apiResult <- try @_ @SomeException fetchAction
   case apiResult of
     Left err -> pure $ Left $ "API fetch failed: " <> show err
-    Right parseResult ->
+    Right (parseResult, metadata) ->
       pure $
         Right
           FetchResult
             { parseResult = parseResult,
               bankCode = bankCode,
               dedupKey = Just key,
-              finalize = \_ -> pure ()
+              finalize = mkFinalize metadata
             }
 
 fetchViaCsv ::
@@ -89,9 +98,11 @@ fetchViaCsv ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
+  UTCTime ->
+  UTCTime ->
   m (Either Text (FetchResult m))
-fetchViaCsv cfg mbJuspayCfg merchantId mocId = do
-  csvResult <- fetchSettlementCsv cfg merchantId mocId
+fetchViaCsv cfg mbJuspayCfg merchantId mocId startTime endTime = do
+  csvResult <- fetchSettlementCsv cfg merchantId mocId (Just startTime) (Just endTime)
   case csvResult of
     Left err -> pure $ Left err
     Right (csvBytes, mbSftpMeta, mbSplitCustomerTy) -> do
@@ -113,8 +124,17 @@ fetchViaCsv cfg mbJuspayCfg merchantId mocId = do
             { parseResult = parseResult,
               bankCode = cfg.bankCode,
               dedupKey = Nothing,
-              finalize = \hadNoReports -> finalizeCsvTracking mbSftpMeta hadNoReports
+              finalize = \result -> finalizeCsvTracking mbSftpMeta (result.totalParsed == 0)
             }
+
+markBatchesCompleted ::
+  (BeamFlow.BeamFlow m r) =>
+  [Id PSB.PgSettlementBatch] ->
+  m ()
+markBatchesCompleted batchIds =
+  forM_ batchIds $ \bId -> do
+    QPgSB.updateIngestionStatus PSB.INGESTED bId
+    logInfo $ "Marked batch as INGESTED: " <> bId.getId
 
 finalizeCsvTracking ::
   (BeamFlow.BeamFlow m r) =>

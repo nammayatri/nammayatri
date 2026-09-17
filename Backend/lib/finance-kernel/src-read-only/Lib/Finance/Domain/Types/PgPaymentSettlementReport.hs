@@ -17,6 +17,7 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
     cardNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cardType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    chargebackDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     chargebackId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

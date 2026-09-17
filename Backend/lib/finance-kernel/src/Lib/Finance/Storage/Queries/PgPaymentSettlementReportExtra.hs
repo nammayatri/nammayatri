@@ -146,6 +146,35 @@ findByOrderIdAndTxnType orderId txnType =
         ]
     ]
 
+findByTxnIdUtrRefundIdDisputeId ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  m (Maybe Domain.PgPaymentSettlementReport)
+findByTxnIdUtrRefundIdDisputeId txnId utr refundId disputeId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.txnId $ Se.Eq (Just txnId),
+          Se.Is Beam.utr $ Se.Eq (Just utr),
+          Se.Is Beam.refundId $ Se.Eq refundId,
+          Se.Is Beam.disputeId $ Se.Eq disputeId
+        ]
+    ]
+
+findOrderByTxnId ::
+  (BeamFlow m r) =>
+  Text ->
+  m (Maybe Domain.PgPaymentSettlementReport)
+findOrderByTxnId txnId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.txnId $ Se.Eq (Just txnId),
+          Se.Is Beam.txnType $ Se.Eq Domain.ORDER
+        ]
+    ]
+
 findByMerchantIdAndDateRange ::
   (BeamFlow m r) =>
   Text ->

@@ -41,15 +41,15 @@ runSettlementPipeline ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
   (Text -> m (Maybe OrderType, Maybe Bool, Maybe Text)) ->
   m PipelineResult
-runSettlementPipeline cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime resolveOrderType = do
+runSettlementPipeline cfg mbJuspayCfg merchantId mocId startTime endTime resolveOrderType = do
   let pgName = settlementServiceToPaymentGatewayName cfg.settlementService
   logInfo $ "Settlement pipeline: service=" <> pgName <> " merchant=" <> merchantId
 
-  fetchResult <- resolveAndFetch cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime
+  fetchResult <- resolveAndFetch cfg mbJuspayCfg merchantId mocId startTime endTime
   case fetchResult of
     Left err -> do
       logWarning $ "Settlement pipeline fetch failed: " <> err
@@ -77,26 +77,26 @@ runSettlementPipeline cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime res
                       <> show (fr.parseResult.totalRows)
                       <> ", failedRows="
                       <> show (fr.parseResult.failedRows)
-                  fr.finalize True
+                  let result =
+                        IngestionResult
+                          { totalParsed = fr.parseResult.totalRows,
+                            totalStored = 0,
+                            totalDuplicates = 0,
+                            totalFailed = fr.parseResult.failedRows,
+                            parseErrors = fr.parseResult.errors,
+                            storeErrors = []
+                          }
+                  fr.finalize result
                   finalizeTracker mbTrackerId
-                  pure $
-                    PipelineSuccess
-                      IngestionResult
-                        { totalParsed = fr.parseResult.totalRows,
-                          totalStored = 0,
-                          totalDuplicates = 0,
-                          totalFailed = max 1 (fr.parseResult.failedRows + length fr.parseResult.errors),
-                          parseErrors = fr.parseResult.errors,
-                          storeErrors = []
-                        }
+                  pure $ PipelineSuccess result
                 else do
                   logInfo "No reports to ingest"
-                  fr.finalize True
+                  fr.finalize emptyIngestionResult
                   finalizeTracker mbTrackerId
                   pure $ PipelineSuccess emptyIngestionResult
             else do
               result <- storeParseResult merchantId mocId fr.bankCode resolveOrderType fr.parseResult
-              fr.finalize (null reps)
+              fr.finalize result
               finalizeTracker mbTrackerId
               logInfo $ "Settlement pipeline complete: " <> show result
               pure $ PipelineSuccess result
