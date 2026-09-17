@@ -56,3 +56,9 @@ ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN updated_by_id text
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN utr text ;
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN vendor_id text ;
 ALTER TABLE atlas_app.pg_payment_settlement_report ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pg_payment_settlement_report ADD COLUMN chargeback_date timestamp with time zone ;

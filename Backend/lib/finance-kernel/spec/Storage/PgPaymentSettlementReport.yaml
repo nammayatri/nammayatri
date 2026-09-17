@@ -117,6 +117,7 @@ PgPaymentSettlementReport:
     chargebackReasonCode: Maybe Text               # Reason for chargeback
     chargebackStatus: Maybe Text                   # Chargeback status
     chargebackAmount: Maybe HighPrecMoney
+    chargebackDate: Maybe UTCTime
 
 
     # --- Dispute fields ---

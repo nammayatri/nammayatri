@@ -7,6 +7,7 @@ ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN charges double
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN currency text ;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN ingestion_status text NOT NULL default 'INGESTION_PENDING';
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN merc_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN merchant_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN merchant_operating_city_id text NOT NULL;
@@ -22,7 +23,7 @@ ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN refund_amount 
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN refund_reversal_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN settlement_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN settlement_date timestamp with time zone ;
-ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN status text ;
+ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN status text NOT NULL default 'PENDING';
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN taxes double precision ;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.pg_settlement_batch ADD COLUMN utr text ;

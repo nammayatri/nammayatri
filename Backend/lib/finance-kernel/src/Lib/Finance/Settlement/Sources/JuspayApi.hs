@@ -63,10 +63,15 @@ fetchSettlementFile ::
   Text ->
   Text ->
   JuspayApiConfig ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m (Either Text (LBS.ByteString, Maybe SftpFetchMeta))
-fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config = do
+fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName config mbStartTime mbEndTime = do
   now <- getCurrentTime
-  let (startUtc, endUtc) = yesterdayIstUtcBounds now
+  let fallbackTime = yesterdayIstUtcBounds now
+      (startUtc, endUtc) = case (mbStartTime, mbEndTime) of
+        (Just s, Just e) -> (s, e)
+        _ -> fallbackTime
       dayLabel = formatTime defaultTimeLocale "%Y-%m-%d" startUtc
       trackerFileName = T.pack $ "juspay_portal_" <> dayLabel <> ".csv"
   mbExisting <-

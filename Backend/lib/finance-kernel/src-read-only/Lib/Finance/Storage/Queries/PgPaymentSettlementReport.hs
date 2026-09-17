@@ -41,6 +41,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPayment
       Se.Set Beam.cardNumber cardNumber,
       Se.Set Beam.cardType cardType,
       Se.Set Beam.chargebackAmount chargebackAmount,
+      Se.Set Beam.chargebackDate chargebackDate,
       Se.Set Beam.chargebackId chargebackId,
       Se.Set Beam.chargebackReasonCode chargebackReasonCode,
       Se.Set Beam.chargebackStatus chargebackStatus,

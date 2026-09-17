@@ -17,6 +17,7 @@ data PgSettlementBatch = PgSettlementBatch
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.PgSettlementBatch.PgSettlementBatch,
+    ingestionStatus :: Lib.Finance.Domain.Types.PgSettlementBatch.IngestionStatus,
     mercId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
@@ -32,10 +33,18 @@ data PgSettlementBatch = PgSettlementBatch
     refundReversalAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     settlementAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     settlementDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Lib.Finance.Domain.Types.PgSettlementBatch.SettlementBatchStatus,
     taxes :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
     utr :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     utrDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic)
+
+data IngestionStatus = INGESTION_PENDING | INGESTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SettlementBatchStatus = PENDING | PROCESSED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''IngestionStatus))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementBatchStatus))

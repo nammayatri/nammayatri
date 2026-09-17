@@ -19,6 +19,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     cardNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cardType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargebackAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    chargebackDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     chargebackId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargebackReasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargebackStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
