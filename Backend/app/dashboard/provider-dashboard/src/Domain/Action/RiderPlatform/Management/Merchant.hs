@@ -45,6 +45,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     getMerchantMerchantMessageCatalog,
     postMerchantMerchantMessageUpsert,
     deleteMerchantMerchantMessage,
+    postMerchantCloudUpdate,
   )
 where
 
@@ -383,3 +384,9 @@ postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageUpsert) req
+
+postMerchantCloudUpdate :: ShortId Merchant -> City.City -> ApiTokenInfo -> Common.MerchantCloudUpdateReq -> Environment.Flow Common.MerchantCloudUpdateRes
+postMerchantCloudUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantCloudUpdate) req)

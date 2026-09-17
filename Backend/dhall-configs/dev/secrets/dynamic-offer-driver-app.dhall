@@ -23,6 +23,7 @@ in  { dbUserId = "atlas_driver_offer_bpp_user"
     , encHashSalt =
         "How wonderful it is that nobody need wait a single moment before starting to improve the world"
     , dashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"
+    , cloudSwitchPassword = Some "test-cloud-switch-password"
     , clickHouseUsername = "default"
     , clickHousePassword = ""
     , locDBUserId = "atlas_person_location_user"
