@@ -10,9 +10,8 @@ import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult,
 import Kernel.External.Settlement.Types (BillDeskApiConfig)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
-import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo, logWarning)
+import Kernel.Utils.Common (generateGUID, getCurrentTime, logInfo, logWarning)
 import Kernel.Utils.Servant.Client (HasRequestId)
 import qualified Lib.Finance.Domain.Types.PgSettlementBatch as PSB
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
@@ -30,12 +29,10 @@ fetchBillDeskSettlementData ::
   BillDeskApiConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
   m ParsePaymentSettlementResult
-fetchBillDeskSettlementData apiCfg merchantId mocId mbStartTime mbEndTime = do
-  startTime <- mbStartTime & fromMaybeM (InternalError "Settlement ingestion requires startTime")
-  endTime <- mbEndTime & fromMaybeM (InternalError "Settlement ingestion requires endTime")
+fetchBillDeskSettlementData apiCfg merchantId mocId startTime endTime = do
   logInfo $ "BillDesk API: fetching settlements fromDate=" <> show startTime <> " toDate=" <> show endTime
   settlements <- getSettlements apiCfg (Just startTime) (Just endTime) Nothing
   logInfo $ "BillDesk API: found " <> show (length settlements) <> " settlement(s)"

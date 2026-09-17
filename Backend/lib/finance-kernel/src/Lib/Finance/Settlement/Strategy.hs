@@ -42,16 +42,16 @@ resolveAndFetch ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
   m (Either Text (FetchResult m))
-resolveAndFetch cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime =
+resolveAndFetch cfg mbJuspayCfg merchantId mocId startTime endTime =
   case cfg.sourceConfig of
     BillDeskApiSourceConfig apiCfg ->
       fetchViaApi "BillDeskApi" cfg.bankCode $
-        fetchBillDeskSettlementData apiCfg merchantId mocId mbStartTime mbEndTime
+        fetchBillDeskSettlementData apiCfg merchantId mocId startTime endTime
     _csvSource ->
-      fetchViaCsv cfg mbJuspayCfg merchantId mocId
+      fetchViaCsv cfg mbJuspayCfg merchantId mocId startTime endTime
 
 fetchViaApi ::
   (BeamFlow.BeamFlow m r, MonadIO m) =>
@@ -89,9 +89,11 @@ fetchViaCsv ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
+  UTCTime ->
+  UTCTime ->
   m (Either Text (FetchResult m))
-fetchViaCsv cfg mbJuspayCfg merchantId mocId = do
-  csvResult <- fetchSettlementCsv cfg merchantId mocId
+fetchViaCsv cfg mbJuspayCfg merchantId mocId startTime endTime = do
+  csvResult <- fetchSettlementCsv cfg merchantId mocId (Just startTime) (Just endTime)
   case csvResult of
     Left err -> pure $ Left err
     Right (csvBytes, mbSftpMeta, mbSplitCustomerTy) -> do

@@ -17,7 +17,7 @@ INSERT INTO atlas_driver_offer_bpp.scheduler_job (
 )
 SELECT
     t.job_id,
-    'SettlementReportIngestion',
+    'PgSettlementIngestion',
     json_build_object(
         'merchantId', t.merchant_id,
         'merchantOperatingCityId', t.moc_id,

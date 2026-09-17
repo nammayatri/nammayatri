@@ -41,15 +41,15 @@ runSettlementPipeline ::
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
+  UTCTime ->
+  UTCTime ->
   (Text -> m (Maybe OrderType, Maybe Bool, Maybe Text)) ->
   m PipelineResult
-runSettlementPipeline cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime resolveOrderType = do
+runSettlementPipeline cfg mbJuspayCfg merchantId mocId startTime endTime resolveOrderType = do
   let pgName = settlementServiceToPaymentGatewayName cfg.settlementService
   logInfo $ "Settlement pipeline: service=" <> pgName <> " merchant=" <> merchantId
 
-  fetchResult <- resolveAndFetch cfg mbJuspayCfg merchantId mocId mbStartTime mbEndTime
+  fetchResult <- resolveAndFetch cfg mbJuspayCfg merchantId mocId startTime endTime
   case fetchResult of
     Left err -> do
       logWarning $ "Settlement pipeline fetch failed: " <> err
