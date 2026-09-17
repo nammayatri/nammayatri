@@ -10,6 +10,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Data.Text as T
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -75,13 +76,13 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
             Just $
               Common.InvoiceRes
                 { date = booking.createdAt,
-                  destination = maybe notAvailableText (\dest -> fromMaybe notAvailableText dest.ward) mbDestination,
+                  destination = maybe notAvailableText buildAddress mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
                   faresList = catMaybes fareBreakups <> gateFeeBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
-                  source = maybe notAvailableText (\src -> fromMaybe notAvailableText src.ward) mbSource,
+                  source = maybe notAvailableText buildAddress mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
@@ -105,4 +106,10 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
           | breakup <- breakups,
             Just title <- [Enums.gateFeeBreakupItemName breakup.description]
         ]
+    buildAddress loc =
+      case loc.ward of
+        Just w -> w
+        Nothing ->
+          let parts = catMaybes [loc.area, loc.street, loc.building, loc.city]
+           in if Kernel.Prelude.null parts then notAvailableText else T.intercalate ", " parts
     notAvailableText = "N/A"
