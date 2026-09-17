@@ -142,3 +142,32 @@ findAllConfirmedByWaybillNo waybillNo = do
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
         ]
     ]
+
+-- Moves a booking to CONFIRMING only while it is still pre-confirm, and reports whether THIS
+-- caller moved it. validTill goes in the same statement: updateOneWithKV gives no affected-row
+-- count, so matching our own validTill on the read-back is what distinguishes winning from
+-- reading the winner's row.
+claimStatusForConfirm ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Id FRFSTicketBooking ->
+  m Bool
+claimStatusForConfirm validTill id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.status DFRFSTicketBookingStatus.CONFIRMING,
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.updatedAt _now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id.getId,
+          Se.Is Beam.status $
+            Se.In
+              [ DFRFSTicketBookingStatus.NEW,
+                DFRFSTicketBookingStatus.PAYMENT_PENDING,
+                DFRFSTicketBookingStatus.APPROVED
+              ]
+        ]
+    ]
+  mbBooking <- findOneWithKV [Se.Is Beam.id $ Se.Eq id.getId]
+  pure $ maybe False (\b -> b.status == DFRFSTicketBookingStatus.CONFIRMING && b.validTill == validTill) mbBooking

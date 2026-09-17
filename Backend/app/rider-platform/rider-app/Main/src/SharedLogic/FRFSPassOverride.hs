@@ -685,10 +685,24 @@ migrateTripDebitMarker fromSearchId toSearchId = do
   if not debited
     then logInfo $ "FRFSPassOverride:migrateTripDebitMarker no debit on searchId=" <> fromSearchId.getId <> ", nothing to migrate"
     else do
-      void $ claimTripMarker "TripConsumed" passMarkerTtl toSearchId
-      clearTripMarker "TripReleased" toSearchId
-      clearTripMarker "TripConsumed" fromSearchId
-      logInfo $ "FRFSPassOverride:migrateTripDebitMarker moved the trip debit searchId=" <> fromSearchId.getId <> " -> " <> toSearchId.getId
+      -- setNx on the source, so exactly one of {refund, migration} owns the debit. A lock would
+      -- also do it, but every refund path is on the confirm path.
+      wonSource <- claimTripMarker "TripReleased" migrationSourceClaimTtl fromSearchId
+      if not wonSource
+        then logInfo $ "FRFSPassOverride:migrateTripDebitMarker a refund already owns searchId=" <> fromSearchId.getId <> ", nothing to migrate"
+        else do
+          claimed <- claimTripMarker "TripConsumed" passMarkerTtl toSearchId
+          -- False here means a replay, not a failure -- only "nobody holds it" is a failed move.
+          destinationHolds <- if claimed then pure True else hasUnreleasedDebit toSearchId
+          if not destinationHolds
+            then do
+              -- Nothing moved: hand the source back rather than stranding the rider's trip.
+              clearTripMarker "TripReleased" fromSearchId
+              logError $ "FRFSPassOverride:migrateTripDebitMarker destination did not take the debit, keeping source searchId=" <> fromSearchId.getId
+            else do
+              clearTripMarker "TripReleased" toSearchId
+              clearTripMarker "TripConsumed" fromSearchId
+              logInfo $ "FRFSPassOverride:migrateTripDebitMarker moved the trip debit searchId=" <> fromSearchId.getId <> " -> " <> toSearchId.getId
 
 hasPendingTripRefund :: (MonadFlow m, Redis.HedisFlow m r) => Id DFRFSSearch.FRFSSearch -> m Bool
 hasPendingTripRefund searchId = do
@@ -706,6 +720,12 @@ hasPendingTripRefund searchId = do
 -- operation that should be allowed.
 passMarkerTtl :: Int
 passMarkerTtl = 86400
+
+-- An exclusion token, not a record: short so that a migration dying midway self-heals instead of
+-- blocking every later attempt. Lapsing after a successful migration is free -- the refund path
+-- gates on TripConsumed, which the migration clears.
+migrationSourceClaimTtl :: Int
+migrationSourceClaimTtl = 120
 
 consumeTripOnce :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ConsumeResult
 consumeTripOnce searchId payment benefit quantity = do

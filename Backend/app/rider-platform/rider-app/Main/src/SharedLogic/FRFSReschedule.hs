@@ -558,7 +558,9 @@ completeReschedule oldBookingId stagingBookingId = do
       _ -> pure ()
     -- Commit marker (MUST stay last): finalize the old booking + its tickets only after the payment/recon
     -- migration and seat release above have all succeeded. The guard at the top keys on this RESCHEDULED
-    -- status, so a retry after any partial failure re-runs every idempotent step above and lands here once.
+    -- status, so every step above is safe to re-run and this lands once. Note nothing actually
+    -- retries completeReschedule: its caller logs "manual cleanup needed" and moves on, so a
+    -- partial failure stays partial. Those logError lines are the alert.
     void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.RESCHEDULED oldBookingId
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBookingStatus.RESCHEDULED oldBookingId
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
