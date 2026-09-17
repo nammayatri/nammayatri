@@ -120,6 +120,15 @@ updateStatus personId rbId rbStatus = do
         -- TODO :: Handle other status race conditions if observed
         _ -> Nothing
 
+updateRequiresPaymentBeforeConfirm :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Bool -> m ()
+updateRequiresPaymentBeforeConfirm rbId flag = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.requiresPaymentBeforeConfirm (Just flag),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 updateBPPBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime

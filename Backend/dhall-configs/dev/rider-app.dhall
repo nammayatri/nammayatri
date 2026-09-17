@@ -307,6 +307,7 @@ let RiderJobType =
       | PassExpiryReminderMaster
       | SettlementReportIngestion
       | ReconcileRewardInflight
+      | BookingDepositExpiry
       | SilentReallocationExpiry
       >
 
@@ -357,6 +358,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
+      , { mapKey = RiderJobType.BookingDepositExpiry, mapValue = True }
       , { mapKey = RiderJobType.SilentReallocationExpiry, mapValue = True }
       ]
 
