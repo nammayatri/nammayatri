@@ -5,6 +5,7 @@ imports:
   MerchantOperatingCity: Lib.Types.SpecialLocation
   Map: Data.Map.Strict
   PriceAPIEntity: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
 
 GateInfo:
   tableName: gate_info
@@ -47,6 +48,7 @@ GateInfo:
     entryFeeAmount: Maybe Double
     entryFeeDisabledServiceTiers: Maybe [Text]
     feeItems: Maybe [GateFeeItem]
+    minBalanceRequired: Maybe HighPrecMoney
     minDriverThresholds: Maybe (Map Text Int)
     maxDriverThresholds: Maybe (Map Text Int)
     demandThresholds: Maybe (Map Text Int)

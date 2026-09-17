@@ -77,6 +77,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoGateTags :: Text,
     gateInfoWalkDescription :: Text,
     gateInfoEntryFeeAmount :: Maybe Text,
+    gateInfoMinBalanceRequired :: Maybe Text,
     priority :: Text,
     pickupPriority :: Text,
     dropPriority :: Text,
@@ -129,6 +130,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     gateInfoGateTags <- r .: "gate_info_tags"
     gateInfoWalkDescription <- r .: "gate_info_walk_description"
     gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
+    gateInfoMinBalanceRequired <- optional (r .: "gate_info_min_balance_required")
     priority <- r .: "priority"
     pickupPriority <- r .: "pickup_priority"
     dropPriority <- r .: "drop_priority"
@@ -384,6 +386,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             walkDescription = gateInfoWalkDescription,
             entryFeeAmount = gateInfoEntryFeeAmount,
             feeItems = resolvedGateFeeItems,
+            minBalanceRequired = row.gateInfoMinBalanceRequired >>= \v -> readMaybeCSVField idx v "Gate Info (min_balance_required)",
             minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
             maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
             demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
@@ -515,6 +518,7 @@ mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
 mergeGateInfoWithExisting new Nothing = new
 mergeGateInfoWithExisting new (Just old) =
   new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+      DGI.minBalanceRequired = new.minBalanceRequired <|> old.minBalanceRequired,
       DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
       DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
       DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,

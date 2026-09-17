@@ -8,6 +8,7 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Lib.Types.GateInfo
 
 data GateInfoT f = GateInfoT
@@ -32,6 +33,7 @@ data GateInfoT f = GateInfoT
     maxRideSkipsBeforeQueueRemoval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    minBalanceRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     minDriverThresholdsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     name :: B.C f Kernel.Prelude.Text,
     navigationInstructionsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

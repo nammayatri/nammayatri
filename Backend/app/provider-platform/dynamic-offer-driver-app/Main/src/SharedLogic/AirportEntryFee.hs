@@ -75,6 +75,13 @@ requiredEntryFeeForBooking enabled mbGateId mbServiceTier mbFareSettlementType
     fee <- maybe (pure 0) (\gateId -> FareCalculator.entryFeeForGateId (Id gateId) mbServiceTier) mbGateId
     pure $ if fee > 0 then Just fee else Nothing
 
+findGate ::
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  m (Maybe DGI.GateInfo)
+findGate Nothing = pure Nothing
+findGate (Just gateIdText) = QGI.findById (Id gateIdText)
+
 -- | DriverFeeItem entries configured on a gate, skipping entries whose currency does
 --   not match the ride's currency and entries with a non-positive amount. Independent
 --   of airportEntryFeeEnabled and of the booth EDC settlement type.
@@ -83,23 +90,25 @@ driverGateFeeItemsForGate ::
   Maybe Text ->
   Maybe Currency ->
   m [DGI.GateFeeItem]
-driverGateFeeItemsForGate Nothing _ = pure []
-driverGateFeeItemsForGate (Just gateIdText) mbCurrency = do
-  mbGate <- QGI.findById (Id gateIdText)
-  let configuredItems = fromMaybe [] (mbGate >>= (.feeItems))
-      matchesCurrency item = maybe True (item.amountWithCurrency.currency ==) mbCurrency
-  pure $ filter (\item -> item.collectionType == DGI.DriverFeeItem && item.amountWithCurrency.amount > 0 && matchesCurrency item) configuredItems
+driverGateFeeItemsForGate mbGateId mbCurrency = (`driverFeeItemsOfGate` mbCurrency) <$> findGate mbGateId
 
-driverGateFeeItemsTotal ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe Text ->
-  Maybe Currency ->
-  m HighPrecMoney
-driverGateFeeItemsTotal mbGateId mbCurrency =
-  sum . map (.amountWithCurrency.amount) <$> driverGateFeeItemsForGate mbGateId mbCurrency
+-- | Pure projection behind 'driverGateFeeItemsForGate', so a caller that already holds the
+--   gate does not fetch it a second time.
+driverFeeItemsOfGate :: Maybe DGI.GateInfo -> Maybe Currency -> [DGI.GateFeeItem]
+driverFeeItemsOfGate mbGate mbCurrency =
+  filter (\item -> item.collectionType == DGI.DriverFeeItem && item.amountWithCurrency.amount > 0 && matchesCurrency item) configuredItems
+  where
+    configuredItems = fromMaybe [] (mbGate >>= (.feeItems))
+    matchesCurrency item = maybe True (item.amountWithCurrency.currency ==) mbCurrency
 
--- | Total amount the driver's wallet must cover before the ride: the airport entry
---   fee (when enabled and not EDC-collected) plus every gate DriverFeeItem.
+-- | Total amount the driver's wallet must cover before the ride.
+--   A gate pins this directly with @minBalanceRequired@, which is a policy floor rather than
+--   a price: set it above what the ride actually costs and the wallet still clears the check
+--   for the driver's next airport ride after the EndRide deduction. When the gate leaves it
+--   unset (or non-positive) we fall back to what the ride will actually debit -- the airport
+--   entry fee (when enabled and not EDC-collected) plus every gate DriverFeeItem.
+--   This only sets the bar for the pre-ride check; the amount debited at EndRide is untouched
+--   and always the real fee, so the override never charges the driver more.
 requiredDriverWalletAmountForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Bool ->
@@ -109,10 +118,16 @@ requiredDriverWalletAmountForBooking ::
   Maybe Currency ->
   m (Maybe HighPrecMoney)
 requiredDriverWalletAmountForBooking enabled mbGateId mbServiceTier mbFareSettlementType mbCurrency = do
-  entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking enabled mbGateId mbServiceTier mbFareSettlementType
-  gateFeeItemsTotal <- driverGateFeeItemsTotal mbGateId mbCurrency
-  let total = entryFee + gateFeeItemsTotal
-  pure $ if total > 0 then Just total else Nothing
+  mbGate <- findGate mbGateId
+  case mbGate >>= (.minBalanceRequired) of
+    Just minBalance | minBalance > 0 -> do
+      logInfo $ "requiredDriverWalletAmountForBooking: using gate minBalanceRequired " <> show minBalance <> " for gate " <> show mbGateId
+      pure $ Just minBalance
+    _ -> do
+      entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking enabled mbGateId mbServiceTier mbFareSettlementType
+      let gateFeeItemsTotal = sum $ map (.amountWithCurrency.amount) (driverFeeItemsOfGate mbGate mbCurrency)
+          total = entryFee + gateFeeItemsTotal
+      pure $ if total > 0 then Just total else Nothing
 
 isAirportPickupArea ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>

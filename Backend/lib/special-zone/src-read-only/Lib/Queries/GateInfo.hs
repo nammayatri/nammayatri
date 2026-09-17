@@ -56,6 +56,7 @@ updateByPrimaryKey (Lib.Types.GateInfo.GateInfo {..}) = do
       Se.Set Beam.maxRideSkipsBeforeQueueRemoval maxRideSkipsBeforeQueueRemoval,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.minBalanceRequired minBalanceRequired,
       Se.Set Beam.minDriverThresholdsJson (Lib.Queries.Transformers.GateInfo.encodeThresholdMap minDriverThresholds),
       Se.Set Beam.name name,
       Se.Set Beam.navigationInstructionsJson (Lib.Queries.Transformers.GateInfo.encodeTextMap navigationInstructions),

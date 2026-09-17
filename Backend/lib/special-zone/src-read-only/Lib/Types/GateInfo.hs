@@ -35,6 +35,7 @@ data GateInfo = GateInfo
     maxRideSkipsBeforeQueueRemoval :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.MerchantOperatingCity),
+    minBalanceRequired :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minDriverThresholds :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Int),
     name :: Kernel.Prelude.Text,
     navigationInstructions :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Text),

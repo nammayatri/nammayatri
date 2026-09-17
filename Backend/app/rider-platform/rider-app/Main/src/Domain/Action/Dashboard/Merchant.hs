@@ -486,6 +486,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             merchantOperatingCityId = specialLocation.merchantOperatingCityId,
             entryFeeAmount = mbGate >>= (.entryFeeAmount),
             feeItems = reqT.feeItems <|> (mbGate >>= (.feeItems)),
+            minBalanceRequired = reqT.minBalanceRequired <|> (mbGate >>= (.minBalanceRequired)),
             minDriverThresholds = mbGate >>= (.minDriverThresholds),
             maxDriverThresholds = mbGate >>= (.maxDriverThresholds),
             demandThresholds = mbGate >>= (.demandThresholds),
@@ -1860,6 +1861,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 walkDescription = gateInfoWalkDescription,
                 entryFeeAmount = row.gateInfoEntryFeeAmount >>= \v -> readMaybeCSVField idx v "Gate Info (entry_fee_amount)",
                 feeItems = Nothing,
+                minBalanceRequired = Nothing,
                 minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
                 maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
                 demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
@@ -1944,6 +1946,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeGateInfoWithExisting new (Just old) =
       new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
           DGI.feeItems = new.feeItems <|> old.feeItems,
+          DGI.minBalanceRequired = new.minBalanceRequired <|> old.minBalanceRequired,
           DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
           DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
           DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
