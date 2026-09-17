@@ -13,9 +13,10 @@
 -}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
--- | Actions the dashboard itself owns -- routes that proxy to servers other
--- than the two application servers (special-zone, bharat-taxi). They live here
--- rather than in either app because neither app serves them.
+-- | Actions the dashboard itself owns: routes that proxy to servers other than
+-- the two application servers (special-zone, bharat-taxi), and routes the
+-- dashboard serves from its own tables (dashboard-user administration). They
+-- live here rather than in either app because neither app serves them.
 module Domain.Types.DashboardActionType (module Domain.Types.DashboardActionType, module Reexport) where
 
 import Data.Singletons.TH
@@ -26,11 +27,15 @@ import Kernel.Prelude
 import Tools.Auth.ApiAuth as Reexport (ApiAccessLevel (..), ApiEntity (..), ApiTokenInfo (..), IsUserActionType (..), type (/))
 import qualified Tools.Auth.ApiAuth as Auth
 
+-- Constructor names are the @capability_endpoint.endpoint_id@ keys verbatim, so
+-- renaming one is a data migration.
 data DashboardActionType
   = SPECIAL_ZONE_CREATE
   | SPECIAL_ZONE_DELETE
   | SPECIAL_ZONE_UPDATE
   | SPECIAL_ZONE_LOOKUP
+  | DASHBOARD_USER_BULK_CREATE
+  | DASHBOARD_USER_PT_LIST
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 instance Auth.IsUserActionType DashboardActionType where
