@@ -79,6 +79,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum, incrementDriverRequestCount)
+import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
@@ -319,6 +320,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
             DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
           } ::
           DFP.FullFarePolicy
+  addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
   fareParams <-
     Fare.calculateFareParameters
       Fare.CalculateFareParametersParams
@@ -332,6 +334,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           stopWaitingTimes = [],
           actualRideDuration = Nothing,
           petCharges = tripQuoteDetail.petCharges,
+          addOnCharges = addOnCharges,
           shouldApplyBusinessDiscount = searchTry.billingCategory == SLT.BUSINESS,
           shouldApplyPersonalDiscount = searchTry.billingCategory == SLT.PERSONAL,
           noOfStops = length searchReq.stops,

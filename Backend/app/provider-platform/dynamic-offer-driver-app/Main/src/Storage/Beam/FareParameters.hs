@@ -95,7 +95,8 @@ data FareParametersT f = FareParametersT
     parkingChargeTaxExclusive :: B.C f (Maybe HighPrecMoney),
     parkingChargeTax :: B.C f (Maybe HighPrecMoney),
     fareSettlementType :: B.C f (Maybe SL.FareSettlementType),
-    negotiatedFareDelta :: B.C f (Maybe HighPrecMoney)
+    negotiatedFareDelta :: B.C f (Maybe HighPrecMoney),
+    addOnCharges :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

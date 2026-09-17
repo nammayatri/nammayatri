@@ -347,8 +347,6 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.negativeFareAdjustmentCongestionThreshold negativeFareAdjustmentCongestionThreshold,
       Se.Set Beam.negativeFareAdjustmentMaxAmount negativeFareAdjustmentMaxAmount,
       Se.Set Beam.negativeFareAdjustmentMinDistanceMeters negativeFareAdjustmentMinDistanceMeters,
-      Se.Set Beam.negotiationFareMaxTolerancePct negotiationFareMaxTolerancePct,
-      Se.Set Beam.negotiationFareMinTolerancePct negotiationFareMinTolerancePct,
       Se.Set Beam.nightSafetyEndTime nightSafetyEndTime,
       Se.Set Beam.nightSafetyRouteDeviationThreshold nightSafetyRouteDeviationThreshold,
       Se.Set Beam.nightSafetyStartTime nightSafetyStartTime,

@@ -23,7 +23,8 @@ import Tools.Beam.UtilsTH
 import qualified Tools.Maps
 
 data BookingT f = BookingT
-  { area :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
+  { addOnData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    area :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
     bapCity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
     bapCountry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country),
     bapId :: B.C f Kernel.Prelude.Text,
@@ -76,8 +77,8 @@ data BookingT f = BookingT
     numberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
-    paymentCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    paymentCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    paymentChargeBearer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -128,6 +129,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG (''BookingT) [('id)] [[('quoteId)], [('specialZoneOtpCode)], [('transactionId)]])
+$(enableKVPG ''BookingT ['id] [['quoteId], ['specialZoneOtpCode], ['transactionId]])
 
-$(mkTableInstances (''BookingT) "booking")
+$(mkTableInstances ''BookingT "booking")

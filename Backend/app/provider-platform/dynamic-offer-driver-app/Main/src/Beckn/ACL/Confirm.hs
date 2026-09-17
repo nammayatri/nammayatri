@@ -70,7 +70,8 @@ buildConfirmReqV2 req isValueAddNP = do
       customerDiscountAmount = (Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
   return $
     DConfirm.DConfirmReq
-      { ..
+      { addOns = [],
+        ..
       }
 
 getNightSafetyCheckTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
