@@ -46,6 +46,7 @@ import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthM
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
+import "rider-app" SharedLogic.Scheduler.Jobs.BookingDepositExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.Chakras
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
@@ -145,6 +146,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env dailyPassStatusUpdate
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
+          & putJobHandlerInListWrapper flowRt env bookingDepositExpiryJob
     }
 
 runRiderAppScheduler ::

@@ -30,6 +30,7 @@ data BookingT f = BookingT
   { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
+    bookingDepositAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

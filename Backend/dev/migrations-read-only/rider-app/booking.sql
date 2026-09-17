@@ -581,3 +581,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN payment_charge double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN parent_search_request_location_info jsonb ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN booking_deposit_amount double precision ;
