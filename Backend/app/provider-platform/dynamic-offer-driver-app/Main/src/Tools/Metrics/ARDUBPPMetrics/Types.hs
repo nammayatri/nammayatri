@@ -64,6 +64,8 @@ type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 -- so tries-based ratios must exclude them.
 type RiderAcceptanceCounterMetric = P.Vector P.Label8 P.Counter
 
+type RideValueHistogram = P.Vector P.Label8 P.Histogram
+
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
@@ -77,7 +79,11 @@ data BPPMetricsContainer = BPPMetricsContainer
     rideCreatedCounter :: RideFunnelCounterMetric,
     rideStartedCounter :: RideFunnelCounterMetric,
     rideCompletedCounter :: RideFunnelCounterMetric,
-    rideCancelledCounter :: RideCancelledCounterMetric
+    rideCancelledCounter :: RideCancelledCounterMetric,
+    pricePerKmHist :: RideValueHistogram,
+    congestionChargeHist :: RideValueHistogram,
+    rideDistanceHist :: RideValueHistogram,
+    pickupDistanceHist :: RideValueHistogram
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
@@ -99,6 +105,10 @@ registerBPPMetricsContainer searchDurationTimeout = do
   rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
   rideCompletedCounter <- registerRideFunnelCounter "BPP_ride_completed_count" "Count of rides completed"
   rideCancelledCounter <- registerRideCancelledCounter
+  pricePerKmHist <- registerRideValueHistogram "BPP_price_per_km" "Fare per km (INR/km) by stage: pre_ride = estimated at booking creation (all bookings); completed = realised at ride end (completed rides)" (P.linearBuckets 0 5 40)
+  congestionChargeHist <- registerRideValueHistogram "BPP_congestion_charge" "Congestion charge (INR) by stage: pre_ride = estimated at booking creation; completed = realised at ride end. Observed only when a congestion charge is present" (P.linearBuckets 0 5 40)
+  rideDistanceHist <- registerRideValueHistogram "BPP_ride_distance_meters" "Trip distance (meters) by stage: pre_ride = estimated at booking creation (all bookings); completed = chargeable distance at ride end (completed rides)" (P.exponentialBuckets 500 2 12)
+  pickupDistanceHist <- registerRideValueHistogram "BPP_pickup_distance_meters" "Assigned driver distance to pickup (meters) by stage: pre_ride = at ride assignment (all assigned rides); completed = at ride end (completed rides)" (P.exponentialBuckets 100 2 12)
   return $ BPPMetricsContainer {..}
 
 registerSearchRequestCounter :: IO SearchRequestCounterMetric
@@ -130,6 +140,11 @@ registerRideCancelledCounter :: IO RideCancelledCounterMetric
 registerRideCancelledCounter =
   P.register . P.vector ("merchant", "city", "vehicle_service_tier", "cancellation_source", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info "BPP_ride_cancelled_count" "Count of bookings cancelled, labelled by cancellation source"
+
+registerRideValueHistogram :: Text -> Text -> [Double] -> IO RideValueHistogram
+registerRideValueHistogram name description buckets =
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone", "stage") $
+    P.histogram (P.Info name description) buckets
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =
