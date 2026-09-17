@@ -51,7 +51,7 @@ data RefundRequest = RefundRequest
 data RefundComponentAmount = RefundComponentAmount {amount :: Kernel.Types.Common.HighPrecMoney, component :: Domain.Types.FareBreakup.FareComponent}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data RefundPurpose = RIDE_FARE | CANCELLATION_FEE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data RefundPurpose = RIDE_FARE | CANCELLATION_FEE | BOOKING_DEPOSIT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RefundRequestStatus = OPEN | APPROVED | REJECTED | FAILED | REFUNDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

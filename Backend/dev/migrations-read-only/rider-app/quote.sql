@@ -156,3 +156,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN driver_cancellation_not_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN booking_deposit double precision ;

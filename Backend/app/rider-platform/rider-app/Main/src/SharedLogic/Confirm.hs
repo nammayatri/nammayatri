@@ -53,10 +53,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
@@ -96,7 +98,8 @@ data DConfirmReq = DConfirmReq
     -- | One-shot assignment (internal oneShotAssign API): the BPP booking already
     -- exists, so the booking row is born TRIP_ASSIGNED with the BPP-known fields set —
     -- no NEW -> TRIP_ASSIGNED staircase. Nothing on every Beckn/UI path.
-    mbOneShotDetails :: Maybe OneShotConfirmDetails
+    mbOneShotDetails :: Maybe OneShotConfirmDetails,
+    supportsBookingDeposit :: Maybe Bool
   }
 
 -- | BPP-computed booking fields that legacy receives via init/on_init but one-shot
@@ -133,7 +136,8 @@ data DConfirmRes = DConfirmRes
     insuredAmount :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
     riderGender :: Maybe Text,
-    bookingOfferEntity :: Maybe DOfferEntity.OfferEntity
+    bookingOfferEntity :: Maybe DOfferEntity.OfferEntity,
+    bookingFeePending :: Bool
   }
   deriving (Show, Generic)
 
@@ -178,7 +182,8 @@ confirm ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   DConfirmReq ->
   m DConfirmRes
@@ -212,16 +217,16 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   let driverPreference = extractDriverPreference person.customerNammaTags
-  (booking, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails
+  (booking0, bookingParties) <- buildBooking merchant personId searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails supportsBookingDeposit
   mbBookingOfferEntity <-
-    case booking.selectedOfferId of
+    case booking0.selectedOfferId of
       Just offerId -> do
         let fareCtx = RD.parseProjectFareParamsBreakup $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
             offerBaseAmount = case fareCtx of
               Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-              Nothing -> booking.estimatedTotalFare.amount
-            offerBasePrice = mkPrice (Just booking.estimatedTotalFare.currency) offerBaseAmount
-        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking) (Just searchRequest)
+              Nothing -> booking0.estimatedTotalFare.amount
+            offerBasePrice = mkPrice (Just booking0.estimatedTotalFare.currency) offerBaseAmount
+        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking0) (Just searchRequest)
         case mbOfferDetails of
           Just (offerDetails, computed) -> do
             bookingOfferId <- generateGUID
@@ -229,7 +234,7 @@ confirm DConfirmReq {..} = do
               Just $
                 DOfferEntity.OfferEntity
                   { id = bookingOfferId,
-                    entityId = booking.id.getId,
+                    entityId = booking0.id.getId,
                     entityType = DOfferEntity.BOOKING,
                     offerId = offerDetails.offerId,
                     offerCode = offerDetails.offerCode,
@@ -256,6 +261,24 @@ confirm DConfirmReq {..} = do
       Nothing -> return Nothing
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
+  void $ QRideB.createBooking booking0
+  void $ QBPL.createMany bookingParties
+  needsFeePayment <- case booking0.bookingDepositAmount of
+    Nothing -> pure False
+    Just fee -> do
+      res <- withTryCatch "confirm:reserveBookingDeposit" $ BookingDeposit.reserveBookingDeposit booking0 fee
+      case res of
+        Right BookingDeposit.Reserved -> pure False
+        Right BookingDeposit.Insufficient -> pure True
+        Left err -> do
+          logError $ "Booking fee reserve failed at confirm for " <> booking0.id.getId <> "; treating as pending: " <> show err
+          pure True
+  let booking =
+        booking0
+          { DRB.requiresPaymentBeforeConfirm = booking0.requiresPaymentBeforeConfirm || needsFeePayment
+          }
+  when (needsFeePayment && not booking0.requiresPaymentBeforeConfirm) $
+    QRideB.updateRequiresPaymentBeforeConfirm booking.id True
   when isScheduled $ do
     let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
     let scheduleAfter = diffUTCTime scheduledRideReminderTime now
@@ -277,8 +300,6 @@ confirm DConfirmReq {..} = do
       else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
-  void $ QRideB.createBooking booking
-  void $ QBPL.createMany bookingParties
   whenJust mbBookingOfferEntity $ \bookingOfferEntity -> do
     QOfferEntity.create bookingOfferEntity
   unless isScheduled $
@@ -323,6 +344,7 @@ confirm DConfirmReq {..} = do
         paymentMode = booking.paymentMode,
         riderGender = Just (show person.gender),
         bookingOfferEntity = mbBookingOfferEntity,
+        bookingFeePending = needsFeePayment,
         ..
       }
   where
@@ -422,8 +444,9 @@ buildBooking ::
   Maybe [Text] ->
   -- | One-shot assignment: booking is born TRIP_ASSIGNED with the BPP fields set (single write)
   Maybe OneShotConfirmDetails ->
+  Maybe Bool ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails = do
+buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode dashboardAgentId requiresPaymentBeforeConfirm driverPreference mbOneShotDetails supportsBookingDeposit = do
   id <- generateGUID
   let bookingId = Id id
   displayBookingId <- Just <$> DBI.generateDisplayBookingId merchant.shortId bookingId now
@@ -478,6 +501,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           estimatedFare = quote.estimatedFare,
           discount = quote.discount,
           estimatedTotalFare = quote.estimatedTotalFare,
+          bookingDepositAmount = if supportsBookingDeposit == Just True then mfilter (> 0) quote.bookingDeposit else Nothing,
           estimatedDistance = searchRequest.distance,
           estimatedDuration = searchRequest.estimatedRideDuration,
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,

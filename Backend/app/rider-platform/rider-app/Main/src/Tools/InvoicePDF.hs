@@ -188,7 +188,8 @@ generatePDFFromHTML htmlPath pdfPath = do
 calculateTotalAmount :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalAmount bookings =
   let amounts = mapMaybe getRideComputedPrice bookings
-   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+      fees = mapMaybe (fmap toRational . DBAPI.getBookingApiDeposit) bookings
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts + sum fees)
   where
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
@@ -314,6 +315,16 @@ generateRideCard booking =
       safeDriverName = escapeHtml driverName
       safeVehicleNumber = escapeHtml vehicleNumber
       safeRideId = escapeHtml rideId
+      bookingFeeLine = case DBAPI.getBookingApiDeposit booking of
+        Just fee ->
+          T.concat
+            [ "<div class='ride-header'>",
+              "<span class='ride-fare'>Booking Deposit: ₹",
+              T.pack $ printf "%.0f" (realToFrac fee :: Double),
+              "</span>",
+              "</div>"
+            ]
+        Nothing -> ""
    in T.concat
         [ "<div class='ride-card'>",
           "<div class='ride-header'>",
@@ -321,6 +332,7 @@ generateRideCard booking =
           amount,
           "</span>",
           "</div>",
+          bookingFeeLine,
           -- Pickup location
           "<div class='location-row'>",
           "<span class='dot green-dot'></span>",

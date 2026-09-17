@@ -386,6 +386,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         parcelType = searchRequest.parcelType,
         parcelQuantity = searchRequest.parcelQuantity,
         isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
+        bookingDeposit = (.charge) <$> (find (\cc -> cc.chargeCategory == DTCC.BOOKING_DEPOSIT) . (.conditionalCharges) =<< mbFarePolicy),
         commission = commission,
         cancellationCommission = cancellationCommission,
         paymentCharge = chargeRes.paymentCharge,

@@ -34,6 +34,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -92,9 +93,18 @@ data OnInitRes = OnInitRes
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     driverPreference :: Maybe [Text],
     discount :: Maybe Price,
-    riderLanguage :: Maybe Maps.Language
+    riderLanguage :: Maybe Maps.Language,
+    bookingDepositAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show)
+
+securedDepositAmount :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m (Maybe HighPrecMoney)
+securedDepositAmount booking =
+  case booking.bookingDepositAmount of
+    Nothing -> pure Nothing
+    Just amount -> do
+      holds <- BookingDeposit.findHolds booking.id
+      pure $ if null holds then Nothing else Just amount
 
 createFareBreakup ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> [DCommon.DFareBreakup] -> m ()
@@ -141,6 +151,7 @@ onInit req = do
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+  mbSecuredDeposit <- securedDepositAmount booking
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
       onInitRes =
@@ -174,6 +185,7 @@ onInit req = do
             driverPreference = booking.driverPreference,
             discount = booking.discount,
             riderLanguage = decRider.language,
+            bookingDepositAmount = mbSecuredDeposit,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -234,6 +246,7 @@ buildOnInitResFromBooking bookingId = do
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+  mbSecuredDeposit <- securedDepositAmount booking
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
   pure
@@ -271,7 +284,8 @@ buildOnInitResFromBooking bookingId = do
         paymentInstrument = booking.paymentInstrument,
         driverPreference = booking.driverPreference,
         discount = booking.discount,
-        riderLanguage = decRider.language
+        riderLanguage = decRider.language,
+        bookingDepositAmount = mbSecuredDeposit
       }
   where
     convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
