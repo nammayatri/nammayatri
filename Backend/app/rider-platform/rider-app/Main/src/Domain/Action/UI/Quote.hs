@@ -287,6 +287,17 @@ translateServiceTierText mocId language mbText = case mbText of
       <&> Just . maybe text (.message)
   Nothing -> pure Nothing
 
+buildServiceTierTranslations :: Id DMOC.MerchantOperatingCity -> Lang.Language -> [Maybe Text] -> Flow (Map.Map Text Text)
+buildServiceTierTranslations mocId language mbTexts = do
+  let distinctTexts = Map.keys $ Map.fromList [(text, ()) | Just text <- mbTexts]
+  translated <- forM distinctTexts $ \text -> do
+    mbTranslated <- translateServiceTierText mocId language (Just text)
+    pure (text, fromMaybe text mbTranslated)
+  pure $ Map.fromList translated
+
+lookupServiceTierTranslation :: Map.Map Text Text -> Maybe Text -> Maybe Text
+lookupServiceTierTranslation translations = fmap (\text -> fromMaybe text (Map.lookup text translations))
+
 getQuotes :: Id SSR.SearchRequest -> Maybe Bool -> Flow GetQuotesRes
 getQuotes searchRequestId mbAllowMultiple = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
@@ -634,10 +645,8 @@ offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
 getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Lang.Language -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLookup estimateList language = do
+getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList language = do
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
-  let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map
           ( \e ->
@@ -651,8 +660,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
           sortedEstimates
       products = map (\(e, _, price) -> (show e.vehicleServiceTierType, price)) estimatesWithCtx
   productOffers <-
-    -- Same as the quotes path: an empty basket can only come back empty.
-    if enableRideHailingOffers && not (null products)
+    if enableRideHailingOffers
       then
         withTryCatch
           "getEstimates:offerListWithBasket"
@@ -662,16 +670,21 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
             Right r -> pure r
       else pure []
   let offerMap = Map.fromList productOffers
-  estimates <- forM estimatesWithCtx $ \(estimate, mbBreakup, _) -> do
+  apiEntities <- forM estimatesWithCtx $ \(estimate, mbBreakup, _) -> do
     let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap
     mbOffer <- case mbOfferResp of
       Nothing -> pure Nothing
       Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
-    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
-    serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
-    serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
-    pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}
+    UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
+  translations <- buildServiceTierTranslations searchRequest.merchantOperatingCityId language (map (.serviceTierName) apiEntities <> map (.serviceTierShortDesc) apiEntities)
+  let estimates =
+        apiEntities
+          <&> \apiEntity ->
+            apiEntity
+              { UEstimate.serviceTierName = lookupServiceTierTranslation translations apiEntity.serviceTierName,
+                UEstimate.serviceTierShortDesc = lookupServiceTierTranslation translations apiEntity.serviceTierShortDesc
+              }
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]
