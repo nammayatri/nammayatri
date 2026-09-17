@@ -20,6 +20,9 @@ module API
 where
 
 import qualified API.Beckn as Beckn
+import qualified API.Beckn.FRFSSeller as BecknFRFSSeller
+import qualified API.Beckn.FRFSSeller.Onboarding as BecknFRFSSellerOnboarding
+import qualified API.Beckn.FRFSSellerRSF as BecknFRFSSellerRSF
 import qualified API.Conductor as Conductor
 import qualified API.Dashboard as Dashboard
 import qualified API.Depot as Depot
@@ -57,6 +60,9 @@ type API =
   MainAPI
     :<|> IGM.IGMAPI
     :<|> FRFS.APIM
+    :<|> BecknFRFSSeller.API
+    :<|> BecknFRFSSellerOnboarding.API
+    :<|> BecknFRFSSellerRSF.API
     :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> OnixBapWebhook.API
@@ -108,6 +114,9 @@ handler =
   mainServer
     :<|> IGM.handler
     :<|> FRFS.handlerM
+    :<|> BecknFRFSSeller.handler
+    :<|> BecknFRFSSellerOnboarding.handler
+    :<|> BecknFRFSSellerRSF.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> const Beckn.handler -- TODO : Revert after 2.x release
     :<|> OnixBapWebhook.handler

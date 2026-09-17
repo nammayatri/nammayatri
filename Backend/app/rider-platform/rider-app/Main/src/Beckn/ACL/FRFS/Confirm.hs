@@ -135,7 +135,8 @@ tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =
   Just $
     Spec.Provider
-      { providerCategories = Nothing,
+      { providerCancellationTerms = Nothing,
+        providerCategories = Nothing,
         providerDescriptor = Nothing,
         providerFulfillments = Nothing,
         providerId = Just booking.providerId,

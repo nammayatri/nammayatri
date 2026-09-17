@@ -88,6 +88,7 @@ Merchant:
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
+    isFrfsSeller: Maybe Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     stuckRideAutoCancellationBuffer: Maybe Seconds
     cloudType: Maybe CloudType
@@ -202,6 +203,7 @@ Merchant:
     bapUniqueKeyId: text
     bapId: text
     isAvoidToll: boolean
+    isFrfsSeller: boolean
     minimumDriverRatesCount: int
     fcmUrl: text
     fcmJsonPath: text
@@ -232,6 +234,7 @@ Merchant:
     fakeOtpEmails: "'{}'"
     city: "'Kochi'"
     onlinePayment: "false"
+    isFrfsSeller: "false"
     gatewayAndRegistryPriorityList: "'{\"NY\"}'"
 
   constraints:
