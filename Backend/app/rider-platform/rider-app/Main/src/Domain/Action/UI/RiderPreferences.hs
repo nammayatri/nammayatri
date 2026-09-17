@@ -95,7 +95,7 @@ postRiderPreference (mbPersonId, _merchantId) req = do
                 updatedAt = now
               }
       -- Every write invalidates the cache the send-path gate reads from
-      -- (Tools.Notifications.isNotificationCategoryAllowed) -- including the create
+      -- (Tools.Notifications.notificationSendMode) -- including the create
       -- branch, which must clear a cached "no row" from before this rider's first save.
       CQRP.clearNotificationPreferenceCache personId
   pure APISuccess.Success
