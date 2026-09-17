@@ -21,6 +21,7 @@ import qualified Domain.Types as DVST
 import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Kernel.Beam.Functions (runInMasterDb)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -37,7 +38,7 @@ findAllUnboundedFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => 
 findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId searchSources tripCategory area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area /=<< Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources
+    Nothing -> cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForVariants merchantOpCityId area tripCategory Domain.Unbounded True searchSources)
 
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductForVariantsByMerchantIdAndArea merchantOpCityId searchSources tripCategory area fareProducts = do
@@ -53,7 +54,7 @@ findAllUnboundedFareProductForArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id M
 findAllUnboundedFareProductForArea merchantOpCityId searchSources area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantIdAndAreaKey merchantOpCityId searchSources area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area /=<< Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources
+    Nothing -> cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area /=<< runInMasterDb (Queries.findAllUnboundedFareProductForArea merchantOpCityId area Domain.Unbounded True searchSources)
 
 cacheAllUnboundedFareProductByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> SL.Area -> [FareProduct] -> m ()
 cacheAllUnboundedFareProductByMerchantIdAndArea merchantOpCityId searchSources area fareProducts = do
@@ -69,7 +70,7 @@ findAllFareProductByMerchantOpCityId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id
 findAllFareProductByMerchantOpCityId merchantOpCityId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
+    Nothing -> cacheAllFareProductByMerchantOpCityId merchantOpCityId /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True)
 
 cacheAllFareProductByMerchantOpCityId :: (CacheFlow m r) => Id MerchantOperatingCity -> [FareProduct] -> m ()
 cacheAllFareProductByMerchantOpCityId merchantOpCityId fareProducts = do
@@ -86,7 +87,7 @@ findSupportedServiceTiersByMerchantOpCityId merchantOpCityId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeSupportedServiceTiersKey merchantOpCityId) >>= \case
     Just a -> pure a
     Nothing -> do
-      fareProducts <- Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
+      fareProducts <- runInMasterDb $ Queries.findAllFareProductByMerchantOpCityId merchantOpCityId True
       let tiers = nub $ map (.vehicleServiceTier) fareProducts
       cacheSupportedServiceTiers merchantOpCityId tiers
       pure tiers
@@ -105,7 +106,7 @@ findUnboundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id M
 findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeUnboundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area) /=<< Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources
+    Nothing -> flip whenJust (cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area) /=<< runInMasterDb (Queries.findUnboundedByMerchantOpCityIdVariantArea merchantOpCityId area tripCategory serviceTier Domain.Unbounded True searchSources)
 
 cacheUnboundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> FareProduct -> m ()
 cacheUnboundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProduct = do
@@ -121,7 +122,7 @@ findAllBoundedByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id 
 findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area) >>= \case
     Just a -> pure a
-    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area /=<< Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources
+    Nothing -> cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area /=<< runInMasterDb (Queries.findAllBoundedByMerchantOpCityIdVariantArea merchantOpCityId area serviceTier tripCategory Domain.Unbounded True searchSources)
 
 cacheBoundedFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> [SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> [FareProduct] -> m ()
 cacheBoundedFareProductByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area fareProducts = do
@@ -137,7 +138,7 @@ findAllFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r, Esq.EsqDBFlow m r
 findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area) >>= \case
     Just a -> pure a
-    Nothing -> cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area /=<< Queries.findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area True
+    Nothing -> cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area /=<< runInMasterDb (Queries.findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area True)
 
 cacheFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> SL.Area -> [FareProduct] -> m ()
 cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area fareProducts = do
@@ -152,7 +153,7 @@ updateFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Fare
 updateFarePolicyId = Queries.updateFarePolicyId
 
 findAllFareProductByFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> m [FareProduct]
-findAllFareProductByFarePolicyId = Queries.findAllFareProductByFarePolicyId
+findAllFareProductByFarePolicyId farePolicyId = runInMasterDb $ Queries.findAllFareProductByFarePolicyId farePolicyId
 
 delete :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FareProduct -> m ()
 delete = Queries.delete

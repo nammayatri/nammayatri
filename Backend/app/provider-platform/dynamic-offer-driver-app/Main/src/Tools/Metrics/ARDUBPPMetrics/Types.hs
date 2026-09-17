@@ -58,6 +58,12 @@ type RideFunnelCounterMetric = P.Vector P.Label7 P.Counter
 -- Labels: (merchant, city, vehicle_service_tier, cancellation_source, distance_bucket, backend_version, pickup_zone, drop_zone)
 type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 
+-- Labels: (merchant, city, vehicle_service_tier, acceptance_flow, distance_bucket, backend_version, pickup_zone, drop_zone)
+-- acceptance_flow = "normal" (Beckn select) | "special_zone" (OTP/special-zone rides that skip
+-- select and fire acceptance at Init). special_zone acceptances have no matching search_try,
+-- so tries-based ratios must exclude them.
+type RiderAcceptanceCounterMetric = P.Vector P.Label8 P.Counter
+
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
@@ -66,7 +72,7 @@ data BPPMetricsContainer = BPPMetricsContainer
     searchTryCounter :: SearchTryCounterMetric,
     searchRequestSentToDriverCounter :: AllocationFunnelCounterMetric,
     searchRequestExpiredCounter :: AllocationFunnelCounterMetric,
-    riderAcceptanceCounter :: RideFunnelCounterMetric,
+    riderAcceptanceCounter :: RiderAcceptanceCounterMetric,
     bookingCreatedCounter :: RideFunnelCounterMetric,
     rideCreatedCounter :: RideFunnelCounterMetric,
     rideStartedCounter :: RideFunnelCounterMetric,
@@ -87,7 +93,7 @@ registerBPPMetricsContainer searchDurationTimeout = do
   searchTryCounter <- registerSearchTryCounter
   searchRequestSentToDriverCounter <- registerAllocationFunnelCounter "BPP_search_request_sent_to_driver_count" "Count of search requests fanned out to drivers, batched per driver"
   searchRequestExpiredCounter <- registerAllocationFunnelCounter "BPP_search_request_expired_count" "Count of driver search requests retracted without any driver response"
-  riderAcceptanceCounter <- registerRideFunnelCounter "BPP_rider_acceptance_count" "Count of rider fare acceptances (Beckn select; normal flow only, OTP/special-zone rides skip select)"
+  riderAcceptanceCounter <- registerRiderAcceptanceCounter
   bookingCreatedCounter <- registerRideFunnelCounter "BPP_booking_created_count" "Count of bookings confirmed on the BPP"
   rideCreatedCounter <- registerRideFunnelCounter "BPP_ride_created_count" "Count of rides created (driver assigned to booking)"
   rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
@@ -114,6 +120,11 @@ registerRideFunnelCounter :: Text -> Text -> IO RideFunnelCounterMetric
 registerRideFunnelCounter name description =
   P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
     P.Info name description
+
+registerRiderAcceptanceCounter :: IO RiderAcceptanceCounterMetric
+registerRiderAcceptanceCounter =
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "acceptance_flow", "distance_bucket", "backend_version", "pickup_zone", "drop_zone") . P.counter $
+    P.Info "BPP_rider_acceptance_count" "Count of rider fare acceptances, by acceptance_flow (normal = Beckn select; special_zone = OTP/special-zone rides that skip select and fire at Init)"
 
 registerRideCancelledCounter :: IO RideCancelledCounterMetric
 registerRideCancelledCounter =
