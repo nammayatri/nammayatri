@@ -55,7 +55,10 @@ trackEvent merchantId merchantOperatingCityId event = do
                   { EventTracking.customerId = customerId,
                     EventTracking.eventName = actionName,
                     EventTracking.attributes = attrs,
-                    EventTracking.timestamp = Just now
+                    EventTracking.timestamp = Just now,
+                    -- Only FirebaseAnalytics reads these, and no city routes to it yet.
+                    EventTracking.appInstanceId = Nothing,
+                    EventTracking.platform = Nothing
                   }
               -- An event absent from the overrides map goes to every provider
               -- live in this city. When present, the override can only narrow
