@@ -1208,12 +1208,13 @@ updatePurchasedPass ::
 updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
   mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
 
+  let liveStatuses = [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
   latestPayments <-
     QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
       (Just 1)
       (Just 0)
       purchasedPass.id
-      [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
+      liveStatuses
       today
 
   photoRequired <- maybe (pure True) (passRequiresDocument DPass.ProfilePicture) (listToMaybe latestPayments)
@@ -1268,8 +1269,11 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
               || purchasedPass.activatedAt /= newActivatedAt
               || isChangedProfilePicture
        in return (newPass, Just newPassPayment, hasChanged)
-    Nothing ->
-      return (purchasedPass, Nothing, False)
+    Nothing
+      | purchasedPass.status `elem` liveStatuses
+          && purchasedPass.endDate < today ->
+        return (purchasedPass {DPurchasedPass.status = DPurchasedPass.Expired, DPurchasedPass.updatedAt = now}, Nothing, True)
+      | otherwise -> return (purchasedPass, Nothing, False)
 
 -- ToDo: needs to be removed once the desired state is attained.
 refillProfilePictureFromS3 ::
