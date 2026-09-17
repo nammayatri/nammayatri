@@ -1729,7 +1729,7 @@ buildOperatorInfo person = do
         createdAt = person.createdAt
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r, HasKafkaProducer r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
     if mbFleetInfo == Just True || driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER
