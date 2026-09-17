@@ -38,14 +38,6 @@ type API =
            :> QueryParam "offset" Integer
            :> QueryParam "personId" (Id DP.Person)
            :> Get '[JSON] DPerson.ListPersonRes
-           :<|> "ptList"
-             :> DashboardAuth 'DASHBOARD_ADMIN
-             :> QueryParam "searchString" Text
-             :> QueryParam "roleName" Text
-             :> QueryParam "entityShortId" Text
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] DPerson.ListPTEmployeeRes
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "assignRole"
@@ -143,7 +135,6 @@ type API =
 handler :: DashboardLoginFlow r => FlowServerR r API
 handler =
   ( listPerson
-      :<|> ptList
       :<|> assignRole
       :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
       :<|> assignMerchantCityAccess
@@ -170,10 +161,6 @@ handler =
 listPerson :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandlerR r DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
   withDashboardDbFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
-
-ptList :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandlerR r DPerson.ListPTEmployeeRes
-ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit =
-  withDashboardDbFlowHandlerAPI . DPerson.ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit
 
 createPerson :: DashboardLoginFlow r => TokenInfo -> DPerson.CreatePersonReq -> FlowHandlerR r DPerson.CreatePersonRes
 createPerson tokenInfo = withDashboardDbFlowHandlerAPI . DPerson.createPerson tokenInfo

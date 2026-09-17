@@ -69,7 +69,7 @@ import qualified Storage.Queries.Transaction as QT
 -- isSuperAdmin lives here rather than in Domain.Action.Dashboard.Capability: that module has no
 -- export list, so it re-exports only what it defines, not what it imports.
 import Tools.Auth.Capability (isSuperAdmin)
-import qualified Tools.Auth.Capability as AuthCap
+import qualified Tools.Auth.ApiAuth as ApiAuth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Auth.Merchant
@@ -436,27 +436,49 @@ data ListPTEmployeeRes = ListPTEmployeeRes
 -- assignments that screen needs. entityShortId is resolved against the caller's merchant, so an
 -- unknown or foreign depot is rejected rather than silently returning everyone.
 ptList ::
-  (BeamFlow m r, EncFlow m r) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   TokenInfo ->
+  ShortId DMerchant.Merchant ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
   m ListPTEmployeeRes
-ptList tokenInfo mbSearchStringRaw mbRoleName mbEntityShortId mbLimit mbOffset = do
+ptList tokenInfo merchantShortId mbSearchStringRaw mbRoleName mbEntityShortId mbTokenNo mbLimit mbOffset = do
+  -- DashboardAuth only checks the session, so Layer A is enforced here as in API.Dashboard.SpecialZone.
+  actorPerson <- Verify.verifyAccessLevel (ApiAuth.showUserActionType DashAuth.DASHBOARD_USER_PT_LIST) tokenInfo.personId
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  actorAccess <- QAccess.findByPersonIdAndMerchantId tokenInfo.personId merchant.id
+  when (null actorAccess) $
+    throwError AccessDenied
+  actorRole <- QRole.findById actorPerson.roleId >>= fromMaybeM (RoleDoesNotExist actorPerson.roleId.getId)
+  -- Admin bypasses the accessibleRoles gate, same policy as bulkUpsert and Roles.listV2.
+  let mbVisibleRoleIds =
+        if actorRole.dashboardAccessType == DRole.DASHBOARD_ADMIN
+          then Nothing
+          else Just actorRole.accessibleRoles
   let mbSearchString = (T.strip <$> mbSearchStringRaw) >>= \s -> if T.null s then Nothing else Just s
   mbSearchStrDBHash <- traverse (getDbHash . T.toLower) mbSearchString
+  -- tokenNo is stored encrypted and written without case-folding, so hash it verbatim.
+  mbTokenNoDBHash <- traverse getDbHash ((T.strip <$> mbTokenNo) >>= \s -> if T.null s then Nothing else Just s)
   mbEntityId <- forM mbEntityShortId $ \shortId ->
-    QEntity.findByMerchantAndShortId tokenInfo.merchantId (ShortId shortId)
+    QEntity.findByMerchantAndShortId merchant.id (ShortId shortId)
       >>= fmap (.id) . fromMaybeM (InvalidRequest $ "Entity " <> shortId <> " does not exist for this merchant")
   -- Every returned row costs a passetto round-trip to decrypt tokenNo and vpa, so the caller
   -- cannot widen the page arbitrarily.
   -- Only the upper bound was capped, so a negative limit or offset reached Postgres as LIMIT/OFFSET -1.
   let cappedLimit = max 0 $ min maxPTPageSize (fromMaybe maxPTPageSize mbLimit)
       safeOffset = max 0 <$> mbOffset
-  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset tokenInfo.merchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId (Just cappedLimit) safeOffset
-  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) tokenInfo.merchantId
+  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset merchant.id mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbTokenNoDBHash mbVisibleRoleIds (Just cappedLimit) safeOffset
+  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) merchant.id
   -- Retired depots stay visible here, unlike profile: staff on one must be findable to reassign.
   let grantedEntityIds = nub $ entityGrants <&> (.entityId)
   entities <- B.runInReplica $ QEntity.findAllByIds grantedEntityIds
@@ -1051,16 +1073,8 @@ bulkUpsert ::
   m BulkUpsertPersonResp
 bulkUpsert tokenInfo merchantShortId req = do
   let actorPersonId = tokenInfo.personId
-      -- lib-dashboard no longer defines an AccessMatrix (each app owns its own
-      -- action union), so the capability table is keyed on the endpoint-id
-      -- string directly rather than on a reconstructed ApiAccessLevel.
-      endpointId = "DASHBOARD_USER_BULK_CREATE"
-  actorPerson <- Verify.verifyAccessLevel endpointId actorPersonId
-  -- The route is DashboardAuth, which never runs verifyApi, so the capability gate is enforced
-  -- here; verifyAccessLevel alone no longer checks it.
-  actorAccessCaps <- AuthCap.resolveAccess actorPerson.id actorPerson.roleId
-  endpointCaps <- AuthCap.endpointCapabilities endpointId
-  AuthCap.enforce actorAccessCaps endpointCaps actorPerson endpointId
+  -- DashboardAuth only checks the session, so Layer A is enforced here as in API.Dashboard.SpecialZone.
+  actorPerson <- Verify.verifyAccessLevel (ApiAuth.showUserActionType DashAuth.DASHBOARD_USER_BULK_CREATE) actorPersonId
   let total = length req.persons
   when (total == 0) $
     throwError (InvalidRequest "persons array is empty")
