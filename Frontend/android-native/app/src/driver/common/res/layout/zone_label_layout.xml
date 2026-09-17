@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:id="@+id/map_xml">
+    <LinearLayout android:id="@+id/zone_image_and_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/ic_grey_border">
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:id="@+id/zone_image"
+            android:paddingRight="5dp"
+            android:visibility="gone"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Juspay Technologies"
+            android:textSize="12dp"
+            android:lineHeight="16dp"
+            android:textColor="#454545"
+            android:textFontWeight="400"
+            android:gravity="center"
+            android:id="@+id/marker_text"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/ll_marker_right"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@android:color/transparent"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ny_ic_dest_marker"
+            android:id="@+id/pointer_img"/>
+    </LinearLayout>
+
+</LinearLayout>
