@@ -68,6 +68,7 @@ data FareParameters = FareParameters
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
+    customerGateFeeItems :: [CustomerGateFeeItem],
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     driverCancellationNotAllowed :: Maybe Bool,
@@ -106,6 +107,12 @@ data FareParameters = FareParameters
 data CardCharge = CardCharge
   { onFare :: Maybe HighPrecMoney,
     fixed :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data CustomerGateFeeItem = CustomerGateFeeItem
+  { itemName :: Text,
+    amount :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
