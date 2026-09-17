@@ -16,3 +16,10 @@ ALTER TABLE atlas_driver_offer_bpp.offer_frequency_stats_history ADD COLUMN tota
 ALTER TABLE atlas_driver_offer_bpp.offer_frequency_stats_history ADD COLUMN total_discount_amount double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.offer_frequency_stats_history ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.offer_frequency_stats_history ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY offer_frequency_stats_history_idx_entity_id ON atlas_driver_offer_bpp.offer_frequency_stats_history USING btree (entity_id);
+ALTER TABLE atlas_driver_offer_bpp.offer_frequency_stats_history ADD CONSTRAINT offer_frequency_stats_history_unique_idx_entity_id_entity_type_frequency_type_offer_id_period_start UNIQUE (entity_id, entity_type, frequency_type, offer_id, period_start);

@@ -34,11 +34,13 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Offer as DOffer
 import qualified Lib.Payment.Domain.Types.OfferStats as DOfferStats
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPDOS
 import qualified Lib.Payment.Offer.Counters as Counters
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.Offer as QOffer
 import qualified Lib.Payment.Storage.Queries.OfferStats as QOfferStats
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -72,7 +74,8 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerIds :: [Text],
     offerListResp :: Payment.OfferListResp,
     metadata :: Maybe A.Value,
-    promoCard :: Maybe PromoCard
+    promoCard :: Maybe PromoCard,
+    greetingLottieUrl :: Maybe Text
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -522,8 +525,66 @@ cumulativeOffersForPerson merchantId person mbAmount = do
             offerIds = map (.offerId) offers,
             offerListResp = offers,
             metadata = Nothing,
-            promoCard = Nothing
+            promoCard = Nothing,
+            greetingLottieUrl = Nothing
           }
+
+listUsedOffersForPerson ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m [UsedOfferAPIEntity]
+listUsedOffersForPerson person merchantOperatingCityId = do
+  statsRows <- QOfferStats.findAllByEntityIdAndEntityType person.id.getId DOfferStats.Person
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  when (isNothing mbRiderConfig) $ logWarning $ "No rider config for city " <> merchantOperatingCityId.getId <> ": applied offers fall back to lifetime counts"
+  let mbRider = mbRiderConfig <&> \riderConfig -> Counters.OfferRiderContext {personId = person.id.getId, deviceId = person.deviceId, timeDiffFromUtc = riderConfig.timeDiffFromUtc}
+  now <- getCurrentTime
+  fmap catMaybes $
+    forM (mergeStatsByOffer statsRows) $ \stats -> do
+      mbOffer <- QOffer.findById stats.offerId
+      forM mbOffer $ \offer -> do
+        uses <- case mbRider of
+          Just rider -> Counters.countUses rider now offer.id offer.frequencyType
+          Nothing -> pure stats.offerAppliedCount
+        pure $ mkUsedOfferAPIEntity stats offer uses
+
+-- Rows can be fragmented across several ids for one offer (see ddl-migration
+-- 1567); collapse them so an offer is listed once with its total.
+mergeStatsByOffer :: [DOfferStats.OfferStats] -> [DOfferStats.OfferStats]
+mergeStatsByOffer = foldr insertMerged []
+  where
+    insertMerged row [] = [row]
+    insertMerged row (acc : rest)
+      | acc.offerId == row.offerId = combine acc row : rest
+      | otherwise = acc : insertMerged row rest
+    combine a b =
+      a
+        { DOfferStats.offerAppliedCount = a.offerAppliedCount + b.offerAppliedCount,
+          DOfferStats.totalDiscountAmount = addMoney a.totalDiscountAmount b.totalDiscountAmount,
+          DOfferStats.totalCashbackAmount = addMoney a.totalCashbackAmount b.totalCashbackAmount,
+          DOfferStats.updatedAt = max a.updatedAt b.updatedAt
+        }
+    addMoney Nothing Nothing = Nothing
+    addMoney a b = Just (fromMaybe 0 a + fromMaybe 0 b)
+
+mkUsedOfferAPIEntity :: DOfferStats.OfferStats -> DOffer.Offer -> Int -> UsedOfferAPIEntity
+mkUsedOfferAPIEntity stats offer uses =
+  UsedOfferAPIEntity
+    { offerId = offer.id.getId,
+      offerCode = offer.offerCode,
+      offerTitle = offer.title,
+      offerDescription = offer.description,
+      offerType = Just offer.offerType,
+      appliedCount = uses,
+      totalAppliedCount = stats.offerAppliedCount,
+      maxApplyCount = offer.maxApplyCount,
+      frequencyType = offer.frequencyType,
+      isUsedUp = Counters.isUsedUp offer.maxApplyCount uses,
+      totalDiscountAmount = stats.totalDiscountAmount,
+      totalCashbackAmount = stats.totalCashbackAmount,
+      lastAppliedAt = stats.updatedAt
+    }
 
 mkOfferRespAPIEntity ::
   (MonadFlow m) =>
