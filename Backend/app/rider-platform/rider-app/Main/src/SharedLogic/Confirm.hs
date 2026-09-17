@@ -421,25 +421,29 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   -- rider's original pickup/drop from the parent search (This is related to walk and save feature)
   mbParentSearchRequestLocationInfo <- case searchRequest.parentSearchRequestId of
-    Nothing -> pure Nothing
+    Nothing -> do
+      logDebug $ "SharedLogic.Confirm.buildBooking: no parent search request for search request " <> searchRequest.id.getId
+      pure Nothing
     Just parentSearchRequestId -> do
       mbParentSearchRequest <- QSReq.findById parentSearchRequestId
       case mbParentSearchRequest of
         Nothing -> do
-          logWarning $ "SharedLogic.Confirm.buildBooking: parent search request " <> parentSearchRequestId.getId <> " not found for shadow " <> searchRequest.id.getId
+          logDebug $ "SharedLogic.Confirm.buildBooking: parent search request " <> parentSearchRequestId.getId <> " not found for shadow " <> searchRequest.id.getId
           pure Nothing
-        Just parent ->
-          pure $ do
-            parentToLocation <- parent.toLocation
-            pure
-              DRB.ParentSearchRequestLocationInfo
-                { sourceLat = parent.fromLocation.lat,
-                  sourceLon = parent.fromLocation.lon,
-                  sourceAddress = parent.fromLocation.address,
-                  destLat = parentToLocation.lat,
-                  destLon = parentToLocation.lon,
-                  destAddress = parentToLocation.address
-                }
+        Just parent -> do
+          let mbOriginalLocationInfo = do
+                parentToLocation <- parent.toLocation
+                pure
+                  DRB.ParentSearchRequestLocationInfo
+                    { sourceLat = parent.fromLocation.lat,
+                      sourceLon = parent.fromLocation.lon,
+                      sourceAddress = parent.fromLocation.address,
+                      destLat = parentToLocation.lat,
+                      destLon = parentToLocation.lon,
+                      destAddress = parentToLocation.address
+                    }
+          logDebug $ "SharedLogic.Confirm.buildBooking: resolved walk-and-save parent search request location info " <> searchRequest.id.getId <> " from parent " <> parentSearchRequestId.getId <> ": " <> show mbOriginalLocationInfo
+          pure mbOriginalLocationInfo
   return $
     ( DRB.Booking
         { id = bookingId,
