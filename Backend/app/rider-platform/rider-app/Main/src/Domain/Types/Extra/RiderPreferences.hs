@@ -68,7 +68,6 @@ data NotificationPreferenceData = NotificationPreferenceData
 data NotificationCategory
   = RIDE_RELATED
   | PROMOTIONAL
-  | OFFERS
   | PAYMENTS
   | SAFETY
   | ACCOUNT
