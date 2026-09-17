@@ -628,6 +628,27 @@ const OPEN_COUNTRIES = new Set(
 );
 
 /**
+ * ── New drivers sign themselves up, 2026-09-17 ──────────────────────────────
+ * Until today a driver number nobody had enrolled was refused here with
+ * `NOT_REGISTERED`, so the only way in was the agency typing the number into
+ * `enrol-driver.sh`. The client's rule now: a new driver enters his number, gets
+ * a code by SMS like a passenger, and lands in the app's sign-up screens (name,
+ * licence, car, papers). The agency then accepts him on the website.
+ *
+ * Opening sign-in does NOT let him work, and that is what makes this safe. The
+ * backend creates a new driver with `enabled = false`, and `setActivity` refuses
+ * to put a disabled driver online (`DRIVER_ACCOUNT_DISABLED`) until the
+ * website's Valider sets `enabled`. The wallet gate below applies on top.
+ *
+ * What it does cost: anyone with a real mobile in an open country can create a
+ * pending driver record, at one SMS per sign-in, limited by the same per-number
+ * throttle as passengers. Enrolled drivers keep their personal code as before.
+ *
+ * `DRIVER_SIGNUP=closed` restores the old refusal, with a restart and no build.
+ */
+const DRIVER_SIGNUP_OPEN = (process.env.DRIVER_SIGNUP || 'open').trim() !== 'closed';
+
+/**
  * ── The wallet gate, 2026-09-14 ─────────────────────────────────────────────
  * The client's rule: **no top-up, no work.** The wallet holds only what a
  * driver loads through Chargily or Moosyl -- never ride money, Movin takes 0 %
@@ -686,6 +707,7 @@ async function handle(req, res) {
         personalCodes: r.codesFile ? Object.keys(loadCodes(r.codesFile)).length : null,
         sms: !!r.sms,
         codeDigits: r.codeDigits,
+        signupOpen: r.codesFile ? DRIVER_SIGNUP_OPEN : null,
       })),
       sessions: sessions.size,
       numbers: starts.size,
@@ -748,7 +770,9 @@ async function handle(req, res) {
       return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
     }
 
-    if (codes && number && !codes[number]) {
+    // Only when sign-up is closed. When it is open, an unenrolled driver goes on
+    // to the SMS code below exactly like a passenger. See DRIVER_SIGNUP_OPEN.
+    if (codes && number && !codes[number] && !DRIVER_SIGNUP_OPEN) {
       console.warn(`[guard] ${route.name}: ${number} is not enrolled`);
       // Deliberately the same shape and status for "never approved" and
       // "approved but removed": the caller learns that this number cannot sign
@@ -810,7 +834,9 @@ async function handle(req, res) {
       const s = sessions.get(key(authId));
       const sent = await issueCode(route, s, number);
       if (!sent.ok) {
-        if (route.codesFile) {
+        // An enrolled driver can still use his personal code. A new driver has
+        // no other code, so he is told the SMS failed, like a passenger.
+        if (route.codesFile && codes && codes[number]) {
           // The driver still has his permanent code, so this is a warning and
           // not a refusal. Losing the gateway must not also ground the fleet.
           console.warn(`[guard] ${route.name}: no SMS for ${number}, personal code still stands`);
