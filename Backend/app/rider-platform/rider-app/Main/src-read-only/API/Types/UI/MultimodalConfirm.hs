@@ -513,7 +513,9 @@ data TransportStation = TransportStation
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     ln :: Kernel.Prelude.Double,
     lt :: Kernel.Prelude.Double,
+    lty :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nm :: Kernel.Prelude.Text,
+    psc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstdDest :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     vt :: Kernel.Prelude.Text
