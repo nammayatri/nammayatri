@@ -30,6 +30,10 @@ findAllByEntityNameAndEntityIds limit offset entityName entityIds = do
     limit
     offset
 
+findAllByEntityIds :: BeamFlow m r => [Text] -> m [PayoutOrder]
+findAllByEntityIds entityIds =
+  findAllWithOptionsKV [Se.Is Beam.entityIds $ Se.Eq (Just entityIds)] (Se.Desc Beam.createdAt) Nothing Nothing
+
 updateLastCheckedOn :: BeamFlow m r => [Text] -> m ()
 updateLastCheckedOn payoutOrderIds = do
   now <- getCurrentTime

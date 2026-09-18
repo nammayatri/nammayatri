@@ -1082,6 +1082,7 @@ TransporterConfig:
       minWalletAmountForScheduledRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
+      nonRedeemableBalanceConsiderCreditAndDebit: Maybe Bool
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
@@ -2417,23 +2418,31 @@ PayoutConfig:
     referralRewardAmountPerRideForD2DPayout: Maybe HighPrecMoney
     vpaVerificationMode: VpaVerificationMode
     isAutoRefundEnabled: Bool
+    payoutStatusCheckInterval: Int
+    payoutStatusCheckMaxAttempts: Int
 
   beamType:
     timeDiff: Seconds
     d2dPayoutType: Maybe D2DPayoutTypeEnum
     vpaVerificationMode: Maybe VpaVerificationMode
     isAutoRefundEnabled: Maybe Bool
+    payoutStatusCheckInterval: Maybe Int
+    payoutStatusCheckMaxAttempts: Maybe Int
 
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     d2dPayoutType: Just d2dPayoutType|E
     vpaVerificationMode: Just vpaVerificationMode|E
     isAutoRefundEnabled: Just isAutoRefundEnabled|E
+    payoutStatusCheckInterval: Just payoutStatusCheckInterval|E
+    payoutStatusCheckMaxAttempts: Just payoutStatusCheckMaxAttempts|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
     d2dPayoutType: fromMaybe Domain.Types.PayoutConfig.NO_PAYOUT d2dPayoutType|E
     vpaVerificationMode: fromMaybe Domain.Types.PayoutConfig.PAYMENT_BASED vpaVerificationMode|E
     isAutoRefundEnabled: fromMaybe False isAutoRefundEnabled|E
+    payoutStatusCheckInterval: fromMaybe 21600 payoutStatusCheckInterval|E
+    payoutStatusCheckMaxAttempts: fromMaybe 8 payoutStatusCheckMaxAttempts|E
   default:
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"

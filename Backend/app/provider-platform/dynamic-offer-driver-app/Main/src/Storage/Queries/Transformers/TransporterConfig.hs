@@ -81,6 +81,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,
+            nonRedeemableBalanceConsiderCreditAndDebit = Nothing,
             onlineCommissionPaidOutDirectly = Nothing,
             fetchWalletTransactionsFromClickhouse = Nothing,
             enableWalletGatedTierCheck = Nothing,

@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndIsPayoutEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled = do
   findAllWithKV
     [ Se.And
@@ -69,6 +69,8 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.payoutRegistrationCgst payoutRegistrationCgst,
       Se.Set Beam.payoutRegistrationFee payoutRegistrationFee,
       Se.Set Beam.payoutRegistrationSgst payoutRegistrationSgst,
+      Se.Set Beam.payoutStatusCheckInterval (Just payoutStatusCheckInterval),
+      Se.Set Beam.payoutStatusCheckMaxAttempts (Just payoutStatusCheckMaxAttempts),
       Se.Set Beam.referralProgramStartDate referralProgramStartDate,
       Se.Set Beam.referralRewardAmountPerRide referralRewardAmountPerRide,
       Se.Set Beam.referralRewardAmountPerRideForD2DPayout referralRewardAmountPerRideForD2DPayout,

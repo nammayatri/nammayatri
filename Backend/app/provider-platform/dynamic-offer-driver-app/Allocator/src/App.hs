@@ -62,6 +62,7 @@ import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCo
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
+import SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck (payoutStatusCheckJob)
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
 import SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress (checkDriverPickupProgress)
@@ -179,6 +180,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env processReminder
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
+          & putJobHandlerInListWrapper flowRt env payoutStatusCheckJob
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob

@@ -21,6 +21,9 @@ module Lib.Payment.Payout.Request
     retryPayoutWith,
     toPaymentState,
     getStatusMessage,
+    stashPayoutLedgerEntryIds,
+    getPayoutLedgerEntryIds,
+    clearPayoutLedgerEntryIds,
   )
 where
 
@@ -30,10 +33,12 @@ import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
+import Kernel.Utils.Common (CacheFlow, Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
@@ -198,6 +203,31 @@ retryPayoutWith canRetry executePayout payoutRequest = do
 -- Payout execution
 -- ---------------------------------------------------------------------------
 
+makePayoutEntryIdsKey :: Text -> Text
+makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
+
+payoutEntryIdsTtl :: Int
+payoutEntryIdsTtl = 30 * 86400
+
+-- | Stash the ledger entry ids reserved for a payout so the webhook can settle or
+--   release them once the payout reaches a terminal status.
+stashPayoutLedgerEntryIds :: (CacheFlow m r) => Text -> [Text] -> m ()
+stashPayoutLedgerEntryIds payoutRequestId entryIds =
+  unless (null entryIds) $ Redis.setExp (makePayoutEntryIdsKey payoutRequestId) entryIds payoutEntryIdsTtl
+
+-- | Redis first, then the ids persisted on the PayoutRequest (payouts created before the
+--   stash flow), and finally the ledger rows stamped with this PayoutRequest id as settlementId
+--   (reserved as PROCESSING at initiate), so a lost stash can still be settled or released.
+getPayoutLedgerEntryIds :: (CacheFlow m r, FinanceBeamFlow.BeamFlow m r) => PayoutRequest -> m [Text]
+getPayoutLedgerEntryIds payoutRequest = do
+  mbStashed <- Redis.get (makePayoutEntryIdsKey payoutRequest.id.getId)
+  case fromMaybe [] (mbStashed <|> payoutRequest.ledgerEntryIds) of
+    [] -> map (.id.getId) <$> LedgerService.findBySettlementId payoutRequest.id.getId
+    entryIds -> pure entryIds
+
+clearPayoutLedgerEntryIds :: (CacheFlow m r) => Text -> m ()
+clearPayoutLedgerEntryIds = Redis.del . makePayoutEntryIdsKey
+
 -- | Submit a payout request: creates the PayoutRequest (INITIATED),
 --   then immediately executes via the external payout service (→ PROCESSING).
 --   This is the single entry point for instant payouts.
@@ -213,8 +243,9 @@ submitPayoutRequest ::
   ) =>
   PayoutSubmission ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
+  Maybe (PayoutOrder.PayoutOrder -> m ()) ->
   m PayoutResult
-submitPayoutRequest submission payoutCall = do
+submitPayoutRequest submission payoutCall mbAfterPayoutOrderCreated = do
   -- 1. Build and persist PayoutRequest (INITIATED)
   payoutRequest <- buildPayoutRequest submission
   createPayoutRequest payoutRequest
@@ -222,7 +253,7 @@ submitPayoutRequest submission payoutCall = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  executionResult <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
+  executionResult <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall mbAfterPayoutOrderCreated
   case executionResult of
     PayoutExecuted po -> pure $ PayoutInitiated payoutRequest po
     PayoutNotExecutable status -> pure $ PayoutProcessing payoutRequest status
@@ -243,9 +274,10 @@ executePayoutRequest ::
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
+  Maybe (PayoutOrder.PayoutOrder -> m ()) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall = do
-  executionResult <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall
+executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall mbAfterPayoutOrderCreated = do
+  executionResult <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall mbAfterPayoutOrderCreated
   pure $ case executionResult of
     PayoutExecuted po -> Just po
     _ -> Nothing
@@ -266,8 +298,9 @@ executePayoutRequestInternal ::
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
+  Maybe (PayoutOrder.PayoutOrder -> m ()) ->
   m PayoutExecutionResult
-executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall = do
+executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall mbAfterPayoutOrderCreated = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
@@ -283,7 +316,7 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
-      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing
+      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing mbAfterPayoutOrderCreated
       case result of
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err

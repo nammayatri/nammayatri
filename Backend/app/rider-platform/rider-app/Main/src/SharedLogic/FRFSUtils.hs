@@ -1704,7 +1704,6 @@ getRouteStationsInfo routeStations =
       routes = map (\r -> SOfferSegment.RouteInfo {routeCode = r.code, routeShortName = r.shortName}) routeStations
     }
 
-
 -- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
 getScheduledTripWindow ::
   (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>

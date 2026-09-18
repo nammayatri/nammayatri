@@ -15,7 +15,6 @@
 module SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge) where
 
 import qualified Data.Time as Time
-import Domain.Action.UI.DriverWallet (counterpartyFromRole)
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -32,6 +31,7 @@ import SharedLogic.Allocator
 import SharedLogic.Finance.Wallet
   ( buildDriverChargeCtx,
     connectBearerToFunder,
+    counterpartyFromRole,
     recordStripeChargeLedger,
     walletReferenceConnectAccountCharges,
   )
@@ -77,8 +77,9 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
                 whenJust mbPerson $ \person -> do
                   let counterparty = counterpartyFromRole person.role
                       chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) (fromMaybe False dwc.enableWalletGatedTierCheck)
-                  recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
-                    >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
+                  void $
+                    recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
+                      >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
               -- Page through active accounts in bounded batches so a large fleet is not loaded at once.
               processBatches offset processed = do
                 accounts <- QDBA.findActiveConnectAccountsByCity merchantOpCityId batchSize offset

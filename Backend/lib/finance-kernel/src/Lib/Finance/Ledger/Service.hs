@@ -48,7 +48,10 @@ module Lib.Finance.Ledger.Service
 
     -- * Payout-specific queries (efficient DB-level filtering)
     findCreditsByAccountAfterTime,
+    findUnsettledByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
+    findBySettlementId,
+    findProcessingByAccountSince,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
     markEntriesAsProcessing,
@@ -723,6 +726,31 @@ findCreditsByAccountAfterTime accountId from to =
         ]
     ]
 
+-- | Find unsettled entries (both credits and debits) for an account after a given time.
+--   Used for computing non-redeemable balance (recent net movement that can't be paid out yet).
+findUnsettledByAccountAfterTime ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- from (cutoff)
+  UTCTime -> -- to (now)
+  m [LedgerEntry]
+findUnsettledByAccountAfterTime accountId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ],
+          Se.Is BeamLE.status $ Se.Eq SETTLED,
+          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
+        ]
+    ]
+
 -- | Find unsettled entries (both credits and debits) for an account before a given time.
 --   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL,
 --   Used for collecting redeemable entry IDs for payout settlement.
@@ -746,6 +774,32 @@ findUnsettledByAccountBeforeTime accountId before =
             ]
         ]
     ]
+
+-- | Entries (both credits and debits) reserved as PROCESSING for in-flight payouts, by reservation time.
+findProcessingByAccountSince ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- reserved at or after
+  m [LedgerEntry]
+findProcessingByAccountSince accountId since =
+  findAllWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ],
+          Se.Is BeamLE.settlementStatus $ Se.Eq (Just PROCESSING),
+          Se.Is BeamLE.settlementTimestamp $ Se.GreaterThanOrEq (Just since)
+        ]
+    ]
+
+-- | Entries stamped with a settlementId (PayoutRequest id) while reserved or paid out.
+findBySettlementId ::
+  (BeamFlow.BeamFlow m r) =>
+  Text ->
+  m [LedgerEntry]
+findBySettlementId settlementId =
+  findAllWithKV [Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId)]
 
 --------------------------------------------------------------------------------
 -- SETTLEMENT (Mark entries as paid out)
@@ -790,6 +844,7 @@ markEntriesAsProcessing entryIds mbSettlementId = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamLE.settlementStatus (Just PROCESSING),
+        Se.Set BeamLE.settlementTimestamp (Just now),
         Se.Set BeamLE.updatedAt now
       ]
         <> maybe [] (\sid -> [Se.Set BeamLE.settlementId (Just sid)]) mbSettlementId

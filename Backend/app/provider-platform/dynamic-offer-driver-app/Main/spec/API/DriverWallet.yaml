@@ -34,11 +34,18 @@ types:
     netEarnings: HighPrecMoney
     from: UTCTime
     to: UTCTime
+  WalletPayoutConfig:
+    payoutEnabled: Bool
+    payoutCutOffDays: Int
+    minimumPayoutAmount: HighPrecMoney
+    payoutFee: HighPrecMoney
   WalletSummaryResponse:
     currentBalance: HighPrecMoney
     redeemableBalance: HighPrecMoney
     nonRedeemableBalance: HighPrecMoney
+    processingPayoutBalance: HighPrecMoney
     netEarningsBalance: HighPrecMoney
+    payoutConfig: WalletPayoutConfig
     additions: WalletItemGroup
     deductions: WalletItemGroup
     agg: "[WalletAggregateBucket]"

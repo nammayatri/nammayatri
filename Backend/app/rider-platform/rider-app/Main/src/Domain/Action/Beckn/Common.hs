@@ -120,6 +120,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import qualified SharedLogic.SilentReallocation as SilentRealloc
@@ -1821,7 +1822,9 @@ customerReferralPayout ::
     Finance.HasActorInfo m r,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DRide.Ride ->
   Currency ->
@@ -1882,7 +1885,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 
-            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing (Just afterPayoutOrderCreated)
             case mbPayoutOrderResp of
               Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
               _ -> pure ()

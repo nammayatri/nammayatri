@@ -50,6 +50,7 @@ import qualified Lib.Finance.Reconciliation.Job
 import qualified Lib.Finance.Reconciliation.Types
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.StatusCheck as PSC
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Tools.Notifications as Notify
@@ -99,6 +100,7 @@ data AllocatorJobType
   | ReconciliationScheduler
   | ReconciliationSweep
   | ScheduledBatchPayout
+  | PayoutStatusCheck
   | SettlementReportIngestion
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
@@ -162,6 +164,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliationScheduler jobData = AnyJobInfo <$> restoreJobInfo SReconciliationScheduler jobData
   restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
+  restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
@@ -651,6 +654,10 @@ data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'ScheduledBatchPayout
 
 type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
+
+instance JobInfoProcessor 'PayoutStatusCheck
+
+type instance JobContent 'PayoutStatusCheck = PSC.PayoutStatusCheckJobData
 
 data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
   { merchantId :: Id DM.Merchant,

@@ -82,6 +82,15 @@ data WalletItemGroup = WalletItemGroup {items :: [WalletItem], totalAmount :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data WalletPayoutConfig = WalletPayoutConfig
+  { minimumPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
+    payoutCutOffDays :: Kernel.Prelude.Int,
+    payoutEnabled :: Kernel.Prelude.Bool,
+    payoutFee :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data WalletSummaryResponse = WalletSummaryResponse
   { additions :: WalletItemGroup,
     agg :: [WalletAggregateBucket],
@@ -89,6 +98,8 @@ data WalletSummaryResponse = WalletSummaryResponse
     deductions :: WalletItemGroup,
     netEarningsBalance :: Kernel.Types.Common.HighPrecMoney,
     nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
+    payoutConfig :: WalletPayoutConfig,
+    processingPayoutBalance :: Kernel.Types.Common.HighPrecMoney,
     redeemableBalance :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)

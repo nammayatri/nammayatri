@@ -124,10 +124,12 @@ module SharedLogic.Finance.Wallet
     validateWalletDebitAmount,
     getControlBalanceByOwner,
     createWalletEntryDelta,
+    createWalletEntryDeltaWithEntryIds,
     utcToLocalDay,
     payoutCutoffTimeUTC,
     todayRangeUTC,
     getNonRedeemableBalance,
+    computeNonRedeemableBalance,
     financeCtxFromRide,
     buildFinanceCtx,
     resolveIsOnlineFromBooking,
@@ -169,6 +171,9 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
+    counterpartyFromRole,
+    reserveWalletEntriesForPayout,
+    releaseWalletEntriesReservation,
     settleWalletEntries,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
@@ -502,19 +507,48 @@ todayRangeUTC timeDiff now =
       end = Time.addUTCTime (negate timeDiff) (Time.UTCTime localDay 86399)
    in (start, end)
 
--- | Calculate non-redeemable balance: sum of recent credit entries after payout cutoff.
---   Uses DB-level filtering to only fetch credits in the cutoff→now window.
+-- | Calculate non-redeemable balance of unsettled entries after payout cutoff.
+--   Uses DB-level filtering to only fetch entries in the cutoff→now window.
 getNonRedeemableBalance ::
   (BeamFlow m r) =>
+  Bool -> -- nonRedeemableBalanceConsiderCreditAndDebit
   Id Account ->
   NominalDiffTime -> -- timezone offset
   Int -> -- payoutCutOffDays
   UTCTime -> -- current time
   m HighPrecMoney
-getNonRedeemableBalance accountId timeDiff cutOffDays now = do
-  let cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-  credits <- findCreditsByAccountAfterTime accountId cutoff now
-  pure $ sum $ map (.amount) credits
+getNonRedeemableBalance considerCreditAndDebit accountId timeDiff cutOffDays now =
+  computeNonRedeemableBalance considerCreditAndDebit accountId (payoutCutoffTimeUTC timeDiff cutOffDays now) now
+
+-- | With the flag on: net (credits − debits) of unsettled entries after the cutoff.
+--   With the flag off: gross credits only, the legacy behaviour. The branch exists for
+--   backward compatibility: on NY, payouts made before the from-account (debit) ledger
+--   entries were being stamped with a settlementStatus left those debits looking
+--   unsettled forever, so netting them would produce a wrong sum for existing wallets.
+computeNonRedeemableBalance ::
+  (BeamFlow m r) =>
+  Bool ->
+  Id Account ->
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time (upper bound)
+  m HighPrecMoney
+computeNonRedeemableBalance considerCreditAndDebit accountId cutoff now
+  | considerCreditAndDebit = netAmountForAccount accountId <$> findUnsettledByAccountAfterTime accountId cutoff now
+  | otherwise = sum . map (.amount) <$> findCreditsByAccountAfterTime accountId cutoff now
+
+-- | Net (credits − debits) of entries reserved as PROCESSING for in-flight payouts. Only reservations
+--   from the last month count: that comfortably covers the status-check job's interval × attempts,
+--   so a payout that never resolved does not hold back the balance forever.
+getProcessingPayoutBalance :: (BeamFlow m r) => Id Account -> UTCTime -> m HighPrecMoney
+getProcessingPayoutBalance accountId now =
+  netAmountForAccount accountId <$> findProcessingByAccountSince accountId (Time.addUTCTime (negate processingPayoutLookback) now)
+
+processingPayoutLookback :: NominalDiffTime
+processingPayoutLookback = 30 * 86400
+
+netAmountForAccount :: Id Account -> [LedgerEntry] -> HighPrecMoney
+netAmountForAccount accountId entries =
+  sum [e.amount | e <- entries, e.toAccountId == accountId] - sum [e.amount | e <- entries, e.fromAccountId == accountId]
 
 -- | Build a FinanceCtx from booking + ride data.
 --   Resolves merchant name, shortId, address, supplier info, and TDS rate reason from DB.
@@ -684,6 +718,11 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         buyerCounterpartyId = Nothing
       }
 
+counterpartyFromRole :: DP.Role -> CounterpartyType
+counterpartyFromRole DP.FLEET_OWNER = FLEET_OWNER
+counterpartyFromRole DP.FLEET_BUSINESS = FLEET_OWNER
+counterpartyFromRole _ = DRIVER
+
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
@@ -698,11 +737,26 @@ createWalletEntryDelta ::
   Text -> -- Reference ID
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   m (Either FinanceError HighPrecMoney)
-createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
+createWalletEntryDelta counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata =
+  fmap fst <$> createWalletEntryDeltaWithEntryIds counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata
+
+createWalletEntryDeltaWithEntryIds ::
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  HighPrecMoney -> -- Delta (positive credit, negative debit)
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  Text -> -- Reference type
+  Text -> -- Reference ID
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
+  m (Either FinanceError (HighPrecMoney, [Id LedgerEntry]))
+createWalletEntryDeltaWithEntryIds counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata = do
   if delta == 0
     then do
       mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
-      pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBalance
+      pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,[])) mbBalance
     else do
       let walletInput =
             AccountInput
@@ -757,13 +811,13 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
           entryRes <- createEntryWithBalanceUpdate entryInput
           case entryRes of
             Left err -> pure $ Left err
-            Right _ -> do
+            Right entry -> do
               -- This function never goes through runFinance, so it can't ride the automatic
               -- PostActions dispatch. Call it explicitly here, once, for both callers.
               transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId)
               runPostActionsForAccount (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) (toAffectedAccount ownerAccount)
               mbBal <- getBalance ownerAccount.id
-              pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
+              pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,[entry.id])) mbBal
         (Left err, _) -> pure $ Left err
         (_, Left err) -> pure $ Left err
 
@@ -789,9 +843,9 @@ recordStripeChargeLedger ::
   StripeChargeFunder ->
   HighPrecMoney ->
   Text ->
-  m (Either FinanceError ())
+  m (Either FinanceError [Id LedgerEntry])
 recordStripeChargeLedger ctx funder amount refType
-  | amount <= 0 = pure (Right ())
+  | amount <= 0 = pure (Right [])
   | otherwise = do
     result <- runFinance ctx $ case funder of
       FundByPlatform -> void $ transfer BuyerAsset SellerExpense amount refType Nothing
@@ -802,7 +856,7 @@ recordStripeChargeLedger ctx funder amount refType
       FundByDriver -> do
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer OwnerLiability SellerRevenue amount refType Nothing
-    pure (void result)
+    pure (snd <$> result)
 
 -- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),
 --   where no booking/ride is in scope. Counterparty is the driver (or fleet owner),
@@ -893,22 +947,24 @@ getRedeemableEntryIds accountId cutoff = do
   pure $ map (.id) entries
 
 -- | Fetch payout eligibility data using two efficient DB-level queries:
---   (1) non-redeemable balance: sum of credits after cutoff (DB-filtered)
---   (2) redeemable entry IDs: unsettled credits + debits before cutoff (DB-filtered)
---   (3) merchant transfer amount: sum of VAT input + discount entries from unsettled entries
+--   (1) non-redeemable balance: unsettled entries after cutoff (DB-filtered, see computeNonRedeemableBalance)
+--   (2) processing payout balance: net (credits − debits) of entries reserved as PROCESSING for in-flight payouts
+--   (3) redeemable entry IDs: unsettled credits + debits before cutoff (DB-filtered)
+--   (4) merchant transfer amount: sum of VAT input + discount entries from unsettled entries
 --   This avoids fetching all entries into Haskell memory.
 getPayoutEligibilityData ::
   (BeamFlow m r) =>
+  Bool -> -- nonRedeemableBalanceConsiderCreditAndDebit
   Id Account ->
   UTCTime -> -- payout cutoff time
   UTCTime -> -- current time (upper bound)
 
-  -- | (nonRedeemableBalance, redeemableEntryIds, merchantTransferAmount)
-  m (HighPrecMoney, [Id LedgerEntry], HighPrecMoney)
-getPayoutEligibilityData accountId cutoff now = do
-  -- Query 1: credits after cutoff (for non-redeemable balance)
-  creditsAfterCutoff <- findCreditsByAccountAfterTime accountId cutoff now
-  let nonRedeemableBalance = sum $ map (.amount) creditsAfterCutoff
+  -- | (nonRedeemableBalance, processingPayoutBalance, redeemableEntryIds, merchantTransferAmount)
+  m (HighPrecMoney, HighPrecMoney, [Id LedgerEntry], HighPrecMoney)
+getPayoutEligibilityData considerCreditAndDebit accountId cutoff now = do
+  -- Query 1: unsettled entries after cutoff (for non-redeemable balance)
+  nonRedeemableBalance <- computeNonRedeemableBalance considerCreditAndDebit accountId cutoff now
+  processingPayoutBalance <- getProcessingPayoutBalance accountId now
   -- Query 2: unsettled entries before cutoff (for redeemable IDs + transfer amount)
   unsettledBeforeCutoff <- findUnsettledByAccountBeforeTime accountId cutoff
   let redeemableIds = map (.id) unsettledBeforeCutoff
@@ -921,17 +977,33 @@ getPayoutEligibilityData accountId cutoff now = do
               e.toAccountId == accountId,
               e.referenceType `elem` walletTransferFromMerchantRefs
           ]
-  pure (nonRedeemableBalance, redeemableIds, merchantTransferAmount)
+  pure (nonRedeemableBalance, processingPayoutBalance, redeemableIds, merchantTransferAmount)
 
--- | Mark a list of wallet ledger entries as paid out.
---   Called by the payout webhook handler after successful disbursement.
+-- | Reserve wallet ledger entries for an in-flight payout (UNSETTLED/NULL → PROCESSING),
+--   optionally stamping the PayoutRequest id as settlementId.
+reserveWalletEntriesForPayout ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  [Id LedgerEntry] ->
+  Maybe Text -> -- PayoutRequest ID
+  m ()
+reserveWalletEntriesForPayout = markEntriesAsProcessing
+
+-- | Release reserved wallet ledger entries (PROCESSING → UNSETTLED) after a failed payout.
+releaseWalletEntriesReservation ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  [Id LedgerEntry] ->
+  m ()
+releaseWalletEntriesReservation = markEntriesAsUnsettled
+
+-- | Mark wallet ledger entries (reserved entries plus the ones the payout itself posted)
+--   as PAID_OUT under the PayoutRequest id. Called by the payout webhook handler after
+--   successful disbursement.
 settleWalletEntries ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LedgerEntry] -> -- entry IDs to settle
   Text -> -- PayoutRequest ID
   m ()
-settleWalletEntries entryIds payoutRequestId =
-  markEntriesAsPaidOut entryIds payoutRequestId
+settleWalletEntries = markEntriesAsPaidOut
 
 -- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
 -- model). Keyed off the cohort config being present (individualNotLinked).
