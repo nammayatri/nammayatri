@@ -114,7 +114,7 @@ data RefundRequestRespondResp = RefundRequestRespondResp
 instance Kernel.Types.HideSecrets.HideSecrets RefundRequestRespondResp where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payment" :> (GetPaymentRefundRequestList :<|> GetPaymentRefundRequestInfo :<|> PostPaymentRefundRequestRespond :<|> PostPaymentRefundRequestInitiate :<|> PostPaymentRefundRequestBookingInitiate :<|> GetPaymentFareBreakup))
+type API = ("payment" :> (GetPaymentRefundRequestListHelper :<|> GetPaymentRefundRequestInfoHelper :<|> PostPaymentRefundRequestRespondHelper :<|> PostPaymentRefundRequestInitiateHelper :<|> PostPaymentRefundRequestBookingInitiateHelper :<|> GetPaymentFareBreakupHelper))
 
 type GetPaymentRefundRequestList =
   ( "refundRequest" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -139,11 +139,48 @@ type GetPaymentRefundRequestList =
            RefundRequestResp
   )
 
+type GetPaymentRefundRequestListHelper =
+  ( "refundRequest" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Domain.Types.RefundRequest.RefundRequestStatus
+      :> QueryParam
+           "code"
+           Domain.Types.RefundRequest.RefundRequestCode
+      :> QueryParam
+           "customerId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> QueryParam
+           "orderId"
+           (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           RefundRequestResp
+  )
+
 type GetPaymentRefundRequestInfo =
   ( "refundRequest" :> Capture "refundRequestId" (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest) :> "info"
       :> QueryParam
            "refreshRefunds"
            Kernel.Prelude.Bool
+      :> Get '[JSON] RefundRequestInfoResp
+  )
+
+type GetPaymentRefundRequestInfoHelper =
+  ( "refundRequest" :> Capture "refundRequestId" (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest) :> "info"
+      :> QueryParam
+           "refreshRefunds"
+           Kernel.Prelude.Bool
+      :> QueryParam "requestorId" Kernel.Prelude.Text
       :> Get '[JSON] RefundRequestInfoResp
   )
 
@@ -155,31 +192,67 @@ type PostPaymentRefundRequestRespond =
       :> Post '[JSON] RefundRequestRespondResp
   )
 
+type PostPaymentRefundRequestRespondHelper =
+  ( "refundRequest" :> Capture "refundRequestId" (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest) :> "respond"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> ReqBody '[JSON] RefundRequestRespondReq
+      :> Post '[JSON] RefundRequestRespondResp
+  )
+
 type PostPaymentRefundRequestInitiate =
   ( "refundRequest" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "initiate"
       :> QueryParam
            "autoApprove"
            Kernel.Prelude.Bool
-      :> ReqBody ('[JSON]) RefundRequestInitiateReq
-      :> Post ('[JSON]) RefundRequestRespondResp
+      :> ReqBody '[JSON] RefundRequestInitiateReq
+      :> Post '[JSON] RefundRequestRespondResp
+  )
+
+type PostPaymentRefundRequestInitiateHelper =
+  ( "refundRequest" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "initiate"
+      :> QueryParam
+           "autoApprove"
+           Kernel.Prelude.Bool
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody '[JSON] RefundRequestInitiateReq
+      :> Post
+           '[JSON]
+           RefundRequestRespondResp
   )
 
 type PostPaymentRefundRequestBookingInitiate =
   ( "refundRequest" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Dashboard.Common.Booking) :> "initiate"
       :> Post
-           ('[JSON])
+           '[JSON]
            RefundRequestRespondResp
+  )
+
+type PostPaymentRefundRequestBookingInitiateHelper =
+  ( "refundRequest" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Dashboard.Common.Booking) :> "initiate"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Post '[JSON] RefundRequestRespondResp
   )
 
 type GetPaymentFareBreakup = (Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "fareBreakup" :> Get '[JSON] API.Types.UI.RidePayment.FareBreakupRes)
 
+type GetPaymentFareBreakupHelper =
+  ( Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "fareBreakup" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.RidePayment.FareBreakupRes
+  )
+
 data PaymentAPIs = PaymentAPIs
-  { getPaymentRefundRequestList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.RefundRequest.RefundRequestStatus) -> Kernel.Prelude.Maybe (Domain.Types.RefundRequest.RefundRequestCode) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient RefundRequestResp),
-    getPaymentRefundRequestInfo :: (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient RefundRequestInfoResp),
-    postPaymentRefundRequestRespond :: (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> RefundRequestRespondReq -> EulerHS.Types.EulerClient RefundRequestRespondResp),
-    postPaymentRefundRequestInitiate :: (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> RefundRequestInitiateReq -> EulerHS.Types.EulerClient RefundRequestRespondResp),
-    postPaymentRefundRequestBookingInitiate :: (Kernel.Types.Id.Id Dashboard.Common.Booking -> EulerHS.Types.EulerClient RefundRequestRespondResp),
-    getPaymentFareBreakup :: (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> EulerHS.Types.EulerClient API.Types.UI.RidePayment.FareBreakupRes)
+  { getPaymentRefundRequestList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestCode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RefundRequestResp,
+    getPaymentRefundRequestInfo :: Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RefundRequestInfoResp,
+    postPaymentRefundRequestRespond :: Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RefundRequestRespondReq -> EulerHS.Types.EulerClient RefundRequestRespondResp,
+    postPaymentRefundRequestInitiate :: Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> RefundRequestInitiateReq -> EulerHS.Types.EulerClient RefundRequestRespondResp,
+    postPaymentRefundRequestBookingInitiate :: Kernel.Types.Id.Id Dashboard.Common.Booking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RefundRequestRespondResp,
+    getPaymentFareBreakup :: Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.RidePayment.FareBreakupRes
   }
 
 mkPaymentAPIs :: (Client EulerHS.Types.EulerClient API -> PaymentAPIs)

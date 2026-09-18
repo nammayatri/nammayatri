@@ -57,8 +57,9 @@ getPaymentRefundRequestList ::
   Maybe (Id DPaymentOrder.PaymentOrder) ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe Text ->
   Flow Common.RefundRequestResp
-getPaymentRefundRequestList merchantShortId opCity mbLimit mbOffset status code customerId orderId from to = do
+getPaymentRefundRequestList merchantShortId opCity mbLimit mbOffset status code customerId orderId from to _mbRequestorId = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -85,8 +86,9 @@ getPaymentRefundRequestInfo ::
   Context.City ->
   Id DRefundRequest.RefundRequest ->
   Maybe Bool ->
+  Maybe Text ->
   Flow Common.RefundRequestInfoResp
-getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds = do
+getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds _mbRequestorId = do
   refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
   mbRideId <- SPayment.getRideIdForOrder refundRequest.orderId
   let refundRequestInfoHandler =
@@ -124,9 +126,10 @@ postPaymentRefundRequestRespond ::
   ShortId DM.Merchant ->
   Context.City ->
   Id DRefundRequest.RefundRequest ->
+  Maybe Text ->
   Common.RefundRequestRespondReq ->
   Flow Common.RefundRequestRespondResp
-postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
+postPaymentRefundRequestRespond merchantShortId opCity refundRequestId _mbRequestorId req = do
   -- Resolve the row before acquiring the lock so the per-orderId key can be derived from it.
   refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
   let orderId = refundRequest.orderId
@@ -268,9 +271,10 @@ postPaymentRefundRequestInitiate ::
   Context.City ->
   Id DRide.Ride ->
   Maybe Bool ->
+  Maybe Text ->
   Common.RefundRequestInitiateReq ->
   Flow Common.RefundRequestRespondResp
-postPaymentRefundRequestInitiate merchantShortId opCity rideId mbAutoApprove req = do
+postPaymentRefundRequestInitiate merchantShortId opCity rideId mbAutoApprove _mbRequestorId req = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let autoApprove = fromMaybe True mbAutoApprove -- server-set by the dashboard proxy; absent (legacy) = auto-approve
@@ -318,8 +322,9 @@ getPaymentFareBreakup ::
   ShortId DM.Merchant ->
   Context.City ->
   Id DRide.Ride ->
+  Maybe Text ->
   Flow API.Types.UI.RidePayment.FareBreakupRes
-getPaymentFareBreakup merchantShortId opCity rideId = do
+getPaymentFareBreakup merchantShortId opCity rideId _mbRequestorId = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -331,8 +336,9 @@ postPaymentRefundRequestBookingInitiate ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Context.City ->
   Kernel.Types.Id.Id Common.Booking ->
+  Maybe Text ->
   Environment.Flow Common.RefundRequestRespondResp
-postPaymentRefundRequestBookingInitiate merchantShortId opCity phantomBookingId = do
+postPaymentRefundRequestBookingInitiate merchantShortId opCity phantomBookingId _mbRequestorId = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let bookingId = cast @Common.Booking @DBooking.Booking phantomBookingId
