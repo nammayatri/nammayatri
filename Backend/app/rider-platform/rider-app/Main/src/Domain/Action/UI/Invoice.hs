@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -76,13 +77,13 @@ getInvoice (mbPersonId, merchantId) from to = do
             Just $
               DTInvoice.InvoiceRes
                 { date = booking.createdAt,
-                  destination = maybe notAvailableText (\destination -> fromMaybe notAvailableText destination.ward) mbDestination,
+                  destination = maybe notAvailableText buildAddress mbDestination,
                   driverName = fromMaybe notAvailableText ride.driverName,
                   faresList = catMaybes fareBreakups,
                   rideEndTime = fromMaybe ride.updatedAt ride.rideEndTime,
                   rideStartTime = fromMaybe ride.createdAt ride.rideStartTime,
                   shortRideId = ride.shortId.getShortId,
-                  source = maybe notAvailableText (\source -> fromMaybe notAvailableText source.ward) mbSource,
+                  source = maybe notAvailableText buildAddress mbSource,
                   totalAmount = maybe notAvailableText show ride.totalFare,
                   vehicleNumber = fromMaybe notAvailableText ride.vehicleNumber,
                   chargeableDistance = ride.chargeableDistance,
@@ -98,6 +99,12 @@ getInvoice (mbPersonId, merchantId) from to = do
           case fareBreakup of
             Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
             Nothing -> return Nothing
+    buildAddress loc =
+      case loc.ward of
+        Just w -> w
+        Nothing ->
+          let parts = catMaybes [loc.area, loc.street, loc.building, loc.city]
+           in if Kernel.Prelude.null parts then notAvailableText else T.intercalate ", " parts
     notAvailableText = "N/A"
 
 -- | List finance-kernel invoices (Ride, RideCancellation) for the authenticated rider.
