@@ -862,3 +862,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN always_allowed_notification_catego
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_categories SET DEFAULT '{RIDE_RELATED,SAFETY}';
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_driver_details_lead_time_seconds int  default 1800;
