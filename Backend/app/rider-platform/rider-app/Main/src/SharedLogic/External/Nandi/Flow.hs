@@ -348,6 +348,45 @@ operatorExportRouteStopMapping :: (CoreMetrics m, MonadFlow m, MonadReader r m, 
 operatorExportRouteStopMapping baseUrl gtfsId =
   withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorExportRouteStopMapping gtfsId) "operatorExportRouteStopMapping" NandiAPI.operatorExportRouteStopMappingAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_EXPORT_ROUTE_STOP_MAPPING_API") baseUrl)
 
+-- | Small by construction: only trips an operator has overridden and that have not yet
+-- lapsed. Failure is the caller's to absorb — see OTPRest.getActiveTripEtaOverrides.
+operatorActiveTripEtaOverrides :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [ActiveTripEtaOverride]
+operatorActiveTripEtaOverrides baseUrl gtfsId =
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getOperatorActiveTripEtaOverrides gtfsId) "operatorActiveTripEtaOverrides" NandiAPI.operatorActiveTripEtaOverridesAPI >>= \case
+      Right overrides -> pure overrides
+      Left err -> do
+        logError $ "Error getting active trip ETA overrides for " <> gtfsId <> ": " <> show err
+        pure []
+
+operatorEtaVariants :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [EtaVariant]
+operatorEtaVariants baseUrl gtfsId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorEtaVariants gtfsId) "operatorEtaVariants" NandiAPI.operatorGetEtaVariantsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_ETA_VARIANTS_API") baseUrl)
+
+operatorUpsertEtaVariant :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> EtaVariantUpsertReq -> m EtaVariant
+operatorUpsertEtaVariant baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorUpsertEtaVariant gtfsId req) "operatorUpsertEtaVariant" NandiAPI.operatorUpsertEtaVariantAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ETA_VARIANT_API") baseUrl)
+
+operatorDeleteEtaVariant :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> Text -> m RowsAffectedResp
+operatorDeleteEtaVariant baseUrl gtfsId variantId =
+  callAPI baseUrl (NandiAPI.deleteOperatorEtaVariant gtfsId variantId) "operatorDeleteEtaVariant" NandiAPI.operatorDeleteEtaVariantAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_DELETE_ETA_VARIANT_API") baseUrl)
+
+operatorStationEtas :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> m [StationEtaRow]
+operatorStationEtas baseUrl gtfsId variantId =
+  callAPI baseUrl (NandiAPI.getOperatorStationEtas gtfsId variantId) "operatorStationEtas" NandiAPI.operatorGetStationEtasAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_STATION_ETAS_API") baseUrl)
+
+operatorUpsertStationEtas :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> StationEtaBatchUpsertReq -> m RowsAffectedResp
+operatorUpsertStationEtas baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorUpsertStationEtas gtfsId req) "operatorUpsertStationEtas" NandiAPI.operatorUpsertStationEtasAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_STATION_ETAS_API") baseUrl)
+
+operatorSetTripEtaOverride :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> SetTripEtaOverrideReq -> m Value
+operatorSetTripEtaOverride baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorSetTripEtaOverride gtfsId req) "operatorSetTripEtaOverride" NandiAPI.operatorSetTripEtaOverrideAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_SET_TRIP_ETA_OVERRIDE_API") baseUrl)
+
+operatorClearTripEtaOverride :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> ClearTripEtaOverrideReq -> m RowsAffectedResp
+operatorClearTripEtaOverride baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorClearTripEtaOverride gtfsId req) "operatorClearTripEtaOverride" NandiAPI.operatorClearTripEtaOverrideAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_CLEAR_TRIP_ETA_OVERRIDE_API") baseUrl)
+
 getRoutesServedToday :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> m [RoutesServedTodayItem]
 getRoutesServedToday baseUrl =
   withShortRetry $ callAPI baseUrl NandiAPI.getNandiRoutesServedToday "getRoutesServedToday" NandiAPI.nandiRoutesServedTodayAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_SERVED_TODAY_API") baseUrl)

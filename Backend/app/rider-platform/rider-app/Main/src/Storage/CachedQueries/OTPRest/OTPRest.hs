@@ -50,10 +50,48 @@ getRouteBusSchedule ::
   Maybe Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber] 180 $ do
+getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = do
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber
+  overridden <- isRouteEtaOverridden routeId integratedBPPConfig
+  if overridden
+    then fetch
+    else IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber] 180 fetch
+
+-- | Every override in force for this feed, refreshed often enough that an operator's change
+-- lands within ~10s. Small by construction, and one read is shared across every schedule
+-- lookup on the pod.
+--
+-- A GIMS failure yields no overrides rather than an error: the caller then takes its normal
+-- cached path, which is the behaviour that predates this feature.
+getActiveTripEtaOverrides ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [ActiveTripEtaOverride]
+getActiveTripEtaOverrides integratedBPPConfig = IM.withInMemCache ["activeTripEtaOverrides", integratedBPPConfig.id.getId] 10 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber
-  pure schedules
+  Flow.operatorActiveTripEtaOverrides baseUrl integratedBPPConfig.feedKey
+
+isTripEtaOverridden ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Int ->
+  IntegratedBPPConfig ->
+  m Bool
+isTripEtaOverridden waybillNo tripNumber integratedBPPConfig =
+  any (\o -> o.waybill_no == waybillNo && o.trip_number == tripNumber)
+    <$> getActiveTripEtaOverrides integratedBPPConfig
+
+-- | The route-level cache key carries no waybill, so it cannot be matched per trip; any
+-- override on the route bypasses it. Cheap at a 180s TTL and this override volume.
+isRouteEtaOverridden ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m Bool
+isRouteEtaOverridden routeId integratedBPPConfig =
+  any (\o -> o.route_id == Just routeId) <$> getActiveTripEtaOverrides integratedBPPConfig
 
 getBusTripSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -62,9 +100,14 @@ getBusTripSchedule ::
   Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 7200 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = do
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+  overridden <- isTripEtaOverridden waybillNo tripNumber integratedBPPConfig
+  if overridden
+    then fetch
+    else IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 7200 fetch
 
 -- | Same lookup as 'getBusTripSchedule', but with a 10s TTL instead of 7200s. Kernel.Storage.InMem
 -- has no cross-instance invalidation, so the long-TTL cache is fine for callers that only read
@@ -80,9 +123,14 @@ getBusTripScheduleForBoardingCheck ::
   Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripScheduleForBoardingCheck", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 10 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPConfig = do
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+  overridden <- isTripEtaOverridden waybillNo tripNumber integratedBPPConfig
+  if overridden
+    then fetch
+    else IM.withInMemCache ["getBusTripScheduleForBoardingCheck", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 10 fetch
 
 getWaybillMetadata ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

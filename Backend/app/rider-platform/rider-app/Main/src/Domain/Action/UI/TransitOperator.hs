@@ -389,3 +389,48 @@ transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo t
     throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'
+
+-- ===== ETA variants and per-trip overrides =====
+
+transitOperatorGetEtaVariantsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [EtaVariant]
+transitOperatorGetEtaVariantsUtil merchantShortId city vehicleCategory = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorEtaVariants baseUrl gtfsId
+
+transitOperatorUpsertEtaVariantUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> EtaVariantUpsertReq -> Flow EtaVariant
+transitOperatorUpsertEtaVariantUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorUpsertEtaVariant baseUrl gtfsId req
+
+transitOperatorDeleteEtaVariantUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp
+transitOperatorDeleteEtaVariantUtil merchantShortId city vehicleCategory variantId = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorDeleteEtaVariant baseUrl gtfsId variantId
+
+transitOperatorGetStationEtasUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Flow [StationEtaRow]
+transitOperatorGetStationEtasUtil merchantShortId city vehicleCategory variantId = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorStationEtas baseUrl gtfsId (nonBlankText variantId)
+
+transitOperatorUpsertStationEtasUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> StationEtaBatchUpsertReq -> Flow RowsAffectedResp
+transitOperatorUpsertStationEtasUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorUpsertStationEtas baseUrl gtfsId req
+
+transitOperatorActiveTripEtaOverridesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [ActiveTripEtaOverride]
+transitOperatorActiveTripEtaOverridesUtil merchantShortId city vehicleCategory = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorActiveTripEtaOverrides baseUrl gtfsId
+
+-- | GIMS validates the expiry window and the variant, and answers with its own shape, so the
+-- response is discarded once the call has succeeded.
+transitOperatorSetTripEtaOverrideUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> SetTripEtaOverrideReq -> Flow Kernel.Types.APISuccess.APISuccess
+transitOperatorSetTripEtaOverrideUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  void $ NandiFlow.operatorSetTripEtaOverride baseUrl gtfsId req
+  pure Kernel.Types.APISuccess.Success
+
+transitOperatorClearTripEtaOverrideUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> ClearTripEtaOverrideReq -> Flow RowsAffectedResp
+transitOperatorClearTripEtaOverrideUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorClearTripEtaOverride baseUrl gtfsId req

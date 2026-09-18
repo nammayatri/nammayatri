@@ -967,11 +967,101 @@ data BusScheduleDetail = BusScheduleDetail
     service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
     trip_number :: Maybe Int,
     waybill_no :: Maybe Text,
-    is_active_trip :: Maybe Bool
+    is_active_trip :: Maybe Bool,
+    eta_variant_id :: Maybe Text,
+    -- | Epoch seconds, present only while an ops override is in force on this trip.
+    override_expires_at :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 type BusScheduleDetails = [BusScheduleDetail]
+
+-- | A segment-time variant: a named set of stop-to-stop times, optionally scoped to a time
+-- band. `bandStartTime`/`bandEndTime` are `HH:MM` and are set together or not at all; a start
+-- later than the end wraps midnight.
+data EtaVariant = EtaVariant
+  { variant_id :: Text,
+    gtfs_id :: Text,
+    code :: Text,
+    display_name :: Text,
+    is_default :: Bool,
+    band_start_time :: Maybe Text,
+    band_end_time :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data EtaVariantUpsertReq = EtaVariantUpsertReq
+  { code :: Text,
+    displayName :: Text,
+    isDefault :: Bool,
+    bandStartTime :: Maybe Text,
+    bandEndTime :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets EtaVariantUpsertReq where
+  hideSecrets = identity
+
+-- | `expiresAt` is absolute epoch seconds, not a duration, so every consumer agrees on when
+-- the override stops applying without agreeing on when it started. GIMS bounds how far ahead
+-- it may be.
+data SetTripEtaOverrideReq = SetTripEtaOverrideReq
+  { waybillNo :: Text,
+    tripNumber :: Int,
+    variantId :: Text,
+    expiresAt :: Int,
+    updatedBy :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets SetTripEtaOverrideReq where
+  hideSecrets = identity
+
+data ClearTripEtaOverrideReq = ClearTripEtaOverrideReq
+  { waybillNo :: Text,
+    tripNumber :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets ClearTripEtaOverrideReq where
+  hideSecrets = identity
+
+data StationEtaEntry = StationEtaEntry
+  { source_station_code :: Text,
+    destination_station_code :: Text,
+    eta_in_seconds :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data StationEtaBatchUpsertReq = StationEtaBatchUpsertReq
+  { variantId :: Maybe Text,
+    entries :: [StationEtaEntry]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+-- | A stored segment time with the variant it belongs to, so one read can span variants.
+data StationEtaRow = StationEtaRow
+  { variant_id :: Text,
+    source_station_code :: Text,
+    destination_station_code :: Text,
+    eta_in_seconds :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets StationEtaBatchUpsertReq where
+  hideSecrets = identity
+
+-- | An ETA override currently in force. Keyed the way this service addresses a trip
+-- (waybill_no + trip_number) rather than the way GIMS stores it, and carrying route_id so a
+-- route-scoped cache can be bypassed too.
+data ActiveTripEtaOverride = ActiveTripEtaOverride
+  { waybill_no :: Text,
+    trip_number :: Int,
+    route_id :: Maybe Text,
+    variant_id :: Text,
+    expires_at :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data NandiTrip = NandiTrip
   { id :: Text,
