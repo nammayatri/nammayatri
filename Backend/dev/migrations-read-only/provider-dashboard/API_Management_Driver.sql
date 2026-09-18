@@ -359,3 +359,9 @@ INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_LOGIN_OTP' ) ON CONFLICT DO NOTHING;
 -- {"api":"GetDriverFyEarnings","migration":"capability","param":"finance.earnings.read","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.earnings.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_FY_EARNINGS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverVehicleRemoveSelectedServiceTiers","migration":"capability","param":"city-operations.vehicle.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_REMOVE_SELECTED_SERVICE_TIERS' ) ON CONFLICT DO NOTHING;
