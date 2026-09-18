@@ -314,9 +314,10 @@ extractRCImage ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ExtractRCImageReq ->
+  Maybe Bool ->
   m ExtractRCImageResp
-extractRCImage _merchantId merchantOpCityId req =
-  Verification.extractRCImage (mkImageExtractionHandler merchantOpCityId) req
+extractRCImage _merchantId merchantOpCityId req allowOperatorSwitch =
+  Verification.extractRCImage (mkImageExtractionHandler merchantOpCityId allowOperatorSwitch) req
 
 extractPanImage ::
   ServiceFlow m r =>
@@ -334,9 +335,10 @@ extractPanImageWithPriorityList ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ExtractPanImage ->
+  Maybe Bool ->
   m ExtractedPanImageResp
-extractPanImageWithPriorityList _merchantId merchantOpCityId req =
-  Verification.extractPanImageMulti (mkImageExtractionHandler merchantOpCityId) req
+extractPanImageWithPriorityList _merchantId merchantOpCityId req allowOperatorSwitch =
+  Verification.extractPanImageMulti (mkImageExtractionHandler merchantOpCityId allowOperatorSwitch) req
 
 extractGSTImage ::
   ServiceFlow m r =>
@@ -370,21 +372,27 @@ extractDLImage ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   ExtractDLImageReq ->
+  Maybe Bool ->
   m ExtractDLImageResp
-extractDLImage _merchantId merchantOpCityId req =
-  Verification.extractDLImage (mkImageExtractionHandler merchantOpCityId) req
+extractDLImage _merchantId merchantOpCityId req allowOperatorSwitch =
+  Verification.extractDLImage (mkImageExtractionHandler merchantOpCityId allowOperatorSwitch) req
 
 mkImageExtractionHandler ::
   ( ServiceFlow m r,
     HasField "imageExtractionTimeoutSec" r Seconds
   ) =>
   Id DMOC.MerchantOperatingCity ->
+  Maybe Bool ->
   Verification.ImageExtractionHandler m
-mkImageExtractionHandler merchantOpCityId =
+mkImageExtractionHandler merchantOpCityId allowOperatorSwitch =
   Verification.ImageExtractionHandler
     { getProvidersPriorityList = do
         msuc <- getMerchantServiceUsageConfig merchantOpCityId
-        pure $ fromMaybe [msuc.verificationService] msuc.imageExtractionProvidersPriorityList,
+        let allProviders = fromMaybe [msuc.verificationService] msuc.imageExtractionProvidersPriorityList
+        pure $
+          if allowOperatorSwitch == Just True
+            then filter (/= VT.InternalOCR) allProviders
+            else allProviders,
       getProviderTimeout = asks ((.getSeconds) . (.imageExtractionTimeoutSec)),
       getProviderConfig = getVerificationServiceConfig merchantOpCityId
     }
