@@ -623,4 +623,11 @@ in  { esqDBCfg
     , rideEventsPublisherCfg
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
     , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
+    , radarXyneCfg =
+      { baseUrl = "https://spaces.xyne.juspay.net"
+      , appJwt = ""
+      , deskChannelId = ""
+      , csatApiKey = ""
+      , webhookSigningSecret = ""
+      }
     }
