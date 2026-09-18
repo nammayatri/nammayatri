@@ -897,10 +897,13 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOve
   case RD.parseProjectFareParamsBreakup (breakupToPair <$> breakups) of
     Nothing -> pure Nothing
     Just b -> do
-      let (breakupPostDiscount, r) = RD.applyDiscountAndRepriceCharge (RD.paymentChargeRateFromBreakup b) b discount
+      let mbChargeRate = RD.paymentChargeRateFromBreakup b
+          (breakupPostDiscount, r) = RD.applyDiscountAndRepriceCharge mbChargeRate b discount
+          -- The override is booking/ride.paymentCharge, stored VAT-inclusive. Reverse the rate
+          -- out of it: reporting the whole gross as net dropped the VAT line from every invoice.
           (paymentChargeAmt, paymentChargeVatAmt) =
             if mbPaymentChargeOverride > 0
-              then (mbPaymentChargeOverride, 0)
+              then splitGrossPaymentCharge mbChargeRate mbPaymentChargeOverride
               else (breakupPostDiscount.paymentChargeTaxExclusive, breakupPostDiscount.paymentChargeTax)
           info =
             mkRidePaymentLedgerInfo

@@ -53,6 +53,8 @@ types:
     timestamp: UTCTime
     payoutMethod: Text
     payoutVpa: Maybe Text
+    bankName: Maybe Text
+    bankAccountLast4: Maybe Text
   PayoutHistoryResponse:
     totalPaidOut: HighPrecMoney
     lastPayout: Maybe PayoutHistoryItem

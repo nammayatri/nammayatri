@@ -336,6 +336,8 @@ startRideHandler ServiceHandle {..} rideId req = do
                         expectedCreditTime = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
                         scheduledAt = if payoutStatus == DPR.INITIATED then Just scheduledTime else Nothing,
                         customerVpa = payoutVpa,
+                        bankName = Nothing,
+                        bankAccountLast4 = Nothing,
                         customerPhone = phoneNo,
                         customerEmail = person.email,
                         customerName = Just person.firstName,

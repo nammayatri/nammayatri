@@ -15,6 +15,8 @@ import Tools.Beam.UtilsTH
 
 data DriverBankAccountT f = DriverBankAccountT
   { accountId :: B.C f Kernel.External.Payment.Stripe.Types.AccountId,
+    bankAccountLast4 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bankName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     chargesEnabled :: B.C f Kernel.Prelude.Bool,
     currentAccountLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     currentAccountLinkExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

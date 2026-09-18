@@ -1250,6 +1250,8 @@ DriverBankAccount:
     paymentMode: Maybe PaymentMode
     ifscCode: Maybe Text
     nameAtBank: Maybe Text
+    bankName: Maybe Text
+    bankAccountLast4: Maybe Text
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
     lastSyncedAt: Maybe UTCTime

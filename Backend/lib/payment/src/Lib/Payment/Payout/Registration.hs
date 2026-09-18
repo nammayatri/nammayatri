@@ -287,6 +287,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
                 merchantOpCityId = maybe "" (.getId) order.merchantOperatingCityId,
                 city = city,
                 vpa = vpa,
+                bankName = Nothing,
+                bankAccountLast4 = Nothing,
                 customerName = Nothing,
                 customerPhone = Nothing,
                 customerEmail = Nothing,

@@ -195,6 +195,8 @@ types:
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
     stripeLegalEntityName: Maybe Text
+    bankName: Maybe Text
+    bankAccountLast4: Maybe Text
   FleetInfo:
     id: Text
     ownerName: Text

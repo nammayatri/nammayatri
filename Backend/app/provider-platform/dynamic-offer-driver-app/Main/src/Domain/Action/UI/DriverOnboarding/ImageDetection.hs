@@ -39,7 +39,7 @@ data DetectImageRecommendation = FullFace | PartialFace | RejectedFace
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data DetectImageResp = DetectImageResp
-  { status :: DetectImageStatus,
+  { status :: Maybe DetectImageStatus,
     fullFaces :: Maybe Int,
     partialFaces :: Maybe Int,
     rejectedFaces :: Maybe Int,
@@ -70,7 +70,7 @@ detectImage (personId, merchantId, merchantOpCityId) req = do
 
     toResp VIT.FaceDetectionSummary {..} =
       DetectImageResp
-        { status = toStatus status,
+        { status = toStatus <$> status,
           fullFaces = fullFaces,
           partialFaces = partialFaces,
           rejectedFaces = rejectedFaces,

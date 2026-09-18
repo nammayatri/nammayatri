@@ -22,6 +22,8 @@ instance FromTType' Beam.DriverBankAccount Domain.Types.DriverBankAccount.Driver
       Just
         Domain.Types.DriverBankAccount.DriverBankAccount
           { accountId = accountId,
+            bankAccountLast4 = bankAccountLast4,
+            bankName = bankName,
             chargesEnabled = chargesEnabled,
             currentAccountLink = currentAccountLink',
             currentAccountLinkExpiry = currentAccountLinkExpiry,
@@ -44,6 +46,8 @@ instance ToTType' Beam.DriverBankAccount Domain.Types.DriverBankAccount.DriverBa
   toTType' (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
     Beam.DriverBankAccountT
       { Beam.accountId = accountId,
+        Beam.bankAccountLast4 = bankAccountLast4,
+        Beam.bankName = bankName,
         Beam.chargesEnabled = chargesEnabled,
         Beam.currentAccountLink = Kernel.Prelude.fmap showBaseUrl currentAccountLink,
         Beam.currentAccountLinkExpiry = currentAccountLinkExpiry,

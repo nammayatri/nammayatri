@@ -45,3 +45,9 @@ ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN coverage_from times
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN ledger_entry_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN bank_name text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_request ADD COLUMN bank_account_last4 text ;

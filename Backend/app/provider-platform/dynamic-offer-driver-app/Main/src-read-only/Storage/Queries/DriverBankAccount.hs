@@ -52,6 +52,8 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.accountId accountId,
+      Se.Set Beam.bankAccountLast4 bankAccountLast4,
+      Se.Set Beam.bankName bankName,
       Se.Set Beam.chargesEnabled chargesEnabled,
       Se.Set Beam.currentAccountLink (Kernel.Prelude.fmap showBaseUrl currentAccountLink),
       Se.Set Beam.currentAccountLinkExpiry currentAccountLinkExpiry,

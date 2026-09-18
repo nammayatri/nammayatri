@@ -611,7 +611,25 @@ rideAssignedReqHandler req = do
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
           estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
           -- Online Ride Assigned branch (inside Just OnlinePaymentParameters case) → isOnline=True.
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+          -- Same recipient/supplier resolution the ride-end paths do. Without it this ctx
+          -- carries the buildRiderFinanceCtx defaults (issuedToName = Nothing), and since a
+          -- re-price here voids the ride-end invoice and writes a fresh one, the invoice the
+          -- PDF actually renders ends up with no recipient and no supplier.
+          riderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+          assignedRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+          let assignedRiderName = listToMaybe $ catMaybes [riderPerson.firstName, riderPerson.middleName, riderPerson.lastName]
+              assignedInvCfg = assignedRiderConfig.invoiceConfig
+              ledgerCtx =
+                -- applyBookingProviderFieldsToCtx only overlays supplier fields the BPP actually
+                -- sent, so seed them from config first -- otherwise a booking without those
+                -- fields leaves the invoice with no supplier at all.
+                RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                  (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                    { issuedToName = assignedRiderName,
+                      supplierName = assignedInvCfg >>= (.supplierName),
+                      supplierAddress = assignedInvCfg >>= (.supplierAddress),
+                      supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
+                    }
           mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
           -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
           -- the two halves, so reverse the rate the ride was priced at.
