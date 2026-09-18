@@ -437,26 +437,58 @@ data ListPTEmployeeRes = ListPTEmployeeRes
 -- assignments that screen needs. entityShortId is resolved against the caller's merchant, so an
 -- unknown or foreign depot is rejected rather than silently returning everyone.
 ptList ::
-  (BeamFlow m r, EncFlow m r) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   TokenInfo ->
+  ShortId DMerchant.Merchant ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
   m ListPTEmployeeRes
-ptList tokenInfo mbSearchString mbRoleName mbEntityShortId mbLimit mbOffset = do
+ptList tokenInfo merchantShortId mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit mbOffset = do
+  let accessLevel =
+        DMatrix.ApiAccessLevel
+          { serverName = DTServer.APP_BACKEND_MANAGEMENT,
+            apiEntity = DMatrix.DSL,
+            userActionType = DMatrix.DASHBOARD_USER_PT_LIST
+          }
+      endpointId = AuthCap.mkEndpointId accessLevel
+  actorPerson <- ApiAuth.verifyAccessLevel accessLevel tokenInfo.personId
+  -- The route is DashboardAuth, which never runs verifyApi, so the capability gate is enforced here.
+  actorAccessCaps <- AuthCap.resolveAccess actorPerson.id actorPerson.roleId
+  endpointCaps <- AuthCap.endpointCapabilities endpointId
+  AuthCap.enforce actorAccessCaps endpointCaps actorPerson endpointId
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  actorAccess <- QAccess.findByPersonIdAndMerchantId tokenInfo.personId merchant.id
+  when (null actorAccess) $
+    throwError AccessDenied
+  actorRole <- QRole.findById actorPerson.roleId >>= fromMaybeM (RoleDoesNotExist actorPerson.roleId.getId)
+  -- Admin bypasses the accessibleRoles gate, same policy as bulkUpsert and Roles.listV2.
+  let mbVisibleRoleIds =
+        if actorRole.dashboardAccessType == DRole.DASHBOARD_ADMIN
+          then Nothing
+          else Just actorRole.accessibleRoles
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  -- tokenNo is stored encrypted, so it is matched on its hash rather than searched as text.
+  mbTokenNoDBHash <- getDbHash `traverse` (mbTokenNo >>= nonBlank)
   mbEntityId <- forM mbEntityShortId $ \shortId ->
-    QEntity.findByMerchantAndShortId tokenInfo.merchantId (ShortId shortId)
+    QEntity.findByMerchantAndShortId merchant.id (ShortId shortId)
       >>= fmap (.id) . fromMaybeM (InvalidRequest $ "Entity " <> shortId <> " does not exist for this merchant")
   -- Every returned row costs a passetto round-trip to decrypt tokenNo and vpa, so the caller
   -- cannot widen the page arbitrarily.
   -- Only the upper bound was capped, so a negative limit or offset reached Postgres as LIMIT/OFFSET -1.
   let cappedLimit = max 0 $ min maxPTPageSize (fromMaybe maxPTPageSize mbLimit)
       safeOffset = max 0 <$> mbOffset
-  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset tokenInfo.merchantId mbSearchString mbSearchStrDBHash mbRoleName mbEntityId (Just cappedLimit) safeOffset
-  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) tokenInfo.merchantId
+  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllPTWithLimitOffset merchant.id mbSearchString mbSearchStrDBHash mbRoleName mbEntityId mbTokenNoDBHash mbVisibleRoleIds (Just cappedLimit) safeOffset
+  entityGrants <- B.runInReplica $ QEntityAccess.findAllByPersonIdsAndMerchantId (map ((.id) . fst) personAndRoleList) merchant.id
   -- Retired depots stay visible here, unlike profile: staff on one must be findable to reassign.
   let grantedEntityIds = nub $ entityGrants <&> (.entityId)
   entities <- B.runInReplica $ QEntity.findAllByIds grantedEntityIds

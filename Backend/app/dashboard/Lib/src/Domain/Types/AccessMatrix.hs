@@ -400,6 +400,7 @@ data UserActionType
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | WHITELIST_MERCHANT_OPERATING_CITY
   | DASHBOARD_USER_BULK_CREATE
+  | DASHBOARD_USER_PT_LIST
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
