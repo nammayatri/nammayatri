@@ -81,9 +81,9 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
 import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
+import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
-import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)

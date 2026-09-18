@@ -181,6 +181,7 @@ data RiderConfigT f = RiderConfigT
     refundStatusUpdateRetries :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     remindEverydayUntilPassExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rentalsConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig]),
+    routeCacheMaxDurationDeviation :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
     seatBookingCleanupTtl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

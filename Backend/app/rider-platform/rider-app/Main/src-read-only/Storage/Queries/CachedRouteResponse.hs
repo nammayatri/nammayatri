@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.CachedRouteResponse.CachedRouteResponse {..}) =
       Se.Set Beam.distance distance,
       Se.Set Beam.dropGeohash dropGeohash,
       Se.Set Beam.duration duration,
+      Se.Set Beam.durationStaticDurationDiff durationStaticDurationDiff,
       Se.Set Beam.hourOfDay hourOfDay,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),

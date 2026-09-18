@@ -868,3 +868,8 @@ ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_cate
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_driver_details_lead_time_seconds int  default 1800;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN route_cache_max_duration_deviation integer ;
