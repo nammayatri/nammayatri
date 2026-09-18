@@ -462,7 +462,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       -- One fetch for both bounds; the single-bound helpers issue the same schedule call.
       (mbScheduledStartTime, mbScheduledEndTime) <-
         case (mbTnstcBoardingTime, firstTripId, mbRouteCode) of
-          (Just tnstcTime, _, _) -> pure tnstcTime
+          (Just tnstcTime, _, _) -> pure (Just tnstcTime, Nothing)
           (Nothing, Just tripId, Just routeCode) ->
             FRFSUtils.getScheduledTripWindow tripId routeCode quote'.fromStationCode quote'.toStationCode integratedBppConfig
           _ -> pure (Nothing, Nothing)
@@ -672,38 +672,6 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
         guard (h >= 0 && h < 24 && m >= 0 && m < 60)
         return $ addUTCTime (negate 19800) (UTCTime day (secondsToDiffTime (h * 3600 + m * 60)))
       _ -> Nothing
-
-    -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
-    -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
-    -- earliest stop when the boarding stop is not present. Returns Nothing when the schedule
-    -- is unavailable or empty so callers can fall back safely.
-    getScheduledTripStartTime ::
-      ( MonadFlow m,
-        ServiceFlow m r,
-        HasShortDurationRetryCfg r c,
-        HasBAPMetrics m r
-      ) =>
-      Text -> -- tripId (format: waybillNo-tripNumber)
-      Text -> -- routeCode
-      Text -> -- boarding stop code
-      DIBC.IntegratedBPPConfig ->
-      m (Maybe UTCTime)
-    getScheduledTripStartTime tripId routeCode boardingStopCode integratedBPPConfig = do
-      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-      mbSchedule <- withTryCatch "getScheduledTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
-      case mbSchedule of
-        Left err -> do
-          logWarning $ "getScheduledTripStartTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
-          pure Nothing
-        Right schedule ->
-          case concatMap (.eta) schedule of
-            [] -> do
-              logWarning $ "getScheduledTripStartTime: empty schedule for tripId=" <> tripId
-              pure Nothing
-            allEtas -> do
-              let mbBoardingEta = listToMaybe (filter (\e -> e.stopCode == boardingStopCode) allEtas)
-                  chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
-              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do

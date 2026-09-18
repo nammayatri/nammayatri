@@ -16,7 +16,6 @@ import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
@@ -64,7 +63,7 @@ data FRFSQuote = FRFSQuote
     toStationCode :: Kernel.Prelude.Text,
     toStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    tripCategory :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
@@ -85,10 +84,4 @@ data FRFSFareDetails = FRFSFareDetails
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSTripCategory = INTRACITY | INTERCITY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTripCategory)
-
-$(mkHttpInstancesForEnum ''FRFSTripCategory)

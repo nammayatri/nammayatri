@@ -41,7 +41,7 @@ resolveBppConfig merchantShortId opCity vehicleCategory = do
         ( MerchantOperatingCityNotFound $
             "merchantShortId: " <> merchantShortId.getShortId <> ", city: " <> show opCity
         )
-  SIBC.findIntegratedBPPConfig Nothing moc.id vehicleCategory DIBC.MULTIMODAL
+  SIBC.findIntegratedBPPConfig Nothing moc.id vehicleCategory DIBC.MULTIMODAL Nothing
 
 stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Enums.VehicleCategory -> Environment.Flow [Domain.Types.Station.Station])
 stopRouteDetailsGetStops merchantShortId opCity mbIncludeClusterId vehicleCategory = do

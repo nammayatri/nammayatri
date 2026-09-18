@@ -518,6 +518,7 @@ data TransportStation = TransportStation
     psc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstdDest :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
+    tc :: Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)

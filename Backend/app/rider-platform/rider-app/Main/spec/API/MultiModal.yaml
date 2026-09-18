@@ -28,6 +28,7 @@ imports:
   GetFareResponse: Lib.JourneyModule.Types
   BookingUpdateRequest: Domain.Types.BookingUpdateRequest
   RouteStopMapping: Domain.Types.RouteStopMapping
+  FRFSTripCategory: Domain.Types.IntegratedBPPConfig
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
   AvailableRoutesByTier: Domain.Types.RouteDetails
@@ -280,6 +281,7 @@ types:
     # in search. psc: the station a platform belongs to, for that grouping.
     lty: Maybe Text
     psc: Maybe Text
+    tc: Maybe FRFSTripCategory
     derive': "Generic, ToSchema"
 
   TransportRouteStopMapping:

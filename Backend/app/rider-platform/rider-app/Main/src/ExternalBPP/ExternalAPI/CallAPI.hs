@@ -349,7 +349,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
         DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
         CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
         TNSTC config' -> TNSTCOrder.createOrder config' integrationBPPConfig booking quoteCategories (_mRiderName, mRiderNumber)
-      _ -> throwError $ InternalError "Unimplemented!"
+        _ -> throwError $ InternalError "Unimplemented!"
   let countOrder = Metrics.incrementFRFSExternalBppCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (getProviderTag integrationBPPConfig) Metrics.FRFSBppOrder
   case eResp of
     Left err -> do

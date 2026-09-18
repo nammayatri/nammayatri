@@ -254,7 +254,7 @@ getFrfsRoute ::
 getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _mbCity vehicleType = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
   let platformType = fromMaybe DIBC.APPLICATION _platformType
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType Nothing
   route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
   routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
   currentTime <- getCurrentTime
@@ -561,7 +561,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfig
           >>= return . (.merchantOperatingCityId)
 
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType req.tripCategory
 
   -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
   mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
@@ -597,7 +597,7 @@ postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> " ,city: " <> show req.city)
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOpCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory req.vehicleType) platformType Nothing
   CallExternalBPP.discoverySearch merchant bapConfig integratedBPPConfig False req
   return Kernel.Types.APISuccess.Success
 
@@ -618,7 +618,7 @@ getFrfsGtfs ::
 getFrfsGtfs (_mbPersonId, merchantId) mbIntegratedBppConfigId mbPlatformType maxWaitSec city vehicleType = do
   let platformType = fromMaybe DIBC.APPLICATION mbPlatformType
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> " ,city: " <> show city)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBppConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBppConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType Nothing
   let key = frfsGtfsCacheKey integratedBPPConfig.id.getId
   mbCached <- Hedis.safeGet key
   case mbCached of
@@ -1766,7 +1766,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
   logInfo $ "FRFSTicketService:getFrfsTripRouteSeats routeId=" <> routeId <> " tripId=" <> tripId <> " vehicleNumber=" <> show vehicleNumber <> " from=" <> show mbFromStopCode <> " to=" <> show mbToStopCode
 
   let cityId = personCityInfo.merchantOperatingCityId
-  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfigByTripCategory cityId Enums.BUS DIBC.MULTIMODAL Nothing
 
   vehicleNo <- vehicleNumber & fromMaybeM (InvalidRequest "Vehicle number not found")
   seatLayoutId <-
@@ -1809,7 +1809,7 @@ getFrfsRouteSeatLayout (mbPersonId, _merchantId) routeId mbVehicleNumber = do
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   let cityId = personCityInfo.merchantOperatingCityId
-  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfigByTripCategory cityId Enums.BUS DIBC.MULTIMODAL Nothing
 
   vehicleNo <- mbVehicleNumber & fromMaybeM (InvalidRequest "Vehicle number not found")
   seatLayoutId <-
@@ -1835,7 +1835,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   let cityId = person.merchantOperatingCityId
-  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfigByTripCategory cityId Enums.BUS DIBC.MULTIMODAL Nothing
 
   busesForRoutes <- CQMMB.getBusesForRoutes [routeId] integratedBPPConfig
 
@@ -1987,7 +1987,7 @@ postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
   personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
   baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
-  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfigByTripCategory personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
   let gtfsId = bppConfig.feedKey
       anchor =
         GimsOperationAnchor
@@ -2211,7 +2211,7 @@ postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
   personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
   baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
-  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfigByTripCategory personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
   let gtfsId = bppConfig.feedKey
       anchor =
         GimsOperationAnchor

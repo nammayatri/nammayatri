@@ -713,7 +713,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) Nothing
   let mode = castVehicleCategoryToGeneralVehicleType vehicleCategory
   let (isSingleMode, isFirstMileRemoved) =
         case req' of
@@ -752,7 +752,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         destination <- extractDest searchRequest.toLocation
         mbOriginIBC <-
           case mbOriginStopIntegratedBppConfigId of
-            Just _ -> SIBC.findMaybeIntegratedBPPConfig mbOriginStopIntegratedBppConfigId merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
+            Just _ -> SIBC.findMaybeIntegratedBPPConfig mbOriginStopIntegratedBppConfigId merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType) Nothing
             Nothing -> pure mbIntegratedBPPConfig
         -- Get stop information if integrated BPP config is available
         fromStopInfo <- case (mbOriginIBC, searchRequest.originStopCode) of
@@ -1166,7 +1166,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       if null subwayRoutes
         then return Nothing
         else do
-          SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= \case
+          SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL Nothing >>= \case
             Just integratedBPPConfig -> do
               case integratedBPPConfig.providerConfig of
                 DIBC.CRIS config -> do

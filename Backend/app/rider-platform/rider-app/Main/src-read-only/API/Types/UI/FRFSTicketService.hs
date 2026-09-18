@@ -284,7 +284,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
-    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
+    tripCategory :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -396,7 +396,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
     travellerGroup :: Data.Maybe.Maybe Domain.Types.FRFSSearch.FRFSTravellerGroup,
-    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
+    tripCategory :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }

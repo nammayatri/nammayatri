@@ -601,7 +601,7 @@ mkQuoteRes (quote, quoteCategories) = do
   singleAdultTicketPrice <- find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice) & fromMaybeM (InternalError "Single Adult Ticket Price not found.")
   return $
     FRFSTypes.FRFSQuoteAPIRes
-      { tripCategory = Just DFRFSQuote.INTRACITY,
+      { tripCategory = Just DIBC.INTRACITY,
         providerServiceId = Nothing,
         providerLayoutId = Nothing,
         providerClassId = Nothing,
@@ -679,7 +679,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
       now <- getCurrentTime
       let quote =
             DFRFSQuote.FRFSQuote
-              { DFRFSQuote.tripCategory = Just DFRFSQuote.INTRACITY,
+              { DFRFSQuote.tripCategory = Just DIBC.INTRACITY,
                 DFRFSQuote.providerServiceId = Nothing,
                 DFRFSQuote.providerLayoutId = Nothing,
                 DFRFSQuote.providerClassId = Nothing,

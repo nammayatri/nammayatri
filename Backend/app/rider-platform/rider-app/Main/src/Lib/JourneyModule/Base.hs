@@ -122,7 +122,7 @@ filterTransitRoutes riderConfig routes = do
               (Just departureTime, Just stopCode, Just routeId) -> do
                 let buffer = 300 -- TODO: MOVE TO CONFIG.
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
-                integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+                integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
                 routeWithBuses <- CQMMB.getRoutesBuses routeId integratedBppConfig
 
                 -- Check if the bus has an ETA for this stop

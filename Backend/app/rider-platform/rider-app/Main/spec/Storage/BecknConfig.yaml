@@ -118,6 +118,7 @@ IntegratedBPPConfig:
     isTicketValidOnMultipleRoutes: Maybe Bool
     passOverrideApplicable: Maybe Bool
     sortQuotesByRouteServiceTiers: Maybe Bool
+    tripCategory: Maybe FRFSTripCategory
 
   beamFields:
     providerConfig:
@@ -129,6 +130,9 @@ IntegratedBPPConfig:
     sortQuotesByRouteServiceTiers: "false"
 
   types:
+    FRFSTripCategory:
+      enum: "INTRACITY, INTERCITY"
+      derive: "HttpInstance"
     PlatformType:
       enum: "MULTIMODAL, PARTNERORG, APPLICATION"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"

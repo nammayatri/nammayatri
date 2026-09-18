@@ -115,7 +115,7 @@ getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode integratedBPPCon
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION Nothing
   fetchedRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (InvalidRequest "Invalid route code")
 
   -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
@@ -203,7 +203,7 @@ putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode integratedBPP
           CQMOC.findByMerchantIdAndCity merchant.id opCity
             >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-        integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION
+        integratedBPPConfig <- SIBC.findIntegratedBPPConfig (Just $ cast integratedBPPConfigId) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.APPLICATION Nothing
         -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
         fareProducts <- QFRFSRouteFareProduct.findByRouteCode row.routeCode integratedBPPConfig.id
         fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")

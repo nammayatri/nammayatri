@@ -6,7 +6,7 @@ imports:
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
-  FRFSTripCategory: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.IntegratedBPPConfig
   FRFSTravellerGroup: Domain.Types.FRFSSearch
   FRFSSavedPassenger: Domain.Types.FRFSSavedPassenger
   FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
