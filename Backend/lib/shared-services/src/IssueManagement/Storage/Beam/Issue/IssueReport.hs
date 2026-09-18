@@ -46,7 +46,8 @@ data IssueReportT f = IssueReportT
     merchantId :: B.C f (Maybe Text),
     becknIssueId :: B.C f (Maybe Text),
     reopenedCount :: B.C f (Maybe Int),
-    customerResponse :: B.C f (Maybe Domain.CustomerResponse)
+    customerResponse :: B.C f (Maybe Domain.CustomerResponse),
+    submitLabel :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
