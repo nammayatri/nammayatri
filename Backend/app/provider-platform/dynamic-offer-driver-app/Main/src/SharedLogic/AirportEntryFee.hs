@@ -120,7 +120,7 @@ requiredDriverWalletAmountForBooking ::
 requiredDriverWalletAmountForBooking enabled mbGateId mbServiceTier mbFareSettlementType mbCurrency = do
   mbGate <- findGate mbGateId
   case mbGate >>= (.minBalanceRequired) of
-    Just minBalance | minBalance > 0 -> do
+    Just minBalance -> do
       logInfo $ "requiredDriverWalletAmountForBooking: using gate minBalanceRequired " <> show minBalance <> " for gate " <> show mbGateId
       pure $ Just minBalance
     _ -> do
