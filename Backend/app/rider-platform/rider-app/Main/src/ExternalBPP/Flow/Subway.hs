@@ -25,8 +25,9 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
-crisViaRoutesSearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r, Forkable m) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+crisViaRoutesSearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r, Forkable m) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 crisViaRoutesSearch merchant merchantOperatingCity integratedBPPConfig bapConfig _mbNetworkHostUrl _mbNetworkId searchReq _routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
   quotes <- buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searchReq blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
@@ -45,7 +46,7 @@ crisViaRoutesSearch merchant merchantOperatingCity integratedBPPConfig bapConfig
         bppDelayedInterest = Nothing
       }
 
-buildCrisViaRouteQuotes :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r, Forkable m) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> DFRFSSearch.FRFSSearch -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m [DQuote]
+buildCrisViaRouteQuotes :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r, Forkable m) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> DFRFSSearch.FRFSSearch -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m [DQuote]
 buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searchReq blacklistedServiceTiers blacklistedFareQuoteTypes _isSingleMode _mbProviderRouteId = do
   let fareRoute =
         CallAPI.FareRoute
