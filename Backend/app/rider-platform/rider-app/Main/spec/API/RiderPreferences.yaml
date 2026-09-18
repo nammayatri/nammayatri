@@ -75,6 +75,13 @@ types:
     locationPickups: "[LocationPickupRespData]"
     notificationPreference: Maybe NotificationPreferenceRespData
 
+  # Response for the notification-only GET below. A bare `Maybe X` doesn't generate
+  # correctly as a top-level API response type (NammaDSL emits an unparenthesized
+  # handler signature that fails to compile), so this wraps it the same way
+  # AllRiderPreferencesResp wraps its optional field.
+  NotificationPreferenceOnlyResp:
+    notificationPreference: Maybe NotificationPreferenceRespData
+
 apis:
   # Save or update a preference.
   # For LOCATION_PICKUP: upserts on (riderId, LOCATION_PICKUP, sourceGeohash).
@@ -108,6 +115,18 @@ apis:
       auth: TokenAuth
       response:
         type: AllRiderPreferencesResp
+
+  # Fetch only the notification preference for the logged-in rider -- skips the
+  # unbounded LOCATION_PICKUP fetch entirely for callers (e.g. the notification-settings
+  # screen) that don't need saved pickup locations. Goes through the same Redis-cached
+  # single-row lookup the send-path gate uses, so it's cheap regardless of how many
+  # LOCATION_PICKUP rows this rider has accumulated. Nothing if the rider has never
+  # responded to the in-app permission popup.
+  - GET:
+      endpoint: /riderPreference/notification
+      auth: TokenAuth
+      response:
+        type: NotificationPreferenceOnlyResp
 
   # Delete a specific preference by its DB id.
   # Ownership is verified: the preference's riderId must match the auth token.
