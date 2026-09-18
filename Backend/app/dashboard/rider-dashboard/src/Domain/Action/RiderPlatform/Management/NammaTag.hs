@@ -136,8 +136,9 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInf
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicUpsertLogicRollout) updatedReq)
 
 postNammaTagAppDynamicLogicBulkUpsertLogicRollout ::
-  (ApiTokenInfo -> Lib.Yudhishthira.Types.BulkLogicRolloutReq -> Environment.Flow Lib.Yudhishthira.Types.BulkLogicRolloutResult)
-postNammaTagAppDynamicLogicBulkUpsertLogicRollout apiTokenInfo req = do
+  (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.BulkLogicRolloutReq -> Environment.Flow Lib.Yudhishthira.Types.BulkLogicRolloutResult)
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout authMerchantShortId opCity apiTokenInfo req = do
+  _ <- merchantCityAccessCheck authMerchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   results <- Kernel.Prelude.forM req.merchantsAndCities $ \entry -> do
     let merchantShortId = Kernel.Types.Id.ShortId entry.merchantShortId
     mbMerchant <- Storage.Queries.Merchant.findByShortId merchantShortId
