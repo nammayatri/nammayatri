@@ -118,9 +118,13 @@ type API =
                       :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
                 )
            :<|> "detectImage"
-             :> TokenAuth
-             :> ReqBody '[JSON] ImageDetection.DetectImageReq
-             :> Post '[JSON] ImageDetection.DetectImageResp
+             :> ( TokenAuth
+                    :> ReqBody '[JSON] ImageDetection.DetectImageReq
+                    :> Post '[JSON] ImageDetection.DetectImageResp
+                    :<|> "detectFace"
+                      :> TokenAuth
+                      :> Get '[JSON] ImageDetection.DetectImageResp
+                )
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -164,7 +168,7 @@ handler =
       :<|> verifyAadhaarOtp
       :<|> unVerifiedAadhaarData
       :<|> (getOCRResultRC :<|> getOCRResultDL :<|> getOCRResultPAN)
-      :<|> detectImageHandler
+      :<|> (detectImageHandler :<|> getDetectFaceResultHandler)
   )
     :<|> addReferral
     :<|> getReferredDrivers
@@ -249,3 +253,6 @@ getOCRResultPAN (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegist
 
 detectImageHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> ImageDetection.DetectImageReq -> FlowHandler ImageDetection.DetectImageResp
 detectImageHandler (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ ImageDetection.detectImage (personId, merchantId, merchantOpCityId) req
+
+getDetectFaceResultHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler ImageDetection.DetectImageResp
+getDetectFaceResultHandler (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ ImageDetection.getDetectFaceResult (personId, merchantId, merchantOpCityId)
