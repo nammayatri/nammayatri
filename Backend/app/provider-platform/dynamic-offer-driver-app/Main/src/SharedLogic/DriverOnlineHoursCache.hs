@@ -19,7 +19,7 @@ module SharedLogic.DriverOnlineHoursCache
   )
 where
 
-import Data.Time (Day, UTCTime (..), addUTCTime)
+import Data.Time (Day, DiffTime, UTCTime (..))
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,22 +42,28 @@ onlineHoursKeyExpiry = 345600
 localDay :: Seconds -> UTCTime -> Day
 localDay timeDiffFromUtc now = utctDay (addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now)
 
+diffUTCTimeInSeconds :: UTCTime -> UTCTime -> Seconds
+diffUTCTimeInSeconds to from = Seconds (round $ diffUTCTime (roundUTCTimeToSecond to) (roundUTCTimeToSecond from))
+
+roundUTCTimeToSecond :: UTCTime -> UTCTime
+roundUTCTimeToSecond (UTCTime utcDay dt) = UTCTime utcDay (fromIntegral $ floor @DiffTime @Integer dt)
+
 markOnlineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m ()
 markOnlineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   let today = localDay timeDiffFromUtc now
       key = mkOnlineHoursKey driverId.getId
-  mbCache <- Redis.safeGet key
+  (mbCache :: Maybe DriverOnlineHoursCache) <- Redis.safeGet key
   let carriedOverTotal = case mbCache of
         Just cache | cache.day == today -> cache.totalOnline
         _ -> Seconds 0
   Redis.setExp key (DriverOnlineHoursCache {day = today, totalOnline = carriedOverTotal, lastOnlineAt = Just now}) onlineHoursKeyExpiry
 
-markOfflineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m ()
-markOfflineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
+markOfflineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m ()
+markOfflineToday driverId = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   let key = mkOnlineHoursKey driverId.getId
-  mbCache <- Redis.safeGet key
+  (mbCache :: Maybe DriverOnlineHoursCache) <- Redis.safeGet key
   whenJust mbCache $ \cache ->
     whenJust cache.lastOnlineAt $ \lastOnlineAt -> do
       let newTotalOnline = cache.totalOnline + max (Seconds 0) (diffUTCTimeInSeconds now lastOnlineAt)
@@ -67,7 +73,7 @@ getTodayOnlineDuration :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) =>
 getTodayOnlineDuration driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   let today = localDay timeDiffFromUtc now
-  mbCache <- Redis.safeGet (mkOnlineHoursKey driverId.getId)
+  (mbCache :: Maybe DriverOnlineHoursCache) <- Redis.safeGet (mkOnlineHoursKey driverId.getId)
   pure $ case mbCache of
     Just cache
       | cache.day == today ->

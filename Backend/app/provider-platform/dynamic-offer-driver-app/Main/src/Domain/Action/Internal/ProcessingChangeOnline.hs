@@ -35,7 +35,7 @@ processingChangeOnline ::
   m ()
 processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
   when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
-    DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+    DriverOnlineHoursCache.markOfflineToday driverId
   when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $
     DriverOnlineHoursCache.markOnlineToday driverId transporterConfig.timeDiffFromUtc
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
