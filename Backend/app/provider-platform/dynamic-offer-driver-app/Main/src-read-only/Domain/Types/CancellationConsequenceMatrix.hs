@@ -35,6 +35,7 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
     faultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationConsequenceMatrix.CancellationConsequenceMatrix,
     isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxDriverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     maxWaiveOffsPerPeriod :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

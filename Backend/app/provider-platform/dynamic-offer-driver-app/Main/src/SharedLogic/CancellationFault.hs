@@ -84,6 +84,9 @@ data FaultVerdictData = FaultVerdictData
     initialDistanceToPickup :: Maybe Meters,
     currentDistanceToPickup :: Maybe Meters,
     isAdvanceBooking :: Bool,
+    -- the booking's own isScheduled flag — distinct from isAdvanceBooking above, which
+    -- actually means "driver chained from a prior ride's drop location"
+    isScheduled :: Bool,
     isPickupOrDestinationEdited :: Bool,
     -- pickup journey: behaviour label (REACHED_PICKUP / PROGRESSING / DETOURING /
     -- STALLED / MOVING_AWAY / GPS_DARK, null when monitoring never ran), cumulative
@@ -111,6 +114,7 @@ instance Default FaultVerdictData where
         initialDistanceToPickup = Nothing,
         currentDistanceToPickup = Nothing,
         isAdvanceBooking = False,
+        isScheduled = False,
         isPickupOrDestinationEdited = False,
         pickupBehaviour = Nothing,
         pickupFaultSeconds = 0,
@@ -134,6 +138,7 @@ mkFaultVerdictData signals cancelledBy reasonCode =
       initialDistanceToPickup = signals.initialDistanceToPickup,
       currentDistanceToPickup = signals.currentDistanceToPickup,
       isAdvanceBooking = signals.isAdvanceBooking,
+      isScheduled = signals.isScheduled,
       isPickupOrDestinationEdited = signals.isPickupOrDestinationEdited,
       pickupBehaviour = signals.pickupBehaviour,
       pickupFaultSeconds = signals.pickupFaultSeconds,
