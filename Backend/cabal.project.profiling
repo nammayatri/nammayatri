@@ -1,0 +1,9 @@
+import: cabal.project
+
+flags: -Local
+
+profiling: True
+profiling-detail: toplevel-functions
+
+package *
+  ghc-options: -O1

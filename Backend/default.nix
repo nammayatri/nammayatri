@@ -71,6 +71,26 @@
         };
       };
       localBuild = builtins.getEnv "NIX_LOCAL_BUILD" != "";
+      profilingBuild = builtins.getEnv "NY_PROFILING" != "";
+      profilingDeps = [
+        "beam-core"
+        "beam-migrate"
+        "beam-mysql"
+        "beam-postgres"
+        "beam-sqlite"
+        "clickhouse-haskell"
+        "euler-events-hs"
+        "euler-hs"
+        "haskell-cac"
+        "juspay-extra"
+        "mobility-core"
+        "mysql-haskell"
+        "prometheus-client"
+        "prometheus-metrics-ghc"
+        "prometheus-proc"
+        "sequelize"
+        "wai-middleware-prometheus"
+      ];
     in
     {
       pre-commit.settings.imports = [
@@ -87,6 +107,11 @@
           inputs.beckn-gateway.haskellFlakeProjectModules.output
           # inputs.namma-dsl.haskellFlakeProjectModules.output
           inputs.haskell-cac.haskellFlakeProjectModules.output
+          {
+            settings = lib.mkIf profilingBuild (lib.genAttrs profilingDeps (_: {
+              libraryProfiling = lib.mkOverride 60 true;
+            }));
+          }
         ];
         # "packages" and "apps" are excluded from autoWire so we can filter out
         # ciExcludedPackages from the flake's top-level outputs (used by devour-flake in om ci run).
@@ -140,7 +165,7 @@
           kafka-consumers.custom = cacConfig;
           driver-offer-allocator.custom = cacConfig;
           rider-dashboard.custom = cacConfig;
-          namma-dsl.libraryProfiling = false;
+          namma-dsl.libraryProfiling = lib.mkForce false;
           location-updates.check = false;
           singletons-th.jailbreak = true;
           singletons-base = {
