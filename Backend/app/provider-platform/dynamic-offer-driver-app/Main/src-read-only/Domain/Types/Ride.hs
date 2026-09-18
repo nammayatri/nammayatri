@@ -112,6 +112,7 @@ data Ride = Ride
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
+    scheduledAcceptanceMode :: Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos),
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
@@ -152,6 +153,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator | FleetO
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | AssignedByOps | AssignedByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
@@ -159,3 +162,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)

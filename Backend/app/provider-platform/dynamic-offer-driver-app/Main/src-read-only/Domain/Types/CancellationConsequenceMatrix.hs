@@ -9,6 +9,7 @@ import qualified Domain.Types.Extra.CancellationConsequenceMatrix
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
+import qualified Domain.Types.Ride
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -41,6 +42,7 @@ data CancellationConsequenceMatrix = CancellationConsequenceMatrix
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     minDriverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.MerchantPaymentMethod.PaymentInstrument,
+    scheduledAcceptanceMode :: Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     vehicleServiceTier :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,

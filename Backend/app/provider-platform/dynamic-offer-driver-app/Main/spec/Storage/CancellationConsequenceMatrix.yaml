@@ -10,6 +10,7 @@ imports:
   PaymentInstrument: Domain.Types.MerchantPaymentMethod
   TimeBound: Kernel.Types.TimeBound
   Centesimal: Kernel.Types.Common
+  ScheduledAcceptanceMode: Domain.Types.Ride
 
 # One row = "given who was at fault and why, in this city, for this kind of trip — what
 # exactly happens to whom and how it is collected". Replaces the USER_CANCELLATION_DUES
@@ -17,9 +18,12 @@ imports:
 # (CANCELLATION_FAULT_VERDICT). The matrix is AUTHORITATIVE: no matching row means no
 # consequences (logged), there is no fallback.
 #
-# Dimensions (null = wildcard), resolved most-specific-wins with fixed weights:
-#   faultRule (32) > faultVerdict (16) > cancelledBy (8) > tripCategory (4)
-#     > vehicleServiceTier (2) > area (1) + paymentInstrument (1)
+# Dimensions (null = wildcard), resolved most-specific-wins (see `specificity` in
+# SharedLogic.CancellationConsequence, the ground truth for this ordering):
+#   faultRule > faultVerdict > cancelledBy > tripCategory > scheduledAcceptanceMode
+#     > isAutoAccepted > vehicleServiceTier > area + paymentInstrument > driverRating band
+#     > timeBounds
+# scheduledAcceptanceMode is not simply booking.isScheduled — see CancellationSignals.effectiveAcceptanceMode.
 # faultVerdict values: show FaultParty (DriverAtFault/CustomerAtFault/SharedFault/NoFault).
 # cancelledBy values: show CancellationType (CancellationByDriver/CancellationByCustomer).
 # faultRule values: names from cancellation_fault_rule_registry (global).
@@ -47,6 +51,7 @@ CancellationConsequenceMatrix:
     faultRule: Maybe Text
     cancelledBy: Maybe CancellationType
     tripCategory: Maybe TripCategory
+    scheduledAcceptanceMode: Maybe ScheduledAcceptanceMode # not simply booking.isScheduled — see CancellationSignals.effectiveAcceptanceMode
     isAutoAccepted: Maybe Bool
     vehicleServiceTier: Maybe ServiceTierType
     area: Maybe Area
@@ -81,6 +86,7 @@ CancellationConsequenceMatrix:
     timeBounds: text
     minDriverRating: double precision
     maxDriverRating: double precision
+    scheduledAcceptanceMode: text
 
   # the generator forbids new NOT NULL columns, so the column is nullable and
   # NULL (all pre-existing rows) reads as Unbounded — the domain type stays total

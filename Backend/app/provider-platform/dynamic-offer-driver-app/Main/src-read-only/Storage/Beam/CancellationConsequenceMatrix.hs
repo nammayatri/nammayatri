@@ -9,6 +9,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.CancellationConsequenceMatrix
 import qualified Domain.Types.MerchantPaymentMethod
+import qualified Domain.Types.Ride
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -42,6 +43,7 @@ data CancellationConsequenceMatrixT f = CancellationConsequenceMatrixT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     minDriverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.MerchantPaymentMethod.PaymentInstrument),
+    scheduledAcceptanceMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode),
     timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),

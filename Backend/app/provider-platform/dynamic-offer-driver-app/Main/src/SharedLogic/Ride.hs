@@ -115,8 +115,12 @@ initializeRide ::
   -- | bookingPreAssigned: one-shot assignment creates the booking row directly as
   -- TRIP_ASSIGNED, so the status update here must be skipped (no double write).
   Bool ->
+  -- | mbForcedScheduledAcceptanceMode: overrides the timing-based computation below with a
+  -- fixed acceptance mode, for accept paths that aren't a driver's own self-accept (e.g. an
+  -- ops or fleet-owner dashboard assignment). Nothing at every ordinary self-accept call site.
+  Maybe DRide.ScheduledAcceptanceMode ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
@@ -193,7 +197,16 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
   cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
   let (mbPaymentCharge, mbPaymentChargeBearer) = (booking.paymentCharge, booking.paymentChargeBearer)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer
+      -- A dashboard/fleet assignment always wins regardless of timing; only a genuine
+      -- driver self-accept falls back to the broadcast-window timing check. A driver
+      -- accepting from the last-minute broadcast is treated as a normal request, using the
+      -- same open-to-all threshold that already governs pool eligibility.
+      mbScheduledAcceptanceMode
+        | not booking.isScheduled = Nothing
+        | isJust mbForcedScheduledAcceptanceMode = mbForcedScheduledAcceptanceMode
+        | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime now = Just DRide.AcceptedFromBroadcast
+        | otherwise = Just DRide.AcceptedAsScheduled
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -517,8 +530,9 @@ buildRide ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Text ->
+  Maybe DRide.ScheduledAcceptanceMode ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer mbScheduledAcceptanceMode = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -566,6 +580,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
         previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
+        scheduledAcceptanceMode = mbScheduledAcceptanceMode,
         isPetRide = booking.isPetRide,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,

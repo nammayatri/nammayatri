@@ -32,6 +32,8 @@ import qualified Domain.Types.Extra.CancellationConsequenceMatrix as DExtra
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTransporterConfig
 import Kernel.Beam.Functions (createWithKV, updateOneWithKV)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
@@ -45,6 +47,7 @@ import qualified Lib.DriverCoins.Types as DCT2
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified SharedLogic.CancellationFault as CancellationFault
+import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified Storage.CachedQueries.CancellationConsequenceMatrix as CQCCM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -55,6 +58,7 @@ data ConsequenceInput = ConsequenceInput
     faultVerdict :: Maybe CancellationFault.FaultVerdict,
     cancelledBy :: DCT2.CancellationType,
     tripCategory :: DTC.TripCategory,
+    scheduledAcceptanceMode :: Maybe DRide.ScheduledAcceptanceMode,
     isAutoAccepted :: Maybe Bool,
     vehicleServiceTier :: DTC.ServiceTierType,
     area :: Maybe SL.Area,
@@ -80,6 +84,7 @@ resolveConsequence input = do
           && dimMatches row.faultRule eventRule
           && dimMatches row.cancelledBy (Just input.cancelledBy)
           && dimMatches row.tripCategory (Just input.tripCategory)
+          && dimMatches row.scheduledAcceptanceMode input.scheduledAcceptanceMode
           && dimMatches row.isAutoAccepted input.isAutoAccepted
           && dimMatches row.vehicleServiceTier (Just input.vehicleServiceTier)
           && dimMatches row.area input.area
@@ -123,17 +128,17 @@ timeBoundMatches :: DCCM.CancellationConsequenceMatrix -> UTCTime -> Bool
 timeBoundMatches row localTime =
   row.timeBounds == TB.Unbounded || not (null (TB.findBoundedDomain [row] localTime))
 
--- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > isAutoAccepted
--- > vehicleServiceTier > area/paymentInstrument > driverRating band > timeBounds.
--- Rating band and time are the LEAST significant on purpose: they are conditional
--- overrides of an otherwise-identical base row, never a trump over a more specific
--- dimension match.
-specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Int, Bool, Bool)
+-- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory
+-- > scheduledAcceptanceMode > isAutoAccepted > vehicleServiceTier > area/paymentInstrument
+-- > driverRating band > timeBounds. Rating band and time are least significant: they override an
+-- otherwise-identical row, never trump a more specific dimension match.
+specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Bool, Int, Bool, Bool)
 specificity row =
   ( isJust row.faultRule,
     isJust row.faultVerdict,
     isJust row.cancelledBy,
     isJust row.tripCategory,
+    isJust row.scheduledAcceptanceMode,
     isJust row.isAutoAccepted,
     isJust row.vehicleServiceTier,
     fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument),
@@ -144,16 +149,16 @@ specificity row =
 -- | Build the resolver input from a full booking — the ONE place the dimension values
 -- come from, so every resolution site (charge calc, side effects, coin fork when it has
 -- the full booking) produces identical inputs and the per-ride cache stays coherent.
--- timeDiffFromUtc comes from the city's transporterConfig (callers already hold it);
--- timeBounds windows are matched against the resulting city-local NOW. driverId is the
--- ride's assigned driver — their DriverStats.rating feeds the rating-band dimension
+-- transporterConfig's timeDiffFromUtc localises timeBounds windows; its
+-- scheduledRideOpenToAllThresholdMinutes also feeds effectiveAcceptanceMode. driverId is
+-- the ride's assigned driver — their DriverStats.rating feeds the rating-band dimension
 -- (missing stats/rating just means band rows don't match; never an error).
-buildConsequenceInputFromBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe CancellationFault.FaultVerdict -> DCT2.CancellationType -> Seconds -> Id DP.Person -> m ConsequenceInput
-buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy timeDiffFromUtc driverId = do
+buildConsequenceInputFromBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> DRide.Ride -> Maybe CancellationFault.FaultVerdict -> DCT2.CancellationType -> DTransporterConfig.TransporterConfig -> Id DP.Person -> m ConsequenceInput
+buildConsequenceInputFromBooking booking ride mbFaultVerdict cancelledBy transporterConfig driverId = do
   mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
     CQMPM.findByIdAndMerchantOpCityId pmId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound pmId.getId)
-  localTime <- getLocalCurrentTime timeDiffFromUtc
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   driverRating <- QDriverStats.findById (cast driverId) <&> (>>= (.rating))
   -- a booking without a payment method is treated as Cash
   let bookingPaymentInstrument = maybe DMPM.Cash (.paymentInstrument) mbPaymentMethod
@@ -163,6 +168,7 @@ buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy timeDiffFrom
         faultVerdict = mbFaultVerdict,
         cancelledBy = cancelledBy,
         tripCategory = booking.tripCategory,
+        scheduledAcceptanceMode = CancellationSignals.effectiveAcceptanceMode booking ride transporterConfig,
         isAutoAccepted = booking.isAutoAccepted,
         vehicleServiceTier = booking.vehicleServiceTier,
         area = booking.area,

@@ -15,7 +15,7 @@
 -- | Dashboard CRUD for the CancellationConsequenceMatrix and the GLOBAL fault-rule
 -- registry (dev/docs/cancellation-consequence-matrix-plan.md). Validations:
 --   * dimension values must parse (verdict/cancelledBy constructor names, TripCategory,
---     ServiceTierType, Area, collection mode);
+--     ServiceTierType, Area, collection mode, scheduledAcceptanceMode);
 --   * a referenced faultRule must be an ACTIVE entry of the global registry;
 --   * no two ACTIVE rows may share an identical dimension tuple (ambiguous resolution) —
 --     unless their timeBounds make them mutually exclusive (base row + peak-hour override).
@@ -36,6 +36,7 @@ import qualified Domain.Types.Extra.CancellationConsequenceMatrix as DExtra
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Ride as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -135,6 +136,8 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
     fromMaybeM (InvalidRequest $ "Invalid paymentInstrument: " <> pi') (readMaybe (Text.unpack pi') :: Maybe DMPM.PaymentInstrument)
   tripCategory <- forM apiRow.tripCategory $ \tc ->
     fromMaybeM (InvalidRequest $ "Invalid tripCategory: " <> tc) (readMaybe (Text.unpack tc) :: Maybe DTC.TripCategory)
+  scheduledAcceptanceMode <- forM apiRow.scheduledAcceptanceMode $ \sam ->
+    fromMaybeM (InvalidRequest $ "Invalid scheduledAcceptanceMode: " <> sam) (readMaybe (Text.unpack sam) :: Maybe DRide.ScheduledAcceptanceMode)
   vehicleServiceTier <- forM apiRow.vehicleServiceTier $ \st ->
     fromMaybeM (InvalidRequest $ "Invalid vehicleServiceTier: " <> st) (readMaybe (Text.unpack st) :: Maybe DTC.ServiceTierType)
   area <- forM apiRow.area $ \a ->
@@ -176,6 +179,7 @@ buildRow merchantId merchantOpCityId rowId apiRow = do
         faultRule = apiRow.faultRule,
         cancelledBy = cancelledBy,
         tripCategory = tripCategory,
+        scheduledAcceptanceMode = scheduledAcceptanceMode,
         isAutoAccepted = apiRow.isAutoAccepted,
         vehicleServiceTier = vehicleServiceTier,
         area = area,
@@ -222,6 +226,7 @@ validateRow merchantOpCityId mbSelfId row =
         && a.faultRule == b.faultRule
         && a.cancelledBy == b.cancelledBy
         && a.tripCategory == b.tripCategory
+        && a.scheduledAcceptanceMode == b.scheduledAcceptanceMode
         && a.isAutoAccepted == b.isAutoAccepted
         && a.vehicleServiceTier == b.vehicleServiceTier
         && a.area == b.area
@@ -327,6 +332,7 @@ toListItem row =
             faultRule = row.faultRule,
             cancelledBy = show <$> row.cancelledBy,
             tripCategory = show <$> row.tripCategory,
+            scheduledAcceptanceMode = show <$> row.scheduledAcceptanceMode,
             isAutoAccepted = row.isAutoAccepted,
             vehicleServiceTier = show <$> row.vehicleServiceTier,
             area = show <$> row.area,
