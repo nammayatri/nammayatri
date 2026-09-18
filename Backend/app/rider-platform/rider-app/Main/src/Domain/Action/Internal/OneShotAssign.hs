@@ -172,41 +172,66 @@ processAssignment req = do
   booking <- case mbExistingBooking of
     Just existingBooking -> pure existingBooking
     Nothing -> do
-      -- Same mutual exclusion the legacy auto-assign/UI-confirm pair uses.
-      isLockAcquired <- SConfirm.tryInitTriggerLock searchRequest.id
-      unless isLockAcquired $
-        throwError $ InvalidRequest $ "Booking creation lock already held for searchRequestId " <> searchRequest.id.getId
-      quote <- DOnSelect.buildSelectedQuote estimate (mkProviderInfo estimate) now searchRequest (mkQuoteInfo estimate)
-      -- @hemant: The BPP priced this ride without any BAP-side offer, so applying one here would
-      -- make the customer's fare diverge from the driver's. Offers stay off for one-shot
-      -- until the discount is carried in the round trip.
-      -- @Khuzema Commented out the below code block, as Offers can be Cashback Offers in which Price will not be updated for NY,
-      -- for Discounts also as it is BAP giving Dicount so Fare on Driver will not be updated,
-      -- except that Driver's Cash Collection from custoemr would be less, handled in UI for International use case,
-      -- which NY also can use in Future.
-      -- let quote = quote' {DQuote.selectedOfferId = Nothing}
-      triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
-      QQuote.createMany [quote]
-      dConfirmRes <-
-        SConfirm.confirm
-          SConfirm.DConfirmReq
-            { personId = person.id,
-              quote = quote,
-              dashboardAgentId = Nothing,
-              paymentMethodId = searchRequest.selectedPaymentMethodId,
-              paymentInstrument = searchRequest.selectedPaymentInstrument,
-              merchant = merchant,
-              requiresPaymentBeforeConfirm = False,
-              mbOneShotDetails =
-                Just
-                  SConfirm.OneShotConfirmDetails
-                    { bppBookingId = Id req.bppBookingId,
-                      commission = req.commission,
-                      paymentCharge = req.paymentCharge,
-                      paymentChargeBearer = req.paymentChargeBearer
-                    }
-            }
-      pure dConfirmRes.booking
+      -- Same mutual exclusion the legacy auto-assign/UI-confirm pair uses — it stays,
+      -- as the only searchRequest-level guard against a double booking. But for
+      -- one-shot a held lock means WAIT, not abort: retry acquisition past the 10s
+      -- TTL, so a dead holder (hard-killed attempt that never released) can't fail a
+      -- winnable assignment. A LIVE holder (manual confirm) leaves a booking behind,
+      -- which confirm's active-booking guards catch after we acquire — a correct
+      -- abort. Budget: 6 tries x 2s ≈ 10-12s, comfortably inside the BPP's callback
+      -- timeout and this handler's own 60s lock TTL.
+      let acquireInitLock attemptsLeft = do
+            acquired <- SConfirm.tryInitTriggerLock searchRequest.id
+            unless acquired $
+              if attemptsLeft <= (1 :: Int)
+                then throwError $ InvalidRequest $ "Booking creation lock already held for searchRequestId " <> searchRequest.id.getId
+                else do
+                  logWarning $ "One-shot assign: init-trigger lock held for searchRequestId " <> searchRequest.id.getId <> ", retrying acquisition"
+                  threadDelay 2000000
+                  acquireInitLock (attemptsLeft - 1)
+      acquireInitLock 6
+      creationResult <- withTryCatch "oneShotBookingCreation" $ do
+        quote <- DOnSelect.buildSelectedQuote estimate (mkProviderInfo estimate) now searchRequest (mkQuoteInfo estimate)
+        -- @hemant: The BPP priced this ride without any BAP-side offer, so applying one here would
+        -- make the customer's fare diverge from the driver's. Offers stay off for one-shot
+        -- until the discount is carried in the round trip.
+        -- @Khuzema Commented out the below code block, as Offers can be Cashback Offers in which Price will not be updated for NY,
+        -- for Discounts also as it is BAP giving Dicount so Fare on Driver will not be updated,
+        -- except that Driver's Cash Collection from custoemr would be less, handled in UI for International use case,
+        -- which NY also can use in Future.
+        -- let quote = quote' {DQuote.selectedOfferId = Nothing}
+        triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
+        QQuote.createMany [quote]
+        dConfirmRes <-
+          SConfirm.confirm
+            SConfirm.DConfirmReq
+              { personId = person.id,
+                quote = quote,
+                dashboardAgentId = Nothing,
+                paymentMethodId = searchRequest.selectedPaymentMethodId,
+                paymentInstrument = searchRequest.selectedPaymentInstrument,
+                merchant = merchant,
+                requiresPaymentBeforeConfirm = False,
+                mbOneShotDetails =
+                  Just
+                    SConfirm.OneShotConfirmDetails
+                      { bppBookingId = Id req.bppBookingId,
+                        commission = req.commission,
+                        paymentCharge = req.paymentCharge,
+                        paymentChargeBearer = req.paymentChargeBearer
+                      }
+              }
+        pure dConfirmRes.booking
+      case creationResult of
+        Right booking' -> pure booking'
+        Left err -> do
+          -- Failed before the booking row exists: release the init-trigger gate we just
+          -- took, or the BPP's retry (arriving well inside the 10s TTL) dies on our own
+          -- orphaned acquire and cancels a winnable assignment ("Booking creation lock
+          -- already held", seen in prod). Safe only because this handler serializes all
+          -- attempts for the transaction behind its waiting lock.
+          SConfirm.releaseInitTriggerLock searchRequest.id
+          throwM err
   -- Fare breakup rows are on_init's job in the legacy relay. Runs on the resume path
   -- too; the underlying FareBreakupInfo upsert replaces rather than appends, so this
   -- is idempotent.

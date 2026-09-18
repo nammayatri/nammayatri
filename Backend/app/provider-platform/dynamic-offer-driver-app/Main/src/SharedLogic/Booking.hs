@@ -72,34 +72,6 @@ cancelBooking ::
   m ()
 cancelBooking = cancelBooking' True
 
--- | One-shot assignment failure path: the BAP was never informed of this booking
--- (the single internal callback failed), so there is nothing to send on_cancel to.
-cancelBookingSilentToBAP ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EncFlow m r,
-    MonadCatch m,
-    Metrics.HasBPPMetrics m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
-  ) =>
-  DRB.Booking ->
-  Maybe DPerson.Person ->
-  DM.Merchant ->
-  m ()
-cancelBookingSilentToBAP = cancelBooking' False
-
 cancelBooking' ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -139,8 +111,14 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
   SharedCancel.tryCancellationLock booking.transactionId $ do
     when isPrepaidSubscriptionAndWalletEnabled $ whenJust mbRide $ \ride -> releaseLien booking ride
+    -- Only for the no-ride case: when a ride exists, the whenJust mbRide block below
+    -- performs this same driver release via ride.driverId — and the ride lock inside
+    -- updateOnRideStatusWithAdvancedRideCheck is taken with a 10s TTL and never
+    -- released, so calling it twice for the same ride made the second call throw
+    -- DriverTransactionTryAgain and abort the cancel midway (LTS never told, seen in
+    -- prod on the one-shot abort path, which passes Just driver with a live ride).
     whenJust mbDriver $ \driver ->
-      updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
+      when (isNothing mbRide) $ updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
     QRB.updateStatus booking.id DRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     QBCR.upsert bookingCancellationReason

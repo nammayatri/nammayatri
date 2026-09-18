@@ -140,11 +140,22 @@ data DConfirmRes = DConfirmRes
 data DConfirmResDetails = DConfirmResDelivery DTDD.DeliveryDetails
   deriving (Show, Generic)
 
+initTriggerLockKey :: Id DSReq.SearchRequest -> Text
+initTriggerLockKey searchRequestId = "Customer:Init:Trigger:SearchRequestId:-" <> searchRequestId.getId
+
 tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool
 tryInitTriggerLock searchRequestId = do
-  let initTriggerLockKey = "Customer:Init:Trigger:SearchRequestId:-" <> searchRequestId.getId
-      lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
-  Redis.tryLockRedis initTriggerLockKey lockExpiryTime
+  let lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
+  Redis.tryLockRedis (initTriggerLockKey searchRequestId) lockExpiryTime
+
+-- | Deliberate escape hatch for the one-shot assign handler ONLY: it serializes all
+-- attempts for a transaction behind its own waiting lock, so when booking creation
+-- fails before the booking row exists it can safely release this gate — otherwise the
+-- BPP's immediate retry dies on the dead attempt's un-released 10s acquire
+-- ("Booking creation lock already held", seen in prod) and a winnable assignment is
+-- cancelled. Beckn/UI callers must NOT release: for them the TTL is the exclusion.
+releaseInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m ()
+releaseInitTriggerLock = Redis.unlockRedis . initTriggerLockKey
 
 -- | Capture pending payment before allowing new ride.
 -- Finds rides with uncaptured payment (Initiated or NotInitiated), attempts capture.

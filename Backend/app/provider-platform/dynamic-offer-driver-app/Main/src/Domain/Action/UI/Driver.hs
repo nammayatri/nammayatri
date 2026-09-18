@@ -1987,6 +1987,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                             searchTry = searchTry,
                             driverQuote = driverQuote,
                             driver = driver,
+                            driverStats = driverStats,
+                            driverInfo = driverInfo,
                             clientId = clientId,
                             transporterConfig = transporterConfig
                           }
