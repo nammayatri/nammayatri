@@ -49,18 +49,18 @@ type API = ("vehicleSeatLayoutMapping" :> (ListVehicleSeatLayoutMapping :<|> Ups
 type ListVehicleSeatLayoutMapping =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> MandatoryQueryParam "gtfsId" Data.Text.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            [VehicleSeatLayoutMappingItem]
   )
 
-type UpsertVehicleSeatLayoutMapping = ("upsert" :> ReqBody '[JSON] VehicleSeatLayoutMappingUpsertReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type UpsertVehicleSeatLayoutMapping = ("upsert" :> ReqBody ('[JSON]) VehicleSeatLayoutMappingUpsertReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type DeleteVehicleSeatLayoutMapping = (Capture "vehicleNo" Data.Text.Text :> Capture "gtfsId" Data.Text.Text :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type DeleteVehicleSeatLayoutMapping = (Capture "vehicleNo" Data.Text.Text :> Capture "gtfsId" Data.Text.Text :> "delete" :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 data VehicleSeatLayoutMappingAPIs = VehicleSeatLayoutMappingAPIs
-  { listVehicleSeatLayoutMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Text.Text -> EulerHS.Types.EulerClient [VehicleSeatLayoutMappingItem],
-    upsertVehicleSeatLayoutMapping :: VehicleSeatLayoutMappingUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    deleteVehicleSeatLayoutMapping :: Data.Text.Text -> Data.Text.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { listVehicleSeatLayoutMapping :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Data.Text.Text -> EulerHS.Types.EulerClient [VehicleSeatLayoutMappingItem]),
+    upsertVehicleSeatLayoutMapping :: (VehicleSeatLayoutMappingUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    deleteVehicleSeatLayoutMapping :: (Data.Text.Text -> Data.Text.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkVehicleSeatLayoutMappingAPIs :: (Client EulerHS.Types.EulerClient API -> VehicleSeatLayoutMappingAPIs)
@@ -75,4 +75,4 @@ data VehicleSeatLayoutMappingUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''VehicleSeatLayoutMappingUserActionType])
+$(Data.Singletons.TH.genSingletons [(''VehicleSeatLayoutMappingUserActionType)])

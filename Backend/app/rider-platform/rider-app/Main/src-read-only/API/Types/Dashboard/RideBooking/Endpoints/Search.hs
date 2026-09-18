@@ -17,9 +17,9 @@ import Servant.Client
 
 type API = ("search" :> PostSearchRide)
 
-type PostSearchRide = (Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "rideSearch" :> ReqBody '[JSON] API.UI.Search.SearchReq :> Post '[JSON] API.UI.Search.SearchResp)
+type PostSearchRide = (Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "rideSearch" :> ReqBody ('[JSON]) API.UI.Search.SearchReq :> Post ('[JSON]) API.UI.Search.SearchResp)
 
-newtype SearchAPIs = SearchAPIs {postSearchRide :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> EulerHS.Types.EulerClient API.UI.Search.SearchResp}
+newtype SearchAPIs = SearchAPIs {postSearchRide :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> API.UI.Search.SearchReq -> EulerHS.Types.EulerClient API.UI.Search.SearchResp)}
 
 mkSearchAPIs :: (Client EulerHS.Types.EulerClient API -> SearchAPIs)
 mkSearchAPIs searchClient = (SearchAPIs {..})
@@ -32,10 +32,10 @@ data SearchUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON SearchUserActionType where
-  toJSON POST_SEARCH_RIDE = Data.Aeson.String "POST_SEARCH_RIDE"
+  toJSON (POST_SEARCH_RIDE) = Data.Aeson.String "POST_SEARCH_RIDE"
 
 instance FromJSON SearchUserActionType where
   parseJSON (Data.Aeson.String "POST_SEARCH_RIDE") = pure POST_SEARCH_RIDE
   parseJSON _ = fail "POST_SEARCH_RIDE expected"
 
-$(Data.Singletons.TH.genSingletons [''SearchUserActionType])
+$(Data.Singletons.TH.genSingletons [(''SearchUserActionType)])

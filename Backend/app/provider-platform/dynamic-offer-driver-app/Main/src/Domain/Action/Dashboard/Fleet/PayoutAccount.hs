@@ -5,7 +5,7 @@ module Domain.Action.Dashboard.Fleet.PayoutAccount
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.PayoutAccount as Common
-import qualified "dashboard-helper-api" Dashboard.Common as DC
+import qualified "lib-dashboard" Dashboard.Common as DC
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Management.DriverRegistration as MDR
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification

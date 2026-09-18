@@ -3,7 +3,7 @@
 
 module Storage.Queries.FleetRcDailyStatsExtra where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
 import Control.Applicative ((<|>))
 import qualified Data.Map as M
 import qualified Data.Text as T

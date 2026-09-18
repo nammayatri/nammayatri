@@ -3,18 +3,18 @@
 
 module AddVehicleUnitTests where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as FleetTypes
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as FleetAPI
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet as FleetTypes
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as FleetAPI
 import Control.Exception (SomeException, evaluate, try)
-import qualified "dashboard-helper-api" Dashboard.Common
-import qualified "dashboard-helper-api" Dashboard.Common.Driver as DDriverCommon
+import qualified "lib-dashboard" Dashboard.Common
+import qualified "lib-dashboard" Dashboard.Common.Driver as DDriverCommon
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
 import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.Driver as DDriver
-import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
+import qualified "dynamic-offer-driver-app" Domain.Types.AccessMatrix as DMatrix
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DDM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
@@ -28,7 +28,7 @@ import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
-import qualified "lib-dashboard" Tools.Auth.Api
+import qualified "lib-dashboard" Tools.Auth.ApiAuth as Tools.Auth.Api
 import Prelude
 
 -- =============================================================================
@@ -325,7 +325,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
               DDriver.postDriverFleetAddVehicle ::
                 Kernel.Types.Id.ShortId DM.Merchant ->
                 Context.City ->
-                Tools.Auth.Api.ApiTokenInfo ->
+                Tools.Auth.Api.ApiTokenInfo DMatrix.UserActionType ->
                 T.Text ->
                 Maybe T.Text ->
                 Maybe T.Text ->

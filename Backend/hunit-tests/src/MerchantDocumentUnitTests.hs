@@ -3,7 +3,7 @@
 
 module MerchantDocumentUnitTests where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Merchant as Common
+import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.Endpoints.Merchant as Common
 import Control.Exception (evaluate, try)
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Text as T

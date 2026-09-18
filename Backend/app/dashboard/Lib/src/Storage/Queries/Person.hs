@@ -17,7 +17,6 @@
 
 module Storage.Queries.Person where
 
-import API.Types.ProviderPlatform.Management.Endpoints.Account (FleetOwnerStatus (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T

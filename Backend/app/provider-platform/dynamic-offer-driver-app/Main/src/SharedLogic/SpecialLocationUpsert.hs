@@ -22,7 +22,7 @@ module SharedLogic.SpecialLocationUpsert
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS

@@ -7,10 +7,11 @@ module API.Action.RiderPlatform.RideBooking.Booking
   )
 where
 
-import qualified API.Types.Dashboard.RideBooking
+import qualified "rider-app" API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Booking
 import qualified Domain.Action.RiderPlatform.RideBooking.Booking
 import qualified "rider-app" Domain.Action.UI.Booking
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "rider-app" Domain.Types.Booking
 import qualified "rider-app" Domain.Types.Booking.API
 import qualified Domain.Types.BookingStatus
@@ -25,7 +26,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
 
 type API = ("booking" :> (PostBookingStatus :<|> GetBookingBooking :<|> GetBookingList :<|> GetBookingAgentL1List :<|> GetBookingAgentL2List))
 
@@ -34,9 +34,9 @@ handler merchantId city = postBookingStatus merchantId city :<|> getBookingBooki
 
 type PostBookingStatus =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.POST_BOOKING_STATUS)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.BOOKING) / ('API.Types.Dashboard.RideBooking.Booking.POST_BOOKING_STATUS))
       :> API.Types.Dashboard.RideBooking.Booking.PostBookingStatus
   )
 
@@ -44,39 +44,39 @@ type GetBookingBooking = API.Types.Dashboard.RideBooking.Booking.GetBookingBooki
 
 type GetBookingList =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_LIST)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.BOOKING) / ('API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_LIST))
       :> API.Types.Dashboard.RideBooking.Booking.GetBookingList
   )
 
 type GetBookingAgentL1List =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L1_LIST)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.BOOKING) / ('API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L1_LIST))
       :> API.Types.Dashboard.RideBooking.Booking.GetBookingAgentL1List
   )
 
 type GetBookingAgentL2List =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.BOOKING / 'API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L2_LIST)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.BOOKING) / ('API.Types.Dashboard.RideBooking.Booking.GET_BOOKING_AGENT_L2_LIST))
       :> API.Types.Dashboard.RideBooking.Booking.GetBookingAgentL2List
   )
 
-postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
+postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
 postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId
 
-getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.Dashboard.RideBooking.Booking.BookingSearchType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
+getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (API.Types.Dashboard.RideBooking.Booking.BookingSearchType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
 getBookingBooking merchantShortId opCity searchValue searchType mobileCountryCode = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingBooking merchantShortId opCity searchValue searchType mobileCountryCode
 
-getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
 getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status
 
-getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
 getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status customerPhoneNo fromDate toDate = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status customerPhoneNo fromDate toDate
 
-getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
 getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status customerPhoneNo fromDate toDate = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingAgentL2List merchantShortId opCity apiTokenInfo limit offset status customerPhoneNo fromDate toDate

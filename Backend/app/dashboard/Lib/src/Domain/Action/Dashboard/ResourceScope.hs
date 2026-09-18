@@ -30,8 +30,8 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonResourceAccess as QPRA
-import Tools.Auth
 import Tools.Auth.Capability (isSuperAdmin)
+import Tools.Auth.Dashboard
 import Tools.Error
 
 -- Layer C management surface. `resourceType` is a closed enum (DRS.ResourceType);
