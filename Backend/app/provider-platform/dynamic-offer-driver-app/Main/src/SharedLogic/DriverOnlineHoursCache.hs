@@ -26,10 +26,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
--- Per-driver, TODAY-ONLY online-hours cache: a single Redis key holding this tuple, entirely in
--- Redis (no DB, not drained anywhere). lastOnlineAt is present only while the driver is online
--- right now; totalOnline is the seconds from all *completed* online spells today.
--- today's total = totalOnline + (lastOnlineAt ? now - lastOnlineAt : 0).
 data DriverOnlineHoursCache = DriverOnlineHoursCache
   { day :: Day,
     totalOnline :: Seconds,
@@ -40,15 +36,12 @@ data DriverOnlineHoursCache = DriverOnlineHoursCache
 mkOnlineHoursKey :: Text -> Text
 mkOnlineHoursKey driverId = "driver-offer:OnlineHours:{" <> driverId <> "}"
 
--- Self-cleaning safety net: if a driver never comes back online, the cache disappears on its own.
 onlineHoursKeyExpiry :: Redis.ExpirationTime
-onlineHoursKeyExpiry = 345600 -- 4 days
+onlineHoursKeyExpiry = 345600
 
 localDay :: Seconds -> UTCTime -> Day
 localDay timeDiffFromUtc now = utctDay (addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now)
 
--- On going online: if the cached day isn't today, that's a stale (e.g. yesterday's) key -- drop it
--- and start fresh at zero; either way, (re)start the running clock at now.
 markOnlineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m ()
 markOnlineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
@@ -57,10 +50,9 @@ markOnlineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   mbCache <- Redis.safeGet key
   let carriedOverTotal = case mbCache of
         Just cache | cache.day == today -> cache.totalOnline
-        _ -> Seconds 0 -- no cache, or it's a stale day -- the old key's value is dropped here
+        _ -> Seconds 0
   Redis.setExp key (DriverOnlineHoursCache {day = today, totalOnline = carriedOverTotal, lastOnlineAt = Just now}) onlineHoursKeyExpiry
 
--- On going offline: add the elapsed running seconds into totalOnline and stop (clear lastOnlineAt).
 markOfflineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m ()
 markOfflineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
@@ -71,7 +63,6 @@ markOfflineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
       let newTotalOnline = cache.totalOnline + max (Seconds 0) (diffUTCTimeInSeconds now lastOnlineAt)
       Redis.setExp key (cache {totalOnline = newTotalOnline, lastOnlineAt = Nothing}) onlineHoursKeyExpiry
 
--- Current today's online duration = totalOnline + running (running is 0 while offline / on a stale day).
 getTodayOnlineDuration :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Seconds
 getTodayOnlineDuration driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime

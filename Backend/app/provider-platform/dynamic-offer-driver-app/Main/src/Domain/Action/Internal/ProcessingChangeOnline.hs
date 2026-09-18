@@ -34,8 +34,6 @@ processingChangeOnline ::
   Maybe DriverInfo.DriverMode ->
   m ()
 processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
-  -- Today-only Redis online-hours cache: independent of the onlineDurationCalculateFrom feature
-  -- flag below, so it always tracks regardless of whether that Postgres-based calculation is on.
   when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
     DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
   when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $

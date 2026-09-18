@@ -502,7 +502,7 @@ data DriverInformationRes = DriverInformationRes
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
     preferredMapProvider :: Maybe DriverInfo.MapProvider,
-    todayOnlineDuration :: Seconds
+    todayOnlineDuration :: Minutes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1776,7 +1776,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  todayOnlineDuration <- DriverOnlineHoursCache.getTodayOnlineDuration driverInfo.driverId merchantConfig.timeDiffFromUtc
+  todayOnlineDuration <- secondsToMinutes <$> DriverOnlineHoursCache.getTodayOnlineDuration driverInfo.driverId merchantConfig.timeDiffFromUtc
   membershipId <-
     if fromMaybe False merchantConfig.sendMembershipIdInProfile
       then do
