@@ -23,8 +23,11 @@ import Kernel.Utils.Common
 
 data LocationT f = LocationT
   { id :: C f (Id DLocation.Location),
-    fullAddress :: C f (Maybe Text),
     ward :: C f (Maybe Text),
+    street :: C f (Maybe Text),
+    area :: C f (Maybe Text),
+    building :: C f (Maybe Text),
+    city :: C f (Maybe Text),
     createdAt :: C f UTCTime
   }
   deriving (Generic)
@@ -36,8 +39,11 @@ locationTTable :: LocationT (FieldModification LocationT)
 locationTTable =
   LocationT
     { id = "id",
-      fullAddress = "full_address",
       ward = "ward",
+      street = "street",
+      area = "area",
+      building = "building",
+      city = "city",
       createdAt = "created_at"
     }
 
