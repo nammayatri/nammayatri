@@ -572,7 +572,13 @@ rideAssignedReqHandler req = do
               else action
       let bookingPaymentChargeAmount = SPayment.paymentChargeForAppFee booking.paymentCharge booking.paymentChargeBearer
           applicationFeeAmount = fromMaybe 0 booking.commission + bookingPaymentChargeAmount
-      mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+      -- An OfferEntity row only exists when an offer was applied at confirm, which is
+      -- exactly when selectedOfferId is set — skip the lookup otherwise (always for
+      -- one-shot, which carries no BAP-side offer).
+      mbBookingOfferEntity <-
+        if isNothing booking.selectedOfferId
+          then pure Nothing
+          else QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
           -- What Stripe must take off is larger than the offer's face value:
           -- discounting the fare also removes the payment charge that sat on it.

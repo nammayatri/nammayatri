@@ -38,6 +38,9 @@ module SharedLogic.CallBAP
     sendPhoneCallCompletedUpdateToBAP,
     mkTxnIdKey,
     rideAssignedCommon,
+    rideAssignedCommonPrefetched,
+    RideAssignedPrefetch (..),
+    noRideAssignedPrefetch,
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,
@@ -95,6 +98,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.ConditionalCharges as DTCC
 import qualified Domain.Types.DocumentVerificationConfig as DIT
+import qualified Domain.Types.DriverInformation as DDInfo
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.EmptyDynamicParam
@@ -115,6 +119,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
@@ -465,6 +470,22 @@ splitOn delim str =
         [] -> []
         _ -> splitOn delim (DL.tail remainder)
 
+-- | Pre-loaded context for rideAssignedCommon. The one-shot assign flow already holds
+-- all of these from the accept request, so re-reading them here is wasted round trips —
+-- and the rideDetails re-read is worse than waste: it is a replica read of a row this
+-- same request created milliseconds earlier, i.e. a replica-lag abort waiting to
+-- happen. Beckn callers pass noRideAssignedPrefetch and keep today's behavior.
+data RideAssignedPrefetch = RideAssignedPrefetch
+  { merchant :: Maybe DM.Merchant,
+    driverInfo :: Maybe DDInfo.DriverInformation,
+    driverStats :: Maybe DDriverStats.DriverStats,
+    transporterConfig :: Maybe TransporterConfig,
+    rideDetails :: Maybe DRD.RideDetails
+  }
+
+noRideAssignedPrefetch :: RideAssignedPrefetch
+noRideAssignedPrefetch = RideAssignedPrefetch Nothing Nothing Nothing Nothing Nothing
+
 rideAssignedCommon ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -486,16 +507,46 @@ rideAssignedCommon ::
   DP.Person ->
   DVeh.Vehicle ->
   m DOU.OnUpdateBuildReq
-rideAssignedCommon booking ride driver veh = do
+rideAssignedCommon = rideAssignedCommonPrefetched noRideAssignedPrefetch
+
+rideAssignedCommonPrefetched ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  RideAssignedPrefetch ->
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m DOU.OnUpdateBuildReq
+rideAssignedCommonPrefetched prefetch booking ride driver veh = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   let estimateId = booking.estimateId <&> getId
   merchant <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+    maybe
+      (CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId))
+      pure
+      prefetch.merchant
+  driverInfo <- maybe (QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound) pure prefetch.driverInfo
+  driverStats <- maybe (QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound) pure prefetch.driverStats
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbTransporterConfig <-
+    maybe
+      (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+      (pure . Just)
+      prefetch.transporterConfig
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -515,7 +566,11 @@ rideAssignedCommon booking ride driver veh = do
       Nothing -> pure veh
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+  rideDetails <-
+    maybe
+      (runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId))
+      pure
+      prefetch.rideDetails
   let bookingDetails = ACL.BookingDetails {..}
   -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   image <- forM driver.faceImageId $ \mediaId -> do

@@ -27,7 +27,9 @@ where
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.DriverStats as DStats
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DPerson
@@ -42,7 +44,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Booking (cancelBookingSilentToBAP)
+import SharedLogic.Booking (cancelBooking)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
@@ -63,6 +65,10 @@ data OneShotAssignReq = OneShotAssignReq
     searchTry :: DST.SearchTry,
     driverQuote :: DDQ.DriverQuote,
     driver :: DPerson.Person,
+    -- | Already loaded by respondQuote; carried through so the callback payload
+    -- builder does not re-read them.
+    driverStats :: DStats.DriverStats,
+    driverInfo :: DDI.DriverInformation,
     clientId :: Maybe Text,
     transporterConfig :: TransporterConfig
   }
@@ -108,11 +114,22 @@ oneShotAssign OneShotAssignReq {..} = do
     -- confirm errHandler, or we'd strand an orphaned TRIP_ASSIGNED booking.
     postBookingResult <- withTryCatch "oneShotAssign:postBooking" $ do
       mFleetAssociation <- QFDA.findByDriverId driver.id True
-      (ride, _rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True
+      (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) (Just transporterConfig)
+      -- Everything the payload builder would otherwise re-read is already in hand;
+      -- rideDetails in particular would be a replica read of a row created
+      -- milliseconds ago (replica-lag abort risk, not just wasted latency).
+      let prefetch =
+            BP.RideAssignedPrefetch
+              { merchant = Just merchant,
+                driverInfo = Just driverInfo,
+                driverStats = Just driverStats,
+                transporterConfig = Just transporterConfig,
+                rideDetails = Just rideDetails
+              }
       fork "one-shot assign callback to BAP" $ do
         callbackResult <- withTryCatch "oneShotAssignCallback" $ do
-          payload <- buildOneShotAssignPayload booking ride driver vehicle driverQuote
+          payload <- buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote
           appBackendBapInternal <- asks (.appBackendBapInternal)
           void $ withQuickRetry $ CallBAPInternal.oneShotAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
         case callbackResult of
@@ -132,7 +149,13 @@ oneShotAssign OneShotAssignReq {..} = do
     abortOneShotBooking booking = do
       -- Guarded so a cancel failure (lock contention etc.) can't skip the search-expired
       -- signal below and leave the customer waiting forever.
-      cancelResult <- withTryCatch "oneShotAssignCancelBooking" $ cancelBookingSilentToBAP booking (Just driver) merchant
+      -- Notifying cancel, NOT silent: the callback having failed does not prove the BAP
+      -- has nothing — a timed-out first attempt can still complete server-side after we
+      -- give up, leaving the customer a ride whose BPP side we cancelled (measured
+      -- ~3-15 ghost rides/day). The on_cancel closes that ride; when the BAP truly has
+      -- no booking it NACKs booking-not-found inside the notify fork, which is
+      -- harmless. The customer additionally gets rideSearchExpired below either way.
+      cancelResult <- withTryCatch "oneShotAssignCancelBooking" $ cancelBooking booking (Just driver) merchant
       case cancelResult of
         Left cancelErr -> logError $ "One-shot assign: cancelling booking " <> booking.id.getId <> " failed: " <> show cancelErr
         Right _ -> pure ()
@@ -144,9 +167,9 @@ oneShotAssign OneShotAssignReq {..} = do
 -- | Derives the internal payload from the same builder the Beckn on_confirm/on_update
 -- RIDE_ASSIGNED paths use (rideAssignedCommon), so driver image, birthday, favourites,
 -- tier upgrade and vehicle-model refill behave identically in both flows.
-buildOneShotAssignPayload :: DRB.Booking -> DRide.Ride -> DPerson.Person -> DVeh.Vehicle -> DDQ.DriverQuote -> Flow CallBAPInternal.OneShotAssignReq
-buildOneShotAssignPayload booking ride driver vehicle driverQuote = do
-  buildReq <- BP.rideAssignedCommon booking ride driver vehicle
+buildOneShotAssignPayload :: BP.RideAssignedPrefetch -> DRB.Booking -> DRide.Ride -> DPerson.Person -> DVeh.Vehicle -> DDQ.DriverQuote -> Flow CallBAPInternal.OneShotAssignReq
+buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
+  buildReq <- BP.rideAssignedCommonPrefetched prefetch booking ride driver vehicle
   rideAssignedReq <- case buildReq of
     DOU.RideAssignedBuildReq r -> pure r
     DOU.ScheduledRideAssignedBuildReq r -> pure r
