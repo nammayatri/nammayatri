@@ -2,6 +2,7 @@ module Domain.Action.UI.RiderPreferences
   ( postRiderPreference,
     getRiderPreference,
     getRiderPreferenceAll,
+    getRiderPreferenceNotification,
     deleteRiderPreference,
   )
 where
@@ -136,10 +137,22 @@ getRiderPreferenceAll ::
   Environment.Flow API.AllRiderPreferencesResp
 getRiderPreferenceAll (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  allPrefs <- QRP.findAllByRiderId personId
-  let locationPickups = mapMaybe toLocationPickupRespData allPrefs
-      notificationPreference = listToMaybe $ mapMaybe toNotificationPreferenceRespData allPrefs
+  locationPrefs <- QRP.findByRiderIdAndType personId RP.LOCATION_PICKUP
+  mbNotificationPref <- CQRP.findNotificationPreferenceByRiderId personId
+  let locationPickups = mapMaybe toLocationPickupRespData locationPrefs
+      notificationPreference = mbNotificationPref >>= toNotificationPreferenceRespData
   pure API.AllRiderPreferencesResp {locationPickups, notificationPreference}
+
+getRiderPreferenceNotification ::
+  ( Kernel.Prelude.Maybe (Id Person.Person),
+    Id Domain.Types.Merchant.Merchant
+  ) ->
+  Environment.Flow API.NotificationPreferenceOnlyResp
+getRiderPreferenceNotification (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  mbNotificationPref <- CQRP.findNotificationPreferenceByRiderId personId
+  let notificationPreference = mbNotificationPref >>= toNotificationPreferenceRespData
+  pure API.NotificationPreferenceOnlyResp {notificationPreference}
 
 deleteRiderPreference ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
