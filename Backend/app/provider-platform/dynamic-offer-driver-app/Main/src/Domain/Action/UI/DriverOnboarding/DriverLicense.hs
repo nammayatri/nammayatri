@@ -170,8 +170,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 image1 <- getImage imageId1
                 image2 <- getImage `mapM` imageId2
                 resp <-
-                  Verification.extractDLImage person.merchantId merchantOpCityId $
-                    Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
+                  Verification.extractDLImage person.merchantId
+                    merchantOpCityId
+                    (Verification.ExtractImageReq {image1, image2, driverId = person.id.getId})
+                    Nothing
                 if resp.provider == Just VT.InternalOCR
                   then return (Nothing, Nothing)
                   else case resp.extractedDL of

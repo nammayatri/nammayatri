@@ -51,7 +51,8 @@ import qualified Tools.Verification as Verification
 data ValidateDocumentImageRequest = ValidateDocumentImageRequest
   { image :: Text,
     imageType :: DVC.DocumentType,
-    vehicleCategory :: Maybe VehicleCategory
+    vehicleCategory :: Maybe VehicleCategory,
+    allowOperatorSwitch :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -116,7 +117,7 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
       case imageType of
         DVC.DriverLicense -> do
           Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:DriverLicense:" <> personId.getId)
-          resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          resp <- Verification.extractDLImage merchantId merchantOpCityId (Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}) allowOperatorSwitch
           logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
           if resp.provider == Just VT.InternalOCR
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
@@ -133,7 +134,7 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
                 return $ emptyValidateDocumentImageResponse imageId
         DVC.VehicleRegistrationCertificate -> do
           Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:RegistrationCertificate:" <> personId.getId)
-          resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          resp <- Verification.extractRCImage merchantId merchantOpCityId (Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}) allowOperatorSwitch
           if resp.provider == Just VT.InternalOCR
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
             else case resp.extractedRC of
@@ -157,7 +158,7 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
                 return $ emptyValidateDocumentImageResponse imageId
         DVC.PanCard -> do
           Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:InternalOCR:PanCard:" <> personId.getId)
-          resp <- Verification.extractPanImageWithPriorityList merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          resp <- Verification.extractPanImageWithPriorityList merchantId merchantOpCityId (Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}) allowOperatorSwitch
           if resp.provider == Just VT.InternalOCR
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
             else case resp.extractedPan of
