@@ -821,6 +821,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       labelled = [m | m <- submitMessages, m.label `elem` map Just submitLabels, Just ids <- [m.onSubmitReplyMsgs], not (null ids)]
       -- prefer the labelled message the customer was actually shown (present in chats)
       messageOverride = (.onSubmitReplyMsgs) =<< (listToMaybe [m | m <- labelled, m.id.getId `elem` shownIds] <|> listToMaybe labelled)
+      -- label of the last labelled message in the chat; stored as is so new labels need no schema change
+      submitLabel = listToMaybe [l | shownId <- reverse shownIds, m <- submitMessages, m.id.getId == shownId, Just l <- [m.label]] <|> listToMaybe submitLabels
       onCreateIssueMsgs
         | isFeedbackFlow = fromMaybe [] messageOverride
         | shouldCreateTicket = fromMaybe issueConfig.onCreateIssueMsgs messageOverride
@@ -836,7 +838,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide (Just config) True identifier issueHandle
-  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now
+  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow submitLabel now
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
     fork "notify on slack" $ do
@@ -894,7 +896,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
-    mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow now = do
+    mkIssueReport mocId updatedChats shouldCreateTicket isFeedbackFlow submitLabel now = do
       id <- generateGUID
       shortId <- generateShortId
       pure $
@@ -922,7 +924,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             merchantId = Just merchantId,
             reopenedCount = 0,
             becknIssueId,
-            customerResponse = Nothing
+            customerResponse = Nothing,
+            submitLabel
           }
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
