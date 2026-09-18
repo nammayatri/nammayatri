@@ -199,6 +199,10 @@ getPersonRegisterBankAccountLink h mbInitiatedBy person = withDynamicLogLevel "p
                 updatedAt = now,
                 ifscCode = Nothing,
                 nameAtBank = Nothing,
+                -- The external account is attached later, through the hosted account link,
+                -- so there is nothing to record until the first status refresh.
+                bankName = Nothing,
+                bankAccountLast4 = Nothing,
                 requirements = resp.requirements,
                 futureRequirements = resp.futureRequirements,
                 lastSyncedAt = Just now
@@ -237,8 +241,13 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
       forceRefresh = fromMaybe False mbForceRefresh
       currentlyDue = fromMaybe [] (bankAccount.requirements >>= (.currentlyDue))
       isBankAccountSuccessfullyLinked = bankAccount.chargesEnabled && null currentlyDue
+      -- A driver linked before bank details were stored would otherwise never refresh, since
+      -- the guard below stops asking Stripe once the account is healthy. Ask once more while
+      -- the details are missing so existing drivers backfill themselves; the sliding-window
+      -- limit still caps how often an account with no bank attached retries.
+      needsBankDetails = isNothing bankAccount.bankName || isNothing bankAccount.bankAccountLast4
   bankAccount' <-
-    if not forceRefresh || isBankAccountSuccessfullyLinked
+    if (not forceRefresh || isBankAccountSuccessfullyLinked) && not needsBankDetails
       then pure bankAccount
       else do
         rateLimitOpts <- getRateLimitOpts merchantOpCityId
@@ -247,14 +256,20 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
           Left _ -> pure bankAccount
           Right _ -> do
             resp <- TPayment.getAccount merchantOpCityId (Just paymentMode) bankAccount.accountId
-            QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted resp.requirements resp.futureRequirements personId
+            -- Hold on to what is already stored when the response carries no external account,
+            -- so a response without one cannot blank out details already shown to the driver.
+            let bankName = maybe bankAccount.bankName Just resp.bankName
+                bankAccountLast4 = maybe bankAccount.bankAccountLast4 Just resp.bankAccountLast4
+            QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted resp.requirements resp.futureRequirements bankName bankAccountLast4 personId
             pure
               bankAccount
                 { DDBA.chargesEnabled = resp.chargesEnabled,
                   DDBA.payoutsEnabled = Just resp.payoutsEnabled,
                   DDBA.detailsSubmitted = resp.detailsSubmitted,
                   DDBA.requirements = resp.requirements,
-                  DDBA.futureRequirements = resp.futureRequirements
+                  DDBA.futureRequirements = resp.futureRequirements,
+                  DDBA.bankName = bankName,
+                  DDBA.bankAccountLast4 = bankAccountLast4
                 }
   stripeLegalEntityName <- TPayment.fetchLegalEntityName merchantOpCityId (Just paymentMode)
   pure $
@@ -265,6 +280,8 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
         requirements = bankAccount'.requirements,
         futureRequirements = bankAccount'.futureRequirements,
         stripeLegalEntityName,
+        bankName = bankAccount'.bankName,
+        bankAccountLast4 = bankAccount'.bankAccountLast4,
         paymentMode
       }
   where

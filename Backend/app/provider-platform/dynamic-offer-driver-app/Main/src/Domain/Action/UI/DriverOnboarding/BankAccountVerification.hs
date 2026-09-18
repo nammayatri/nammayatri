@@ -89,6 +89,10 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
                 updatedAt = now,
                 ifscCode = resp.ifscCode,
                 nameAtBank = resp.nameAtBank,
+                -- Populated from the Stripe connected account only; this is the Idfy
+                -- penny-drop path, which reports the account holder rather than the bank.
+                bankName = Nothing,
+                bankAccountLast4 = Nothing,
                 requirements = Nothing,
                 futureRequirements = Nothing,
                 lastSyncedAt = Nothing

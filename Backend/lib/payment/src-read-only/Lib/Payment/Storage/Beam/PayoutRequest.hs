@@ -14,6 +14,8 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest
 
 data PayoutRequestT f = PayoutRequestT
   { amount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    bankAccountLast4 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bankName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     beneficiaryId :: B.C f Kernel.Prelude.Text,
     cashMarkedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     cashMarkedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

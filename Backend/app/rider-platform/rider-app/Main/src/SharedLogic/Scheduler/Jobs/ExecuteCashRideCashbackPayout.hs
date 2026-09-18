@@ -141,6 +141,9 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             merchantOpCityId = person.merchantOperatingCityId.getId,
             city = show merchantOperatingCity.city,
             vpa = Just payoutVpa,
+            -- VPA payout: no bank account involved.
+            bankName = Nothing,
+            bankAccountLast4 = Nothing,
             customerName = person.firstName,
             customerPhone = phoneNo,
             customerEmail = emailId,

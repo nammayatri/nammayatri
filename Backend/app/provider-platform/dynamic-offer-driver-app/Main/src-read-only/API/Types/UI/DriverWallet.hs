@@ -31,6 +31,8 @@ data PaymentOrderInfo = PaymentOrderInfo {id :: Kernel.Types.Id.Id Lib.Payment.D
 
 data PayoutHistoryItem = PayoutHistoryItem
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
     payoutFee :: Kernel.Types.Common.HighPrecMoney,
     payoutMethod :: Kernel.Prelude.Text,

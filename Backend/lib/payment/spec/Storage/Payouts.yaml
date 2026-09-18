@@ -176,6 +176,8 @@ PayoutRequest:
     customerPhone: Maybe Text
     customerEmail: Maybe Text
     customerName: Maybe Text
+    bankName: Maybe Text
+    bankAccountLast4: Maybe Text
     remark: Maybe Text
     orderType: Maybe Text
     city: Maybe Text

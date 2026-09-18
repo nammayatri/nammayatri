@@ -53,9 +53,11 @@ updateAccountStatus ::
   Bool ->
   Maybe Payment.RequirementsInfo ->
   Maybe Payment.RequirementsInfo ->
+  Maybe Text ->
+  Maybe Text ->
   Id DP.Person ->
   m ()
-updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted requirements futureRequirements driverId = do
+updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted requirements futureRequirements bankName bankAccountLast4 driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.chargesEnabled chargesEnabled,
@@ -63,6 +65,8 @@ updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted requirements 
       Se.Set Beam.detailsSubmitted detailsSubmitted,
       Se.Set Beam.requirements (A.toJSON <$> requirements),
       Se.Set Beam.futureRequirements (A.toJSON <$> futureRequirements),
+      Se.Set Beam.bankName bankName,
+      Se.Set Beam.bankAccountLast4 bankAccountLast4,
       Se.Set Beam.lastSyncedAt (Just now),
       Se.Set Beam.updatedAt now
     ]

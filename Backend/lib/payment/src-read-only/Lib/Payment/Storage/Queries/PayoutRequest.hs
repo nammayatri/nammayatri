@@ -81,6 +81,8 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.bankAccountLast4 bankAccountLast4,
+      Se.Set Beam.bankName bankName,
       Se.Set Beam.beneficiaryId beneficiaryId,
       Se.Set Beam.cashMarkedAt cashMarkedAt,
       Se.Set Beam.cashMarkedById cashMarkedById,
@@ -118,6 +120,8 @@ instance FromTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Pa
       Just
         Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest
           { amount = amount,
+            bankAccountLast4 = bankAccountLast4,
+            bankName = bankName,
             beneficiaryId = beneficiaryId,
             cashMarkedAt = cashMarkedAt,
             cashMarkedById = cashMarkedById,
@@ -154,6 +158,8 @@ instance ToTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Payo
   toTType' (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest {..}) = do
     Beam.PayoutRequestT
       { Beam.amount = amount,
+        Beam.bankAccountLast4 = bankAccountLast4,
+        Beam.bankName = bankName,
         Beam.beneficiaryId = beneficiaryId,
         Beam.cashMarkedAt = cashMarkedAt,
         Beam.cashMarkedById = cashMarkedById,

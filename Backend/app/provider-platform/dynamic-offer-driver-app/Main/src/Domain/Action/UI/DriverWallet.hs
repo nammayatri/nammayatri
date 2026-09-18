@@ -214,7 +214,9 @@ fetchWalletRowsFromLedger ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
+  -- Payouts are a settlement of already-earned money, not a deduction from earnings,
+  -- so they are excluded from the transaction breakdown entirely.
+  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
   entries <-
     QLedgerEntry.findByAccountsWithConcernedIndividual
       accountIds
@@ -244,12 +246,16 @@ fetchWalletRowsFromCH ::
   UTCTime ->
   m [CHLE.WalletEntryRow]
 fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
-  let allRefs = walletCreditRefs ++ [walletReferencePayout, walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
+  -- Payouts are a settlement of already-earned money, not a deduction from earnings,
+  -- so they are excluded from the transaction breakdown entirely.
+  let allRefs = walletCreditRefs ++ [walletReferenceAirportCashWithdrawal, walletReferenceGateDriverFee]
   CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
 
--- | Aggregate raw entries into the WalletSummary fields:
---   per-reference additions/deductions groups, top-level non-redeemable
---   balance, and net earnings (additions - deductions).
+-- | Per-reference additions/deductions groups and the net earnings for the window.
+--   Items still carry the payout-cutoff split, but the response's own
+--   redeemable/non-redeemable pair is NOT derived from these: that pair splits the
+--   current balance and is computed by the caller, so the two answer different
+--   questions and are not expected to agree.
 aggregateWalletRows ::
   Bool -> -- merchant charges VAT rather than GST
   [Id Account] ->
@@ -547,7 +553,9 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
           status = i.status,
           timestamp = i.timestamp,
           payoutMethod = i.payoutMethod,
-          payoutVpa = i.payoutVpa
+          payoutVpa = i.payoutVpa,
+          bankName = i.bankName,
+          bankAccountLast4 = i.bankAccountLast4
         }
 
 --------------------------------------------------------------------------------
@@ -706,6 +714,10 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
             merchantOpCityId = ctx.mocId.getId,
             city = show merchantOperatingCity.city,
             vpa = vpa,
+            -- mbPersonBankAccount is the account the payout is actually sent to, which for a
+            -- fleet driver is the fleet owner's rather than their own.
+            bankName = mbPersonBankAccount >>= (.bankName),
+            bankAccountLast4 = mbPersonBankAccount >>= (.bankAccountLast4),
             customerName = Just ctx.person.firstName,
             customerPhone = phoneNo,
             customerEmail = ctx.person.email,

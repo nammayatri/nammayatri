@@ -17,6 +17,8 @@ import qualified Tools.Beam.UtilsTH
 
 data DriverBankAccount = DriverBankAccount
   { accountId :: Kernel.External.Payment.Stripe.Types.AccountId,
+    bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargesEnabled :: Kernel.Prelude.Bool,
     currentAccountLink :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     currentAccountLinkExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

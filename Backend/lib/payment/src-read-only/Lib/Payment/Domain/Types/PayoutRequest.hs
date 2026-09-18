@@ -14,6 +14,8 @@ import qualified Tools.Beam.UtilsTH
 
 data PayoutRequest = PayoutRequest
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     beneficiaryId :: Kernel.Prelude.Text,
     cashMarkedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     cashMarkedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

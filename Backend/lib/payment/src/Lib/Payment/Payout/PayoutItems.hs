@@ -9,7 +9,7 @@ where
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import qualified Lib.Payment.Domain.Types.Common as DCommon
-import Lib.Payment.Domain.Types.PayoutRequest (PayoutRequest (..), PayoutRequestStatus)
+import Lib.Payment.Domain.Types.PayoutRequest (PayoutRequest (..), PayoutRequestStatus (..))
 import Lib.Payment.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPR
 
@@ -22,7 +22,9 @@ data PayoutItem = PayoutItem
     status :: PayoutRequestStatus,
     timestamp :: UTCTime,
     payoutMethod :: Text,
-    payoutVpa :: Maybe Text
+    payoutVpa :: Maybe Text,
+    bankName :: Maybe Text,
+    bankAccountLast4 :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -41,6 +43,15 @@ getPayoutItems beneficiaryId mbFrom mbTo statuses limit offset = do
   payoutRequests <- QPR.findByBeneficiaryWithFilters beneficiaryId mbFrom mbTo statuses limit offset
   pure $ map toPayoutItem payoutRequests
 
+-- | How the money actually reached the beneficiary. Cash is settled at a booth
+--   and never has a destination on the request; a VPA means the Juspay UPI flow;
+--   anything else is the Stripe flow, which pays out to a bank account.
+payoutMethodOf :: PayoutRequest -> Text
+payoutMethodOf pr
+  | pr.status `elem` [CASH_PAID, CASH_PENDING] = "CASH"
+  | isJust pr.customerVpa = "UPI"
+  | otherwise = "BANK"
+
 toPayoutItem :: PayoutRequest -> PayoutItem
 toPayoutItem pr =
   PayoutItem
@@ -49,6 +60,8 @@ toPayoutItem pr =
       entityName = pr.entityName,
       status = pr.status,
       timestamp = pr.createdAt,
-      payoutMethod = "UPI", -- hardcoded for now; all current payouts are UPI
-      payoutVpa = pr.customerVpa
+      payoutMethod = payoutMethodOf pr,
+      payoutVpa = pr.customerVpa,
+      bankName = pr.bankName,
+      bankAccountLast4 = pr.bankAccountLast4
     }

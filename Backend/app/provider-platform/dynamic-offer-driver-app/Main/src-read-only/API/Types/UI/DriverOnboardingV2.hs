@@ -72,7 +72,9 @@ data BankAccountLinkResp = BankAccountLinkResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BankAccountResp = BankAccountResp
-  { chargesEnabled :: Kernel.Prelude.Bool,
+  { bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    chargesEnabled :: Kernel.Prelude.Bool,
     detailsSubmitted :: Kernel.Prelude.Bool,
     futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
