@@ -680,6 +680,7 @@ library
       SharedLogic.PersonBankAccount
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
+      SharedLogic.QuickRetry
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride

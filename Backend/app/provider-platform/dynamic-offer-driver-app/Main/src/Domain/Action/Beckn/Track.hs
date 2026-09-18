@@ -36,6 +36,7 @@ import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import SharedLogic.External.LocationTrackingService.Types
+import SharedLogic.QuickRetry (withQuickRetry)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Ride as QRide
@@ -115,6 +116,6 @@ callMultiCloudDriverLocation ride = do
             Right result -> pure result
 
     callDriverLocationAPI url req =
-      withShortRetry $
+      withQuickRetry $
         callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
           >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)

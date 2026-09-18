@@ -137,6 +137,7 @@ import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
@@ -1522,7 +1523,11 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
   let pickupLatLong = getCoordinates pickup
   transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    withShortRetry $
+    -- Quick ladder (0.5s/1s/2s): this distance-matrix call sits on the per-batch dispatch
+    -- path, where a 4s retry sleep delays every driver ping in the batch; the dominant
+    -- provider (self-hosted OSRM) is intra-VPC, and for external providers only
+    -- connection errors/503 are retried (never 429), so fast retries stay safe.
+    withQuickRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
         Maps.GetDistancesReq
           { origins = driverPoolResults,
@@ -1578,7 +1583,11 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults searchInfo = do
   transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    withShortRetry $
+    -- Quick ladder (0.5s/1s/2s): this distance-matrix call sits on the per-batch dispatch
+    -- path, where a 4s retry sleep delays every driver ping in the batch; the dominant
+    -- provider (self-hosted OSRM) is intra-VPC, and for external providers only
+    -- connection errors/503 are retried (never 429), so fast retries stay safe.
+    withQuickRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
         Maps.GetDistancesReq
           { origins = driverPoolResults,

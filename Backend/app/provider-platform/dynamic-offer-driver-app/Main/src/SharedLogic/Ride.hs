@@ -667,15 +667,20 @@ pullExistingRideRequests ::
   DTC.TransporterConfig ->
   m ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig = do
-  for_ driverSearchReqs $ \driverReq -> do
-    let driverId = driverReq.driverId
-    unless (driverId == quoteDriverId) $ do
-      DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
-      DP.decrementSrdSentCount driverReq.createdAt driverId
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
-      void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
-      driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
+  -- Forked: the loop is ~6 serial KV/Redis round trips per pooled driver, which put the
+  -- whole driver pool's cleanup on the accepting driver's respond latency. Nothing reads
+  -- its effects synchronously — losers are additionally bulk-deactivated by
+  -- deactivateExistingQuotes, and a racing loser respond fails on the searchTry gate.
+  fork "pulling ride requests from other drivers" $
+    for_ driverSearchReqs $ \driverReq -> do
+      let driverId = driverReq.driverId
+      unless (driverId == quoteDriverId) $ do
+        DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
+        DP.decrementSrdSentCount driverReq.createdAt driverId
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+        void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
+        driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId

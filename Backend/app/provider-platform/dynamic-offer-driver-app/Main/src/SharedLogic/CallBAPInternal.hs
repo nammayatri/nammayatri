@@ -310,6 +310,10 @@ data OneShotAssignReq = OneShotAssignReq
     fareBreakups :: [OneShotFareBreakupItem],
     quoteValidTill :: UTCTime,
     otp :: Text,
+    -- | The BPP-served live-tracking URL (buildTrackingUrl). Carrying it here lets the
+    -- BAP skip the Beckn track/on_track round trip, whose only effect for a
+    -- value-add NP is copying this same URL onto the BAP ride.
+    trackingUrl :: BaseUrl,
     driverDetails :: OneShotDriverDetails,
     vehicleDetails :: OneShotVehicleDetails,
     distanceToPickup :: Maybe Meters,
