@@ -196,7 +196,7 @@ mkDriverPreferenceChecks searchReq driver =
     -- SharedLogic.DriverPool.AreaPreference), not a dedicated typed field, so this
     -- reads the raw tag object directly. Matched against the ride's DROP location
     -- only -- pickup is deliberately not considered (product decision).
-    areaCheck = case dpr.driverTags of
+    areaCheck = withWeight 2.0 $ case dpr.driverTags of
       A.Object tagsObj
         | Just radiusValue <- lookupTagValue AreaPref.areaPreferenceRadiusTagName tagsObj,
           Just (center, radius) <- AreaPref.parseRadiusTagValue radiusValue ->
