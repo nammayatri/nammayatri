@@ -22,7 +22,6 @@ import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
 import qualified API.ProviderPlatform as BPP
-import qualified API.ProviderPlatform.BulkLogicRollout as BulkLogicRollout
 import qualified API.RiderPlatform as BAP
 import qualified API.SpecialZone as SpecialZone
 import qualified Data.ByteString as BS
@@ -51,7 +50,6 @@ type MainAPI =
     :<|> Exotel.API
     :<|> FReg.API
     :<|> SpecialZone.API
-    :<|> BulkLogicRollout.API
 
 handler :: FlowServer API
 handler =
@@ -69,7 +67,6 @@ mainServer =
     :<|> Exotel.handler
     :<|> FReg.handler
     :<|> SpecialZone.handler
-    :<|> BulkLogicRollout.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

@@ -215,6 +215,15 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
   - POST:
+      endpoint: /appDynamicLogic/bulkUpsertLogicRollout
+      auth: ApiAuthV2
+      request:
+        type: BulkLogicRolloutReq
+      response:
+        type: BulkLogicRolloutResult
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
+  - POST:
       endpoint: /appDynamicLogic/updateExperimentGroup
       auth: ApiAuthV2
       request:
