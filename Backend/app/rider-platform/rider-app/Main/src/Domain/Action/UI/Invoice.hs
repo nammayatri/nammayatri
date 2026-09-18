@@ -6,13 +6,13 @@ where
 
 import qualified API.Types.UI.Invoice as DTInvoice
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Data.Text as T
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
