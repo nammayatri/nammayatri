@@ -45,6 +45,12 @@ type API =
            API.Types.UI.RiderPreferences.AllRiderPreferencesResp
       :<|> TokenAuth
       :> "riderPreference"
+      :> "notification"
+      :> Get
+           '[JSON]
+           API.Types.UI.RiderPreferences.NotificationPreferenceOnlyResp
+      :<|> TokenAuth
+      :> "riderPreference"
       :> Capture
            "preferenceId"
            (Kernel.Types.Id.Id Domain.Types.RiderPreferences.RiderPreferences)
@@ -54,7 +60,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postRiderPreference :<|> getRiderPreference :<|> getRiderPreferenceAll :<|> deleteRiderPreference
+handler = postRiderPreference :<|> getRiderPreference :<|> getRiderPreferenceAll :<|> getRiderPreferenceNotification :<|> deleteRiderPreference
 
 postRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -82,6 +88,14 @@ getRiderPreferenceAll ::
     Environment.FlowHandler API.Types.UI.RiderPreferences.AllRiderPreferencesResp
   )
 getRiderPreferenceAll a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+getRiderPreferenceNotification ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.FlowHandler API.Types.UI.RiderPreferences.NotificationPreferenceOnlyResp
+  )
+getRiderPreferenceNotification a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceNotification (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 deleteRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

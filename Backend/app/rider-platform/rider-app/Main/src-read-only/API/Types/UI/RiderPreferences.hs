@@ -43,6 +43,10 @@ data LocationPickupRespData = LocationPickupRespData
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data NotificationPreferenceOnlyResp = NotificationPreferenceOnlyResp {notificationPreference :: Kernel.Prelude.Maybe NotificationPreferenceRespData}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data NotificationPreferenceReqData = NotificationPreferenceReqData {enabledCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory], osPermissionGranted :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
