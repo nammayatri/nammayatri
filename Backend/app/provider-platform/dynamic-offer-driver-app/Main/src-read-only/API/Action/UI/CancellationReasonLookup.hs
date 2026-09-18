@@ -21,12 +21,13 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "getCancellationReasons"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.CancellationReasonLookup.CancellationReasonResp]
   )
 
@@ -41,4 +42,4 @@ getRideGetCancellationReasons ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler [API.Types.UI.CancellationReasonLookup.CancellationReasonResp]
   )
-getRideGetCancellationReasons a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CancellationReasonLookup.getRideGetCancellationReasons (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getRideGetCancellationReasons a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.CancellationReasonLookup.getRideGetCancellationReasons (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

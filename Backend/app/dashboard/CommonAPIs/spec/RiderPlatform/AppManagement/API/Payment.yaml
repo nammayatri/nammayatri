@@ -25,6 +25,13 @@ importPackageOverrides:
   Lib.Payment.Domain.Types.Refunds: "payment"
 
 module: Payment
+# requestorId/actorInfo applied for each api by default
+# for overwrite helperApiExtra/helperApi can be specified for each api separately
+default:
+  helperApiExtra:
+    query:
+      - requestorId: Text
+    actorInfo: requestorId
 
 apis:
   - GET:
@@ -47,7 +54,7 @@ apis:
       params:
         refundRequestId: Id RefundRequest
       query:
-        refreshRefunds: Bool
+        - refreshRefunds: Bool
       response:
         type: RefundRequestInfoResp
   - POST:

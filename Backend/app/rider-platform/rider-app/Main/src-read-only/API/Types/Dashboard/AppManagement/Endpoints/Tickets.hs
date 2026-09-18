@@ -80,7 +80,7 @@ data TicketDashboardUserInfo = TicketDashboardUserInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces :<|> GetTicketsTicketdashboardTicketplaceSubPlaces :<|> PostTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> GetTicketFleetVehicles :<|> GetTicketFleetVehiclesV2 :<|> PostTicketBookingsVerifyV2 :<|> PostTicketPlacesBookHelper :<|> GetTicketPlaces :<|> GetTicketPlaceServices :<|> GetTicketBookingDetails :<|> GetTicketsDashboardBookingStatus :<|> GetAllTicketBookings :<|> PostTicketBookingCashCollect :<|> PostTicketPlacesDirectBook :<|> GetTicketPlaceBookings)
+type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces :<|> GetTicketsTicketdashboardTicketplaceSubPlaces :<|> PostTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> GetTicketFleetVehicles :<|> GetTicketFleetVehiclesV2 :<|> PostTicketBookingsVerifyV2 :<|> PostTicketPlacesBookHelper :<|> GetTicketPlaces :<|> GetTicketPlaceServices :<|> GetTicketBookingDetails :<|> GetTicketsDashboardBookingStatus :<|> GetAllTicketBookings :<|> PostTicketBookingCashCollect :<|> PostTicketPlacesDirectBookHelper :<|> GetTicketPlaceBookings)
 
 type PostTicketsVerify =
   ( "tickets" :> Capture "personServiceId" (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
@@ -325,6 +325,14 @@ type PostTicketBookingCashCollect =
   )
 
 type PostTicketPlacesDirectBook =
+  ( "ticket" :> "places" :> Capture "placeId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "directBook"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.TicketService.DirectTicketBookingReq
+      :> Post '[JSON] API.Types.UI.TicketService.DirectTicketBookingResp
+  )
+
+type PostTicketPlacesDirectBookHelper =
   ( "ticket" :> "places" :> Capture "placeId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "directBook"
       :> QueryParam
            "requestorId"

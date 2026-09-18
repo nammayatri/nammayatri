@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -44,4 +45,4 @@ postEditResult ::
     API.Types.UI.EditBooking.EditBookingRespondAPIReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postEditResult a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditBooking.postEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postEditResult a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.EditBooking.postEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

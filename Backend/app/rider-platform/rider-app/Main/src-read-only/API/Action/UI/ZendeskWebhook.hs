@@ -16,17 +16,18 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( "zendesk" :> "webhook" :> Header "Authorization" Kernel.Prelude.Text :> ReqBody ('[JSON]) API.Types.UI.ZendeskWebhook.ZendeskWebhookPayload
+  ( "zendesk" :> "webhook" :> Header "Authorization" Kernel.Prelude.Text :> ReqBody '[JSON] API.Types.UI.ZendeskWebhook.ZendeskWebhookPayload
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = postZendeskWebhook
 
-postZendeskWebhook :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.ZendeskWebhook.ZendeskWebhookPayload -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postZendeskWebhook a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ZendeskWebhook.postZendeskWebhook a2 a1
+postZendeskWebhook :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.ZendeskWebhook.ZendeskWebhookPayload -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postZendeskWebhook a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.ZendeskWebhook.postZendeskWebhook a2 a1

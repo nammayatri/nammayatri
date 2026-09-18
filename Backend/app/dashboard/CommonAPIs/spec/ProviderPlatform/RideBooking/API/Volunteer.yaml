@@ -14,8 +14,6 @@ apis:
         bookingOtp: Text
       response:
         type: BookingInfoResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP VOLUNTEER VOLUNTEER_BOOKING_INFO
   - POST: # AssignCreateAndStartOtpRideAPI
       endpoint: /assign/start
       name: PostVolunteerAssignStartOtpRide
@@ -24,20 +22,10 @@ apis:
         type: AssignCreateAndStartOtpRideAPIReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: VolunteerAPI AssignCreateAndStartOtpRideEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP VOLUNTEER VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
-      helperApi:
-        - POST:
-            endpoint: /assign/start
-            name: PostVolunteerAssignStartOtpRide
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: AssignCreateAndStartOtpRideAPIReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
 types:
   BookingInfoResponse:

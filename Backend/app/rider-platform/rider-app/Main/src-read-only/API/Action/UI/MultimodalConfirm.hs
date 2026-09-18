@@ -26,6 +26,7 @@ import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -633,7 +634,7 @@ postMultimodalRouteServiceability ::
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteServiceability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalRouteServiceability a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteServiceability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -645,7 +646,7 @@ postMultimodalInitiate ::
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalInitiate a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalInitiate a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -658,7 +659,7 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+postMultimodalConfirm a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -667,7 +668,7 @@ getMultimodalBookingInfo ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-getMultimodalBookingInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalBookingInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -676,7 +677,7 @@ getMultimodalBookingPaymentStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyBookingPaymentStatus
   )
-getMultimodalBookingPaymentStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingPaymentStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalBookingPaymentStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalBookingPaymentStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPaymentUpdateOrder ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -686,7 +687,7 @@ postMultimodalPaymentUpdateOrder ::
     API.Types.UI.MultimodalConfirm.UpdatePaymentOrderReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.UpdatePaymentOrderResp
   )
-postMultimodalPaymentUpdateOrder a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalPaymentUpdateOrder (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalPaymentUpdateOrder a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalPaymentUpdateOrder (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalSwitch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -698,7 +699,7 @@ postMultimodalSwitch ::
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalSwitch a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalSwitch a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -708,7 +709,7 @@ postMultimodalJourneyLegSkip ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegSkip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalJourneyLegSkip a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegSkip (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalJourneyLegAddSkippedLeg ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -718,7 +719,7 @@ postMultimodalJourneyLegAddSkippedLeg ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegAddSkippedLeg a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegAddSkippedLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalJourneyLegAddSkippedLeg a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyLegAddSkippedLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalExtendLeg ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -728,7 +729,7 @@ postMultimodalExtendLeg ::
     API.Types.UI.MultimodalConfirm.ExtendLegReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalExtendLeg a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalExtendLeg a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalExtendLegGetfare ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -738,7 +739,7 @@ postMultimodalExtendLegGetfare ::
     API.Types.UI.MultimodalConfirm.ExtendLegGetFareReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.ExtendLegGetFareResp
   )
-postMultimodalExtendLegGetfare a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLegGetfare (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalExtendLegGetfare a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalExtendLegGetfare (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalJourneyStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -747,7 +748,7 @@ getMultimodalJourneyStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-getMultimodalJourneyStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalJourneyStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalJourneyStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalJourneyStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalJourneyCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -756,7 +757,7 @@ postMultimodalJourneyCancel ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalJourneyCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalRiderLocation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -767,7 +768,7 @@ postMultimodalRiderLocation ::
     API.Types.UI.MultimodalConfirm.RiderLocationReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalRiderLocation a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalRiderLocation a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalRiderLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderSwitchTaxi ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -778,7 +779,7 @@ postMultimodalOrderSwitchTaxi ::
     API.Types.UI.MultimodalConfirm.SwitchTaxiReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchTaxi a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchTaxi (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderSwitchTaxi a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchTaxi (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -789,7 +790,7 @@ postMultimodalOrderSwitchFRFSTier ::
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchFRFSTier a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchFRFSTier (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderSwitchFRFSTier a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchFRFSTier (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalOrderSimilarJourneyLegs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -799,7 +800,7 @@ getMultimodalOrderSimilarJourneyLegs ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp
   )
-getMultimodalOrderSimilarJourneyLegs a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderSimilarJourneyLegs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalOrderSimilarJourneyLegs a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderSimilarJourneyLegs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalOrderSwitchJourneyLeg ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -810,7 +811,7 @@ postMultimodalOrderSwitchJourneyLeg ::
     API.Types.UI.MultimodalConfirm.SwitchJourneyLegReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchJourneyLeg a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchJourneyLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderSwitchJourneyLeg a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSwitchJourneyLeg (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalJourneyFeedback ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -820,7 +821,7 @@ postMultimodalJourneyFeedback ::
     API.Types.UI.MultimodalConfirm.JourneyFeedBackForm ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyFeedback a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalJourneyFeedback a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalJourneyFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalFeedback ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -829,7 +830,7 @@ getMultimodalFeedback ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.MultimodalConfirm.JourneyFeedBackForm)
   )
-getMultimodalFeedback a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalFeedback a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.getMultimodalFeedback (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalUserPreferences ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -837,7 +838,7 @@ getMultimodalUserPreferences ::
     ) ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalUserPreferences
   )
-getMultimodalUserPreferences a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalUserPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getMultimodalUserPreferences a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.MultimodalConfirm.getMultimodalUserPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postMultimodalUserPreferences ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -846,7 +847,7 @@ postMultimodalUserPreferences ::
     API.Types.UI.MultimodalConfirm.MultimodalUserPreferences ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalUserPreferences a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalUserPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalUserPreferences a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalUserPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalTransitOptionsLite ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -855,7 +856,7 @@ postMultimodalTransitOptionsLite ::
     API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
   )
-postMultimodalTransitOptionsLite a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTransitOptionsLite (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalTransitOptionsLite a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalTransitOptionsLite (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPublicTransportData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -869,7 +870,7 @@ getPublicTransportData ::
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+getPublicTransportData a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 getPublicTransportVehicleData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -880,7 +881,7 @@ getPublicTransportVehicleData ::
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getPublicTransportVehicleData a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postPublicTransportVehicleDataBlock ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -890,7 +891,7 @@ postPublicTransportVehicleDataBlock ::
     Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.BlockedVehiclesResp
   )
-postPublicTransportVehicleDataBlock a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postPublicTransportVehicleDataBlock (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postPublicTransportVehicleDataBlock a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postPublicTransportVehicleDataBlock (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getPublicTransportBlockedVehicles ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -898,7 +899,7 @@ getPublicTransportBlockedVehicles ::
     ) ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.BlockedVehiclesResp
   )
-getPublicTransportBlockedVehicles a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportBlockedVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getPublicTransportBlockedVehicles a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.MultimodalConfirm.getPublicTransportBlockedVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -909,7 +910,7 @@ getMultimodalOrderGetLegTierOptions ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.LegServiceTierOptionsResp
   )
-getMultimodalOrderGetLegTierOptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getMultimodalOrderGetLegTierOptions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderSublegSetOnboardedVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -921,7 +922,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
     API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSublegSetOnboardedVehicleDetails a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetOnboardedVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalOrderSublegSetOnboardedVehicleDetails a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetOnboardedVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalOrderSublegSetStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -933,7 +934,7 @@ postMultimodalOrderSublegSetStatus ::
     Lib.JourneyLeg.Types.JourneyLegStatus ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalOrderSublegSetStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalOrderSublegSetStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalOrderSublegSetTrackingStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -946,7 +947,7 @@ postMultimodalOrderSublegSetTrackingStatus ::
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalOrderSublegSetTrackingStatus a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+postMultimodalOrderSublegSetTrackingStatus a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 postMultimodalComplete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -955,7 +956,7 @@ postMultimodalComplete ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalComplete a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalComplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalComplete a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalComplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalTicketVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -965,7 +966,7 @@ postMultimodalTicketVerify ::
     API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
   )
-postMultimodalTicketVerify a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalTicketVerify a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalOrderSoftCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -975,7 +976,7 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSoftCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalOrderSoftCancel a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSoftCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalOrderCancelStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -985,7 +986,7 @@ getMultimodalOrderCancelStatus ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
-getMultimodalOrderCancelStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderCancelStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalOrderCancelStatus a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderCancelStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalOrderCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -995,7 +996,7 @@ postMultimodalOrderCancel ::
     Kernel.Prelude.Int ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderCancel a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalOrderCancel a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalOrderChangeStops ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1006,7 +1007,7 @@ postMultimodalOrderChangeStops ::
     API.Types.UI.MultimodalConfirm.ChangeStopsReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.ChangeStopsResp
   )
-postMultimodalOrderChangeStops a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderChangeStops (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderChangeStops a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderChangeStops (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1017,7 +1018,7 @@ postMultimodalOrderReschedule ::
     API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderReschedule a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderReschedule a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1026,7 +1027,7 @@ postMultimodalRouteAvailability ::
     API.Types.UI.MultimodalConfirm.RouteAvailabilityReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.RouteAvailabilityResp
   )
-postMultimodalRouteAvailability a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalRouteAvailability a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalRouteAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalSwitchRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1035,7 +1036,7 @@ postMultimodalSwitchRoute ::
     API.Types.UI.MultimodalConfirm.SwitchRouteReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalSwitchRoute a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitchRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalSwitchRoute a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitchRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalSetRouteName ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1044,7 +1045,7 @@ postMultimodalSetRouteName ::
     API.Types.UI.MultimodalConfirm.SetRouteNameReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalSetRouteName a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSetRouteName (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalSetRouteName a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postMultimodalSetRouteName (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalUpdateBusLocation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1054,7 +1055,7 @@ postMultimodalUpdateBusLocation ::
     API.Types.UI.MultimodalConfirm.UpdateBusLocationReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalUpdateBusLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalUpdateBusLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalUpdateBusLocation a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.postMultimodalUpdateBusLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postStoreTowerInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1063,7 +1064,7 @@ postStoreTowerInfo ::
     API.Types.UI.MultimodalConfirm.TowerInfoReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postStoreTowerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postStoreTowerInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postStoreTowerInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.MultimodalConfirm.postStoreTowerInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalTrackStopRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -1073,4 +1074,4 @@ getMultimodalTrackStopRoutes ::
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.MultimodalConfirm.PassingRoutes]
   )
-getMultimodalTrackStopRoutes a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalTrackStopRoutes a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MultimodalConfirm.getMultimodalTrackStopRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

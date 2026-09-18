@@ -78,7 +78,7 @@ postBbpsCreateOrder ::
     API.Types.UI.BBPS.BBPSPaymentReq ->
     Environment.Flow Kernel.External.Payment.Interface.CreateOrderResp
   )
-postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+postBbpsCreateOrder (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   bbpsAmount <- (highPrecMoneyFromText req.billDetails.txnAmount) & fromMaybeM (InvalidRequest "Invalid amount")

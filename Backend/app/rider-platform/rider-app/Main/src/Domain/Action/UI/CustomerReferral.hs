@@ -34,7 +34,6 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as PStats
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout
@@ -113,7 +112,7 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
         }
 
 postPayoutVpaUpsert :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> UpdatePayoutVpaReq -> Flow APISuccess
-postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId

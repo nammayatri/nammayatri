@@ -28,9 +28,6 @@ apis:
         type: DSelectReq
       response:
         type: MultimodalSelectRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS SELECT
-        endpoint: SelectAPI EstimatesEndPoint
   - GET: # CustomerSelectListAPI
       endpoint: /{customerId}/{estimateId}/quotes
       auth: ApiAuthV2
@@ -39,8 +36,6 @@ apis:
         estimateId: Id Estimate
       response:
         type: SelectListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS SELECTLIST
   - GET: # CustomerSelectResultAPI
       endpoint: /{customerId}/{estimateId}/result
       auth: ApiAuthV2
@@ -49,8 +44,6 @@ apis:
         estimateId: Id Estimate
       response:
         type: QuotesResultResponse
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS SELECTRESULT
   - POST:  # CustomerCancelSearchAPI
       endpoint: /{customerId}/{estimateId}/cancel
       name: postSelectCancelSearch
@@ -60,8 +53,5 @@ apis:
         estimateId: Id Estimate
       response:
         type: CancelAPIResponse
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS CANCELSEARCH
-        endpoint: SelectAPI CancelSearchEndPoint
 
 types: {}

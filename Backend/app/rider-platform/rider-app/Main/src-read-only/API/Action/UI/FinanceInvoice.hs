@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Invoice.PdfService
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -59,4 +60,4 @@ getFinanceInvoicePdf ::
     Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime ->
     Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
   )
-getFinanceInvoicePdf a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdf (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+getFinanceInvoicePdf a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdf (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1

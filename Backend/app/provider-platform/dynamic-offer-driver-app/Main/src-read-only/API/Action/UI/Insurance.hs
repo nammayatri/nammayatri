@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBAPInternal
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "insurance" :> Capture "referenceId" Kernel.Prelude.Text :> Get '[JSON] SharedLogic.CallBAPInternal.InsuranceAPIEntity)
@@ -35,4 +36,4 @@ getInsurance ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler SharedLogic.CallBAPInternal.InsuranceAPIEntity
   )
-getInsurance a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Insurance.getInsurance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getInsurance a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Insurance.getInsurance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -27,7 +27,6 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRideDetails
 import Environment
@@ -51,7 +50,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.SMS as Sms
 
@@ -140,7 +138,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
         }
 
 postVolunteerAssignStartOtpRide :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
-postVolunteerAssignStartOtpRide _ _ mbRequestorId Common.AssignCreateAndStartOtpRideAPIReq {..} = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
+postVolunteerAssignStartOtpRide _ _ _mbRequestorId Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   when driverInfo.onRide $ do

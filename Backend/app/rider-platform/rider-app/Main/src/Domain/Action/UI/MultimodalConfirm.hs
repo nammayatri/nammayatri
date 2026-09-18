@@ -173,7 +173,6 @@ import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.VehicleActionHistory as QVAH
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.Metrics as Metrics
@@ -253,8 +252,8 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
-postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq = withTimeAPI "multimodalConfirm" "total" $
-  ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mbIsMockPayment mbSkipCreateOrderCall journeyConfirmReq =
+  withTimeAPI "multimodalConfirm" "total" $ do
     journey <- JM.getJourney journeyId
     legs <- QJourneyLeg.getJourneyLegs journey.id
     let confirmElements = journeyConfirmReq.journeyConfirmReqElements
@@ -322,7 +321,7 @@ getMultimodalBookingPaymentStatus ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyBookingPaymentStatus
   )
-getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId

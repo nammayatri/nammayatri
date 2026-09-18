@@ -17,12 +17,13 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( "frfs" :> "trip" :> Capture "tripId" Kernel.Prelude.Text :> "route" :> Capture "routeId" Kernel.Prelude.Text :> "manifest" :> Header "token" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
       :<|> "frfs"
       :> "trip"
@@ -34,7 +35,7 @@ type API =
            "token"
            Kernel.Prelude.Text
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> "frfs"
       :> "trip"
@@ -50,21 +51,21 @@ type API =
            "token"
            Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSInternal.NotifyBusApproachingReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = getFrfsTripRouteManifest :<|> postFrfsTripNotifyTripStarted :<|> postFrfsTripStopNotifyApproaching
 
-getFrfsTripRouteManifest :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp)
-getFrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSInternal.getFrfsTripRouteManifest a3 a2 a1
+getFrfsTripRouteManifest :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp)
+getFrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.FRFSInternal.getFrfsTripRouteManifest a3 a2 a1
 
-postFrfsTripNotifyTripStarted :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFrfsTripNotifyTripStarted a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSInternal.postFrfsTripNotifyTripStarted a2 a1
+postFrfsTripNotifyTripStarted :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFrfsTripNotifyTripStarted a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.FRFSInternal.postFrfsTripNotifyTripStarted a2 a1
 
-postFrfsTripStopNotifyApproaching :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.FRFSInternal.NotifyBusApproachingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postFrfsTripStopNotifyApproaching a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSInternal.postFrfsTripStopNotifyApproaching a4 a3 a2 a1
+postFrfsTripStopNotifyApproaching :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.FRFSInternal.NotifyBusApproachingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFrfsTripStopNotifyApproaching a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.FRFSInternal.postFrfsTripStopNotifyApproaching a4 a3 a2 a1

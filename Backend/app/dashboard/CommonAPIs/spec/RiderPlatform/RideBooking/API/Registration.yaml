@@ -24,9 +24,6 @@ apis:
         type: CustomerAuthReq
       response:
         type: AuthRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTH
-        endpoint: RegistrationAPI RegistrationAuthEndPoint
   - POST:  # CustomerVerify
       endpoint: /{authId}/verify
       auth: ApiAuthV2
@@ -36,9 +33,6 @@ apis:
         type: AuthVerifyReq
       response:
         type: AuthVerifyRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS VERIFY
-        endpoint: RegistrationAPI RegistrationVerifyEndPoint
   - POST:  # CustomerResend
       endpoint: /otp/{authId}/resend
       auth: ApiAuthV2
@@ -46,9 +40,6 @@ apis:
         authId: Id RegistrationToken
       response:
         type: ResendAuthRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS RESEND
-        endpoint: RegistrationAPI RegistrationResendEndPoint
   - POST:  # CustomerLogout
       endpoint: /logout/{customerId}
       auth: ApiAuthV2
@@ -56,9 +47,6 @@ apis:
         customerId: Id Person
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS LOGOUT
-        endpoint: RegistrationAPI RegistrationLogoutEndPoint
 
 types:
   CustomerAuthReq:

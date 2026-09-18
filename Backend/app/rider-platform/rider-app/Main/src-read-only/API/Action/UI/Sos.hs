@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Sos
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -186,13 +187,13 @@ getSosGetDetails ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler API.Types.UI.Sos.SosDetailsRes
   )
-getSosGetDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSosGetDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getSosIvrOutcome :: (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-getSosIvrOutcome a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosIvrOutcome a4 a3 a2 a1
+getSosIvrOutcome a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Sos.getSosIvrOutcome a4 a3 a2 a1
 
 postSosCreate :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.Sos.SosReq -> Environment.FlowHandler API.Types.UI.Sos.SosRes)
-postSosCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosCreate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -202,7 +203,7 @@ postSosStatus ::
     API.Types.UI.Sos.SosUpdateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosStatus a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postSosMarkRideAsSafe ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -212,7 +213,7 @@ postSosMarkRideAsSafe ::
     API.Types.UI.Sos.MarkAsSafeReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosMarkRideAsSafe a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosMarkRideAsSafe a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postSosCreateMockSos ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -221,7 +222,7 @@ postSosCreateMockSos ::
     API.Types.UI.Sos.MockSosReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosCreateMockSos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosCreateMockSos a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosCallPolice ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -230,7 +231,7 @@ postSosCallPolice ::
     API.Types.UI.Sos.CallPoliceAPI ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosCallPolice a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCallPolice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosCallPolice a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.postSosCallPolice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosUpdateLocation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -240,10 +241,10 @@ postSosUpdateLocation ::
     API.Types.UI.Sos.SosLocationUpdateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosUpdateLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosUpdateLocation a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosUpdateLocation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSosTracking :: (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos -> Environment.FlowHandler API.Types.UI.Sos.SosTrackingRes)
-getSosTracking a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTracking a1
+getSosTracking a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Sos.getSosTracking a1
 
 postSosStartTracking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -252,7 +253,7 @@ postSosStartTracking ::
     API.Types.UI.Sos.StartTrackingReq ->
     Environment.FlowHandler API.Types.UI.Sos.StartTrackingRes
   )
-postSosStartTracking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosStartTracking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosStartTracking a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.postSosStartTracking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosUpdateState ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -262,7 +263,7 @@ postSosUpdateState ::
     API.Types.UI.Sos.UpdateStateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosUpdateState a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateState (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosUpdateState a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosUpdateState (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSosTrackingDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -271,7 +272,7 @@ getSosTrackingDetails ::
     Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos ->
     Environment.FlowHandler API.Types.UI.Sos.SosTrackingDetailsRes
   )
-getSosTrackingDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosTrackingDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSosTrackingDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.getSosTrackingDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosUpdateToRide ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -281,7 +282,7 @@ postSosUpdateToRide ::
     API.Types.UI.Sos.UpdateToRideReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosUpdateToRide a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosUpdateToRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosUpdateToRide a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosUpdateToRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSosGetDetailsByPerson ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -290,7 +291,7 @@ getSosGetDetailsByPerson ::
     Safety.Domain.Types.Sos.SosStatus ->
     Environment.FlowHandler API.Types.UI.Sos.SosDetailsRes
   )
-getSosGetDetailsByPerson a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetailsByPerson (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSosGetDetailsByPerson a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.getSosGetDetailsByPerson (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosErssStatusUpdate :: (API.Types.UI.Sos.ErssStatusUpdateReq -> Environment.FlowHandler API.Types.UI.Sos.ErssStatusUpdateRes)
-postSosErssStatusUpdate a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosErssStatusUpdate a1
+postSosErssStatusUpdate a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Sos.postSosErssStatusUpdate a1

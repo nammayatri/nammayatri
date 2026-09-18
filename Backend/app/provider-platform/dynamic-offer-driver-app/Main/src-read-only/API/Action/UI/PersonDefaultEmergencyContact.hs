@@ -21,21 +21,22 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "driver" :> "personDefaultEmergencyContacts"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.PersonDefaultEmergencyContact.PersonDefaultEmergencyContact]
       :<|> TokenAuth
       :> "driver"
       :> "personDefaultEmergencyContacts"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PersonDefaultEmergencyContact.UpdatePersonDefaultEmergencyContactsReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -49,7 +50,7 @@ getDriverPersonDefaultEmergencyContacts ::
     ) ->
     Environment.FlowHandler [API.Types.UI.PersonDefaultEmergencyContact.PersonDefaultEmergencyContact]
   )
-getDriverPersonDefaultEmergencyContacts a1 = withFlowHandlerAPI $ Domain.Action.UI.PersonDefaultEmergencyContact.getDriverPersonDefaultEmergencyContacts (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverPersonDefaultEmergencyContacts a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.PersonDefaultEmergencyContact.getDriverPersonDefaultEmergencyContacts (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 putDriverPersonDefaultEmergencyContacts ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -59,4 +60,4 @@ putDriverPersonDefaultEmergencyContacts ::
     API.Types.UI.PersonDefaultEmergencyContact.UpdatePersonDefaultEmergencyContactsReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-putDriverPersonDefaultEmergencyContacts a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PersonDefaultEmergencyContact.putDriverPersonDefaultEmergencyContacts (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+putDriverPersonDefaultEmergencyContacts a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PersonDefaultEmergencyContact.putDriverPersonDefaultEmergencyContacts (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

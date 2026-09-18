@@ -66,9 +66,9 @@ type PostPaymentRefundRequestInitiate =
 
 type PostPaymentRefundRequestBookingInitiate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PAYMENT) / ('API.Types.Dashboard.AppManagement.Payment.POST_PAYMENT_REFUND_REQUEST_BOOKING_INITIATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.POST_PAYMENT_REFUND_REQUEST_BOOKING_INITIATE)
       :> API.Types.Dashboard.AppManagement.Payment.PostPaymentRefundRequestBookingInitiate
   )
 

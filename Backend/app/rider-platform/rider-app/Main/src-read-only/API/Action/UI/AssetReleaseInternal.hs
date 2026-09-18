@@ -17,21 +17,22 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( "assetRelease" :> "publish" :> Header "token" Kernel.Prelude.Text :> ReqBody ('[JSON]) API.Types.UI.AssetReleaseInternal.AssetPublishReq
+  ( "assetRelease" :> "publish" :> Header "token" Kernel.Prelude.Text :> ReqBody '[JSON] API.Types.UI.AssetReleaseInternal.AssetPublishReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.AssetReleaseInternal.AssetPublishResp
       :<|> "assetRelease"
       :> "rollback"
       :> Header "token" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.AssetReleaseInternal.AssetRollbackReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.AssetReleaseInternal.AssetRollbackResp
       :<|> "assetRelease"
       :> QueryParam
@@ -47,18 +48,18 @@ type API =
            "token"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
-           ((Kernel.Prelude.Maybe API.Types.UI.AssetReleaseInternal.AssetReleaseResp))
+           '[JSON]
+           (Kernel.Prelude.Maybe API.Types.UI.AssetReleaseInternal.AssetReleaseResp)
   )
 
 handler :: Environment.FlowServer API
 handler = postAssetReleasePublish :<|> postAssetReleaseRollback :<|> getAssetRelease
 
-postAssetReleasePublish :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.AssetReleaseInternal.AssetPublishReq -> Environment.FlowHandler API.Types.UI.AssetReleaseInternal.AssetPublishResp)
-postAssetReleasePublish a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AssetReleaseInternal.postAssetReleasePublish a2 a1
+postAssetReleasePublish :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.AssetReleaseInternal.AssetPublishReq -> Environment.FlowHandler API.Types.UI.AssetReleaseInternal.AssetPublishResp)
+postAssetReleasePublish a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.AssetReleaseInternal.postAssetReleasePublish a2 a1
 
-postAssetReleaseRollback :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.AssetReleaseInternal.AssetRollbackReq -> Environment.FlowHandler API.Types.UI.AssetReleaseInternal.AssetRollbackResp)
-postAssetReleaseRollback a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AssetReleaseInternal.postAssetReleaseRollback a2 a1
+postAssetReleaseRollback :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.AssetReleaseInternal.AssetRollbackReq -> Environment.FlowHandler API.Types.UI.AssetReleaseInternal.AssetRollbackResp)
+postAssetReleaseRollback a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.AssetReleaseInternal.postAssetReleaseRollback a2 a1
 
-getAssetRelease :: (Kernel.Prelude.Maybe (Domain.Types.AssetRelease.AssetType) -> Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.AssetReleaseInternal.AssetReleaseResp))
-getAssetRelease a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AssetReleaseInternal.getAssetRelease a4 a3 a2 a1
+getAssetRelease :: (Kernel.Prelude.Maybe Domain.Types.AssetRelease.AssetType -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.AssetReleaseInternal.AssetReleaseResp))
+getAssetRelease a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.AssetReleaseInternal.getAssetRelease a4 a3 a2 a1

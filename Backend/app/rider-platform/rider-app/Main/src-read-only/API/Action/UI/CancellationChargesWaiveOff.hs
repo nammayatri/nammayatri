@@ -20,12 +20,13 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
   ( TokenAuth :> "rideBooking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.Booking.Booking) :> "cancellationChargesWaiveOff"
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.CancellationChargesWaiveOff.CancellationChargesWaiveOffRes
   )
 
@@ -39,4 +40,4 @@ postRideBookingCancellationChargesWaiveOff ::
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
     Environment.FlowHandler API.Types.UI.CancellationChargesWaiveOff.CancellationChargesWaiveOffRes
   )
-postRideBookingCancellationChargesWaiveOff a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CancellationChargesWaiveOff.postRideBookingCancellationChargesWaiveOff (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postRideBookingCancellationChargesWaiveOff a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.CancellationChargesWaiveOff.postRideBookingCancellationChargesWaiveOff (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

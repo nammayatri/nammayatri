@@ -199,7 +199,6 @@ apis:
         type: ReconciliationTriggerReq
       response:
         type: ReconciliationTriggerRes
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
   # ----- Ledger adjustment (maker-checker) -----
   - POST: # LedgerAdjustmentSubmitAPI
@@ -211,17 +210,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.write
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/submit
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            request:
-              type: SubmitLedgerAdjustmentReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   - GET: # LedgerAdjustmentListAPI
       endpoint: /finance/adjustment/list
@@ -245,29 +238,10 @@ apis:
         type: LedgerAdjustmentListRes
       migrate:
         capability: finance.adjustment.read
-      helperApi:
-        - GET:
-            endpoint: /finance/adjustment/list
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - adjustmentRequestId: Id LedgerAdjustmentRequest
-              - status: AdjustmentRequestStatus
-              - personId: Id Person
-              - excludeCurrentAdminMaker: Bool
-              - category: AdjustmentCategory
-              - direction: AdjustmentDirection
-              - referenceType: Text
-              - referenceId: Text
-              - adminMakerId: Id Person
-              - adminCheckerId: Id Person
-              - from: UTCTime
-              - to: UTCTime
-            response:
-              type: LedgerAdjustmentListRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - POST: # LedgerAdjustmentApproveAPI
       endpoint: /finance/adjustment/{adjustmentRequestId}/approve
@@ -278,17 +252,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.approve
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/{adjustmentRequestId}/approve
-            auth: ApiAuthV2
-            params:
-              adjustmentRequestId: Id LedgerAdjustmentRequest
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   - POST: # LedgerAdjustmentRejectAPI
       endpoint: /finance/adjustment/{adjustmentRequestId}/reject
@@ -299,17 +267,11 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.adjustment.write
-      helperApi:
-        - POST:
-            endpoint: /finance/adjustment/{adjustmentRequestId}/reject
-            auth: ApiAuthV2
-            params:
-              adjustmentRequestId: Id LedgerAdjustmentRequest
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
 
   # ----- SAP Journal Entries -----
   - GET: # SapJournalListAPI
@@ -353,75 +315,45 @@ apis:
         type: TdsReimbursementRequestSubmitRes
       migrate:
         capability: finance.tds_reimbursement.write
-      helperApi:
-        - POST:
-            endpoint: /tdsReimbursement/request/submit
-            auth: ApiAuthV2
-            request:
-              type: TdsReimbursementRequestSubmitReq
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: TdsReimbursementRequestSubmitRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementStatusAPI
       endpoint: /tdsReimbursement/status
       mandatoryQuery:
-        quarter: TdsReimbursementQuarter
-        assessmentYear: Text
+        - quarter: TdsReimbursementQuarter
+        - assessmentYear: Text
       auth: ApiAuthV2
       response:
         type: TdsReimbursementStatusRes
       migrate:
         capability: finance.tds_reimbursement.read
-      helperApi:
-        - GET:
-            endpoint: /tdsReimbursement/status
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - quarter: TdsReimbursementQuarter
-              - assessmentYear: Text
-              - requestorId: Text
-            response:
-              type: TdsReimbursementStatusRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementListAPI
       endpoint: /tdsReimbursement/list
       query:
-        limit: Int
-        offset: Int
-        fleetOwnerId: Text
-        tanNumber: Text
-        quarter: TdsReimbursementQuarter
-        assessmentYear: Text
-        excludeCurrentAdminMaker: Bool
-        status: TdsReimbursementStatus
-        from: UTCTime
-        to: UTCTime
+        - limit: Int
+        - offset: Int
+        - fleetOwnerId: Text
+        - tanNumber: Text
+        - quarter: TdsReimbursementQuarter
+        - assessmentYear: Text
+        - excludeCurrentAdminMaker: Bool
+        - status: TdsReimbursementStatus
+        - from: UTCTime
+        - to: UTCTime
       auth: ApiAuthV2
       response:
         type: TdsReimbursementListRes
       migrate:
         capability: finance.tds_reimbursement.read
-      helperApi:
-        - GET:
-            endpoint: /tdsReimbursement/list
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - requestorId: Text
-            query:
-              - limit: Int
-              - offset: Int
-              - fleetOwnerId: Text
-              - tanNumber: Text
-              - quarter: TdsReimbursementQuarter
-              - assessmentYear: Text
-              - excludeCurrentAdminMaker: Bool
-              - status: TdsReimbursementStatus
-              - from: UTCTime
-              - to: UTCTime
-            response:
-              type: TdsReimbursementListRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # TdsReimbursementDetailAPI
       endpoint: /tdsReimbursement/{requestId}
@@ -444,19 +376,10 @@ apis:
         type: APISuccess
       migrate:
         capability: finance.tds_reimbursement.write
-      helperApi:
-        - POST:
-            endpoint: /tdsReimbursement/{requestId}/reject
-            params:
-              requestId: Id FinanceTdsReimbursementRequest
-            auth: ApiAuthV2
-            request:
-              type: TdsReimbursementRejectReq
-            mandatoryQuery:
-              - requestorId: Text
-              - requestorName: Text
-            response:
-              type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
 
 types:
   SubscriptionPurchaseStatus:
