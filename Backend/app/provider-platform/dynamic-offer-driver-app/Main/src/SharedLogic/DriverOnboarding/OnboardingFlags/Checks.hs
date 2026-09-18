@@ -426,7 +426,7 @@ onboardingFlow = do
   unified $ check LinkVehicle FleetAndDriverActor VehicleTarget actingDriverActiveInActorFleet -- acting driver belongs to the fleet
   unified $ check LinkVehicle FleetActor VehicleTarget vehicleNotInAnotherFleet
   unified $ check UnlinkVehicle FleetActor VehicleTarget vehicleInActorFleet -- vehicle belongs to the fleet
-  unified $ check View FleetActor AnyTarget actorScopeOverTarget -- a fleet reads only what it holds
+  unified $ check View FleetActor AnyTarget actorScopeOverTarget -- a fleet reads what it holds, or a driver looking for a fleet
   forM_ liveRideVerbs $ \verb -> check verb AnyActor AnyTarget noLiveRide -- no change under a live ride
   check [LinkToFleet, LinkToOperator] AnyActor DriverTarget ensureNoActiveFleetAssociation -- no live fleet or operator association
   check Delete AnyActor DriverTarget driverDeletable -- driver strands no association
@@ -503,7 +503,7 @@ onboardingFlow = do
       EFleet fleetCtx -> ensure (fleetCtx.fcId == actorFleet.afId) "SCOPE-FLEET" "fleet owner is not the acting fleet owner"
       EUnresolved -> ok
       where
-        driverScope driverCtx = ensure (isAssociatedWith actorFleet.afId driverCtx) "SCOPE-DRIVER" "driver is not part of this fleet"
+        driverScope driverCtx = ensure (isAssociatedWith actorFleet.afId driverCtx || lookingForFleet driverCtx) "SCOPE-DRIVER" "driver is not part of this fleet"
     noLiveRide :: () -> TargetCtx -> Either GuardViolation ()
     noLiveRide _ targetCtx = ensure (not targetCtx.tcHasLiveRide) "LIVE-RIDE" "a live ride is in progress, cannot change association"
     ensureNoActiveFleetAssociation :: () -> DriverCtx -> Either GuardViolation ()
@@ -615,6 +615,10 @@ onboardingFlow = do
     fleetDriverWithoutActiveAssociation :: DriverCtx -> Bool
     fleetDriverWithoutActiveAssociation driverCtx =
       driverCtx.dcInfo.onboardingAs == Just DI.FLEET_DRIVER && not (hasActiveFleetAssociation driverCtx)
+
+    lookingForFleet :: DriverCtx -> Bool
+    lookingForFleet driverCtx =
+      driverCtx.dcInfo.onboardingAs == Just DI.FLEET_DRIVER && null driverCtx.dcFleetAssociations
 
 guardOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m ()
 guardOnboardingAction transporterConfig actor verb target =
