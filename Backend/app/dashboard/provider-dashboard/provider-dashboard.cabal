@@ -83,6 +83,7 @@ library
       Domain.Action.ProviderPlatform.Management.Payout
       Domain.Action.ProviderPlatform.Management.PlanManagement
       Domain.Action.ProviderPlatform.Management.Pricing
+      Domain.Action.ProviderPlatform.Management.RadarTickets
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.ScheduledBooking
@@ -207,6 +208,7 @@ library
       API.Action.ProviderPlatform.Management.Payout
       API.Action.ProviderPlatform.Management.PlanManagement
       API.Action.ProviderPlatform.Management.Pricing
+      API.Action.ProviderPlatform.Management.RadarTickets
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.ScheduledBooking

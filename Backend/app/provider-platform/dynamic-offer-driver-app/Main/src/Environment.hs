@@ -200,7 +200,21 @@ data AppCfg = AppCfg
     enableLtsPoolDataForPooling :: Bool,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
-    xyneWebhookBearerToken :: Text
+    xyneWebhookBearerToken :: Text,
+    radarXyneCfg :: RadarXyneCfg
+  }
+  deriving (Generic, FromDhall)
+
+-- | RADAR ticket-desk (Control Center support view) Xyne workspace. A
+-- separate credential set from the in-app issue-desk Xyne config: RADAR has
+-- its own app JWT and desk channel. 'csatApiKey' authenticates the CSAT
+-- endpoint (X-Api-Key), independently of the app JWT; blank disables CSAT.
+data RadarXyneCfg = RadarXyneCfg
+  { baseUrl :: BaseUrl,
+    appJwt :: Text,
+    deskChannelId :: Text,
+    csatApiKey :: Text,
+    webhookSigningSecret :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -338,6 +352,7 @@ data AppEnv = AppEnv
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
     xyneWebhookSigningSecret :: Text,
     xyneWebhookBearerToken :: Text,
+    radarXyneCfg :: RadarXyneCfg,
     actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
