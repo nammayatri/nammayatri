@@ -102,6 +102,7 @@ data RiderConfigT f = RiderConfigT
     fareCacheRentalsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     feedbackAlertRatingThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     filterWalkAndUnspecifiedTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    frfsDriverDetailsLeadTimeSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     frfsMetricsApiKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     immediateCaptureDriverCancellationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -5,8 +5,10 @@ module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Map.Strict as Map
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import Environment (Flow)
@@ -19,8 +21,10 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types
+import SharedLogic.FRFSUtils (unixToUTC)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -218,6 +222,21 @@ validateVehicleChange baseUrl gtfsId req = case req.vehicle_no of
     findSeatLayoutId vehicleNo = fmap (.seatLayoutId) <$> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo gtfsId
     showLayoutId = maybe "<none>" (.getId)
 
+-- | Live trip-start time (first stop's ETA on the current schedule), matching what
+-- Lib.JourneyModule.Types.mkLegInfoFromFrfsBooking uses to gate driver details on the ticket. Fetched
+-- fresh (not booking.startTime, which is frozen at booking-confirmation time and can go stale if the
+-- trip is later rescheduled/delayed) so both gates agree on the same, current departure time.
+getLiveTripStartTime :: DFRFSTicketBooking.FRFSTicketBooking -> Flow (Maybe UTCTime)
+getLiveTripStartTime booking = case (booking.tripId, booking.routeCode) of
+  (Just tripId, Just routeCode) -> do
+    integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+    let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
+    eSchedule <- withTryCatch "getLiveTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+    case eSchedule of
+      Right (firstSchedule : _) -> pure $ unixToUTC . (.arrivalTimeUnix) <$> listToMaybe firstSchedule.eta
+      _ -> pure Nothing
+  _ -> pure Nothing
+
 -- | Reflect a waybill fleet/driver change on the customer tickets riding that waybill: for every confirmed
 -- booking on the waybill, refresh its driver + (assigned) bus from freshly-fetched waybill metadata. The
 -- metadata is read directly via NandiFlow (bypassing the 30s OTPRest in-mem cache) since the operator's
@@ -236,27 +255,41 @@ fanOutWaybillRefresh baseUrl gtfsId waybillNo = do
         -- Batch-load the riders up front so the per-booking notification below needs no query in the loop.
         persons <- QP.findAllByIds (map (.riderId) bookings)
         let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-        forM_ bookings $ \booking -> do
-          let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
-          eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
-          case eRefresh of
-            Left err -> logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
-            Right refreshInfo ->
-              -- Notify only when the driver and/or the assigned bus actually changed. The notification
-              -- (FCM push + external WhatsApp) is slow and best-effort, so it is forked out of the
-              -- critical, synchronous refresh path above.
-              when (refreshInfo.driverChanged || refreshInfo.busChanged) $
-                whenJust (Map.lookup booking.riderId personMap) $ \person -> do
-                  let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
-                      -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
-                      -- of the raw route name.
-                      routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
-                      mbJourneyId = (.journeyId) <$> mbJourneyLeg
-                  fork ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ do
-                    eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged
-                    case eNotify of
-                      Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
-                      Right _ -> pure ()
+        -- Notify only when the driver and/or the assigned bus actually changed. The notification (FCM push +
+        -- external WhatsApp) is slow and best-effort, so it is forked out of the critical, synchronous
+        -- refresh path above.
+        toNotify <-
+          fmap catMaybes $
+            forM bookings $ \booking -> do
+              let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
+              eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
+              case eRefresh of
+                Left err -> do
+                  logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
+                  pure Nothing
+                Right refreshInfo ->
+                  pure $
+                    if refreshInfo.driverChanged || refreshInfo.busChanged
+                      then (\person -> (booking, refreshInfo, person, (.journeyId) <$> mbJourneyLeg)) <$> Map.lookup booking.riderId personMap
+                      else Nothing
+        -- Grouped by tripId: bookings on the same trip share one live schedule fetch (getLiveTripStartTime)
+        -- instead of each booking fetching it separately -- a waybill can have confirmed bookings across
+        -- more than one trip (findAllConfirmedByWaybillNo isn't trip-scoped), so this groups rather than
+        -- assuming a single shared trip.
+        let groups = Map.elems $ Map.fromListWith (<>) [(b.tripId, [item]) | item@(b, _, _, _) <- toNotify]
+        forM_ groups $ \bookingGroup ->
+          whenJust (listToMaybe bookingGroup) $ \(firstBooking, _, _, _) ->
+            fork ("fanOutWaybillRefresh:notify:" <> waybillNo <> ":" <> fromMaybe "" firstBooking.tripId) $ do
+              mbStartTime <- getLiveTripStartTime firstBooking
+              forM_ bookingGroup $ \(booking, refreshInfo, person, mbJourneyId) -> do
+                let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
+                    -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
+                    -- of the raw route name.
+                    routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
+                eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged mbStartTime
+                case eNotify of
+                  Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
+                  Right _ -> pure ()
 
 transitOperatorUpdateWaybillTabletUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillTabletReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillTabletUtil merchantShortId city vehicleCategory req = do

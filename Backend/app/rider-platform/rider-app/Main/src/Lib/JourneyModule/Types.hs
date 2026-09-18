@@ -1055,6 +1055,14 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                 _ -> return (Nothing, Nothing)
             _ -> return (Nothing, Nothing)
 
+          -- Driver name/mobile number only revealed within frfsDriverDetailsLeadTimeSeconds of departure (PII, gated server-side). Fleet/bus number is not gated.
+          mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+          let leadWindow = maybe 1800 (\s -> fromIntegral s.getSeconds) (mRiderConfig >>= (.frfsDriverDetailsLeadTimeSeconds))
+          now <- getCurrentTime
+          let revealDriverDetails = case mTripStartTime of
+                Nothing -> False
+                Just tripStartTime -> let untilDeparture = diffUTCTime tripStartTime now in untilDeparture >= 0 && untilDeparture <= leadWindow
+
           return $
             Bus $
               BusLegExtraInfo
@@ -1099,8 +1107,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   tripId = booking.tripId,
                   tripStartTime = fmap pure mTripStartTime,
                   bookedStopETA = fmap pure mBookedStopETA,
-                  driverName = booking.driverName,
-                  driverMobileNumber = booking.driverMobileNumber,
+                  driverName = if revealDriverDetails then booking.driverName else Nothing,
+                  driverMobileNumber = if revealDriverDetails then booking.driverMobileNumber else Nothing,
                   seatSelectionType = booking.seatSelectionType
                 }
         Spec.SUBWAY -> do
