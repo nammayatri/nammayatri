@@ -341,13 +341,14 @@ instance Default DriverPoolWithActualDistResult where
 -- lower than a pickup-and-drop match). Binary dimensions use 'binaryCheck'.
 data PreferenceCheck = PreferenceCheck
   { isApplicable :: Bool,
-    satisfaction :: Double
+    satisfaction :: Double,
+    weight :: Double
   }
 
 -- | A dimension that has nothing to say about this ride, and so is excluded from
 -- the aggregate rather than counted as a miss.
 notApplicable :: PreferenceCheck
-notApplicable = PreferenceCheck {isApplicable = False, satisfaction = 0.0}
+notApplicable = PreferenceCheck {isApplicable = False, satisfaction = 0.0, weight = 1.0}
 
 -- | Build a PreferenceCheck for a dimension that is either fully met or not met
 -- at all. Keeps binary call sites readable and clamps them to the same [0, 1]
@@ -356,20 +357,30 @@ binaryCheck :: Bool -> Bool -> PreferenceCheck
 binaryCheck applicable satisfied =
   PreferenceCheck
     { isApplicable = applicable,
-      satisfaction = if satisfied then 1.0 else 0.0
+      satisfaction = if satisfied then 1.0 else 0.0,
+      weight = 1.0
     }
 
--- | Mean satisfaction across the applicable preferences, in [0, 1].
+withWeight :: Double -> PreferenceCheck -> PreferenceCheck
+withWeight w check = check {weight = w}
+
+-- | Weighted mean satisfaction across the applicable preferences, in [0, 1].
 -- No applicable preferences => 1.0 (nothing to violate => neutral/full match).
 -- Each dimension's satisfaction is clamped so a malformed contributor cannot
--- drag the aggregate outside [0, 1].
+-- drag the aggregate outside [0, 1];
 computePreferenceMatchScore :: [PreferenceCheck] -> Double
 computePreferenceMatchScore checks =
   case filter isApplicable checks of
     [] -> 1.0
-    applicable -> sum (map (clamp01 . satisfaction) applicable) / fromIntegral (length applicable)
+    applicable
+      | totalWeight <= 0.0 -> 1.0
+      | otherwise -> roundTo2 (clamp01 (weightedSum applicable / totalWeight))
+      where
+        totalWeight = sum (map weight applicable)
   where
     clamp01 = max 0.0 . min 1.0
+    weightedSum = sum . map (\c -> weight c * clamp01 (satisfaction c))
+    roundTo2 x = fromIntegral (round (x * 100) :: Int) / 100
 
 withJsonDefault :: A.Key -> A.Value -> A.Value -> A.Value
 withJsonDefault k fallback (A.Object o) | not (AKM.member k o) = A.Object (AKM.insert k fallback o)
