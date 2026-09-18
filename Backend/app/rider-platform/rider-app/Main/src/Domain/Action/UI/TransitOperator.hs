@@ -14,6 +14,7 @@ import Domain.Types.Merchant (Merchant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (ShortId (..))
@@ -399,3 +400,78 @@ transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo t
     throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'
+
+-- ===== ETA variants and per-trip overrides =====
+
+transitOperatorGetEtaVariantsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [EtaVariant]
+transitOperatorGetEtaVariantsUtil merchantShortId city vehicleCategory = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorEtaVariants baseUrl gtfsId
+
+-- | Segment times and variant pins are baked into cached schedule responses, and unlike an
+-- override they leave no trace in the cache key, so an edit is invisible until the TTL lapses
+-- (7200s for the trip schedule).
+--
+-- One call, not one per prefix: refreshInMem propagates cross-pod through a single shared Redis
+-- key, so consecutive calls overwrite each other and only the last prefix would reach pods on
+-- the Redis fallback. "BusSchedule" is an infix of all three cache keys.
+flushCachedBusSchedules :: Flow ()
+flushCachedBusSchedules = IM.refreshInMem "BusSchedule"
+
+transitOperatorUpsertEtaVariantUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> EtaVariantUpsertReq -> Flow EtaVariant
+transitOperatorUpsertEtaVariantUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  result <- NandiFlow.operatorUpsertEtaVariant baseUrl gtfsId req
+  flushCachedBusSchedules
+  pure result
+
+transitOperatorDeleteEtaVariantUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow RowsAffectedResp
+transitOperatorDeleteEtaVariantUtil merchantShortId city vehicleCategory variantId = do
+  -- guard blank: an empty Capture segment would target a different URL rather than fail loud
+  let variantId' = T.strip variantId
+  when (T.null variantId') $ throwError $ InvalidRequest "deleteEtaVariant: variantId must not be blank"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  result <- NandiFlow.operatorDeleteEtaVariant baseUrl gtfsId variantId'
+  flushCachedBusSchedules
+  pure result
+
+transitOperatorGetStationEtasUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Flow [StationEtaRow]
+transitOperatorGetStationEtasUtil merchantShortId city vehicleCategory variantId = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorStationEtas baseUrl gtfsId (nonBlankText variantId)
+
+transitOperatorSetScheduleDefaultVariantUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> SetScheduleDefaultVariantReq -> Flow RowsAffectedResp
+transitOperatorSetScheduleDefaultVariantUtil merchantShortId city vehicleCategory req = do
+  when (T.null (T.strip req.scheduleTripId)) $ throwError $ InvalidRequest "setScheduleDefaultVariant: scheduleTripId must not be blank"
+  -- Absent clears the pin; blank is a caller that meant to name one and did not.
+  when (maybe False (T.null . T.strip) req.variantId) $ throwError $ InvalidRequest "setScheduleDefaultVariant: variantId must not be blank; omit it to clear the pin"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  result <- NandiFlow.operatorSetScheduleDefaultVariant baseUrl gtfsId req
+  flushCachedBusSchedules
+  pure result
+
+transitOperatorUpsertStationEtasUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> StationEtaBatchUpsertReq -> Flow RowsAffectedResp
+transitOperatorUpsertStationEtasUtil merchantShortId city vehicleCategory req = do
+  when (null req.entries) $ throwError $ InvalidRequest "upsertStationEtas: body must contain at least one entry"
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  result <- NandiFlow.operatorUpsertStationEtas baseUrl gtfsId req
+  flushCachedBusSchedules
+  pure result
+
+transitOperatorActiveTripEtaOverridesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [ActiveTripEtaOverride]
+transitOperatorActiveTripEtaOverridesUtil merchantShortId city vehicleCategory = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorActiveTripEtaOverridesOrThrow baseUrl gtfsId
+
+-- | GIMS validates the expiry window and the variant, and answers with its own shape, so the
+-- response is discarded once the call has succeeded.
+transitOperatorSetTripEtaOverrideUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> SetTripEtaOverrideReq -> Flow Kernel.Types.APISuccess.APISuccess
+transitOperatorSetTripEtaOverrideUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  void $ NandiFlow.operatorSetTripEtaOverride baseUrl gtfsId req
+  pure Kernel.Types.APISuccess.Success
+
+transitOperatorClearTripEtaOverrideUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> ClearTripEtaOverrideReq -> Flow RowsAffectedResp
+transitOperatorClearTripEtaOverrideUtil merchantShortId city vehicleCategory req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorClearTripEtaOverride baseUrl gtfsId req

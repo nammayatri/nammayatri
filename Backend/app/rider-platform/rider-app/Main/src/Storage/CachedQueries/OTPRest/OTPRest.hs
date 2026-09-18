@@ -2,10 +2,12 @@ module Storage.CachedQueries.OTPRest.OTPRest (module OTPRestCommon, module Stora
 
 import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Utils as BecknFRFSUtils
+import qualified Crypto.Hash as Hash
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy)
+import Data.List (groupBy, sort)
 import Data.Text (splitOn)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as DT
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -72,10 +74,73 @@ getRouteBusSchedule ::
 getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = do
   today <- todayIST
   let mbMaxDutyDate = (\days -> DT.addDays (toInteger days) today) <$> getCheckAheadDaysSchedule integratedBPPConfig.providerConfig
-  IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber, maybe "unbounded" show mbMaxDutyDate] 180 $ do
-    baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-    schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber mbMaxDutyDate
-    pure schedules
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber mbMaxDutyDate
+  overrideKey <- etaOverrideCacheKey routeId integratedBPPConfig
+  IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber, maybe "unbounded" show mbMaxDutyDate, overrideKey] 180 fetch
+
+-- | Every override in force for this feed, refreshed often enough that an operator's change
+-- lands within ~10s. Small by construction, and one read is shared across every schedule
+-- lookup on the pod.
+--
+-- A GIMS failure yields no overrides rather than an error: the caller then takes its normal
+-- cached path, which is the behaviour that predates this feature.
+getActiveTripEtaOverrides ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [ActiveTripEtaOverride]
+getActiveTripEtaOverrides integratedBPPConfig = IM.withInMemCache ["activeTripEtaOverrides", integratedBPPConfig.id.getId] 10 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.operatorActiveTripEtaOverrides baseUrl integratedBPPConfig.feedKey
+
+-- | A key component that changes whenever this route's overrides do. Folding it into the cache
+-- key rather than bypassing the cache keeps the TTL: a 12-hour override would otherwise make
+-- every request for that route an uncached GIMS fetch for its whole window.
+--
+-- Scoped to the route so one override does not rotate every route's key at once. Overrides
+-- whose route_id is NULL cannot be attributed, so their count is folded in as well -- they are
+-- rare, and missing one would leave a route serving pre-override times.
+etaOverrideCacheKey ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m Text
+etaOverrideCacheKey routeId integratedBPPConfig = do
+  overrides <- getActiveTripEtaOverrides integratedBPPConfig
+  let onRoute = filter (\o -> o.route_id == Just routeId) overrides
+      unattributed = length $ filter (isNothing . (.route_id)) overrides
+  pure . digestKeyPart $ T.intercalate "," (sort (map overrideFingerprint onRoute)) <> "|" <> show unattributed
+
+-- | Only this trip's override matters to its own cache entry, so the key stays stable while
+-- other trips are overridden.
+tripEtaOverrideCacheKey ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Int ->
+  IntegratedBPPConfig ->
+  m Text
+tripEtaOverrideCacheKey waybillNo tripNumber integratedBPPConfig =
+  maybe "none" overrideFingerprint
+    . find (\o -> o.waybill_no == waybillNo && o.trip_number == tripNumber)
+    <$> getActiveTripEtaOverrides integratedBPPConfig
+
+-- | Both bounds matter, not just the end: moving a window earlier or later has to produce a
+-- different key, or the previous answer keeps being served.
+overrideFingerprint :: ActiveTripEtaOverride -> Text
+overrideFingerprint o =
+  o.waybill_no <> ":" <> show o.trip_number <> ":" <> o.variant_id
+    <> ":"
+    <> show o.effective_from
+    <> ":"
+    <> show o.effective_untill
+
+-- | Keeps the component short however many overrides are in play. Kernel.Storage.InMem hashes
+-- any key over 200 chars, and refreshInMem then cannot find it by plain-text infix -- so a long
+-- key would silently break the flush that ops edits rely on.
+digestKeyPart :: Text -> Text
+digestKeyPart =
+  T.take 16 . show . Hash.hashWith Hash.SHA256 . TE.encodeUtf8
 
 getBusTripSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -84,9 +149,12 @@ getBusTripSchedule ::
   Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 300 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = do
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+  overrideKey <- tripEtaOverrideCacheKey waybillNo tripNumber integratedBPPConfig
+  IM.withInMemCache ["getBusTripSchedule", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId, overrideKey] 7200 fetch
 
 -- | Same lookup as 'getBusTripSchedule', but with a 10s TTL instead of 7200s. Kernel.Storage.InMem
 -- has no cross-instance invalidation, so the long-TTL cache is fine for callers that only read
@@ -102,9 +170,12 @@ getBusTripScheduleForBoardingCheck ::
   Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPConfig = IM.withInMemCache ["getBusTripScheduleForBoardingCheck", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId] 10 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPConfig = do
+  let fetch = do
+        baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+        Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
+  overrideKey <- tripEtaOverrideCacheKey waybillNo tripNumber integratedBPPConfig
+  IM.withInMemCache ["getBusTripScheduleForBoardingCheck", integratedBPPConfig.id.getId, waybillNo, show tripNumber, routeId, overrideKey] 10 fetch
 
 getWaybillMetadata ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
