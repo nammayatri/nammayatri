@@ -34,6 +34,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Dhall (FromDhall)
+import qualified Lib.Payment.Payout.StatusCheck as PSC
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
 
@@ -62,6 +63,7 @@ data RiderJobType
   | UpdateCrisUtsData
   | CheckMultimodalConfirmFail
   | CheckRefundStatus
+  | PayoutStatusCheck
   | MetroBusinessHour
   | NyRegularMaster
   | NyRegularInstance
@@ -111,6 +113,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
   restoreAnyJobInfo SCheckMultimodalConfirmFail jobData = AnyJobInfo <$> restoreJobInfo SCheckMultimodalConfirmFail jobData
   restoreAnyJobInfo SCheckRefundStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckRefundStatus jobData
+  restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
   restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
   restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
@@ -242,6 +245,10 @@ data CheckRefundStatusJobData = CheckRefundStatusJobData
 instance JobInfoProcessor 'CheckRefundStatus
 
 type instance JobContent 'CheckRefundStatus = CheckRefundStatusJobData
+
+instance JobInfoProcessor 'PayoutStatusCheck
+
+type instance JobContent 'PayoutStatusCheck = PSC.PayoutStatusCheckJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

@@ -918,8 +918,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     whenJust mbPaymentBearer $ \paymentBearer ->
       when (paymentChargeGross > 0) $ case paymentBearer of
         PAYMENT_PLATFORM ->
-          recordStripeChargeLedger ctx FundByPlatform paymentChargeGross walletReferencePGPaymentCharges
-            >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
+          void $
+            recordStripeChargeLedger ctx FundByPlatform paymentChargeGross walletReferencePGPaymentCharges
+              >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
         _ -> do
           paymentChargeResult <- runFinance ctx $ do
             let postChargePaidByCustomer amt ref =

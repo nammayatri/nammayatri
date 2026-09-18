@@ -134,3 +134,13 @@ ALTER TABLE atlas_app.merchant ADD COLUMN cloud_base_url text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -18,7 +18,6 @@ import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
 import Domain.Action.UI.DriverWallet
   ( PayoutContext (..),
-    counterpartyFromRole,
     initiateWalletPayout,
   )
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
@@ -238,7 +237,9 @@ processOneWalletPayout ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DSPC.ScheduledPayoutConfig ->
   DTConf.TransporterConfig ->
@@ -271,10 +272,10 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
           cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
           cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-      (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
-        Nothing -> pure (0, [], 0)
-        Just accountId -> getPayoutEligibilityData accountId cutoff now
-      let payoutableBalance = walletBalance - nonRedeemable
+      (nonRedeemable, processingPayout, redeemableIds, merchantTransferAmt) <- case mbAccountId of
+        Nothing -> pure (0, 0, [], 0)
+        Just accountId -> getPayoutEligibilityData (fromMaybe False transporterConfig.driverWalletConfig.nonRedeemableBalanceConsiderCreditAndDebit) accountId cutoff now
+      let payoutableBalance = walletBalance - nonRedeemable - processingPayout
       logDebug $
         "[SBP-DEBUG] payee=" <> personId.getId
           <> " role="
@@ -285,6 +286,8 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
           <> show walletBalance
           <> " nonRedeemable="
           <> show nonRedeemable
+          <> " processingPayout="
+          <> show processingPayout
           <> " payoutableBalance="
           <> show payoutableBalance
           <> " minimum="

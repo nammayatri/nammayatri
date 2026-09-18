@@ -824,7 +824,7 @@ releaseCashbackEntriesReservation entryIds = do
 markCashbackEntriesAsPaidOut ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
-  [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
+  [Id LE.LedgerEntry] -> -- original cashback entry IDs (from the payout Redis stash)
   HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
   Text -> -- PayoutRequest id → settlementId on the row
   m (Either FinanceError ())

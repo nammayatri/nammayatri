@@ -17,6 +17,7 @@ module Domain.Action.UI.Payout
     castPayoutOrderStatus,
     payoutProcessingLockKey,
     processPreviousPayoutAmount,
+    PayoutSettlementFlow,
     refreshPayoutOrderWithSettlement,
     stripePayoutWebhookHandler,
     stripeTestPayoutWebhookHandler,
@@ -25,7 +26,6 @@ where
 
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
-import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
@@ -51,7 +51,11 @@ import qualified Kernel.External.Payout.Interface.Stripe as IStripe
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Logging (withDynamicLogLevel)
@@ -63,11 +67,15 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Payout.RequestStatus as RequestStatus
+import Lib.Payment.Payout.StatusCheck (isPayoutOrderSuccess, isPayoutStatusFailed)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
@@ -76,6 +84,7 @@ import SharedLogic.DriverOnboarding (isFleetRole)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
@@ -100,11 +109,26 @@ import qualified Tools.SMS as Sms
 
 -- webhook ----------------------------------------------------------
 
-type CallPayoutServiceAction =
+type CallPayoutServiceAction m =
   Text ->
   Id Person.Person ->
   DPC.PayoutConfig ->
-  Flow (Payout.PayoutOrderStatus, Text)
+  m (Payout.PayoutOrderStatus, Text)
+
+type PayoutSettlementFlow m r =
+  ( ServiceFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Finance.HasActorInfo m r,
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    ClickhouseFlow m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig]
+  )
 
 juspayPayoutWebhookHandler ::
   ShortId DM.Merchant ->
@@ -126,7 +150,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
-    callJuspayPayoutServiceAction :: CallPayoutServiceAction
+    callJuspayPayoutServiceAction :: CallPayoutServiceAction Flow
     callJuspayPayoutServiceAction payoutOrderId driverId payoutConfig = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
@@ -251,7 +275,7 @@ stripePayoutWebhookAction merchantId merchantOperatingCityId resp respDump = do
       void $ DPayment.stripePayoutWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
   pure Ack
   where
-    callStripePayoutServiceAction :: DPayment.PayoutStripeWebhookData -> PayoutEvents.Payout -> CallPayoutServiceAction
+    callStripePayoutServiceAction :: DPayment.PayoutStripeWebhookData -> PayoutEvents.Payout -> CallPayoutServiceAction Flow
     callStripePayoutServiceAction stripeWebhookData pObj payoutOrderId _driverId _payoutConfig = do
       let commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       void $ DPayment.stripePayoutWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
@@ -297,29 +321,28 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
         TPayout.StripeFlow -> service -- we should keep differentiation between Stripe and StripeTest, depending to which webhook triggered
         TPayout.JuspayFlow -> subscriptionService
 
-isPayoutOrderSuccess :: IPayout.PayoutOrderStatus -> Bool
-isPayoutOrderSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
-
 payoutSettlementAction ::
+  (PayoutSettlementFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   IPayout.PayoutOrderStatus ->
   HighPrecMoney ->
   Text ->
-  CallPayoutServiceAction ->
-  Flow ()
+  CallPayoutServiceAction m ->
+  m ()
 payoutSettlementAction merchantId merchantOperatingCityId payoutStatus amount payoutOrderId callPayoutServiceAction = do
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
   runPayoutSettlement merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
 
 runPayoutSettlement ::
+  (PayoutSettlementFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   IPayout.PayoutOrderStatus ->
   HighPrecMoney ->
   DPayoutOrder.PayoutOrder ->
-  CallPayoutServiceAction ->
-  Flow ()
+  CallPayoutServiceAction m ->
+  m ()
 runPayoutSettlement merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction =
   case payoutOrder.entityName of
     Just DPayment.SPECIAL_ZONE_PAYOUT ->
@@ -329,10 +352,11 @@ runPayoutSettlement merchantId merchantOperatingCityId payoutStatus amount payou
         settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
 
 settleSpecialZonePayout ::
+  (PayoutSettlementFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   DPayoutOrder.PayoutOrder ->
-  CallPayoutServiceAction ->
-  Flow ()
+  CallPayoutServiceAction m ->
+  m ()
 settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAction = do
   let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
   case mbPayoutRequestId of
@@ -364,13 +388,14 @@ settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAct
             QSPE.updateStatusWithHistoryById newStatus (Just statusMsg) scheduledPayout
 
 settlePayoutEntities ::
+  (PayoutSettlementFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   IPayout.PayoutOrderStatus ->
   HighPrecMoney ->
   DPayoutOrder.PayoutOrder ->
-  CallPayoutServiceAction ->
-  Flow ()
+  CallPayoutServiceAction m ->
+  m ()
 settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction = do
   payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
   when (isPayoutOrderSuccess payoutStatus) do
@@ -464,8 +489,8 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
                     d2dReferralEarnings = Nothing,
                     dailyStatsId = Nothing
                   }
-          void $
-            createWalletEntryDelta
+          (_, payoutEntryIds) <-
+            createWalletEntryDeltaWithEntryIds
               counterparty
               driverId.getId
               (negate amount)
@@ -480,20 +505,23 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
           -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
           -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
           -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-          whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
-            whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
+          chargeEntryIds <- case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
+            Nothing -> pure []
+            Just (payoutFeeCfg, payoutBearer) -> do
               let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
                   chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
               recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
                 >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
 
           whenJust mbPayoutReq $ \payoutReq -> do
-            mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
-            case mbEntryIds of
-              Just entryIds -> do
-                settleWalletEntries (map Id entryIds) payoutReq.id.getId
-                Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
-              Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+            entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+            settleWalletEntries (entryIds <> payoutEntryIds <> chargeEntryIds) payoutReq.id.getId
+            PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+        when (isPayoutStatusFailed updPayoutStatus) $
+          whenJust mbPayoutReq $ \payoutReq -> do
+            entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+            releaseWalletEntriesReservation entryIds
+            PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
 
         let (notificationTitle, notificationMessage, notificationType) =
               if isPayoutOrderSuccess updPayoutStatus
@@ -528,8 +556,9 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
 -- | Poll Juspay and run the same settlement as the webhook when payout_order is not
 -- already SUCCESS; otherwise return the order as-is.
 refreshPayoutOrderWithSettlement ::
+  (PayoutSettlementFlow m r) =>
   DPayoutOrder.PayoutOrder ->
-  Flow DPayoutOrder.PayoutOrder
+  m DPayoutOrder.PayoutOrder
 refreshPayoutOrderWithSettlement payoutOrder =
   if isPayoutOrderSuccess payoutOrder.status
     then pure payoutOrder
@@ -548,9 +577,10 @@ refreshPayoutOrderWithSettlement payoutOrder =
           Just finalOrder -> pure finalOrder
 
 getPayoutConfigForCustomer ::
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Text ->
-  Flow DPC.PayoutConfig
+  m DPC.PayoutConfig
 getPayoutConfigForCustomer merchantOperatingCityId customerId = do
   mbVehicle <- QV.findById (Id customerId)
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -560,10 +590,11 @@ getPayoutConfigForCustomer merchantOperatingCityId customerId = do
     >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOperatingCityId.getId)
 
 callPayoutServiceActionForRefresh ::
+  (PayoutSettlementFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DPayment.EntityName ->
-  CallPayoutServiceAction
+  CallPayoutServiceAction m
 callPayoutServiceActionForRefresh _merchantId merchantOpCityId mbEntityName payoutOrderId driverId payoutConfig = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   let payoutServiceNameCons = case mbEntityName of
@@ -576,7 +607,7 @@ callPayoutServiceActionForRefresh _merchantId merchantOpCityId mbEntityName payo
   payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
   pure (payoutStatusResp.status, payoutStatusResp.orderId)
 
-processPreviousPayoutAmount :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
+processPreviousPayoutAmount :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl], HasKafkaProducer r, Finance.HasActorInfo m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -608,7 +639,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
               createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchOpCity person.id mbPersonBankAccount
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
-          void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+          void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing (Just afterPayoutOrderCreated)
         (_, False) -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
@@ -621,9 +652,10 @@ mkSpecialZonePayoutSmsKey payoutRequestId status =
   "SpecialZonePayoutSms:" <> payoutRequestId.getId <> ":" <> show status
 
 sendSpecialZonePayoutSms ::
+  (PayoutSettlementFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   DPR.PayoutRequest ->
-  Flow ()
+  m ()
 sendSpecialZonePayoutSms merchantOpCityId payoutRequest = do
   case payoutRequest.amount of
     Nothing -> logInfo $ "Skipping special zone payout SMS, amount missing for payoutRequest " <> payoutRequest.id.getId

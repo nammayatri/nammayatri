@@ -24,6 +24,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import Lib.Scheduler
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -44,7 +45,8 @@ executeCashRideCashbackPayoutJob ::
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'ExecuteCashRideCashbackPayout ->
   m ExecutionResult
@@ -69,7 +71,8 @@ runPayoutForPerson ::
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id Person ->
   m ()
@@ -111,7 +114,8 @@ submitCashbackPayout ::
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     FinanceBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Person ->
   Text -> -- VPA
@@ -150,7 +154,7 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             payoutType = Just DPR.INSTANT,
             coverageFrom = Nothing,
             coverageTo = Nothing,
-            ledgerEntryIds = map (.getId) originalEntryIds,
+            ledgerEntryIds = map (.getId) originalEntryIds, -- TODO :: Can be made empty in next release `[]` as now using Redis for storing ids for not bloating DB rows with ids in a row.
             payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
           }
   -- DB-level reservation: flip entries UNSETTLED → PROCESSING BEFORE
@@ -158,12 +162,13 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
   -- the same entries while this Juspay call is in flight.
   RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds Nothing
   result <-
-    PayoutRequest.submitPayoutRequest submission payoutCall
+    PayoutRequest.submitPayoutRequest submission payoutCall (Just afterPayoutOrderCreated)
       `catch` \(e :: SomeException) -> do
         RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
         throwM e
   case result of
     PayoutRequest.PayoutInitiated pr _ -> do
+      PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId (map (.getId) originalEntryIds)
       -- Stamp the PayoutRequest id onto the PROCESSING entries. The
       -- entries stay PROCESSING until the Juspay webhook resolves them
       -- (success → PAID_OUT via markCashbackEntriesAsPaidOut, failure →

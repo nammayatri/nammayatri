@@ -85,3 +85,17 @@ ALTER TABLE atlas_app.finance_ledger_entry ALTER COLUMN to_ending_balance TYPE n
 ALTER TABLE atlas_app.finance_ledger_entry ALTER COLUMN from_starting_balance TYPE numeric(30,15);
 ALTER TABLE atlas_app.finance_ledger_entry ALTER COLUMN from_ending_balance TYPE numeric(30,15);
 ALTER TABLE atlas_app.finance_ledger_entry ALTER COLUMN amount TYPE numeric(30,15);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_settlement_id ON atlas_app.finance_ledger_entry USING btree (settlement_id);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_settlement_timestamp ON atlas_app.finance_ledger_entry USING btree (settlement_timestamp);
+
+
+------- SQL updates -------
+

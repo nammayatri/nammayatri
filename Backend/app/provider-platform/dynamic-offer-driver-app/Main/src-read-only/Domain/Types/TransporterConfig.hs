@@ -499,6 +499,7 @@ data DriverWalletConfig = DriverWalletConfig
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minWalletAmountForScheduledRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
+    nonRedeemableBalanceConsiderCreditAndDebit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
     paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

@@ -95,21 +95,6 @@ updateSettled status settledAt updatedBy updatedById id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSettlementStatus ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
-updateSettlementStatus settlementStatus settlementId settlementTimestamp updatedBy updatedById id = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.settlementStatus settlementStatus,
-      Se.Set Beam.settlementId settlementId,
-      Se.Set Beam.settlementTimestamp settlementTimestamp,
-      Se.Set Beam.updatedBy updatedBy,
-      Se.Set Beam.updatedById updatedById,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
