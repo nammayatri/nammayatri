@@ -56,9 +56,9 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Account.Service as Account
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
@@ -74,6 +74,7 @@ import qualified SharedLogic.Finance.RidePayment as RidePayment
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -81,6 +82,7 @@ import qualified Storage.Queries.BookingPayment as QBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 
 bookingDepositHoldRefType, bookingDepositTopupRefType :: Text
 bookingDepositHoldRefType = "BOOKING_DEPOSIT_HOLD"
@@ -460,8 +462,10 @@ executeDepositRefundGateway ::
     EncFlow m r,
     HasActorInfo m r,
     MonadMask m,
+    SchedulerFlow r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DRB.Booking ->
   DRefundRequest.RefundRequest ->
@@ -493,6 +497,12 @@ executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
             _ -> DBP.REFUND_INITIATED
       QRefundRequest.updateRefundIdAndStatus (Just (Id resp.refundId)) reqStatus refundReq.id
       QBookingPayment.updateStatusById bpStatus row.id
+      riderConfig <-
+        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+          >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
+        CheckRefundStatusJobData {refundId = resp.refundId, numberOfRetries = 0}
+      logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> resp.refundId <> " order " <> order.id.getId
       when (reqStatus == DRefundRequest.FAILED) $
         logError $
           "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId
@@ -502,8 +512,7 @@ executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
             <> show resp.errorCode
             <> "); refund legs voided, amount back in the rider's wallet. Retry from the dashboard refund queue with retryRefunds=true."
 
--- | Resolve a fee-bearing booking that was never staffed: cancel it BAP-locally and settle
---   the fee. Returns True when it actually repaired something.
+-- | Resolve a fee-bearing booking that was never staffed: cancel it BAP-locally and settle the fee
 expireOrRepairBookingDeposit ::
   ( EsqDBFlow m r,
     CacheFlow m r,
