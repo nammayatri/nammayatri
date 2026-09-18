@@ -18,8 +18,8 @@ withJobIdActorInfoWrapper jobHandler job@Job {id} = Finance.withActorInfo Financ
 
 withRequestIdActorInfo :: Finance.HasActorInfo m r => m a -> m a
 withRequestIdActorInfo action = do
-  requestId <- asks (.requestId)
-  Finance.withActorInfo Finance.SYSTEM requestId action
+  currentActorId <- asks (.actorInfo.actorId)
+  Finance.withActorInfo Finance.SYSTEM currentActorId action
 
 withPersonIdActorInfo :: Finance.HasActorInfo m r => Id DP.Person -> m a -> m a
 withPersonIdActorInfo personId action = do
