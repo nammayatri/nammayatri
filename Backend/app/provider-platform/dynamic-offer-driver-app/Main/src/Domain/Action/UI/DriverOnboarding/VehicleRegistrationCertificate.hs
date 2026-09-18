@@ -265,8 +265,10 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         image <- getImage req.imageId
         image2 <- getImage `mapM` req.imageId2
         resp <-
-          Verification.extractRCImage person.merchantId merchantOpCityId $
-            Verification.ExtractImageReq {image1 = image, image2, driverId = person.id.getId}
+          Verification.extractRCImage person.merchantId
+            merchantOpCityId
+            (Verification.ExtractImageReq {image1 = image, image2, driverId = person.id.getId})
+            Nothing
         unless (resp.provider == Just VT.InternalOCR) $
           case resp.extractedRC of
             Just extractedRC -> do
