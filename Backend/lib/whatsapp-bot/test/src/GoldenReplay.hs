@@ -676,7 +676,8 @@ makeWorld merchantCtx theKnobs t0 = do
             tdSender = senderH,
             tdSessions = sessionsH,
             tdClock = clockH,
-            tdTranslations = staticTranslations
+            tdTranslations = staticTranslations,
+            tdMerchant = merchantCtx
           }
   pure
     World
