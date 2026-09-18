@@ -20,7 +20,9 @@ import qualified Domain.Types.Person as Person
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface.Types as VIT
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow)
 import qualified Tools.Verification as Verification
 
 data DetectImageType = Face | Vehicle
@@ -62,12 +64,21 @@ detectImage (personId, merchantId, merchantOpCityId) req = do
             driverId = personId.getId,
             prompt = Nothing
           }
-  summary <- Verification.detectImage merchantId merchantOpCityId ocrReq
-  pure $ toResp summary
+  Hedis.withCrossAppRedis $ Hedis.del ("providerPlatform:FaceDetection:" <> personId.getId)
+  _ <- Verification.detectImage merchantId merchantOpCityId ocrReq
+  pure emptyDetectImageResp
   where
     toImgType Face = VIT.Face
     toImgType Vehicle = VIT.VehicleRegistrationCertificate
 
+getDetectFaceResult ::
+  CacheFlow m r =>
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m DetectImageResp
+getDetectFaceResult (personId, _, _) = do
+  mbSummary <- Verification.getFaceDetectionResult personId.getId
+  pure $ maybe emptyDetectImageResp toResp mbSummary
+  where
     toResp VIT.FaceDetectionSummary {..} =
       DetectImageResp
         { status = toStatus status,
@@ -78,10 +89,20 @@ detectImage (personId, merchantId, merchantOpCityId) req = do
           recommendation = toRec <$> recommendation,
           message = message
         }
-
     toStatus VIT.FaceDetected = FaceDetected
     toStatus VIT.NoFaces = NoFaces
-
     toRec VIT.FullFace = FullFace
     toRec VIT.PartialFace = PartialFace
     toRec VIT.RejectedFace = RejectedFace
+
+emptyDetectImageResp :: DetectImageResp
+emptyDetectImageResp =
+  DetectImageResp
+    { status = Nothing,
+      fullFaces = Nothing,
+      partialFaces = Nothing,
+      rejectedFaces = Nothing,
+      total = Nothing,
+      recommendation = Nothing,
+      message = Nothing
+    }
