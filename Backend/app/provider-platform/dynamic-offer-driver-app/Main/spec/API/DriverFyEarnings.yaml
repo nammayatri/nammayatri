@@ -1,0 +1,44 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+
+module: DriverFyEarnings
+
+# Driver-facing FY/quarter earnings. The dashboard equivalent lives in
+# ProviderPlatform/Management/API/Driver.yaml and takes an entityId; here the
+# driver is the requestor, so there is no entity parameter and no access check
+# beyond TokenAuth -- you can only ever read yourself.
+#
+# Rows are attributed per ride, on `fromMaybe ride.driverId ride.fleetOwnerId`,
+# where ride.fleetOwnerId is the driver's active fleet association at the time
+# the ride was confirmed (Beckn/Confirm.hs -> SharedLogic/Ride.hs). It is NOT the
+# vehicle's RC -- that is RideDetails.fleetOwnerId, a different column.
+#
+# So a driver currently in a fleet has no rows of their own and gets an empty
+# result, while a driver who earned independently before joining a fleet still
+# sees those earlier quarters. Attribution is historical; membership is not.
+#
+# totalNetEarnings / totalTdsDeducted are totals over the RETURNED quarters:
+# the full-FY totals with no `quarter`, that quarter's totals with one. The
+# response always describes the scope that was requested.
+
+types:
+  FyQuarterEarningsEntity:
+    quarter: Int
+    netEarnings: HighPrecMoney
+    tdsDeducted: HighPrecMoney
+  DriverFyEarningsResp:
+    financialYear: Int
+    quarters: "[FyQuarterEarningsEntity]"
+    totalNetEarnings: HighPrecMoney
+    totalTdsDeducted: HighPrecMoney
+
+apis:
+  - GET:
+      endpoint: /driver/fyEarnings
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        - financialYear: Int
+      query:
+        - quarter: Int
+      response:
+        type: DriverFyEarningsResp
