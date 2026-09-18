@@ -42,6 +42,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.QueueHistory a
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
+import SharedLogic.QuickRetry (withQuickRetry)
 
 rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe RideInfo -> m APISuccess
 rideStart rideId lat lon merchantId driverId rideInfo = do
@@ -56,7 +57,7 @@ rideStart rideId lat lon merchantId driverId rideInfo = do
             rideInfo
           }
   rideStartRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (StartRideAPI.startRide rideId req) "rideStart" StartRideAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_START_RIDE_API") url)
   logDebug $ "lts rideStart: " <> show rideStartRes
@@ -77,7 +78,7 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo mbTs = do
             rideInfo = rideInfo
           }
   rideEndRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (EndRideAPI.endRide rideId req) "rideEnd" EndRideAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_END_RIDE_API") url)
   logDebug $ "lts rideEnd: " <> show rideEndRes
@@ -100,13 +101,13 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 searchTryId = do
           }
   -- Call both APIs (primary and secondary cloud) concurrently and combine results
   let callNearByAPI url = do
-        withShortRetry $
+        withQuickRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
 
   -- For secondary URL, gracefully handle errors
   let secondaryCallNearByAPI url = do
-        withShortRetry $
+        withQuickRetry $
           callAPI url (NearByAPI.nearBy req) "nearBy" NearByAPI.locationTrackingServiceAPI
             >>= \case
               Right locations -> pure locations
@@ -145,7 +146,7 @@ nearByTagCount lat lon tag radius merchantId = do
   ltsCfg <- asks (.ltsCfg)
   let req = NearByTagReq {lat, lon, tag, radius, merchantId}
   let callNearByTagAPI url =
-        withShortRetry $
+        withQuickRetry $
           callAPI url (NearByTagAPI.nearByTag req) "nearByTag" NearByTagAPI.locationTrackingServiceAPI
   primaryResult <- callNearByTagAPI ltsCfg.url
   case primaryResult of
@@ -182,7 +183,7 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo 
             rideInfo
           }
   rideDetailsRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (RideDetailsAPI.rideDetails req) "rideDetails" RideDetailsAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_RIDE_DETAILS_API") url)
   logDebug $ "lts rideDetails: " <> show rideDetailsRes
@@ -197,7 +198,7 @@ driversLocation driverIds = do
           { driverIds
           }
   driversLocationRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocation: " <> show driversLocationRes
@@ -205,7 +206,7 @@ driversLocation driverIds = do
     ([], Just secondaryUrl) -> do
       logDebug "driversLocation: primary returned empty, trying secondary URL"
       fallbackRes <-
-        withShortRetry $
+        withQuickRetry $
           callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
       logDebug $ "lts driversLocation fallback: " <> show fallbackRes
@@ -222,7 +223,7 @@ driverLocation rideId merchantId driverId = do
             merchantId
           }
   driverLocationRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") url)
   logDebug $ "lts driverLocation: " <> show driverLocationRes
@@ -230,7 +231,7 @@ driverLocation rideId merchantId driverId = do
     ([], Just secondaryUrl) -> do
       logDebug "driverLocation: primary returned empty, trying secondary URL"
       fallbackRes <-
-        withShortRetry $
+        withQuickRetry $
           callAPI secondaryUrl (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") secondaryUrl)
       logDebug $ "lts driverLocation fallback: " <> show fallbackRes
@@ -247,7 +248,7 @@ pickupDriverLocation rideId merchantId driverId = do
             merchantId
           }
   pickupDriverLocationRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") url)
   logDebug $ "lts pickupDriverLocation: " <> show pickupDriverLocationRes
@@ -255,7 +256,7 @@ pickupDriverLocation rideId merchantId driverId = do
     ([], Just secondaryUrl) -> do
       logDebug "pickupDriverLocation: primary returned empty, trying secondary URL"
       fallbackRes <-
-        withShortRetry $
+        withQuickRetry $
           callAPI secondaryUrl (PickupDriverLocationAPI.pickupDriverLocation rideId req) "pickupDriverLocation" PickupDriverLocationAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_PICKUP_DRIVER_LOCATION_API") secondaryUrl)
       logDebug $ "lts pickupDriverLocation fallback: " <> show fallbackRes
@@ -271,7 +272,7 @@ blockDriverLocationsTill merchantId driverId blockTill = do
           { ..
           }
   blockLocationsTillResp <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (DriverBlockTill.blockDriverLocationsTill req) "driverBlockTill" DriverBlockTill.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_BLOCK_TILL_API") url)
   logDebug $ "lts driver block till: " <> show blockLocationsTillResp
@@ -283,7 +284,7 @@ manualQueueRemove specialLocationId vehicleType merchantId driverId reason prese
   let url = ltsCfg.url
   let req = ManualQueueRemoveAPI.ManualQueueRemoveRequest {reason, preservePosition = Just preservePosition}
   manualQueueRemoveResp <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (ManualQueueRemoveAPI.manualQueueRemove specialLocationId vehicleType merchantId driverId req) "manualQueueRemove" ManualQueueRemoveAPI.manualQueueRemoveAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_MANUAL_QUEUE_REMOVE_API") url)
   logDebug $ "lts manual queue remove: " <> show manualQueueRemoveResp
@@ -295,7 +296,7 @@ manualQueueAdd specialLocationId vehicleType merchantId driverId position = do
   let url = ltsCfg.url
   let req = ManualQueueAddAPI.ManualQueueAddRequest {queuePosition = position}
   manualQueueAddResp <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (ManualQueueAddAPI.manualQueueAdd specialLocationId vehicleType merchantId driverId req) "manualQueueAdd" ManualQueueAddAPI.manualQueueAddAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_MANUAL_QUEUE_ADD_API") url)
   logDebug $ "lts manual queue add: " <> show manualQueueAddResp
@@ -306,7 +307,7 @@ getQueueDriverPosition specialLocationId vehicleType driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   queuePositionRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (NearByAPI.queueDriverPosition specialLocationId vehicleType driverId) "getQueueDriverPosition" NearByAPI.queueDriverPositionAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_QUEUE_DRIVER_POSITION_API") url)
   logDebug $ "lts getQueueDriverPosition: " <> show queuePositionRes
@@ -317,7 +318,7 @@ getQueueDrivers specialLocationId vehicleType = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   queueDriversRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (NearByAPI.queueDrivers specialLocationId vehicleType) "getQueueDrivers" NearByAPI.queueDriversAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_QUEUE_DRIVERS_API") url)
   logDebug $ "lts getQueueDrivers: " <> show queueDriversRes
@@ -328,7 +329,7 @@ getDriverQueueHistory merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   queueHistoryRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (QueueHistoryAPI.queueHistory merchantId driverId) "getDriverQueueHistory" QueueHistoryAPI.queueHistoryAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_QUEUE_HISTORY_API") url)
   logDebug $ "lts getDriverQueueHistory: " <> show queueHistoryRes
@@ -345,7 +346,7 @@ driversLocationByCloudType driverIds mbCloudType = do
           { driverIds
           }
   driversLocationRes <-
-    withShortRetry $
+    withQuickRetry $
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocationByCloudType: " <> show driversLocationRes
@@ -353,7 +354,7 @@ driversLocationByCloudType driverIds mbCloudType = do
     ([], Just secondaryUrl) -> do
       logDebug "driversLocationByCloudType: primary returned empty, trying fallback URL"
       fallbackRes <-
-        withShortRetry $
+        withQuickRetry $
           callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
             >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
       logDebug $ "lts driversLocationByCloudType fallback: " <> show fallbackRes

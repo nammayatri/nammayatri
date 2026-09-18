@@ -48,6 +48,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -113,7 +114,7 @@ oneShotAssign OneShotAssignReq {..} = do
         callbackResult <- withTryCatch "oneShotAssignCallback" $ do
           payload <- buildOneShotAssignPayload booking ride driver vehicle driverQuote
           appBackendBapInternal <- asks (.appBackendBapInternal)
-          void $ withShortRetry $ CallBAPInternal.oneShotAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
+          void $ withQuickRetry $ CallBAPInternal.oneShotAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
         case callbackResult of
           Right _ -> logInfo $ "One-shot assign callback delivered for booking " <> booking.id.getId
           Left err -> do
@@ -169,6 +170,7 @@ buildOneShotAssignPayload booking ride driver vehicle driverQuote = do
         fareBreakups = fareBreakups,
         quoteValidTill = driverQuote.validTill,
         otp = fromMaybe ride.otp ride.endOtp,
+        trackingUrl = ride.trackingUrl,
         driverDetails =
           CallBAPInternal.OneShotDriverDetails
             { name = driverName,

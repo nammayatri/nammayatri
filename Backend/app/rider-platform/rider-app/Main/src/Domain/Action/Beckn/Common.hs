@@ -551,6 +551,21 @@ rideAssignedReqHandler req = do
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
+      -- One-shot runs this handler synchronously inside the BPP's callback — the BPP
+      -- holds the connection (and its retry timer) until we answer, so every inline
+      -- second here back-pressures the whole assignment path. Post-ride side effects
+      -- therefore run forked for one-shot, each isolated with its own catch + log:
+      -- a failure loses only that side effect, mirroring the handler's existing
+      -- late-failure tolerance (ride exists => assignment stands). Beckn flows keep
+      -- them inline: there a failure NACKs and the BPP's on_update retry replays them.
+      let deferPostAssignmentWork name action =
+            if req'.bookingPrePersisted
+              then fork name $ do
+                result <- withTryCatch name action
+                case result of
+                  Left err -> logError $ "one-shot post-assignment step '" <> name <> "' failed for ride " <> ride.id.getId <> ": " <> show err
+                  Right _ -> pure ()
+              else action
       let bookingPaymentChargeAmount = SPayment.paymentChargeForAppFee booking.paymentCharge booking.paymentChargeBearer
           applicationFeeAmount = fromMaybe 0 booking.commission + bookingPaymentChargeAmount
       mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
@@ -646,36 +661,39 @@ rideAssignedReqHandler req = do
         Nothing -> do
           let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
               ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
-          estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
-          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
-          -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
-          -- the two halves, so reverse the rate the ride was priced at.
-          let (bookingChargeNet, bookingChargeVat) =
-                SPayment.splitGrossPaymentCharge (SPayment.paymentChargeRateFromFareBreakups estimatedBreakups) bookingPaymentChargeAmount
-          let ledgerInfo =
-                fromMaybe
-                  SPayment.RidePaymentLedgerInfo
-                    { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
-                      gstAmount = 0,
-                      tollFare = 0,
-                      tollVatAmount = 0,
-                      parkingCharge = 0,
-                      parkingChargeVat = 0,
-                      offerDiscountAmount = bookingDiscountAmount,
-                      cashbackPayoutAmount = bookingPayoutAmount,
-                      platformFee = applicationFeeAmount,
-                      paymentCharge = bookingChargeNet,
-                      paymentChargeVat = bookingChargeVat,
-                      rideVatAbsorbedOnDiscount = 0,
-                      cancellationCharge = 0,
-                      cancellationTax = 0,
-                      financeCtx = ledgerCtx
-                    }
-                  mbLedgerInfo
-          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
-          case result of
-            Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
-            Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
+          -- Deferred: ~15 serial ledger/invoice DB ops; its failure was already
+          -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
+          deferPostAssignmentWork "assign:cashRideLedger" $ do
+            estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
+            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
+            -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
+            -- the two halves, so reverse the rate the ride was priced at.
+            let (bookingChargeNet, bookingChargeVat) =
+                  SPayment.splitGrossPaymentCharge (SPayment.paymentChargeRateFromFareBreakups estimatedBreakups) bookingPaymentChargeAmount
+            let ledgerInfo =
+                  fromMaybe
+                    SPayment.RidePaymentLedgerInfo
+                      { rideFare = booking.estimatedFare.amount - applicationFeeAmount - bookingDiscountAmount,
+                        gstAmount = 0,
+                        tollFare = 0,
+                        tollVatAmount = 0,
+                        parkingCharge = 0,
+                        parkingChargeVat = 0,
+                        offerDiscountAmount = bookingDiscountAmount,
+                        cashbackPayoutAmount = bookingPayoutAmount,
+                        platformFee = applicationFeeAmount,
+                        paymentCharge = bookingChargeNet,
+                        paymentChargeVat = bookingChargeVat,
+                        rideVatAbsorbedOnDiscount = 0,
+                        cancellationCharge = 0,
+                        cancellationTax = 0,
+                        financeCtx = ledgerCtx
+                      }
+                    mbLedgerInfo
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
+            case result of
+              Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
+              Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
           pure Nothing
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       fork "event_tracking: driver_assigned" $
@@ -695,23 +713,39 @@ rideAssignedReqHandler req = do
       fork "Increment assigned count for customer cancellation rate" $ do
         windowSize <- CCR.getWindowSize booking.merchantOperatingCityId
         void $ CCR.incrementAssignedCount booking.riderId windowSize
-      unless isInitiatedByCronJob $ do
-        if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
-        when req'.isDriverBirthDay $ do
-          Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
-      withLongRetry $ CallBPP.callTrack booking ride
+      unless isInitiatedByCronJob $
+        -- Deferred: the FCM POST is forked deep inside, but its prelude is ~6-8 blocking
+        -- config/DB reads plus a possible synchronous APNS call. Best-effort already:
+        -- the app also learns of the assignment by polling the TRIP_ASSIGNED booking.
+        deferPostAssignmentWork "assign:customerNotify" $ do
+          if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
+          when req'.isDriverBirthDay $ do
+            Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
+      -- One-shot already carries the BPP tracking URL in its payload (set on the ride at
+      -- build), and for a value-add NP the track/on_track round trip's only effect is
+      -- copying that same URL — so skip the call. Beckn flows (driverTrackingUrl from an
+      -- optional tag, non-VANP live-location caching) keep the existing behavior.
+      unless (req'.bookingPrePersisted && isJust req'.driverTrackingUrl) $
+        withLongRetry $ CallBPP.callTrack booking ride
 
-      notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
-      notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
+      -- Deferred independently so one event's scheduling failure can't lose the other.
+      deferPostAssignmentWork "assign:rideAssignedReminders" $
+        notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
+      deferPostAssignmentWork "assign:pickupTimeReminders" $
+        notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
-        fork "Sending Dashboard Ride Flow Booking Details" $ do
-          sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
+      -- RiderConfig is only consumed by the two conditional branches below, so it is
+      -- fetched inside them instead of unconditionally on the handler's hot path.
+      when (booking.isDashboardRequest == Just True) $ do
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        when (riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
+          fork "Sending Dashboard Ride Flow Booking Details" $ do
+            sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
 
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
           mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
           senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
           receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)

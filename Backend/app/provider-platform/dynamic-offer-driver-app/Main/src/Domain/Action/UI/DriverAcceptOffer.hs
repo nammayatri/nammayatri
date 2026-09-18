@@ -224,7 +224,10 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
     if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
       then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
       else pure []
-  pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
+  -- One-shot pulls the losers via deactivateExistingQuotes inside its own action; pulling
+  -- here too would double-notify them now that the pull loop runs forked.
+  when (isNothing mbOneShotAction) $
+    pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
   case mbOneShotAction of
     Just action -> action driverQuote
     Nothing -> sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
