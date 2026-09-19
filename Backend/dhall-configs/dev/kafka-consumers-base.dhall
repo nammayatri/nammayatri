@@ -176,4 +176,5 @@ in  { hedisCfg
     , dashboardClickhouseCfg
     , inMemConfig
     , smsCfg = appCfg.smsCfg
+    , selfBaseUrl = appCfg.selfBaseUrl
     }

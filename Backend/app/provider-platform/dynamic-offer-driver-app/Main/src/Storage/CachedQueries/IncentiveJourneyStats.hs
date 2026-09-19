@@ -9,70 +9,48 @@ module Storage.CachedQueries.IncentiveJourneyStats
   )
 where
 
-import qualified Domain.Types.IncentiveJourney as DIJ
-import qualified Domain.Types.IncentiveJourneyMilestone as DIJM
-import qualified Domain.Types.IncentiveJourneyStats as DIJS
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.IncentiveJourneyStats as Queries
+import qualified Lib.IncentiveJourney as IJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourney as DIJ
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyMilestone as DIJM
+import qualified Lib.IncentiveJourney.Domain.Types.IncentiveJourneyStats as DIJS
+import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyStats as LibCQ
+import Storage.Beam.IncentiveJourney ()
+
+actor :: IJ.JourneyActor
+actor = IJ.DriverActor
 
 findByDriverIdAndJourneyIdAndPeriodKey ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r) =>
   Id DP.Person ->
   Id DIJ.IncentiveJourney ->
   Text ->
   m [DIJS.IncentiveJourneyStats]
 findByDriverIdAndJourneyIdAndPeriodKey driverId journeyId periodKey =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeByDriverJourneyPeriodKey driverId journeyId periodKey)) >>= \case
-    Just rows -> pure rows
-    Nothing -> do
-      rows <- Queries.findStatsByDriverJourneyAndPeriod driverId journeyId periodKey
-      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.withCrossAppRedis $ Hedis.setExp (makeByDriverJourneyPeriodKey driverId journeyId periodKey) rows expTime
-      pure rows
+  LibCQ.findByPersonIdAndJourneyIdAndPeriodKey actor (cast driverId) journeyId periodKey
 
 findByDriverIdAndJourneyIdAndMilestoneIdAndPeriodKey ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r) =>
   Id DP.Person ->
   Id DIJ.IncentiveJourney ->
   Id DIJM.IncentiveJourneyMilestone ->
   Text ->
   m (Maybe DIJS.IncentiveJourneyStats)
 findByDriverIdAndJourneyIdAndMilestoneIdAndPeriodKey driverId journeyId milestoneId periodKey =
-  Hedis.withCrossAppRedis (Hedis.safeGet (makeByDriverJourneyMilestonePeriodKey driverId journeyId milestoneId periodKey)) >>= \case
-    Just row -> pure row
-    Nothing -> do
-      mbRow <- Queries.findStatsByDriverAndMilestonePeriod driverId journeyId milestoneId periodKey
-      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.withCrossAppRedis $ Hedis.setExp (makeByDriverJourneyMilestonePeriodKey driverId journeyId milestoneId periodKey) mbRow expTime
-      pure mbRow
+  LibCQ.findByPersonIdAndJourneyIdAndMilestoneIdAndPeriodKey actor (cast driverId) journeyId milestoneId periodKey
 
--- | Upsert then clear Redis keys so EndRide/list never see stale progress.
 upsertJourneyStats ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (BeamFlow m r) =>
   DIJS.IncentiveJourneyStats ->
   m DIJS.IncentiveJourneyStats
-upsertJourneyStats stats = do
-  updated <- Queries.upsertJourneyStats stats
-  clearCacheForStats updated
-  pure updated
+upsertJourneyStats = LibCQ.upsertJourneyStats actor
 
 clearCacheForStats :: (CacheFlow m r) => DIJS.IncentiveJourneyStats -> m ()
-clearCacheForStats stats =
-  Hedis.runInMultiCloudRedisWrite $
-    Hedis.withCrossAppRedis $ do
-      void $ Hedis.del (makeByDriverJourneyPeriodKey stats.driverId stats.journeyId stats.periodKey)
-      void $
-        Hedis.del
-          ( makeByDriverJourneyMilestonePeriodKey
-              stats.driverId
-              stats.journeyId
-              stats.milestoneId
-              stats.periodKey
-          )
+clearCacheForStats = LibCQ.clearCacheForStats actor
 
 clearCacheByDriverJourneyPeriod ::
   (CacheFlow m r) =>
@@ -81,32 +59,4 @@ clearCacheByDriverJourneyPeriod ::
   Text ->
   m ()
 clearCacheByDriverJourneyPeriod driverId journeyId periodKey =
-  Hedis.runInMultiCloudRedisWrite $
-    Hedis.withCrossAppRedis $
-      void $
-        Hedis.del (makeByDriverJourneyPeriodKey driverId journeyId periodKey)
-
-makeByDriverJourneyPeriodKey :: Id DP.Person -> Id DIJ.IncentiveJourney -> Text -> Text
-makeByDriverJourneyPeriodKey driverId journeyId periodKey =
-  "driver-offer:CachedQueries:IncentiveJourneyStats:DriverId-"
-    <> driverId.getId
-    <> ":JourneyId-"
-    <> journeyId.getId
-    <> ":PeriodKey-"
-    <> periodKey
-
-makeByDriverJourneyMilestonePeriodKey ::
-  Id DP.Person ->
-  Id DIJ.IncentiveJourney ->
-  Id DIJM.IncentiveJourneyMilestone ->
-  Text ->
-  Text
-makeByDriverJourneyMilestonePeriodKey driverId journeyId milestoneId periodKey =
-  "driver-offer:CachedQueries:IncentiveJourneyStats:DriverId-"
-    <> driverId.getId
-    <> ":JourneyId-"
-    <> journeyId.getId
-    <> ":MilestoneId-"
-    <> milestoneId.getId
-    <> ":PeriodKey-"
-    <> periodKey
+  LibCQ.clearCacheByPersonJourneyPeriod actor (cast driverId) journeyId periodKey

@@ -135,6 +135,10 @@ data IncentiveJourney
 
 data IncentiveJourneyMilestone
 
+data CohortDetails
+
+data CohortJourneyMapping
+
 data Person
 
 data Merchant

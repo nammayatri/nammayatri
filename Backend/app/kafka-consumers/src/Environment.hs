@@ -139,7 +139,8 @@ data AppCfg = AppCfg
     maxShards :: Int,
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
-    shortDurationRetryCfg :: RetryCfg
+    shortDurationRetryCfg :: RetryCfg,
+    selfBaseUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -203,7 +204,8 @@ data AppEnv = AppEnv
     blackListedJobs :: [Text],
     shortDurationRetryCfg :: RetryCfg,
     cloudType :: Maybe CloudType,
-    actorInfo :: Finance.ActorInfo
+    actorInfo :: Finance.ActorInfo,
+    selfBaseUrl :: BaseUrl
   }
   deriving (Generic)
 

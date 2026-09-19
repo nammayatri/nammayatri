@@ -36,6 +36,7 @@ processRideEnded event =
         runHandler "updateLeaderboard" event Handlers.handleLeaderboard
         runHandler "sendReferralAndDriverToDriverReward" event Handlers.handleReferral
         runHandler "migrateDriverOperatingCity" event Handlers.handleDriverCityMigration
+        runHandler "processDriverCoinsAndJourney" event Handlers.handleDriverCoinsAndJourney
 
 runHandler :: Text -> RideEndedEvent -> (RideEndedEvent -> Flow ()) -> Flow ()
 runHandler name event handler =
