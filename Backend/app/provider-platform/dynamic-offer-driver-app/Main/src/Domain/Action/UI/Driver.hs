@@ -270,6 +270,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -500,7 +501,8 @@ data DriverInformationRes = DriverInformationRes
     operatorBadgeToken :: Maybe Text,
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider
+    preferredMapProvider :: Maybe DriverInfo.MapProvider,
+    todayOnlineDuration :: Minutes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1774,6 +1776,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  todayOnlineDuration <- secondsToMinutes <$> DriverOnlineHoursCache.getTodayOnlineDuration driverInfo.driverId merchantConfig.timeDiffFromUtc
   membershipId <-
     if fromMaybe False merchantConfig.sendMembershipIdInProfile
       then do
