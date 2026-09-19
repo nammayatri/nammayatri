@@ -466,6 +466,8 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBPP
               stopPoint = mapping.stopPoint,
               timeBounds = Unbounded,
               vehicleType = mapping.vehicleType,
+              stageNumber = mapping.stageNumber,
+              isStageStop = mapping.isStageStop,
               createdAt = now,
               updatedAt = now
             }

@@ -52,7 +52,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.overrideBenefitConfigJson overrideBenefitConfigJson,
-      Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
+      Se.Set Beam.maxSwitchCount (((.maxSwitchCount) <$> passConfig)),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.pricingTiers pricingTiers,
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
