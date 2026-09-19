@@ -32,6 +32,13 @@ imports:
   ReprocessResult: SharedLogic.External.Nandi.Types
   RouteStopMappingExport: SharedLogic.External.Nandi.Types
   VehicleUpsertRequest: SharedLogic.External.Nandi.Types
+  EtaVariant: SharedLogic.External.Nandi.Types
+  EtaVariantUpsertReq: SharedLogic.External.Nandi.Types
+  ActiveTripEtaOverride: SharedLogic.External.Nandi.Types
+  SetTripEtaOverrideReq: SharedLogic.External.Nandi.Types
+  ClearTripEtaOverrideReq: SharedLogic.External.Nandi.Types
+  StationEtaBatchUpsertReq: SharedLogic.External.Nandi.Types
+  StationEtaRow: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
   APISuccess: Kernel.Types.APISuccess
@@ -463,6 +470,105 @@ apis:
       mandatoryQuery:
         vehicleCategory: VehicleCategory
         vehicleId: Text
+      response:
+        type: RowsAffectedResp
+
+  - GET:
+      endpoint: /etaVariants
+      name: TransitOperatorGetEtaVariants
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-config.eta_variant.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[EtaVariant]"
+
+  - POST:
+      endpoint: /etaVariants
+      name: TransitOperatorUpsertEtaVariant
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-config.eta_variant.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: EtaVariantUpsertReq
+      response:
+        type: EtaVariant
+
+  - DELETE:
+      endpoint: /etaVariants
+      name: TransitOperatorDeleteEtaVariant
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-config.eta_variant.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+        variantId: Text
+      response:
+        type: RowsAffectedResp
+
+  - GET:
+      endpoint: /stationEta
+      name: TransitOperatorGetStationEtas
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-config.eta_variant.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        variantId: Text
+      response:
+        type: "[StationEtaRow]"
+
+  - POST:
+      endpoint: /stationEta/batch
+      name: TransitOperatorUpsertStationEtas
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-config.station_eta.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: StationEtaBatchUpsertReq
+      response:
+        type: RowsAffectedResp
+
+  - GET:
+      endpoint: /tripEtaOverride/active
+      name: TransitOperatorActiveTripEtaOverrides
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.eta_override.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[ActiveTripEtaOverride]"
+
+  - POST:
+      endpoint: /tripEtaOverride
+      name: TransitOperatorSetTripEtaOverride
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.eta_override.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: SetTripEtaOverrideReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /tripEtaOverride/clear
+      name: TransitOperatorClearTripEtaOverride
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.eta_override.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: ClearTripEtaOverrideReq
       response:
         type: RowsAffectedResp
 
