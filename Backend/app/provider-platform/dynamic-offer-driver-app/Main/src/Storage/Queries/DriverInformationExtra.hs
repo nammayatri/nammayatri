@@ -446,7 +446,8 @@ updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.onRide = LTSSync.Set onRide,
-        LTSSync.driverTripEndLocation = LTSSync.Set tripEndLocation
+        LTSSync.driverTripEndLocation = LTSSync.Set tripEndLocation,
+        LTSSync.lastRideEndedAt = if not onRide then LTSSync.Set (Just now) else LTSSync.Unchanged
       }
 
 updateServicesEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> [P.ServiceNames] -> m ()

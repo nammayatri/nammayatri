@@ -1194,3 +1194,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prefer_ondc_can
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_min_distance_meters integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_max_amount integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_congestion_threshold double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_cool_off_period integer  default 30;

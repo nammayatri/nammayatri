@@ -95,6 +95,8 @@ data DriverPoolData = DriverPoolData
     -- On-ride / forward batching fields
     driverTripEndLocation :: Maybe Maps.LatLong,
     hasRideStarted :: Maybe Bool,
+    -- | Drives the post-ride auto-assign cool-off in 'attemptPriorityDirectAssign'.
+    lastRideEndedAt :: Maybe UTCTime,
     -- Vehicle attributes for service tier usage restriction checks
     airConditionScore :: Maybe Double,
     airConditioned :: Maybe Bool,
@@ -241,7 +243,8 @@ defaultDriverPoolData dId =
       registrationNo = "",
       cloudType = Nothing,
       schemaVersion = Nothing,
-      lastUpdatedAt = Nothing
+      lastUpdatedAt = Nothing,
+      lastRideEndedAt = Nothing
     }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
