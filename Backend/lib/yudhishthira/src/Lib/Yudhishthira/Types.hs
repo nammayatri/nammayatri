@@ -858,7 +858,7 @@ instance HideSecrets LogicRolloutObject where
 
 data MerchantCitiesEntry = MerchantCitiesEntry
   { merchantShortId :: Text,
-    cities :: [Text]
+    cities :: [Kernel.Types.Beckn.Context.City]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -873,7 +873,7 @@ instance HideSecrets BulkLogicRolloutReq where
 
 data BulkRolloutCityFailure = BulkRolloutCityFailure
   { merchantShortId :: Text,
-    cityId :: Text,
+    cityId :: Kernel.Types.Beckn.Context.City,
     reason :: Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)

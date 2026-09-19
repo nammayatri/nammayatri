@@ -297,14 +297,14 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantShortId opCity apiToke
     mbMerchant <- Storage.Queries.Merchant.findByShortId (Kernel.Types.Id.ShortId entry.merchantShortId)
     case mbMerchant of
       Kernel.Prelude.Nothing ->
-        Kernel.Prelude.pure ([], [Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityText "Merchant not found." | cityText <- entry.cities])
+        Kernel.Prelude.pure ([], [Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId city "Merchant not found." | city <- entry.cities])
       Kernel.Prelude.Just merchant -> do
-        checks <- Kernel.Prelude.forM entry.cities $ \cityText -> do
-          mbAccess <- Storage.Queries.MerchantAccess.findByPersonIdAndMerchantIdAndCity apiTokenInfo.personId merchant.id (Kernel.Types.Beckn.Context.City cityText)
+        checks <- Kernel.Prelude.forM entry.cities $ \city -> do
+          mbAccess <- Storage.Queries.MerchantAccess.findByPersonIdAndMerchantIdAndCity apiTokenInfo.personId merchant.id city
           Kernel.Prelude.pure $ case mbAccess of
-            Kernel.Prelude.Nothing -> Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityText "You have no access to this operation.")
-            Kernel.Prelude.Just _ -> Kernel.Prelude.Right cityText
-        let allowedCities = [cityText | Kernel.Prelude.Right cityText <- checks]
+            Kernel.Prelude.Nothing -> Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId city "You have no access to this operation.")
+            Kernel.Prelude.Just _ -> Kernel.Prelude.Right city
+        let allowedCities = [city | Kernel.Prelude.Right city <- checks]
             denied = [failure | Kernel.Prelude.Left failure <- checks]
         Kernel.Prelude.pure ([Lib.Yudhishthira.Types.MerchantCitiesEntry entry.merchantShortId allowedCities | not (null allowedCities)], denied)
   let allowedEntries = concatMap fst authorised
