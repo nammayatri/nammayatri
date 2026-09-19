@@ -3,6 +3,13 @@ module SharedLogic.FRFSPassOverride
     OverrideBenefit (..),
     PercentageSaving (..),
     FixedSaving (..),
+    DynamicPricingConfig (..),
+    OverrideBenefitEntry (..),
+    PassTicketBenefitConfig (..),
+    entryBenefit,
+    entryPricing,
+    dynamicPricingFromPass,
+    applyPricingSaving,
     ApplicablePass (..),
     PassOption (..),
     mkPassOptionAPIEntity,
@@ -32,6 +39,9 @@ module SharedLogic.FRFSPassOverride
     ConsumeResult (..),
     remainingTrips,
     benefitFromPass,
+    benefitForPayment,
+    isOverridePayment,
+    overrideConfigForPurchase,
     isUnlimitedBenefit,
     seededRemainingTrips,
     consumeTrip,
@@ -51,6 +61,7 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import Data.List (nubBy)
 import qualified Data.Time as T
@@ -78,7 +89,18 @@ import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 
 newtype OverrideBenefitConfig = OverrideBenefitConfig
-  { overrideBenefits :: [OverrideBenefit]
+  { overrideBenefits :: [OverrideBenefitEntry]
+  }
+  deriving (Generic, Show)
+
+data OverrideBenefitEntry
+  = TicketBenefit OverrideBenefit
+  | PassTicketBenefit PassTicketBenefitConfig
+  deriving (Generic, Show)
+
+data PassTicketBenefitConfig = PassTicketBenefitConfig
+  { pricing :: DynamicPricingConfig,
+    benefit :: OverrideBenefit
   }
   deriving (Generic, Show)
 
@@ -110,11 +132,38 @@ instance FromJSON OverrideBenefitConfig where
 instance ToJSON OverrideBenefitConfig where
   toJSON = A.genericToJSON constructorsWithSnakeCase
 
+instance FromJSON OverrideBenefitEntry where
+  parseJSON value = A.genericParseJSON constructorsWithSnakeCase value <|> (TicketBenefit <$> parseJSON value)
+
+instance ToJSON OverrideBenefitEntry where
+  toJSON = A.genericToJSON constructorsWithSnakeCase
+
+instance FromJSON PassTicketBenefitConfig where
+  parseJSON = A.genericParseJSON constructorsWithSnakeCase
+
+instance ToJSON PassTicketBenefitConfig where
+  toJSON = A.genericToJSON constructorsWithSnakeCase
+
 instance FromJSON OverrideBenefit where
   parseJSON = A.genericParseJSON constructorsWithSnakeCase
 
 instance ToJSON OverrideBenefit where
   toJSON = A.genericToJSON constructorsWithSnakeCase
+
+entryBenefit :: OverrideBenefitEntry -> OverrideBenefit
+entryBenefit = \case
+  TicketBenefit benefit -> benefit
+  PassTicketBenefit config -> config.benefit
+
+entryPricing :: OverrideBenefitEntry -> Maybe DynamicPricingConfig
+entryPricing = \case
+  TicketBenefit _ -> Nothing
+  PassTicketBenefit config -> Just config.pricing
+
+withPurchasedTripCount :: Int -> OverrideBenefitEntry -> OverrideBenefitEntry
+withPurchasedTripCount tripCount = \case
+  TicketBenefit benefit -> TicketBenefit benefit {maximumTripCount = Just tripCount}
+  PassTicketBenefit config -> PassTicketBenefit config {benefit = config.benefit {maximumTripCount = Just tripCount}}
 
 instance FromJSON PercentageSaving where
   parseJSON = A.genericParseJSON constructorsWithSnakeCase
@@ -127,6 +176,66 @@ instance FromJSON FixedSaving where
 
 instance ToJSON FixedSaving where
   toJSON = A.genericToJSON constructorsWithSnakeCase
+
+data DynamicPricingConfig = DynamicPricingConfig
+  { percentageSaving :: Maybe PercentageSaving,
+    fixedSaving :: Maybe FixedSaving,
+    primaryServiceTier :: Spec.ServiceTierType,
+    maximumPurchaseableTripCount :: Int
+  }
+  deriving (Generic, Show)
+
+instance FromJSON DynamicPricingConfig where
+  parseJSON = A.genericParseJSON constructorsWithSnakeCase
+
+instance ToJSON DynamicPricingConfig where
+  toJSON = A.genericToJSON constructorsWithSnakeCase
+
+dynamicPricingFromPass :: (Log m, MonadFlow m) => DPass.Pass -> m (Maybe DynamicPricingConfig)
+dynamicPricingFromPass pass = case pass.overrideBenefitConfigJson of
+  Nothing -> pure Nothing
+  Just configJson -> case parseOverrideBenefitConfig configJson of
+    Left err -> do
+      logError $ "FRFSPassOverride: unparseable benefit config passId=" <> pass.id.getId <> " error=" <> show err
+      pure Nothing
+    Right config -> case listToMaybe (mapMaybe entryPricing config.overrideBenefits) of
+      Nothing -> pure Nothing
+      Just pricing -> case validateDynamicPricing pricing of
+        Left reason -> do
+          logError $ "FRFSPassOverride: invalid dynamic pricing config passId=" <> pass.id.getId <> " reason=" <> reason
+          pure Nothing
+        Right valid -> pure (Just valid)
+
+applyPricingSaving :: DynamicPricingConfig -> HighPrecMoney -> HighPrecMoney
+applyPricingSaving config fare
+  | Just p <- config.percentageSaving,
+    p.enabled == Just True =
+    discounted (fare * p.applicableValue / 100)
+  | Just f <- config.fixedSaving,
+    f.enabled == Just True =
+    discounted f.applicableValue
+  | otherwise = fare
+  where
+    discounted saving = max 0 (fare - saving)
+
+validateDynamicPricing :: DynamicPricingConfig -> Either Text DynamicPricingConfig
+validateDynamicPricing config
+  | percentageOn && fixedOn =
+    Left "both percentage_saving and fixed_saving are enabled; at most one may be"
+  | Just p <- config.percentageSaving,
+    percentageOn,
+    p.applicableValue <= 0 || p.applicableValue >= 100 =
+    Left $ "percentage_saving.applicable_value must be in (0, 100), got " <> show p.applicableValue
+  | Just f <- config.fixedSaving,
+    fixedOn,
+    f.applicableValue <= 0 =
+    Left $ "fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
+  | config.maximumPurchaseableTripCount <= 0 =
+    Left $ "maximum_purchaseable_trip_count must be positive, got " <> show config.maximumPurchaseableTripCount
+  | otherwise = Right config
+  where
+    percentageOn = maybe False ((== Just True) . (.enabled)) config.percentageSaving
+    fixedOn = maybe False ((== Just True) . (.enabled)) config.fixedSaving
 
 isFullyPassCovered :: Maybe HighPrecMoney -> Bool
 isFullyPassCovered = maybe False (<= 0)
@@ -162,8 +271,13 @@ isOndcConfig integratedBPPConfig = case integratedBPPConfig.providerConfig of
   DIBC.ONDC _ -> True
   _ -> False
 
-validateBenefit :: OverrideBenefit -> Either Text OverrideBenefit
-validateBenefit benefit
+validateEntry :: OverrideBenefitEntry -> Either Text OverrideBenefitEntry
+validateEntry entry = case entry of
+  TicketBenefit benefit -> entry <$ validateBenefit True benefit
+  PassTicketBenefit config -> entry <$ (validateDynamicPricing config.pricing >> validateBenefit False config.benefit)
+
+validateBenefit :: Bool -> OverrideBenefit -> Either Text OverrideBenefit
+validateBenefit requireTripCount benefit
   | not (savingEnabled benefit.percentageSaving (.enabled)) && not (savingEnabled benefit.fixedSaving (.enabled)) =
     Left "no enabled saving: exactly one of percentage_saving or fixed_saving must have enabled=true"
   | savingEnabled benefit.percentageSaving (.enabled) && savingEnabled benefit.fixedSaving (.enabled) =
@@ -176,7 +290,7 @@ validateBenefit benefit
     f.enabled == Just True,
     f.applicableValue <= 0 =
     Left $ "fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
-  | not (isUnlimitedBenefit benefit) && isNothing benefit.maximumTripCount =
+  | requireTripCount && not (isUnlimitedBenefit benefit) && isNothing benefit.maximumTripCount =
     Left "benefit is metered but has no maximum_trip_count"
   | maybe False (<= 0) benefit.maximumTripCount =
     Left "maximum_trip_count must be positive"
@@ -191,22 +305,54 @@ benefitFromPass pass = case pass.overrideBenefitConfigJson of
   Nothing -> do
     logError $ "FRFSPassOverride: pass is override-applicable but has no benefit config passId=" <> pass.id.getId
     pure Nothing
-  Just configJson -> case parseOverrideBenefitConfig configJson of
-    Left err -> do
-      logError $ "FRFSPassOverride: unparseable benefit config passId=" <> pass.id.getId <> " error=" <> show err
-      pure Nothing
-    Right config -> do
-      when (length config.overrideBenefits > 1) $
-        logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied passId=" <> pass.id.getId
-      case listToMaybe config.overrideBenefits of
+  Just configJson -> benefitFromConfig ("passId=" <> pass.id.getId) configJson
+
+benefitForPayment :: (Log m, MonadFlow m) => DPPP.PurchasedPassPayment -> DPass.Pass -> m (Maybe OverrideBenefit)
+benefitForPayment payment pass = case payment.overrideBenefitConfigJson of
+  Just configJson -> benefitFromConfig ("purchasedPassPaymentId=" <> payment.id.getId) configJson
+  Nothing -> benefitFromPass pass
+
+isOverridePayment :: DPPP.PurchasedPassPayment -> DPass.Pass -> Bool
+isOverridePayment payment pass = isJust payment.overrideBenefitConfigJson || pass.frfsPriceOverrideApplicable == Just True
+
+overrideConfigForPurchase :: (Log m, MonadFlow m) => DPass.Pass -> Maybe Int -> m (Maybe A.Value)
+overrideConfigForPurchase pass mbTripCount
+  | pass.frfsPriceOverrideApplicable /= Just True = pure Nothing
+  | otherwise = case pass.overrideBenefitConfigJson of
+    Nothing -> pure Nothing
+    Just configJson -> case parseOverrideBenefitConfig configJson of
+      Left err -> do
+        logError $ "FRFSPassOverride: unparseable benefit config, storing none on the purchase passId=" <> pass.id.getId <> " error=" <> show err
+        pure Nothing
+      Right config -> case listToMaybe config.overrideBenefits of
         Nothing -> do
-          logError $ "FRFSPassOverride: empty override_benefits passId=" <> pass.id.getId
+          logError $ "FRFSPassOverride: empty override_benefits, storing none on the purchase passId=" <> pass.id.getId
           pure Nothing
-        Just benefit -> case validateBenefit benefit of
-          Left reason -> do
-            logError $ "FRFSPassOverride: invalid benefit config, disqualifying pass passId=" <> pass.id.getId <> " reason=" <> reason
-            pure Nothing
-          Right valid -> pure (Just valid)
+        Just entry -> do
+          let purchased = maybe entry (`withPurchasedTripCount` entry) mbTripCount
+          case validateEntry purchased of
+            Left reason -> do
+              logError $ "FRFSPassOverride: invalid benefit config, storing none on the purchase passId=" <> pass.id.getId <> " reason=" <> reason
+              pure Nothing
+            Right valid -> pure (Just (A.toJSON (OverrideBenefitConfig {overrideBenefits = [valid]})))
+
+benefitFromConfig :: (Log m, MonadFlow m) => Text -> A.Value -> m (Maybe OverrideBenefit)
+benefitFromConfig source configJson = case parseOverrideBenefitConfig configJson of
+  Left err -> do
+    logError $ "FRFSPassOverride: unparseable benefit config " <> source <> " error=" <> show err
+    pure Nothing
+  Right config -> do
+    when (length config.overrideBenefits > 1) $
+      logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied " <> source
+    case listToMaybe config.overrideBenefits of
+      Nothing -> do
+        logError $ "FRFSPassOverride: empty override_benefits " <> source
+        pure Nothing
+      Just entry -> case validateEntry entry of
+        Left reason -> do
+          logError $ "FRFSPassOverride: invalid benefit config, disqualifying pass " <> source <> " reason=" <> reason
+          pure Nothing
+        Right valid -> pure (Just (entryBenefit valid))
 
 isUnlimitedBenefit :: OverrideBenefit -> Bool
 isUnlimitedBenefit benefit = benefit.unlimitedTripCount == Just True
@@ -244,9 +390,9 @@ toCandidate payment = case payment.passId of
     CQPass.findById passId >>= \case
       Nothing -> pure Nothing
       Just pass
-        | pass.frfsPriceOverrideApplicable /= Just True -> pure Nothing
+        | not (isOverridePayment payment pass) -> pure Nothing
         | otherwise ->
-          benefitFromPass pass >>= \case
+          benefitForPayment payment pass >>= \case
             Nothing -> pure Nothing
             Just benefit -> do
               availableTripCount <- remainingTrips payment benefit
@@ -403,15 +549,8 @@ passForOverrideAppliedEntity (Just entityId) = do
       Just passId -> fmap (payment,) <$> CQPass.findById passId
 
 benefitForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe OverrideBenefit)
-benefitForOverrideAppliedEntity Nothing = pure Nothing
-benefitForOverrideAppliedEntity (Just entityId) = do
-  mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
-  case mbPayment >>= (.passId) of
-    Nothing -> pure Nothing
-    Just passId ->
-      CQPass.findById passId >>= \case
-        Nothing -> pure Nothing
-        Just pass -> benefitFromPass pass
+benefitForOverrideAppliedEntity mbEntityId =
+  passForOverrideAppliedEntity mbEntityId >>= maybe (pure Nothing) (uncurry benefitForPayment)
 
 data ConsumeResult
   = Consumed Int
@@ -882,7 +1021,7 @@ refundPassOverrideTrip searchId paymentId quantity = do
   case mbPayment of
     Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip payment not found paymentId=" <> paymentId.getId
     Just payment -> do
-      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) benefitFromPass) payment.passId
+      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) (benefitForPayment payment)) payment.passId
       case mbBenefit of
         Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip no benefit config, nothing to give back paymentId=" <> paymentId.getId
         Just benefit -> do
