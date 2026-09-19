@@ -610,7 +610,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleImageId = Nothing,
             verified = Nothing,
             pendingChallan = Nothing,
-            initiatedBy = Nothing
+            initiatedBy = Nothing,
+            exemptParkingFee = Nothing
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of

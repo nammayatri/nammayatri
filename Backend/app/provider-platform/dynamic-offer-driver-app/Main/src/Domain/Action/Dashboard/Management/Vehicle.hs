@@ -1,4 +1,4 @@
-module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, mkAssociationInfo) where
+module Domain.Action.Dashboard.Management.Vehicle (getVehicleList, postVehicleParkingFeeExemption, mkAssociationInfo) where
 
 import qualified API.Types.ProviderPlatform.Management.Vehicle as VehicleAPI
 import qualified Dashboard.Common as Common
@@ -16,10 +16,13 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runTransaction)
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSL
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -29,7 +32,9 @@ import qualified Storage.Queries.FleetRCAssociationExtra as QFRCA
 import qualified Storage.Queries.OnboardingList.VehicleList as QVehicleList
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
+import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Auth ()
+import Tools.Error
 
 getVehicleList ::
   ShortId DM.Merchant ->
@@ -110,8 +115,48 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         approved = rc.approved,
         createdAt = rc.createdAt,
         recentFleetInfo,
-        linkedDriverInfo
+        linkedDriverInfo,
+        exemptParkingFee = rc.exemptParkingFee
       }
+
+-- | Ops toggle for the parking fee exemption. Sets the vehicle flag on the RC and, when the
+--   caller passes the special location it is toggling from, the matching zone flag. Both must
+--   be true for the fare to drop the parking charge, so they are written together.
+postVehicleParkingFeeExemption ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  VehicleAPI.ParkingFeeExemptionReq ->
+  Flow APISuccess
+postVehicleParkingFeeExemption merchantShortId opCity rcId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  rc <- B.runInReplica (QVRC.findById (Id rcId)) >>= fromMaybeM (RCNotFound rcId)
+  whenJust rc.merchantOperatingCityId $ \rcCityId ->
+    unless (rcCityId == merchantOpCity.id) $
+      throwError (InvalidRequest $ "RC " <> rcId <> " does not belong to city " <> show opCity)
+  mbSpecialLocation <- forM req.specialLocationId $ \specialLocationId -> do
+    specialLocation <-
+      QSL.findById (Id specialLocationId)
+        >>= fromMaybeM (InvalidRequest $ "Special location not found: " <> specialLocationId)
+    whenJust specialLocation.merchantOperatingCityId $ \slCityId ->
+      unless (slCityId.getId == merchantOpCity.id.getId) $
+        throwError (InvalidRequest $ "Special location " <> specialLocationId <> " does not belong to city " <> show opCity)
+    pure specialLocation
+  QVRC.updateExemptParkingFee (Just req.exempt) rc.id
+  whenJust mbSpecialLocation $ \specialLocation -> do
+    now <- getCurrentTime
+    void $ runTransaction $ QSL.updateParkingFeeExemptionEnabled (Just req.exempt) now specialLocation.id
+    QSL.clearSpecialZoneInMemCache
+  logInfo $
+    "Parking fee exemption set to " <> show req.exempt <> " for rcId: " <> rcId
+      <> ", specialLocationId: "
+      <> fromMaybe "NA" req.specialLocationId
+      <> ", reason: "
+      <> fromMaybe "NA" req.reason
+  pure Success
 
 mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Bool -> Flow (Maybe Common.DriverAssociationInfo)
 mkAssociationInfo Nothing _ _ _ = pure Nothing

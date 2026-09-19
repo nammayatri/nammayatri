@@ -340,8 +340,10 @@ VehicleRegistrationCertificate:
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
+    exemptParkingFee: Maybe Bool # ops-set; drops fp.parkingCharge for this vehicle in zones that opted into the exemption
   default:
     approved: "false"
+    exemptParkingFee: "false"
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
@@ -421,6 +423,10 @@ VehicleRegistrationCertificate:
     updateVehicleRatingAndRemark:
       kvFunction: updateOneWithKV
       params: [vehicleRating, vehicleRatingRemark]
+      where: id
+    updateExemptParkingFee:
+      kvFunction: updateOneWithKV
+      params: [exemptParkingFee]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -48,6 +48,7 @@ data SpecialLocationFull = SpecialLocationFull
     enabled :: Bool,
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
+    parkingFeeExemptionEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
     fetchAllGateFareProduct :: Maybe Bool,
     supportNumber :: Maybe Text,
@@ -331,6 +332,18 @@ findSpecialLocationByLatLong :: (BeamFlow m r, Transactionable m, EsqDBReplicaFl
 findSpecialLocationByLatLong point = do
   cached <- getAllEnabledSpecialLocationsWithGeom
   pure $ listToMaybe [(sl, fromMaybe "" sl.geomGeoJson) | (sl, polys) <- cached, any (pointInPolygon point) polys]
+
+-- | Single-column update. Deliberately not routed through
+--   'Lib.Queries.SpecialLocationGeom.updateSpecialLocation', which writes the whole row and
+--   would blank the geometry when handed a domain value read back without it.
+updateParkingFeeExemptionEnabled :: Maybe Bool -> UTCTime -> Id D.SpecialLocation -> SqlDB ()
+updateParkingFeeExemptionEnabled parkingFeeExemptionEnabled now specialLocationId = Esq.update $ \tbl -> do
+  set
+    tbl
+    [ SpecialLocationParkingFeeExemptionEnabled =. val parkingFeeExemptionEnabled,
+      SpecialLocationUpdatedAt =. val now
+    ]
+  where_ $ tbl ^. SpecialLocationId ==. val specialLocationId.getId
 
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT

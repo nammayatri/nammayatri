@@ -154,3 +154,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN is_new boolean;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN exempt_parking_fee boolean  default false;
