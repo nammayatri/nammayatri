@@ -46,5 +46,5 @@ getFleetEngineDriverToken ::
 getFleetEngineDriverToken (personId, _, merchantOpCityId) = do
   (token, vehicleId, providerId) <-
     FleetEngine.mkDriverToken merchantOpCityId personId
-      >>= fromMaybeM (InternalError "Fleet Engine is not configured for this city")
+      >>= fromMaybeM (InvalidRequest "Fleet Engine is not configured for this city")
   pure FleetEngineDriverTokenRes {..}
