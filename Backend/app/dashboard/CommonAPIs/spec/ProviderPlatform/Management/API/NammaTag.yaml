@@ -222,7 +222,7 @@ apis:
       response:
         type: BulkLogicRolloutResult
       migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
+        capability: system-config.dynamic_logic.write
   - POST:
       endpoint: /appDynamicLogic/updateExperimentGroup
       auth: ApiAuthV2

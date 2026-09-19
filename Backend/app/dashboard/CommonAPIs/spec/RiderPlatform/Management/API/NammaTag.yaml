@@ -18,6 +18,9 @@ imports:
   CreateTimeBoundRequest: Lib.Yudhishthira.Types
   LogicRolloutObject: Lib.Yudhishthira.Types
   LogicRolloutReq: Lib.Yudhishthira.Types
+  MerchantCitiesEntry: Lib.Yudhishthira.Types
+  BulkLogicRolloutReq: Lib.Yudhishthira.Types
+  BulkLogicRolloutResult: Lib.Yudhishthira.Types
   UpdateRolloutGroupReq: Lib.Yudhishthira.Types
   RolloutGroupInfo: Lib.Yudhishthira.Types
   TimeBoundResp: Lib.Yudhishthira.Types
@@ -219,6 +222,15 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
+  - POST:
+      endpoint: /appDynamicLogic/bulkUpsertLogicRollout
+      auth: ApiAuthV2
+      request:
+        type: BulkLogicRolloutReq
+      response:
+        type: BulkLogicRolloutResult
+      migrate:
+        capability: system-config.dynamic_logic.write
   - POST:
       endpoint: /appDynamicLogic/updateExperimentGroup
       auth: ApiAuthV2
