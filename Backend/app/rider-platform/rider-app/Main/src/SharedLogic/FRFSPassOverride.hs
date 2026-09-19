@@ -32,6 +32,9 @@ module SharedLogic.FRFSPassOverride
     ConsumeResult (..),
     remainingTrips,
     benefitFromPass,
+    benefitForPayment,
+    isOverridePayment,
+    overrideConfigForPurchase,
     isUnlimitedBenefit,
     seededRemainingTrips,
     consumeTrip,
@@ -191,22 +194,38 @@ benefitFromPass pass = case pass.overrideBenefitConfigJson of
   Nothing -> do
     logError $ "FRFSPassOverride: pass is override-applicable but has no benefit config passId=" <> pass.id.getId
     pure Nothing
-  Just configJson -> case parseOverrideBenefitConfig configJson of
-    Left err -> do
-      logError $ "FRFSPassOverride: unparseable benefit config passId=" <> pass.id.getId <> " error=" <> show err
-      pure Nothing
-    Right config -> do
-      when (length config.overrideBenefits > 1) $
-        logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied passId=" <> pass.id.getId
-      case listToMaybe config.overrideBenefits of
-        Nothing -> do
-          logError $ "FRFSPassOverride: empty override_benefits passId=" <> pass.id.getId
+  Just configJson -> benefitFromConfig ("passId=" <> pass.id.getId) configJson
+
+benefitForPayment :: (Log m, MonadFlow m) => DPPP.PurchasedPassPayment -> DPass.Pass -> m (Maybe OverrideBenefit)
+benefitForPayment payment pass = case payment.overrideBenefitConfigJson of
+  Just configJson -> benefitFromConfig ("purchasedPassPaymentId=" <> payment.id.getId) configJson
+  Nothing -> benefitFromPass pass
+
+isOverridePayment :: DPPP.PurchasedPassPayment -> DPass.Pass -> Bool
+isOverridePayment payment pass = isJust payment.overrideBenefitConfigJson || pass.frfsPriceOverrideApplicable == Just True
+
+overrideConfigForPurchase :: (Log m, MonadFlow m) => DPass.Pass -> m (Maybe A.Value)
+overrideConfigForPurchase pass
+  | pass.frfsPriceOverrideApplicable /= Just True = pure Nothing
+  | otherwise = benefitFromPass pass <&> \mbBenefit -> mbBenefit *> pass.overrideBenefitConfigJson
+
+benefitFromConfig :: (Log m, MonadFlow m) => Text -> A.Value -> m (Maybe OverrideBenefit)
+benefitFromConfig source configJson = case parseOverrideBenefitConfig configJson of
+  Left err -> do
+    logError $ "FRFSPassOverride: unparseable benefit config " <> source <> " error=" <> show err
+    pure Nothing
+  Right config -> do
+    when (length config.overrideBenefits > 1) $
+      logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied " <> source
+    case listToMaybe config.overrideBenefits of
+      Nothing -> do
+        logError $ "FRFSPassOverride: empty override_benefits " <> source
+        pure Nothing
+      Just benefit -> case validateBenefit benefit of
+        Left reason -> do
+          logError $ "FRFSPassOverride: invalid benefit config, disqualifying pass " <> source <> " reason=" <> reason
           pure Nothing
-        Just benefit -> case validateBenefit benefit of
-          Left reason -> do
-            logError $ "FRFSPassOverride: invalid benefit config, disqualifying pass passId=" <> pass.id.getId <> " reason=" <> reason
-            pure Nothing
-          Right valid -> pure (Just valid)
+        Right valid -> pure (Just valid)
 
 isUnlimitedBenefit :: OverrideBenefit -> Bool
 isUnlimitedBenefit benefit = benefit.unlimitedTripCount == Just True
@@ -244,9 +263,9 @@ toCandidate payment = case payment.passId of
     CQPass.findById passId >>= \case
       Nothing -> pure Nothing
       Just pass
-        | pass.frfsPriceOverrideApplicable /= Just True -> pure Nothing
+        | not (isOverridePayment payment pass) -> pure Nothing
         | otherwise ->
-          benefitFromPass pass >>= \case
+          benefitForPayment payment pass >>= \case
             Nothing -> pure Nothing
             Just benefit -> do
               availableTripCount <- remainingTrips payment benefit
@@ -403,15 +422,8 @@ passForOverrideAppliedEntity (Just entityId) = do
       Just passId -> fmap (payment,) <$> CQPass.findById passId
 
 benefitForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe OverrideBenefit)
-benefitForOverrideAppliedEntity Nothing = pure Nothing
-benefitForOverrideAppliedEntity (Just entityId) = do
-  mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
-  case mbPayment >>= (.passId) of
-    Nothing -> pure Nothing
-    Just passId ->
-      CQPass.findById passId >>= \case
-        Nothing -> pure Nothing
-        Just pass -> benefitFromPass pass
+benefitForOverrideAppliedEntity mbEntityId =
+  passForOverrideAppliedEntity mbEntityId >>= maybe (pure Nothing) (uncurry benefitForPayment)
 
 data ConsumeResult
   = Consumed Int
@@ -882,7 +894,7 @@ refundPassOverrideTrip searchId paymentId quantity = do
   case mbPayment of
     Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip payment not found paymentId=" <> paymentId.getId
     Just payment -> do
-      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) benefitFromPass) payment.passId
+      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) (benefitForPayment payment)) payment.passId
       case mbBenefit of
         Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip no benefit config, nothing to give back paymentId=" <> paymentId.getId
         Just benefit -> do

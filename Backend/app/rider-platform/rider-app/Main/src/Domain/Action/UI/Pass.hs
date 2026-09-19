@@ -359,6 +359,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         return newPurchasedPassId
 
   mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
+  mbOverrideBenefitConfig <- FRFSPassOverride.overrideConfigForPurchase pass
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -385,6 +386,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passPhotoChangeCount = Just 0,
             activatedAt = Nothing,
             clientSdkVersion = person.clientSdkVersion,
+            overrideBenefitConfigJson = mbOverrideBenefitConfig,
             createdAt = now,
             updatedAt = now
           }
@@ -999,7 +1001,9 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         listToMaybe . sortOn (Down . (.endDate)) . filter ((== DPurchasedPass.Expired) . (.status))
           <$> QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
   mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbPayment >>= (.passId))
-  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
+  mbBenefit <- case (mbPayment, mbOverridePass) of
+    (Just payment, Just overridePass) -> FRFSPassOverride.benefitForPayment payment overridePass
+    _ -> pure Nothing
   availableTripCount <- case (mbPayment, mbBenefit) of
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
@@ -1791,7 +1795,7 @@ availableTripCountForPayment ::
   m (Maybe Int)
 availableTripCountForPayment payment = do
   mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
-  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
+  mbBenefit <- maybe (pure Nothing) (FRFSPassOverride.benefitForPayment payment) mbPass
   maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
 
 -- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
@@ -1810,10 +1814,10 @@ allowsOverlappingPurchase ::
 allowsOverlappingPurchase payment =
   maybe (pure Nothing) CQPass.findById payment.passId >>= \case
     Just pass
-      -- Guarded before benefitFromPass: that logs an error for a pass with no override config,
+      -- Guarded before benefitForPayment: that logs an error for a pass with no override config,
       -- and every gate runs this over passes that legitimately have none.
-      | pass.frfsPriceOverrideApplicable == Just True ->
-        FRFSPassOverride.benefitFromPass pass >>= \case
+      | FRFSPassOverride.isOverridePayment payment pass ->
+        FRFSPassOverride.benefitForPayment payment pass >>= \case
           Nothing -> pure False
           Just benefit -> do
             mbRemaining <- FRFSPassOverride.remainingTrips payment benefit
