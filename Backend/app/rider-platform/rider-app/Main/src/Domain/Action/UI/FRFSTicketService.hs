@@ -1978,8 +1978,18 @@ postFrfsFleetOperatorTripAction ::
 postFrfsFleetOperatorTripAction (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
   personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
-  baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
-  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  postFrfsFleetOperatorTripAction' (merchantId, personCityInfo.merchantOperatingCityId) req
+
+-- | City-anchored variant for the dashboard, which has no logged-in customer to derive the operating city from.
+postFrfsFleetOperatorTripAction' ::
+  ( Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id DMOC.MerchantOperatingCity
+  ) ->
+  FRFSTicketService.FleetOperatorTripActionReq ->
+  Environment.Flow FRFSTicketService.FleetOperatorTripActionResp
+postFrfsFleetOperatorTripAction' (merchantId, merchantOperatingCityId) req = do
+  baseUrl <- MM.getOTPRestServiceReq merchantId merchantOperatingCityId
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   let gtfsId = bppConfig.feedKey
       anchor =
         GimsOperationAnchor
@@ -2202,8 +2212,18 @@ postFrfsFleetOperatorCurrentOperation ::
 postFrfsFleetOperatorCurrentOperation (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
   personCityInfo <- CQP.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
-  baseUrl <- MM.getOTPRestServiceReq merchantId personCityInfo.merchantOperatingCityId
-  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig personCityInfo.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  postFrfsFleetOperatorCurrentOperation' (merchantId, personCityInfo.merchantOperatingCityId) req
+
+-- | City-anchored variant for the dashboard, which has no logged-in customer to derive the operating city from.
+postFrfsFleetOperatorCurrentOperation' ::
+  ( Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id DMOC.MerchantOperatingCity
+  ) ->
+  FRFSTicketService.FleetOperatorCurrentOperationReq ->
+  Environment.Flow FRFSTicketService.FleetOperatorCurrentOperationResp
+postFrfsFleetOperatorCurrentOperation' (merchantId, merchantOperatingCityId) req = do
+  baseUrl <- MM.getOTPRestServiceReq merchantId merchantOperatingCityId
+  bppConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   let gtfsId = bppConfig.feedKey
       anchor =
         GimsOperationAnchor

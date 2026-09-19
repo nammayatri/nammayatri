@@ -192,6 +192,7 @@ library
       Domain.Action.Dashboard.AppManagement.EDCMachine
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
+      Domain.Action.Dashboard.AppManagement.FrfsFleetOperator
       Domain.Action.Dashboard.AppManagement.FRFSTicketService
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
@@ -892,6 +893,7 @@ library
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EDCMachine
       API.Action.Dashboard.AppManagement.EventManagement
+      API.Action.Dashboard.AppManagement.FrfsFleetOperator
       API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
@@ -1006,6 +1008,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Customer
       API.Types.Dashboard.AppManagement.Endpoints.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
+      API.Types.Dashboard.AppManagement.Endpoints.FrfsFleetOperator
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
@@ -1019,6 +1022,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.TransitOperator
       API.Types.Dashboard.AppManagement.Endpoints.VehicleSeatLayoutMapping
       API.Types.Dashboard.AppManagement.EventManagement
+      API.Types.Dashboard.AppManagement.FrfsFleetOperator
       API.Types.Dashboard.AppManagement.FRFSTicketService
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
