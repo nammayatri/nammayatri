@@ -38,7 +38,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
-import Data.List (sortOn)
+import Data.List (partition, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -172,17 +172,21 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
         logError $ "getMultimodalPassAvailablePasses: no enabled passes for passTypeId " <> passType.id.getId
       return (passType, passes)
 
-    let flatPasses = concatMap snd allPasses
+    let (dynamicPasses, fixedPasses) = partition FRFSPassOverride.isDynamicallyPriced (concatMap snd allPasses)
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
-    passAPIEntities <- flip mapMaybeM flatPasses $ \pass ->
+    passAPIEntities <- flip mapMaybeM fixedPasses $ \pass ->
       withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
         >>= either (const (pure Nothing)) (pure . mfilter (.eligibility) . Just)
+    dynamicPricedPassAPIEntities <- flip mapMaybeM dynamicPasses $ \pass ->
+      withTryCatch ("getMultimodalPassAvailablePasses:buildDynamicPricedPassAPIEntity:" <> pass.id.getId) (buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass)
+        >>= either (const (pure Nothing)) (pure . mfilter (.eligibility))
 
     return $
       PassAPI.PassInfoAPIEntity
         { passCategory = buildPassCategoryAPIEntity category,
           passTypes = map (buildPassTypeAPIEntity . fst) allPasses,
-          passes = passAPIEntities
+          passes = passAPIEntities,
+          dynamicPricedPasses = dynamicPricedPassAPIEntities
         }
 
 postMultimodalPassSelectUtil ::
@@ -207,6 +211,8 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+  when (FRFSPassOverride.isDynamicallyPriced pass) $
+    throwError (InvalidRequest "Pass is priced per route; source, destination and trip count are required")
 
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
@@ -699,6 +705,8 @@ createPassCatalog merchantShortId opCity req = do
             frfsCancelLimit = Nothing,
             frfsPriceOverrideApplicable = Nothing,
             overrideBenefitConfigJson = Nothing,
+            dynamicPricingEnabled = Nothing,
+            dynamicPricingConfigJson = Nothing,
             merchantId = merchant.id,
             merchantOperatingCityId = merchantOperatingCity.id,
             createdAt = now,
@@ -770,6 +778,15 @@ mkFrfsOverrideConfig benefit =
       maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
     }
 
+mkDynamicPricingConfig :: FRFSPassOverride.DynamicPricingConfig -> PassAPI.DynamicPricingConfigAPIEntity
+mkDynamicPricingConfig pricing =
+  PassAPI.DynamicPricingConfigAPIEntity
+    { percentageSaving = pricing.percentageSaving >>= \p -> if p.enabled == Just True then Just p.applicableValue else Nothing,
+      fixedSaving = pricing.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
+      primaryServiceTier = pricing.primaryServiceTier,
+      maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount
+    }
+
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
 findMerchantOperatingCity merchantShortId opCity =
   CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
@@ -810,6 +827,72 @@ resolvePassEligibility person pass = do
     TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
   SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics (SLE.mkPassEligibilityData person pass passType mbPassDetails)
 
+data PassListing = PassListing
+  { listingPassDetails :: Maybe DPassDetails.PassDetails,
+    listingEligibility :: Bool,
+    listingName :: Maybe Text,
+    listingBenefitDescription :: Text,
+    listingDescription :: Maybe Text
+  }
+
+buildPassListing ::
+  Maybe Lang.Language ->
+  DP.Person ->
+  [A.Value] ->
+  DPass.Pass ->
+  Environment.Flow PassListing
+buildPassListing mbLanguage person eligibilityLogics pass = do
+  passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
+  mbPassDetails <- findEligibilityPassDetails person passType
+  eligibilityResult <- SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics (SLE.mkPassEligibilityData person pass passType mbPassDetails)
+  let language = fromMaybe Lang.ENGLISH mbLanguage
+  let moid = person.merchantOperatingCityId
+  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language))
+  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language))
+  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language))
+  pure
+    PassListing
+      { listingPassDetails = mbPassDetails,
+        listingEligibility = eligibilityResult.eligible,
+        listingName = maybe pass.name (Just . (.message)) nameTranslation,
+        listingBenefitDescription = maybe pass.benefitDescription (.message) benefitTranslation,
+        listingDescription = maybe pass.description (Just . (.message)) descriptionTranslation
+      }
+
+buildDynamicPricedPassAPIEntity ::
+  Maybe Lang.Language ->
+  DP.Person ->
+  [A.Value] ->
+  DPass.Pass ->
+  Environment.Flow (Maybe PassAPI.DynamicPricedPassAPIEntity)
+buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
+  FRFSPassOverride.dynamicPricingFromPass pass >>= \case
+    Nothing -> pure Nothing
+    Just pricing -> do
+      listing <- buildPassListing mbLanguage person eligibilityLogics pass
+      pure . Just $
+        PassAPI.DynamicPricedPassAPIEntity
+          { id = pass.id,
+            code = pass.code,
+            name = listing.listingName,
+            description = listing.listingDescription,
+            benefitDescription = listing.listingBenefitDescription,
+            vehicleServiceTierType = pass.applicableVehicleServiceTiers,
+            vehicleType = pass.vehicleType,
+            maxDays = pass.maxValidDays,
+            dynamicPricingConfig = mkDynamicPricingConfig pricing,
+            frfsCancelLimit = pass.frfsCancelLimit,
+            documentsRequired = pass.documentsRequired,
+            eligibility = listing.listingEligibility,
+            autoApply = pass.autoApply,
+            verificationStatus = (.verificationStatus) <$> listing.listingPassDetails,
+            formVerificationConfig = pass.formVerificationConfig,
+            referenceNumber = (.referenceNumber) =<< listing.listingPassDetails,
+            minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
+            minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
+            timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
+          }
+
 buildPassAPIEntity ::
   Maybe Lang.Language ->
   DP.Person ->
@@ -817,12 +900,9 @@ buildPassAPIEntity ::
   DPass.Pass ->
   Environment.Flow PassAPI.PassAPIEntity
 buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
-  passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
-
-  mbPassDetails <- findEligibilityPassDetails person passType
-
-  eligibilityResult <- SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics (SLE.mkPassEligibilityData person pass passType mbPassDetails)
-  let eligibility = eligibilityResult.eligible
+  listing <- buildPassListing mbLanguage person eligibilityLogics pass
+  let mbPassDetails = listing.listingPassDetails
+  let eligibility = listing.listingEligibility
 
   -- Get pass amount: use pricing tiers if verified organization holder, else default pass amount
   let mbTierAmount = do
@@ -839,15 +919,6 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
           _ -> Nothing
 
   let passAmount = fromMaybe pass.amount mbTierAmount
-
-  let language = fromMaybe Lang.ENGLISH mbLanguage
-  let moid = person.merchantOperatingCityId
-  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language))
-  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language))
-  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language))
-  let name = maybe pass.name (Just . (.message)) nameTranslation
-  let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
-  let description = maybe pass.description (Just . (.message)) descriptionTranslation
 
   offer <-
     withTryCatch "getMultimodalPassAvailablePasses:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DOrder.FRFSPassPurchase (mkPrice (Just INR) pass.amount) (case pass.applicableVehicleServiceTiers of [] -> Nothing; tiers -> Just $ T.intercalate "-" $ EHS.sort $ map show tiers))
@@ -875,7 +946,7 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         originalAmount,
         savings = Nothing, -- TODO: Calculate based on benefit
         benefit = pass.benefit,
-        benefitDescription = benefitDescription,
+        benefitDescription = listing.listingBenefitDescription,
         vehicleServiceTierType = pass.applicableVehicleServiceTiers,
         vehicleType = pass.vehicleType,
         maxTrips = pass.maxValidTrips,
@@ -884,8 +955,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         frfsCancelLimit = pass.frfsCancelLimit,
         documentsRequired = pass.documentsRequired,
         eligibility = eligibility,
-        name = name,
-        description = description,
+        name = listing.listingName,
+        description = listing.listingDescription,
         code = pass.code,
         offer,
         autoApply = pass.autoApply,

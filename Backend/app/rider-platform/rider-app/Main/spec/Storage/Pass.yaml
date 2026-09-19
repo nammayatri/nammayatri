@@ -63,6 +63,8 @@ Pass:
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
     timeOverlappingFrfsBookingsLimit: Maybe Int
+    dynamicPricingEnabled: Maybe Bool
+    dynamicPricingConfigJson: Maybe Value
 
   beamFields:
     passConfig:
@@ -95,6 +97,7 @@ Pass:
     pricingTiers: jsonb
     formVerificationConfig: jsonb
     overrideBenefitConfigJson: jsonb
+    dynamicPricingConfigJson: jsonb
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -148,3 +148,9 @@ ALTER TABLE atlas_app.pass ADD COLUMN min_days_to_suggest_renewal integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass ADD COLUMN time_overlapping_frfs_bookings_limit integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN dynamic_pricing_enabled boolean ;
+ALTER TABLE atlas_app.pass ADD COLUMN dynamic_pricing_config_json jsonb ;

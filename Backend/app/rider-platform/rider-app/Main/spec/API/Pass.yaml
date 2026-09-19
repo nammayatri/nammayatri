@@ -81,10 +81,40 @@ types:
     timeOverlappingFrfsBookingsLimit: Maybe Int
     derive: "Show"
 
+  DynamicPricingConfigAPIEntity:
+    percentageSaving: Maybe HighPrecMoney
+    fixedSaving: Maybe HighPrecMoney
+    primaryServiceTier: ServiceTierType
+    maximumPurchaseableTripCount: Int
+    derive: "Show"
+
+  DynamicPricedPassAPIEntity:
+    id: Id Pass
+    code: Text
+    name: Maybe Text
+    description: Maybe Text
+    benefitDescription: Text
+    vehicleServiceTierType: "[ServiceTierType]"
+    vehicleType: VehicleCategory
+    maxDays: Maybe Int
+    dynamicPricingConfig: DynamicPricingConfigAPIEntity
+    frfsCancelLimit: Maybe Int
+    documentsRequired: "[PassDocumentType]"
+    eligibility: Bool
+    autoApply: Bool
+    verificationStatus: Maybe VerificationStatus
+    formVerificationConfig: Maybe Value
+    referenceNumber: Maybe Int
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    derive: "Show"
+
   PassInfoAPIEntity:
     passCategory: PassCategoryAPIEntity
     passTypes: "[PassTypeAPIEntity]"
     passes: "[PassAPIEntity]"
+    dynamicPricedPasses: "[DynamicPricedPassAPIEntity]"
     derive: "Show"
 
   PassVerifyReq:

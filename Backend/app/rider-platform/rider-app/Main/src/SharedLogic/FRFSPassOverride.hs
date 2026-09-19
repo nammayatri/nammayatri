@@ -3,6 +3,9 @@ module SharedLogic.FRFSPassOverride
     OverrideBenefit (..),
     PercentageSaving (..),
     FixedSaving (..),
+    DynamicPricingConfig (..),
+    isDynamicallyPriced,
+    dynamicPricingFromPass,
     ApplicablePass (..),
     PassOption (..),
     mkPassOptionAPIEntity,
@@ -130,6 +133,59 @@ instance FromJSON FixedSaving where
 
 instance ToJSON FixedSaving where
   toJSON = A.genericToJSON constructorsWithSnakeCase
+
+data DynamicPricingConfig = DynamicPricingConfig
+  { percentageSaving :: Maybe PercentageSaving,
+    fixedSaving :: Maybe FixedSaving,
+    primaryServiceTier :: Spec.ServiceTierType,
+    maximumPurchaseableTripCount :: Int
+  }
+  deriving (Generic, Show)
+
+instance FromJSON DynamicPricingConfig where
+  parseJSON = A.genericParseJSON constructorsWithSnakeCase
+
+instance ToJSON DynamicPricingConfig where
+  toJSON = A.genericToJSON constructorsWithSnakeCase
+
+isDynamicallyPriced :: DPass.Pass -> Bool
+isDynamicallyPriced pass = pass.dynamicPricingEnabled == Just True
+
+dynamicPricingFromPass :: (Log m, MonadFlow m) => DPass.Pass -> m (Maybe DynamicPricingConfig)
+dynamicPricingFromPass pass
+  | not (isDynamicallyPriced pass) = pure Nothing
+  | otherwise = case pass.dynamicPricingConfigJson of
+    Nothing -> do
+      logError $ "FRFSPassOverride: pass is dynamically priced but has no pricing config passId=" <> pass.id.getId
+      pure Nothing
+    Just configJson -> case A.fromJSON configJson of
+      A.Error err -> do
+        logError $ "FRFSPassOverride: unparseable dynamic pricing config passId=" <> pass.id.getId <> " error=" <> show err
+        pure Nothing
+      A.Success config -> case validateDynamicPricing config of
+        Left reason -> do
+          logError $ "FRFSPassOverride: invalid dynamic pricing config passId=" <> pass.id.getId <> " reason=" <> reason
+          pure Nothing
+        Right valid -> pure (Just valid)
+
+validateDynamicPricing :: DynamicPricingConfig -> Either Text DynamicPricingConfig
+validateDynamicPricing config
+  | percentageOn && fixedOn =
+    Left "both percentage_saving and fixed_saving are enabled; at most one may be"
+  | Just p <- config.percentageSaving,
+    percentageOn,
+    p.applicableValue <= 0 || p.applicableValue >= 100 =
+    Left $ "percentage_saving.applicable_value must be in (0, 100), got " <> show p.applicableValue
+  | Just f <- config.fixedSaving,
+    fixedOn,
+    f.applicableValue <= 0 =
+    Left $ "fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
+  | config.maximumPurchaseableTripCount <= 0 =
+    Left $ "maximum_purchaseable_trip_count must be positive, got " <> show config.maximumPurchaseableTripCount
+  | otherwise = Right config
+  where
+    percentageOn = maybe False ((== Just True) . (.enabled)) config.percentageSaving
+    fixedOn = maybe False ((== Just True) . (.enabled)) config.fixedSaving
 
 isFullyPassCovered :: Maybe HighPrecMoney -> Bool
 isFullyPassCovered = maybe False (<= 0)
