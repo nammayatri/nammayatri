@@ -33,6 +33,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Data.Aeson.Value,
     passCode :: Kernel.Prelude.Text,
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),

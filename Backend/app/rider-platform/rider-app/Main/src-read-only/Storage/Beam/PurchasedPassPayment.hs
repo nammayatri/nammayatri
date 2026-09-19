@@ -3,6 +3,7 @@
 
 module Storage.Beam.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -28,6 +29,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     orderId :: B.C f Kernel.Prelude.Text,
+    overrideBenefitConfigJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     passCode :: B.C f Kernel.Prelude.Text,
     passEnum :: B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum),
     passId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
