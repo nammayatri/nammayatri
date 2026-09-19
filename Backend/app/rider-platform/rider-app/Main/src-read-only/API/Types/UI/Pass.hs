@@ -26,6 +26,39 @@ import Servant
 import qualified SharedLogic.Offer
 import Tools.Auth
 
+data DynamicPricedPassAPIEntity = DynamicPricedPassAPIEntity
+  { autoApply :: Kernel.Prelude.Bool,
+    benefitDescription :: Data.Text.Text,
+    code :: Data.Text.Text,
+    description :: Data.Maybe.Maybe Data.Text.Text,
+    documentsRequired :: [Domain.Types.Pass.PassDocumentType],
+    dynamicPricingConfig :: DynamicPricingConfigAPIEntity,
+    eligibility :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Data.Maybe.Maybe Data.Aeson.Value,
+    frfsCancelLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
+    maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    minDaysToSuggestRenewal :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    minTripsAllowingOverlap :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    name :: Data.Maybe.Maybe Data.Text.Text,
+    referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    timeOverlappingFrfsBookingsLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DynamicPricingConfigAPIEntity = DynamicPricingConfigAPIEntity
+  { fixedSaving :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    maximumPurchaseableTripCount :: Kernel.Prelude.Int,
+    percentageSaving :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    primaryServiceTier :: BecknV2.FRFS.Enums.ServiceTierType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
   { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -68,6 +101,21 @@ data PassAPIEntity = PassAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassCalculatePriceReq = PassCalculatePriceReq {destinationStopCode :: Data.Text.Text, numberOfTrips :: Kernel.Prelude.Int, sourceStopCode :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassCalculatePriceResp = PassCalculatePriceResp
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    numberOfTrips :: Kernel.Prelude.Int,
+    perTripPrice :: Kernel.Types.Common.HighPrecMoney,
+    referenceFare :: Kernel.Types.Common.HighPrecMoney,
+    routesConsidered :: Kernel.Prelude.Int,
+    serviceTier :: BecknV2.FRFS.Enums.ServiceTierType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassCategoryAPIEntity = PassCategoryAPIEntity {description :: Data.Text.Text, id :: Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory, name :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -76,14 +124,17 @@ data PassDetailsAPIEntity = PassDetailsAPIEntity {category :: PassCategoryAPIEnt
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntity, passTypes :: [PassTypeAPIEntity], passes :: [PassAPIEntity]}
+data PassInfoAPIEntity = PassInfoAPIEntity {dynamicPricedPasses :: [DynamicPricedPassAPIEntity], passCategory :: PassCategoryAPIEntity, passTypes :: [PassTypeAPIEntity], passes :: [PassAPIEntity]}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassSelectReq = PassSelectReq
-  { imeiNumber :: Data.Text.Text,
+  { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    imeiNumber :: Data.Text.Text,
+    numberOfTrips :: Data.Maybe.Maybe Kernel.Prelude.Int,
     passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
+    sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
     startDate :: Data.Time.Day
   }
   deriving stock (Generic)
