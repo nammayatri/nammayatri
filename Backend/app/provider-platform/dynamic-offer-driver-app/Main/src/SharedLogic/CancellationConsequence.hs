@@ -55,6 +55,7 @@ data ConsequenceInput = ConsequenceInput
     faultVerdict :: Maybe CancellationFault.FaultVerdict,
     cancelledBy :: DCT2.CancellationType,
     tripCategory :: DTC.TripCategory,
+    isScheduled :: Bool,
     isAutoAccepted :: Maybe Bool,
     vehicleServiceTier :: DTC.ServiceTierType,
     area :: Maybe SL.Area,
@@ -80,6 +81,7 @@ resolveConsequence input = do
           && dimMatches row.faultRule eventRule
           && dimMatches row.cancelledBy (Just input.cancelledBy)
           && dimMatches row.tripCategory (Just input.tripCategory)
+          && dimMatches row.isScheduled (Just input.isScheduled)
           && dimMatches row.isAutoAccepted input.isAutoAccepted
           && dimMatches row.vehicleServiceTier (Just input.vehicleServiceTier)
           && dimMatches row.area input.area
@@ -123,17 +125,21 @@ timeBoundMatches :: DCCM.CancellationConsequenceMatrix -> UTCTime -> Bool
 timeBoundMatches row localTime =
   row.timeBounds == TB.Unbounded || not (null (TB.findBoundedDomain [row] localTime))
 
--- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > isAutoAccepted
--- > vehicleServiceTier > area/paymentInstrument > driverRating band > timeBounds.
+-- fixed precedence: faultRule > faultVerdict > cancelledBy > tripCategory > isScheduled
+-- > isAutoAccepted > vehicleServiceTier > area/paymentInstrument > driverRating band
+-- > timeBounds. isScheduled ranks next to tripCategory (not isAutoAccepted): both are
+-- always-known, non-nullable Booking fields, matched via "row set requires an event
+-- value"; isAutoAccepted is nullable on Booking itself and matched Maybe-to-Maybe.
 -- Rating band and time are the LEAST significant on purpose: they are conditional
 -- overrides of an otherwise-identical base row, never a trump over a more specific
 -- dimension match.
-specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Int, Bool, Bool)
+specificity :: DCCM.CancellationConsequenceMatrix -> (Bool, Bool, Bool, Bool, Bool, Bool, Bool, Int, Bool, Bool)
 specificity row =
   ( isJust row.faultRule,
     isJust row.faultVerdict,
     isJust row.cancelledBy,
     isJust row.tripCategory,
+    isJust row.isScheduled,
     isJust row.isAutoAccepted,
     isJust row.vehicleServiceTier,
     fromEnum (isJust row.area) + fromEnum (isJust row.paymentInstrument),
@@ -163,6 +169,7 @@ buildConsequenceInputFromBooking booking mbFaultVerdict cancelledBy timeDiffFrom
         faultVerdict = mbFaultVerdict,
         cancelledBy = cancelledBy,
         tripCategory = booking.tripCategory,
+        isScheduled = booking.isScheduled,
         isAutoAccepted = booking.isAutoAccepted,
         vehicleServiceTier = booking.vehicleServiceTier,
         area = booking.area,

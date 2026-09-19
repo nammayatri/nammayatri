@@ -36,6 +36,7 @@ data CancellationConsequenceMatrixT f = CancellationConsequenceMatrixT
     faultVerdict :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isAutoAccepted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxDriverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     maxWaiveOffsPerPeriod :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,

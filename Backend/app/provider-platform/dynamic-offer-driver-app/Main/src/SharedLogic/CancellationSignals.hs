@@ -43,6 +43,9 @@ data CancellationSignals = CancellationSignals
     initialDistanceToPickup :: Maybe Meters,
     currentDistanceToPickup :: Maybe Meters,
     isAdvanceBooking :: Bool,
+    -- the booking's own isScheduled flag — distinct from isAdvanceBooking above, which
+    -- actually means "driver chained from a prior ride's drop location"
+    isScheduled :: Bool,
     isPickupOrDestinationEdited :: Bool,
     -- pickup journey (see SharedLogic.BehaviourManagement.PickupStallState): what the
     -- driver was doing when the cancel landed, how much of the pickup phase he provably
@@ -62,6 +65,7 @@ data CancellationSignalsReq = CancellationSignalsReq
     fallbackDurationToPickup :: Maybe Seconds,
     initialDisToPickup :: Maybe Meters,
     cancellationDisToPickup :: Maybe Meters,
+    isScheduled :: Bool,
     arrivedPickupThreshold :: HighPrecMeters,
     -- False = scheduled ride in a city without the Behaviour Engine opt-in: the journey stays
     -- capture-only (ride columns) and never feeds the fault-verdict/coin pipelines.
@@ -93,6 +97,7 @@ buildCancellationSignals req = do
       initialDistanceToPickup = req.initialDisToPickup
       currentDistanceToPickup = req.cancellationDisToPickup
       isAdvanceBooking = req.ride.isAdvanceBooking
+      isScheduled = req.isScheduled
       isPickupOrDestinationEdited = fromMaybe False req.ride.isPickupOrDestinationEdited
       pickupBehaviour = mbPickupJourney <&> \journey -> PickupStallState.behaviourLabel journey.behaviour
       pickupFaultSeconds = maybe 0 (.faultSeconds) mbPickupJourney

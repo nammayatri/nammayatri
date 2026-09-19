@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN ti
 
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN min_driver_rating double precision ;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN max_driver_rating double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_consequence_matrix ADD COLUMN is_scheduled boolean ;

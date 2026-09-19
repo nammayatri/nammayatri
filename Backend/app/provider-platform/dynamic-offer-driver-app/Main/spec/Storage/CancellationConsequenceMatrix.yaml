@@ -17,9 +17,13 @@ imports:
 # (CANCELLATION_FAULT_VERDICT). The matrix is AUTHORITATIVE: no matching row means no
 # consequences (logged), there is no fallback.
 #
-# Dimensions (null = wildcard), resolved most-specific-wins with fixed weights:
-#   faultRule (32) > faultVerdict (16) > cancelledBy (8) > tripCategory (4)
-#     > vehicleServiceTier (2) > area (1) + paymentInstrument (1)
+# Dimensions (null = wildcard), resolved most-specific-wins (see `specificity` in
+# SharedLogic.CancellationConsequence, the ground truth for this ordering):
+#   faultRule > faultVerdict > cancelledBy > tripCategory > isScheduled > isAutoAccepted
+#     > vehicleServiceTier > area + paymentInstrument > driverRating band > timeBounds
+# isScheduled ranks next to tripCategory (not isAutoAccepted) because, like tripCategory,
+# it's an always-known, non-nullable Booking field (matched via "row dimension set requires
+# an event value"); isAutoAccepted is nullable on Booking itself and matched Maybe-to-Maybe.
 # faultVerdict values: show FaultParty (DriverAtFault/CustomerAtFault/SharedFault/NoFault).
 # cancelledBy values: show CancellationType (CancellationByDriver/CancellationByCustomer).
 # faultRule values: names from cancellation_fault_rule_registry (global).
@@ -47,6 +51,7 @@ CancellationConsequenceMatrix:
     faultRule: Maybe Text
     cancelledBy: Maybe CancellationType
     tripCategory: Maybe TripCategory
+    isScheduled: Maybe Bool
     isAutoAccepted: Maybe Bool
     vehicleServiceTier: Maybe ServiceTierType
     area: Maybe Area
