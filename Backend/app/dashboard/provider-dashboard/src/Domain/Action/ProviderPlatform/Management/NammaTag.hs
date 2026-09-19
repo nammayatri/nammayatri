@@ -41,6 +41,7 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
     getNammaTagConfigPilotGetDimensionSchema,
     postNammaTagConfigPilotCreateRow,
     postNammaTagAppDynamicLogicUpdateExperimentGroup,
+    postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
     getNammaTagAppDynamicLogicExperimentGroups,
   )
 where
@@ -58,6 +59,8 @@ import qualified Lib.BehaviorTracker.Types
 import qualified Lib.Yudhishthira.Types
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.Queries.Merchant
+import qualified Storage.Queries.MerchantAccess
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -286,3 +289,30 @@ getNammaTagAppDynamicLogicExperimentGroups :: (Kernel.Types.Id.ShortId Domain.Ty
 getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity apiTokenInfo domain = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogicExperimentGroups) domain
+
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.BulkLogicRolloutReq -> Environment.Flow Lib.Yudhishthira.Types.BulkLogicRolloutResult)
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  authorised <- Kernel.Prelude.forM req.merchantsAndCities $ \entry -> do
+    mbMerchant <- Storage.Queries.Merchant.findByShortId (Kernel.Types.Id.ShortId entry.merchantShortId)
+    case mbMerchant of
+      Kernel.Prelude.Nothing ->
+        Kernel.Prelude.pure ([], [Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityText "Merchant not found." | cityText <- entry.cities])
+      Kernel.Prelude.Just merchant -> do
+        checks <- Kernel.Prelude.forM entry.cities $ \cityText -> do
+          mbAccess <- Storage.Queries.MerchantAccess.findByPersonIdAndMerchantIdAndCity apiTokenInfo.personId merchant.id (Kernel.Types.Beckn.Context.City cityText)
+          Kernel.Prelude.pure $ case mbAccess of
+            Kernel.Prelude.Nothing -> Kernel.Prelude.Left (Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId cityText "You have no access to this operation.")
+            Kernel.Prelude.Just _ -> Kernel.Prelude.Right cityText
+        let allowedCities = [cityText | Kernel.Prelude.Right cityText <- checks]
+            denied = [failure | Kernel.Prelude.Left failure <- checks]
+        Kernel.Prelude.pure ([Lib.Yudhishthira.Types.MerchantCitiesEntry entry.merchantShortId allowedCities | not (null allowedCities)], denied)
+  let allowedEntries = concatMap fst authorised
+      deniedFailures = concatMap snd authorised
+  if null allowedEntries
+    then Kernel.Prelude.pure (Lib.Yudhishthira.Types.BulkLogicRolloutResult [] deniedFailures)
+    else do
+      let relayReq = Lib.Yudhishthira.Types.BulkLogicRolloutReq allowedEntries req.rollout
+      transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just relayReq)
+      result <- SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicBulkUpsertLogicRollout) relayReq)
+      Kernel.Prelude.pure (Lib.Yudhishthira.Types.BulkLogicRolloutResult result.succeeded (result.failures <> deniedFailures))

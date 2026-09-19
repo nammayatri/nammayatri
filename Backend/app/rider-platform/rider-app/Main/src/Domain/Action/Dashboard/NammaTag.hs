@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.NammaTag
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
     postNammaTagAppDynamicLogicUpsertLogicRollout,
+    postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
     postNammaTagAppDynamicLogicUpdateExperimentGroup,
     getNammaTagAppDynamicLogicExperimentGroups,
     getNammaTagTimeBounds,
@@ -551,6 +552,20 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
+
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.BulkLogicRolloutReq -> Environment.Flow LYTU.BulkLogicRolloutResult
+postNammaTagAppDynamicLogicBulkUpsertLogicRollout _authMerchantShortId _authOpCity req = do
+  results <- forM req.merchantsAndCities $ \entry ->
+    forM entry.cities $ \cityText -> do
+      let city = Kernel.Types.Beckn.Context.City cityText
+      attempt <- Prelude.try $ postNammaTagAppDynamicLogicUpsertLogicRollout (ShortId entry.merchantShortId) city req.rollout
+      case attempt of
+        Left (e :: SomeException) -> do
+          logError $ "bulkUpsertLogicRollout failed for " <> entry.merchantShortId <> "/" <> cityText <> ": " <> show e
+          pure $ Left (LYTU.BulkRolloutCityFailure entry.merchantShortId cityText "Failed to upsert rollout for this merchant and city.")
+        Right _ -> pure $ Right (entry.merchantShortId <> ":" <> cityText)
+  let flatResults = concat results
+  pure $ LYTU.BulkLogicRolloutResult [s | Right s <- flatResults] [f | Left f <- flatResults]
 
 postNammaTagAppDynamicLogicUpdateExperimentGroup :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UpdateRolloutGroupReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpdateExperimentGroup merchantShortId opCity req = do
