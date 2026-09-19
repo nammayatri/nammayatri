@@ -556,14 +556,13 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
 postNammaTagAppDynamicLogicBulkUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.BulkLogicRolloutReq -> Environment.Flow LYTU.BulkLogicRolloutResult
 postNammaTagAppDynamicLogicBulkUpsertLogicRollout _authMerchantShortId _authOpCity req = do
   results <- forM req.merchantsAndCities $ \entry ->
-    forM entry.cities $ \cityText -> do
-      let city = Kernel.Types.Beckn.Context.City cityText
+    forM entry.cities $ \city -> do
       attempt <- Prelude.try $ postNammaTagAppDynamicLogicUpsertLogicRollout (ShortId entry.merchantShortId) city req.rollout
       case attempt of
         Left (e :: SomeException) -> do
-          logError $ "bulkUpsertLogicRollout failed for " <> entry.merchantShortId <> "/" <> cityText <> ": " <> show e
-          pure $ Left (LYTU.BulkRolloutCityFailure entry.merchantShortId cityText "Failed to upsert rollout for this merchant and city.")
-        Right _ -> pure $ Right (entry.merchantShortId <> ":" <> cityText)
+          logError $ "bulkUpsertLogicRollout failed for " <> entry.merchantShortId <> "/" <> Text.pack (show city) <> ": " <> show e
+          pure $ Left (LYTU.BulkRolloutCityFailure entry.merchantShortId city "Failed to upsert rollout for this merchant and city.")
+        Right _ -> pure $ Right (entry.merchantShortId <> ":" <> Text.pack (show city))
   let flatResults = concat results
   pure $ LYTU.BulkLogicRolloutResult [s | Right s <- flatResults] [f | Left f <- flatResults]
 
