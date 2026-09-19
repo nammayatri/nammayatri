@@ -388,10 +388,47 @@ DRIVER_URL = os.environ.get("DRIVER_URL") or f"http://localhost:{_svc_port('dyna
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
-# Allowed --from values. The actual S3 bucket / per-direction version is owned
-# by config_transfer.py (DEFAULT_S3_PUBLIC_BUCKET + DEFAULT_FETCH_VERSIONS), so
-# there is only one source of truth for the fetch URL.
+# Allowed --from values. When no explicit version is picked, the bucket and
+# per-direction version are owned by config_transfer.py
+# (DEFAULT_S3_PUBLIC_BUCKET + DEFAULT_FETCH_VERSIONS) — one source of truth for
+# the default fetch URL.
 CONFIG_SYNC_ENVS = ("master", "prod", "prod_international")
+
+# Base URL for listing published versions. Mirrors config_transfer.py's
+# DEFAULT_CLOUDFRONT_URL / DEFAULT_S3_PUBLIC_BUCKET (same env vars, same
+# defaults) rather than importing it: config_transfer pulls in psycopg2 and
+# calls load_dotenv() at import time, neither of which belongs in this
+# long-running server. If those defaults move, they move here too.
+CONFIG_SYNC_PUBLIC_BASE = (
+    os.getenv("CONFIG_SYNC_CLOUDFRONT_URL", "")
+    or os.getenv("CONFIG_SYNC_PUBLIC_BUCKET_URL",
+                 "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com")
+)
+
+
+def _config_sync_direction_base(direction: str) -> str:
+    """Public S3 prefix for a direction, WITHOUT a version segment.
+    metadata.json lives at the direction root because it is never itself
+    versioned — same key layout DB Manager writes on publish."""
+    return f"{CONFIG_SYNC_PUBLIC_BASE.rstrip('/')}/{direction}"
+
+
+def _config_sync_fetch_versions(direction: str):
+    """GET <direction>/metadata.json — the list of versions DB Manager has
+    published for this direction. The bucket policy already allows anonymous
+    reads from the VPN, same as the zip fetch itself. A 404 just means nobody
+    has published this direction yet: an empty list, not an error."""
+    url = f"{_config_sync_direction_base(direction)}/metadata.json"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []
+        raise RuntimeError(f"fetching {url}: HTTP {e.code}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"cannot reach {url}: {e.reason} (VPN off?)")
+    return data.get("available_versions", [])
 CONFIG_SYNC_DEFAULT_FROM = os.environ.get("CONFIG_SYNC_DEFAULT_FROM", "prod")
 CONFIG_SYNC_MAX_LOG_LINES = 4000
 
@@ -414,6 +451,9 @@ def _load_last_synced():
 _config_sync_state = {
     "running": False,
     "from": None,
+    # The published version being imported, e.g. "v6". None means no explicit
+    # version was picked, so config_transfer.py's DEFAULT_FETCH_VERSIONS applies.
+    "version": None,
     "started_at": None,
     "finished_at": None,
     "exit_code": None,
@@ -524,13 +564,22 @@ def _restart_haskell_services():
     time.sleep(3)
 
 
-def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False):
+def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False,
+                    version: str | None = None):
     """Run `config_transfer.py import --from <env> --to local --fetch`.
     Streams stdout into _config_sync_state['log']. Restarts haskell services on success.
 
-    The fetch URL is resolved entirely inside config_transfer.py from its
-    DEFAULT_S3_PUBLIC_BUCKET + DEFAULT_FETCH_VERSIONS (overridable via
-    CONFIG_SYNC_CLOUDFRONT_URL / CONFIG_SYNC_FETCH_URL_<DIRECTION> env vars).
+    With no `version`, the fetch URL is resolved entirely inside
+    config_transfer.py from its DEFAULT_S3_PUBLIC_BUCKET +
+    DEFAULT_FETCH_VERSIONS (overridable via CONFIG_SYNC_CLOUDFRONT_URL /
+    CONFIG_SYNC_FETCH_URL_<DIRECTION> env vars) — i.e. whichever version is
+    baked into the script.
+
+    With a `version` (e.g. "v6", chosen from metadata.json), we point
+    --fetch-url straight at that version's prefix and force the download:
+    a plain --fetch would silently reuse whatever bundle is already cached at
+    DATA_DIR/<direction> from a previous import, ignoring the version the
+    user just picked.
 
     force_fetch=True passes `--force-fetch` so the importer ignores any
     previously-patched local bundle and re-downloads from S3."""
@@ -543,7 +592,7 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         if _config_sync_state["running"]:
             return
         _config_sync_state.update({
-            "running": True, "from": from_env,
+            "running": True, "from": from_env, "version": version,
             "started_at": time.time(), "finished_at": None,
             "exit_code": None, "error": None, "log": [],
         })
@@ -591,7 +640,11 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
             "--fetch",
             "--skip-feature-migrations",
         ]
-        if force_fetch:
+        if version:
+            direction = f"{from_env}_to_local"
+            import_args += ["--force-fetch", "--fetch-url",
+                            f"{_config_sync_direction_base(direction)}/{version}"]
+        elif force_fetch:
             import_args.append("--force-fetch")
         rc = _run("import", import_args)
         with _config_sync_lock:
@@ -654,14 +707,14 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
             _config_sync_state["finished_at"] = time.time()
 
 
-def trigger_config_sync(from_env: str, force_fetch: bool = False):
+def trigger_config_sync(from_env: str, force_fetch: bool = False, version: str | None = None):
     """Kick off a config-sync in a daemon thread. Returns True if accepted, False if one is already running."""
     with _config_sync_lock:
         if _config_sync_state["running"]:
             return False
     threading.Thread(
         target=run_config_sync,
-        kwargs={"from_env": from_env, "force_fetch": force_fetch},
+        kwargs={"from_env": from_env, "force_fetch": force_fetch, "version": version},
         daemon=True,
     ).start()
     return True
@@ -3421,6 +3474,34 @@ class ContextHandler(BaseHTTPRequestHandler):
             })
             return True
 
+        if method == "GET" and path == "/api/config-sync/versions":
+            # Versions DB Manager has published for this direction, read from
+            # <direction>/metadata.json on S3. Takes ?from=<env> (direction is
+            # always <from>_to_local here — this dashboard only seeds local).
+            # Local alias: a `from urllib.parse import parse_qs` further down
+            # this same function makes the module-level name local to the whole
+            # of _handle, so referring to it here would hit UnboundLocalError.
+            # Same workaround the other query-string handlers here already use.
+            from urllib.parse import parse_qs as _pq
+            qs = _pq(parsed.query)
+            from_env = (qs.get("from") or [CONFIG_SYNC_DEFAULT_FROM])[0]
+            if from_env not in CONFIG_SYNC_ENVS:
+                self._send_json({"error": f"unknown env '{from_env}'",
+                                 "envs": list(CONFIG_SYNC_ENVS)}, 400)
+                return True
+            direction = f"{from_env}_to_local"
+            try:
+                versions = _config_sync_fetch_versions(direction)
+            except RuntimeError as e:
+                # Unreachable S3 (VPN off) is not fatal — the caller can still
+                # sync without picking a version, falling back to
+                # config_transfer.py's built-in DEFAULT_FETCH_VERSIONS.
+                self._send_json({"direction": direction, "versions": [],
+                                 "error": str(e)}, 200)
+                return True
+            self._send_json({"direction": direction, "versions": versions})
+            return True
+
         if method == "GET" and path == "/api/ui-state":
             # Returns the entire ui-state dict. The dashboard reads this on
             # mount so dropdowns can be restored to whatever the user picked
@@ -3462,14 +3543,22 @@ class ContextHandler(BaseHTTPRequestHandler):
             body = self._read_json_body()
             from_env = body.get("from", CONFIG_SYNC_DEFAULT_FROM)
             force_fetch = bool(body.get("forceFetch", False))
+            # Optional: a specific published version (e.g. "v6") from
+            # /api/config-sync/versions. Omitted -> config_transfer.py's own
+            # DEFAULT_FETCH_VERSIONS, i.e. today's behaviour unchanged.
+            version = body.get("version") or None
             if from_env not in CONFIG_SYNC_ENVS:
                 self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_ENVS)}, 400)
                 return True
-            accepted = trigger_config_sync(from_env, force_fetch=force_fetch)
+            if version is not None and not re.fullmatch(r"v\d+", str(version)):
+                self._send_json({"error": f"invalid version '{version}' (expected e.g. 'v3')"}, 400)
+                return True
+            accepted = trigger_config_sync(from_env, force_fetch=force_fetch, version=version)
             if not accepted:
                 self._send_json({"error": "another config-sync is already running"}, 409)
                 return True
-            self._send_json({"started": True, "from": from_env, "forceFetch": force_fetch})
+            self._send_json({"started": True, "from": from_env,
+                             "forceFetch": force_fetch, "version": version})
             return True
 
         if method in ("GET", "POST") and path == "/api/integration-tests/seed-toll-dashboard":

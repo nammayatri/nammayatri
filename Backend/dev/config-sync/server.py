@@ -16,6 +16,12 @@ Endpoints:
     POST /patch                         body: {"from":"...", "to":"...", "s3":true,
                                                "s3_bucket":"...", "s3_prefix":"...",
                                                "schemas":[...]}
+    GET  /versions?direction=<d>        available published versions for a direction
+                                         (reads <bucket>/<direction>/metadata.json —
+                                         same file configTransfer.service.ts's
+                                         publishVersion() writes on the DB Manager side)
+    POST /import                        body: {"from":"...", "to":"local", "version":"v3",
+                                               "dry_run":false}
     GET  /tasks                         list known tasks (summaries)
     GET  /tasks/<id>                    status + captured stdout
     POST /tasks/<id>/stop               SIGTERM the running task (then SIGKILL after 5s)
@@ -31,10 +37,13 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 import uuid
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
 import config_transfer
 
@@ -205,6 +214,64 @@ def _patch_argv(body):
             "s3_prefix": body.get("s3_prefix")}, argv
 
 
+def _direction_base_url(direction):
+    """Public base URL for a direction's S3 prefix (bucket/direction) — NOT
+    including a version segment. Distinct from config_transfer.py's own
+    default_fetch_url_for(), which bakes in a specific hardcoded version;
+    metadata.json always lives one level up, at the direction root, since
+    it's never versioned itself (see configSyncMetadata.service.ts on the
+    DB Manager side — same key layout)."""
+    base = config_transfer.DEFAULT_CLOUDFRONT_URL or config_transfer.DEFAULT_S3_PUBLIC_BUCKET
+    return f"{base.rstrip('/')}/{direction}"
+
+
+def _fetch_versions(direction):
+    """GET <direction>/metadata.json over plain HTTPS — the bucket policy
+    already allows anonymous reads from the VPN (see AllowListFromVPN /
+    AllowGetPutFromVPN), same as fetch_patch_zip_from_cloudfront() does for
+    the zip itself. 404 just means nobody's published this direction yet —
+    not an error, just an empty list."""
+    url = f"{_direction_base_url(direction)}/metadata.json"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []
+        raise RuntimeError(f"fetching {url}: HTTP {e.code}")
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"cannot reach {url}: {e.reason} (VPN off?)")
+    return data.get("available_versions", [])
+
+
+def _import_argv(body):
+    src, dst = body.get("from"), body.get("to") or "local"
+    if src not in VALID_ENVS:
+        raise ValueError(f"'from' must be one of {sorted(VALID_ENVS)}, got {src!r}")
+    if dst not in VALID_ENVS:
+        raise ValueError(f"'to' must be one of {sorted(VALID_ENVS)}, got {dst!r}")
+    version = body.get("version")
+    if not version:
+        raise ValueError("'version' is required (e.g. 'v3') — GET /versions first")
+    direction = f"{src}_to_{dst}"
+    fetch_url = f"{_direction_base_url(direction)}/{version}"
+
+    argv = [sys.executable, str(CONFIG_TRANSFER), "import", "--from", src, "--to", dst,
+            # --force-fetch (not --fetch): the whole point of picking a
+            # version in the UI is that THIS version gets pulled — a plain
+            # --fetch would silently reuse whatever's already cached at
+            # DATA_DIR/<direction> from a previous import, ignoring the
+            # version the user just chose.
+            "--force-fetch", "--fetch-url", fetch_url]
+    if body.get("dry_run"):
+        argv += ["--dry-run"]
+    for s in body.get("schemas") or []:
+        argv += ["--schema", str(s)]
+    return {"from": src, "to": dst, "version": version,
+            "dry_run": bool(body.get("dry_run")),
+            "schemas": body.get("schemas")}, argv
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         sys.stderr.write("[%s] %s\n" % (self.log_date_time_string(), fmt % args))
@@ -238,10 +305,21 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(raw) if raw else {}
 
     def do_GET(self):
-        if self.path == "/healthz":
+        parsed = urlparse(self.path)
+        if parsed.path == "/healthz":
             return self._send_json(200, {"ok": True})
-        if self.path == "/sync-marker":
+        if parsed.path == "/sync-marker":
             return self._send_json(200, {"marker": _read_marker()})
+        if parsed.path == "/versions":
+            qs = parse_qs(parsed.query)
+            direction = (qs.get("direction") or [None])[0]
+            if not direction:
+                return self._send_json(400, {"error": "?direction=<from>_to_<to> is required"})
+            try:
+                versions = _fetch_versions(direction)
+            except RuntimeError as e:
+                return self._send_json(502, {"error": str(e)})
+            return self._send_json(200, {"direction": direction, "versions": versions})
         if self.path == "/tasks":
             with _TASKS_LOCK:
                 summary = [
@@ -289,6 +367,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json(400, {"error": str(e)})
             task_id = _spawn_task("patch", args, argv)
             self.log_message("started patch task %s: %s", task_id, shlex.join(argv))
+            return self._send_json(202, {"task_id": task_id, "status": "running"})
+
+        if self.path == "/import":
+            try:
+                args, argv = _import_argv(body)
+            except ValueError as e:
+                return self._send_json(400, {"error": str(e)})
+            task_id = _spawn_task("import", args, argv)
+            self.log_message("started import task %s: %s", task_id, shlex.join(argv))
             return self._send_json(202, {"task_id": task_id, "status": "running"})
 
         return self._send_json(404, {"error": f"no such route {self.path}"})
