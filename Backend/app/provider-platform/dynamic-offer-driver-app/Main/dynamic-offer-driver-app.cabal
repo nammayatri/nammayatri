@@ -558,6 +558,7 @@ library
       SharedLogic.AnalyticsExtra
       SharedLogic.Association.Change
       SharedLogic.Beckn.Common
+      SharedLogic.BehaviourManagement.AutoAcceptCancellation
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
       SharedLogic.BehaviourManagement.GpsTollBehavior

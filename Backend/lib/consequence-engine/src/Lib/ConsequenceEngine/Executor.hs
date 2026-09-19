@@ -78,6 +78,7 @@ executeConsequence entityId action = do
       ChargeFee params -> handleChargeFee entityId params
       IncrementCounter _ -> logDebug $ "INCREMENT_COUNTER skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
       AssignTag params -> handleAssignTag entityId params
+      OptOutAutoAssign params -> handleOptOutAutoAssign entityId params
   case result of
     Right () -> do
       logDebug $ "Successfully executed consequence " <> show action <> " for entity " <> entityId

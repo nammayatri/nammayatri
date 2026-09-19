@@ -24,6 +24,7 @@ module Lib.ConsequenceEngine.Types
     WarnParams (..),
     IncrementCounterParams (..),
     AssignTagParams (..),
+    OptOutAutoAssignParams (..),
     ConsequenceHandler (..),
     ConsequenceResult (..),
   )
@@ -55,6 +56,7 @@ data ConsequenceAction
   | ChargeFee ChargeFeeParams
   | IncrementCounter IncrementCounterParams
   | AssignTag AssignTagParams
+  | OptOutAutoAssign OptOutAutoAssignParams
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a nudge (warning only, no restrictions)
@@ -133,6 +135,12 @@ data AssignTagParams = AssignTagParams
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Parameters for opting an entity out of auto-assign in every tier
+data OptOutAutoAssignParams = OptOutAutoAssignParams
+  { reason :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 -- | Result of executing a consequence
 data ConsequenceResult = ConsequenceResult
   { action :: ConsequenceAction,
@@ -166,6 +174,10 @@ class (Monad m) => ConsequenceHandler m where
   -- Apps override to write their domain tag store (e.g. person.driver_tag).
   handleAssignTag :: Text -> AssignTagParams -> m ()
   handleAssignTag _ _ = pure ()
+
+  -- | Optional: opt the entity out of auto-assign. Default: no-op.
+  handleOptOutAutoAssign :: Text -> OptOutAutoAssignParams -> m ()
+  handleOptOutAutoAssign _ _ = pure ()
 
   -- | Optional: log/record the consequence for audit. Default: no-op.
   recordConsequence :: Text -> ConsequenceAction -> Value -> m ()

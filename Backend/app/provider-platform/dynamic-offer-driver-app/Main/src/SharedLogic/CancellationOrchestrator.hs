@@ -89,6 +89,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Analytics as Analytics
+import qualified SharedLogic.BehaviourManagement.AutoAcceptCancellation as AutoAcceptCancellation
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
@@ -242,6 +243,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyCancellationAnalytics
     applyDriverMoneyConsequence ctx.driver
     applyDriverCancellationRateCount ctx.driver
+    applyAutoAcceptCancellationBehaviour
   case resultE of
     Left err -> logError $ "applyImmediateConsequences failed for rideId " <> ctx.ride.id.getId <> ": " <> show err
     Right _ -> pure ()
@@ -292,6 +294,11 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
       when (ctx.source == SBCR.ByUser && countsTowardRate) $ do
         let windowSize = toInteger $ fromMaybe 7 ctx.transporterConfig.cancellationRateWindow
         void $ SCR.incrementCancelledCount ctx.ride.driverId windowSize
+
+    applyAutoAcceptCancellationBehaviour =
+      when (ctx.booking.isAutoAccepted == Just True) $
+        fork "autoAcceptCancellationBehaviour" $
+          AutoAcceptCancellation.recordAutoAcceptCancellation ctx.transporterConfig ctx.ride.driverId ctx.ride.merchantOperatingCityId ctx.ride.id ctx.booking.vehicleServiceTier (CancellationFault.mkFaultVerdictData ctx.decision.signals ctx.decision.cancelledBy ctx.decision.reasonCode) ctx.decision.faultVerdict
 
 -- | Customer-side money consequences, applied on every cancelled ride — including when
 -- the booking reallocates (the row decides whether the customer pays; on a reallocated
