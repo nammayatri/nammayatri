@@ -6,6 +6,10 @@
 #   ./setup.sh algeria  re-apply the Algeria service areas, then verify
 #   ./setup.sh down     stop everything (keeps the database volume)
 #   ./setup.sh clean    stop everything and delete the database volume
+#
+# SKIP_OSRM=1 brings the stack up without the routing graph or the tiles --
+# fixture distances from mock-google, everything else real. That is what the
+# `algeria: ride regression` workflow runs on a throwaway machine.
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -308,6 +312,22 @@ seed_algeria() {
 #   place names / autocomplete     "Google" -> maps-shim -> mock-google
 start_maps() {
   log "Starting the maps services"
+
+  # ── SKIP_OSRM=1: the routing graph is not there, and that is on purpose ────
+  # Preparing it downloads a 285 MB extract and preprocesses it: minutes and
+  # gigabytes, reasonable on a laptop once, absurd on a CI runner that throws
+  # the machine away afterwards.
+  #
+  # What is lost is REAL distances, not the flow. With `seed_maps` skipped too,
+  # Maps_Google stays pointed at mock-google exactly as upstream seeds it, and
+  # a search still goes rider -> gateway -> registry -> driver-app and comes
+  # back with a price. That chain is what a regression test is for; the fixture
+  # distance behind it is the one thing OSRM would make real.
+  if [ "${SKIP_OSRM:-0}" = "1" ]; then
+    docker compose up -d mock-google maps-shim
+    ok "mock-google, maps-shim (SKIP_OSRM=1: no routing graph, no tiles)"
+    return
+  fi
 
   # osrm-routed exits immediately if the graph is not there, and the container
   # then restart-loops. Say so here rather than let it surface 60s later as a
@@ -728,9 +748,13 @@ docker compose up -d mock-registry beckn-gateway
 wait_for_api
 wait_for_driver_api
 # Repoints both apps at OSRM and restarts them, so wait for them again.
-seed_maps
-wait_for_api
-wait_for_driver_api
+if [ "${SKIP_OSRM:-0}" != "1" ]; then
+  # Pointing the backend at a routing service that is not running turns every
+  # search into a 500, which is worse than fixtures.
+  seed_maps
+  wait_for_api
+  wait_for_driver_api
+fi
 seed_algeria
 # seed_algeria restarts driver-app to drop its cached merchant row; without this
 # verify_connector can fire its search before the BPP is listening again and
