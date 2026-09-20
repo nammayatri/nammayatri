@@ -22,13 +22,7 @@ module Domain.Action.UI.DriverWallet
     postWalletTopup,
     recordAirportCashRecharge,
     getWalletPayoutHistory,
-    -- Exported for scheduled batch payout
-    PayoutContext (..),
-    loadPayoutContext,
     counterpartyFromRole,
-    computePayoutFee,
-    initiateWalletPayout,
-    makePayoutEntryIdsKey,
     mkDriverWalletFinanceCtx,
   )
 where
@@ -39,58 +33,51 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
+import qualified Domain.Action.UI.Payout as UIPayout
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.DriverInformation as DI
-import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.Payout.Interface as IPayout
-import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id (Id (..))
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( Account,
     AccountRole (OwnerLiability, PlatformAsset),
-    CounterpartyType,
     FinanceCtx (..),
     InvoiceConfig (..),
     InvoiceLineItem (..),
     ItemType (..),
     LedgerEntryMetadata (..),
     LineItemDescription (..),
-    findByAccountWithFilters,
     getEntriesByReference,
     invoice,
+    markEntriesAsClaimed,
     transfer,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
-import qualified Lib.Payment.Payout.Request as PayoutRequest
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Finance.PostActions (runFinance)
-import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
+import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
+import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -98,22 +85,15 @@ import qualified Storage.Clickhouse.LedgerEntry as CHLE
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
-import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
-import qualified Tools.Notifications as Notify
-import qualified Tools.Payout as Payout
 
 instance Kernel.Types.HideSecrets.HideSecrets DriverWallet.TopUpRequest where
   hideSecrets = Kernel.Prelude.identity
 
 -- | Pick the counterparty type based on the person's role.
-counterpartyFromRole :: DP.Role -> CounterpartyType
-counterpartyFromRole DP.FLEET_OWNER = counterpartyFleetOwner
-counterpartyFromRole DP.FLEET_BUSINESS = counterpartyFleetOwner
-counterpartyFromRole _ = counterpartyDriver
 
 --------------------------------------------------------------------------------
 -- getWalletBalance
@@ -166,7 +146,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
-    (Nothing, Nothing) -> pure emptyWalletSummary
+    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig 0}
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
@@ -175,16 +155,21 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         if useClickhouse
           then fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate
           else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
-      let (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
+      eligibility <- case mbWalletAcc of
+        Nothing -> pure emptyWalletPayoutEligibility
+        Just walletAcc -> getPayoutEligibilityData counterparty ownerId walletAcc.id currentBalance cutoff now
+      let (additions, deductions, netEarningsBalance) =
             aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
-          redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
+          redeemableBalance = eligibility.redeemableBalance
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
       pure $
         DriverWallet.WalletSummaryResponse
           { currentBalance,
             redeemableBalance,
-            nonRedeemableBalance,
+            nonRedeemableBalance = eligibility.nonRedeemableBalance,
+            processingPayoutBalance = eligibility.processingPayoutBalance,
             netEarningsBalance,
+            payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
             agg
@@ -196,10 +181,27 @@ emptyWalletSummary =
     { currentBalance = 0,
       redeemableBalance = 0,
       nonRedeemableBalance = 0,
+      processingPayoutBalance = 0,
       netEarningsBalance = 0,
+      payoutConfig =
+        DriverWallet.WalletPayoutConfig
+          { payoutEnabled = False,
+            payoutCutOffDays = 0,
+            minimumPayoutAmount = 0,
+            payoutFee = 0
+          },
       additions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
       deductions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
       agg = []
+    }
+
+buildWalletPayoutConfig :: DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
+buildWalletPayoutConfig walletConfig redeemableBalance =
+  DriverWallet.WalletPayoutConfig
+    { payoutEnabled = walletConfig.enableWalletPayout,
+      payoutCutOffDays = walletConfig.payoutCutOffDays,
+      minimumPayoutAmount = walletConfig.minimumWalletPayoutAmount,
+      payoutFee = computePayoutFee (mfilter (\cfg -> cfg.feeBearer == Just DTConf.DRIVER_BEARER) walletConfig.payoutFee) redeemableBalance
     }
 
 -- | Fetch wallet ledger entries from the primary Postgres ledger store and
@@ -261,7 +263,7 @@ aggregateWalletRows ::
   [Id Account] ->
   UTCTime -> -- payout cutoff time
   [CHLE.WalletEntryRow] ->
-  (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney, HighPrecMoney)
+  (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
 aggregateWalletRows isVat accountIds cutoff entries =
   let (addEntries, dedEntries) = partition (\e -> e.walletToAccountId `elem` accountIds) entries
 
@@ -279,7 +281,6 @@ aggregateWalletRows isVat accountIds cutoff entries =
           )
           (Map.toList addRefMap)
       addTotal = sum (map (\(_, (t, _)) -> t) (Map.toList addRefMap))
-      topLevelNonRedeemable = sum (map (\(_, (_, nr)) -> nr) (Map.toList addRefMap))
 
       dedRefMap = foldl' (\acc e -> Map.insertWith (+) e.walletReferenceType e.walletAmount acc) Map.empty dedEntries
       dedItems =
@@ -298,7 +299,6 @@ aggregateWalletRows isVat accountIds cutoff entries =
       netEarnings = addTotal - dedTotal
    in ( DriverWallet.WalletItemGroup {totalAmount = addTotal, items = addItems},
         DriverWallet.WalletItemGroup {totalAmount = dedTotal, items = dedItems},
-        topLevelNonRedeemable,
         netEarnings
       )
 
@@ -526,6 +526,7 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
       limit = mbLimit
       offset = mbOffset
 
+  refreshNonTerminalWalletPayouts driverId
   items <- PayoutItems.getPayoutItems driverId.getId mbFrom mbTo statuses limit offset
 
   let apiItems = map toHistoryItem items
@@ -541,6 +542,14 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
         items = apiItems
       }
   where
+    refreshNonTerminalWalletPayouts driverId = do
+      pending <- QPayoutRequestExtra.findByBeneficiaryWithFilters driverId.getId Nothing Nothing [PR.INITIATED, PR.PROCESSING] Nothing Nothing
+      forM_ pending $ \pr ->
+        forM_ pr.payoutTransactionId $ \payoutOrderId -> do
+          mbOrder <- QPayoutOrder.findById (Id payoutOrderId)
+          forM_ mbOrder $ \order ->
+            void $ withTryCatch ("refreshWalletPayout:" <> pr.id.getId) (UIPayout.refreshPayoutOrderWithSettlement order)
+
     isPaidOut s = s == PR.CREDITED || s == PR.CASH_PAID
     isPending s = s == PR.INITIATED || s == PR.PROCESSING
 
@@ -563,74 +572,6 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
 --------------------------------------------------------------------------------
 
 -- | All context needed for payout operations, loaded once at the start.
-data PayoutContext = PayoutContext
-  { driverId :: Kernel.Types.Id.Id DP.Person,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    mocId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    person :: DP.Person,
-    payoutVpa :: Maybe Text,
-    transporterConfig :: DTConf.TransporterConfig
-  }
-
-loadPayoutContext ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person) ->
-  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
-  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  m PayoutContext
-loadPayoutContext mbPersonId merchantId mocId = do
-  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  payoutVpa <- case person.role of
-    DP.FLEET_OWNER -> do
-      mbFleetInfo <- QFOI.findByPersonIdAndEnabledAndVerified Nothing Nothing driverId
-      pure (mbFleetInfo >>= (.payoutVpa))
-    DP.FLEET_BUSINESS -> do
-      mbFleetInfo <- QFOI.findByPersonIdAndEnabledAndVerified Nothing Nothing driverId
-      pure (mbFleetInfo >>= (.payoutVpa))
-    _ -> do
-      mbDriverInfo <- QDI.findById driverId
-      pure (mbDriverInfo >>= (.payoutVpa))
-  pure PayoutContext {..}
-
--- | Validate that wallet payouts are enabled for this merchant.
-ensurePayoutsEnabled :: (MonadFlow m) => PayoutContext -> m ()
-ensurePayoutsEnabled ctx =
-  unless ctx.transporterConfig.driverWalletConfig.enableWalletPayout $
-    throwError $ InvalidRequest "Payouts are disabled"
-
--- | Check that the driver hasn't exceeded the maximum daily payout count.
-ensurePayoutLimitNotReached ::
-  (BeamFlow m r) =>
-  PayoutContext ->
-  Maybe (Id Account) ->
-  UTCTime ->
-  m ()
-ensurePayoutLimitNotReached ctx mbAccountId now = do
-  let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-      (utcStartOfDay, utcEndOfDay) = todayRangeUTC timeDiff now
-  whenJust ctx.transporterConfig.driverWalletConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
-    payoutsToday <- case mbAccountId of
-      Nothing -> pure []
-      Just accountId -> findByAccountWithFilters accountId (Just utcStartOfDay) (Just utcEndOfDay) Nothing Nothing Nothing (Just [walletReferencePayout])
-    when (length payoutsToday >= maxPayoutsPerDay) $
-      throwError $ InvalidRequest "Maximum payouts per day reached"
-
--- | Validate that the payoutable balance meets the minimum threshold.
-ensureMinimumPayoutAmount :: (MonadFlow m) => PayoutContext -> HighPrecMoney -> m ()
-ensureMinimumPayoutAmount ctx payoutableBalance = do
-  let minAmount = ctx.transporterConfig.driverWalletConfig.minimumWalletPayoutAmount
-  when (payoutableBalance < minAmount) $
-    throwError $ InvalidRequest ("Minimum payout amount is " <> show minAmount)
-
--- | Extract and validate the payout VPA (works for both drivers and fleet owners).
-resolvePayoutVpa :: (MonadFlow m) => PayoutContext -> m Text
-resolvePayoutVpa ctx =
-  fromMaybeM (InternalError $ "Payout vpa not present for " <> ctx.driverId.getId) ctx.payoutVpa
-
 postWalletPayout ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -641,113 +582,15 @@ postWalletPayout ::
 postWalletPayout (mbPersonId, merchantId, mocId) = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
   ensurePayoutsEnabled ctx
-  let counterparty = counterpartyFromRole ctx.person.role
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 10 $ do
-    now <- getCurrentTime
-    mbAccount <- getWalletAccountByOwner counterparty ctx.driverId.getId
-    let mbAccountId = (.id) <$> mbAccount
-    walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
-    ensurePayoutLimitNotReached ctx mbAccountId now
-    -- Single query: get both non-redeemable balance and redeemable entry IDs
-    let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-        cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-        cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-    (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
-      Nothing -> pure (0, [], 0)
-      Just accountId -> getPayoutEligibilityData accountId cutoff now
-    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
-    let payoutableBalance = walletBalance - nonRedeemable
-    ensureMinimumPayoutAmount ctx payoutableBalance
-    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
-  pure APISuccess.Success
-
--- | Compute the payout fee based on the PayoutFeeConfig.
---   Returns 0 if no config is set.
-computePayoutFee :: Maybe DTConf.PayoutFeeConfig -> HighPrecMoney -> HighPrecMoney
-computePayoutFee Nothing _ = 0
-computePayoutFee (Just feeConfig) amount =
-  min amount . SPayment.roundToTwoDecimalPlaces $ computeStripePayoutFee feeConfig amount
-
--- | Create a PayoutRequest (INITIATED), then call Juspay createPayoutService (→ PROCESSING).
---   No ledger entry here — that happens in the webhook handler on SUCCESS.
-initiateWalletPayout ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    Finance.HasActorInfo m r,
-    EsqDBFlow m r,
-    BeamFlow m r,
-    ServiceFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
-  ) =>
-  PayoutContext ->
-  HighPrecMoney -> -- payoutable balance
-  PR.PayoutType -> -- INSTANT or SCHEDULED
-  Maybe UTCTime -> -- coverageFrom
-  Maybe UTCTime -> -- coverageTo
-  [Text] -> -- redeemable entry IDs for settlement
-  HighPrecMoney -> -- merchant transfer amount (VAT input + discounts)
-  m ()
-initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount = do
-  phoneNo <- mapM decrypt ctx.person.mobileNumber
-  merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
-  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id
-  vpa <- case payoutServiceFlow of
-    IPayout.JuspayFlow -> Just <$> resolvePayoutVpa ctx
-    IPayout.StripeFlow -> pure Nothing
-  let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
-      -- Floor (not round-half-up) to whole cents so the disbursed amount never exceeds the
-      -- wallet balance; otherwise the webhook debit can overdraw the wallet by a sub-cent
-      -- rounding delta and leave the balance slightly negative.
-      netAmount = SPayment.floorToTwoDecimalPlaces (payoutableBalance - fee)
-      submission =
-        PayoutRequest.PayoutSubmission
-          { beneficiaryId = ctx.driverId.getId,
-            entityName = DPayment.DRIVER_WALLET_TRANSACTION,
-            entityId = ctx.driverId.getId,
-            entityRefId = Nothing,
-            amount = netAmount,
-            currency = ctx.transporterConfig.currency,
-            payoutFee = if fee > 0 then Just fee else Nothing,
-            transferAmount = Just merchantTransferAmount,
-            merchantId = ctx.merchantId.getId,
-            merchantOpCityId = ctx.mocId.getId,
-            city = show merchantOperatingCity.city,
-            vpa = vpa,
-            -- mbPersonBankAccount is the account the payout is actually sent to, which for a
-            -- fleet driver is the fleet owner's rather than their own.
-            bankName = mbPersonBankAccount >>= (.bankName),
-            bankAccountLast4 = mbPersonBankAccount >>= (.bankAccountLast4),
-            customerName = Just ctx.person.firstName,
-            customerPhone = phoneNo,
-            customerEmail = ctx.person.email,
-            remark = "Settlement for wallet",
-            orderType = "FULFILL_ONLY",
-            scheduledAt = Nothing,
-            payoutType = Just payoutType,
-            coverageFrom = coverageFrom,
-            coverageTo = coverageTo,
-            ledgerEntryIds = [], -- driver side keeps Redis stash flow unchanged
-            payoutServiceFlow
+  let params =
+        WalletPayoutParams
+          { payoutType = PR.INSTANT,
+            minimumPayoutAmount = ctx.transporterConfig.driverWalletConfig.minimumWalletPayoutAmount,
+            enforceDailyLimit = True,
+            throwOnBelowMinimum = True
           }
-      payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
-
-  when (netAmount > 0.0) $ do
-    result <- PayoutRequest.submitPayoutRequest submission payoutCall
-    case result of
-      PayoutRequest.PayoutInitiated pr _ -> do
-        -- Stash redeemable entry IDs in Redis for the webhook handler to settle
-        unless (null redeemableEntryIds) $
-          Redis.setExp (makePayoutEntryIdsKey pr.id.getId) redeemableEntryIds 86400 -- 24h TTL
-        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
-      PayoutRequest.PayoutProcessing pr status ->
-        logInfo $ "Wallet payout already in flight for driver " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> " | status: " <> show status
-      PayoutRequest.PayoutFailed _ err ->
-        logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
-
--- | Redis key for stashing redeemable entry IDs during payout.
-makePayoutEntryIdsKey :: Text -> Text
-makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
+  runWalletPayout ctx params
+  pure APISuccess.Success
 
 --------------------------------------------------------------------------------
 -- postWalletTopup (finance ledger: platform Asset -> driver RideCredit, reference WalletTopup)
@@ -949,4 +792,5 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
           else do
             _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
             void $ invoice cashRechargeInvoiceConfig
-    void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
+    (_, entryIds) <- fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
+    when isReversal $ markEntriesAsClaimed entryIds

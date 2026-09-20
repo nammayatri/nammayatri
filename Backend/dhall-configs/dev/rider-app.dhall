@@ -293,6 +293,7 @@ let RiderJobType =
       | UpdateCrisUtsData
       | CheckMultimodalConfirmFail
       | CheckRefundStatus
+      | PayoutStatusCheck
       | ExecuteCashRideCashbackPayout
       | MetroBusinessHour
       | NyRegularMaster
@@ -344,6 +345,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
       , { mapKey = RiderJobType.CheckMultimodalConfirmFail, mapValue = True }
       , { mapKey = RiderJobType.CheckRefundStatus, mapValue = True }
+      , { mapKey = RiderJobType.PayoutStatusCheck, mapValue = True }
       , { mapKey = RiderJobType.ExecuteCashRideCashbackPayout, mapValue = True }
       , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
       , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }

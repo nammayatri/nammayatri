@@ -440,6 +440,7 @@ updateAll rideId ride = do
       Se.Set BeamR.endOdometerReadingValue (ride.endOdometerReading <&> (.value)),
       Se.Set BeamR.tollCharges ride.tollCharges,
       Se.Set BeamR.tollNames ride.tollNames,
+      Se.Set BeamR.tollIds ride.tollIds,
       Se.Set BeamR.tollConfidence ride.tollConfidence,
       Se.Set BeamR.rideTags (Yudhishthira.tagsNameValueToTType ride.rideTags),
       Se.Set BeamR.updatedAt now,

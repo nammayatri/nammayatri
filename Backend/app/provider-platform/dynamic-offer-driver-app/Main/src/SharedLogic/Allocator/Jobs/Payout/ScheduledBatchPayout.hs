@@ -16,12 +16,6 @@ module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatc
 
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
-import Domain.Action.UI.DriverWallet
-  ( PayoutContext (..),
-    counterpartyFromRole,
-    initiateWalletPayout,
-  )
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -47,7 +41,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import Lib.Scheduler
 import SharedLogic.Allocator
-import SharedLogic.Finance.Wallet
+import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), runWalletPayout)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -238,7 +232,9 @@ processOneWalletPayout ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DSPC.ScheduledPayoutConfig ->
   DTConf.TransporterConfig ->
@@ -249,55 +245,27 @@ processOneWalletPayout ::
   Bool -> -- isManuallyAdded
   m ()
 processOneWalletPayout config transporterConfig merchantId merchantOpCityId personId mbPayoutVpa isManuallyAdded = do
-  result <- try $ do
-    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    let counterparty = counterpartyFromRole person.role
-        ctx =
-          PayoutContext
-            { driverId = personId,
-              merchantId = merchantId,
-              mocId = merchantOpCityId,
-              person = person,
-              payoutVpa = mbPayoutVpa,
-              transporterConfig = transporterConfig
-            }
-
-    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
-      now <- getCurrentTime
-      mbAccount <- getWalletAccountByOwner counterparty personId.getId
-      let mbAccountId = (.id) <$> mbAccount
-      walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty personId.getId
-      -- Single query: get both non-redeemable balance and redeemable entry IDs
-      let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-          cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-          cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-      (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
-        Nothing -> pure (0, [], 0)
-        Just accountId -> getPayoutEligibilityData accountId cutoff now
-      let payoutableBalance = walletBalance - nonRedeemable
-      logDebug $
-        "[SBP-DEBUG] payee=" <> personId.getId
-          <> " role="
-          <> show person.role
-          <> " hasWalletAccount="
-          <> show (isJust mbAccountId)
-          <> " walletBalance="
-          <> show walletBalance
-          <> " nonRedeemable="
-          <> show nonRedeemable
-          <> " payoutableBalance="
-          <> show payoutableBalance
-          <> " minimum="
-          <> show config.minimumPayoutAmount
-          <> " isManuallyAdded="
-          <> show isManuallyAdded
-          <> " willPay="
-          <> show (payoutableBalance >= config.minimumPayoutAmount && not isManuallyAdded)
-
-      when (payoutableBalance >= config.minimumPayoutAmount) $ do
-        -- Skip manually-added VPAs
-        unless isManuallyAdded $ do
-          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
+  result <- try $
+    -- Skip manually-added VPAs
+    unless isManuallyAdded $ do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let ctx =
+            PayoutContext
+              { driverId = personId,
+                merchantId = merchantId,
+                mocId = merchantOpCityId,
+                person = person,
+                payoutVpa = mbPayoutVpa,
+                transporterConfig = transporterConfig
+              }
+          params =
+            WalletPayoutParams
+              { payoutType = PR.SCHEDULED,
+                minimumPayoutAmount = config.minimumPayoutAmount,
+                enforceDailyLimit = False,
+                throwOnBelowMinimum = False
+              }
+      runWalletPayout ctx params
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()

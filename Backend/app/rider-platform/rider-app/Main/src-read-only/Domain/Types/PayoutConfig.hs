@@ -26,6 +26,8 @@ data PayoutConfig = PayoutConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderType :: Kernel.Prelude.Text,
     payoutEntity :: Domain.Types.PayoutConfig.PayoutEntity,
+    payoutStatusCheckInterval :: Kernel.Prelude.Int,
+    payoutStatusCheckMaxAttempts :: Kernel.Prelude.Int,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     referredByRewardAmount :: Kernel.Types.Common.HighPrecMoney,
     remark :: Kernel.Prelude.Text,
@@ -40,4 +42,4 @@ data PayoutConfig = PayoutConfig
 
 data PayoutEntity = METRO_TICKET_CASHBACK | PAYOUT_AWARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutEntity))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutEntity)

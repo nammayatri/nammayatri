@@ -46,6 +46,7 @@ module Lib.Finance.FinanceM
     account,
     transfer,
     transfer_,
+    transferInProcessing,
     adjustment,
     transferPending,
     transferAllowZero,
@@ -204,6 +205,7 @@ data AccountRole
   | BuyerControl
   | BuyerExpense
   | OwnerLiability
+  | OwnerPayoutLiability
   | OwnerExpense
   | OwnerControl
   | GovtIndirect
@@ -440,6 +442,16 @@ roleToInput ctx = \case
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId
       }
+  OwnerPayoutLiability ->
+    AccountInput
+      { accountType = PayoutLiability,
+        counterpartyType = Just ctx.counterpartyType,
+        counterpartyId = Just ctx.counterpartyId,
+        subLedger = Nothing,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
   SellerRideCredit ->
     AccountInput
       { accountType = RideCredit,
@@ -572,7 +584,19 @@ transfer ::
   Text -> -- Reference type
   Maybe LE.LedgerEntryMetadata -> -- Optional typed ledger metadata (e.g. a reason)
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transfer = transferWithEntryType LE.Expense
+transfer = transferWithEntryType LE.Expense Nothing
+
+-- | Like 'transfer' but the entry is stamped settlementStatus = PROCESSING: money that has left
+--   the payee's wallet and is parked (e.g. in OwnerPayoutLiability) until a third party confirms it.
+transferInProcessing ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  Maybe LE.LedgerEntryMetadata ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferInProcessing = transferWithEntryType LE.Expense (Just LE.PROCESSING)
 
 -- | Manual adjustment transfer. Positive amounts use @fromRole -> toRole@;
 --   negative amounts reverse the account direction. Collects the entry ID.
@@ -584,20 +608,21 @@ adjustment ::
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
 adjustment fromRole toRole amount refType
-  | amount > 0 = transferWithEntryType LE.Adjustment fromRole toRole amount refType Nothing
-  | amount < 0 = transferWithEntryType LE.Adjustment toRole fromRole (negate amount) refType Nothing
+  | amount > 0 = transferWithEntryType LE.Adjustment Nothing fromRole toRole amount refType Nothing
+  | amount < 0 = transferWithEntryType LE.Adjustment Nothing toRole fromRole (negate amount) refType Nothing
   | otherwise = pure Nothing
 
 transferWithEntryType ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   LE.EntryType ->
+  Maybe LE.SettlementStatus ->
   AccountRole ->
   AccountRole ->
   HighPrecMoney ->
   Text -> -- Reference type
   Maybe LE.LedgerEntryMetadata -> -- Optional typed ledger metadata (e.g. a reason)
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transferWithEntryType entryType fromRole toRole amount refType mbMetadata = do
+transferWithEntryType entryType mbSettlementStatus fromRole toRole amount refType mbMetadata = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -620,7 +645,7 @@ transferWithEntryType entryType fromRole toRole amount refType mbMetadata = do
                 metadata = mbMetadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = mbSettlementStatus
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectAffectedAccount fromAcc

@@ -157,16 +157,12 @@ LedgerEntry:
       params: [status, voidReason, updatedBy, updatedById]
       where: id
 
-    updateSettlementStatus:
-      kvFunction: updateWithKV
-      params: [settlementStatus, settlementId, settlementTimestamp, updatedBy, updatedById]
-      where: id
-
   extraIndexes:
     - columns: [timestamp, fromAccountId]
     - columns: [timestamp, toAccountId]
     - columns: [timestamp, concernedIndividualId]
     - columns: [concernedIndividualId]
+    - columns: [settlementId]
 
   extraOperations:
     - GENERATE_INDEXES

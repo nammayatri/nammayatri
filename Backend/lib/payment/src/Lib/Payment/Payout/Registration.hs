@@ -303,5 +303,5 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
               }
 
       logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> maybe "" ("| vpa: " <>) vpa
-      result <- PayoutRequest.submitPayoutRequest submission createPayoutOrderCall
+      result <- PayoutRequest.submitPayoutRequest submission createPayoutOrderCall (const (pure ()))
       pure $ Just result

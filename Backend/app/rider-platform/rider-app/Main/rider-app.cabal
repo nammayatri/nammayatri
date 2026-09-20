@@ -534,6 +534,7 @@ library
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
       SharedLogic.FareBreakupInfo
+      SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelJourney
@@ -570,6 +571,7 @@ library
       SharedLogic.PassRestore
       SharedLogic.Payment
       SharedLogic.PaymentVendorSplits
+      SharedLogic.PayoutStatusCheck
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PersonPTStats
@@ -600,6 +602,7 @@ library
       SharedLogic.Scheduler.Jobs.PassExpiryReminderMaster
       SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
+      SharedLogic.Scheduler.Jobs.PayoutStatusCheck
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
       SharedLogic.Scheduler.Jobs.SafetyCSAlert

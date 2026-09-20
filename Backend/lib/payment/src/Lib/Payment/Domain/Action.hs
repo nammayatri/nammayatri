@@ -2685,8 +2685,9 @@ createPayoutService ::
   CreatePayoutServiceReq ->
   (CreatePayoutServiceReq -> m PT.CreatePayoutOrderResp) ->
   Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
+  (Payment.PayoutOrder -> m ()) -> -- runs once the order is persisted (e.g. schedule a status check job)
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig = do
+createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig afterPayoutOrderCreated = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -2716,6 +2717,8 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
         createPayoutOrderResp.transferId
         createPayoutOrderResp.merchantTopUpAmount
       latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
+      forM_ latestPayoutOrder $ \order ->
+        void $ withTryCatch "afterPayoutOrderCreated" (afterPayoutOrderCreated order)
       return (Just createPayoutOrderResp, latestPayoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
   where

@@ -27,7 +27,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PayoutConfig.PayoutConfig])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByCityIdAndVehicleCategory ::
@@ -70,6 +70,8 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.orderType orderType,
       Se.Set Beam.payoutEntity payoutEntity,
+      Se.Set Beam.payoutStatusCheckInterval (Just payoutStatusCheckInterval),
+      Se.Set Beam.payoutStatusCheckMaxAttempts (Just payoutStatusCheckMaxAttempts),
       Se.Set Beam.referralRewardAmountPerRide (Just referralRewardAmountPerRide),
       Se.Set Beam.referredByRewardAmount (Just referredByRewardAmount),
       Se.Set Beam.remark remark,
@@ -97,6 +99,8 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             orderType = orderType,
             payoutEntity = payoutEntity,
+            payoutStatusCheckInterval = fromMaybe 21600 payoutStatusCheckInterval,
+            payoutStatusCheckMaxAttempts = fromMaybe 8 payoutStatusCheckMaxAttempts,
             referralRewardAmountPerRide = fromMaybe 0 referralRewardAmountPerRide,
             referredByRewardAmount = fromMaybe 0 referredByRewardAmount,
             remark = remark,
@@ -122,6 +126,8 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.orderType = orderType,
         Beam.payoutEntity = payoutEntity,
+        Beam.payoutStatusCheckInterval = Just payoutStatusCheckInterval,
+        Beam.payoutStatusCheckMaxAttempts = Just payoutStatusCheckMaxAttempts,
         Beam.referralRewardAmountPerRide = Just referralRewardAmountPerRide,
         Beam.referredByRewardAmount = Just referredByRewardAmount,
         Beam.remark = remark,

@@ -26,6 +26,7 @@ module Lib.Finance.Ledger.Service
     settleEntryWithBalancesAndAmount,
     voidEntry,
     markEntriesAsPaidOut,
+    markEntriesAsClaimed,
 
     -- * Query by ID/reference
     getEntry,
@@ -48,7 +49,14 @@ module Lib.Finance.Ledger.Service
 
     -- * Payout-specific queries (efficient DB-level filtering)
     findCreditsByAccountAfterTime,
+    findUnsettledByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
+    findBySettlementId,
+
+    -- * Payout eligibility (shared by driver wallet and rider cashback payouts)
+    PayoutEligibility (..),
+    getPayoutEligibilityData,
+    entryNetForAccount,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
     markEntriesAsProcessing,
@@ -723,6 +731,31 @@ findCreditsByAccountAfterTime accountId from to =
         ]
     ]
 
+-- | Find unsettled entries (both credits and debits) for an account after a given time.
+--   Used for computing non-redeemable balance (recent net movement that can't be paid out yet).
+findUnsettledByAccountAfterTime ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  UTCTime -> -- from (cutoff)
+  UTCTime -> -- to (now)
+  m [LedgerEntry]
+findUnsettledByAccountAfterTime accountId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ],
+          Se.Is BeamLE.status $ Se.Eq SETTLED,
+          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
+        ]
+    ]
+
 -- | Find unsettled entries (both credits and debits) for an account before a given time.
 --   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL,
 --   Used for collecting redeemable entry IDs for payout settlement.
@@ -746,6 +779,182 @@ findUnsettledByAccountBeforeTime accountId before =
             ]
         ]
     ]
+
+-- | Entries stamped with a settlementId (PayoutRequest id) while reserved or paid out.
+findBySettlementId ::
+  (BeamFlow.BeamFlow m r) =>
+  Text ->
+  m [LedgerEntry]
+findBySettlementId settlementId =
+  findAllWithKV [Se.Is BeamLE.settlementId $ Se.Eq (Just settlementId)]
+
+--------------------------------------------------------------------------------
+-- PAYOUT ELIGIBILITY
+--------------------------------------------------------------------------------
+
+data PayoutEligibility = PayoutEligibility
+  { walletBalance :: HighPrecMoney,
+    nonRedeemableBalance :: HighPrecMoney,
+    redeemableBalance :: HighPrecMoney,
+    redeemableEntries :: [LedgerEntry]
+  }
+
+-- | Signed impact of an entry on the given account: +amount when it credits the
+--   account (to side), -amount when it debits it (from side).
+entryNetForAccount :: Id Account -> LedgerEntry -> HighPrecMoney
+entryNetForAccount accountId e
+  | e.toAccountId == accountId = e.amount
+  | e.fromAccountId == accountId = negate e.amount
+  | otherwise = 0
+
+{- Note [Redeemable payout calculation]
+Only entries *below* the payout cut-off are redeemable. Anything earned after
+the cut-off must stay in the wallet to fund the next cycle, so we subtract it:
+
+    payout = walletBalance - max 0 (creditsAboveCutOff - debitsAboveCutOff)
+           = walletBalance - max 0 netAbove
+           = min walletBalance netBelow
+
+Note this consumes only the *sums* above the cut-off, so it is path-independent:
+the interleaving of debits and credits inside the post-cut-off window cannot
+change the result (see Scenario 3, where the running balance dips negative).
+
+Scenario 1 — cash commission on top, wallet stays positive
+----------------------------------------------------------
+  payout = 150 - max 0 (200 - 150) = 150 - 50 = 100   (expected 100)
+  wallet = 150
+
+  above cut-off:
+    debits   Online Ride 3  charge + commission   50
+             Online Ride 4  charge + commission   50
+             Cash   Ride 5  charge + commission   50 -> 150
+    credits  Online Ride 3                       100
+             Online Ride 4                       100   -> 200
+    net                                                 +50   (held back)
+
+  --- payout cut-off ---
+
+    debits   Online Ride 1  charge + commission   50
+             Online Ride 2  charge + commission   50   -> 100
+    credits  Online Ride 1                       100
+             Online Ride 2                       100   -> 200
+    net                                                +100   (redeemable)
+
+Scenario 2 — cash commissions exceed online earnings, netAbove negative
+------------------------------------------------------------------------
+  payout = 50 - max 0 (200 - 250) = 50 - 0 = 50       (expected 50)
+  wallet = 50
+
+  above cut-off:
+    debits   Online Ride 3  charge + commission   50
+             Online Ride 4  charge + commission   50
+             Cash   Ride 5  charge + commission   50
+             Cash   Ride 6  charge + commission   50
+             Cash   Ride 7  charge + commission   50   -> 250
+    credits  Online Ride 3                       100
+             Online Ride 4                       100   -> 200
+    net                                                 -50   (clamped to 0,
+                                                               already eaten
+                                                               into wallet)
+
+  --- payout cut-off ---
+
+    debits   Online Ride 1  charge + commission   50
+             Online Ride 2  charge + commission   50   -> 100
+    credits  Online Ride 1                       100
+             Online Ride 2                       100   -> 200
+    net                                                +100
+
+Scenario 3 — cash commissions land first, wallet dips negative, then recovers
+------------------------------------------------------------------------------
+  payout = 150 - max 0 (400 - 350) = 150 - 50 = 100   (expected 100)
+  wallet = 150
+
+  above cut-off (running balance shown, starting from 100 below the cut-off):
+    debits   Cash   Ride 3  charge + commission   50   ->   50
+             Cash   Ride 4  charge + commission   50   ->    0
+             Cash   Ride 5  charge + commission   50   ->  -50  NEGATIVE
+             Online Ride 6  charge + commission   50
+             Online Ride 7  charge + commission   50
+             Online Ride 8  charge + commission   50
+             Online Ride 9  charge + commission   50   -> 350
+    credits  Online Ride 6                       100   ->    0
+             Online Ride 7                       100   ->   50
+             Online Ride 8                       100   ->  100
+             Online Ride 9                       100   ->  150
+                                                       -> 400
+    net                                                 +50   (held back)
+
+  --- payout cut-off ---
+
+    debits   Online Ride 1  charge + commission   50
+             Online Ride 2  charge + commission   50   -> 100
+    credits  Online Ride 1                       100
+             Online Ride 2                       100   -> 200
+    net                                                +100
+
+  The transient -50 never reaches the formula: it sees only the totals
+  (350 debits / 400 credits), so Scenario 3 and Scenario 1 agree.
+
+Scenario 4 — debt carried across the cut-off, formula returns NEGATIVE payout
+------------------------------------------------------------------------------
+  Cash commissions charged *before* the cut-off leave netBelow negative: the
+  driver closed the previous cycle owing 50. There is nothing redeemable, but
+  the wallet is positive because post-cut-off online rides funded it.
+
+  payout = 50 - max 0 (200 - 100) = 50 - 100 = -50    (expected 0)   <-- BUG
+  wallet = 50
+
+  above cut-off:
+    debits   Online Ride 3  charge + commission   50
+             Online Ride 4  charge + commission   50   -> 100
+    credits  Online Ride 3                       100
+             Online Ride 4                       100   -> 200
+    net                                                +100   (held back)
+
+  --- payout cut-off ---
+
+    debits   Online Ride 1  charge + commission   50
+             Online Ride 2  charge + commission   50
+             Cash   Ride A  charge + commission   50
+             Cash   Ride B  charge + commission   50
+             Cash   Ride C  charge + commission   50   -> 250
+    credits  Online Ride 1                       100
+             Online Ride 2                       100   -> 200
+    net                                                 -50   (debt, NOT
+                                                               redeemable)
+
+  min walletBalance netBelow = min 50 (-50) = -50, and the formula has no
+  floor, so it hands back a negative payout. Fix by clamping:
+
+      payout = max 0 (min walletBalance netBelow)
+
+  which yields 0 here and is a no-op for Scenarios 1-3.
+-}
+
+-- | Payout eligibility for one wallet account, see Note [Redeemable payout calculation].
+--   PROCESSING entries (in-flight payout holds and their reservations) are excluded by the
+--   unsettled queries, and PAID_OUT entries never come back, so a payout in flight or already
+--   settled cannot be counted again.
+getPayoutEligibilityData ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  HighPrecMoney -> -- current wallet balance
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time (upper bound)
+  m PayoutEligibility
+getPayoutEligibilityData accountId walletBalance cutoff now = do
+  unsettledAbove <- findUnsettledByAccountAfterTime accountId cutoff now
+  redeemableEntries <- findUnsettledByAccountBeforeTime accountId cutoff
+  let netAbove = sum (map (entryNetForAccount accountId) unsettledAbove)
+      netBelow = sum (map (entryNetForAccount accountId) redeemableEntries)
+  pure
+    PayoutEligibility
+      { walletBalance,
+        nonRedeemableBalance = max 0 netAbove,
+        redeemableBalance = max 0 (min walletBalance netBelow),
+        redeemableEntries
+      }
 
 --------------------------------------------------------------------------------
 -- SETTLEMENT (Mark entries as paid out)
@@ -773,6 +982,26 @@ markEntriesAsPaidOut entryIds payoutRequestId = do
     [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]
   auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
 
+-- | Mark entries as PAID_OUT without a settlementId: legs that move money rather than
+--   accrue it (payout holds, settlements, reversals, airport cash withdrawals), so they are
+--   never counted as unsettled or picked up by a later payout.
+markEntriesAsClaimed ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  [Id LedgerEntry] ->
+  m ()
+markEntriesAsClaimed [] = pure ()
+markEntriesAsClaimed entryIds = do
+  actorInfo <- asks (.actorInfo)
+  beforeEntries <- QLedgerExtra.findByIds entryIds
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamLE.settlementStatus (Just PAID_OUT),
+      Se.Set BeamLE.settlementTimestamp (Just now),
+      Se.Set BeamLE.updatedAt now
+    ]
+    [Se.Is BeamLE.id $ Se.In (map (.getId) entryIds)]
+  auditBatchSettlementUpdates actorInfo StatusChanged beforeEntries
+
 -- | Reserve a batch of ledger entries for an in-flight payout.
 --   Sets settlementStatus = PROCESSING (so subsequent eligibility queries
 --   skip them) and stamps the optional settlementId. Only flips entries
@@ -790,6 +1019,7 @@ markEntriesAsProcessing entryIds mbSettlementId = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamLE.settlementStatus (Just PROCESSING),
+        Se.Set BeamLE.settlementTimestamp (Just now),
         Se.Set BeamLE.updatedAt now
       ]
         <> maybe [] (\sid -> [Se.Set BeamLE.settlementId (Just sid)]) mbSettlementId

@@ -89,6 +89,7 @@ dependencies:
   - sequelize
   - finance-kernel
   - yudhishthira
+  - scheduler
 
 
 ghc-options:
