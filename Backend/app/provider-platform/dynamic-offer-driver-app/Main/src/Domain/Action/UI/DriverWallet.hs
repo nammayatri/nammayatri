@@ -545,9 +545,9 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
     refreshNonTerminalWalletPayouts driverId = do
       pending <- QPayoutRequestExtra.findByBeneficiaryWithFilters driverId.getId Nothing Nothing [PR.INITIATED, PR.PROCESSING] Nothing Nothing
       forM_ pending $ \pr ->
-        forM_ pr.payoutTransactionId $ \payoutOrderId -> do
+        whenJust pr.payoutTransactionId $ \payoutOrderId -> do
           mbOrder <- QPayoutOrder.findById (Id payoutOrderId)
-          forM_ mbOrder $ \order ->
+          whenJust mbOrder $ \order ->
             void $ withTryCatch ("refreshWalletPayout:" <> pr.id.getId) (UIPayout.refreshPayoutOrderWithSettlement order)
 
     isPaidOut s = s == PR.CREDITED || s == PR.CASH_PAID

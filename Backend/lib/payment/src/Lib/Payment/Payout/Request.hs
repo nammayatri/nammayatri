@@ -217,7 +217,7 @@ runPayoutUnderLock ::
   (a -> m ()) -> -- initiate the payout
   m ()
 runPayoutUnderLock lockKey lockTtl findPayoutAmount initiatePayout =
-  Redis.withWaitAndLockMasterCloudCrossAppRedis lockKey lockTtl 100 (findPayoutAmount >>= mapM_ initiatePayout)
+  Redis.withWaitAndLockMasterCloudCrossAppRedis lockKey lockTtl 100 (findPayoutAmount >>= (`whenJust` initiatePayout))
 
 makePayoutEntryIdsKey :: Text -> Text
 makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
