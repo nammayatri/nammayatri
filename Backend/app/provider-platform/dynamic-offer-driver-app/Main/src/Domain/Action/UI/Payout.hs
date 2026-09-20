@@ -454,20 +454,21 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let counterparty = counterpartyFromRole person.role
         when (isPayoutOrderSuccess updPayoutStatus) $ do
-          -- Skip if this payout was already debited, so retries don't double-charge the wallet.
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+          let metadata =
+                LedgerEntryMetadata
+                  { driverPayable = Just (-1 * amount),
+                    payoutOrderId = Just payoutOrder.id.getId,
+                    reason = Nothing,
+                    subscriptionAllocations = Nothing,
+                    d2cReferralEarnings = Nothing,
+                    d2dReferralEarnings = Nothing,
+                    dailyStatsId = Nothing
+                  }
+          -- The debit and the fee are checked independently, so a retry after a partial failure
+          -- (debit posted, fee failed) posts only what is missing and never double-charges.
           existingPayoutEntries <- getEntriesByReference walletReferencePayout payoutOrder.id.getId
-          when (null existingPayoutEntries) $ do
-            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-            let metadata =
-                  LedgerEntryMetadata
-                    { driverPayable = Just (-1 * amount),
-                      payoutOrderId = Just payoutOrder.id.getId,
-                      reason = Nothing,
-                      subscriptionAllocations = Nothing,
-                      d2cReferralEarnings = Nothing,
-                      d2dReferralEarnings = Nothing,
-                      dailyStatsId = Nothing
-                    }
+          when (null existingPayoutEntries) $
             void $
               createWalletEntryDelta
                 counterparty
@@ -481,11 +482,13 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
                 (Just metadata)
                 >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
 
-            -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
-            -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
-            -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-            whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
-              whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
+          -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
+          -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
+          -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
+          whenJust transporterConfig.driverWalletConfig.payoutFee $ \payoutFeeCfg ->
+            whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
+              existingFeeEntries <- getEntriesByReference walletReferencePGPayoutCharges payoutOrder.id.getId
+              when (null existingFeeEntries) $ do
                 let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
                     chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
                 recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges

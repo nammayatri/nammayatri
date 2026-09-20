@@ -612,27 +612,21 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   let counterparty = counterpartyFromRole ctx.person.role
   Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 50000 $ do
     now <- getCurrentTime
-    -- Idempotency guard: skip if a payout is already in flight for this driver (24h look-back) so concurrent withdraw taps don't re-read the same unsettled balance and create duplicate payouts.
-    let inFlightWindowStart = Data.Time.addUTCTime (negate 86400) now
-    inFlightPayouts <- QPRE.findByBeneficiaryWithFilters ctx.driverId.getId (Just inFlightWindowStart) Nothing [PR.INITIATED, PR.PROCESSING, PR.RETRYING] (Just 1) Nothing
-    if not (null inFlightPayouts)
-      then logInfo $ "Wallet payout already in flight for driver " <> ctx.driverId.getId <> ", skipping duplicate withdraw"
-      else do
-        mbAccount <- getWalletAccountByOwner counterparty ctx.driverId.getId
-        let mbAccountId = (.id) <$> mbAccount
-        walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
-        ensurePayoutLimitNotReached ctx mbAccountId now
-        -- Single query: get both non-redeemable balance and redeemable entry IDs
-        let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
-            cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
-            cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-        (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
-          Nothing -> pure (0, [], 0)
-          Just accountId -> getPayoutEligibilityData accountId cutoff now
-        logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
-        let payoutableBalance = walletBalance - nonRedeemable
-        ensureMinimumPayoutAmount ctx payoutableBalance
-        initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
+    mbAccount <- getWalletAccountByOwner counterparty ctx.driverId.getId
+    let mbAccountId = (.id) <$> mbAccount
+    walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ctx.driverId.getId
+    ensurePayoutLimitNotReached ctx mbAccountId now
+    -- Single query: get both non-redeemable balance and redeemable entry IDs
+    let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
+        cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
+        cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
+    (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
+      Nothing -> pure (0, [], 0)
+      Just accountId -> getPayoutEligibilityData accountId cutoff now
+    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
+    let payoutableBalance = walletBalance - nonRedeemable
+    ensureMinimumPayoutAmount ctx payoutableBalance
+    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.
@@ -663,6 +657,36 @@ initiateWalletPayout ::
   HighPrecMoney -> -- merchant transfer amount (VAT input + discounts)
   m ()
 initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount = do
+  -- Idempotency guard, shared by the manual withdraw and the scheduled batch (both hold the wallet
+  -- running-balance lock): wallet entries are only debited when the payout settles, so a second
+  -- payout created while one is in flight would re-read the same unsettled balance.
+  -- Only wallet payouts count; other payout kinds (special zone, registration refund) share the beneficiary.
+  now <- getCurrentTime
+  let inFlightWindowStart = Data.Time.addUTCTime (negate 86400) now
+  recentPayouts <- QPRE.findByBeneficiaryWithFilters ctx.driverId.getId (Just inFlightWindowStart) Nothing [PR.INITIATED, PR.PROCESSING, PR.RETRYING] Nothing Nothing
+  if any (\pr -> pr.entityName == Just DPayment.DRIVER_WALLET_TRANSACTION) recentPayouts
+    then logInfo $ "Wallet payout already in flight for driver " <> ctx.driverId.getId <> ", skipping duplicate payout"
+    else submitWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount
+
+submitWalletPayout ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    Finance.HasActorInfo m r,
+    EsqDBFlow m r,
+    BeamFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  PayoutContext ->
+  HighPrecMoney ->
+  PR.PayoutType ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  [Text] ->
+  HighPrecMoney ->
+  m ()
+submitWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
   (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id
