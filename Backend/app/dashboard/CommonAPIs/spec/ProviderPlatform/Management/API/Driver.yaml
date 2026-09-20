@@ -535,8 +535,22 @@ apis:
         type: APISuccess
 
   - POST:
+      endpoint: /{driverId}/vehicle/removeSelectedServiceTiers
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: RemoveSelectedServiceTiersReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.vehicle.write
+
+  - POST:
       endpoint: /vehicle/upsertSelectedServiceTiers
       auth: ApiAuthV2
+      query:
+        - remove: Bool
       multipart:
         type: UpsertDriverServiceTiersCsvReq
       response:
@@ -951,6 +965,9 @@ types:
     - manufacturing: Day
     - derive: "'HideSecrets"
   AppendSelectedServiceTiersReq:
+    - selected_service_tiers: [ServiceTierType]
+    - derive: "'HideSecrets"
+  RemoveSelectedServiceTiersReq:
     - selected_service_tiers: [ServiceTierType]
     - derive: "'HideSecrets"
   ReviewRCVariantReq:
