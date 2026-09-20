@@ -65,6 +65,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateMerchant,
     postDriverTdsRateUpdate,
     postDriverVehicleAppendSelectedServiceTiers,
+    postDriverVehicleRemoveSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
     getDriverAirportPreference,
@@ -1752,8 +1753,22 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   pure Success
 
 ---------------------------------------------------------------------
-postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> Context.City -> Common.UpsertDriverServiceTiersCsvReq -> Flow APISuccess
-postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
+postDriverVehicleRemoveSelectedServiceTiers :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RemoveSelectedServiceTiersReq -> Flow APISuccess
+postDriverVehicleRemoveSelectedServiceTiers merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  let newTiers = filter (`notElem` req.selected_service_tiers) vehicle.selectedServiceTiers
+  QVehicle.updateSelectedServiceTiers newTiers personId
+  logTagInfo "dashboard -> removeSelectedServiceTiers : " (show personId <> " removed tiers: " <> show req.selected_service_tiers)
+  pure Success
+
+---------------------------------------------------------------------
+postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Common.UpsertDriverServiceTiersCsvReq -> Flow APISuccess
+postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity mbRemove req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   csvData <- readCsvAndGetDriverServiceTiers req.file
@@ -1790,12 +1805,20 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
       unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
         throwError (PersonDoesNotExist personId.getId)
 
-      let appendReq = Common.AppendSelectedServiceTiersReq {selected_service_tiers = serviceTiers}
-      void $ postDriverVehicleAppendSelectedServiceTiers merchant.shortId opCity driverId appendReq
+      if mbRemove == Just True
+        then do
+          let removeReq = Common.RemoveSelectedServiceTiersReq {selected_service_tiers = serviceTiers}
+          void $ postDriverVehicleRemoveSelectedServiceTiers merchant.shortId opCity driverId removeReq
+          logTagInfo
+            "dashboard -> upsertSelectedServiceTiers : "
+            ("Removed tiers from driver " <> driverIdText <> " : " <> show serviceTiers)
+        else do
+          let appendReq = Common.AppendSelectedServiceTiersReq {selected_service_tiers = serviceTiers}
+          void $ postDriverVehicleAppendSelectedServiceTiers merchant.shortId opCity driverId appendReq
 
-      logTagInfo
-        "dashboard -> upsertSelectedServiceTiers : "
-        ("Updated driver " <> driverIdText <> " with tiers: " <> show serviceTiers)
+          logTagInfo
+            "dashboard -> upsertSelectedServiceTiers : "
+            ("Updated driver " <> driverIdText <> " with tiers: " <> show serviceTiers)
 
     parseServiceTiers :: Text -> Either Text [Dashboard.Common.ServiceTierType]
     parseServiceTiers tiersText = do

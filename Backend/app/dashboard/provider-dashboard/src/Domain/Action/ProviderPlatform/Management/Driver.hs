@@ -60,6 +60,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateTagBulk,
     postDriverUpdateMerchant,
     postDriverVehicleAppendSelectedServiceTiers,
+    postDriverVehicleRemoveSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
     postDriverTdsRateUpdate,
@@ -404,11 +405,11 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity apiTokenInfo 
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverVehicleAppendSelectedServiceTiers) driverId req
 
-postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertDriverServiceTiersCsvReq -> Environment.Flow APISuccess
-postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity apiTokenInfo req = do
+postDriverVehicleUpsertSelectedServiceTiers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Bool -> Common.UpsertDriverServiceTiersCsvReq -> Environment.Flow APISuccess
+postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity apiTokenInfo mbRemove req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverVehicleUpsertSelectedServiceTiers)) req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (\c -> Common.addMultipartBoundary "XXX00XXX" (c.driverDSL.postDriverVehicleUpsertSelectedServiceTiers mbRemove)) req)
 
 postDriverUpdateRCInvalidStatusByRCNumber :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateRCInvalidStatusByRCNumberReq -> Environment.Flow APISuccess)
 postDriverUpdateRCInvalidStatusByRCNumber merchantShortId opCity apiTokenInfo req = do
@@ -463,3 +464,9 @@ getDriverFyEarnings :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Mayb
 getDriverFyEarnings merchantShortId opCity apiTokenInfo mbQuarter financialYear entityId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverFyEarnings) mbQuarter financialYear entityId apiTokenInfo.personId.getId
+
+postDriverVehicleRemoveSelectedServiceTiers :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RemoveSelectedServiceTiersReq -> Environment.Flow APISuccess)
+postDriverVehicleRemoveSelectedServiceTiers merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverVehicleRemoveSelectedServiceTiers) driverId req)
