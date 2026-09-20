@@ -522,6 +522,7 @@ library
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
       SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress
@@ -650,6 +651,7 @@ library
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount
+      SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
@@ -676,6 +678,7 @@ library
       SharedLogic.OneShotAssign
       SharedLogic.OTP
       SharedLogic.Payment
+      SharedLogic.PayoutStatusCheck
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.PersonDefaultEmergencyNumber

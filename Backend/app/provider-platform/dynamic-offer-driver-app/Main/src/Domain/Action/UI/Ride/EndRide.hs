@@ -562,7 +562,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                           (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
                             (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
                           _ ->
-                            (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+                            if maybe False (> 0) updRide.estimatedTollCharges
+                              then (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Sure)
+                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 

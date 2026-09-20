@@ -698,6 +698,8 @@ PayoutConfig:
     referredByRewardAmount: HighPrecMoney
     maxPayoutReferralForADay: Int
     scheduleCashbackPayoutAfter: Int
+    payoutStatusCheckInterval: Int
+    payoutStatusCheckMaxAttempts: Int
   beamType:
     timeDiff: Seconds
     referralRewardAmountPerRide: Maybe HighPrecMoney
@@ -705,6 +707,8 @@ PayoutConfig:
     referredByRewardAmount: Maybe HighPrecMoney
     maxPayoutReferralForADay: Maybe Int
     scheduleCashbackPayoutAfter: Maybe Int
+    payoutStatusCheckInterval: Maybe Int
+    payoutStatusCheckMaxAttempts: Maybe Int
     currency: Maybe Currency
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -713,6 +717,8 @@ PayoutConfig:
     referredByRewardAmount: Just referredByRewardAmount|E
     maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
     scheduleCashbackPayoutAfter: Just scheduleCashbackPayoutAfter|E
+    payoutStatusCheckInterval: Just payoutStatusCheckInterval|E
+    payoutStatusCheckMaxAttempts: Just payoutStatusCheckMaxAttempts|E
     currency: Just currency|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
@@ -721,6 +727,8 @@ PayoutConfig:
     referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
     maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
     scheduleCashbackPayoutAfter: fromMaybe 86400 scheduleCashbackPayoutAfter|E
+    payoutStatusCheckInterval: fromMaybe 21600 payoutStatusCheckInterval|E
+    payoutStatusCheckMaxAttempts: fromMaybe 8 payoutStatusCheckMaxAttempts|E
     currency: fromMaybe Kernel.Types.Price.INR currency|E
 
   default:

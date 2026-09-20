@@ -325,7 +325,7 @@ findBaseRideOwnerLiabilityRows merchantOpCityId startTime endTime = do
 -- Payout
 -- ---------------------------------------------------------------------------
 
--- | Successful wallet payouts (Juspay webhook → WalletPayout ledger). Feeds both
+-- | Successful wallet payouts (webhook SUCCESS → WalletPayoutSettlement, or legacy WalletPayout debit). Feeds both
 -- phase-1 payout JVs. WS4: keep this for PayoutToClearing; PayoutClearingToBank
 -- should switch to pg_payout_settlement_report once the payout file is ingested.
 fetchPayoutTotals ::
@@ -335,12 +335,16 @@ fetchPayoutTotals ::
   UTCTime ->
   m (PayoutTotals, [RevenueRecognitionTransactionRow])
 fetchPayoutTotals merchantOpCityId fromTime toTime = do
-  -- List SETTLED WalletPayout ledger legs (driver liability debit on success).
-  -- Single-leg createWalletEntryDelta — no account join needed.
-  rawRows <- QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange Wallet.walletReferencePayout merchantOpCityId.getId fromTime toTime Nothing Nothing
-  let (totals, txnRowsRev) = foldl' go (PayoutTotals 0 0, []) rawRows
+  -- SETTLED WalletPayoutSettlement legs (OwnerPayoutLiability → PlatformAsset on webhook SUCCESS) plus
+  -- legacy WalletPayout debits (payouts initiated before the OwnerPayoutLiability hold; only those carry
+  -- metadataV2.payoutOrderId). The hold leg itself shares the WalletPayout reference but is posted at
+  -- initiate for every payout, so it must not be counted.
+  settlementRows <- QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange Wallet.walletReferencePayoutSettlement merchantOpCityId.getId fromTime toTime Nothing Nothing
+  legacyRows <- filter isLegacyPayoutDebit <$> QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange Wallet.walletReferencePayout merchantOpCityId.getId fromTime toTime Nothing Nothing
+  let (totals, txnRowsRev) = foldl' go (PayoutTotals 0 0, []) (settlementRows <> legacyRows)
   pure (totals, reverse txnRowsRev)
   where
+    isLegacyPayoutDebit le = isJust (le.metadataV2 >>= (.payoutOrderId))
     go (acc, rs) le =
       ( acc {payoutAmount = acc.payoutAmount + le.amount, txnCount = acc.txnCount + 1},
         RevenueRecognitionTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs

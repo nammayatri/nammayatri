@@ -6,6 +6,7 @@ module Domain.Action.UI.Payout
     castOrderStatus,
     isPayoutOrderSuccess,
     isPayoutStatusFailed,
+    PayoutSettlementFlow,
     runRiderPayoutSettlement,
     refreshPayoutOrderWithSettlement,
   )
@@ -18,17 +19,25 @@ import qualified Domain.Types.PayoutConfig as DPayoutConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.VehicleCategory as DV
-import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Ledger.PayoutSettlement (PayoutOutcome (..))
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
+import qualified Lib.Payment.Payout.Request as PayoutRequest
+import Lib.Payment.Payout.StatusCheck (isPayoutOrderFailed, isPayoutOrderSuccess, isPayoutStatusFailed)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -46,11 +55,18 @@ import qualified Tools.Payout as PayoutTools
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey bookingId = "Payout:Processing:bookingId" <> bookingId
 
-isPayoutOrderSuccess :: IPayout.PayoutOrderStatus -> Bool
-isPayoutOrderSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+payoutSettlementLockKey :: Text -> Text
+payoutSettlementLockKey payoutRequestId = "Payout:Settlement:payoutRequestId:" <> payoutRequestId
 
-isPayoutStatusFailed :: IPayout.PayoutOrderStatus -> Bool
-isPayoutStatusFailed status = status `elem` [Payout.FAILURE, Payout.FULFILLMENTS_FAILURE, Payout.FULFILLMENTS_CANCELLED]
+type PayoutSettlementFlow m r =
+  ( ServiceFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    Finance.HasActorInfo m r,
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r
+  )
 
 castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DFTB.CashbackStatus
 castPayoutOrderStatus payoutOrderStatus =
@@ -79,13 +95,14 @@ castOrderStatus payoutOrderStatus =
     _ -> DPS.Processing
 
 runRiderPayoutSettlement ::
+  (PayoutSettlementFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   IPayout.PayoutOrderStatus ->
   DPayoutOrder.PayoutOrder ->
-  Flow ()
+  m ()
 runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutOrder =
-  unless (isPayoutOrderSuccess payoutOrder.status) $ do
+  unless (isPayoutOrderSuccess payoutOrder.status && payoutOrder.entityName /= Just DPayment.RIDE_OFFER_CASHBACK) $ do
     let personId = Id payoutOrder.customerId
     payoutConfig <-
       getOneConfig
@@ -128,44 +145,48 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
           callPayoutService payoutOrder payoutConfig person
       Just DPayment.RIDE_OFFER_CASHBACK -> do
         let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-        if isPayoutOrderSuccess payoutStatus
-          then whenJust mbPayoutRequestId $ \prId -> do
-            mbPayoutReq <- QPR.findById (Id prId)
-            whenJust mbPayoutReq $ \payoutReq -> do
-              let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
-              when (null entryIds) $
-                logError $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
-              let ctx =
-                    RidePaymentFinance.buildRiderFinanceCtx
-                      merchantId.getId
-                      merchantOperatingCityId.getId
-                      payoutOrder.amount.currency
-                      True
-                      payoutOrder.customerId
-                      ""
-                      Nothing
-                      Nothing
-                      Nothing
-              void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
-              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_COMPLETED" payoutOrder.amount.amount
-              fork "event_tracking: offer_cashback_credited" $
-                ET.trackEvent merchantId merchantOperatingCityId $
-                  ET.OfferCashbackCredited payoutOrder.customerId payoutReq.id.getId payoutOrder.amount.amount
-          else when (isPayoutStatusFailed payoutStatus) $
-            whenJust mbPayoutRequestId $ \prId -> do
-              mbPayoutReq <- QPR.findById (Id prId)
-              whenJust mbPayoutReq $ \payoutReq -> do
-                let entryIds = map Id (fromMaybe [] payoutReq.ledgerEntryIds)
+        whenJust mbPayoutRequestId $ \prId -> Redis.withWaitAndLockMasterCloudCrossAppRedis (payoutSettlementLockKey prId) 60 100 $ do
+          mbPayoutReq <- QPR.findById (Id prId)
+          whenJust mbPayoutReq $ \payoutReq -> do
+            let ctx =
+                  RidePaymentFinance.buildRiderFinanceCtx
+                    merchantId.getId
+                    merchantOperatingCityId.getId
+                    payoutOrder.amount.currency
+                    True
+                    payoutOrder.customerId
+                    payoutReq.id.getId
+                    Nothing
+                    Nothing
+                    Nothing
+            entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+            if isPayoutOrderSuccess payoutStatus
+              then do
+                when (null entryIds) $
+                  logError $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+                RidePaymentFinance.settleCashbackPayoutLedger ctx payoutOrder.amount.amount entryIds PayoutSucceeded
+                  >>= either (\err -> logError $ "Failed to settle cashback payout: " <> show err) (const (pure ()))
+                PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+                Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_COMPLETED" payoutOrder.amount.amount
+                fork "event_tracking: offer_cashback_credited" $
+                  ET.trackEvent merchantId merchantOperatingCityId $
+                    ET.OfferCashbackCredited payoutOrder.customerId payoutReq.id.getId payoutOrder.amount.amount
+              else when (isPayoutOrderFailed payoutStatus) $ do
+                RidePaymentFinance.settleCashbackPayoutLedger ctx payoutOrder.amount.amount entryIds (PayoutFailed ("Payout failed: " <> show payoutStatus))
+                  >>= either (\err -> logError $ "Failed to reverse cashback payout: " <> show err) (const (pure ()))
+                -- TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability:
+                -- those reserved their accrual entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
                 RidePaymentFinance.releaseCashbackEntriesReservation entryIds
-                logInfo $ "Released cashback reservation after webhook failure for payoutRequest " <> payoutReq.id.getId
+                PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
                 Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" payoutOrder.amount.amount
         fork "Update Payout Status and Transactions for RideOfferCashback" $
           callPayoutService payoutOrder payoutConfig person
       _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
 
 refreshPayoutOrderWithSettlement ::
+  (PayoutSettlementFlow m r) =>
   DPayoutOrder.PayoutOrder ->
-  Flow DPayoutOrder.PayoutOrder
+  m DPayoutOrder.PayoutOrder
 refreshPayoutOrderWithSettlement payoutOrder =
   if isPayoutOrderSuccess payoutOrder.status
     then pure payoutOrder
@@ -189,14 +210,14 @@ refreshPayoutOrderWithSettlement payoutOrder =
           Nothing -> throwError $ PayoutOrderNotFound payoutOrder.orderId
           Just finalOrder -> pure finalOrder
 
-callPayoutService :: DPayoutOrder.PayoutOrder -> DPayoutConfig.PayoutConfig -> DP.Person -> Flow ()
+callPayoutService :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> DPayoutConfig.PayoutConfig -> DP.Person -> m ()
 callPayoutService payoutOrder payoutConfig person = do
   let personId = person.id
       payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
       createPayoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
   void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq createPayoutOrderStatusCall
 
-notifyPersonOnAmountCredit :: DP.Person -> Flow ()
+notifyPersonOnAmountCredit :: (PayoutSettlementFlow m r) => DP.Person -> m ()
 notifyPersonOnAmountCredit person = do
   let pnKey = "REFERRAL_BONUS_EARNED"
   mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []

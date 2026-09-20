@@ -34,7 +34,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Payout.Interface as IPayout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
-import Kernel.External.Types (Language (..), ServiceFlow)
+import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -51,6 +51,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified SharedLogic.Merchant as SMerchant
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
@@ -279,7 +280,9 @@ useCoinsHandler ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -308,7 +311,9 @@ handler ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ConvertCoinToCashReq ->
@@ -388,7 +393,9 @@ redeemCoins ::
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id SP.Person ->
   Id DM.Merchant ->
@@ -416,7 +423,7 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing
       entityName = DPayment.COINS_REDEMPTION
       createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
-  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+  void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
   void $ QDS.updateCoinsFieldsForDirectPayout driverId calculatedAmount
   pure $ Just $ Id uid
 

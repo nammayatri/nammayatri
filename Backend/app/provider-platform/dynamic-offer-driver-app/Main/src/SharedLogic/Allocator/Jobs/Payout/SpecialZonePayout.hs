@@ -22,6 +22,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Interface as IPayout
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -38,6 +39,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import SharedLogic.Ride (getRcIdForRide)
 import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
@@ -60,7 +62,9 @@ sendSpecialZonePayout ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'SpecialZonePayout ->
   m ExecutionResult
@@ -88,7 +92,9 @@ handleNewFlow ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DPR.PayoutRequest ->
   m ExecutionResult
@@ -119,7 +125,9 @@ executeSpecialZonePayout ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DPR.PayoutRequest ->
   m ExecutionResult
@@ -149,7 +157,7 @@ executeSpecialZonePayout payoutRequest = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
   let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
-  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall
+  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
   case mbPayoutOrder of
     Just payoutOrder ->
       logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
@@ -175,7 +183,9 @@ handleOldFlow ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   Id DSP.ScheduledPayout ->
   m ExecutionResult
@@ -232,7 +242,9 @@ executeOldSpecialZonePayout ::
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c,
     HasField "activeDriversListKeyShards" r Int,
-    HasField "enableDriverFeeShardedFanOut" r Bool
+    HasField "enableDriverFeeShardedFanOut" r Bool,
+    SchedulerFlow r,
+    HasField "blackListedJobs" r [Text]
   ) =>
   DSP.ScheduledPayout ->
   m ExecutionResult
@@ -324,7 +336,7 @@ executeOldSpecialZonePayout scheduledPayout = do
                   logInfo $ "Calling payout service for driver: " <> driverId.getId <> " | amount: " <> show amount <> " | orderId: " <> uid
                   let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
 
-                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
+                  result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
 
                   case result of
                     Left (err :: SomeException) -> do

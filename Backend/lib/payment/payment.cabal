@@ -43,6 +43,7 @@ library
       Lib.Payment.Payout.Request
       Lib.Payment.Payout.RequestStatus
       Lib.Payment.Payout.Status
+      Lib.Payment.Payout.StatusCheck
       Lib.Payment.PGFee
       Lib.Payment.Refunds.History
       Lib.Payment.Storage.Beam.BeamFlow
@@ -176,6 +177,7 @@ library
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scheduler
     , sequelize
     , servant
     , servant-client
@@ -262,6 +264,7 @@ test-suite payment-tests
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scheduler
     , sequelize
     , servant
     , servant-client

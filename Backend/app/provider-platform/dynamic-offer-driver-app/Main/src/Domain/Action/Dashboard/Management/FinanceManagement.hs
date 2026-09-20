@@ -1651,9 +1651,11 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
         Just account -> do
           let availableBalance = account.balance
 
+          now <- getCurrentTime
           let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
               cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
-          lockedBalance <- WalletService.getNonRedeemableBalance account.id timeDiff cutOffDays =<< getCurrentTime
+              cutoff = WalletService.payoutCutoffTimeUTC timeDiff cutOffDays now
+          lockedBalance <- (.nonRedeemableBalance) <$> LedgerService.getPayoutEligibilityData account.id availableBalance cutoff now
 
           -- Get last wallet update time from latest ledger entry
           mbLatestEntry <- LedgerService.getLatestEntryByAccount account.id

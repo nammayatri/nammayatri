@@ -88,6 +88,11 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
     ridePaymentRefCashbackPayoutTransfer,
+    ridePaymentRefCashbackPayoutSettlement,
+    postCashbackOwnerPayoutLiability,
+    releaseCashbackEntriesReservation,
+    cashbackPayoutLedgerRefs,
+    settleCashbackPayoutLedger,
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
     ridePaymentRefParkingCharge,
@@ -123,9 +128,6 @@ module SharedLogic.Finance.RidePayment
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     getPayoutEligibilityData,
-    reserveCashbackEntriesForPayout,
-    releaseCashbackEntriesReservation,
-    markCashbackEntriesAsPaidOut,
     voidRidePaymentLedger,
     voidRidePaymentEntriesAndInvoice,
     createTipLedger,
@@ -171,14 +173,14 @@ import qualified Domain.Types.Person
 import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
-import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo, throwError)
-import Lib.Finance
+import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo)
+import Lib.Finance hiding (PayoutEligibility (..), getPayoutEligibilityData)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), settlePayoutLedger)
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
@@ -222,6 +224,9 @@ ridePaymentRefCashbackPayout = "CashbackPayout"
 
 ridePaymentRefCashbackPayoutTransfer :: Text
 ridePaymentRefCashbackPayoutTransfer = "CashbackPayoutTransfer"
+
+ridePaymentRefCashbackPayoutSettlement :: Text
+ridePaymentRefCashbackPayoutSettlement = "CashbackPayoutSettlement"
 
 ridePaymentRefTollFare :: Text
 ridePaymentRefTollFare = "TollFare"
@@ -743,17 +748,12 @@ getWalletBalanceByOwner counterpartyType ownerId = do
   mbAcc <- getWalletAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
 
-netAmountForAccount :: Id Account -> LE.LedgerEntry -> HighPrecMoney
-netAmountForAccount accountId e =
-  if e.fromAccountId == accountId then negate e.amount else e.amount
-
--- | Returns the wallet balance and the list of unsettled (status DUE or
---   SETTLED) ledger entries paired with their net effect on this account's
---   balance:
---   * `-amount` if this account is on the `from` side of the entry
---   * `+amount` if this account is on the `to` side
---   The sum of the net amounts must equal the wallet balance, otherwise
---   the wallet/ledger has drifted and we throw.
+-- | Returns the wallet balance and the redeemable ledger entries (see
+--   Note [Redeemable payout calculation] in finance-kernel; cashback has no cut-off,
+--   so everything unsettled up to now is redeemable) paired with their net effect
+--   on this account's balance.
+--   When the wallet balance no longer covers the unsettled net (accruals already
+--   parked in OwnerPayoutLiability by an in-flight payout) no entries are returned.
 getPayoutEligibilityData ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   CounterpartyType ->
@@ -765,8 +765,9 @@ getPayoutEligibilityData counterparty personId = do
   case mbAccount of
     Nothing -> pure (0, [])
     Just Account {id = accountId, balance = walletBalance} -> do
-      unsettledEntries <- Lib.Finance.Ledger.Service.findUnsettledByAccountBeforeTime accountId now
-      let entriesWithNet = map (\e -> (e, netAmountForAccount accountId e)) unsettledEntries
+      eligibility <- Lib.Finance.Ledger.Service.getPayoutEligibilityData accountId walletBalance now now
+      let unsettledEntries = eligibility.redeemableEntries
+          entriesWithNet = map (\e -> (e, Lib.Finance.Ledger.Service.entryNetForAccount accountId e)) unsettledEntries
           totalNet = sum (map snd entriesWithNet)
       when (walletBalance < totalNet) $ do
         logError $
@@ -777,85 +778,52 @@ getPayoutEligibilityData counterparty personId = do
             <> show totalNet
             <> " unsettled entries: "
             <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
-        throwError $ InvalidRequest "Wallet balance less than net amount"
       pure (walletBalance, entriesWithNet)
 
--- | Reserve a batch of cashback ledger entries for an in-flight payout
---   by flipping their settlementStatus from UNSETTLED → PROCESSING. This
---   is the DB-level guard that keeps subsequent eligibility queries
---   (`findUnsettledByAccountBeforeTime*`) from returning the same entries
---   while the Juspay payout is in flight (which can outlive any Redis
---   lock TTL). Idempotent — entries already PROCESSING/PAID_OUT are
---   left alone.
-reserveCashbackEntriesForPayout ::
-  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
-  [Id LE.LedgerEntry] ->
-  Maybe Text -> -- optional PayoutRequest id (settlementId)
-  m ()
-reserveCashbackEntriesForPayout entryIds mbSettlementId = do
-  Lib.Finance.Ledger.Service.markEntriesAsProcessing entryIds mbSettlementId
-  logInfo $
-    "Reserved " <> show (length entryIds) <> " cashback entries as PROCESSING"
-      <> maybe "" (\s -> " (settlementId=" <> s <> ")") mbSettlementId
-
--- | Release a previously-reserved batch of cashback ledger entries by
---   flipping their settlementStatus from PROCESSING → UNSETTLED so they
---   become eligible again. Used when the payout submission fails (sync
---   PayoutFailed) or the webhook reports a terminal failure.
---   Only flips PROCESSING entries — PAID_OUT entries are untouched.
+-- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved
+--   their accrual entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
 releaseCashbackEntriesReservation ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
-releaseCashbackEntriesReservation entryIds = do
-  Lib.Finance.Ledger.Service.markEntriesAsUnsettled entryIds
-  logInfo $ "Released cashback entries reservation (" <> show (length entryIds) <> " entries reverted to UNSETTLED)"
+releaseCashbackEntriesReservation = Lib.Finance.Ledger.Service.markEntriesAsUnsettled
 
--- | Called after a successful payout submission (and on the Juspay webhook
---   replay) for a RIDE_OFFER_CASHBACK payout. Posts the drain transfer
---   (OwnerLiability → BuyerExternal) for the payout amount with refType
---   `ridePaymentRefCashbackPayoutTransfer` and refId = personId (carried
---   on `ctx.referenceId`), settles that drain entry, and flags both the
---   original cashback accrual entries and the new drain entry as
---   PAID_OUT against the PayoutRequest id.
---
---   Idempotent: if all supplied entries are already PAID_OUT we no-op
---   (and skip creating a duplicate drain transfer).
-markCashbackEntriesAsPaidOut ::
+-- | PayoutInitiated: move the cashback amount out of the rider's wallet into the merchant's
+--   OwnerPayoutLiability liability account (PROCESSING) until the PG confirms or fails the payout.
+--   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
+postCashbackOwnerPayoutLiability ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
-  [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
-  HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
-  Text -> -- PayoutRequest id → settlementId on the row
-  m (Either FinanceError ())
-markCashbackEntriesAsPaidOut ctx entryIds amount payoutRequestId = do
-  mbEntries <- forM entryIds getEntry
-  let entries = catMaybes mbEntries
-      eligible = filter (\e -> e.settlementStatus /= Just LE.PAID_OUT) entries
-  if null eligible
-    then do
-      logInfo $ "markCashbackEntriesAsPaidOut: nothing eligible (payoutRequestId=" <> payoutRequestId <> ")"
-      pure $ Right ()
-    else do
-      transferRes <-
-        runFinance ctx $
-          void $ transferPending OwnerLiability BuyerExternal amount ridePaymentRefCashbackPayoutTransfer
-      case transferRes of
-        Left err -> do
-          logError $ "Failed to create cashback payout drain transfer: " <> show err
-          pure $ Left err
-        Right (_, transferEntryIds) -> do
-          forM_ transferEntryIds $ \tid -> Lib.Finance.Ledger.Service.settleEntry tid
-          let allPaidOutIds = map (.id) eligible <> transferEntryIds
-          Lib.Finance.Ledger.Service.markEntriesAsPaidOut allPaidOutIds payoutRequestId
-          logInfo $
-            "Cashback payout settled — " <> show (length eligible)
-              <> " original entries → PAID_OUT (payoutRequestId="
-              <> payoutRequestId
-              <> ", drainTransferEntries="
-              <> show (length transferEntryIds)
-              <> ")"
-          pure $ Right ()
+  HighPrecMoney ->
+  m (Either FinanceError [Id LE.LedgerEntry])
+postCashbackOwnerPayoutLiability ctx amount =
+  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
+
+cashbackPayoutLedgerRefs :: PayoutLedgerRefs
+cashbackPayoutLedgerRefs =
+  PayoutLedgerRefs
+    { holdReferenceType = ridePaymentRefCashbackPayoutTransfer,
+      settlementReferenceType = ridePaymentRefCashbackPayoutSettlement,
+      settlementToRole = BuyerExternal
+    }
+
+-- | Apply a payout outcome to the rider cashback ledger; re-runnable, see 'settlePayoutLedger'.
+--   On success the original cashback accrual entries are additionally flagged PAID_OUT under the
+--   PayoutRequest id (a plain set, so also re-runnable).
+settleCashbackPayoutLedger ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  HighPrecMoney ->
+  [Id LE.LedgerEntry] -> -- original cashback entry IDs (from the payout Redis stash)
+  PayoutOutcome ->
+  m (Either FinanceError [Id LE.LedgerEntry])
+settleCashbackPayoutLedger ctx amount entryIds outcome = do
+  result <- settlePayoutLedger runFinance cashbackPayoutLedgerRefs ctx amount Nothing outcome
+  forM result $ \postedIds -> do
+    case outcome of
+      PayoutSucceeded -> Lib.Finance.Ledger.Service.markEntriesAsPaidOut entryIds ctx.referenceId
+      PayoutFailed _ -> pure ()
+    pure postedIds
 
 -- | Build the canonical 'InvoiceConfig' for a rider ride-payment invoice.
 --   Reuses the same line-item layout that createRidePaymentLedger used when

@@ -39,6 +39,7 @@ import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -286,7 +287,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = ActorInfo
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency payoutServiceFlow req) createPayoutOrderCall Nothing
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency payoutServiceFlow req) createPayoutOrderCall Nothing afterPayoutOrderCreated
   pure Kernel.Types.APISuccess.Success
 
 mkCreatePayoutServiceReq :: Currency -> IPayout.PayoutServiceFlow -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq

@@ -54,3 +54,9 @@ ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN vpa_verification_mod
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN is_auto_refund_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN payout_status_check_max_attempts integer ;
+ALTER TABLE atlas_driver_offer_bpp.payout_config ADD COLUMN payout_status_check_interval integer ;
