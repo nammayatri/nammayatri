@@ -3387,7 +3387,54 @@ and one environment variable away — it sends our own French wording under
 an Algerian number, and Moorsyl only delivers to `+222`. The chain is proven as
 far as the gateway accepting the message and no further.
 
+## Tests, and what CI actually runs
+
+Three workflows, none of which deploys anything:
+
+| Workflow | What it proves | When |
+|---|---|---|
+| `algeria: node tests` | The guard's sign-in rules and the push relay, each started for real against fakes on loopback — no key, no network, no VPS | On pushes touching `auth-guard/`, `maps-shim/` or `tests/` |
+| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner, signs a `+213` number in and answers a ride search **with a price** | On changes to the stack's own files, weekly, and on demand |
+| `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
+
+```bash
+node tests/auth-guard-signup.test.js   # the sign-in rules
+node tests/push-relay.test.js          # FCM forwarded, APNs in the app's words
+SKIP_OSRM=1 ./setup.sh                 # the whole stack, no routing graph
+```
+
+**`SKIP_OSRM=1` is what makes the ride regression possible at all.** Preparing
+the routing graph is a 285 MB download and minutes of preprocessing for a
+machine that is deleted afterwards. With `seed_maps` skipped too, `Maps_Google`
+stays pointed at mock-google exactly as upstream seeds it: distances become
+fixtures, and everything else — rider → gateway → registry → driver-app →
+dispatch → tariff → back over BECKN — stays real. That chain is what has broken
+before, and all but its first link are invisible from the passenger's side.
+
+`preflight` accepts a **pulled** image in place of the loose binaries in `bin/`,
+which is what the regression job and `deploy-backend.sh` both do.
+
+---
+
 ## Gotchas
+
+**The SMS gateway can be dead for two weeks and nobody notices, because every
+number that ever signs in here is exempt.** Measured 2026-09-20: Moorsyl
+answers our key with `401 Unauthorized`, and `/healthz` had `sent: 0` with that
+error sitting in `lastError`. The guard log held **exactly one** real attempt
+since it started — the client's own number, 2026-09-17 17:32 — because
+`SMS_BYPASS` covers every test number the team uses and those send nothing.
+
+Two consequences worth carrying:
+
+- **Check the gateway itself, not the sign-ins.** `/healthz` reports
+  `gateway.configured`, `sent` and `lastError`. `sent: 0` after a day of work
+  means nothing has been tested that a real user does.
+- **The free key test is `POST /verify/check` with a made-up id**: a good key
+  answers 404 "does not belong to this organization", a dead one answers 401.
+  It sends no message and costs nothing. Both header styles (`x-api-key` and
+  `authorization: Bearer`) answered 401 that day, which is how we know it is
+  the key and not the header.
 
 **A new `maps-shim` route is unreachable until the edge has a `location` for
 it.** The shim listens on `127.0.0.1:8030` and is published nowhere; the only
