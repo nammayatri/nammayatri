@@ -98,11 +98,16 @@ import qualified Database.Redis.Cluster as RedisCluster
 import Environment
 import EulerHS.Prelude
 import GHC.TypeLits (symbolVal)
+import Kernel.Utils.Servant.Server (livenessCheck)
 import Servant
 import System.Timeout (timeout)
 
 -- for multi-cloud proxy
 type UIAPIPrefix = "v2"
+
+-- Dependency-free liveness probe target (see Kernel.Utils.Servant.Server.livenessCheck).
+-- Served at /v2/live; readiness stays on /v2/ (allConnectionsHealthCheck: DB+replica+Redis).
+type LivenessCheckAPI = "live" :> Get '[JSON] Text
 
 uiApiPrefix :: Text
 uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
@@ -110,6 +115,7 @@ uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
 type API =
   UIAPIPrefix
     :> ( Get '[JSON] Text
+           :<|> LivenessCheckAPI
            :<|> Registration.API
            :<|> Profile.API
            :<|> RidePayment.API
@@ -247,6 +253,7 @@ allConnectionsHealthCheck = do
 handler :: FlowServer API
 handler =
   allConnectionsHealthCheck
+    :<|> livenessCheck
     :<|> Registration.handler
     :<|> Profile.handler
     :<|> RidePayment.handler

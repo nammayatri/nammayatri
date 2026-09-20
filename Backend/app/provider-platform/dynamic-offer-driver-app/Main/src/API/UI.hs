@@ -102,10 +102,14 @@ import qualified Data.Text as T
 import Environment
 import GHC.TypeLits (symbolVal)
 import Kernel.Prelude
-import Kernel.Utils.Servant.Server (healthCheck)
+import Kernel.Utils.Servant.Server (healthCheck, livenessCheck)
 import Servant
 
 type HealthCheckAPI = Get '[JSON] Text
+
+-- Dependency-free liveness probe target (see Kernel.Utils.Servant.Server.livenessCheck).
+-- Served at /ui/live; readiness stays on /ui/ (HealthCheckAPI, which pings DB+Redis).
+type LivenessCheckAPI = "live" :> Get '[JSON] Text
 
 --for multi-cloud proxy
 type UIAPIPrefix = "ui"
@@ -116,6 +120,7 @@ uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
 type API =
   UIAPIPrefix
     :> ( HealthCheckAPI
+           :<|> LivenessCheckAPI
            :<|> Merchant.API
            :<|> MerchantDocument.API
            :<|> Registration.API
@@ -200,6 +205,7 @@ type API =
 handler :: FlowServer API
 handler =
   healthCheck
+    :<|> livenessCheck
     :<|> Merchant.handler
     :<|> MerchantDocument.handler
     :<|> Registration.handler
