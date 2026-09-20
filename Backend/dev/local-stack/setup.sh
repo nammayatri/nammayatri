@@ -62,6 +62,17 @@ Pick one:
   # The image is built from these; COPY would otherwise fail with "no source
   # files were specified", which reads like a Dockerfile bug rather than a
   # missing download.
+  #
+  # Not needed when the image already exists. That is the normal case on the
+  # VPS and the only case in CI, where the image is PULLED and tagged rather
+  # than built -- the binaries are already inside it, and insisting on the
+  # loose files as well would mean downloading a 320 MB artifact to build an
+  # image that is standing right there.
+  if docker image inspect ny-rider:patched >/dev/null 2>&1; then
+    ok "backend image ny-rider:patched present (binaries not needed)"
+    return
+  fi
+
   local missing=""
   local exe
   for exe in rider-app-exe dynamic-offer-driver-app-exe \
