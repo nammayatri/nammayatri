@@ -203,6 +203,9 @@ getClusterRoutesBetweenStops fromStopCode toStopCode integratedBPPConfig = do
           destinationSequenceNum = c.destinationSequenceNum
         }
 
+-- | The stop filter runs here rather than in the Nandi flow layer (which only has a base url and
+-- a feed key): a station code matches the route's rows only through the platform codes under it,
+-- and only this layer has the config needed to resolve them. Reuses the by-route cache.
 getRouteStopMappingByStopCodeAndRouteCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
@@ -210,12 +213,9 @@ getRouteStopMappingByStopCodeAndRouteCode ::
   IntegratedBPPConfig ->
   m [RouteStopMapping]
 getRouteStopMappingByStopCodeAndRouteCode stopCode routeCode integratedBPPConfig = do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) (Just stopCode)
-  logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
-  routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
-  return routeStopMapping
+  routeStopMapping <- getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+  stopCodes <- getEquivalentStopCodes stopCode integratedBPPConfig
+  return $ filter (\mapping -> mapping.stopCode `elem` stopCodes) routeStopMapping
 
 getRouteStopMappingByStopCodes ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -254,6 +254,34 @@ getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache [
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
   listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig False
+
+-- | Every stop code that stands for the same boarding place as the given one: the code itself,
+-- and the platform codes under it when it names a station. Stops are grouped under stations
+-- (GTFS location_type "1") whose platforms are the real boarding points, but live ETAs, bus
+-- schedules and vehicle positions are all keyed by the platform a bus actually calls at -- a
+-- station code appears in none of them, so matching one on equality silently finds nothing.
+-- Resolve an externally-supplied code through this once, outside any loop, and match with 'elem'.
+getEquivalentStopCodes ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m [Text]
+getEquivalentStopCodes stopCode integratedBPPConfig = IM.withInMemCache ["EqStopCodes", stopCode, integratedBPPConfig.id.getId] 3600 $ do
+  mbLocationType <-
+    withTryCatch "getEquivalentStopCodes:getStation" (getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) >>= \case
+      Left err -> logStopWarn "station lookup" err >> pure Nothing
+      Right mbStation -> pure (mbStation >>= (.locationType))
+  -- A stop that is not a station (including one with no locationType) is a plain boarding
+  -- stop: it answers with itself, with no children call and no extra latency.
+  case mbLocationType of
+    Just "1" ->
+      withTryCatch "getEquivalentStopCodes:getChildren" (OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode) >>= \case
+        Left err -> logStopWarn "children lookup" err >> pure [stopCode]
+        -- The station code stays first, so a caller needing one representative code keeps today's.
+        Right children -> pure $ stopCode : filter (/= stopCode) children
+    _ -> pure [stopCode]
+  where
+    logStopWarn what err = logWarning $ "getEquivalentStopCodes: " <> what <> " failed for " <> stopCode <> ", treating it as a plain stop: " <> show err
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do
@@ -531,10 +559,12 @@ getAlternateStationsByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withIn
   stations <- Flow.getAlternateStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
   parseStationsFromInMemoryServer stations integratedBPPConfig False
 
--- Helper function to find a specific stop in TripDetails
-findTripStopByStopCode :: TripDetails -> Text -> Maybe TripStopDetail
-findTripStopByStopCode tripDetails stopCode =
-  find (\stop -> stop.stopCode == stopCode) tripDetails.stops
+-- Helper function to find a specific stop in TripDetails. Takes a stop and its equivalents
+-- (see 'getEquivalentStopCodes'): a trip's stops are keyed by platform, so a station code
+-- only matches through the platform codes under it.
+findTripStopByStopCode :: TripDetails -> [Text] -> Maybe TripStopDetail
+findTripStopByStopCode tripDetails stopCodes =
+  find (\stop -> stop.stopCode `elem` stopCodes) tripDetails.stops
 
 -- Helper function to extract stage information from TripStopDetail
 extractStageFromTripStop :: TripStopDetail -> Maybe Int

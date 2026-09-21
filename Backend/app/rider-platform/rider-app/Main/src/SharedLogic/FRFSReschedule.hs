@@ -133,11 +133,15 @@ getNewTripStopEtas tripId routeCode boardingStopCode alightingStopCode integrate
       throwError $ InvalidRequest "Could not verify the selected trip schedule, please try again"
     Right s -> pure s
   let allEtas = concatMap (.eta) schedule
+  -- The schedule is keyed by the platform the bus calls at, so a station code is matched through
+  -- the platform codes under it. Resolved once per stop, outside the lookups.
+  boardingStopCodes <- OTPRest.getEquivalentStopCodes boardingStopCode integratedBppConfig
+  alightingStopCodes <- OTPRest.getEquivalentStopCodes alightingStopCode integratedBppConfig
   boardingEta <-
-    find (\e -> e.stopCode == boardingStopCode) allEtas
+    find (\e -> e.stopCode `elem` boardingStopCodes) allEtas
       & fromMaybeM (InvalidRequest "Selected trip does not stop at the boarding station")
   alightingEta <-
-    find (\e -> e.stopCode == alightingStopCode) allEtas
+    find (\e -> e.stopCode `elem` alightingStopCodes) allEtas
       & fromMaybeM (InvalidRequest "Selected trip does not stop at the destination station")
   when (alightingEta.arrivalTimeUnix <= boardingEta.arrivalTimeUnix) $
     throwError $ InvalidRequest "Selected trip does not serve the boarding and destination stations in travel order"
@@ -173,8 +177,11 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
     case mbRouteStation of
       Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
       Nothing -> return Nothing
-  let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newFromCode >>= (.platformCode)
-      toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newToCode >>= (.platformCode)
+  -- A trip's stops are platforms, so a station code matches through the platforms under it.
+  newFromCodes <- OTPRest.getEquivalentStopCodes newFromCode integratedBppConfig
+  newToCodes <- OTPRest.getEquivalentStopCodes newToCode integratedBppConfig
+  let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newFromCodes >>= (.platformCode)
+      toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip newToCodes >>= (.platformCode)
       fromStopDetail =
         MultiModalStopDetails
           { stopCode = Just newFromCode,

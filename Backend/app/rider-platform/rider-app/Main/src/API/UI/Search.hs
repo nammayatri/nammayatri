@@ -697,6 +697,13 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
       let initiateJourney = fromMaybe False mbInitiateJourney
       withTimeAPI "multimodalSearch" "multiModalSearch" $ JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses) "multiModalSearch"
 
+-- | A stop code together with its equivalents (see 'OTPRest.getEquivalentStopCodes'), or the
+-- code on its own when there is no integrated BPP config to resolve it against.
+resolveStopCodes :: Maybe DIBC.IntegratedBPPConfig -> Maybe Text -> Flow (Maybe [Text])
+resolveStopCodes _ Nothing = pure Nothing
+resolveStopCodes Nothing (Just stopCode) = pure (Just [stopCode])
+resolveStopCodes (Just integratedBPPConfig) (Just stopCode) = Just <$> OTPRest.getEquivalentStopCodes stopCode integratedBPPConfig
+
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Flow MultimodalSearchResp
 multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime filterServiceAndJrnyType mbNewServiceTiers mbHasPasses = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
   now <- getCurrentTime
@@ -813,7 +820,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           else do
             (finalRoutes, warningType) <- case req' of
               DSearch.PTSearch ptSearchReq -> do
-                let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes searchRequest.originStopCode searchRequest.destinationStopCode
+                -- OTP names the platform a vehicle calls at, so a requested station is matched
+                -- through its platforms. Without a BPP config there is nothing to resolve
+                -- against, so the codes are used as they arrive, exactly as before.
+                mbOriginStopCodes <- resolveStopCodes mbIntegratedBPPConfig searchRequest.originStopCode
+                mbDestinationStopCodes <- resolveStopCodes mbIntegratedBPPConfig searchRequest.destinationStopCode
+                let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes mbOriginStopCodes mbDestinationStopCodes
                 case mbBestOneWayRoute of
                   Just bestOneWayRoute -> do
                     mbPreliminaryLeg <-

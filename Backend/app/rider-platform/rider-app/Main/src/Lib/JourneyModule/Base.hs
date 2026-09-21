@@ -51,6 +51,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
 import Kernel.Types.Error
@@ -87,6 +88,7 @@ import SharedLogic.Search
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
@@ -104,13 +106,13 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
-filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
+filterTransitRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
 filterTransitRoutes riderConfig routes = do
   if riderConfig.enableBusFiltering == Just True
     then filterM filterBusRoutes routes
     else return routes
   where
-    filterBusRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => MultiModalRoute -> m Bool
+    filterBusRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => MultiModalRoute -> m Bool
     filterBusRoutes route = do
       let legs = route.legs
           busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
@@ -124,13 +126,16 @@ filterTransitRoutes riderConfig routes = do
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
                 integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
                 routeWithBuses <- CQMMB.getRoutesBuses routeId integratedBppConfig
+                -- Resolved once per leg, not per bus: bus ETAs are keyed by the platform a bus
+                -- calls at, so a station code only matches through the platforms under it.
+                equivalentStopCodes <- OTPRest.getEquivalentStopCodes stopCode integratedBppConfig
 
                 -- Check if the bus has an ETA for this stop
                 return $
                   any
                     ( \bus -> do
                         -- vehicleRouteMapping <- QVehicleRouteMapping.findByVehicleNumber bus.vehicleNo
-                        let busStopETA = find (\eta -> eta.stopCode == stopCode) (fromMaybe [] bus.busData.eta_data)
+                        let busStopETA = find (\eta -> eta.stopCode `elem` equivalentStopCodes) (fromMaybe [] bus.busData.eta_data)
                         case busStopETA of
                           Just eta -> eta.arrivalTime > departureTimeWithBuffer
                           Nothing -> False

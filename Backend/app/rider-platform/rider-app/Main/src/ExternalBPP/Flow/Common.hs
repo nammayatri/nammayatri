@@ -466,7 +466,10 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
       case mbSchedule of
         Right [] -> return baseQrTtl
         Right (firstSchedule : _) -> do
-          case find (\eta -> eta.stopCode == booking.fromStationCode) firstSchedule.eta of
+          -- The schedule is keyed by the platform the bus calls at, so a booking made against a
+          -- station code is only found through the platforms under it.
+          fromStationCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBPPConfig
+          case find (\eta -> eta.stopCode `elem` fromStationCodes) firstSchedule.eta of
             Just boardingStopEta -> do
               currentTime <- getCurrentTime
               let extraTtlSeconds =
