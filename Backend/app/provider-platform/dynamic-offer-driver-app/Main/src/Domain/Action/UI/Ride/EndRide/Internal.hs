@@ -197,17 +197,17 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance) pickupZone dropZone
   let vstLabel = show booking.vehicleServiceTier
-      distBucketLabel = SML.distanceBucketLabel (SML.distanceBucketEdges thresholdConfig) booking.estimatedDistance
       chargeableMeters = realToFrac (fromMaybe 0 ride.chargeableDistance) :: Double
       rideFareValue = realToFrac (fromMaybe 0 ride.fare) :: Double
   fork "BPP completed-stage ride-value histograms" $ do
-    Metrics.observeRideDistanceMeters merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone "completed" chargeableMeters
+    (pickupZoneCat, dropZoneCat) <- SML.specialZoneCategoryLabels booking.area
+    Metrics.observeRideDistanceMeters merchantLabel cityLabel vstLabel pickupZoneCat dropZoneCat "completed" chargeableMeters
     when (chargeableMeters > 0) $
-      Metrics.observePricePerKm merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone "completed" (rideFareValue / (chargeableMeters / 1000))
+      Metrics.observePricePerKm merchantLabel cityLabel vstLabel pickupZoneCat dropZoneCat "completed" (rideFareValue / (chargeableMeters / 1000))
     whenJust newFareParams.congestionCharge $ \congestionChargeVal ->
-      Metrics.observeCongestionCharge merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone "completed" (realToFrac congestionChargeVal)
-    whenJust ride.distanceToPickup $ \pickupDistanceVal ->
-      Metrics.observePickupDistanceMeters merchantLabel cityLabel vstLabel distBucketLabel pickupZone dropZone "completed" (realToFrac pickupDistanceVal)
+      Metrics.observeCongestionCharge merchantLabel cityLabel vstLabel pickupZoneCat dropZoneCat "completed" (realToFrac congestionChargeVal)
+    whenJust (ride.distanceToPickup <|> booking.distanceToPickup) $ \pickupDistanceVal ->
+      Metrics.observePickupDistanceMeters merchantLabel cityLabel vstLabel pickupZoneCat dropZoneCat "completed" (realToFrac pickupDistanceVal)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active

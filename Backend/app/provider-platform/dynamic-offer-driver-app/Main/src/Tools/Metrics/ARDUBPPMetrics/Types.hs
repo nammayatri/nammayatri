@@ -58,7 +58,13 @@ type RideFunnelCounterMetric = P.Vector P.Label7 P.Counter
 -- Labels: (merchant, city, vehicle_service_tier, cancellation_source, distance_bucket, backend_version, pickup_zone, drop_zone)
 type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 
-type RideValueHistogram = P.Vector P.Label8 P.Histogram
+-- Labels: (merchant, city, vehicle_service_tier, backend_version, pickup_zone, drop_zone, stage)
+-- distance_bucket dropped: it multiplied per-le-bucket series into the tens of thousands and
+-- made range histogram_quantile queries time out. pickup_zone/drop_zone here are the special-
+-- location CATEGORY ("Airport" | ... | "none") — NOT the zone id (unlike the funnel counters).
+-- The id had 64+ values per city; the category has a handful, so airport (FROM/TO) stays
+-- filterable at low cardinality. Only populated at pre_ride/completed; "none" at search.
+type RideValueHistogram = P.Vector P.Label7 P.Histogram
 
 -- Labels: (merchant, city, vehicle_service_tier, acceptance_flow, distance_bucket, backend_version, pickup_zone, drop_zone)
 -- acceptance_flow = "normal" (Beckn select) | "special_zone" (OTP/special-zone rides that skip
@@ -105,10 +111,10 @@ registerBPPMetricsContainer searchDurationTimeout = do
   rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
   rideCompletedCounter <- registerRideFunnelCounter "BPP_ride_completed_count" "Count of rides completed"
   rideCancelledCounter <- registerRideCancelledCounter
-  pricePerKmHist <- registerRideValueHistogram "BPP_price_per_km" "Fare per km (INR/km) by stage: pre_ride = estimated at booking creation (all bookings); completed = realised at ride end (completed rides)" (P.linearBuckets 0 5 40)
-  congestionChargeHist <- registerRideValueHistogram "BPP_congestion_charge" "Congestion charge (INR) by stage: pre_ride = estimated at booking creation; completed = realised at ride end. Observed only when a congestion charge is present" (P.linearBuckets 0 5 40)
-  rideDistanceHist <- registerRideValueHistogram "BPP_ride_distance_meters" "Trip distance (meters) by stage: pre_ride = estimated at booking creation (all bookings); completed = chargeable distance at ride end (completed rides)" (P.exponentialBuckets 500 2 12)
-  pickupDistanceHist <- registerRideValueHistogram "BPP_pickup_distance_meters" "Assigned driver distance to pickup (meters) by stage: pre_ride = at ride assignment (all assigned rides); completed = at ride end (completed rides)" (P.exponentialBuckets 100 2 12)
+  pricePerKmHist <- registerRideValueHistogram "BPP_price_per_km" "Fare per km (INR/km) by stage: pre_ride = estimated at booking creation (all bookings); completed = realised at ride end (completed rides)" [10, 15, 20, 25, 30, 40, 50, 65, 85, 120]
+  congestionChargeHist <- registerRideValueHistogram "BPP_congestion_charge" "Congestion charge (INR) by stage: pre_ride = estimated at booking creation; completed = realised at ride end. Observed only when a congestion charge is present" [5, 10, 20, 30, 50, 75, 100, 150]
+  rideDistanceHist <- registerRideValueHistogram "BPP_ride_distance_meters" "Trip distance (meters) by stage: pre_ride = estimated at booking creation (all bookings); completed = chargeable distance at ride end (completed rides)" (P.exponentialBuckets 500 2 8)
+  pickupDistanceHist <- registerRideValueHistogram "BPP_pickup_distance_meters" "Assigned driver distance to pickup (meters) by stage: pre_ride = estimated distance from driver-quote at assignment (all assigned rides); completed = realised at ride end (falls back to the estimate)" (P.exponentialBuckets 100 2 8)
   return $ BPPMetricsContainer {..}
 
 registerSearchRequestCounter :: IO SearchRequestCounterMetric
@@ -143,7 +149,7 @@ registerRideCancelledCounter =
 
 registerRideValueHistogram :: Text -> Text -> [Double] -> IO RideValueHistogram
 registerRideValueHistogram name description buckets =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone", "stage") $
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "backend_version", "pickup_zone", "drop_zone", "stage") $
     P.histogram (P.Info name description) buckets
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
