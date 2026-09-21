@@ -206,6 +206,7 @@ getProviderTag IntegratedBPPConfig {providerConfig} =
     DIRECT _ -> "DIRECT"
     ONDC _ -> "ONDC"
     CRIS _ -> "CRIS"
+    KMRL _ -> "KMRL"
 
 resolveOndcCity :: IntegratedBPPConfig -> Context.City -> Context.City
 resolveOndcCity IntegratedBPPConfig {providerConfig} city =

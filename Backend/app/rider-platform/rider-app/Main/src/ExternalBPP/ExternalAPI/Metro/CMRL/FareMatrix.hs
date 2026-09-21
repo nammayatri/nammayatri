@@ -45,6 +45,6 @@ fareMatrixAPI = Proxy
 
 getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> m [FareMatrixRes]
 getFareMatrix config = do
-  let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken) cmrlAppType
+  let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken) (cmrlAppType config)
   fareMatrixRes <- callCMRLAPI config eulerClient "getFareMatrix" fareMatrixAPI
   return fareMatrixRes.result

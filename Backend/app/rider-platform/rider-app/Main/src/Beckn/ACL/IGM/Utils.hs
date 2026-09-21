@@ -118,7 +118,9 @@ timeToText = T.pack . show
 buildIGMIssue :: UTCTimeRFC3339 -> Text -> RideBooking -> Person -> Text -> Spec.Domain -> IGMIssueCommon.IGMIssue
 buildIGMIssue now issueId booking rider transactionId domain = do
   IGMIssueCommon.IGMIssue
-    { createdAt = convertRFC3339ToUTC now,
+    { bapUri = Nothing,
+      becknTransactionId = Nothing,
+      createdAt = convertRFC3339ToUTC now,
       riderId = cast <$> (Just rider.id),
       id = Id issueId,
       issueStatus = IGMIssueCommon.OPEN,
