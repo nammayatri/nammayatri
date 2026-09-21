@@ -416,7 +416,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   resp <- case req.domain of
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0 (Just 0))
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0 (Just 0) Nothing Nothing Nothing Nothing)
     LYT.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData

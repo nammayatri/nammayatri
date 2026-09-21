@@ -214,6 +214,7 @@ handler merchant req validatedQuote = do
                 isRepeatSearch = False,
                 isAllocatorBatch = False,
                 paymentMethodInfo = paymentMethodInfo,
+                riderDetails = Just riderDetails,
                 emailDomain = booking.emailDomain,
                 businessEmailDomain = booking.businessEmailDomain,
                 driverPreference = req.driverPreference

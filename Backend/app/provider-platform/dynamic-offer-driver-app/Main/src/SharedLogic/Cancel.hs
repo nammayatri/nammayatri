@@ -68,6 +68,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
@@ -176,6 +177,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId conditionalCharges
       merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
       let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
+      mbRiderDetails <- maybe (pure Nothing) QRD.findById searchReq.riderId
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -189,6 +191,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 isAllocatorBatch = False,
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = paymentMethodInfo,
+                riderDetails = mbRiderDetails,
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference
@@ -209,6 +212,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       when newBooking.isScheduled $ void $ addScheduledBookingInRedis newBooking
       merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
       let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
+      mbRiderDetails <- maybe (pure Nothing) QRD.findById searchReq.riderId
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -222,6 +226,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 isAllocatorBatch = False,
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = paymentMethodInfo,
+                riderDetails = mbRiderDetails,
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference

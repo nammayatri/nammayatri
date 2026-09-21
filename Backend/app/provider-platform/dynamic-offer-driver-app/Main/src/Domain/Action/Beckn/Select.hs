@@ -34,6 +34,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
@@ -104,6 +105,9 @@ data DSelectReq = DSelectReq
     billingCategory :: SLT.BillingCategory,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     emailDomain :: Maybe Text,
+    customerRating :: Maybe Centesimal,
+    customerTotalRatings :: Maybe Int,
+    customerGender :: Maybe DP.Gender,
     businessEmailDomain :: Maybe Text
   }
 
@@ -124,19 +128,21 @@ handler merchant sReq searchReq estimates = do
       pickupZone
       dropZone
   now <- getCurrentTime
-  riderId <- case sReq.customerPhoneNum of
+  mbRiderDetails <- case sReq.customerPhoneNum of
     Just number -> do
       let mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
       -- consent tag is only emitted at confirm, not select, so no consent to record yet here
       (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number searchReq.bapId False Nothing
       when isNewRider $ QRD.create riderDetails
+      QRD.updateCustomerProfile sReq.customerRating sReq.customerTotalRatings sReq.customerGender riderDetails.id
       when sReq.toUpdateDeviceIdInfo do
         let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist
         when (riderDetails.payoutFlagReason /= mbFlag) $ QRD.updateFlagReasonAndIsDeviceIdExists mbFlag (Just $ isJust sReq.isMultipleOrNoDeviceIdExist) riderDetails.id
-      return (Just riderDetails.id)
+      return $ Just riderDetails {DRD.customerRating = sReq.customerRating, DRD.customerTotalRatings = sReq.customerTotalRatings, DRD.customerGender = sReq.customerGender}
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
+  let riderId = (.id) <$> mbRiderDetails
   when sReq.isPetRide $ do
     let tagData =
           Y.SelectTagData
@@ -191,6 +197,7 @@ handler merchant sReq searchReq estimates = do
             billingCategory = sReq.billingCategory,
             isAllocatorBatch = False,
             paymentMethodInfo = sReq.paymentMethodInfo,
+            riderDetails = mbRiderDetails,
             emailDomain = sReq.emailDomain,
             businessEmailDomain = sReq.businessEmailDomain,
             driverPreference = sReq.driverPreference

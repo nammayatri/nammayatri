@@ -5,6 +5,7 @@ module Storage.Beam.RiderDetails where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -23,6 +24,9 @@ data RiderDetailsT f = RiderDetailsT
     consentToShareMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    customerGender :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.Gender),
+    customerRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    customerTotalRatings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     disputeChancesUsed :: B.C f Kernel.Prelude.Int,
     firstRideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,

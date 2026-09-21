@@ -47,6 +47,7 @@ import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -240,9 +241,10 @@ makeTaggedDriverPool ::
   Maybe Int ->
   PoolBatchNum ->
   DriverPoolConfig ->
-  Id DST.SearchTry ->
+  DST.SearchTry ->
+  Maybe DRD.RiderDetails ->
   m (Maybe Int, [DriverPoolWithActualDistResult])
-makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
+makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTry mbRiderDetails = do
   localTime <- getLocalCurrentTime transporterCfg.timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
   updateVersionInSearchReq mbVersion
@@ -254,7 +256,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
       "POOLING version mismatch: ran " <> show mbVersion <> " but SearchRequest is pinned to "
         <> show mbPoolingLogicVersion
         <> " (searchTryId="
-        <> searchTryId.getId
+        <> searchTry.id.getId
         <> ", isOnRidePool="
         <> show isOnRidePool
         <> ")"
@@ -282,8 +284,18 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         onlyNewDriversWithCustomerInfo
   -- Rejects accumulated by the earlier batches of this search try, so the POOLING ruleset can
   -- escalate (widen radius, grow the batch) instead of drip-feeding an unwilling pool.
-  cumulativeRejectCount <- getSearchTryRejectCount searchTryId
-  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum, cumulativeRejectCount = Just cumulativeRejectCount}
+  cumulativeRejectCount <- getSearchTryRejectCount searchTry.id
+  let taggedDriverPoolInput =
+        TaggedDriverPoolInput
+          { drivers = enrichedDrivers,
+            needOnRideDrivers = isOnRidePool,
+            batchNum,
+            cumulativeRejectCount = Just cumulativeRejectCount,
+            customerRating = mbRiderDetails >>= (.customerRating),
+            customerTotalRatings = mbRiderDetails >>= (.customerTotalRatings),
+            customerGender = mbRiderDetails >>= (.customerGender),
+            paymentInstrument = searchTry.paymentInstrument
+          }
   logInfo $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
       <> " | drivers=["
@@ -339,7 +351,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
       else do
         (backfill, _) <- reserveInRankOrder (tryReserve hardCap) (batchSize - length underSoft) overSoft
         logInfo $
-          "SoftParallelBackfill: searchTryId=" <> searchTryId.getId
+          "SoftParallelBackfill: searchTryId=" <> searchTry.id.getId
             <> " batchNum="
             <> show batchNum
             <> " softCap="
@@ -359,7 +371,7 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
 
   pushTaggedPoolToKafka (sortedPool <> rest)
   when (isContinuousBatchingEnabled driverPoolCfg && not isOnRidePool) $
-    setDriverReserveList searchTryId (getNextBatchScheduleTime driverPoolCfg + driverReserveListTtlBufferSeconds) rest
+    setDriverReserveList searchTry.id (getNextBatchScheduleTime driverPoolCfg + driverReserveListTtlBufferSeconds) rest
   return (mbVersion, take batchSize sortedPool)
   where
     updateVersionInSearchReq mbVersion =
@@ -375,14 +387,14 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka
         ( SearchTryBatchPoolData
-            { searchTryId = searchTryId.getId,
+            { searchTryId = searchTry.id.getId,
               driverPoolData = taggedPool,
               filterStage = TaggedPool,
               batchNum = batchNum
             }
         )
         "search-try-driver-tagged-pool-batch"
-        searchTryId.getId
+        searchTry.id.getId
 
 reserveInRankOrder :: Monad m => ([a] -> m [Bool]) -> Int -> [a] -> m ([a], [a])
 reserveInRankOrder tryReserve target = go [] []

@@ -35,6 +35,19 @@ updateCancellationDues cancellationDues id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCustomerProfile ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.Person.Gender -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateCustomerProfile customerRating customerTotalRatings customerGender id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.customerRating customerRating,
+      Se.Set Beam.customerTotalRatings customerTotalRatings,
+      Se.Set Beam.customerGender customerGender,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDisputeChancesUsed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateDisputeChancesUsed disputeChancesUsed id = do
   _now <- getCurrentTime
@@ -115,6 +128,9 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.completedRides (Kernel.Prelude.Just completedRides),
       Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.customerGender customerGender,
+      Se.Set Beam.customerRating customerRating,
+      Se.Set Beam.customerTotalRatings customerTotalRatings,
       Se.Set Beam.disputeChancesUsed disputeChancesUsed,
       Se.Set Beam.firstRideId firstRideId,
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,

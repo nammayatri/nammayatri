@@ -6,6 +6,8 @@ imports:
   Person: Domain.Types.Person
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  Gender: Domain.Types.Person
 
 
 RiderDetails:
@@ -49,6 +51,9 @@ RiderDetails:
     bapId: Maybe Text
     riderFlaggedForDriverIncentives: Bool
     consentToShareMobileNumber: Maybe Bool
+    customerRating: Maybe Centesimal
+    customerTotalRatings: Maybe Int
+    customerGender: Maybe Gender
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -106,6 +111,11 @@ RiderDetails:
     updateOtpCode:
       kvFunction: updateOneWithKV
       params: [otpCode]
+      where: id
+
+    updateCustomerProfile:
+      kvFunction: updateOneWithKV
+      params: [customerRating, customerTotalRatings, customerGender]
       where: id
 
     findAllReferredByDriverId:
@@ -175,6 +185,8 @@ RiderDetails:
     referralCode: character varying(15)
     referredByDriver: character varying(255)
     bapId: character varying(255)
+    customerRating: double precision
+    customerGender: character varying(255)
 
   extraOperations:
     - EXTRA_QUERY_FILE

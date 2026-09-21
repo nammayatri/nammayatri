@@ -68,6 +68,7 @@ import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -280,6 +281,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
               _ -> return tripQuoteDetailsWithoutUpgrades
           _ -> return tripQuoteDetailsWithoutUpgrades
 
+      mbRiderDetails <- maybe (pure Nothing) QRD.findById searchReq.riderId
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -293,6 +295,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 isAllocatorBatch = True,
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = Nothing,
+                riderDetails = mbRiderDetails,
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference
@@ -402,7 +405,7 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
         { isBatchNumExceedLimit = I.isDispatchBudgetExhausted driverPoolConfig searchTry.id driverSearchBatchInput.searchReq.transactionId,
           mbTopUpSize = mbTopUpSize,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo,
+          getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo driverSearchBatchInput.riderDetails,
           popTopUpDrivers = I.popTopUpDrivers driverPoolConfig searchTry.requestId searchTry.id,
           markDriversAttempted = I.markDriversAttempted searchTry.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch (isJust mbTopUpSize) driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
