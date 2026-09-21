@@ -1694,55 +1694,6 @@ getPaymentType isMultiModalBooking = \case
 unixToUTC :: Integer -> UTCTime
 unixToUTC = posixSecondsToUTCTime . fromIntegral
 
-data RouteStationsInfo = RouteStationsInfo
-  { serviceTierType :: Maybe Spec.ServiceTierType,
-    routes :: [SOfferSegment.RouteInfo]
-  }
-
-getRouteStationsInfo :: [APITypes.FRFSRouteStationsAPI] -> RouteStationsInfo
-getRouteStationsInfo routeStations =
-  RouteStationsInfo
-    { serviceTierType = listToMaybe routeStations >>= (.vehicleServiceTier) <&> (._type),
-      routes = map (\r -> SOfferSegment.RouteInfo {routeCode = r.code, routeShortName = r.shortName}) routeStations
-    }
-
--- | Both bounds of a trip from one schedule fetch, instead of one call per bound.
-getScheduledTripWindow ::
-  (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
-  Text -> -- tripId, "<waybillNo>-<tripNumber>"
-  Text -> -- routeCode
-  Text -> -- boarding stop code
-  Text -> -- alighting stop code
-  DIBC.IntegratedBPPConfig ->
-  m (Maybe UTCTime, Maybe UTCTime)
-getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integratedBPPConfig = do
-  let (waybillNo, tripNo) = case T.splitOn "-" tripId of
-        [w, n] -> (w, fromMaybe 0 (readMaybe (T.unpack n)))
-        _ -> (tripId, 0 :: Int)
-  withTryCatch "getScheduledTripWindow:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig) >>= \case
-    Left err -> do
-      logWarning $ "getScheduledTripWindow: no schedule for tripId=" <> tripId <> ": " <> show err
-      pure (Nothing, Nothing)
-    Right schedule -> case concatMap (.eta) schedule of
-      [] -> do
-        logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
-        pure (Nothing, Nothing)
-      allEtas -> do
-        let atStop stopCode = find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode stopCode) allEtas
-            --
-            bound name mbFallback stopCode = case atStop stopCode of
-              Just eta -> pure $ Just (unixToUTC eta.arrivalTimeUnix)
-              Nothing -> case mbFallback of
-                Just fallbackEta -> do
-                  logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", using the trip's earliest stop"
-                  pure $ Just (unixToUTC fallbackEta.arrivalTimeUnix)
-                Nothing -> do
-                  logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
-                  pure Nothing
-            earliestEta = minimumBy (comparing (.arrivalTimeUnix)) allEtas
-        (,) <$> bound "boarding" (Just earliestEta) boardingStopCode
-          <*> bound "alighting" Nothing alightingStopCode
-
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do
   rsJson <- mbJson
