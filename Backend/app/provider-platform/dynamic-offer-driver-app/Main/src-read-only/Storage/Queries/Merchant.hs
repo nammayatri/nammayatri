@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Geofencing
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as Beam
@@ -33,6 +34,18 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Domain.Types.Merchant.Subscriber -> m (Maybe Domain.Types.Merchant.Merchant))
 findBySubscriberId subscriberId = do findOneWithKV [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId)]
 
+updateCloudConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType -> Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+updateCloudConfig cloudType cloudBaseUrl id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
+      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap showBaseUrl cloudBaseUrl),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateGatewayAndRegistryPriorityList :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.GatewayAndRegistryService] -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
 updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList id = do
   _now <- getCurrentTime
@@ -48,8 +61,8 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
     [ Se.Set Beam.businessId businessId,
       Se.Set Beam.cipherText cipherText,
       Se.Set Beam.city city,
-      Se.Set Beam.cloudBaseUrl ((Kernel.Prelude.fmap showBaseUrl) cloudBaseUrl),
-      Se.Set Beam.cloudType ((Kernel.Prelude.fmap Kernel.Prelude.show) cloudType),
+      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap showBaseUrl cloudBaseUrl),
+      Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
       Se.Set Beam.country country,
       Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,

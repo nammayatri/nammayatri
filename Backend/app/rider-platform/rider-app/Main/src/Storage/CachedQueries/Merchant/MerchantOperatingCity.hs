@@ -21,6 +21,8 @@ module Storage.CachedQueries.Merchant.MerchantOperatingCity
     findByMerchantShortIdAndCity,
     findAllByMerchantIdAndState,
     getMerchantOpCityId,
+    clearAllCrossCloudProxyCache,
+    crossCloudProxyCacheKeyParts,
   )
 where
 
@@ -133,3 +135,12 @@ makeMerchantShortIdAndCityKey merchantShortId city = "CachedQueries:MerchantOper
 
 makeMerchantIdAndStateKey :: Id Merchant -> Context.IndianState -> Text
 makeMerchantIdAndStateKey merchantId state = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId <> ":State-" <> show state
+
+clearAllCrossCloudProxyCache :: (CacheFlow m r, MonadFlow m) => m ()
+clearAllCrossCloudProxyCache = IM.refreshInMem crossCloudProxyCacheKeyPrefix
+
+crossCloudProxyCacheKeyPrefix :: Text
+crossCloudProxyCacheKeyPrefix = "crossCloudProxy:mocCloud"
+
+crossCloudProxyCacheKeyParts :: Id MerchantOperatingCity -> [Text]
+crossCloudProxyCacheKeyParts mocId = [crossCloudProxyCacheKeyPrefix, mocId.getId]

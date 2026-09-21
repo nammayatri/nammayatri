@@ -479,6 +479,7 @@ in  { esqDBCfg
     , internalAPIKey = sec.internalAPIKey
     , internalClickhouseAPIKey = sec.internalClickhouseAPIKey
     , assetPublisherApiKey = sec.assetPublisherApiKey
+    , cloudSwitchPassword = sec.cloudSwitchPassword
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
