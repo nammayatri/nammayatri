@@ -586,3 +586,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN parent_search_request_location_info jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN booking_deposit_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN pickup_area text ;
