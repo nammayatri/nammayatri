@@ -2780,8 +2780,16 @@ each find theirs, and a rollback needs nothing.
 
 **The simulated fleets are not exempt** (the client's choice, 2026-09-14): they
 have no credit and get no rides. Test with a real driver account topped up
-through the gateway page — both keys are in TEST mode, so that is the real flow
-with no real money.
+through the gateway page.
+
+**That test stopped being free on 2026-09-20**, and only on one side. Chargily
+is still a test key, so an Algerian top-up is the real flow with no real money.
+**Moosyl is live**: a Mauritanian top-up moves a real 30 MRU out of a real
+account, and there is no sandbox to fall back to — the same URL serves both and
+only the key differs. To rehearse the Mauritanian flow without paying, put the
+old test key back for the length of the test (`install-moosyl-key.sh` keeps
+every previous key as `/opt/ny/secrets/moosyl.env.before-<stamp>`), or credit
+the wallet row directly in Postgres and leave the gateway out of it.
 
 ### The Moosyl contract, measured rather than read
 
@@ -2843,13 +2851,40 @@ It opens one real checkout and deletes the row afterwards; left behind it would
 sit in that driver's own history as a payment he never started. 33 checks,
 all passing as of 2026-09-07.
 
-### The key is TEST mode
+### The key — `install-moosyl-key.sh`
 
-`GET /configuration` lists the methods with `isTestingMode`. On the key given
-2026-09-06 all five — bankily, masrivi, sedad, bim_bank, bci_pay — are
-**TESTING**, so it moves no real money. That is what made it safe to build the
-whole thing before the production key arrived. The secret lives at
-`/opt/ny/secrets/moosyl.env` (root, 600) and **never in git**.
+The secret lives at `/opt/ny/secrets/moosyl.env` (root, 600) and **never in
+git**. It is the only place it has ever lived: the app does not hold it, the
+Haskell backend does not know Moosyl exists, and `docker-compose.yml` carries
+`MOOSYL_BASE` but deliberately not the key. So changing keys is one file and one
+container, and nothing to build.
+
+    ./install-moosyl-key.sh '<key>'          # the key is an argument, never a line in the repo
+
+**Test and live are the same base URL.** `https://api.moosyl.com` serves both;
+there is no `/test` prefix the way Chargily has one, and no setting anywhere
+that says which you are on. The *key* decides, and the only way to know which
+one you hold is to ask: `GET /configuration` lists the payment methods with an
+`isTestingMode` flag each. That is the last check the install script runs, and
+it refuses the install — telling you how to roll back — unless every method
+comes back false. A key that authenticates is not the same as a key that takes
+money. A wrong key answers `404 Invalid API key`, never 401.
+
+**`env_file` is read when the container is created, not when it starts.** A
+plain `docker compose restart maps-shim` keeps the old key and every check then
+passes or fails for a reason that has nothing to do with the key you just
+installed. The script uses `up -d --force-recreate --no-deps maps-shim`. Same
+trap as `install-moorsyl-key.sh`.
+
+| | |
+|---|---|
+| 2026-09-06 | test key. All five methods — bankily, masrivi, sedad, bim_bank, bci_pay — `isTestingMode: true`, which is what made it safe to build the whole wallet before production existed. |
+| 2026-09-20 | **production key** from the client. Valid one year — **expires 2026-09-20 + 1y = 2027-09-20**, and nothing warns you; a lapsed key reads as `404 Invalid API key` and every top-up returns `not_configured`. |
+
+Once the live key is in, `probe-wallet-screens.py` still opens one real checkout
+session against the real gateway. It pays nothing and deletes its own row, and
+an unfinished session expires on Moosyl's side — but it is no longer a rehearsal,
+so read what it opened before running it on a driver who is not yours.
 
 ---
 
