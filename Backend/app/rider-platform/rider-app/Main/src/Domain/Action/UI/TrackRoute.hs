@@ -66,7 +66,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
   logInfo $ "deduplicatedVehicles: " <> show deduplicatedVehicles
   let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
-  vehiclesYetToReachSelectedStop <- filterVehiclesYetToReachSelectedStop includeNullUpcomingStops personCityInfo.merchantOperatingCityId deduplicatedVehicles
+  vehiclesYetToReachSelectedStop <- filterVehiclesYetToReachSelectedStop includeNullUpcomingStops personCityInfo.merchantOperatingCityId integratedBPPConfig deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
   let sortedTracking = sortOn (distanceToStop currentLocation . snd) ghostBuses
   let sortedConfirmed = sortOn (distanceToStop currentLocation . snd) confirmedHighBuses
@@ -88,10 +88,13 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
       { vehicleTrackingInfo = vehicleTrackingInfoWithSubTypes
       }
   where
-    filterVehiclesYetToReachSelectedStop includeNullUpcomingStops merchantOperatingCityId vehicleTracking =
+    filterVehiclesYetToReachSelectedStop includeNullUpcomingStops merchantOperatingCityId integratedBPPConfig vehicleTracking =
       case mbSelectedSourceStopId of
         Just selectedStopId -> do
-          let (matched, rest) = List.partition (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
+          -- A vehicle's upcoming stops are platforms, so a selected station is matched through
+          -- the platform codes under it. Resolved once, not per vehicle.
+          selectedStopCodes <- OTPRest.getEquivalentStopCodes selectedStopId integratedBPPConfig
+          let (matched, rest) = List.partition (\(_, vt) -> any (\u -> u.stopCode `elem` selectedStopCodes) vt.upcomingStops) vehicleTracking
           let vehiclesWithNullUpcomingStops = filter (\(_, vt) -> null vt.upcomingStops) rest
           unless (null vehiclesWithNullUpcomingStops) $ do
             logError $

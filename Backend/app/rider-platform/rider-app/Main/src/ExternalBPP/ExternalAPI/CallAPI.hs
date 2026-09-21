@@ -15,7 +15,6 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.RouteStopMapping
-import Domain.Types.Station
 import Domain.Types.StationType
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Status as EBIXStatus
@@ -369,18 +368,22 @@ buildStationsPerSegment basicRouteDetails integratedBPPConfig = do
     ( \idx routeDetail -> do
         let startStopType = if idx == 0 then START else TRANSIT
         let endStopType = if idx == lastStopIndex then END else TRANSIT
-        fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
-        toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
         stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
-        return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType routeDetail.color)
+        -- A route's stops are platforms, so a station is served at whichever of its platforms
+        -- this route calls at.
+        startStopCodes <- OTPRest.getEquivalentStopCodes routeDetail.startStopCode integratedBPPConfig
+        endStopCodes <- OTPRest.getEquivalentStopCodes routeDetail.endStopCode integratedBPPConfig
+        return $ fromMaybe [] (mkStations startStopCodes endStopCodes stops startStopType endStopType routeDetail.color)
     )
     basicRouteDetails
   where
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 
-mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe Text -> Maybe [DStation]
-mkStations fromStation toStation stops startStopType endStopType routeColor =
-  ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
+-- | The first two arguments are the from/to stop codes with their equivalents (see
+-- 'OTPRest.getEquivalentStopCodes'), since a station is only on a route through its platforms.
+mkStations :: [Text] -> [Text] -> [RouteStopMapping] -> StationType -> StationType -> Maybe Text -> Maybe [DStation]
+mkStations fromStopCodes toStopCodes stops startStopType endStopType routeColor =
+  ((,) <$> find (\stop -> stop.stopCode `elem` fromStopCodes) stops <*> find (\stop -> stop.stopCode `elem` toStopCodes) stops)
     <&> \(startStop, endStop) ->
       do
         let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing routeColor

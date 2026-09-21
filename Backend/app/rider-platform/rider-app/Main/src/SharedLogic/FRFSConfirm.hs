@@ -1008,8 +1008,12 @@ buildJourneyAndLeg booking fareParameters = do
       case mbLastRouteStation of
         Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
         Nothing -> return Nothing
-    let fromStopPlatformCode = mbFirstTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
-        toStopPlatformCode = mbLastTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+    -- A trip's stops are platforms, so a booking made against a station code matches through
+    -- the platform codes under it.
+    fromStationCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBppConfig
+    toStationCodes <- OTPRest.getEquivalentStopCodes booking.toStationCode integratedBppConfig
+    let fromStopPlatformCode = mbFirstTrip >>= \trip -> OTPRest.findTripStopByStopCode trip fromStationCodes >>= (.platformCode)
+        toStopPlatformCode = mbLastTrip >>= \trip -> OTPRest.findTripStopByStopCode trip toStationCodes >>= (.platformCode)
         fromStopDetail =
           MultiModalStopDetails
             { stopCode = Just booking.fromStationCode,
@@ -1043,7 +1047,9 @@ buildJourneyAndLeg booking fareParameters = do
               ( \(sequenceNo', routeStation, (boardingStop, alightingStop)) -> do
                   subLegGuid <- generateGUID
                   mbSubLegTrip <- OTPRest.getExampleTrip integratedBppConfig routeStation.code
-                  let platformAt stopCode = mbSubLegTrip >>= \trip -> OTPRest.findTripStopByStopCode trip stopCode >>= (.platformCode)
+                  boardingStopCodes <- OTPRest.getEquivalentStopCodes boardingStop.code integratedBppConfig
+                  alightingStopCodes <- OTPRest.getEquivalentStopCodes alightingStop.code integratedBppConfig
+                  let platformAt stopCodes = mbSubLegTrip >>= \trip -> OTPRest.findTripStopByStopCode trip stopCodes >>= (.platformCode)
                   pure
                     SubLegInput
                       { subLegId = subLegGuid,
@@ -1051,12 +1057,12 @@ buildJourneyAndLeg booking fareParameters = do
                         mbStation = Just routeStation,
                         fromCode = boardingStop.code,
                         fromName = boardingStop.name,
-                        fromPlatform = platformAt boardingStop.code,
+                        fromPlatform = platformAt boardingStopCodes,
                         fromLat = fromMaybe fromLocation.lat boardingStop.lat,
                         fromLon = fromMaybe fromLocation.lon boardingStop.lon,
                         toCode = alightingStop.code,
                         toName = alightingStop.name,
-                        toPlatform = platformAt alightingStop.code,
+                        toPlatform = platformAt alightingStopCodes,
                         toLat = fromMaybe toLocation.lat alightingStop.lat,
                         toLon = fromMaybe toLocation.lon alightingStop.lon
                       }
