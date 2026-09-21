@@ -64,7 +64,15 @@ type RideCancelledCounterMetric = P.Vector P.Label8 P.Counter
 -- so tries-based ratios must exclude them.
 type RiderAcceptanceCounterMetric = P.Vector P.Label8 P.Counter
 
-type RideValueHistogram = P.Vector P.Label8 P.Histogram
+-- Labels: (merchant, city, vehicle_service_tier, distance_bucket, backend_version, stage)
+-- Deliberately NO pickup_zone/drop_zone here. These are histograms, so every label
+-- combination costs one series *per bucket* (41 for the linear ones). The zone pair is an
+-- unbounded cross-product (~436 pickup x ~483 drop ids seen in prod) that a pod keeps
+-- discovering for its whole life, which grew /metrics past vmagent's 100MB
+-- -promscrape.maxScrapeSize after ~7-8h of uptime. vmagent then drops the *entire* scrape,
+-- so every BPP_* series from that pod vanishes -- not just these histograms.
+-- Zone breakdowns stay on the plain counters above, where they cost one series each.
+type RideValueHistogram = P.Vector P.Label6 P.Histogram
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
@@ -143,7 +151,7 @@ registerRideCancelledCounter =
 
 registerRideValueHistogram :: Text -> Text -> [Double] -> IO RideValueHistogram
 registerRideValueHistogram name description buckets =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "pickup_zone", "drop_zone", "stage") $
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "distance_bucket", "backend_version", "stage") $
     P.histogram (P.Info name description) buckets
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
