@@ -1184,3 +1184,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_con
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_pool_enrichment boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_cool_off_period integer  default 30;

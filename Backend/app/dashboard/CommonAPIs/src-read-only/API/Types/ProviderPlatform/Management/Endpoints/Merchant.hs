@@ -550,6 +550,7 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     scheduledRideMinLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    driverCoolOffPeriod :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -599,7 +600,8 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     maxScheduledHoldsPerDriver :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Int),
     scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
     scheduledRideMinLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
-    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
+    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
+    driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
