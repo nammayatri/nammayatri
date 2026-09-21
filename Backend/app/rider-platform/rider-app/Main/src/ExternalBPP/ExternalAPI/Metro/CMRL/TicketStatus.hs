@@ -73,7 +73,7 @@ getTicketStatus config booking = do
       ( \ticket -> do
           if ticket.status == Ticket.ACTIVE
             then do
-              let eulerClient = \accessToken -> ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber cmrlAppType
+              let eulerClient = \accessToken -> ET.client ticketStatusAPI (Just $ "Bearer " <> accessToken) ticket.ticketNumber (cmrlAppType config)
               ticketStatus <- callCMRLAPI config eulerClient "getTicketStatus" ticketStatusAPI
               let qrStatus = mkTicketStatus ticketStatus.result
               return $

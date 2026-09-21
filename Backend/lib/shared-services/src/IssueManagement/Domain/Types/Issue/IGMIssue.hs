@@ -11,7 +11,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 data IGMIssue = IGMIssue
-  { bookingId :: Text,
+  { bapUri :: Maybe Text,
+    becknTransactionId :: Maybe Text,
+    bookingId :: Text,
     createdAt :: UTCTime,
     customerEmail :: Maybe Text,
     customerName :: Maybe Text,

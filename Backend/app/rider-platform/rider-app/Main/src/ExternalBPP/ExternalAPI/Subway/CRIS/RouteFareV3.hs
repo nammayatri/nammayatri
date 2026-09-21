@@ -174,6 +174,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
                     serviceTierLongName = serviceTier.longName,
                     isAirConditioned = serviceTier.isAirConditioned
                   },
+              fareQuoteId = Nothing,
               fareQuoteType = Nothing
             }
   let fares = concat frfsDetails
