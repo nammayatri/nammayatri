@@ -129,7 +129,7 @@ specialZoneLabels (Just area) =
 -- special-location categories. The category comes straight from the row, so nothing about
 -- "what is an airport" is hardcoded — filter on it in Grafana. Costs one replica read per
 -- end, so only use off the request hot path (ride assignment / ride end), never per search.
-specialZoneCategoryLabels :: (Transactionable m, EsqDBReplicaFlow m r) => Maybe SL.Area -> m (Text, Text)
+specialZoneCategoryLabels :: (EsqDBFlow m r, EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) => Maybe SL.Area -> m (Text, Text)
 specialZoneCategoryLabels Nothing = pure ("none", "none")
 specialZoneCategoryLabels (Just area) =
   (,)
