@@ -427,22 +427,18 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
     fork "BPP search-stage ride-value histograms" $ do
       searchCityLabel <- SML.getCityLabel merchantOpCityId
       let searchMerchantLabel = merchant.shortId.getShortId
-          searchDistEdges = SML.distanceBucketEdges transporterConfig
-          (searchPickupZone, searchDropZone) = SML.specialZoneLabels mbAreaForVST
       forM_ estimates $ \est -> do
         let estVst = show est.vehicleServiceTier
-            estDistBucket = SML.distanceBucketLabel searchDistEdges est.estimatedDistance
             estDistMeters = realToFrac (fromMaybe 0 est.estimatedDistance) :: Double
             estFareValue = realToFrac est.maxFare :: Double
         when (estDistMeters > 0) $
-          Metrics.observePricePerKm searchMerchantLabel searchCityLabel estVst estDistBucket searchPickupZone searchDropZone "search" (estFareValue / (estDistMeters / 1000))
+          Metrics.observePricePerKm searchMerchantLabel searchCityLabel estVst "none" "none" "search" (estFareValue / (estDistMeters / 1000))
         whenJust (est.fareParams >>= (.congestionCharge)) $ \congestionChargeVal ->
-          Metrics.observeCongestionCharge searchMerchantLabel searchCityLabel estVst estDistBucket searchPickupZone searchDropZone "search" (realToFrac congestionChargeVal)
+          Metrics.observeCongestionCharge searchMerchantLabel searchCityLabel estVst "none" "none" "search" (realToFrac congestionChargeVal)
       unless (null estimates) $ do
         let searchDistMeters = realToFrac (fromMaybe 0 mbDistance) :: Double
-            searchDistBucket = SML.distanceBucketLabel searchDistEdges mbDistance
         when (searchDistMeters > 0) $
-          Metrics.observeRideDistanceMeters searchMerchantLabel searchCityLabel "all" searchDistBucket searchPickupZone searchDropZone "search" searchDistMeters
+          Metrics.observeRideDistanceMeters searchMerchantLabel searchCityLabel "all" "none" "none" "search" searchDistMeters
 
   driverInfoQuotes <- withTimeAPI "search" "addNearestDriverInfoQuotes" $ addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- withTimeAPI "search" "addNearestDriverInfoEstimates" $ addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)

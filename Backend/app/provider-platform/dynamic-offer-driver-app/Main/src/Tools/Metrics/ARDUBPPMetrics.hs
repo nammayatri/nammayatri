@@ -93,29 +93,29 @@ incrementRideCancelledCount merchantId merchantOpCityId vehicleServiceTier cance
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.rideCancelledCounter (merchantId, merchantOpCityId, vehicleServiceTier, cancellationSource, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone) P.incCounter
 
-observePricePerKm :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
-observePricePerKm merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone stage value = do
+observePricePerKm :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
+observePricePerKm merchantId merchantOpCityId vehicleServiceTier pickupZone dropZone stage value = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.pricePerKmHist (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
+  liftIO $ P.withLabel bmContainer.pricePerKmHist (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
 
-observeCongestionCharge :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
-observeCongestionCharge merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone stage value = do
+observeCongestionCharge :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
+observeCongestionCharge merchantId merchantOpCityId vehicleServiceTier pickupZone dropZone stage value = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.congestionChargeHist (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
+  liftIO $ P.withLabel bmContainer.congestionChargeHist (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
 
-observeRideDistanceMeters :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
-observeRideDistanceMeters merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone stage value = do
+observeRideDistanceMeters :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
+observeRideDistanceMeters merchantId merchantOpCityId vehicleServiceTier pickupZone dropZone stage value = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.rideDistanceHist (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
+  liftIO $ P.withLabel bmContainer.rideDistanceHist (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
 
-observePickupDistanceMeters :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
-observePickupDistanceMeters merchantId merchantOpCityId vehicleServiceTier distanceBucket pickupZone dropZone stage value = do
+observePickupDistanceMeters :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Text -> Double -> m ()
+observePickupDistanceMeters merchantId merchantOpCityId vehicleServiceTier pickupZone dropZone stage value = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.pickupDistanceHist (merchantId, merchantOpCityId, vehicleServiceTier, distanceBucket, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
+  liftIO $ P.withLabel bmContainer.pickupDistanceHist (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion, pickupZone, dropZone, stage) (`P.observe` value)
 
 type SearchMetricsMVar = MVar Milliseconds
 

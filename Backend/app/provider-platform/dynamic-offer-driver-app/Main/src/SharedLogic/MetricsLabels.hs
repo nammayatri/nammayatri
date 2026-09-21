@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -121,6 +122,22 @@ specialZoneLabels (Just area) =
   ( fromMaybe "none" (SL.pickupSpecialZoneIdFromArea area),
     fromMaybe "none" (SL.dropSpecialZoneIdFromArea area)
   )
+
+-- | (pickup_zone, drop_zone) as the special-location CATEGORY (e.g. "Airport") rather than
+-- the opaque zone id, "none" when regular. Keeps the pickup/drop distinction (FROM- vs
+-- TO-airport) while collapsing tens of thousands of distinct zone ids to the handful of
+-- special-location categories. The category comes straight from the row, so nothing about
+-- "what is an airport" is hardcoded — filter on it in Grafana. Costs one replica read per
+-- end, so only use off the request hot path (ride assignment / ride end), never per search.
+specialZoneCategoryLabels :: (EsqDBFlow m r, EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) => Maybe SL.Area -> m (Text, Text)
+specialZoneCategoryLabels Nothing = pure ("none", "none")
+specialZoneCategoryLabels (Just area) =
+  (,)
+    <$> categoryOf (SL.pickupSpecialZoneIdFromArea area)
+    <*> categoryOf (SL.dropSpecialZoneIdFromArea area)
+  where
+    categoryOf Nothing = pure "none"
+    categoryOf (Just slId) = maybe "none" (.category) <$> QSpecialLocation.findById (Id slId)
 
 -- | The three allocation-funnel label values, in the order every counter expects:
 -- (distance_bucket, pooling_logic_version, pooling_config_version).
