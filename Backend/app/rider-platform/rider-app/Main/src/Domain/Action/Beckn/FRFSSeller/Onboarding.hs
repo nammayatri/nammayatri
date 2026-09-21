@@ -16,6 +16,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment (Flow)
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSSeller.Common as Common
@@ -39,6 +40,7 @@ onSubscribe operator req = do
   encPriv <-
     integratedBPPConfig.ondcEncryptionPrivateKey
       & fromMaybeM (InvalidRequest $ "No ondcEncryptionPrivateKey configured for " <> operator)
+      >>= decrypt
   registryPub <-
     integratedBPPConfig.ondcRegistryPublicKey
       & fromMaybeM (InvalidRequest $ "No ondcRegistryPublicKey configured for " <> operator)

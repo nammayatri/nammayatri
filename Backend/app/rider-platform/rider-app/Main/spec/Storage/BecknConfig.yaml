@@ -1,4 +1,6 @@
 imports:
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
   OperatorConfig: Domain.Types.Extra.IntegratedBPPConfig
   Value: Data.Aeson
   Base64: Kernel.Types.Base64
@@ -122,7 +124,7 @@ IntegratedBPPConfig:
     sortQuotesByRouteServiceTiers: Maybe Bool
     operatorConfig: Maybe OperatorConfig
     ondcRegistryPublicKey: Maybe Text
-    ondcEncryptionPrivateKey: Maybe Text
+    ondcEncryptionPrivateKey: Maybe (EncryptedField 'AsEncrypted Text)
 
   beamFields:
     providerConfig:
@@ -130,6 +132,10 @@ IntegratedBPPConfig:
 
   beamType:
     operatorConfig: Maybe Value
+    # Encrypted Text has no HasSqlValueSyntax/Ord instance, which the KV layer
+    # requires on every column, so the column stays text and is wrapped/unwrapped
+    # in fromTType/toTType (same shape as driver-app's DriverOnboarding.accessToken).
+    ondcEncryptionPrivateKey: Maybe Text
 
   default:
     isTicketValidOnMultipleRoutes: "true"
@@ -152,16 +158,19 @@ IntegratedBPPConfig:
   fromTType:
     providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
     operatorConfig: Kernel.Utils.JSON.valueToMaybe =<< operatorConfig|E
+    ondcEncryptionPrivateKey: Encrypted <$> ondcEncryptionPrivateKey|E
 
 
   toTType:
     configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E
     operatorConfig: Data.Aeson.toJSON <$> operatorConfig|E
+    ondcEncryptionPrivateKey: ondcEncryptionPrivateKey <&> unEncrypted|E
 
   sqlType:
     configJSON: json
     platformType: text
     operatorConfig: jsonb
+    ondcEncryptionPrivateKey: text
 
   constraints:
     id: PrimaryKey
