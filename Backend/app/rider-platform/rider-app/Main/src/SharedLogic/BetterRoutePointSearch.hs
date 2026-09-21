@@ -304,8 +304,8 @@ resolveBetterRoute riderConfig parentRes mbPickup mbDrop = do
       parentPickup = LatLong parent.fromLocation.lat parent.fromLocation.lon
   parentDropLoc <- parent.toLocation & fromMaybeM (InvalidRequest "Cannot suggest a better route point for a search without a destination")
   let parentDrop = LatLong parentDropLoc.lat parentDropLoc.lon
-  validateWalk parentPickup mbPickup
-  validateWalk parentDrop mbDrop
+  validateWalk "pickup" (maxWalkAtPickup riderConfig) parentPickup mbPickup
+  validateWalk "drop" (maxWalkAtDrop riderConfig) parentDrop mbDrop
   let mbTrimmed = do
         routeInfo <- parentRes.shortestRouteInfo
         BRP.betterRouteForCustomPoints
@@ -326,17 +326,16 @@ resolveBetterRoute riderConfig parentRes mbPickup mbDrop = do
     -- A point the customer can walk to is the entire premise; anything further is a
     -- different ride, and belongs in a search of its own rather than a shadow of this one.
     --
-    -- The absolute cap, not the ride-scaled one 'detectBetterRoute' offers points within.
-    -- That headroom is deliberate: a customer nudging a marker that was already placed at
-    -- the scaled cap has to be able to move it, and the point they land on is one they
-    -- chose to walk to rather than one we talked them into.
-    validateWalk own = \case
+    -- The absolute cap for the end being moved, not the ride-scaled one 'detectBetterRoute'
+    -- offers points within. That headroom is deliberate: a customer nudging a marker that
+    -- was already placed at the scaled cap has to be able to move it, and the point they
+    -- land on is one they chose to walk to rather than one we talked them into.
+    validateWalk end maxWalk own = \case
       Nothing -> pure ()
       Just chosen -> do
         let walk = highPrecMetersToMeters $ distanceBetweenInMeters own chosen
-            maxWalk = fromMaybe defaultMaxWalkDistance riderConfig.maxWalkDistanceForBetterPoint
         when (walk > maxWalk) $
-          throwError (InvalidRequest $ "Suggested point is " <> show walk <> " away, further than the " <> show maxWalk <> " a customer is asked to walk")
+          throwError (InvalidRequest $ "Suggested " <> end <> " is " <> show walk <> " away, further than the " <> show maxWalk <> " a customer is asked to walk at that end")
 
 -- | The fallback for a point the parent's polyline cannot describe: ask the provider for
 -- the route between the endpoints as they now stand, and state the saving against what
@@ -389,6 +388,14 @@ defaultMaxOffRouteDistance = Meters 60
 defaultMaxWalkDistance :: Meters
 defaultMaxWalkDistance = Meters 400
 
+-- | The absolute walk ceiling for each end. The drop falls back to the pickup's, so a city
+-- that has only ever configured one cap keeps holding both ends to it.
+maxWalkAtPickup :: DRC.RiderConfig -> Meters
+maxWalkAtPickup riderConfig = fromMaybe defaultMaxWalkDistance riderConfig.maxWalkDistanceForBetterPoint
+
+maxWalkAtDrop :: DRC.RiderConfig -> Meters
+maxWalkAtDrop riderConfig = fromMaybe (maxWalkAtPickup riderConfig) riderConfig.maxWalkDistanceForBetterPointAtDrop
+
 -- | All the reasons a search is not a candidate, in one place.
 detectBetterRoute :: DRC.RiderConfig -> SLS.SearchRes -> Maybe BRP.BetterRoutePlan
 detectBetterRoute riderConfig parentRes = do
@@ -423,15 +430,21 @@ detectBetterRoute riderConfig parentRes = do
 betterPointConfig :: DRC.RiderConfig -> Maybe BRP.BetterPointConfig
 betterPointConfig riderConfig = do
   minSaving <- riderConfig.minRideDistanceSavingForBetterPoint
-  maxWalk <- riderConfig.maxWalkDistanceForBetterPoint
+  -- The pickup cap is what turns the feature on. The drop's is optional and falls back to
+  -- it, so splitting the two ends is something a city opts into rather than something it
+  -- has to restate to keep the behaviour it already had.
+  maxWalkPickup <- riderConfig.maxWalkDistanceForBetterPoint
+  let maxWalkPctPickup = fromMaybe 0.03 riderConfig.betterPointMaxWalkPctOfRide
   pure
     BRP.BetterPointConfig
       { minRideDistanceSaving = minSaving,
-        maxWalkDistance = maxWalk,
+        maxWalkDistanceAtPickup = maxWalkPickup,
+        maxWalkDistanceAtDrop = fromMaybe maxWalkPickup riderConfig.maxWalkDistanceForBetterPointAtDrop,
         -- 3% walk / 5% saving: on a 9.5km ride that allows a ~285m walk, which is what it
         -- takes to reach detours that a flat 150m cap silently hides; on a 2km ride it
         -- allows only ~60m.
-        maxWalkPctOfRide = fromMaybe 0.03 riderConfig.betterPointMaxWalkPctOfRide,
+        maxWalkPctOfRideAtPickup = maxWalkPctPickup,
+        maxWalkPctOfRideAtDrop = fromMaybe maxWalkPctPickup riderConfig.betterPointMaxWalkPctOfRideAtDrop,
         minSavingPctOfRide = fromMaybe 0.05 riderConfig.betterPointMinSavingPctOfRide,
         -- Default 5: enough that a short walk beats the walk cap for a modest extra
         -- saving, without being so high that only near-zero walks ever win.
