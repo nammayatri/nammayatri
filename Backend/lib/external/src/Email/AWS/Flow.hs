@@ -36,11 +36,14 @@ sendEmail config to otpCode = do
   void $ AWS.runResourceT $ AWS.send env sendReq
 
 -- | Send a plain subject+body email (no attachment, no template)
-sendPlainEmail :: Text -> [Text] -> Text -> Text -> IO ()
-sendPlainEmail from to subject bodyText = do
+sendPlainEmail :: Text -> [Text] -> Text -> Text -> Email.EmailBodyFormat -> IO ()
+sendPlainEmail from to subject bodyText bodyFormat = do
   env <- AWS.newEnv AWS.discover
   let destination = Destination' Nothing Nothing (Just to)
-      message = newMessage (newContent subject) (Body' Nothing (Just $ newContent bodyText))
+      body = case bodyFormat of
+        Email.HtmlText -> Body' (Just (newContent bodyText)) (Just (newContent (htmlToPlaintext bodyText)))
+        Email.Text -> Body' Nothing (Just (newContent bodyText))
+      message = newMessage (newContent subject) body
       sendReq = newSendEmail from destination message
   void $ AWS.runResourceT $ AWS.send env sendReq
 
@@ -138,36 +141,68 @@ sendEmailWithAttachments ::
   [Text] ->
   Text ->
   Text ->
+  Email.EmailBodyFormat ->
   [Email.EmailAttachment] ->
   IO ()
-sendEmailWithAttachments from to subject bodyText attachments = do
-  let rawEmail = buildMultiAttachmentRawEmail from to subject bodyText attachments
+sendEmailWithAttachments from to subject bodyText bodyFormat attachments = do
+  let rawEmail = buildMultiAttachmentRawEmail from to subject bodyText bodyFormat attachments
   env <- AWS.newEnv AWS.discover
   let rawMessage = newRawMessage (TE.encodeUtf8 rawEmail)
       sendReq = newSendRawEmail rawMessage
   void $ AWS.runResourceT $ AWS.send env sendReq
+
+htmlToPlaintext :: Text -> Text
+htmlToPlaintext = T.strip . dropTags
+  where
+    dropTags s = case T.breakOn "<" s of
+      (before, "") -> before
+      (before, rest) -> case T.breakOn ">" rest of
+        (_, "") -> before
+        (_, gt) -> before <> " " <> dropTags (T.drop 1 gt)
 
 buildMultiAttachmentRawEmail ::
   Text ->
   [Text] ->
   Text ->
   Text ->
+  Email.EmailBodyFormat ->
   [Email.EmailAttachment] ->
   Text
-buildMultiAttachmentRawEmail from to subject body attachments =
-  let boundary = "----=_Part_0_123456789.987654321"
+buildMultiAttachmentRawEmail from to subject body bodyFormat attachments =
+  let outerBoundary = "----=_Part_0_123456789.987654321"
+      altBoundary = "----=_Alt_0_abcdefghi.jklmnopq"
       toAddressList = T.intercalate ", " to
-      bodyPart =
-        [ "--" <> boundary,
-          "Content-Type: text/plain; charset=UTF-8",
-          "Content-Transfer-Encoding: 7bit",
-          "",
-          body,
-          ""
-        ]
+      bodyPart = case bodyFormat of
+        Email.HtmlText ->
+          [ "--" <> outerBoundary,
+            "Content-Type: multipart/alternative; boundary=\"" <> altBoundary <> "\"",
+            "",
+            "--" <> altBoundary,
+            "Content-Type: text/plain; charset=UTF-8",
+            "Content-Transfer-Encoding: 7bit",
+            "",
+            htmlToPlaintext body,
+            "",
+            "--" <> altBoundary,
+            "Content-Type: text/html; charset=UTF-8",
+            "Content-Transfer-Encoding: 7bit",
+            "",
+            body,
+            "",
+            "--" <> altBoundary <> "--",
+            ""
+          ]
+        Email.Text ->
+          [ "--" <> outerBoundary,
+            "Content-Type: text/plain; charset=UTF-8",
+            "Content-Transfer-Encoding: 7bit",
+            "",
+            body,
+            ""
+          ]
       attachmentPart att =
         let b64 = TE.decodeUtf8 . B64.encode $ att.content
-         in [ "--" <> boundary,
+         in [ "--" <> outerBoundary,
               "Content-Type: " <> att.contentType <> "; name=\"" <> att.filename <> "\"",
               "Content-Description: " <> att.filename,
               "Content-Disposition: attachment; filename=\"" <> att.filename <> "\"",
@@ -181,8 +216,8 @@ buildMultiAttachmentRawEmail from to subject body attachments =
           "To: " <> toAddressList,
           "Subject: " <> subject,
           "MIME-Version: 1.0",
-          "Content-Type: multipart/mixed; boundary=\"" <> boundary <> "\"",
+          "Content-Type: multipart/mixed; boundary=\"" <> outerBoundary <> "\"",
           ""
         ]
-      closing = ["--" <> boundary <> "--"]
+      closing = ["--" <> outerBoundary <> "--"]
    in T.unlines $ headerPart <> bodyPart <> concatMap attachmentPart attachments <> closing

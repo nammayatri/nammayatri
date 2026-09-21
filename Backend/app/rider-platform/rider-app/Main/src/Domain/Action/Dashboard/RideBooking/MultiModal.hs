@@ -17,6 +17,7 @@ import Domain.Types.EmptyDynamicParam
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Email.Flow as Email
+import qualified Email.Types as EmailT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -79,7 +80,7 @@ postMultiModalSendDirectMessage merchantShortId opCity req = do
           (pure "")
           (\k -> buildMessageWithKey merchantOpCityId k vars >>= fromMaybeM (InvalidRequest $ "No email template found for messageKey: " <> show k))
           req.titleKey
-      liftIO $ Email.sendPlainEmail emailServiceConfig fromEmail [req.destination] subject body
+      liftIO $ Email.sendPlainEmail emailServiceConfig fromEmail [req.destination] subject body EmailT.Text
     _ -> throwError $ InvalidRequest "Unsupported channel for sendDirectMessage; only WHATSAPP and EMAIL are supported"
   pure Kernel.Types.APISuccess.Success
 

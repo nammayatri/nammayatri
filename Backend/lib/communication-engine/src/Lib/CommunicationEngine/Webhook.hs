@@ -36,6 +36,7 @@ where
 
 import Data.Aeson (Value (Null))
 import qualified Data.Text as T
+import qualified Email.Types as EmailT
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -94,7 +95,8 @@ data SendNotificationReq = SendNotificationReq
     variables :: Maybe [Text],
     sender :: Maybe Text,
     subject :: Maybe Text,
-    attachments :: Maybe [EmailAttachment]
+    attachments :: Maybe [EmailAttachment],
+    bodyFormat :: Maybe EmailT.EmailBodyFormat
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -115,6 +117,7 @@ data EmailArgs = EmailArgs
     to :: Text,
     subject :: Text,
     body :: Text,
+    bodyFormat :: EmailT.EmailBodyFormat,
     attachments :: [EmailAttachment]
   }
 
@@ -223,5 +226,5 @@ sendNotificationWebhook h req = do
     EMAIL -> do
       toEmail <- fromMaybeM (InvalidRequest "Recipient email not available") contact.email
       from <- fromMaybeM (InvalidRequest "sender (from email) required for EMAIL channel") req.sender
-      h.sendEmail contact EmailArgs {from = from, to = toEmail, subject = fromMaybe req.title req.subject, body = req.body, attachments = fromMaybe [] req.attachments}
+      h.sendEmail contact EmailArgs {from = from, to = toEmail, subject = fromMaybe req.title req.subject, body = req.body, bodyFormat = fromMaybe EmailT.Text req.bodyFormat, attachments = fromMaybe [] req.attachments}
   pure Success

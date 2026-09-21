@@ -18,6 +18,7 @@ module Email.Types
     EmailBusinessVerificationConfig (..),
     EmailServiceConfig (..),
     EmailAttachment (..),
+    EmailBodyFormat (..),
   )
 where
 
@@ -44,6 +45,9 @@ data EmailAttachment = EmailAttachment
     filename :: Text,
     contentType :: Text
   }
+
+data EmailBodyFormat = Text | HtmlText
+  deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 data EmailOTPConfig = EmailOTPConfig
   { fromEmail :: Text,

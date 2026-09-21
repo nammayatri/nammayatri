@@ -127,27 +127,38 @@ sendViaSendGrid apiUrl emailData = do
     let errBody = TE.decodeUtf8 $ BSL.toStrict $ responseBody response
     error $ "SendGrid API error (status " <> T.pack (show status) <> "): " <> errBody
 
-buildEmail :: Text -> [Text] -> Text -> Text -> Maybe [Attachment] -> SendGridEmail
-buildEmail from to subject body attachments =
+buildEmail :: Text -> [Text] -> Text -> Text -> Email.EmailBodyFormat -> Maybe [Attachment] -> SendGridEmail
+buildEmail from to subject body bodyFormat attachments =
   SendGridEmail
     { personalizations = [Personalization {to = map (\e -> EmailAddress e Nothing) to}],
       from = EmailAddress from Nothing,
       subject = subject,
-      content = [Content "text/plain" body],
+      content = case bodyFormat of
+        Email.HtmlText -> [Content "text/plain" (htmlToPlaintextGcp body), Content "text/html" body]
+        Email.Text -> [Content "text/plain" body],
       attachments = attachments
     }
+
+htmlToPlaintextGcp :: Text -> Text
+htmlToPlaintextGcp = T.strip . dropTags
+  where
+    dropTags s = case T.breakOn "<" s of
+      (before, "") -> before
+      (before, rest) -> case T.breakOn ">" rest of
+        (_, "") -> before
+        (_, gt) -> before <> " " <> dropTags (T.drop 1 gt)
 
 sendEmail :: String -> Email.EmailOTPConfig -> [Text] -> Text -> IO ()
 sendEmail apiUrl config to otpCode = do
   let from = config.fromEmail
       subject = config.subject
       bodyText = T.replace "<otp>" otpCode config.bodyTemplate
-      emailData = buildEmail from to subject bodyText Nothing
+      emailData = buildEmail from to subject bodyText Email.Text Nothing
   sendViaSendGrid apiUrl emailData
 
-sendPlainEmail :: String -> Text -> [Text] -> Text -> Text -> IO ()
-sendPlainEmail apiUrl from to subject bodyText = do
-  let emailData = buildEmail from to subject bodyText Nothing
+sendPlainEmail :: String -> Text -> [Text] -> Text -> Text -> Email.EmailBodyFormat -> IO ()
+sendPlainEmail apiUrl from to subject bodyText bodyFormat = do
+  let emailData = buildEmail from to subject bodyText bodyFormat Nothing
   sendViaSendGrid apiUrl emailData
 
 sendMagicLinkEmail :: String -> Email.EmailMagicLinkConfig -> [Text] -> Text -> IO ()
@@ -156,7 +167,7 @@ sendMagicLinkEmail apiUrl config to token = do
       subject = config.subject
       verificationUrl = T.replace "<token>" token config.verificationUrlTemplate
       bodyText = T.replace "<link>" verificationUrl config.bodyTemplate
-      emailData = buildEmail from to subject bodyText Nothing
+      emailData = buildEmail from to subject bodyText Email.Text Nothing
   sendViaSendGrid apiUrl emailData
 
 sendBusinessVerificationEmail :: String -> Email.EmailBusinessVerificationConfig -> [Text] -> Text -> Text -> IO ()
@@ -165,7 +176,7 @@ sendBusinessVerificationEmail apiUrl config to otpCode token = do
       subject = config.subject
       verificationUrl = T.replace "<token>" token config.verificationUrlTemplate
       bodyText = T.replace "<otp>" otpCode $ T.replace "<link>" verificationUrl config.bodyTemplate
-      emailData = buildEmail from to subject bodyText Nothing
+      emailData = buildEmail from to subject bodyText Email.Text Nothing
   sendViaSendGrid apiUrl emailData
 
 sendEmailWithAttachment ::
@@ -194,7 +205,7 @@ sendEmailWithAttachment apiUrl from to subject bodyText pdfPath fileName = do
             attachmentType = "application/pdf",
             disposition = "attachment"
           }
-      emailData = buildEmail from to subject bodyText (Just [attachment])
+      emailData = buildEmail from to subject bodyText Email.Text (Just [attachment])
 
   sendViaSendGrid apiUrl emailData
 
@@ -204,11 +215,12 @@ sendEmailWithAttachments ::
   [Text] ->
   Text ->
   Text ->
+  Email.EmailBodyFormat ->
   [Email.EmailAttachment] ->
   IO ()
-sendEmailWithAttachments apiUrl from to subject bodyText attachments = do
+sendEmailWithAttachments apiUrl from to subject bodyText bodyFormat attachments = do
   let sgAttachments = map toSg attachments
-      emailData = buildEmail from to subject bodyText (Just sgAttachments)
+      emailData = buildEmail from to subject bodyText bodyFormat (Just sgAttachments)
   sendViaSendGrid apiUrl emailData
   where
     toSg a =

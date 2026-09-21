@@ -45,12 +45,12 @@ sendEmail serviceConfig emailConfig to otpCode = do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email"
 
-sendPlainEmail :: EmailServiceConfig -> Text -> [Text] -> Text -> Text -> IO ()
-sendPlainEmail serviceConfig from to subject bodyText = do
+sendPlainEmail :: EmailServiceConfig -> Text -> [Text] -> Text -> Text -> EmailBodyFormat -> IO ()
+sendPlainEmail serviceConfig from to subject bodyText bodyFormat = do
   handleEmailRouting serviceConfig "sendPlainEmail" $ \cloudType ->
     case cloudType of
-      AWS -> AWS.sendPlainEmail from to subject bodyText
-      GCP -> GCP.sendPlainEmail (getSendGridUrl serviceConfig) from to subject bodyText
+      AWS -> AWS.sendPlainEmail from to subject bodyText bodyFormat
+      GCP -> GCP.sendPlainEmail (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route plain email"
@@ -100,13 +100,14 @@ sendEmailWithAttachments ::
   [Text] ->
   Text ->
   Text ->
+  EmailBodyFormat ->
   [EmailAttachment] ->
   IO ()
-sendEmailWithAttachments serviceConfig from to subject bodyText attachments = do
+sendEmailWithAttachments serviceConfig from to subject bodyText bodyFormat attachments = do
   handleEmailRouting serviceConfig "sendEmailWithAttachments" $ \cloudType ->
     case cloudType of
-      AWS -> AWS.sendEmailWithAttachments from to subject bodyText attachments
-      GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText attachments
+      AWS -> AWS.sendEmailWithAttachments from to subject bodyText bodyFormat attachments
+      GCP -> GCP.sendEmailWithAttachments (getSendGridUrl serviceConfig) from to subject bodyText bodyFormat attachments
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachments"
