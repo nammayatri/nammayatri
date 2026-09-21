@@ -151,12 +151,8 @@ callCRISAPI config proxy clientFn description = do
             Right res -> do
               countCrisCall "success_after_token_refresh"
               return res
-        else do
-          countCrisCall "failed"
-          throwError $ CRISErrorUnhandled $ "Error while calling CRIS API : " <> T.pack (show err)
-    Right res -> do
-      countCrisCall "success"
-      return res
+        else throwError $ CRISErrorUnhandled $ "Error while calling CRIS API : " <> T.pack (show err)
+    Right res -> return res
   where
     countCrisCall :: HasBAPMetrics m r => Text -> m ()
     countCrisCall = incrementExternalBppApiCallCount "CRIS" description
