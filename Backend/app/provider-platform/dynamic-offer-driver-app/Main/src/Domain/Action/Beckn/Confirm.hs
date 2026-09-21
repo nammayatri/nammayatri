@@ -48,7 +48,6 @@ import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.MerchantPaymentMethod
-import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
@@ -244,10 +243,6 @@ handler merchant req validatedQuote = do
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do
-      cityLabel <- SML.getCityLabel uBooking.merchantOperatingCityId
-      metricsDistanceBucketEdges <- SML.getDistanceBucketEdges uBooking.merchantOperatingCityId
-      let (pickupZone, dropZone) = SML.specialZoneLabels uBooking.area
-      Metrics.incrementBookingCreatedCount merchant.shortId.getShortId cityLabel (show uBooking.vehicleServiceTier) (SML.distanceBucketLabel metricsDistanceBucketEdges uBooking.estimatedDistance) pickupZone dropZone
       mDriverStats <-
         if isNothing mbRideInfo
           then pure Nothing
