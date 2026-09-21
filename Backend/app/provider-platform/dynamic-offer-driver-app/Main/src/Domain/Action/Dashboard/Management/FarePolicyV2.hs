@@ -66,6 +66,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Email.Flow as Email
+import qualified Email.Types as EmailT
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -725,7 +726,7 @@ sendCoverageAlerts merchantOpCity before after actor = do
                   <> section "Activated" activated
                   <> section "Deactivated" deactivated
                   <> "\nThis is a system-generated email from the fare policy dashboard."
-          liftIO $ Email.sendPlainEmail emailServiceConfig fromEmail recipients subject body
+          liftIO $ Email.sendPlainEmail emailServiceConfig fromEmail recipients subject body EmailT.Text
 
 --------------------------------------------------------------------------------
 -- alert subscriptions

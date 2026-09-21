@@ -124,8 +124,8 @@ sendEmail' _ args = do
   attachments <- traverse (fetchAttachment emailServiceConfig.maxAttachmentBytes) args.attachments
   result <- liftIO $
     E.try @E.SomeException $ case attachments of
-      [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body
-      _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body attachments
+      [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body args.bodyFormat
+      _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body args.bodyFormat attachments
   case result of
     Left err -> throwError (InternalError $ "Email send failed: " <> show err)
     Right () -> pure ()
