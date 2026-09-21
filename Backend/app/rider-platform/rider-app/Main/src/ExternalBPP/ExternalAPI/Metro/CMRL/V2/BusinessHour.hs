@@ -16,7 +16,7 @@ import Kernel.Utils.Common
 import Servant
 
 data CommonParam = CommonParam
-  { paramId :: Int,
+  { paramId :: Maybe Int,
     paramName :: T.Text,
     paramValue :: T.Text
   }

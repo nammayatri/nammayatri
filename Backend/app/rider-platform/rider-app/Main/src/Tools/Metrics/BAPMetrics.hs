@@ -286,3 +286,13 @@ incrementFRFSBookingPaymentCount merchantId merchantOperatingCityId vehicleCateg
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.frfsBookingPaymentCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, vehicleCategory, status, reason) P.incCounter
+
+incrementExternalProviderFailure ::
+  (Redis.HedisFlow m r, HasBAPMetrics m r) =>
+  Text ->
+  Text ->
+  Text ->
+  m ()
+incrementExternalProviderFailure provider operation failureKind = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.externalProviderFailureCounter (provider, operation, failureKind) P.incCounter

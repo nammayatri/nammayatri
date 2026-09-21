@@ -162,6 +162,7 @@ getProviderName integrationBPPConfig =
     (_, DIBC.DIRECT _) -> "Direct Multimodal Services"
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
+    (_, DIBC.KMRL _) -> "Kochi Metro Rail Limited"
 
 getQREncoding :: DIBC.IntegratedBPPConfig -> Maybe DIBC.QREncoding
 getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
@@ -227,6 +228,10 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
       (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig)
       routeCodes
   currentTime <- getCurrentTime
+  -- Route stops are platforms, so a station is served at whichever of its platforms a route calls
+  -- at. Resolved once for the whole call, inside the cache, never per route.
+  startStationCodes <- OTPRest.getEquivalentStopCodes startStationCode integratedBPPConfig
+  endStationCodes <- OTPRest.getEquivalentStopCodes endStationCode integratedBPPConfig
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
       possibleRoutes =
@@ -235,12 +240,12 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
             map
               ( \stops ->
                   let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) stops
-                      mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
+                      mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode `elem` startStationCodes) stopsSortedBySequenceNumber
                    in find
                         ( \stop ->
                             maybe
                               False
-                              (\startStopSequence -> stop.stopCode == endStationCode && stop.sequenceNum > startStopSequence)
+                              (\startStopSequence -> stop.stopCode `elem` endStationCodes && stop.sequenceNum > startStopSequence)
                               mbStartStopSequence
                         )
                         stopsSortedBySequenceNumber
@@ -385,7 +390,8 @@ data FRFSFare = FRFSFare
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier,
-    fareQuoteType :: Maybe Quote.FRFSQuoteType
+    fareQuoteType :: Maybe Quote.FRFSQuoteType,
+    fareQuoteId :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -476,6 +482,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
               serviceTierLongName = vehicleServiceTier.longName,
               isAirConditioned = vehicleServiceTier.isAirConditioned
             },
+        fareQuoteId = Nothing,
         fareQuoteType = Nothing
       }
 
@@ -484,8 +491,11 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
   tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
   case tripDetails of
     Just trip -> do
-      let startStop = OTPRest.findTripStopByStopCode trip startStopCode
-          endStop = OTPRest.findTripStopByStopCode trip endStopCode
+      -- A trip's stops are platforms, so a station code matches through the platforms under it.
+      startStopCodes <- OTPRest.getEquivalentStopCodes startStopCode integratedBPPConfig
+      endStopCodes <- OTPRest.getEquivalentStopCodes endStopCode integratedBPPConfig
+      let startStop = OTPRest.findTripStopByStopCode trip startStopCodes
+          endStop = OTPRest.findTripStopByStopCode trip endStopCodes
       logDebug $ "startStop: " <> show startStop <> " endStop: " <> show endStop
       case (startStop, endStop) of
         (Just startTripStop, Just endTripStop) -> do
@@ -530,6 +540,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                             serviceTierLongName = vehicleServiceTier.longName,
                             isAirConditioned = vehicleServiceTier.isAirConditioned
                           },
+                      fareQuoteId = Nothing,
                       fareQuoteType = Nothing
                     }
             _ -> return [] -- No stage information available
@@ -1732,9 +1743,13 @@ getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integ
         logWarning $ "getScheduledTripWindow: empty schedule for tripId=" <> tripId
         pure (Nothing, Nothing)
       allEtas -> do
-        let atStop stopCode = find (\e -> gtfsIdtoDomainCode e.stopCode == gtfsIdtoDomainCode stopCode) allEtas
+        -- The schedule is keyed by the platform the bus calls at, so a station bound is matched
+        -- through the platform codes under it. Resolved once per bound, outside the lookup.
+        boardingStopCodes <- OTPRest.getEquivalentStopCodes boardingStopCode integratedBPPConfig
+        alightingStopCodes <- OTPRest.getEquivalentStopCodes alightingStopCode integratedBPPConfig
+        let atStop stopCodes = find (\e -> gtfsIdtoDomainCode e.stopCode `elem` map gtfsIdtoDomainCode stopCodes) allEtas
             --
-            bound name mbFallback stopCode = case atStop stopCode of
+            bound name mbFallback stopCode stopCodes = case atStop stopCodes of
               Just eta -> pure $ Just (unixToUTC eta.arrivalTimeUnix)
               Nothing -> case mbFallback of
                 Just fallbackEta -> do
@@ -1744,8 +1759,8 @@ getScheduledTripWindow tripId routeCode boardingStopCode alightingStopCode integ
                   logWarning $ "getScheduledTripWindow: " <> name <> " stop " <> stopCode <> " not in schedule for tripId=" <> tripId <> ", no bound"
                   pure Nothing
             earliestEta = minimumBy (comparing (.arrivalTimeUnix)) allEtas
-        (,) <$> bound "boarding" (Just earliestEta) boardingStopCode
-          <*> bound "alighting" Nothing alightingStopCode
+        (,) <$> bound "boarding" (Just earliestEta) boardingStopCode boardingStopCodes
+          <*> bound "alighting" Nothing alightingStopCode alightingStopCodes
 
 getServiceTierTypeFromRouteStationsJson :: Maybe Text -> Maybe Spec.ServiceTierType
 getServiceTierTypeFromRouteStationsJson mbJson = do

@@ -19,6 +19,7 @@ import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -151,22 +152,24 @@ checkRiderNearBusFRFS vehicleNumber mbRouteCode mbBookingTripId mbBookingStartTi
                         | otherwise = Just "TRIP_MISMATCH"
                   pure (isMatch, Just distanceMeters, reason)
 
-isYetToReachStop :: Text -> UTCTime -> FullBusData -> Bool
-isYetToReachStop stopCode now bus =
+-- | 'stopCodes' is a stop together with its equivalents (see 'OTPRest.getEquivalentStopCodes'):
+-- a bus's eta_data is keyed by the platform it calls at, so a station is matched via its platforms.
+isYetToReachStop :: [Text] -> UTCTime -> FullBusData -> Bool
+isYetToReachStop stopCodes now bus =
   case bus.busData.eta_data of
     Just etaList ->
-      case find (\eta -> eta.stopCode == stopCode) etaList of
+      case find (\eta -> eta.stopCode `elem` stopCodes) etaList of
         Just eta_data_for_boarding_stop -> eta_data_for_boarding_stop.arrivalTime > utcToIST now
         Nothing -> False
     Nothing -> False
 
-filterBusesYetToReachStop :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Text -> UTCTime -> Bool -> Id MerchantOperatingCity -> [FullBusData] -> m [FullBusData]
-filterBusesYetToReachStop stopCode now includeNoEta merchantOpCityId allBuses = do
-  let (matched, rest) = partition (isYetToReachStop stopCode now) allBuses
+filterBusesYetToReachStop :: (MonadFlow m, Metrics.HasBAPMetrics m r) => [Text] -> UTCTime -> Bool -> Id MerchantOperatingCity -> [FullBusData] -> m [FullBusData]
+filterBusesYetToReachStop stopCodes now includeNoEta merchantOpCityId allBuses = do
+  let (matched, rest) = partition (isYetToReachStop stopCodes now) allBuses
   let busesWithNoEta = filter (\bus -> isNothing bus.busData.eta_data) rest
   unless (null busesWithNoEta) $ do
     logError $
-      "Buses with no eta_data found - stopCode: " <> stopCode
+      "Buses with no eta_data found - stopCode: " <> show stopCodes
         <> ", vehicles: "
         <> show (map (\bus -> (bus.vehicleNumber, bus.busData.route_id)) busesWithNoEta)
     Metrics.incrementVehicleNoEtaCounter merchantOpCityId.getId merchantOpCityId.getId "riderLocation"
@@ -175,7 +178,7 @@ filterBusesYetToReachStop stopCode now includeNoEta merchantOpCityId allBuses = 
     else pure matched
 
 processBusLegState ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, CoreMetrics m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) =>
   UTCTime ->
   Maybe DJourneyLeg.JourneyLeg ->
   Maybe Text ->
@@ -207,10 +210,14 @@ processBusLegState
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
+    -- Resolved once per call, not per bus: a booked station's code appears in no live feed, only
+    -- the codes of the platforms under it do.
+    mbBoardingStopCodes <- traverse (\station -> OTPRest.getEquivalentStopCodes station.code integratedBppConfig) mbUserBoardingStation
+    mbLegEndStopCodes <- traverse (\station -> OTPRest.getEquivalentStopCodes station.code integratedBppConfig) mbLegEndStation
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
-        filteredBusData <- case (mbUserBoardingStation, mbLegEndStation) of
-          (_, Just destStation) -> filterBusesYetToReachStop destStation.code now includeNullUpcomingStops merchantOperatingCityId allBusDataForRoute
+        filteredBusData <- case (mbUserBoardingStation, mbLegEndStopCodes) of
+          (_, Just destStopCodes) -> filterBusesYetToReachStop destStopCodes now includeNullUpcomingStops merchantOperatingCityId allBusDataForRoute
           _ -> pure allBusDataForRoute
         case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
           (Just legDetails, Just rc, Just userPos) -> do
@@ -235,8 +242,8 @@ processBusLegState
                     let routeStopMapping = HM.lookup bestBusData.route_id routeStopMappings
                     let upcomingStops =
                           if journeyLegTrackingStatus `elem` [JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
-                            then getUpcomingStopsForBus routeStopMapping now mbUserBoardingStation bestBusData False -- Stops up to boarding for OnTheWay
-                            else getUpcomingStopsForBus routeStopMapping now mbLegEndStation bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
+                            then getUpcomingStopsForBus routeStopMapping now mbBoardingStopCodes bestBusData False -- Stops up to boarding for OnTheWay
+                            else getUpcomingStopsForBus routeStopMapping now mbLegEndStopCodes bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
                     pure
                       [ JT.VehiclePosition
                           { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
@@ -264,8 +271,8 @@ processBusLegState
                 logDebug $ "changedBuses: " <> show changedBuses
                 if null changedBuses
                   then do
-                    findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute mbBookedVehicleNumber
-                  else findVehiclePositionFromSequence (reverse changedBuses)
+                    findfilteredBusData includeNullUpcomingStops mbBoardingStopCodes allBusDataForRoute mbBookedVehicleNumber
+                  else findVehiclePositionFromSequence mbLegEndStopCodes (reverse changedBuses)
               Nothing -> do
                 logDebug "No current leg details available, returning empty list"
                 pure []
@@ -273,19 +280,19 @@ processBusLegState
             logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegTrackingStatus
             if journeyLegTrackingStatus `elem` [JMStateTypes.InPlan, JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
               then do
-                findfilteredBusData includeNullUpcomingStops mbUserBoardingStation allBusDataForRoute mbBookedVehicleNumber
+                findfilteredBusData includeNullUpcomingStops mbBoardingStopCodes allBusDataForRoute mbBookedVehicleNumber
               else do
                 logDebug "No filtered bus data available, returning empty list"
                 pure []
     where
-      findVehiclePositionFromSequence :: (MonadFlow m) => [Text] -> m [JT.VehiclePosition]
-      findVehiclePositionFromSequence [] = pure []
-      findVehiclePositionFromSequence (busNum : rest) = do
+      findVehiclePositionFromSequence :: (MonadFlow m) => Maybe [Text] -> [Text] -> m [JT.VehiclePosition]
+      findVehiclePositionFromSequence _ [] = pure []
+      findVehiclePositionFromSequence mbLegEndStopCodes (busNum : rest) = do
         logDebug $ "Looking for bus number: " <> show busNum
         case find (\bd -> bd.vehicleNumber == busNum) allBusDataForRoute of
           Just bestBusData -> do
             let routeStopMapping = HM.lookup bestBusData.busData.route_id routeStopMappings
-            let upcomingStops = getUpcomingStopsForBus routeStopMapping now mbLegEndStation bestBusData.busData True
+            let upcomingStops = getUpcomingStopsForBus routeStopMapping now mbLegEndStopCodes bestBusData.busData True
             logDebug $ "findVehiclePositionFromSequence upcomingStops: " <> show upcomingStops <> " " <> show bestBusData.busData.latitude <> " " <> show bestBusData.busData.longitude
             pure
               [ JT.VehiclePosition
@@ -297,11 +304,11 @@ processBusLegState
               ]
           Nothing -> do
             logDebug $ "No bus data found for vehicle number: " <> show rest
-            findVehiclePositionFromSequence rest
-      findfilteredBusData :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Bool -> Maybe Station -> [FullBusData] -> Maybe Text -> m [JT.VehiclePosition]
-      findfilteredBusData includeNoEta mbBoardingStation allBusData mbVehicleNumber = do
-        filteredBusData <- case mbBoardingStation of
-          Just boardingStation -> filterBusesYetToReachStop boardingStation.code now includeNoEta merchantOperatingCityId allBusData
+            findVehiclePositionFromSequence mbLegEndStopCodes rest
+      findfilteredBusData :: (MonadFlow m, Metrics.HasBAPMetrics m r) => Bool -> Maybe [Text] -> [FullBusData] -> Maybe Text -> m [JT.VehiclePosition]
+      findfilteredBusData includeNoEta mbBoardingStopCodes allBusData mbVehicleNumber = do
+        filteredBusData <- case mbBoardingStopCodes of
+          Just boardingStopCodes -> filterBusesYetToReachStop boardingStopCodes now includeNoEta merchantOperatingCityId allBusData
           Nothing -> pure allBusData
         let vehicleFilteredBusData = case mbVehicleNumber of
               Just vehicleNum -> filter (\bd -> bd.vehicleNumber == vehicleNum) filteredBusData
@@ -316,7 +323,7 @@ processBusLegState
                   { position = Just $ LatLong bd.busData.latitude bd.busData.longitude,
                     vehicleId = bd.vehicleNumber,
                     route_state = bd.busData.route_state,
-                    upcomingStops = getUpcomingStopsForBus routeStopMapping now mbBoardingStation bd.busData False
+                    upcomingStops = getUpcomingStopsForBus routeStopMapping now mbBoardingStopCodes bd.busData False
                   }
             )
             confirmedHighBuses
@@ -324,16 +331,17 @@ processBusLegState
 getUpcomingStopsForBus ::
   Maybe (HM.HashMap Text RouteStopMapping) ->
   UTCTime -> -- Current time (`now`)
-  Maybe Station -> -- The target station (e.g., boarding or destination)
+  Maybe [Text] -> -- The target station's code and its equivalents (see 'OTPRest.getEquivalentStopCodes')
   BusData -> -- The specific bus's data, containing `eta_data`
   Bool -> -- `True` if filtering from current time onwards, `False` otherwise (e.g., for OnTheWay, we might want all stops up to boarding)
   [JT.NextStopDetails]
-getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFromCurrentTime =
+getUpcomingStopsForBus mbRouteStopMapping now mbTargetStopCodes busData filterFromCurrentTime =
   case (busData.eta_data, mbRouteStopMapping) of
     (Just etaData, Just routeStopMapping) ->
-      let -- Filter stops up to the target station
-          stopsUpToTarget :: [CQMMB.BusStopETA] = case mbTargetStation of
-            Just targetStation -> fst $ foldl' (\(eta_data_acc, foundTarget) bs -> if not foundTarget then (bs : eta_data_acc, bs.stopCode == targetStation.code) else (eta_data_acc, True)) ([], False) etaData
+      let -- Filter stops up to the target station: eta_data is keyed by platform, so the target
+          -- is reached at whichever of its platforms this bus calls at.
+          stopsUpToTarget :: [CQMMB.BusStopETA] = case mbTargetStopCodes of
+            Just targetStopCodes -> fst $ foldl' (\(eta_data_acc, foundTarget) bs -> if not foundTarget then (bs : eta_data_acc, bs.stopCode `elem` targetStopCodes) else (eta_data_acc, True)) ([], False) etaData
             Nothing -> etaData
 
           -- Further filter from current time if required

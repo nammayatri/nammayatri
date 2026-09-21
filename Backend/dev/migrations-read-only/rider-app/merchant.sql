@@ -120,3 +120,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN signing_private_key text ;
 
 ALTER TABLE atlas_app.merchant ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_app.merchant ADD COLUMN cloud_base_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN is_frfs_seller boolean  default false;

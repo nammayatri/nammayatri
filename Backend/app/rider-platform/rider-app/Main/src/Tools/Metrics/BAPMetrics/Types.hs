@@ -53,7 +53,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     frfsPassPaymentCounter :: FRFSPassPaymentCounterMetric,
     frfsBookingPaymentCounter :: FRFSBookingPaymentCounterMetric,
     frfsExternalBppCounter :: FRFSExternalBppCounterMetric,
-    externalBppApiCallCounter :: ExternalBppApiCallCounterMetric
+    externalBppApiCallCounter :: ExternalBppApiCallCounterMetric,
+    externalProviderFailureCounter :: ExternalProviderFailureCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -93,6 +94,8 @@ type FRFSExternalBppCounterMetric = P.Vector P.Label7 P.Counter
 
 type ExternalBppApiCallCounterMetric = P.Vector P.Label4 P.Counter
 
+type ExternalProviderFailureCounterMetric = P.Vector P.Label3 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -111,6 +114,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   frfsBookingPaymentCounter <- registerFRFSBookingPaymentCounterMetric
   frfsExternalBppCounter <- registerFRFSExternalBppCounterMetric
   externalBppApiCallCounter <- registerExternalBppApiCallCounterMetric
+  externalProviderFailureCounter <- registerExternalProviderFailureCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
   selectDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_select_frfs_round_trip" "beckn_select_frfs_round_trip_failure_counter"
@@ -139,6 +143,13 @@ registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_nam
 
 registerEmptyVehiclesCounterMetric :: IO EmptyVehiclesCounterMetric
 registerEmptyVehiclesCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "service_tier") $ P.counter $ P.Info "empty_vehicles_count" ""
+
+registerExternalProviderFailureCounterMetric :: IO ExternalProviderFailureCounterMetric
+registerExternalProviderFailureCounterMetric =
+  P.register $
+    P.vector ("provider", "operation", "failure_kind") $
+      P.counter $
+        P.Info "frfs_external_provider_failure_count" "Calls to a transport operator that failed, by provider and operation"
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""

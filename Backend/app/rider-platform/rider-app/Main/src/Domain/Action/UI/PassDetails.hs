@@ -315,8 +315,11 @@ stagesAndCoordsFromTrip ::
   Environment.Flow (Int, LatLong, LatLong)
 stagesAndCoordsFromTrip integratedBPPConfig routeCode srcStopCode destStopCode mbSrcStationLatLong mbDestStationLatLong = do
   trip <- OTPRest.getExampleTrip integratedBPPConfig routeCode >>= fromMaybeM (InvalidRequest "Could not fetch trip details for route")
-  srcTripStop <- OTPRest.findTripStopByStopCode trip srcStopCode & fromMaybeM (InvalidRequest ("Source stop not found in trip: " <> srcStopCode))
-  destTripStop <- OTPRest.findTripStopByStopCode trip destStopCode & fromMaybeM (InvalidRequest ("Destination stop not found in trip: " <> destStopCode))
+  -- A trip's stops are platforms, so a station code matches through the platforms under it.
+  srcStopCodes <- OTPRest.getEquivalentStopCodes srcStopCode integratedBPPConfig
+  destStopCodes <- OTPRest.getEquivalentStopCodes destStopCode integratedBPPConfig
+  srcTripStop <- OTPRest.findTripStopByStopCode trip srcStopCodes & fromMaybeM (InvalidRequest ("Source stop not found in trip: " <> srcStopCode))
+  destTripStop <- OTPRest.findTripStopByStopCode trip destStopCodes & fromMaybeM (InvalidRequest ("Destination stop not found in trip: " <> destStopCode))
   stages <- case (OTPRest.extractStageFromTripStop srcTripStop, OTPRest.extractStageFromTripStop destTripStop) of
     (Just s, Just d) -> pure $ max 1 (abs (d - s))
     _ -> Utils.throwError $ InvalidRequest "Stage Calculation Failed"
@@ -396,10 +399,13 @@ computeLegStages integratedBPPConfig leg = do
   case (mbLegRouteCode, mbFromCode, mbToCode) of
     (Just legRouteCode, Just fromCode, Just toCode) -> do
       mbTrip <- OTPRest.getExampleTrip integratedBPPConfig legRouteCode
+      -- A trip's stops are platforms, so a station code matches through the platforms under it.
+      fromCodes <- OTPRest.getEquivalentStopCodes fromCode integratedBPPConfig
+      toCodes <- OTPRest.getEquivalentStopCodes toCode integratedBPPConfig
       pure $ do
         trip <- mbTrip
-        srcStop <- OTPRest.findTripStopByStopCode trip fromCode
-        destStop <- OTPRest.findTripStopByStopCode trip toCode
+        srcStop <- OTPRest.findTripStopByStopCode trip fromCodes
+        destStop <- OTPRest.findTripStopByStopCode trip toCodes
         s <- OTPRest.extractStageFromTripStop srcStop
         d <- OTPRest.extractStageFromTripStop destStop
         pure (max 1 (abs (d - s)))

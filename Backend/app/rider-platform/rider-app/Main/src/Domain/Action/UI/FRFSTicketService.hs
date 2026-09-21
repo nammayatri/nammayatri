@@ -47,7 +47,7 @@ import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Domain.Utils (mapConcurrently)
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, sum, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, notElem, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
@@ -362,14 +362,17 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
           EulerHS.Prelude.concatMapM
             (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig)
             routeCodes
+        -- A route's stops are platforms, so a station is served at whichever of its platforms the
+        -- route calls at. Resolved once, not per route.
+        endStationCodes <- OTPRest.getEquivalentStopCodes endStationCode integratedBPPConfig
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
             possibleStartStops =
               nubBy (\a b -> a.stopCode == b.stopCode) $
                 concatMap
                   ( \stops ->
-                      let mbEndStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == endStationCode) stops
-                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\endStopSequence -> stop.stopCode /= endStationCode && stop.sequenceNum < endStopSequence) mbEndStopSequence) stops
+                      let mbEndStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode `elem` endStationCodes) stops
+                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\endStopSequence -> stop.stopCode `notElem` endStationCodes && stop.sequenceNum < endStopSequence) mbEndStopSequence) stops
                   )
                   groupedStopsByRouteCode
         let startStops =
@@ -399,9 +402,10 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       (Just routeCode, Just startStationCode, Nothing) -> do
         routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
         currentTime <- getCurrentTime
+        startStationCodes <- OTPRest.getEquivalentStopCodes startStationCode integratedBPPConfig
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-            startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) serviceableStops)
-            filteredRouteStops = filter (\stop -> stop.stopCode /= startStationCode && stop.sequenceNum > startSeqNum) serviceableStops
+            startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode `elem` startStationCodes) serviceableStops)
+            filteredRouteStops = filter (\stop -> stop.stopCode `notElem` startStationCodes && stop.sequenceNum > startSeqNum) serviceableStops
         let endStops =
               map
                 ( \routeStop ->
@@ -460,6 +464,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
         routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
         let routeCodes = nub $ map (.routeCode) routesWithStop
         routeStops <- EulerHS.Prelude.concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) routeCodes
+        startStationCodes <- OTPRest.getEquivalentStopCodes startStationCode integratedBPPConfig
         let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
             groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
             possibleEndStops =
@@ -467,8 +472,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                 sortBy (compare `on` (.stopCode)) $
                   concatMap
                     ( \stops ->
-                        let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
-                         in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+                        let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode `elem` startStationCodes) stops
+                         in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode `notElem` startStationCodes && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
                     )
                     groupedStopsByRouteCode
         let endStops =
@@ -1680,6 +1685,9 @@ postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_
       routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
       let routeCodes = nub $ map (.routeCode) routesWithStop
       routeStops <- EulerHS.Prelude.concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) routeCodes
+      -- A route's stops are platforms, so a station is served at whichever of its platforms the
+      -- route calls at. Resolved once per start station, not per route.
+      startStationCodes <- OTPRest.getEquivalentStopCodes startStationCode integratedBPPConfig
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
           groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
           possibleEndStops =
@@ -1687,8 +1695,8 @@ postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_
               sortBy (compare `on` (.stopCode)) $
                 concatMap
                   ( \stops ->
-                      let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
-                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+                      let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode `elem` startStationCodes) stops
+                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode `notElem` startStationCodes && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
                   )
                   groupedStopsByRouteCode
       let endStops =

@@ -1045,10 +1045,13 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
               mbSchedule <- withTryCatch "getBusTripSchedule_mkLegInfo" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode' integratedBPPConfig)
               case mbSchedule of
                 Right (firstSchedule : _) -> do
+                  -- The schedule is keyed by the platform the bus calls at, so a booking made
+                  -- against a station code is only found through the platforms under it.
+                  fromStationCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBPPConfig
                   let allEtas = firstSchedule.eta
                       mbBookedStopEta =
                         unixToUTC . (.arrivalTimeUnix)
-                          <$> find (\etaObj -> etaObj.stopCode == booking.fromStationCode) allEtas
+                          <$> find (\etaObj -> etaObj.stopCode `elem` fromStationCodes) allEtas
                       mbTripStartEta =
                         unixToUTC . (.arrivalTimeUnix)
                           <$> listToMaybe allEtas
