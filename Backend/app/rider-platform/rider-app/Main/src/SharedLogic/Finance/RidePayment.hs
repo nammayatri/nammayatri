@@ -150,6 +150,7 @@ module SharedLogic.Finance.RidePayment
 
     -- * Query helpers (replaces PaymentInvoice reads)
     findRidePaymentEntries,
+    findCashbackPayoutEntries,
     findPendingRidePaymentEntries,
     findUnsettledRidePaymentEntries,
     findDueRidePaymentEntries,
@@ -1283,6 +1284,12 @@ findRidePaymentEntries ::
 findRidePaymentEntries rideId = do
   entries <- concat <$> mapM (\refType -> getEntriesByReference refType rideId) allRidePaymentRefTypes
   pure entries
+
+findCashbackPayoutEntries ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- rideId
+  m [LE.LedgerEntry]
+findCashbackPayoutEntries = getEntriesByReference ridePaymentRefCashbackPayout
 
 -- | Find PENDING ledger entries for a ride (unpaid).
 --   Replaces: QPaymentInvoiceExtra.findByRideIdAndTypeAndPurpose rideId PAYMENT RIDE

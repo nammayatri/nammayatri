@@ -64,6 +64,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -79,6 +80,10 @@ import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import qualified Lib.Payment.Storage.Queries.OfflineOffer as QOfflineOffer
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
@@ -384,6 +389,7 @@ rideInfo merchantId reqRideId = do
   fareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+  mbOfferInfo <- getRideOfferInfo booking ride person
   mbBCReason <-
     if ride.status == DRide.CANCELLED
       then B.runInReplica $ QBCReason.findByRideBookingId booking.id
@@ -459,8 +465,75 @@ rideInfo merchantId reqRideId = do
         mobileCountryCode = person.mobileCountryCode,
         isSafetyPlus = ride.isSafetyPlus,
         isAirConditioned = fromMaybe False booking.isAirConditioned,
-        rideSosId = mbSosId
+        rideSosId = mbSosId,
+        offerInfo = mbOfferInfo
       }
+
+getRideOfferInfo :: DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)
+getRideOfferInfo booking ride person =
+  forM booking.selectedOfferId $ \selectedOfferId -> B.runInReplica $ do
+    mbBookingOffer <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+    mbRideOffer <-
+      if ride.status == DRide.COMPLETED
+        then QOfferEntity.findByEntityIdAndEntityType ride.id.getId DOfferEntity.RIDE
+        else pure Nothing
+    (offerStatus, mbPayoutEntry) <- case mbRideOffer of
+      Nothing -> pure (statusWithoutRideSnapshot, Nothing)
+      Just rideOffer
+        | rideOffer.discountAmount <= 0 && rideOffer.payoutAmount <= 0 -> pure (Common.NOT_APPLIED, Nothing)
+        | rideOffer.payoutAmount > 0 -> cashbackOfferStatus (isJust person.payoutVpa) <$> RidePaymentFinance.findCashbackPayoutEntries ride.id.getId
+        | otherwise -> (,Nothing) <$> getDiscountOfferStatus ride.id rideOffer.offerId
+    let mbOffer = listToMaybe $ catMaybes [mbRideOffer, mbBookingOffer]
+    pure
+      Common.RideOfferInfo
+        { offerId = maybe selectedOfferId (.offerId) mbOffer,
+          offerCode = mbOffer <&> (.offerCode),
+          offerTitle = mbOffer >>= (.offerTitle),
+          status = offerStatus,
+          currency = booking.estimatedFare.currency,
+          discountAmount = mbRideOffer <&> (.discountAmount),
+          payoutAmount = mbRideOffer <&> (.payoutAmount),
+          amountSaved = mbRideOffer <&> (.amountSaved),
+          estimatedAmountSaved = mbBookingOffer <&> (.amountSaved),
+          payoutRequestId = mbPayoutEntry >>= (.settlementId),
+          paidOutAt = mbPayoutEntry >>= (.settlementTimestamp)
+        }
+  where
+    statusWithoutRideSnapshot = case ride.status of
+      DRide.COMPLETED -> Common.UNKNOWN
+      DRide.CANCELLED -> Common.NOT_APPLIED
+      _ -> Common.OFFER_SELECTED
+
+-- | No settlement status means the payout was never attempted; UNSETTLED means a reserved payout failed and was released.
+cashbackOfferStatus :: Bool -> [LE.LedgerEntry] -> (Common.RideOfferStatus, Maybe LE.LedgerEntry)
+cashbackOfferStatus hasPayoutVpa entries =
+  case reverse . DL.sortOn (.createdAt) $ filter (\entry -> entry.status /= LE.VOIDED) entries of
+    [] -> (Common.UNKNOWN, Nothing)
+    entry : _ -> (statusOf entry.settlementStatus, Just entry)
+  where
+    statusOf = \case
+      Just LE.PAID_OUT -> Common.CASHBACK_PAID
+      Just LE.PROCESSING -> Common.CASHBACK_PROCESSING
+      Just LE.UNSETTLED -> Common.CASHBACK_FAILED
+      Nothing
+        | hasPayoutVpa -> Common.CASHBACK_PENDING
+        | otherwise -> Common.CASHBACK_AWAITING_VPA
+
+-- | Cash and fully discounted rides record the offer in offline_offer; card rides carry it on the ride's payment order, never the tip order.
+getDiscountOfferStatus :: Id DRide.Ride -> Text -> Flow Common.RideOfferStatus
+getDiscountOfferStatus rideId appliedOfferId = do
+  offlineOffers <- QOfflineOffer.findByReferenceId rideId.getId
+  if any (\offlineOffer -> offlineOffer.offerId == appliedOfferId && offlineOffer.status == PaymentInterface.OFFER_AVAILED) offlineOffers
+    then pure Common.DISCOUNT_APPLIED
+    else do
+      mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
+      orderOffers <- maybe (pure []) (QPaymentOrderOffer.findByPaymentOrder . (.id)) mbOrder
+      let statuses = [orderOffer.status | orderOffer <- orderOffers, orderOffer.offer_id == appliedOfferId]
+      pure $
+        if
+            | PaymentInterface.OFFER_AVAILED `elem` statuses -> Common.DISCOUNT_APPLIED
+            | PaymentInterface.OFFER_INITIATED `elem` statuses -> Common.DISCOUNT_PENDING_CAPTURE
+            | otherwise -> Common.UNKNOWN
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
 transformFareBreakup DFareBreakup.FareBreakup {..} = do

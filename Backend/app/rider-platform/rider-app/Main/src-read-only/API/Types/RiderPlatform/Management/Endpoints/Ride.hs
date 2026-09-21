@@ -224,7 +224,8 @@ data RideInfoRes = RideInfoRes
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isSafetyPlus :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Bool,
-    rideSosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Sos)
+    rideSosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Sos),
+    offerInfo :: Kernel.Prelude.Maybe RideOfferInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -251,6 +252,36 @@ data RideListItem = RideListItem
 
 data RideListRes = RideListRes {totalItems :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary, rides :: [RideListItem]}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideOfferInfo = RideOfferInfo
+  { offerId :: Kernel.Prelude.Text,
+    offerCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    offerTitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: RideOfferStatus,
+    currency :: Kernel.Types.Common.Currency,
+    discountAmount :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
+    payoutAmount :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
+    amountSaved :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
+    estimatedAmountSaved :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
+    payoutRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paidOutAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideOfferStatus
+  = OFFER_SELECTED
+  | NOT_APPLIED
+  | DISCOUNT_APPLIED
+  | DISCOUNT_PENDING_CAPTURE
+  | CASHBACK_PENDING
+  | CASHBACK_AWAITING_VPA
+  | CASHBACK_PROCESSING
+  | CASHBACK_PAID
+  | CASHBACK_FAILED
+  | UNKNOWN
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideStatus

@@ -11,6 +11,7 @@ imports:
   Money: Kernel.Types.Price
   PriceAPIEntity: Kernel.Types.Price
   HighPrecMoney: Kernel.Types.Price
+  Currency: Kernel.Types.Common
   Seconds: Kernel.Types.Time
   UTCTime: Kernel.Prelude
   FareProductType: Domain.Types
@@ -239,6 +240,21 @@ types:
     - isSafetyPlus: Bool
     - isAirConditioned: Bool
     - rideSosId: Maybe (Id Sos)
+    - offerInfo: Maybe RideOfferInfo
+  RideOfferInfo:
+    - offerId: Text
+    - offerCode: Maybe Text
+    - offerTitle: Maybe Text
+    - status: RideOfferStatus
+    - currency: Currency
+    - discountAmount: Maybe HighPrecMoney
+    - payoutAmount: Maybe HighPrecMoney
+    - amountSaved: Maybe HighPrecMoney
+    - estimatedAmountSaved: Maybe HighPrecMoney
+    - payoutRequestId: Maybe Text
+    - paidOutAt: Maybe UTCTime
+  RideOfferStatus:
+    - enum: "OFFER_SELECTED, NOT_APPLIED, DISCOUNT_APPLIED, DISCOUNT_PENDING_CAPTURE, CASHBACK_PENDING, CASHBACK_AWAITING_VPA, CASHBACK_PROCESSING, CASHBACK_PAID, CASHBACK_FAILED, UNKNOWN"
   CancellationChargesWaiveOffRes:
     - rideId: Id Ride
     - waivedOffAmount: Maybe HighPrecMoney
