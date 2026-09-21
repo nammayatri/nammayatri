@@ -99,6 +99,7 @@ data BookingT f = BookingT
     paymentMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode)),
     paymentStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus)),
     paymentUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    pickupArea :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     preferSafetyPlus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     primaryExophone :: (B.C f Kernel.Prelude.Text),
     providerId :: (B.C f Kernel.Prelude.Text),

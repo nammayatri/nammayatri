@@ -133,6 +133,7 @@ data BookingAPIEntity = BookingAPIEntity
     merchantExoPhone :: Text,
     specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
+    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
@@ -217,6 +218,26 @@ data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- | specialLocationId/gateId of the pickup special zone, parsed from Booking.pickupArea
+-- (e.g. "Pickup_<specialLocationId>_Gate_<gateId>"). That string is the same value
+-- driver-app's Domain.Action.Beckn.Select resolves and dispatches drivers against, copied
+-- through Quote.area at on_select time, so this is guaranteed to agree with driver-app --
+-- deliberately not re-derived from lat/lng on this side.
+data SpecialZoneGateInfo = SpecialZoneGateInfo
+  { specialLocationId :: Maybe Text,
+    gateId :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+mkSpecialZoneGateInfo :: Maybe Text -> Maybe SpecialZoneGateInfo
+mkSpecialZoneGateInfo mbPickupArea = do
+  area <- mbPickupArea >>= SL.parsePickupDropFromText
+  let specialLocationId = SL.pickupSpecialZoneIdFromArea area
+      gateId = SL.pickupGateIdFromArea area
+  if isNothing specialLocationId && isNothing gateId
+    then Nothing
+    else Just SpecialZoneGateInfo {specialLocationId, gateId}
+
 data BookingStatusAPIEntity = BookingStatusAPIEntity
   { id :: Id Booking,
     isBookingUpdated :: Bool,
@@ -237,7 +258,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     -- list is rebuilt wholesale at ride completion). This is the only way the app can read back
     -- the tip it currently has set, e.g. after a restart. Mirrors RideAPIEntity.tipAmount.
     tipAmount :: Maybe PriceAPIEntity,
-    bookingDepositAmount :: Maybe HighPrecMoney
+    bookingDepositAmount :: Maybe HighPrecMoney,
+    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -406,6 +428,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
         specialLocationTag = booking.specialLocationTag,
         specialLocationName = booking.specialLocationName,
+        pickupSpecialZoneInfo = mkSpecialZoneGateInfo booking.pickupArea,
         paymentMethodId = paymentMethodId,
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
@@ -667,7 +690,7 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea)
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
