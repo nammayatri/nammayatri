@@ -309,9 +309,9 @@ driverMoneyDeduction row fareBasis =
     _ -> Nothing
 
 driverRideCreditDeduction :: DCCM.CancellationConsequenceMatrix -> HighPrecMoney -> Maybe HighPrecMoney
-driverRideCreditDeduction row fareBasis =
+driverRideCreditDeduction row earnedBasis =
   row.driverDeduction >>= \case
-    DExtra.RideCreditDeduction money -> Just (abs (moneyDeductionAmount money fareBasis Nothing).amount)
+    DExtra.RideCreditDeduction money -> Just (abs (moneyDeductionAmount money earnedBasis Nothing).amount)
     _ -> Nothing
 
 --------------------------------------------------------------------------------------

@@ -391,8 +391,9 @@ applyTerminalConsequences ctx createLedgerEntries = do
             when (ctx.source == SBCR.ByUser && totalCharges > 0 && carriesForwardDues) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId
             let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
+            let driverCancellationEarnings = baseFee + (if fromMaybe False booking.fareParams.isVatTaxType then gst else 0)
             when (isWalletEnabled && totalCharges > 0) $
-              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r (FC.netRideFare booking.fareParams booking.estimatedFare)) =<< decision.consequenceRow)
+              createLedgerEntries baseFee gst ((\r -> CancellationConsequence.driverRideCreditDeduction r driverCancellationEarnings) =<< decision.consequenceRow)
         pure mbOutcome
       case chargesE of
         Left err -> do

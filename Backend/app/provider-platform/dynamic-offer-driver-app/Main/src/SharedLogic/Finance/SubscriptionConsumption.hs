@@ -65,7 +65,7 @@ consumeCancellationRideCredit ::
   ConsumptionFlow m r =>
   SRB.Booking ->
   DRide.Ride ->
-  HighPrecMoney -> -- cancellation base, tax-exclusive
+  HighPrecMoney -> -- credit to burn: the cancellation fee the driver earns
   DTC.TransporterConfig ->
   m ()
 consumeCancellationRideCredit booking ride consumeAmount transporterConfig
