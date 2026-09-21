@@ -581,13 +581,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
     toPercentage x = (x - 1) * 100
 
     processAdditionalCharges conditionalCharges = do
-      List.map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToTag addCharges.chargeCategory) . mkValue $ show addCharges.charge) conditionalCharges
+      mapMaybe (\addCharges -> (\tag -> mkBreakupItem (show tag) . mkValue $ show addCharges.charge) <$> castAdditionalChargeCategoriesToTag addCharges.chargeCategory) conditionalCharges
 
     castAdditionalChargeCategoriesToTag = \case
-      DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
-      DAC.NO_CHARGES -> Tags.NO_CHARGES
-      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Tags.NYREGULAR_SUBSCRIPTION_CHARGE
-      DAC.BOOKING_DEPOSIT -> Tags.BOOKING_DEPOSIT
+      DAC.SAFETY_PLUS_CHARGES -> Just Tags.SAFETY_PLUS_CHARGES
+      DAC.NO_CHARGES -> Just Tags.NO_CHARGES
+      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Just Tags.NYREGULAR_SUBSCRIPTION_CHARGE
+      DAC.BOOKING_DEPOSIT -> Just Tags.BOOKING_DEPOSIT
+      DAC.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Nothing
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
