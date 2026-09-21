@@ -24,3 +24,9 @@ ALTER TABLE atlas_app.igm_issue ADD COLUMN resolution_action character varying(3
 ALTER TABLE atlas_app.igm_issue ADD COLUMN domain character varying(36) not null;
 ALTER TABLE atlas_app.igm_issue ADD PRIMARY KEY ( id);
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ADD COLUMN bap_uri text ;
+ALTER TABLE atlas_app.igm_issue ADD COLUMN beckn_transaction_id text ;

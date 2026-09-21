@@ -14,18 +14,20 @@ import Kernel.Utils.Common
 import Servant
 
 data Station = Station
-  { stationId :: Text,
-    stationCode :: Text,
-    stationName :: Text,
-    latitude :: Maybe Double,
-    longitude :: Maybe Double
+  { stationName :: Text,
+    stationShortName :: Text,
+    stationUniqueid :: Text,
+    lineId :: Maybe Int,
+    lineName :: Maybe Text,
+    latitude :: Maybe Text,
+    longitude :: Maybe Text,
+    sequenceNo :: Maybe Int,
+    stationNameTamil :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data StationListResponse = StationListResponse
-  { statusCode :: Int,
-    message :: Text,
-    result :: [Station]
+newtype StationListResponse = StationListResponse
+  { stations :: [Station]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -43,6 +45,5 @@ getStationList config = do
   logInfo $ "[CMRLV2:StationList] Fetching station list for operatorNameId: " <> show config.operatorNameId
   let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken) config.operatorNameId
   response <- callCMRLV2API config eulerClient "getStationList" stationListAPI
-  logDebug $ "[CMRLV2:StationList] API Response: statusCode=" <> show response.statusCode <> ", message=" <> response.message
-  logInfo $ "[CMRLV2:StationList] Fetched " <> show (length response.result) <> " stations"
-  return response.result
+  logInfo $ "[CMRLV2:StationList] Fetched " <> show (length response.stations) <> " stations"
+  return response.stations

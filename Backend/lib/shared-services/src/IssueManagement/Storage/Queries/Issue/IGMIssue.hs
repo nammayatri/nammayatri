@@ -51,7 +51,9 @@ instance FromTType' Beam.IGMIssue DIGMIssue.IGMIssue where
     pure $
       Just
         DIGMIssue.IGMIssue
-          { bookingId = bookingId,
+          { bapUri = bapUri,
+            becknTransactionId = becknTransactionId,
+            bookingId = bookingId,
             createdAt = createdAt,
             customerEmail = customerEmail,
             riderId = Id <$> riderId,
@@ -77,7 +79,9 @@ instance FromTType' Beam.IGMIssue DIGMIssue.IGMIssue where
 instance ToTType' Beam.IGMIssue DIGMIssue.IGMIssue where
   toTType' (DIGMIssue.IGMIssue {..}) = do
     Beam.IGMIssueT
-      { Beam.bookingId = bookingId,
+      { Beam.bapUri = bapUri,
+        Beam.becknTransactionId = becknTransactionId,
+        Beam.bookingId = bookingId,
         Beam.createdAt = createdAt,
         Beam.customerEmail = customerEmail,
         Beam.riderId = getId <$> riderId,

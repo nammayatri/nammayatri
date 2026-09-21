@@ -9,7 +9,9 @@ import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 
 data IGMIssueT f = IGMIssueT
-  { bookingId :: B.C f Text,
+  { bapUri :: B.C f (Maybe Text),
+    becknTransactionId :: B.C f (Maybe Text),
+    bookingId :: B.C f Text,
     createdAt :: B.C f UTCTime,
     customerEmail :: B.C f (Maybe Text),
     customerName :: B.C f (Maybe Text),
