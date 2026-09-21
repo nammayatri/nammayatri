@@ -191,7 +191,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
   fork "BPP pre_ride pickup-distance histogram" $
     whenJust ride.distanceToPickup $ \pickupDistanceVal ->
-      Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone "pre_ride" (realToFrac pickupDistanceVal)
+      Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) "pre_ride" (realToFrac pickupDistanceVal)
   QRideD.create rideDetails
   whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
