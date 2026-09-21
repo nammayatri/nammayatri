@@ -1767,7 +1767,9 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     schedulingCharge :: Text,
     vatChargeConfig :: Text,
     commissionChargeConfig :: Text,
-    tollTaxCharge :: Text
+    tollTaxCharge :: Text,
+    negotiationFareMinTolerancePct :: Text,
+    negotiationFareMaxTolerancePct :: Text
   }
   deriving (Show)
 
@@ -1882,7 +1884,9 @@ instance ToNamedRecord FarePolicyCSVRow where
           "scheduling_charge" .= schedulingCharge,
           "vat_charge_config" .= vatChargeConfig,
           "commission_charge_config" .= commissionChargeConfig,
-          "toll_tax_charge_config" .= tollTaxCharge
+          "toll_tax_charge_config" .= tollTaxCharge,
+          "negotiation_fare_min_tolerance_pct" .= negotiationFareMinTolerancePct,
+          "negotiation_fare_max_tolerance_pct" .= negotiationFareMaxTolerancePct
         ]
     where
       sanitizeNamedField (columnName, value) =
@@ -1993,7 +1997,9 @@ farePolicyCSVHeader =
       "scheduling_charge",
       "vat_charge_config",
       "commission_charge_config",
-      "toll_tax_charge_config"
+      "toll_tax_charge_config",
+      "negotiation_fare_min_tolerance_pct",
+      "negotiation_fare_max_tolerance_pct"
     ]
 
 instance FromNamedRecord FarePolicyCSVRow where
@@ -2109,6 +2115,9 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> r .: "vat_charge_config"
           <*> r .: "commission_charge_config"
           <*> r .: "toll_tax_charge_config"
+          -- optional columns: old fare-policy CSV templates don't have them
+          <*> (r .: "negotiation_fare_min_tolerance_pct" <|> pure "")
+          <*> (r .: "negotiation_fare_max_tolerance_pct" <|> pure "")
 
 -- | Total UTF-8 decode. TEnc.decodeUtf8 is partial and throws UnicodeException; the CSV paths
 -- must not fail on a byte sequence Postgres happened to accept.
@@ -2782,7 +2791,9 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     schedulingCharge = schedulingChargeVal,
                     vatChargeConfig = vatChargeJson,
                     commissionChargeConfig = commissionChargeJson,
-                    tollTaxCharge = tollTaxChargeJson
+                    tollTaxCharge = tollTaxChargeJson,
+                    negotiationFareMinTolerancePct = maybe "" showT farePolicy.negotiationFareMinTolerancePct,
+                    negotiationFareMaxTolerancePct = maybe "" showT farePolicy.negotiationFareMaxTolerancePct
                   }
        in map buildRow [0 .. numRows - 1]
 
@@ -3217,6 +3228,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let airportConvenienceFee :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.airportConvenienceFee "Airport Convenience Fee"
       let businessDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.businessDiscountPercentage "Business Discount Percentage"
       let personalDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.personalDiscountPercentage "Personal Discount Percentage"
+      let negotiationFareMinTolerancePct :: (Maybe Double) = readMaybeCSVField idx row.negotiationFareMinTolerancePct "Negotiation Fare Min Tolerance Pct"
+      let negotiationFareMaxTolerancePct :: (Maybe Double) = readMaybeCSVField idx row.negotiationFareMaxTolerancePct "Negotiation Fare Max Tolerance Pct"
+      let validateNegotiationTolerance label mbPct =
+            whenJust mbPct $ \pct ->
+              when (pct < 0 || pct > FarePolicy.maxNegotiationTolerancePct) $
+                throwError $ InvalidRequest $ label <> " must be between 0 and " <> show FarePolicy.maxNegotiationTolerancePct
+      validateNegotiationTolerance "Negotiation Fare Min Tolerance Pct" negotiationFareMinTolerancePct
+      validateNegotiationTolerance "Negotiation Fare Max Tolerance Pct" negotiationFareMaxTolerancePct
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"
       let pickupBufferInSecsForNightShiftCal :: (Maybe Seconds) = readMaybeCSVField idx row.pickupBufferInSecsForNightShiftCal "Pickup Buffer In Secs For Night Shift Cal"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"

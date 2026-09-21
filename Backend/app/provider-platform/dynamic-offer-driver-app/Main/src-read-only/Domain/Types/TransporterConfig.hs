@@ -271,8 +271,6 @@ data TransporterConfig = TransporterConfig
     negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    negotiationFareMaxTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    negotiationFareMinTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
     nightSafetyStartTime :: Kernel.Types.Common.Seconds,

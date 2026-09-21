@@ -152,7 +152,7 @@ tfFulfillments res =
         { Spec.fulfillmentCustomer = tfCustomer res,
           Spec.fulfillmentId = Just res.booking.quoteId,
           Spec.fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode Nothing Nothing Nothing,
+          Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode Nothing (Just res.booking.startTime) Nothing,
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res
         }

@@ -15,8 +15,10 @@
 
 module Storage.Queries.Quote where
 
+import qualified Data.Aeson
 import qualified Data.Time as T
 import qualified Domain.Types as DTC
+import Domain.Types.AddOnConfig (AddOnData)
 import Domain.Types.Quote
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions
@@ -24,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as BeamQSZ
 import Storage.Cac.FarePolicy as BeamFPolicy
@@ -39,11 +42,16 @@ findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 findAllBySearchRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m [Quote]
 findAllBySearchRequestId (Id srId) = findAllWithKV [Se.Is BeamQSZ.searchRequestId $ Se.Eq srId]
 
-updateEstimatedFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> HighPrecMoney -> m ()
-updateEstimatedFare (Id quoteId) estimatedFare =
+-- | Updates whichever of the negotiated fare / add-on selection actually
+-- changed at /select, in one write -- rather than two separate updates to
+-- the same row (one from applyNegotiatedFare, one from the add-on check).
+-- Pass the existing value for whichever half didn't change.
+updateEstimatedFareAndAddOnDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> HighPrecMoney -> [AddOnData] -> m ()
+updateEstimatedFareAndAddOnDetails (Id quoteId) estimatedFare addOnData =
   updateOneWithKV
     [ Se.Set BeamQSZ.estimatedFare $ roundToIntegral estimatedFare,
-      Se.Set BeamQSZ.estimatedFareAmount $ Just estimatedFare
+      Se.Set BeamQSZ.estimatedFareAmount $ Just estimatedFare,
+      Se.Set BeamQSZ.addOnData $ Just (Data.Aeson.toJSON addOnData)
     ]
     [Se.Is BeamQSZ.id $ Se.Eq quoteId]
 
@@ -73,6 +81,7 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             currency = fromMaybe INR currency,
             distanceUnit = fromMaybe Meter distanceUnit,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            addOnData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData),
             ..
           }
 
@@ -103,5 +112,6 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.area = area,
         BeamQSZ.navigationInstruction = navigationInstruction,
         BeamQSZ.farePolicyId = getId . (.id) <$> farePolicy,
-        BeamQSZ.merchantOperatingCityId = getId <$> merchantOperatingCityId
+        BeamQSZ.merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        BeamQSZ.addOnData = Just (Data.Aeson.toJSON addOnData)
       }

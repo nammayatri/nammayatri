@@ -174,6 +174,14 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       baseFareCaption = show Enums.BASE_FARE
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinal)
 
+      -- Its own breakup line, since the breakup total otherwise diverges from the negotiated price.
+      negotiatedFareDeltaCaption = show Enums.NEGOTIATED_FARE_DELTA
+      mbNegotiatedFareDeltaItem = mkBreakupItem negotiatedFareDeltaCaption . mkPrice <$> fareParams.negotiatedFareDelta
+
+      -- Its own breakup line, so the rider can see what the add-ons cost and the breakup still sums to the fare.
+      addOnChargesCaption = show Enums.ADD_ON_CHARGES
+      mbAddOnChargesItem = mkBreakupItem addOnChargesCaption . mkPrice <$> fareParams.addOnCharges
+
       serviceChargeCaption = show Enums.SERVICE_CHARGE
       mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
 
@@ -297,6 +305,8 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
           else []
   catMaybes
     [ Just baseFareItem,
+      mbNegotiatedFareDeltaItem,
+      mbAddOnChargesItem,
       mbCongestionChargeItem,
       mbNightShiftChargeItem,
       mbNightChargesItem,
@@ -434,6 +444,7 @@ fareSum fareParams conditionalChargeCategories =
   pureFareSum
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
+    + fromMaybe 0.0 fareParams.negotiatedFareDelta
     + fromMaybe 0.0 fareParams.negativeFareAdjustment
     - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
     - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
@@ -454,6 +465,7 @@ fareSum fareParams conditionalChargeCategories =
         + fromMaybe 0.0 fareParams.rideExtraTimeFare
         + fromMaybe 0.0 fareParams.congestionCharge
         + fromMaybe 0.0 fareParams.petCharges
+        + fromMaybe 0.0 fareParams.addOnCharges
         + fromMaybe 0.0 fareParams.driverAllowance
         + fromMaybe 0.0 fareParams.airportConvenienceFee
         + fromMaybe 0.0 fareParams.stopCharges
@@ -542,6 +554,10 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     currency :: Currency,
     distanceUnit :: DistanceUnit,
     petCharges :: Maybe HighPrecMoney,
+    -- | Charge for the rider add-ons selected at /select, passed through unchanged (outside discounts; VAT/commission via AddOnChargeComponent in the fare policy) -- see FareParameters.addOnCharges.
+    addOnCharges :: Maybe HighPrecMoney,
+    -- | Delta of the fare negotiated at /select from the originally quoted fare, passed through unchanged so a recalculation does not drop it -- see FareParameters.negotiatedFareDelta.
+    negotiatedFareDelta :: Maybe HighPrecMoney,
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
@@ -740,7 +756,8 @@ calculateFareParametersHandler params = do
             parkingChargeTaxExclusive = Nothing,
             parkingChargeTax = Nothing,
             fareSettlementType = params.fareSettlementType,
-            negotiatedFareDelta = Nothing,
+            negotiatedFareDelta = params.negotiatedFareDelta,
+            addOnCharges = params.addOnCharges,
             -- Filled in by 'calculateFareParameters' once the full params exist.
             bufferedFare = Nothing
           }
@@ -1522,6 +1539,7 @@ buildComponentMap FareParameters {..} =
             (LuggageChargeComponent, maybeZero luggageCharge),
             (CustomerCancellationChargeComponent, maybeZero customerCancellationDues),
             (CustomerExtraFeeComponent, maybeZero customerExtraFee),
+            (AddOnChargeComponent, maybeZero addOnCharges),
             (TollVatComponent, maybeZero tollFareTax),
             (RideVatComponent, maybeZero discountApplicableRideFareTax),
             (DriverAllowanceComponent, maybeZero driverAllowance),

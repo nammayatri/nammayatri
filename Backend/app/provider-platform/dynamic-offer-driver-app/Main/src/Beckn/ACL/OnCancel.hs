@@ -20,6 +20,7 @@ where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
@@ -52,6 +53,7 @@ import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Person as QPerson
@@ -106,7 +108,12 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   let driverName = DP.getPersonFullName =<< mbPerson
       driverGender = mbPerson <&> \p -> show p.gender -- ONDC v2.1.0: extract driver gender
   driverPhone <- maybe (pure Nothing) DP.getPersonNumber mbPerson
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey
+  -- Needed only by the ONDC override below; resolved here rather than threaded through
+  -- buildOnCancelReq, which every other cancel path also calls.
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  onCancelReq <- buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey
+  patchedMessage <- OSRCommon.applyOnCancelOrderOverridesIfEnabled isValueAddNP booking onCancelReq.onCancelReqMessage
+  pure onCancelReq {Spec.onCancelReqMessage = patchedMessage}
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>

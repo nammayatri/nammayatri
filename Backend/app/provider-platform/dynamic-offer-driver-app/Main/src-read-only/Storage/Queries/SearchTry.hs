@@ -4,6 +4,7 @@
 
 module Storage.Queries.SearchTry (module Storage.Queries.SearchTry, module ReExport) where
 
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -36,7 +37,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
+    [ Se.Set Beam.addOnData (Just $ toJSON addOnData),
+      Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
       Se.Set Beam.baseFareAmount (Kernel.Prelude.Just baseFare),
       Se.Set Beam.batchingMode batchingMode,
       Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),

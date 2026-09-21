@@ -105,6 +105,7 @@ updateFareParameters FareParameters {..} id_ = do
       Se.Set BeamFP.nightShiftChargeAmount nightShiftCharge,
       Se.Set BeamFP.currency $ Just currency,
       Se.Set BeamFP.negotiatedFareDelta negotiatedFareDelta,
+      Se.Set BeamFP.addOnCharges addOnCharges,
       Se.Set BeamFP.updatedAt (Just now)
     ]
     [Se.Is BeamFP.id (Se.Eq id_.getId)]
@@ -228,6 +229,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 parkingChargeTax = parkingChargeTax,
                 fareSettlementType = fareSettlementType,
                 negotiatedFareDelta = negotiatedFareDelta,
+                addOnCharges = addOnCharges,
                 bufferedFare = bufferedFare
               }
       Nothing -> return Nothing
@@ -308,5 +310,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.driverCancellationNotAllowed = driverCancellationNotAllowed,
         BeamFP.fareSettlementType = fareSettlementType,
         BeamFP.negotiatedFareDelta = negotiatedFareDelta,
+        BeamFP.addOnCharges = addOnCharges,
         BeamFP.bufferedFare = bufferedFare
       }
