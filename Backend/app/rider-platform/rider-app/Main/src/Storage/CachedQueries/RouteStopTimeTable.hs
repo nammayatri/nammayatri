@@ -34,6 +34,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
 import qualified System.Environment as Se
 import Tools.Error
@@ -86,7 +87,9 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
                   >>= \case
                     [] -> pure [stopCode']
                     stopCodes@(_ : _) -> pure stopCodes
-              _ -> pure [stopCode']
+              -- Buses are grouped under stations too, and the timetable is keyed by the platform
+              -- a bus calls at. Costs nothing for a plain stop, which resolves to just itself.
+              _ -> OTPRest.getEquivalentStopCodes stopCode' integratedBPPConfig
         allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType needOnlyOneTrip
         unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode routeCodes allTrips needOnlyOneTrip
         pure allTrips

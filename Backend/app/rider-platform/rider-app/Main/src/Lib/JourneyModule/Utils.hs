@@ -250,13 +250,17 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
     M.fromList . map (\t -> (t._type, t))
       <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId mocid integratedBppConfig.id
 
+  -- Resolved once for the whole call, never per route or per bus: live ETAs and static schedules
+  -- are keyed by the platform a bus calls at, so a station code matches only through its platforms.
+  equivalentStopCodes <- OTPRest.getEquivalentStopCodes stopCode integratedBppConfig
+
   (liveRouteStopTimes, fallbackRouteCodes) <-
     if useLiveBusData
       then do
         allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes integratedBppConfig
 
         -- Enrich vehicles for all routes concurrently
-        enrichedRoutes <- mapConcurrently enrichRoute allRouteWithBuses
+        enrichedRoutes <- mapConcurrently (enrichRoute equivalentStopCodes) allRouteWithBuses
 
         -- Build entries (pure) and determine fallback routes
         let liveStopTimes = concatMap (buildLiveEntries frfsServiceTierMap) enrichedRoutes
@@ -270,17 +274,17 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
   staticRouteStopTimes <-
     if null fallbackRouteCodes
       then return []
-      else measureLatency (fetchStaticTimings frfsServiceTierMap fallbackRouteCodes) "fetch route stop timing through getRouteBusSchedule"
+      else measureLatency (fetchStaticTimings equivalentStopCodes frfsServiceTierMap fallbackRouteCodes) "fetch route stop timing through getRouteBusSchedule"
 
   return $ liveRouteStopTimes ++ staticRouteStopTimes
   where
     -- Filters buses at the target stop and enriches each with its service tier type
-    enrichRoute routeWithBuses = do
+    enrichRoute equivalentStopCodes routeWithBuses = do
       let filteredBuses =
             [ (bus.vehicleNumber, eta)
               | bus <- routeWithBuses.buses,
                 eta <- fromMaybe [] bus.busData.eta_data,
-                eta.stopCode == stopCode
+                eta.stopCode `elem` equivalentStopCodes
             ]
       enrichedBuses <- mapConcurrently getVehicleServiceType filteredBuses
       return (routeWithBuses.routeId, catMaybes enrichedBuses)
@@ -297,14 +301,14 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
       return $ mbServiceTier <&> (vno,eta,)
 
     -- Fetches static schedules for all fallback routes concurrently then converts using the shared tier map
-    fetchStaticTimings frfsServiceTierMap routeIds = do
+    fetchStaticTimings equivalentStopCodes frfsServiceTierMap routeIds = do
       allSchedules <- mapConcurrently (\routeId -> (routeId,) <$> OTPRest.getRouteBusSchedule routeId Nothing integratedBppConfig) routeIds
-      return $ concatMap (\(routeId, details) -> concatMap (convertStaticSchedule routeId frfsServiceTierMap) details) allSchedules
+      return $ concatMap (\(routeId, details) -> concatMap (convertStaticSchedule equivalentStopCodes routeId frfsServiceTierMap) details) allSchedules
 
-    convertStaticSchedule routeId frfsServiceTierMap busScheduleDetail =
+    convertStaticSchedule equivalentStopCodes routeId frfsServiceTierMap busScheduleDetail =
       let serviceTierType = busScheduleDetail.service_tier
           frfsServiceTierName = M.lookup serviceTierType frfsServiceTierMap <&> (.shortName)
-          filteredEtas = filter (\eta -> eta.stopCode == stopCode && eta.arrivalTime > currentTimeIST) busScheduleDetail.eta
+          filteredEtas = filter (\eta -> eta.stopCode `elem` equivalentStopCodes && eta.arrivalTime > currentTimeIST) busScheduleDetail.eta
        in map (\eta -> createRouteStopTimeTable routeId busScheduleDetail.vehicle_no eta serviceTierType frfsServiceTierName GTFS) filteredEtas
 
     createRouteStopTimeTable routeCode' vehicleNumber eta serviceTierType' serviceTierName' source' =
@@ -350,13 +354,16 @@ fetchLiveSubwayTimings ::
   m [RouteStopTimeTable]
 fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
   allRouteWithTrains <- MultiModalSuburban.getTrainsForRoutes routeCodes
-  let routeStopTimes = concatMap processRoute allRouteWithTrains
+  -- Resolved once: the live train feed is keyed by the platform a train calls at, not by the
+  -- station code a rider may have been shown.
+  equivalentStopCodes <- OTPRest.getEquivalentStopCodes stopCode integratedBppConfig
+  let routeStopTimes = concatMap (processRoute equivalentStopCodes) allRouteWithTrains
   if not (null routeStopTimes)
     then return routeStopTimes
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False False) "fetch route stop timing through graphql"
   where
-    processRoute routeWithTrains =
-      let filteredTrains = filter (\train -> train.stationCode == stopCode) (routeWithTrains.trains)
+    processRoute equivalentStopCodes routeWithTrains =
+      let filteredTrains = filter (\train -> train.stationCode `elem` equivalentStopCodes) (routeWithTrains.trains)
           baseStopTimes = map createRouteStopTimeTable filteredTrains
        in baseStopTimes ++ map (\rt -> (rt {serviceTierType = Spec.FIRST_CLASS}) :: RouteStopTimeTable) baseStopTimes
 
@@ -746,19 +753,22 @@ measureLatency action label = do
   logDebug $ label <> " Latency: " <> show latency <> " seconds"
   return result
 
-getBestOneWayRoute :: MultiModalTypes.GeneralVehicleType -> [MultiModalTypes.MultiModalRoute] -> Maybe Text -> Maybe Text -> Maybe MultiModalTypes.MultiModalRoute
-getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode = do
+-- | The origin/destination arguments are each a stop code together with its equivalents (see
+-- 'OTPRest.getEquivalentStopCodes'): OTP's legs name the platform a vehicle calls at, so a
+-- station code matches only through the platform codes under it.
+getBestOneWayRoute :: MultiModalTypes.GeneralVehicleType -> [MultiModalTypes.MultiModalRoute] -> Maybe [Text] -> Maybe [Text] -> Maybe MultiModalTypes.MultiModalRoute
+getBestOneWayRoute vehicleCategory routes mbOriginStopCodes mbDestinationStopCodes = do
   let selectedVehicleCategoryRoutes = filter (\r -> onlySelectedModeWithWalkLegs vehicleCategory r.legs) routes
   firstJust
-    [ findConditionalRoute [correctToFromStops mbOriginStopCode mbDestinationStopCode] selectedVehicleCategoryRoutes,
+    [ findConditionalRoute [correctToFromStops mbOriginStopCodes mbDestinationStopCodes] selectedVehicleCategoryRoutes,
       listToMaybe selectedVehicleCategoryRoutes
     ]
   where
     removeWalkLegs = filter (\l -> l.mode /= MultiModal.Walk)
     onlySelectedModeWithWalkLegs vc = all (\l -> l.mode == vc) . removeWalkLegs
-    correctToFromStops (Just originStopCode) (Just destinationStopCode) legs =
+    correctToFromStops (Just originStopCodes) (Just destinationStopCodes) legs =
       case ((listToMaybe legs) >>= (.fromStopDetails) >>= (.stopCode), (listToMaybe $ reverse legs) >>= (.toStopDetails) >>= (.stopCode)) of
-        (Just journeyStartStopCode, Just journeyEndStopCode) -> journeyStartStopCode == originStopCode && journeyEndStopCode == destinationStopCode
+        (Just journeyStartStopCode, Just journeyEndStopCode) -> journeyStartStopCode `elem` originStopCodes && journeyEndStopCode `elem` destinationStopCodes
         _ -> False
     correctToFromStops _ _ _ = True
 
@@ -960,8 +970,11 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
           tripInfo' <- maybe (return Nothing) (\tripId -> measureLatency (OTPRest.getNandiTripInfo integratedBppConfig tripId.getId) "getNandiTripInfo") originStopTripId
-          let destinationArrivalTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.arrivalTime)
-              destinationDepartureTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.departureTime)
+          -- A trip's schedule is keyed by platform, so a station destination matches through its platforms.
+          destinationStopCodes <- OTPRest.getEquivalentStopCodes destinationStopCode integratedBppConfig
+          let mbDestinationSchedule = tripInfo' >>= \tripInfo -> find (\schedule -> schedule.stopCode `elem` destinationStopCodes) tripInfo.schedule
+              destinationArrivalTime' = secondsToTime . (.arrivalTime) <$> mbDestinationSchedule
+              destinationDepartureTime' = secondsToTime . (.departureTime) <$> mbDestinationSchedule
           destStopTimings <- case (mbRouteCode, tripInfo', destinationArrivalTime', destinationDepartureTime') of
             (Nothing, Just tripInfo, Just destinationArrivalTime, Just destinationDepartureTime) -> do
               logDebug $ "destinationArrivalTime: " <> show destinationArrivalTime <> " destinationDepartureTime: " <> show destinationDepartureTime <> " tripInfo: " <> show tripInfo
@@ -2092,11 +2105,15 @@ getRouteStopIndices ::
 getRouteStopIndices routeCode fromStationCode toStationCode integratedBppConfig = do
   IM.withInMemCache ["getRouteStopIndices", routeCode, fromStationCode, toStationCode, integratedBppConfig.id.getId] 86400 $ do
     routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBppConfig
+    -- A route's stops are its platforms, so a station is served at whichever of its platforms
+    -- this route calls at. Resolved inside the cache, so a repeat lookup costs nothing.
+    fromStationCodes <- OTPRest.getEquivalentStopCodes fromStationCode integratedBppConfig
+    toStationCodes <- OTPRest.getEquivalentStopCodes toStationCode integratedBppConfig
     let sortedStops = sortOn (.sequenceNum) routeStops
         mFromIdx =
-          findIndex (\s -> s.stopCode == fromStationCode) sortedStops
+          findIndex (\s -> s.stopCode `elem` fromStationCodes) sortedStops
         mToIdx =
-          findIndex (\s -> s.stopCode == toStationCode) sortedStops
+          findIndex (\s -> s.stopCode `elem` toStationCodes) sortedStops
     pure $ (,) <$> mFromIdx <*> mToIdx
 
 getWaybillNoAndTripNoFromTripId :: T.Text -> (T.Text, Int)

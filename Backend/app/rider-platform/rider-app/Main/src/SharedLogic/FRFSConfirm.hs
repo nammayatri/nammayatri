@@ -958,8 +958,16 @@ buildJourneyAndLeg booking fareParameters = do
       case mbRouteStation of
         Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
         Nothing -> return Nothing
-    let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
-        toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+    mbLastTrip <-
+      case mbLastRouteStation of
+        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+        Nothing -> return Nothing
+    -- A trip's stops are platforms, so a booking made against a station code matches through
+    -- the platform codes under it.
+    fromStationCodes <- OTPRest.getEquivalentStopCodes booking.fromStationCode integratedBppConfig
+    toStationCodes <- OTPRest.getEquivalentStopCodes booking.toStationCode integratedBppConfig
+    let fromStopPlatformCode = mbFirstTrip >>= \trip -> OTPRest.findTripStopByStopCode trip fromStationCodes >>= (.platformCode)
+        toStopPlatformCode = mbLastTrip >>= \trip -> OTPRest.findTripStopByStopCode trip toStationCodes >>= (.platformCode)
         fromStopDetail =
           MultiModalStopDetails
             { stopCode = Just booking.fromStationCode,

@@ -1901,7 +1901,9 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
       otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
 
-      validatedRoute <- JMU.getBestOneWayRoute transitMode otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (getRouteNotFoundError transitMode sourceStopCode destStopCode)
+      -- Metro/subway station change: no integrated BPP config in scope to resolve a station's
+      -- platforms through, so the codes are matched as they arrive, exactly as before.
+      validatedRoute <- JMU.getBestOneWayRoute transitMode otpResponse.routes (Just [sourceStopCode]) (Just [destStopCode]) & fromMaybeM (getRouteNotFoundError transitMode sourceStopCode destStopCode)
 
       transitLeg <- case filter (\leg -> leg.mode == transitMode) validatedRoute.legs of
         [singleTransitLeg] -> return singleTransitLeg
@@ -2328,7 +2330,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
       otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
-      oneWayRouteWithWalkLegs <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCode') (Just destCode') & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
+      -- OTP names the platform a bus calls at, so a requested station is matched via its platforms.
+      srcCodes <- OTPRest.getEquivalentStopCodes srcCode' routeServiceabilityContext.integratedBPPConfig
+      destCodes <- OTPRest.getEquivalentStopCodes destCode' routeServiceabilityContext.integratedBPPConfig
+      oneWayRouteWithWalkLegs <- JMU.getBestOneWayRoute MultiModalTypes.Bus otpResponse.routes (Just srcCodes) (Just destCodes) & fromMaybeM (getRouteNotFoundError MultiModalTypes.Bus srcCode' destCode')
       pure $ onlyBusLegs oneWayRouteWithWalkLegs
 
     onlyBusLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
@@ -2607,7 +2612,13 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
                 partition (\r -> r.routeCode `elem` userRequestedCodes) routesWithLiveVehicles
               -- Clustered routes board at their own stop, not the leg's requested one,
               -- so the ETA used for ranking has to be read at each route's own stop.
-              boardingStopFor rc = maybe rlFromStopCode fst (lookup rc rlStopsByRoute)
+              boardingStops = nub $ filter (not . T.null) (rlFromStopCode : map (fst . snd) rlStopsByRoute)
+          -- Resolved once per distinct boarding stop (and cached), never per route or per
+          -- vehicle: a station's feed ETAs are keyed by its platforms, not by the station code.
+          equivalentsByStop <- mapConcurrently (\stop -> (stop,) <$> OTPRest.getEquivalentStopCodes stop ctx.integratedBPPConfig) boardingStops
+          let boardingStopFor rc =
+                let stop = maybe rlFromStopCode fst (lookup rc rlStopsByRoute)
+                 in fromMaybe [stop] (lookup stop equivalentsByStop)
               cappedAlternates = capVehiclesAcrossRoutes boardingStopFor ctx.maxAlternateRouteVehicles alternateRoutes
 
           pure $
@@ -2714,7 +2725,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
           }
       ]
     capVehiclesAcrossRoutes ::
-      (Text -> Text) ->
+      (Text -> [Text]) ->
       Int ->
       [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle] ->
       [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle]
@@ -2763,13 +2774,15 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
               )
               routes
 
-    getSourceStopETAFromLive :: Text -> API.Types.UI.MultimodalConfirm.LiveVehicleInfo -> Maybe UTCTime
-    getSourceStopETAFromLive stopCode v =
-      v.eta >>= find (\e -> e.stopCode == stopCode) >>= \e -> Just e.arrivalTime
+    -- Takes the boarding stop's equivalent codes: feed ETAs are keyed by platform, so a station
+    -- is only found through the platform codes under it.
+    getSourceStopETAFromLive :: [Text] -> API.Types.UI.MultimodalConfirm.LiveVehicleInfo -> Maybe UTCTime
+    getSourceStopETAFromLive stopCodes v =
+      v.eta >>= find (\e -> e.stopCode `elem` stopCodes) >>= \e -> Just e.arrivalTime
 
-    getSourceStopETAFromScheduled :: Text -> API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo -> Maybe UTCTime
-    getSourceStopETAFromScheduled stopCode v =
-      v.eta >>= find (\e -> e.stopCode == stopCode) >>= \e -> Just e.arrivalTime
+    getSourceStopETAFromScheduled :: [Text] -> API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo -> Maybe UTCTime
+    getSourceStopETAFromScheduled stopCodes v =
+      v.eta >>= find (\e -> e.stopCode `elem` stopCodes) >>= \e -> Just e.arrivalTime
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -3292,19 +3305,25 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
+  -- GIMS already expands a station into the platforms each
+  -- route calls at, and feed ETAs are keyed by the platform a bus calls at, so a route's own
+  -- mapping rows are its equivalent-code set for free (see OTPRest.getEquivalentStopCodes).
+  -- For a plain stop this is just [stopCode].
   let filterRouteCodes = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbRouteCodes
       passingRouteCodes = nub (map (.routeCode) mappings)
+      stopCodesByRoute = Map.fromListWith (flip (<>)) [(mapping.routeCode, [mapping.stopCode]) | mapping <- mappings]
       routeCodes =
         if null filterRouteCodes
           then passingRouteCodes
           else filter (`elem` filterRouteCodes) passingRouteCodes
 
   frfsTierMap <- map (\t -> (t._type, t)) <$> CQFRFSVehicleServiceTier.findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId person.merchantOperatingCityId integratedBPPConfig.id
-  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap) routeCodes
+  catMaybes <$> mapConcurrently (getRouteEtaAtStop integratedBPPConfig frfsTierMap stopCodesByRoute) routeCodes
   where
-    etaAtStop etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode == stopCode) etaEntries))
+    etaAtStop routeStopCodes etaEntries = listToMaybe (sortOn (.arrivalTimeUnix) (filter (\etaEntry -> etaEntry.stopCode `elem` routeStopCodes) etaEntries))
 
-    getRouteEtaAtStop integratedBPPConfig frfsTierMap routeCode = do
+    getRouteEtaAtStop integratedBPPConfig frfsTierMap stopCodesByRoute routeCode = do
+      let routeStopCodes = nub (stopCode : Map.findWithDefault [] routeCode stopCodesByRoute)
       mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
       case mbRoute of
         Nothing -> do
@@ -3323,7 +3342,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
                   [ (bus.vehicleNumber, busEta)
                     | routeWithBuses <- busesForRoutes,
                       bus <- routeWithBuses.buses,
-                      Just busEta <- [etaAtStop (fromMaybe [] bus.busData.eta_data)]
+                      Just busEta <- [etaAtStop routeStopCodes (fromMaybe [] bus.busData.eta_data)]
                   ]
           scheduleVehiclesFork <-
             awaitableFork "getMultimodalTrackStopRoutes->schedules" $ do
@@ -3331,7 +3350,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
               pure
                 [ (scheduleDetail.vehicle_no, scheduleDetail.service_tier, detailEta)
                   | scheduleDetail <- schedules,
-                    Just detailEta <- [etaAtStop scheduleDetail.eta]
+                    Just detailEta <- [etaAtStop routeStopCodes scheduleDetail.eta]
                 ]
           liveVehicles <-
             L.await Nothing liveVehiclesFork >>= \case
@@ -3348,8 +3367,9 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbRouteCodes = d
           liveVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) liveVehicles
           scheduleVehicleInfos <- mapM (mkPassingVehicle integratedBPPConfig frfsTierMap) scheduleVehicles
           routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+          -- "Is this stop the route's last one" -- for a station, any of its platforms counts.
           let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
-                (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
+                (lastStopMapping : _) -> lastStopMapping.stopCode `elem` routeStopCodes
                 [] -> False
           pure $
             Just
