@@ -194,7 +194,7 @@ types:
     - value: Text
     - appliesOn: "[FPV2FareChargeComponent]"
   FPV2ConditionalChargeCategory:
-    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES, BOOKING_DEPOSIT"
+    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES, BOOKING_DEPOSIT, SCHEDULED_RIDE_MIN_WALLET_BALANCE"
   FPV2ConditionalCharge:
     - chargeCategory: FPV2ConditionalChargeCategory
     - charge: HighPrecMoney
