@@ -401,6 +401,8 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             estimatedCongestionCharge = Nothing,
             timeDiffFromUtc = Nothing,
             petCharges = Nothing, ----------check
+            addOnCharges = Nothing,
+            negotiatedFareDelta = Nothing,
             shouldApplyBusinessDiscount = False,
             shouldApplyPersonalDiscount = True,
             tollCharges = Nothing, ------fix it in future

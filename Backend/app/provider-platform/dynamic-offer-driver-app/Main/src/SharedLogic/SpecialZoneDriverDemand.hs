@@ -280,6 +280,8 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               customerExtraFee = Nothing,
               negativeFareAdjustment = Nothing,
               petCharges = Nothing,
+              addOnCharges = Nothing,
+              negotiatedFareDelta = Nothing,
               nightShiftCharge = Nothing,
               estimatedCongestionCharge = Nothing,
               isScheduled = False,

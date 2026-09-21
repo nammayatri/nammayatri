@@ -72,7 +72,8 @@ buildConfirmReqV2 req isValueAddNP = do
       bookingDepositSecured = readMaybe . T.unpack =<< Utils.getTag Tag.BOOKING_DEPOSIT_HELD orderTags
   return $
     DConfirm.DConfirmReq
-      { ..
+      { addOns = [],
+        ..
       }
 
 getNightSafetyCheckTag :: Bool -> Maybe [Spec.TagGroup] -> Bool

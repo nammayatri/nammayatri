@@ -268,8 +268,6 @@ data TransporterConfigT f = TransporterConfigT
     negativeFareAdjustmentCongestionThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     negativeFareAdjustmentMaxAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     negativeFareAdjustmentMinDistanceMeters :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    negotiationFareMaxTolerancePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    negotiationFareMinTolerancePct :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     nightSafetyStartTime :: B.C f Kernel.Types.Common.Seconds,

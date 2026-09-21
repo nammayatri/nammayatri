@@ -25,6 +25,7 @@ imports:
   SearchTry: Domain.Types.SearchTry
   FareSettlementType: Lib.Types.SpecialLocation
   Language: Tools.Maps
+  AddOnData: Domain.Types.AddOnConfig
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -129,6 +130,7 @@ Booking:
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
     customerLanguage: Maybe Language
+    addOnData: "[AddOnData]"
 
   excludedFields:
     - merchantId
@@ -147,6 +149,7 @@ Booking:
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
     configInExperimentVersions: Maybe Value
+    addOnData: Maybe Value
     isSafetyPlus : Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
@@ -197,6 +200,7 @@ Booking:
     receiverName: (receiverDetails <&> (.name))|E
     receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    addOnData: Just $ toJSON addOnData|E
     isSafetyPlus : Just isSafetyPlus|E
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
@@ -228,6 +232,7 @@ Booking:
     senderDetails: fst <$> senderAndReceiverDetails|E
     receiverDetails: snd <$> senderAndReceiverDetails|E
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    addOnData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData)|E
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
@@ -258,6 +263,7 @@ Booking:
     tollIds: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
+    addOnData: "json"
     displayBookingId: character varying(25)
     searchTryId: character varying(36)
     dqDurationToPickup: bigint

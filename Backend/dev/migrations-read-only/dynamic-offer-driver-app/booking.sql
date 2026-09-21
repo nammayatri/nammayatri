@@ -283,7 +283,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN preference_match_score dou
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_auto_accepted boolean ;
 
+------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN add_on_data json ;
 
 ------- SQL updates -------
 

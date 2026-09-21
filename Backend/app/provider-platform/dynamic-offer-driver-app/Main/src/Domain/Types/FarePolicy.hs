@@ -115,7 +115,9 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     merchantId :: Maybe (Id Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DTAC.ConditionalCharges],
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    negotiationFareMinTolerancePct :: Maybe Double,
+    negotiationFareMaxTolerancePct :: Maybe Double
   }
   deriving (Generic, Show, ToSchema)
 
@@ -181,6 +183,7 @@ data FareChargeComponent
   | PlatformFeeComponent
   | CustomerCancellationChargeComponent
   | CustomerExtraFeeComponent
+  | AddOnChargeComponent
   | -- Progressive details
     DeadKmFareComponent
   | ExtraKmFareComponent
@@ -399,7 +402,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     driverCancellationNotAllowed :: Maybe Bool,
     mbArea :: Maybe SL.Area,
     fareSettlementType :: Maybe SL.FareSettlementType,
-    parkingFeeExemptionEnabled :: Maybe Bool
+    parkingFeeExemptionEnabled :: Maybe Bool,
+    negotiationFareMinTolerancePct :: Maybe Double,
+    negotiationFareMaxTolerancePct :: Maybe Double
   }
   deriving (Generic, Show)
 
@@ -448,6 +453,21 @@ type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
 type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
 
 type FullFarePolicyInterCityDetails = (Id FarePolicy, FPInterCityDetails)
+
+-- | Negotiation tolerance (percent of the originally quoted fare) used by the
+-- Quote-based /select. Unset on the policy means +-10%.
+defaultNegotiationTolerancePct :: Double
+defaultNegotiationTolerancePct = 10
+
+-- | Upper bound for either tolerance. Enforced on write (CSV + dashboard V2) and
+-- again on read, since a direct DB write bypasses both write paths and a min
+-- tolerance of 100 would accept a zero fare.
+maxNegotiationTolerancePct :: Double
+maxNegotiationTolerancePct = 100
+
+-- | Effective tolerance in percent: default when unset, clamped to [0, maxNegotiationTolerancePct].
+effectiveNegotiationTolerancePct :: Maybe Double -> Double
+effectiveNegotiationTolerancePct = max 0 . min maxNegotiationTolerancePct . fromMaybe defaultNegotiationTolerancePct
 
 mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> CongestionChargeMultiplier
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge

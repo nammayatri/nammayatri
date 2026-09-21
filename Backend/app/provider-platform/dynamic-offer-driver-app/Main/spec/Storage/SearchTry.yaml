@@ -8,6 +8,8 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   BillingCategory: SharedLogic.Type
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  AddOnData: Domain.Types.AddOnConfig
+  Value: Data.Aeson
 
 SearchTry:
   tableName: search_try
@@ -53,6 +55,7 @@ SearchTry:
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
     paymentInstrument: Maybe PaymentInstrument
+    addOnData: "[AddOnData]"
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -68,6 +71,7 @@ SearchTry:
     preferSafetyPlus: Maybe Bool
     driverPreference: "Maybe [Text]"
     billingCategory: Maybe BillingCategory
+    addOnData: Maybe Value
 
   beamFields:
     vehicleServiceTier:
@@ -111,6 +115,7 @@ SearchTry:
     preferSafetyPlus: fromMaybe False preferSafetyPlus|E
     driverPreference: driverPreference|E
     billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+    addOnData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData)|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -132,6 +137,7 @@ SearchTry:
     serviceTierArray: Kernel.Prelude.Just|I
     preferSafetyPlus: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just|I
+    addOnData: Just $ toJSON addOnData|E
 
 
   constraints:
@@ -155,6 +161,7 @@ SearchTry:
     vehicleVariant: character varying (255)
     estimateId: character (36)
     searchRepeatType: character varying (255)
+    addOnData: "json"
 
   excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
 

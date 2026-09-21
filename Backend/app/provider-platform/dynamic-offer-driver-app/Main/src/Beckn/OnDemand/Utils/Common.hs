@@ -918,6 +918,11 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
+            -- Both are fare-type agnostic and were absent from every branch, so a negotiated or
+            -- add-on booking shipped a breakup that did not sum to quote.price.
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NEGOTIATED_FARE_DELTA)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.ADD_ON_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.FIXED_GOVERNMENT_RATE)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -957,6 +962,10 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
+            -- Both are fare-type agnostic and were absent from every branch, so a negotiated or
+            -- add-on booking shipped a breakup that did not sum to quote.price.
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NEGOTIATED_FARE_DELTA)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.ADD_ON_CHARGES)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -995,6 +1004,11 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
+            -- Both are fare-type agnostic and were absent from every branch, so a negotiated or
+            -- add-on booking shipped a breakup that did not sum to quote.price.
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.NEGOTIATED_FARE_DELTA)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.ADD_ON_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.FIXED_GOVERNMENT_RATE)
         _ -> True
 
 type MerchantShortId = Text
