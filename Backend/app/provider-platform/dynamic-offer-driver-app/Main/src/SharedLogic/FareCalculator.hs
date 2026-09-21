@@ -696,7 +696,7 @@ calculateFareParametersHandler params = do
             platformFeeChargesBy = fp.platformFeeChargesBy,
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
-            conditionalCharges = filter (\addCharges -> addCharges.chargeCategory /= DAC.BOOKING_DEPOSIT && maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
+            conditionalCharges = filter (\addCharges -> DAC.isFareComponent addCharges.chargeCategory && maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             customerGateFeeItems = [],
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
