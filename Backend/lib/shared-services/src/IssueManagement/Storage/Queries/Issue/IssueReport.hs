@@ -245,5 +245,6 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.merchantId = getId <$> merchantId,
         BeamIR.becknIssueId = becknIssueId,
         BeamIR.reopenedCount = Just reopenedCount,
-        BeamIR.customerResponse = customerResponse
+        BeamIR.customerResponse = customerResponse,
+        BeamIR.submitLabel = submitLabel
       }

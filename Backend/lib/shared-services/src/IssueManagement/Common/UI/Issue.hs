@@ -40,6 +40,8 @@ data IssueReportReq = IssueReportReq
     description :: Text,
     chats :: Maybe [Chat],
     createTicket :: Maybe Bool,
+    -- | FEEDBACK_TICKET: store the report as CLOSED, no ticket raised.
+    isFeedback :: Maybe Bool,
     ticketBookingId :: Maybe (Id FRFSTicketBooking)
   }
   deriving (Generic, FromJSON, ToSchema, Show)

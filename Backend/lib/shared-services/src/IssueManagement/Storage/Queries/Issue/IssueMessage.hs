@@ -36,6 +36,7 @@ updateByPrimaryKey IssueMessage {..} =
       Set BeamIM.mediaFiles (getId <$> mediaFiles),
       Set BeamIM.messageType messageType,
       Set BeamIM.apiAction apiAction,
+      Set BeamIM.onSubmitReplyMsgs (map getId <$> onSubmitReplyMsgs),
       Set BeamIM.createdAt createdAt,
       Set BeamIM.updatedAt updatedAt
     ]
@@ -155,6 +156,7 @@ instance FromTType' BeamIM.IssueMessage IssueMessage where
             referenceCategoryId = Id <$> referenceCategoryId,
             referenceOptionId = Id <$> referenceOptionId,
             mediaFiles = Id <$> mediaFiles,
+            onSubmitReplyMsgs = map Id <$> onSubmitReplyMsgs,
             ..
           }
 
@@ -173,6 +175,7 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
         BeamIM.messageAction = messageAction,
         BeamIM.messageType = messageType,
         BeamIM.apiAction = apiAction,
+        BeamIM.onSubmitReplyMsgs = map getId <$> onSubmitReplyMsgs,
         BeamIM.isActive = isActive,
         BeamIM.priority = priority,
         BeamIM.merchantId = getId merchantId,
