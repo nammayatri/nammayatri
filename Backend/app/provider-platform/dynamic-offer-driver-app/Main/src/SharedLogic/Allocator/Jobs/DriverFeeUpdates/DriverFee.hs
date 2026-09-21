@@ -166,8 +166,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               if totalCancellationPenalty > 0
                 then do
                   QDF.updateCancellationPenaltyAmount driverFee.id totalCancellationPenalty now
-                  let cancellationPenaltyIds = map (.id) cancellationPenalties
-                  QDF.updateStatusAndAddedToFeeId ADDED_TO_INVOICE (Just driverFee.id) cancellationPenaltyIds now
+                  -- source penalties are consumed later (after placement), so a failure keeps them re-billable
                   pure $ driverFee {cancellationPenaltyAmount = Just totalCancellationPenalty}
                 else do
                   pure driverFee
@@ -193,13 +192,16 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             let paymentMode = maybe MANUAL (.planType) mbDriverPlan
             let nonEmptyDriverId = NE.fromList [driverFee.driverId]
             ------------- process driver fee based on payment mode ----------------
-            unless (totalFee == 0 && totalCancellationPenalty == 0) $ do
-              -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
+            -- only subscription processing here; guard on totalFee > 0 so a zero-fee (free-ride) day with a
+            -- cancellation penalty does not enter the coin-clear branch (coinCashLeft >= 0 is always true) and
+            -- driverFeeSplitter is never called with 0 (avoids a 0/0 split and a mis-routed execution invoice).
+            when (totalFee > 0) $ do
               if coinCashLeft >= totalFee
                 then do
                   void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
                   setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
-                  QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
+                  -- clear by coins and zero the cancellation in one write (it goes on a separate fee below)
+                  QDF.updateStatusAndCancellationPenaltyByIds CLEARED_BY_YATRI_COINS 0 [driverFeeUpdateWithPlanAndOffer.id] now
                   driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs transporterConfig now
                   invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
                   updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
@@ -217,14 +219,28 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
             let driverFeeIds = map (.id) dueDriverFees
                 due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
-            if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
+            let isBlocked = roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
+                -- parent won't be billed itself (coins cleared it, or zero-fee day) -> penalty goes on a child, not a fold
+                parentCleared = (totalFee > 0 && coinCashLeft >= totalFee) || totalFee == 0
+            -- always credit the cancellation to vendor fee: child for AUTOPAY/parent-cleared, fold for MANUAL.
+            -- no withTryCatch: a failure must retry, not be swallowed.
+            cancellationChildIds <- handleCancellationPenalty paymentMode parentCleared driverFeeWithPenalties subscriptionConfigs transporterConfig now
+            -- consume the source penalties only after placement, so a failure above keeps them re-billable
+            when (totalCancellationPenalty > 0) $
+              QDF.updateStatusAndAddedToFeeId ADDED_TO_INVOICE (Just driverFee.id) (map (.id) cancellationPenalties) now
+            if isBlocked
               then do
-                updateDriverFeeToManual $ driverFeeIds <> [driverFee.id]
+                -- driverFeeIds was queried before the cancellation children existed, so add cancellationChildIds
+                -- (from handleCancellationPenalty, no re-query) to also convert them to manual for a blocked driver.
+                updateDriverFeeToManual $ driverFeeIds <> [driverFee.id] <> cancellationChildIds
                 when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
                   updateSubscription False (cast driverFee.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
-              else do
-                unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
+              else -- bill the parent only if it has a subscription fee coins didn't cover; otherwise it's CLEARED
+              -- and the penalty is already on a child (above).
+
+                when (totalFee > 0 && coinCashLeft < totalFee) $
+                  processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName transporterConfig.timeDiffFromUtc
 
     let closeOutWindow =
@@ -253,33 +269,53 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       ReSchedule <$> getRescheduledTime 600
     Right result -> return result
 
--- | Split cancellation penalty amount into separate DriverFees for AUTOPAY vendor routing
+-- | Place the cancellation penalty on separate collectible fees and return all cancellation-child ids
+-- (existing + new) so the caller can convert them to manual for a blocked driver. Idempotent: children
+-- already placed by a previous (crashed) run are completed and counted, and only the shortfall is created.
 splitCancellationPenaltyIntoDriverFees ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
   TransporterConfig ->
   UTCTime ->
-  m ()
-splitCancellationPenaltyIntoDriverFees parentDriverFee subscriptionConfig transporterConfig now = do
+  m [Id DriverFee]
+splitCancellationPenaltyIntoDriverFees paymentMode parentDriverFee subscriptionConfig transporterConfig now = do
   let totalCancellationAmount = fromMaybe 0 parentDriverFee.cancellationPenaltyAmount
-  when (totalCancellationAmount > 0) $ do
-    mbDriverPlan <- QDPlan.findByDriverIdWithServiceName (cast parentDriverFee.driverId) parentDriverFee.serviceName
-    mandate <- maybe (pure Nothing) QMD.findById (mbDriverPlan >>= (.mandateId))
-    case mandate <&> (.maxAmount) of
-      Nothing -> do
-        logError $ "No mandate max amount found for driver plan " <> maybe "[No Plan]" (.getId) parentDriverFee.planId
-        createCancellationPenaltyDriverFee parentDriverFee totalCancellationAmount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
-      Just maxAmt -> do
-        if totalCancellationAmount <= maxAmt || maxAmt == 0
-          then do
-            createCancellationPenaltyDriverFee parentDriverFee totalCancellationAmount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+  if totalCancellationAmount <= 0
+    then pure []
+    else do
+      -- idempotent: complete existing children, then create only the shortfall so a retry can't duplicate; parent zeroed last
+      existingChildren <- QDF.findCancellationPenaltyChildrenByParentId parentDriverFee.driverId parentDriverFee.id
+      forM_ existingChildren $ ensureCancellationChildDependents paymentMode subscriptionConfig transporterConfig.cancellationFeeVendor now
+      let alreadySplit = sum $ map (fromMaybe 0 . (.cancellationPenaltyAmount)) existingChildren
+          remainingToSplit = totalCancellationAmount - alreadySplit
+      newChildIds <-
+        if remainingToSplit <= 0
+          then pure []
           else do
-            let numSplits = ceiling (totalCancellationAmount / maxAmt) :: Int
-                amounts = splitAmountToMaximizeMandateUsage totalCancellationAmount maxAmt numSplits
-            forM_ amounts $ \amount -> do
-              createCancellationPenaltyDriverFee parentDriverFee amount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
-    QDF.updateCancellationPenaltyAmount parentDriverFee.id 0 now
+            mbDriverPlan <- QDPlan.findByDriverIdWithServiceName (cast parentDriverFee.driverId) parentDriverFee.serviceName
+            mandate <- maybe (pure Nothing) QMD.findById (mbDriverPlan >>= (.mandateId))
+            case mandate <&> (.maxAmount) of
+              Nothing -> do
+                -- MANUAL plans have no mandate by design; only an AUTOPAY plan missing its mandate is worth logging
+                when (paymentMode == AUTOPAY) $
+                  logError $ "No mandate max amount found for driver plan " <> maybe "[No Plan]" (.getId) parentDriverFee.planId
+                childId <- createCancellationPenaltyDriverFee paymentMode parentDriverFee remainingToSplit (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+                pure [childId]
+              Just maxAmt -> do
+                if remainingToSplit <= maxAmt || maxAmt == 0
+                  then do
+                    childId <- createCancellationPenaltyDriverFee paymentMode parentDriverFee remainingToSplit (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+                    pure [childId]
+                  else do
+                    let numSplits = ceiling (remainingToSplit / maxAmt) :: Int
+                        amounts = splitAmountToMaximizeMandateUsage remainingToSplit maxAmt numSplits
+                    forM amounts $ \amount ->
+                      createCancellationPenaltyDriverFee paymentMode parentDriverFee amount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+      QDF.updateCancellationPenaltyAmount parentDriverFee.id 0 now
+      -- ids collected from the create calls (not a re-query) so the blocked-driver branch can convert them
+      pure (map (.id) existingChildren <> newChildIds)
   where
     splitAmountToMaximizeMandateUsage :: HighPrecMoney -> HighPrecMoney -> Int -> [HighPrecMoney]
     splitAmountToMaximizeMandateUsage totalAmount maxAmount numSplits
@@ -289,17 +325,20 @@ splitCancellationPenaltyIntoDriverFees parentDriverFee subscriptionConfig transp
             remainder = totalAmount - (fromIntegral (numSplits - 1) * maxAmount)
          in fullSplits ++ [remainder]
 
--- | Create a single CANCELLATION_PENALTY DriverFee with optional VendorFee
+-- | Create a single CANCELLATION_PENALTY DriverFee with optional VendorFee.
+-- For MANUAL it is a manual-collectible RECURRING_INVOICE (no autopay stage); for AUTOPAY a
+-- RECURRING_EXECUTION_INVOICE with NOTIFICATION_SCHEDULED (the existing autopay-cancellation flow).
 createCancellationPenaltyDriverFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  PaymentMode ->
   DriverFee ->
   HighPrecMoney ->
   Maybe (Id DriverFee) ->
   SubscriptionConfig ->
   Maybe Text ->
   UTCTime ->
-  m ()
-createCancellationPenaltyDriverFee parentFee amount mbSplitOfDriverFeeId subscriptionConfig vendor now = do
+  m (Id DriverFee)
+createCancellationPenaltyDriverFee paymentMode parentFee amount mbSplitOfDriverFeeId subscriptionConfig vendor now = do
   childId <- generateGUID
   let childDriverFee =
         DriverFee
@@ -311,10 +350,10 @@ createCancellationPenaltyDriverFee parentFee amount mbSplitOfDriverFeeId subscri
             merchantOperatingCityId = parentFee.merchantOperatingCityId,
             serviceName = parentFee.serviceName,
             cancellationPenaltyAmount = Just amount,
-            feeType = RECURRING_EXECUTION_INVOICE,
+            feeType = if paymentMode == AUTOPAY then RECURRING_EXECUTION_INVOICE else RECURRING_INVOICE,
             splitOfDriverFeeId = mbSplitOfDriverFeeId,
-            status = PAYMENT_PENDING,
-            autopayPaymentStage = Just NOTIFICATION_SCHEDULED,
+            status = if paymentMode == AUTOPAY || subscriptionConfig.allowManualPaymentLinks then PAYMENT_PENDING else PAYMENT_OVERDUE,
+            autopayPaymentStage = if paymentMode == AUTOPAY then Just NOTIFICATION_SCHEDULED else Nothing,
             createdAt = now,
             updatedAt = now,
             numRides = 0,
@@ -353,20 +392,43 @@ createCancellationPenaltyDriverFee parentFee amount mbSplitOfDriverFeeId subscri
             collectedAtVendorId = Nothing
           }
   QDF.create childDriverFee
-  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust vendor) $ do
-    let vendorFee =
-          DVF.VendorFee
-            { driverFeeId = childId,
-              vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" vendor,
-              amount = amount,
-              createdAt = now,
-              updatedAt = now
-            }
-    QVF.create vendorFee
+  -- create dependents idempotently, so a retry completes a child whose vendor fee/invoice wasn't written
+  ensureCancellationChildDependents paymentMode subscriptionConfig vendor now childDriverFee
+  pure childId
 
-  invoice <- mkInvoiceAgainstDriverFee childDriverFee (False, True)
-  QINV.create invoice
-  QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) childId
+-- | Find-or-create a cancellation child's dependents so a partial child completes on retry: the vendor fee
+-- (both modes), and only for AUTOPAY the execution invoice + NOTIFICATION_SCHEDULED stage. A MANUAL child is
+-- a RECURRING_INVOICE collected via the manual payment-link job, which creates its own invoice later.
+ensureCancellationChildDependents ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  PaymentMode ->
+  SubscriptionConfig ->
+  Maybe Text ->
+  UTCTime ->
+  DriverFee ->
+  m ()
+ensureCancellationChildDependents paymentMode subscriptionConfig vendor now childDriverFee = do
+  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust vendor) $ do
+    let vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" vendor
+    mbVendorFee <- QVF.findByVendorAndDriverFeeId vendorId childDriverFee.id
+    when (isNothing mbVendorFee) $
+      QVF.create
+        DVF.VendorFee
+          { driverFeeId = childDriverFee.id,
+            vendorId = vendorId,
+            amount = fromMaybe 0 childDriverFee.cancellationPenaltyAmount,
+            createdAt = now,
+            updatedAt = now
+          }
+  -- AUTOPAY only: the execution invoice + notification stage. A MANUAL child is collected by the manual
+  -- payment-link job, which creates its own invoice; creating an autopay invoice here would strand it.
+  when (paymentMode == AUTOPAY) $ do
+    mbInvoice <- QINV.findLatestByDriverFeeId childDriverFee.id
+    when (isNothing mbInvoice) $ do
+      invoice <- mkInvoiceAgainstDriverFee childDriverFee (False, True)
+      QINV.create invoice
+    when (childDriverFee.autopayPaymentStage `elem` [Nothing, Just NOTIFICATION_SCHEDULED]) $
+      QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) childDriverFee.id
 
 processDriverFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
@@ -375,29 +437,38 @@ processDriverFee ::
   SubscriptionConfig ->
   TransporterConfig ->
   m ()
-processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
+processDriverFee paymentMode driverFee subscriptionConfig _transporterConfig = do
   now <- getCurrentTime
+  -- cancellation attribution is owned by handleCancellationPenalty; here we only advance status + invoice
   case paymentMode of
-    MANUAL -> do
-      _ <- withTryCatch "makeVendorFeeForCancellationPenalty:processDriverFee" $ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig
-      ( if subscriptionConfig.allowManualPaymentLinks
-          then
-            ( do
-                updateStatus PAYMENT_PENDING driverFee.id now
-                updateFeeType RECURRING_INVOICE driverFee.id
-            )
-          else
-            ( do
-                updateDriverFeeToManual [driverFee.id]
-            )
-        )
+    MANUAL ->
+      if subscriptionConfig.allowManualPaymentLinks
+        then do
+          updateStatus PAYMENT_PENDING driverFee.id now
+          updateFeeType RECURRING_INVOICE driverFee.id
+        else updateDriverFeeToManual [driverFee.id]
     AUTOPAY -> do
-      _ <- withTryCatch "splitCancellationPenaltyIntoDriverFees:processDriverFee" $ splitCancellationPenaltyIntoDriverFees driverFee subscriptionConfig transporterConfig now
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE driverFee.id
       invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
       QINV.create invoice
       QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) driverFee.id
+
+-- | Credit the cancellation to vendor fee: a separate child for AUTOPAY/parent-cleared, or fold onto the parent
+-- for MANUAL. Returns the child ids placed (empty for the fold) so a blocked driver's children can be made manual.
+handleCancellationPenalty ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  PaymentMode ->
+  Bool ->
+  DriverFee ->
+  SubscriptionConfig ->
+  TransporterConfig ->
+  UTCTime ->
+  m [Id DriverFee]
+handleCancellationPenalty paymentMode parentCleared driverFee subscriptionConfig transporterConfig now
+  | fromMaybe 0 driverFee.cancellationPenaltyAmount <= 0 = pure []
+  | parentCleared || paymentMode == AUTOPAY = splitCancellationPenaltyIntoDriverFees paymentMode driverFee subscriptionConfig transporterConfig now
+  | otherwise = makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig >> pure []
 
 processRestFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
@@ -567,13 +638,15 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     _ -> do
+      let hasChildSplits = length splittedFeesWithRespectiveVendorFee > 1
       forM_ splittedFeesWithRespectiveVendorFee $ \(dfee, vfee) -> do
         if dfee.id /= driverFee.id
           then processRestFee paymentMode dfee vfee subscriptionConfigs driverFee totalFee transporterConfig
           else do
             -- Reset The Original Fee Amount & adjust the vendor fee amount by subtracting sums of child vendor fees
             resetFee dfee.id dfee.govtCharges dfee.platformFee (Just feeWithoutDiscount) dfee.amountPaidByCoin now
-            QVF.resetVendorFee dfee.merchantOperatingCityId vfee
+            -- only net out child shares when there are children; with none, the parent already holds the full vendor amount
+            when hasChildSplits $ QVF.resetVendorFee dfee.merchantOperatingCityId vfee
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
@@ -1011,24 +1084,27 @@ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConf
   let vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" transporterConfig.cancellationFeeVendor
       cancellationAmount = fromMaybe 0 driverFee.cancellationPenaltyAmount
       guardKey = cancellationVendorFeeGuardKey driverFee.id
-  -- Guard against scheduler retries double-adding. Set after write so a crash re-applies, not skips.
-  alreadyApplied <- Hedis.get guardKey
-  case (alreadyApplied :: Maybe Bool) of
-    Just True -> logError $ "makeVendorFeeForCancellationPenalty: cancellation already applied for driverFee " <> driverFee.id.getId <> ", skipping"
-    _ -> do
-      mbExisting <- runInMasterDbAndRedis $ QVF.findByVendorAndDriverFeeId vendorId driverFee.id
-      case mbExisting of
-        Just existing -> QVF.updateAmount driverFee.id vendorId (existing.amount + cancellationAmount)
-        Nothing ->
-          QVF.create
-            DVF.VendorFee
-              { driverFeeId = driverFee.id,
-                vendorId = vendorId,
-                amount = cancellationAmount,
-                createdAt = driverFee.createdAt,
-                updatedAt = driverFee.updatedAt
-              }
-      Hedis.setExp guardKey True (3600 * 24)
+  -- idempotent: the guard captures the pre-fold base once, then every run SETs base + cancellation (never additive), so a retry can't double-add
+  mbBase <- Hedis.get guardKey
+  mbExisting <- runInMasterDbAndRedis $ QVF.findByVendorAndDriverFeeId vendorId driverFee.id
+  base <- case (mbBase :: Maybe HighPrecMoney) of
+    Just b -> pure b
+    Nothing -> do
+      let b = SPayment.roundToTwoDecimalPlaces (maybe 0 (.amount) mbExisting)
+      Hedis.setExp guardKey b (3600 * 24)
+      pure b
+  let targetAmount = SPayment.roundToTwoDecimalPlaces (base + cancellationAmount)
+  case mbExisting of
+    Just _ -> QVF.updateAmount driverFee.id vendorId targetAmount
+    Nothing ->
+      QVF.create
+        DVF.VendorFee
+          { driverFeeId = driverFee.id,
+            vendorId = vendorId,
+            amount = targetAmount,
+            createdAt = driverFee.createdAt,
+            updatedAt = driverFee.updatedAt
+          }
 
 updateCancellationPenaltyAccumulationFees :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) => ServiceNames -> TransporterConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
 updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchantId merchantOperatingCityId = do
@@ -1055,9 +1131,7 @@ recomputeVendorFeesForPlan driverFeeId plan cityId = do
   unless (null planSplits) $ do
     now <- getCurrentTime
     QVF.deleteAllByDriverFeeId driverFeeId
-    -- Reset cancellation-vendor guard so a later makeVendorFeeForCancellationPenalty re-applies
-    -- the cancellation portion on top of the freshly-recreated plan-split rows. The cancellation
-    -- vendor may overlap with a subscription vendor, so we cannot preserve rows selectively.
+    -- rows are recreated here, so clear the guard to let makeVendorFeeForCancellationPenalty re-apply the cancellation
     Hedis.del (cancellationVendorFeeGuardKey driverFeeId)
     forM_ planSplits $ \vsd -> do
       let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount

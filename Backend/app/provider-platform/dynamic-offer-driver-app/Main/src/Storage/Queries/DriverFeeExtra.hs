@@ -609,6 +609,17 @@ updateStatusByIds status driverFeeIds now = do
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
   fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
 
+-- Like updateStatusByIds, but also sets cancellationPenaltyAmount in the same write (used for coin-cleared parents).
+updateStatusAndCancellationPenaltyByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> HighPrecMoney -> [Id DriverFee] -> UTCTime -> m ()
+updateStatusAndCancellationPenaltyByIds status cancellationPenaltyAmount driverFeeIds now = do
+  updateWithKV
+    ( [Se.Set BeamDF.status status, Se.Set BeamDF.cancellationPenaltyAmount (Just cancellationPenaltyAmount), Se.Set BeamDF.updatedAt now]
+        <> [Se.Set BeamDF.collectedAt (Just now) | status `elem` [CLEARED, COLLECTED_CASH]]
+        <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
+    )
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+  fork "set bad recovery date" $ do updateBadDebtRecoveryDate status driverFeeIds
+
 -- Like updateStatusByIds for CLEARED, but stamps collectedAt with the time the
 -- payment actually succeeded instead of the processing wall-clock. Use from any
 -- path that clears a fee retroactively (delayed webhook, paid-but-not-cleared
@@ -1138,6 +1149,22 @@ findParentRecurringExecutionBySplitOfDriverFeeIds splitOfDriverFeeIds =
     [ Se.And
         [ Se.Is BeamDF.id $ Se.In ((.getId) <$> splitOfDriverFeeIds),
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE
+        ]
+    ]
+
+-- Cancellation child fees of a parent (driverId leads for the KV secondary key); lets the split create only the shortfall on retry.
+findCancellationPenaltyChildrenByParentId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  Id DriverFee ->
+  m [DriverFee]
+findCancellationPenaltyChildrenByParentId driverId parentDriverFeeId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId.getId,
+          Se.Is BeamDF.splitOfDriverFeeId $ Se.Eq (Just parentDriverFeeId.getId),
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE],
+          Se.Is BeamDF.cancellationPenaltyAmount $ Se.GreaterThan (Just 0.0)
         ]
     ]
 
