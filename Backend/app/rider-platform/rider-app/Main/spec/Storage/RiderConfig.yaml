@@ -130,6 +130,7 @@ RiderConfig:
     routeCacheMaxDurationDeviation: Maybe Seconds
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
+    enableAdjacentGeoHashPlaceNameLookup: Maybe Bool
     passExpiryReminderDays: Maybe Int
     remindEverydayUntilPassExpiry: Maybe Bool
     passExpiryReminderBatchSize: Maybe Int
