@@ -1002,6 +1002,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               negativeFareAdjustment = booking.fareParams.negativeFareAdjustment,
               nightShiftCharge = booking.fareParams.nightShiftCharge,
               petCharges = booking.fareParams.petCharges,
+              addOnCharges = booking.fareParams.addOnCharges,
+              negotiatedFareDelta = booking.fareParams.negotiatedFareDelta,
               estimatedCongestionCharge = endRideCongestionCharge,
               isScheduled = booking.isScheduled,
               customerCancellationDues = booking.fareParams.customerCancellationDues,

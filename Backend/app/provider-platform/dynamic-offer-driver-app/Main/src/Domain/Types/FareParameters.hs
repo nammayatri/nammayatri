@@ -98,10 +98,21 @@ data FareParameters = FareParameters
     parkingChargeTax :: Maybe HighPrecMoney,
     fareSettlementType :: Maybe SL.FareSettlementType,
     -- | The BAP-negotiated fare's delta from the estimated fare at
-    -- /select (ONDC v2.1.0 Pre-Order Bid, MSIL pilot only) -- kept as its
+    -- /select (ONDC v2.1.0 Pre-Order Bid, ONDC scheduled-ride pilot only) -- kept as its
     -- own field rather than folded into baseFare, so how much was
     -- negotiated for this transaction stays visible on its own.
-    negotiatedFareDelta :: Maybe HighPrecMoney
+    negotiatedFareDelta :: Maybe HighPrecMoney,
+    -- | Total charge for the rider add-ons selected at /select
+    -- (pricePerQuantity x selectedQuantity, priced from add_on_config at
+    -- selection time and frozen here, so a later catalogue price edit never
+    -- changes an existing quote's or booking's fare).
+    --
+    -- It is part of the fare sum, and exposed to 'buildComponentMap' as
+    -- 'AddOnChargeComponent', so whether VAT/GST or commission applies to it is
+    -- decided per fare policy by listing that component in the charge config's
+    -- appliesOn (absent => neither applies). Shown to the rider as its own
+    -- ADD_ON_CHARGES breakup line.
+    addOnCharges :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

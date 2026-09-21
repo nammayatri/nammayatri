@@ -74,6 +74,8 @@ update' farePolicy = do
       Se.Set BeamFP.rideExtraTimeChargeGracePeriod $ farePolicy.rideExtraTimeChargeGracePeriod,
       Se.Set BeamFP.congestionCharge $ farePolicy.congestionChargeMultiplier,
       Se.Set BeamFP.description $ farePolicy.description,
+      Se.Set BeamFP.negotiationFareMinTolerancePct $ farePolicy.negotiationFareMinTolerancePct,
+      Se.Set BeamFP.negotiationFareMaxTolerancePct $ farePolicy.negotiationFareMaxTolerancePct,
       Se.Set BeamFP.updatedAt now
     ]
     [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]

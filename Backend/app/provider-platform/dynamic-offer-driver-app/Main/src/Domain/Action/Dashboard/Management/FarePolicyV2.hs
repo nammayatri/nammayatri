@@ -418,6 +418,8 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               currency = domainPolicy.currency,
               distanceUnit = domainPolicy.distanceUnit,
               petCharges = Nothing,
+              addOnCharges = Nothing,
+              negotiatedFareDelta = Nothing,
               shouldApplyBusinessDiscount = False,
               shouldApplyPersonalDiscount = False,
               merchantOperatingCityId = Just merchantOpCity.id,
@@ -800,6 +802,8 @@ validatePolicy transporterConfig p =
       validateBounds p.driverExtraFeeBounds,
       percentageIssue "businessDiscountPercentage" p.businessDiscountPercentage,
       percentageIssue "personalDiscountPercentage" p.personalDiscountPercentage,
+      negotiationToleranceIssue "negotiationFareMinTolerancePct" p.negotiationFareMinTolerancePct,
+      negotiationToleranceIssue "negotiationFareMaxTolerancePct" p.negotiationFareMaxTolerancePct,
       nonNegativeMaybe "serviceCharge" p.serviceCharge,
       nonNegativeMaybe "parkingCharge" p.parkingCharge,
       nonNegativeMaybe "perStopCharge" p.perStopCharge,
@@ -813,6 +817,8 @@ validatePolicy transporterConfig p =
   where
     issue field message = [Common.FPV2ValidationIssue {field, message}]
     percentageIssue field = maybe [] (\v -> if v < 0 || v > 100 then issue field "must be between 0 and 100" else [])
+    negotiationToleranceIssue field =
+      maybe [] (\v -> if v < 0 || v > FarePolicyD.maxNegotiationTolerancePct then issue field ("must be between 0 and " <> show FarePolicyD.maxNegotiationTolerancePct) else [])
     schedulingChargePercent = \case Common.ProgressiveSchedulingCharge percent -> Just percent; _ -> Nothing
     schedulingChargeAmount = \case Common.ConstantSchedulingCharge amount -> Just amount; _ -> Nothing
     nonNegativeMaybe field = maybe [] (\v -> if v < 0 then issue field "must not be negative" else [])
@@ -968,6 +974,8 @@ toApiPolicy policy mbCancellation =
       platformFeeChargesBy = Just (toApiPlatformFeeMethod policy.platformFeeChargesBy),
       conditionalCharges = if null policy.conditionalCharges then Nothing else Just (map toApiConditionalCharge policy.conditionalCharges),
       driverCancellationNotAllowed = policy.driverCancellationNotAllowed,
+      negotiationFareMinTolerancePct = policy.negotiationFareMinTolerancePct,
+      negotiationFareMaxTolerancePct = policy.negotiationFareMaxTolerancePct,
       cancellationFarePolicy = toApiCancellation <$> mbCancellation,
       description = policy.description
     }
@@ -1134,6 +1142,8 @@ fromApiPolicy ctx mbCancellationId now p = do
         tollTaxChargeConfig = fromApiChargeConfig <$> p.tollTaxChargeConfig,
         farePolicyDetails = details,
         cancellationFarePolicyId = mbCancellationId,
+        negotiationFareMinTolerancePct = p.negotiationFareMinTolerancePct,
+        negotiationFareMaxTolerancePct = p.negotiationFareMaxTolerancePct,
         description = p.description,
         platformFee = p.platformFee,
         sgst = p.platformFeeSgst,
@@ -1436,6 +1446,7 @@ toApiChargeComponent = \case
   FarePolicyD.PlatformFeeComponent -> Common.PlatformFeeComponent
   FarePolicyD.CustomerCancellationChargeComponent -> Common.CustomerCancellationChargeComponent
   FarePolicyD.CustomerExtraFeeComponent -> Common.CustomerExtraFeeComponent
+  FarePolicyD.AddOnChargeComponent -> Common.AddOnChargeComponent
   FarePolicyD.DeadKmFareComponent -> Common.DeadKmFareComponent
   FarePolicyD.ExtraKmFareComponent -> Common.ExtraKmFareComponent
   FarePolicyD.RideDurationFareComponent -> Common.RideDurationFareComponent
@@ -1468,6 +1479,7 @@ fromApiChargeComponent = \case
   Common.PlatformFeeComponent -> FarePolicyD.PlatformFeeComponent
   Common.CustomerCancellationChargeComponent -> FarePolicyD.CustomerCancellationChargeComponent
   Common.CustomerExtraFeeComponent -> FarePolicyD.CustomerExtraFeeComponent
+  Common.AddOnChargeComponent -> FarePolicyD.AddOnChargeComponent
   Common.DeadKmFareComponent -> FarePolicyD.DeadKmFareComponent
   Common.ExtraKmFareComponent -> FarePolicyD.ExtraKmFareComponent
   Common.RideDurationFareComponent -> FarePolicyD.RideDurationFareComponent

@@ -298,7 +298,8 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 riderDetails = mbRiderDetails,
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
-                driverPreference = searchTry.driverPreference
+                driverPreference = searchTry.driverPreference,
+                addOnData = searchTry.addOnData
               }
       (res, _, _) <- sendSearchRequestToDriversWithTopUp jobData.topUpSize driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
       return res

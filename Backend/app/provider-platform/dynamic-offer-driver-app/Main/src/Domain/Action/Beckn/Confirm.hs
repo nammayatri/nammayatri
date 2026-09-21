@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
@@ -27,6 +28,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -41,8 +43,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
@@ -56,7 +58,6 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -89,7 +90,10 @@ data DConfirmReq = DConfirmReq
     driverPreference :: Maybe [Text],
     customerDiscountAmount :: Maybe HighPrecMoney,
     customerLanguage :: Maybe Maps.Language,
-    bookingDepositSecured :: Maybe HighPrecMoney
+    bookingDepositSecured :: Maybe HighPrecMoney,
+    -- | A BAP can select more than one add-on on the same item -- empty when
+    -- none was echoed, never a single Maybe.
+    addOns :: [Spec.AddOn]
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -217,7 +221,8 @@ handler merchant req validatedQuote = do
                 riderDetails = Just riderDetails,
                 emailDomain = booking.emailDomain,
                 businessEmailDomain = booking.businessEmailDomain,
-                driverPreference = req.driverPreference
+                driverPreference = req.driverPreference,
+                addOnData = booking.addOnData
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id
@@ -305,8 +310,9 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
+  DTMT.TransporterConfig ->
   m (DM.Merchant, ValidatedQuote)
-validateRequest subscriber transporterId req now = do
+validateRequest subscriber transporterId req now transporterConfig = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <- QM.findById transporterId' >>= fromMaybeM (MerchantNotFound transporterId'.getId)
@@ -314,19 +320,17 @@ validateRequest subscriber transporterId req now = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  -- OneWay OneWayOnDemandStaticOffer is the only category the pilot newly allows for non-value-add (external) BAPs -- everything else they were never validated for must stay blocked, even in a pilot-enabled city.
+  -- This allows the two pre-existing dynamic-offer categories always, and OneWay OneWayOnDemandStaticOffer only when the city has the pilot enabled.
   let isAllowedForNonValueAddNP = case booking.tripCategory of
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
+        OneWay OneWayOnDemandStaticOffer -> isOndcScheduledRideSupportEnabled
         _ -> False
-  -- Verifying: MSIL pilot merchants are expected to be non-value-add NPs
-  -- (isValueAddNP is legitimately False for them) yet still need scheduled
-  -- trip categories (e.g. OneWay OneWayOnDemandStaticOffer) allowed through
-  -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
-  -- them specifically, instead of registering them as value-add NPs just to
-  -- satisfy this unrelated check.
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-  when (not isOndcScheduledRideSupportEnabled && not isValueAddNP && not isAllowedForNonValueAddNP) $
+  when isOndcScheduledRideSupportEnabled $
+    SAddOn.verifyAddOnEcho booking.addOnData booking.merchantOperatingCityId (Just booking.vehicleServiceTier) req.addOns
+  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter

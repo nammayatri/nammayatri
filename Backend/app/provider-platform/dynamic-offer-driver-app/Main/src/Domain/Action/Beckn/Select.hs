@@ -20,12 +20,14 @@ module Domain.Action.Beckn.Select
   )
 where
 
-import qualified Beckn.OnDemand.Transformer.MSIL.OnSelect as MSILOnSelect
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect as OSROnSelect
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -41,15 +43,16 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.DriverPool
@@ -62,7 +65,6 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -83,7 +85,7 @@ data DSelectReq = DSelectReq
     customerExtraFee :: Maybe HighPrecMoney,
     -- | BAP-proposed total fare for the Quote-based /select negotiation flow
     -- (ONDC v2.1.0 Pre-Order Bid). Layer 1 (Beckn.ACL.Select) always sets this
-    -- to Nothing; only Beckn.OnDemand.Transformer.MSIL.Select.msilParser fills
+    -- to Nothing; only Beckn.OnDemand.Transformer.OndcScheduledRide.Select.ondcScheduledRideParser fills
     -- it in, from item.price.value, for enableOndcScheduledRideSupport cities
     -- pilot merchants. Deliberately a separate field from customerExtraFee,
     -- which is an additive tip/extra-fee delta used by the Estimate-based
@@ -108,12 +110,16 @@ data DSelectReq = DSelectReq
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Maybe Int,
     customerGender :: Maybe DP.Gender,
-    businessEmailDomain :: Maybe Text
+    businessEmailDomain :: Maybe Text,
+    -- | A BAP can select more than one add-on on the same item (e.g. rider
+    -- insurance plus a future second add-on) -- empty when none was
+    -- selected, never a single Maybe.
+    addOns :: [Spec.AddOn]
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
-handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
-handler merchant sReq searchReq estimates = do
+handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> [DAddOnConfig.AddOnData] -> Flow ()
+handler merchant sReq searchReq estimates addOnData = do
   logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
   whenJust (listToMaybe estimates) $ \primaryEstimate -> do
     cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
@@ -200,7 +206,8 @@ handler merchant sReq searchReq estimates = do
             riderDetails = mbRiderDetails,
             emailDomain = sReq.emailDomain,
             businessEmailDomain = sReq.businessEmailDomain,
-            driverPreference = sReq.driverPreference
+            driverPreference = sReq.driverPreference,
+            addOnData = addOnData
           }
   void $ initiateDriverSearchBatch driverSearchBatchInput
   -- NOTE: Special zone demand pipeline has been moved to Init handler (Domain.Action.Beckn.Init)
@@ -214,8 +221,8 @@ handler merchant sReq searchReq estimates = do
           nyregularCharges = if fromMaybe False searchReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing
       catMaybes $ [safetyCharges, nyregularCharges]
 
-validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
-validateRequest merchantId sReq = do
+validateRequest :: Id DM.Merchant -> DSelectReq -> Bool -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate], [DAddOnConfig.AddOnData])
+validateRequest merchantId sReq isOndcScheduledRideSupportEnabled = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbEstimates <- mapM QEst.findById sReq.estimateIds
   let estimates = catMaybes mbEstimates
@@ -223,7 +230,12 @@ validateRequest merchantId sReq = do
     [] -> throwError $ InvalidRequest "User need to select at least one estimate"
     (estimate : xs) -> do
       searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-      return (merchant, searchReq, [estimate] <> xs)
+      -- Synchronous NACK, before any fork. Resolved once here and handed to 'handler' (which runs after this, inside its own fork) so it doesn't re-query for the same rows.
+      addOnData <-
+        if isOndcScheduledRideSupportEnabled
+          then SAddOn.resolveAddOnData searchReq.merchantOperatingCityId (Just estimate.vehicleServiceTier) sReq.addOns
+          else pure []
+      return (merchant, searchReq, [estimate] <> xs, addOnData)
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do
@@ -231,49 +243,86 @@ addNammaTags tagData sReq = do
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id
 
--- MSIL pilot: /select for the new Quote-based (static/scheduled) capability --
+-- ONDC scheduled-ride pilot: /select for the new Quote-based (static/scheduled) capability --
 -- Dispatched only for cities with enableOndcScheduledRideSupport,
 -- at the API layer (API.Beckn.Select), when the wire item.id resolves to a Quote
 -- instead of an Estimate.
 
--- | Validate a Quote-based /select. Pure read -- no DB writes, no driver-search
--- trigger (unlike 'handler' above, which is the Estimate-based/dynamic-offer path).
+-- | Validate a Quote-based /select. If the BAP sent a negotiated fare, this also
+-- persists it on the quote (see 'applyNegotiatedFare'); otherwise it is a pure
+-- read. No driver-search trigger (unlike 'handler' above, which is the
+-- Estimate-based/dynamic-offer path).
 -- Driver search for this flow already starts later, at /confirm
 -- (Domain.Action.Beckn.Confirm.handleStaticOfferFlow).
-validateQuoteSelect :: Id DM.Merchant -> Id DQuote.Quote -> Text -> Maybe HighPrecMoney -> Flow (DM.Merchant, DSR.SearchRequest, DQuote.Quote)
-validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare = do
+validateQuoteSelect :: Id DM.Merchant -> Id DQuote.Quote -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, DQuote.Quote)
+validateQuoteSelect merchantId quoteId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
   now <- getCurrentTime
   unless (quote.validTill > now) $
     throwError $ QuoteExpired quoteId.getId
   searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
-  unless (searchReq.transactionId == transactionId) $
+  unless (searchReq.transactionId == sReq.transactionId) $
     throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
-  quote' <- case mbNegotiatedFare of
-    Nothing -> return quote
-    Just negotiatedFare -> applyNegotiatedFare searchReq.merchantOperatingCityId quoteId quote negotiatedFare
+  quote' <- applyNegotiatedFare searchReq.merchantOperatingCityId quoteId sReq
   return (merchant, searchReq, quote')
 
--- Validate the negotiated fare and update fare policy and quotes according to that
-applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DQuote.Quote -> HighPrecMoney -> Flow DQuote.Quote
-applyNegotiatedFare merchantOpCityId quoteId quote negotiatedFare = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
-  let negotiationFareMinTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMinTolerancePct
-      negotiationFareMaxTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMaxTolerancePct
-      currentFare = quote.estimatedFare
-      minAcceptable = currentFare * (1 - realToFrac negotiationFareMinTolerancePct)
-      maxAcceptable = currentFare * (1 + realToFrac negotiationFareMaxTolerancePct)
-  unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $ -- We can discuss on this comparisation logic
-    throwError $ NegotiatedFareNotAcceptable quoteId.getId
-  let negotiationDelta = negotiatedFare - currentFare
-      updatedFareParams = quote.fareParams {DFareParams.negotiatedFareDelta = Just negotiationDelta}
-  QFareParams.updateFareParameters updatedFareParams quote.fareParams.id
-  QQuote.updateEstimatedFare quoteId negotiatedFare
-  return quote {DQuote.estimatedFare = negotiatedFare, DQuote.fareParams = updatedFareParams}
+-- | Validates and persists whatever /select actually sent -- the negotiated fare tolerance check (if a bid was made) and the add-on selection (if one was made) -- in a single update to the Quote row, instead of two separate ones.
+applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DSelectReq -> Flow DQuote.Quote
+applyNegotiatedFare merchantOpCityId quoteId sReq =
+  -- Concurrent /select calls on the same quote would race their reads/writes.
+  -- This locks per quoteId and re-fetches the quote inside the lock.
+  Redis.withLockRedisAndReturnValue (quoteNegotiationLockKey quoteId.getId) 60 $ do
+    quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+    addOnData <- computeAddOnData quote
+    -- Priced once, here, and frozen into the quote's FareParameters: the catalogue is what's on offer, the fare parameters are what was charged.
+    addOnCharges <- SAddOn.addOnChargesTotal addOnData
+    let fareParams = quote.fareParams
+        -- estimatedFare carries whatever an earlier /select already applied, so strip both parts off to recover the fare originally quoted. Everything below is computed from that, which is what keeps repeated /selects from ratcheting the fare.
+        originalFare = quote.estimatedFare - fromMaybe 0 fareParams.negotiatedFareDelta - fromMaybe 0 fareParams.addOnCharges
+    negotiatedFareDelta <- computeNegotiatedFareDelta quote originalFare
+    let updatedFareParams =
+          fareParams
+            { DFareParams.negotiatedFareDelta = negotiatedFareDelta,
+              DFareParams.addOnCharges = addOnCharges
+            }
+        -- The bid is the ride fare; add-on charges go on top of it.
+        estimatedFare = originalFare + fromMaybe 0 negotiatedFareDelta + fromMaybe 0 addOnCharges
+        updatedQuote =
+          quote
+            { DQuote.estimatedFare = estimatedFare,
+              DQuote.fareParams = updatedFareParams,
+              DQuote.addOnData = addOnData
+            }
+    QFareParams.updateFareParameters updatedFareParams fareParams.id
+    QQuote.updateEstimatedFareAndAddOnDetails quoteId updatedQuote.estimatedFare updatedQuote.addOnData
+    return updatedQuote
+  where
+    -- Tolerance lives on the quote's own FarePolicy (per-vehicle-tier), not TransporterConfig (city-level) -- a Sedan and an Auto on the same city can negotiate different bands. Defaults to +-10% when unset on the policy (see DFP.effectiveNegotiationTolerancePct).
+    computeNegotiatedFareDelta quote originalFare = case sReq.negotiatedFare of
+      -- No bid on this /select: keep whatever an earlier one negotiated.
+      Nothing -> pure quote.fareParams.negotiatedFareDelta
+      Just negotiatedFare -> do
+        let negotiationFareMinTolerancePct = DFP.effectiveNegotiationTolerancePct (quote.farePolicy >>= (.negotiationFareMinTolerancePct))
+            negotiationFareMaxTolerancePct = DFP.effectiveNegotiationTolerancePct (quote.farePolicy >>= (.negotiationFareMaxTolerancePct))
+            negotiationFareMinToleranceFraction = realToFrac negotiationFareMinTolerancePct / 100
+            negotiationFareMaxToleranceFraction = realToFrac negotiationFareMaxTolerancePct / 100
+            minAcceptable = originalFare * (1 - negotiationFareMinToleranceFraction)
+            maxAcceptable = originalFare * (1 + negotiationFareMaxToleranceFraction)
+        unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $
+          throwError $ NegotiatedFareNotAcceptable quoteId.getId negotiatedFare minAcceptable maxAcceptable
+        -- Total delta from the original fare, not just this negotiation round's step.
+        pure $ Just (negotiatedFare - originalFare)
+
+    computeAddOnData quote
+      | Kernel.Prelude.null sReq.addOns = pure [] -- if same request will come which already processed then we should process the latest addOns information not the esisting one
+      | otherwise = SAddOn.resolveAddOnData merchantOpCityId (Just quote.vehicleServiceTier) sReq.addOns
+
+quoteNegotiationLockKey :: Text -> Text
+quoteNegotiationLockKey id = "Driver:Select:Negotiate:QuoteId-" <> id
 
 -- | Build and send /on_select for a validated Quote (see
--- Beckn.OnDemand.Transformer.MSIL.OnSelect for the builder). Called from a fork,
+-- Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect for the builder). Called from a fork,
 -- same as 'handler' above, using the inbound /select's own messageId -- unlike
 -- the dynamic-offer flow's callOnSelectV2, there's no driver bid to wait for, so
 -- this is synchronous within the same request, not deferred to a later event.
@@ -287,5 +336,5 @@ handleQuoteSelect msgId merchant searchReq quote = do
       >>= fromMaybeM (VehicleServiceTierNotFound (show quote.vehicleServiceTier))
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
-  onSelectMsg <- MSILOnSelect.mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
+  onSelectMsg <- OSROnSelect.mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
   CallBAP.callOnSelectV2ForQuote merchant searchReq msgId quote onSelectMsg

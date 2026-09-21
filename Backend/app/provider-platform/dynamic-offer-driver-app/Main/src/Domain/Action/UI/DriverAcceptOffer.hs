@@ -60,6 +60,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -168,6 +169,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
     if fromMaybe False farePolicy'.parkingFeeExemptionEnabled
       then SPFE.isParkingFeeExemptForDriver driver.id
       else pure False
+  addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
   fareParams <- do
     FC.calculateFareParameters
       CalculateFareParametersParams
@@ -185,6 +187,8 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           customerExtraFee = searchTry.customerExtraFee,
           negativeFareAdjustment = searchTry.negativeFareAdjustment,
           petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
+          addOnCharges = addOnCharges,
+          negotiatedFareDelta = Nothing,
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,
           tollCharges = searchReq.tollCharges,

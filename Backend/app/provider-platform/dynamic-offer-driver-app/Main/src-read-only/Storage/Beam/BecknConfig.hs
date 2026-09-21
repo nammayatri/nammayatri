@@ -28,7 +28,7 @@ data BecknConfigT f = BecknConfigT
     onSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onSelectTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onStatusTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    onSupportTTLSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    onSupportTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onTrackTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onUpdateTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

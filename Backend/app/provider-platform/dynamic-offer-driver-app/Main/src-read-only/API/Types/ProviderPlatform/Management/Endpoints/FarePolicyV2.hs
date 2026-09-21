@@ -192,6 +192,7 @@ data FPV2FareChargeComponent
   | PlatformFeeComponent
   | CustomerCancellationChargeComponent
   | CustomerExtraFeeComponent
+  | AddOnChargeComponent
   | DeadKmFareComponent
   | ExtraKmFareComponent
   | RideDurationFareComponent
@@ -339,6 +340,8 @@ data FPV2Policy = FPV2Policy
     platformFeeChargesBy :: Kernel.Prelude.Maybe FPV2PlatformFeeMethod,
     conditionalCharges :: Kernel.Prelude.Maybe [FPV2ConditionalCharge],
     driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    negotiationFareMinTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    negotiationFareMaxTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     cancellationFarePolicy :: Kernel.Prelude.Maybe FPV2CancellationFarePolicy,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
