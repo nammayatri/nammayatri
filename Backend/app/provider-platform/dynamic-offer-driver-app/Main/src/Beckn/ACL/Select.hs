@@ -80,6 +80,9 @@ buildSelectReqV2 subscriber req = do
       parcelDetails = getParcelDetails item.itemTags
       preferSafetyPlus = getPeferSafetyPlus item.itemTags
       driverPreference = getDriverPreference item.itemTags now
+      customerRating = readTag Tag.CUSTOMER_RATING item.itemTags
+      customerTotalRatings = readTag Tag.CUSTOMER_TOTAL_RATINGS item.itemTags
+      customerGender = readTag Tag.CUSTOMER_GENDER item.itemTags
   logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
@@ -114,6 +117,9 @@ buildSelectReqV2 subscriber req = do
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
         preferSafetyPlus = preferSafetyPlus,
         paymentMethodInfo = paymentMethodInfo,
+        customerRating = customerRating,
+        customerTotalRatings = customerTotalRatings,
+        customerGender = customerGender,
         billingCategory = billingCategory,
         ..
       }
@@ -140,6 +146,9 @@ getAutoAssignEnabledV2 tagGroups =
         Just "True" -> True
         Just "False" -> False
         _ -> False
+
+readTag :: Read a => Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe a
+readTag tag tagGroups = readMaybe . T.unpack =<< Utils.getTagV2 Tag.CUSTOMER_INFO tag tagGroups
 
 buildDisableDisabilityTag :: Maybe [Spec.TagGroup] -> Maybe Bool
 buildDisableDisabilityTag tagGroups = do

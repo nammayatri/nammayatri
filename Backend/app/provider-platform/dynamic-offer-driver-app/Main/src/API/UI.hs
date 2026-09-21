@@ -31,6 +31,7 @@ import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
+import qualified API.Action.UI.DriverTag as DriverTag
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
@@ -200,6 +201,7 @@ type API =
            :<|> DriverDocument.API
            :<|> DriverAreaPreference.API
            :<|> AvailableForRides.API
+           :<|> DriverTag.API
        )
 
 handler :: FlowServer API
@@ -285,3 +287,4 @@ handler =
     :<|> DriverDocument.handler
     :<|> DriverAreaPreference.handler
     :<|> AvailableForRides.handler
+    :<|> DriverTag.handler

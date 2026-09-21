@@ -349,6 +349,7 @@ library
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.DriverSafetySettings
+      Domain.Action.UI.DriverTag
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
@@ -1183,6 +1184,7 @@ library
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
       API.Action.UI.DriverSafetySettings
+      API.Action.UI.DriverTag
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.Faq
@@ -1269,6 +1271,7 @@ library
       API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
       API.Types.UI.DriverSafetySettings
+      API.Types.UI.DriverTag
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.Faq

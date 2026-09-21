@@ -225,7 +225,10 @@ data DSelectRes = DSelectRes
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
-    emailDomain :: Maybe Text
+    emailDomain :: Maybe Text,
+    customerRating :: Maybe Centesimal,
+    customerTotalRatings :: Int,
+    customerGender :: DPerson.Gender
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -370,6 +373,9 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
         paymentMode = person.paymentMode,
         emailDomain = emailDomain',
         riderName = bool Nothing person.firstName isValueAddNP,
+        customerRating = person.rating,
+        customerTotalRatings = person.totalRatings,
+        customerGender = person.gender,
         ..
       }
   where

@@ -1,0 +1,26 @@
+imports:
+  TagNameValueExpiry: Lib.Yudhishthira.Types
+
+module: DriverTag
+
+types:
+  DriverTagAction:
+    enum: "ADD_TAG,REMOVE_TAG"
+  # One endpoint for every driver-initiated change to `person.driverTag`.
+  # ADD_TAG upserts `tagName#tagValue` with no expiry (a tag with the same name is replaced);
+  # REMOVE_TAG drops the tag by name, or only the exact `tagName#tagValue` when a value is given.
+  DriverTagUpdateReq:
+    action: DriverTagAction
+    tagName: Text
+    tagValue: Maybe Text
+  DriverTagRes:
+    driverTags: "[TagNameValueExpiry]"
+
+apis:
+  - POST:
+      endpoint: /driver/tag/update
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverTag.DriverTagUpdateReq
+      response:
+        type: API.Types.UI.DriverTag.DriverTagRes

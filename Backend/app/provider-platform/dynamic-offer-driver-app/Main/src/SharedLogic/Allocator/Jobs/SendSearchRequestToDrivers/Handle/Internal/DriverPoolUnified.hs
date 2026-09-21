@@ -16,6 +16,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -71,15 +72,16 @@ getNextDriverPoolBatch ::
   DST.SearchTry ->
   [TripQuoteDetail] ->
   Maybe DMPM.PaymentMethodInfo ->
+  Maybe DRD.RiderDetails ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails paymentMethodInfo goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails paymentMethodInfo mbRiderDetails goHomeConfig = withLogTag "getNextDriverPoolBatch" do
   logDebug $ "Doing Special Driver Pooling for seachReq:- " <> show searchReq
   batchNum <- SDP.getPoolBatchNum searchTry.id
   SDP.incrementBatchNum searchTry.id
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
-  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo
+  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo mbRiderDetails
 
 assignTagsToDrivers :: [Id Driver] -> DriverPoolTags -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 assignTagsToDrivers driverIds driverTag =
@@ -124,8 +126,9 @@ prepareDriverPoolBatch ::
   PoolBatchNum ->
   GoHomeConfig ->
   Maybe DMPM.PaymentMethodInfo ->
+  Maybe DRD.RiderDetails ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
+prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo mbRiderDetails = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
@@ -315,7 +318,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry mbRiderDetails
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
           addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit

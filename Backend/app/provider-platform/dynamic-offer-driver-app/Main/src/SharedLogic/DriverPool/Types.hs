@@ -31,6 +31,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
@@ -418,7 +419,11 @@ data TaggedDriverPoolInput = TaggedDriverPoolInput
     -- Maybe on purpose: this type is also how the ruleset's *output* is parsed, and a live
     -- ruleset that rebuilds the object without this key would otherwise fail to decode and
     -- silently drop the whole ranking back to the unsorted pool.
-    cumulativeRejectCount :: Maybe Int
+    cumulativeRejectCount :: Maybe Int,
+    customerRating :: Maybe Centesimal,
+    customerTotalRatings :: Maybe Int,
+    customerGender :: Maybe Person.Gender,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -428,7 +433,11 @@ instance Default TaggedDriverPoolInput where
       { drivers = [],
         needOnRideDrivers = False,
         batchNum = 0,
-        cumulativeRejectCount = Just 0
+        cumulativeRejectCount = Just 0,
+        customerRating = Nothing,
+        customerTotalRatings = Nothing,
+        customerGender = Nothing,
+        paymentInstrument = Nothing
       }
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
@@ -472,6 +481,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    riderDetails :: Maybe DRD.RiderDetails,
     billingCategory :: SLT.BillingCategory,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
