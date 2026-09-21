@@ -6,6 +6,7 @@ where
 import qualified "this" API.Types.RiderPlatform.Management.Invoice as Common
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
+import Data.Time (UTCTime (..), addGregorianMonthsClip, fromGregorian, toGregorian)
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -29,7 +30,8 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
   merchant <- findMerchantByShortId merchantShortId
   phoneNumberDBHash <- getDbHash phoneNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantId "+91" phoneNumberDBHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
-  bookings <- CHB.findAllCompletedRiderBookingsByMerchantInRange merchant.id person.id from to
+  let batchRanges = makeMonthlyBatchRanges from to
+  bookings <- concat <$> mapM (\(bFrom, bTo) -> CHB.findAllCompletedRiderBookingsByMerchantInRange merchant.id person.id bFrom bTo) batchRanges
   invoices <- mapM makeInvoiceResponse bookings
   return $ catMaybes invoices
   where
@@ -113,3 +115,12 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
           let parts = catMaybes [loc.area, loc.street, loc.building, loc.city]
            in if Kernel.Prelude.null parts then notAvailableText else T.intercalate ", " parts
     notAvailableText = "N/A"
+
+makeMonthlyBatchRanges :: UTCTime -> UTCTime -> [(UTCTime, UTCTime)]
+makeMonthlyBatchRanges start end
+  | start >= end = []
+  | otherwise =
+    let (y, m, _) = toGregorian (utctDay start)
+        firstOfNextMonth = UTCTime (addGregorianMonthsClip 1 (fromGregorian y m 1)) 0
+        next = min end firstOfNextMonth
+     in (start, next) : makeMonthlyBatchRanges next end
