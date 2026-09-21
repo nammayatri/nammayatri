@@ -96,7 +96,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             paymentMode = paymentMode,
             payoutVpa = payoutVpa,
             profilePicture = profilePicture,
-            rating = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings,
+            rating = if totalRatings > 0 then Just (fromIntegral totalRatingScore / fromIntegral totalRatings) else Nothing,
             referralCode = referralCode,
             referredAt = referredAt,
             referredByCustomer = referredByCustomer,

@@ -188,7 +188,7 @@ Person:
     imeiNumber: EncryptedHashed <$> (Encrypted <$> imeiNumberEncrypted) <*> imeiNumberHash|E
     blockedAt: Data.Time.localTimeToUTC Data.Time.utc <$> blockedAt|E
     falseSafetyAlarmCount: fromMaybe 0 falseSafetyAlarmCount|E
-    rating: Just $ fromIntegral totalRatingScore / fromIntegral totalRatings|E
+    rating: if totalRatings > 0 then Just (fromIntegral totalRatingScore / fromIntegral totalRatings) else Nothing|E
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
