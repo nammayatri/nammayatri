@@ -828,6 +828,7 @@ types:
     - negativeFareAdjustmentCongestionThreshold: Maybe Double
     - negativeFareAdjustmentMinDistanceMeters: Maybe Int
     - negativeFareAdjustmentMaxAmount: Maybe Int
+    - driverCoolOffPeriod: Maybe Seconds
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -877,6 +878,7 @@ types:
     - negativeFareAdjustmentCongestionThreshold: Maybe (OptionalValue Double)
     - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
     - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)
+    - driverCoolOffPeriod: Maybe (OptionalValue Seconds)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
