@@ -510,6 +510,44 @@ type OperatorExportRouteStopMappingAPI =
   "internal" :> "operator" :> Capture "gtfs_id" Text :> "export" :> "route-stop-mapping"
     :> Get '[JSON] [RouteStopMappingExport]
 
+type OperatorActiveTripEtaOverridesAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-eta-override" :> "active"
+    :> Get '[JSON] [ActiveTripEtaOverride]
+
+type OperatorGetEtaVariantsAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "eta-variants"
+    :> Get '[JSON] [EtaVariant]
+
+type OperatorUpsertEtaVariantAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "eta-variants"
+    :> ReqBody '[JSON] EtaVariantUpsertReq
+    :> Post '[JSON] EtaVariant
+
+type OperatorDeleteEtaVariantAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "eta-variants" :> Capture "variant_id" Text
+    :> Delete '[JSON] RowsAffectedResp
+
+type OperatorGetStationEtasAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "station-eta"
+    :> QueryParam "variantId" Text
+    :> Get '[JSON] [StationEtaRow]
+
+type OperatorUpsertStationEtasAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "station-eta" :> "upsert" :> "batch"
+    :> ReqBody '[JSON] StationEtaBatchUpsertReq
+    :> Post '[JSON] RowsAffectedResp
+
+-- Value, not APISuccess: GIMS answers with its own {status, expires_at} shape.
+type OperatorSetTripEtaOverrideAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-eta-override"
+    :> ReqBody '[JSON] SetTripEtaOverrideReq
+    :> Post '[JSON] Value
+
+type OperatorClearTripEtaOverrideAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "trip-eta-override" :> "clear"
+    :> ReqBody '[JSON] ClearTripEtaOverrideReq
+    :> Post '[JSON] RowsAffectedResp
+
 operatorStopSearchAPI :: Proxy OperatorStopSearchAPI
 operatorStopSearchAPI = Proxy
 
@@ -531,6 +569,30 @@ operatorReprocessRoutesAPI = Proxy
 operatorExportRouteStopMappingAPI :: Proxy OperatorExportRouteStopMappingAPI
 operatorExportRouteStopMappingAPI = Proxy
 
+operatorActiveTripEtaOverridesAPI :: Proxy OperatorActiveTripEtaOverridesAPI
+operatorActiveTripEtaOverridesAPI = Proxy
+
+operatorGetEtaVariantsAPI :: Proxy OperatorGetEtaVariantsAPI
+operatorGetEtaVariantsAPI = Proxy
+
+operatorUpsertEtaVariantAPI :: Proxy OperatorUpsertEtaVariantAPI
+operatorUpsertEtaVariantAPI = Proxy
+
+operatorDeleteEtaVariantAPI :: Proxy OperatorDeleteEtaVariantAPI
+operatorDeleteEtaVariantAPI = Proxy
+
+operatorGetStationEtasAPI :: Proxy OperatorGetStationEtasAPI
+operatorGetStationEtasAPI = Proxy
+
+operatorUpsertStationEtasAPI :: Proxy OperatorUpsertStationEtasAPI
+operatorUpsertStationEtasAPI = Proxy
+
+operatorSetTripEtaOverrideAPI :: Proxy OperatorSetTripEtaOverrideAPI
+operatorSetTripEtaOverrideAPI = Proxy
+
+operatorClearTripEtaOverrideAPI :: Proxy OperatorClearTripEtaOverrideAPI
+operatorClearTripEtaOverrideAPI = Proxy
+
 getOperatorStopSearch :: Text -> Maybe Text -> Maybe Int -> Maybe Bool -> ET.EulerClient [EnrichedStop]
 getOperatorStopSearch = ET.client operatorStopSearchAPI
 
@@ -551,6 +613,30 @@ postOperatorReprocessRoutes = ET.client operatorReprocessRoutesAPI
 
 getOperatorExportRouteStopMapping :: Text -> ET.EulerClient [RouteStopMappingExport]
 getOperatorExportRouteStopMapping = ET.client operatorExportRouteStopMappingAPI
+
+getOperatorActiveTripEtaOverrides :: Text -> ET.EulerClient [ActiveTripEtaOverride]
+getOperatorActiveTripEtaOverrides = ET.client operatorActiveTripEtaOverridesAPI
+
+getOperatorEtaVariants :: Text -> ET.EulerClient [EtaVariant]
+getOperatorEtaVariants = ET.client operatorGetEtaVariantsAPI
+
+postOperatorUpsertEtaVariant :: Text -> EtaVariantUpsertReq -> ET.EulerClient EtaVariant
+postOperatorUpsertEtaVariant = ET.client operatorUpsertEtaVariantAPI
+
+deleteOperatorEtaVariant :: Text -> Text -> ET.EulerClient RowsAffectedResp
+deleteOperatorEtaVariant = ET.client operatorDeleteEtaVariantAPI
+
+getOperatorStationEtas :: Text -> Maybe Text -> ET.EulerClient [StationEtaRow]
+getOperatorStationEtas = ET.client operatorGetStationEtasAPI
+
+postOperatorUpsertStationEtas :: Text -> StationEtaBatchUpsertReq -> ET.EulerClient RowsAffectedResp
+postOperatorUpsertStationEtas = ET.client operatorUpsertStationEtasAPI
+
+postOperatorSetTripEtaOverride :: Text -> SetTripEtaOverrideReq -> ET.EulerClient Value
+postOperatorSetTripEtaOverride = ET.client operatorSetTripEtaOverrideAPI
+
+postOperatorClearTripEtaOverride :: Text -> ClearTripEtaOverrideReq -> ET.EulerClient RowsAffectedResp
+postOperatorClearTripEtaOverride = ET.client operatorClearTripEtaOverrideAPI
 
 type OperatorCurrentOperationAPI =
   "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "currentOperation"
