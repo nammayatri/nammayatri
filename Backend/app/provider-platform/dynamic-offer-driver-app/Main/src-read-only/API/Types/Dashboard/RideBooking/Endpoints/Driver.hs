@@ -152,7 +152,12 @@ data DriverInfoRes = DriverInfoRes
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
-    specialLocWarriorInfo :: SpecialLocWarriorInfo
+    specialLocWarriorInfo :: SpecialLocWarriorInfo,
+    isPetModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tripDistanceMinThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    tripDistanceMaxThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    maxPickupRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    isSilentModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
