@@ -188,6 +188,7 @@ data RiderConfig = RiderConfig
     refundStatusUpdateRetries :: Kernel.Prelude.Int,
     remindEverydayUntilPassExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
+    routeCacheMaxDurationDeviation :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     seatBookingCleanupTtl :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
