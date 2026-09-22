@@ -78,7 +78,7 @@ import Lib.Scheduler.Environment
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Types
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum, incrementDriverRequestCount)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (autoAssignPreferenceScore, getPoolBatchNum, incrementDriverRequestCount)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
@@ -712,6 +712,9 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
       isAutoAssignEnabledForTier dp.driverPoolResult.serviceTier
         && UI.hasPriorityTag (show dp.driverPoolResult.serviceTier) dp
         && dp.driverPoolResult.serviceTier `elem` dp.driverPoolResult.selectedAutoAcceptTiers
-        && dp.preferenceMatchScore == 1.0
+        -- Trip-distance preference deliberately excluded from the auto-assign score.
+        && autoAssignPreferenceScore searchReq dp == 1.0
+        -- Farther-than-threshold drivers still get the normal broadcast, just no silent assign.
+        && maybe True (dp.actualDistanceToPickup <=) driverPoolCfg.autoAssignMaxPickupDistance
     priorityCandidates = DL.filter isPriorityCandidate batch
     sortedPriority = DL.sortOn (.actualDistanceToPickup) priorityCandidates

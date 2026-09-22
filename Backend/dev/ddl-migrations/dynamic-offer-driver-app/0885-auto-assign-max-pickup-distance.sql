@@ -1,0 +1,1 @@
+alter table atlas_driver_offer_bpp.driver_pool_config add column if not exists auto_assign_max_pickup_distance integer;

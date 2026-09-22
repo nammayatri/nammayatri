@@ -33,16 +33,23 @@ module SharedLogic.DriverPool.AreaPreference
     areaPreferenceCellTagPrefix,
     areaPreferenceCellTagName,
     areaPreferenceRadiusTagName,
+    areaPreferenceEnabledTagName,
     mkCellTagValue,
     mkRadiusTagValue,
+    mkEnabledTagValue,
     parseRadiusTagValue,
     driverAreaPreferenceFromTags,
     areaPreferenceTagNamesToClear,
     tagNamesForSelection,
     matchesRadius,
+    isAreaPreferenceEnabled,
+    isAreaPreferenceEnabledJson,
   )
 where
 
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as A
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
 import EulerHS.Prelude hiding (id)
@@ -80,6 +87,14 @@ areaPreferenceCellTagName geohash = areaPreferenceCellTagPrefix <> geohash
 areaPreferenceRadiusTagName :: Text
 areaPreferenceRadiusTagName = "AreaPreferenceRadius"
 
+-- | Toggles matching on/off independently of the driver's saved selection
+-- (radius/cell tags are left untouched by a toggle -- see
+-- 'Domain.Action.UI.DriverAreaPreference.postDriverAreaPreferenceUpdateInfo').
+-- Absent tag => enabled, so drivers who set a preference before this toggle
+-- existed keep matching without needing to re-opt-in.
+areaPreferenceEnabledTagName :: Text
+areaPreferenceEnabledTagName = "AreaPreferenceEnabled"
+
 -- | Tag value for a cell tag: just the area name (empty when the cell has no
 -- mapping row -- the driver picked it, so it must not silently vanish).
 mkCellTagValue :: Maybe Text -> Text
@@ -94,6 +109,15 @@ mkRadiusTagValue center radius =
   where
     showT :: Show a => a -> Text
     showT = T.pack . show
+
+mkEnabledTagValue :: Bool -> Text
+mkEnabledTagValue enabled = if enabled then "true" else "false"
+
+parseEnabledTagValue :: Text -> Maybe Bool
+parseEnabledTagValue = \case
+  "true" -> Just True
+  "false" -> Just False
+  _ -> Nothing
 
 parseRadiusTagValue :: Text -> Maybe (LatLong, Meters)
 parseRadiusTagValue value = case T.splitOn "&" value of
@@ -136,6 +160,28 @@ splitTagNameValue (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
   (name : value : _) -> Just (name, value)
   [name] -> Just (name, "")
   _ -> Nothing
+
+-- | Read the enabled toggle from a driver's raw tag list -- used by the
+-- driver-facing read/write path (Domain.Action.UI.DriverAreaPreference).
+isAreaPreferenceEnabled :: [LYT.TagNameValueExpiry] -> Bool
+isAreaPreferenceEnabled tags =
+  case [value | tag <- tags, Just (name, value) <- [splitTagNameValue tag], name == areaPreferenceEnabledTagName] of
+    (value : _) -> fromMaybe hasSelectionDefault (parseEnabledTagValue value)
+    [] -> hasSelectionDefault
+  where
+    hasSelectionDefault = isJust (driverAreaPreferenceFromTags tags)
+
+isAreaPreferenceEnabledJson :: A.Value -> Bool
+isAreaPreferenceEnabledJson (A.Object tagsObj) =
+  case KM.lookup (A.fromText areaPreferenceEnabledTagName) tagsObj of
+    Just (A.Bool enabled) -> enabled
+    Just (A.String value) -> fromMaybe hasSelectionDefault (parseEnabledTagValue value)
+    _ -> hasSelectionDefault
+  where
+    hasSelectionDefault =
+      KM.member (A.fromText areaPreferenceRadiusTagName) tagsObj
+        || any (T.isPrefixOf areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
+isAreaPreferenceEnabledJson _ = False
 
 -- | Every tag name that must be cleared before writing a new selection --
 -- both the radius tag and every existing cell tag, regardless of which
