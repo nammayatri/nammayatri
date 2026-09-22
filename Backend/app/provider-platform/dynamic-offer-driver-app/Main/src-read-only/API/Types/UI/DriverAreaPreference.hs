@@ -10,7 +10,7 @@ import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
-data AreaPreferenceInfoRes = AreaPreferenceInfoRes {minCells :: Kernel.Prelude.Int, radiusArea :: Kernel.Prelude.Maybe RadiusAreaSelection, selectedGeohashAreas :: [SelectedGeohashArea]}
+data AreaPreferenceInfoRes = AreaPreferenceInfoRes {enabled :: Kernel.Prelude.Bool, minCells :: Kernel.Prelude.Int, radiusArea :: Kernel.Prelude.Maybe RadiusAreaSelection, selectedGeohashAreas :: [SelectedGeohashArea]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -20,7 +20,7 @@ data AreaPreferenceSelection
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AreaPreferenceUpdateReq = AreaPreferenceUpdateReq {selection :: Kernel.Prelude.Maybe AreaPreferenceSelection}
+data AreaPreferenceUpdateReq = AreaPreferenceUpdateReq {enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, selection :: Kernel.Prelude.Maybe AreaPreferenceSelection}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
