@@ -32,3 +32,14 @@ ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN support_email text ;
 ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN support_phone text ;
 ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN support_url text ;
 ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN offline_contract boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ALTER COLUMN domain SET DEFAULT 'MOBILITY';
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ALTER COLUMN domain SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN enable_ondc_scheduled_ride_support boolean ;
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata DROP CONSTRAINT bap_metadata_pkey;
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD PRIMARY KEY ( domain, id, merchant_id, merchant_operating_city_id);
