@@ -809,19 +809,30 @@ entryNetForAccount accountId e
 
 {- Note [Redeemable payout calculation]
 Only entries *below* the payout cut-off are redeemable. Anything earned after
-the cut-off must stay in the wallet to fund the next cycle, so we subtract it:
+the cut-off must stay in the wallet to fund the next cycle, so we hold it back:
 
-    payout = walletBalance - max 0 (creditsAboveCutOff - debitsAboveCutOff)
-           = walletBalance - max 0 netAbove
-           = min walletBalance netBelow
+    nonRedeemable = max 0 (min walletBalance (creditsAboveCutOff - debitsAboveCutOff))
+                  = max 0 (min walletBalance netAbove)
+    payout        = max 0 (walletBalance - nonRedeemable)
+
+Each clamp matters: `max 0` so that post-cut-off deductions exceeding
+post-cut-off earnings never *add* to the payout (Scenario 2); `min walletBalance`
+so that debt carried across the cut-off cannot hold back more than the wallet
+holds (Scenario 4), which keeps `payout + nonRedeemable == walletBalance` for
+any non-negative balance (a negative balance reports 0 / 0).
 
 Note this consumes only the *sums* above the cut-off, so it is path-independent:
 the interleaving of debits and credits inside the post-cut-off window cannot
 change the result (see Scenario 3, where the running balance dips negative).
+It also never sums the entries below the cut-off: rows there that lack a
+settlementStatus (e.g. payout debits posted before the hold model) would
+otherwise net against fresh earnings. Those rows are only used to pick which
+entries a payout stamps PAID_OUT.
 
 Scenario 1 — cash commission on top, wallet stays positive
 ----------------------------------------------------------
-  payout = 150 - max 0 (200 - 150) = 150 - 50 = 100   (expected 100)
+  nonRedeemable = max 0 (min 150 (200 - 150)) = 50
+  payout        = max 0 (150 - 50)            = 100      (expected 100)
   wallet = 150
 
   above cut-off:
@@ -842,7 +853,8 @@ Scenario 1 — cash commission on top, wallet stays positive
 
 Scenario 2 — cash commissions exceed online earnings, netAbove negative
 ------------------------------------------------------------------------
-  payout = 50 - max 0 (200 - 250) = 50 - 0 = 50       (expected 50)
+  nonRedeemable = max 0 (min 50 (200 - 250)) = 0
+  payout        = max 0 (50 - 0)             = 50        (expected 50)
   wallet = 50
 
   above cut-off:
@@ -867,7 +879,8 @@ Scenario 2 — cash commissions exceed online earnings, netAbove negative
 
 Scenario 3 — cash commissions land first, wallet dips negative, then recovers
 ------------------------------------------------------------------------------
-  payout = 150 - max 0 (400 - 350) = 150 - 50 = 100   (expected 100)
+  nonRedeemable = max 0 (min 150 (400 - 350)) = 50
+  payout        = max 0 (150 - 50)            = 100      (expected 100)
   wallet = 150
 
   above cut-off (running balance shown, starting from 100 below the cut-off):
@@ -896,13 +909,14 @@ Scenario 3 — cash commissions land first, wallet dips negative, then recovers
   The transient -50 never reaches the formula: it sees only the totals
   (350 debits / 400 credits), so Scenario 3 and Scenario 1 agree.
 
-Scenario 4 — debt carried across the cut-off, formula returns NEGATIVE payout
-------------------------------------------------------------------------------
-  Cash commissions charged *before* the cut-off leave netBelow negative: the
-  driver closed the previous cycle owing 50. There is nothing redeemable, but
-  the wallet is positive because post-cut-off online rides funded it.
+Scenario 4 — debt carried across the cut-off
+---------------------------------------------
+  Cash commissions charged *before* the cut-off leave the driver closing the
+  previous cycle owing 50. There is nothing redeemable, but the wallet is
+  positive because post-cut-off online rides funded it.
 
-  payout = 50 - max 0 (200 - 100) = 50 - 100 = -50    (expected 0)   <-- BUG
+  nonRedeemable = max 0 (min 50 (200 - 100)) = 50
+  payout        = max 0 (50 - 50)            = 0         (expected 0)
   wallet = 50
 
   above cut-off:
@@ -924,12 +938,10 @@ Scenario 4 — debt carried across the cut-off, formula returns NEGATIVE payout
     net                                                 -50   (debt, NOT
                                                                redeemable)
 
-  min walletBalance netBelow = min 50 (-50) = -50, and the formula has no
-  floor, so it hands back a negative payout. Fix by clamping:
-
-      payout = max 0 (min walletBalance netBelow)
-
-  which yields 0 here and is a no-op for Scenarios 1-3.
+  Without `min walletBalance` the hold-back would be reported as 100 against a
+  wallet of 50; with it the whole 50 is held back, the payout is 0, and the
+  post-cut-off earnings become payable next cycle once they have absorbed the
+  debt.
 -}
 
 -- | Payout eligibility for one wallet account, see Note [Redeemable payout calculation].
@@ -947,12 +959,12 @@ getPayoutEligibilityData accountId walletBalance cutoff now = do
   unsettledAbove <- findUnsettledByAccountAfterTime accountId cutoff now
   redeemableEntries <- findUnsettledByAccountBeforeTime accountId cutoff
   let netAbove = sum (map (entryNetForAccount accountId) unsettledAbove)
-      netBelow = sum (map (entryNetForAccount accountId) redeemableEntries)
+      nonRedeemableBalance = max 0 (min walletBalance netAbove)
   pure
     PayoutEligibility
       { walletBalance,
-        nonRedeemableBalance = max 0 netAbove,
-        redeemableBalance = max 0 (min walletBalance netBelow),
+        nonRedeemableBalance,
+        redeemableBalance = max 0 (walletBalance - nonRedeemableBalance),
         redeemableEntries
       }
 
