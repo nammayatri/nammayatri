@@ -15,9 +15,9 @@ types:
   AreaPreferenceSelection:
     enum: "SelectGeohashCells [Text], SelectRadiusArea RadiusAreaSelection"
 
-  # Nothing clears any existing preference.
   AreaPreferenceUpdateReq:
     selection: Maybe AreaPreferenceSelection
+    enabled: Maybe Bool
 
   SelectedGeohashArea:
     geohash: Text
@@ -27,6 +27,7 @@ types:
     selectedGeohashAreas: "[SelectedGeohashArea]"
     radiusArea: Maybe RadiusAreaSelection
     minCells: Int
+    enabled: Bool
 
   GeohashAreaItem:
     geohash: Text
