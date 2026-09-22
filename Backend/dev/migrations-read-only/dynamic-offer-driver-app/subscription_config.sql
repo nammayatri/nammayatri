@@ -144,3 +144,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_offers_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_daily_plan_vendor_split boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN auto_enroll_new_drivers boolean ;

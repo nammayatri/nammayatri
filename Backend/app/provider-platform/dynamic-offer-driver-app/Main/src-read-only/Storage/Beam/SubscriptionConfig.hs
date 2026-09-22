@@ -23,6 +23,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
   { allowDriverFeeCalcSchedule :: B.C f Kernel.Prelude.Bool,
     allowDueAddition :: B.C f Kernel.Prelude.Bool,
     allowManualPaymentLinks :: B.C f Kernel.Prelude.Bool,
+    autoEnrollNewDrivers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autopayEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     cgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     dataEntityToSend :: B.C f (Kernel.Prelude.Maybe [Domain.Types.SubscriptionConfig.CurrentPlanEntites]),
