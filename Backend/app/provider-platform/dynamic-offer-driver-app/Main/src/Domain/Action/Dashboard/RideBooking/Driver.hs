@@ -953,10 +953,12 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   runRequestValidation (Common.validateAddVehicleReq transporterConfig.preProcessDocumentIdentifiers) req
 
-  when (requestor.role == DP.DRIVER) $ do
-    mbLinkedVehicle <- QVehicle.findById personId
-    whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
+  -- Vehicle is keyed by driverId; creating a second one below would otherwise fail with a raw
+  -- DB primary-key conflict instead of a clean error, so check regardless of requester role.
+  mbLinkedVehicle <- QVehicle.findById personId
+  whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
 
+  when (requestor.role == DP.DRIVER) $ do
     allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
     let validLinkedRCs = filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
