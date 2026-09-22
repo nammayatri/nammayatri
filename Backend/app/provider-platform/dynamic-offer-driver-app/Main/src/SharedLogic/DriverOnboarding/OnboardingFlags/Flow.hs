@@ -180,10 +180,14 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
         logError $ "onboardingFlags: mutation blocked for " <> person.id.getId <> ": " <> show err
         pure False
   let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
+      approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
   isFleetDriver <- case mbIsFleetDriver of
     Just isFleet -> pure isFleet
     Nothing
-      | effectiveOnboardingAs == DI.FLEET_DRIVER -> isJust <$> QFDA.findOneByDriverIdWithStatus person.id
+      | effectiveOnboardingAs == DI.FLEET_DRIVER ->
+        if approvalSupported
+          then pure True
+          else isJust <$> QFDA.findOneByDriverIdWithStatus person.id
       | otherwise -> pure False
   let driverDocConfigs = case allDocVerificationConfigs of Right configs -> configs; Left _ -> []
       unavailableVehicleDocs =
@@ -206,7 +210,6 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
-      approvalSupported = approvalSupportedInConfigs allDocVerificationConfigs
       newApproved =
         case derivedApproved of
           Just True | not allMandatoryDocsValid -> Nothing
