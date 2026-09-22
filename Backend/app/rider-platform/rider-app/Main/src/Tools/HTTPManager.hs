@@ -9,7 +9,7 @@ where
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Internal as HMap
 import qualified Data.Text as DT
-import Data.X509 (CertificateChain (..), SignedCertificate)
+import Data.X509 (Certificate (..), CertificateChain (..), SignedCertificate, getCertificate)
 import Data.X509.CertificateStore (CertificateStore, makeCertificateStore)
 import qualified Data.X509.Memory as X509Mem
 import EulerHS.Prelude
@@ -93,7 +93,24 @@ loadCredential pem =
     [] -> Left "client certificate PEM contained no certificate"
     certs -> case X509Mem.readKeyFileFromMemory pem of
       [] -> Left "client certificate PEM contained no private key (cert and key must be in the same blob)"
-      (key : _) -> Right (CertificateChain certs, key)
+      (key : _) -> Right (CertificateChain (orderLeafFirst certs), key)
+
+-- TLS requires our own certificate first and each subsequent one to certify the
+-- previous (RFC 5246 7.4.2), but 'readSignedObjectFromMemory' just preserves PEM
+-- order. Axis rejects a chain that leads with their intermediate: it reads entry
+-- zero as the client identity and fatals with an opaque handshake_failure.
+orderLeafFirst :: [SignedCertificate] -> [SignedCertificate]
+orderLeafFirst certs = maybe certs walkFrom (find isLeaf certs)
+  where
+    subjectOf = certSubjectDN . getCertificate
+    issuerOf = certIssuerDN . getCertificate
+    without cert = filter ((/= subjectOf cert) . subjectOf)
+    isLeaf cert = not $ any (\other -> subjectOf other /= subjectOf cert && issuerOf other == subjectOf cert) certs
+    walkFrom leaf = leaf : climb leaf (without leaf certs)
+    climb _ [] = []
+    climb cert rest = case find ((== issuerOf cert) . subjectOf) rest of
+      Nothing -> rest
+      Just issuer -> issuer : climb issuer (without issuer rest)
 
 loadCaStore :: BS.ByteString -> Either Text CertificateStore
 loadCaStore pem =
