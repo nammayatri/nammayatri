@@ -21,6 +21,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
   { actualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     actualDistanceThresholdOnRide :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     area :: B.C f Lib.Types.SpecialLocation.Area,
+    autoAssignMaxPickupDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     batchSizeOnRide :: B.C f Kernel.Prelude.Int,
     batchSizeOnRideWithStraightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     batchingMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverPoolConfig.BatchingMode),

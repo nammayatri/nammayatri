@@ -61,16 +61,23 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
   minCells <- getMinCells merchantOpCityId
   mbPref <- mapM (validateSelection merchantOpCityId minCells) req.selection
   let existingTags = fromMaybe [] person.driverTag
-      clearedNames = AreaPref.areaPreferenceTagNamesToClear existingTags
-      retained = filter (\t -> maybe True (`notElem` clearedNames) (tagNameOf t)) existingTags
-      newTags = [LYT.TagNameValueExpiry (name <> "#" <> value) | (name, value) <- maybe [] AreaPref.tagNamesForSelection mbPref]
-      updatedTags = retained <> newTags
+      tagsAfterSelection = case mbPref of
+        Nothing -> existingTags
+        Just pref ->
+          let clearedNames = AreaPref.areaPreferenceTagNamesToClear existingTags
+              retained = filter (\t -> maybe True (`notElem` clearedNames) (tagNameOf t)) existingTags
+              newTags = [LYT.TagNameValueExpiry (name <> "#" <> value) | (name, value) <- AreaPref.tagNamesForSelection pref]
+           in retained <> newTags
+      updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
   pure $ buildInfoRes minCells (Just updatedTags)
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
       (name : _) -> Just name
       _ -> Nothing
+    setEnabledTag enabled tags =
+      filter (\t -> tagNameOf t /= Just AreaPref.areaPreferenceEnabledTagName) tags
+        <> [LYT.TagNameValueExpiry (AreaPref.areaPreferenceEnabledTagName <> "#" <> AreaPref.mkEnabledTagValue enabled)]
 
 getDriverAreaPreferenceList ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -120,16 +127,20 @@ validateSelection merchantOpCityId minCells = \case
 buildInfoRes :: Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
 buildInfoRes minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
-    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells}
+    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [],
           radiusArea = Just APIT.RadiusAreaSelection {center = center, radiusMeters = radiusMeters},
-          minCells = minCells
+          minCells = minCells,
+          enabled = enabled
         }
     Just (AreaPref.PreferredGeohashCells cells) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [APIT.SelectedGeohashArea {geohash = c, areaName = areaName} | (c, areaName) <- cells],
           radiusArea = Nothing,
-          minCells = minCells
+          minCells = minCells,
+          enabled = enabled
         }
+  where
+    enabled = AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

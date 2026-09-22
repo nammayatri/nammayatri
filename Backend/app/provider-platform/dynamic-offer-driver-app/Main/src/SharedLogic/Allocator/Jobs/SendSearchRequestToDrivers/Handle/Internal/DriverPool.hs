@@ -24,6 +24,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     checkRequestCount,
     isBookAny,
     makeTaggedDriverPool,
+    autoAssignPreferenceScore,
     ensurePoolingLogicVersion,
     splitSilentDriversAndSortWithDistance,
     previouslyAttemptedDriversKey,
@@ -174,8 +175,17 @@ ensurePoolingLogicVersion searchReq
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
 mkDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> [PreferenceCheck]
-mkDriverPreferenceChecks searchReq driver =
-  [rideDistanceCheck, pickupRadiusCheck, petModeCheck, areaCheck]
+mkDriverPreferenceChecks searchReq driver = uncurry (:) (splitDriverPreferenceChecks searchReq driver)
+
+-- | Preference score used to gate silent auto-assign: every dimension except the
+-- driver's trip-distance preference, which must not block an auto-assign.
+autoAssignPreferenceScore :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> Double
+autoAssignPreferenceScore searchReq driver = computePreferenceMatchScore (snd (splitDriverPreferenceChecks searchReq driver))
+
+-- | The trip-distance check paired with all the other checks.
+splitDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> (PreferenceCheck, [PreferenceCheck])
+splitDriverPreferenceChecks searchReq driver =
+  (rideDistanceCheck, [pickupRadiusCheck, petModeCheck, areaCheck])
   where
     dpr = driver.driverPoolResult
     rideDistanceCheck =
@@ -197,18 +207,20 @@ mkDriverPreferenceChecks searchReq driver =
     -- SharedLogic.DriverPool.AreaPreference), not a dedicated typed field, so this
     -- reads the raw tag object directly. Matched against the ride's DROP location
     -- only -- pickup is deliberately not considered (product decision).
-    areaCheck = withWeight 2.0 $ case dpr.driverTags of
-      A.Object tagsObj
-        | Just radiusValue <- lookupTagValue AreaPref.areaPreferenceRadiusTagName tagsObj,
-          Just (center, radius) <- AreaPref.parseRadiusTagValue radiusValue ->
-          case EMaps.getCoordinates <$> searchReq.toLocation of
-            Nothing -> notApplicable
-            Just dropPoint -> binaryCheck True (AreaPref.matchesRadius center radius dropPoint)
-        | hasAnyCellTag tagsObj ->
-          case searchReq.toLocGeohash of
-            Nothing -> notApplicable
-            Just dropGeohash -> binaryCheck True (KM.member (A.fromText (AreaPref.areaPreferenceCellTagName dropGeohash)) tagsObj)
-      _ -> notApplicable
+    areaCheck
+      | not (AreaPref.isAreaPreferenceEnabledJson dpr.driverTags) = notApplicable
+      | otherwise = withWeight 2.0 $ case dpr.driverTags of
+        A.Object tagsObj
+          | Just radiusValue <- lookupTagValue AreaPref.areaPreferenceRadiusTagName tagsObj,
+            Just (center, radius) <- AreaPref.parseRadiusTagValue radiusValue ->
+            case EMaps.getCoordinates <$> searchReq.toLocation of
+              Nothing -> notApplicable
+              Just dropPoint -> binaryCheck True (AreaPref.matchesRadius center radius dropPoint)
+          | hasAnyCellTag tagsObj ->
+            case searchReq.toLocGeohash of
+              Nothing -> notApplicable
+              Just dropGeohash -> binaryCheck True (KM.member (A.fromText (AreaPref.areaPreferenceCellTagName dropGeohash)) tagsObj)
+        _ -> notApplicable
     hasAnyCellTag tagsObj = any (T.isPrefixOf AreaPref.areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
     -- convertTags turns an '&'-joined tag value into a JSON array of strings
     -- (one element per '&' part), so the radius tag's value round-trips as

@@ -148,6 +148,7 @@ instance Default DriverPoolConfig where
         scheduleTryTimes = [1, 2, 3],
         singleBatchProcessTime = Common.Seconds 120,
         softMaxParallelSearchRequests = Nothing,
+        autoAssignMaxPickupDistance = Nothing,
         thresholdToIgnoreActualDistanceThreshold = Nothing,
         timeBounds = Unbounded, -- Replace with actual default for `TimeBound`
         tripCategory = "DefaultTripCategory",
