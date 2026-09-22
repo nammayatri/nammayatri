@@ -31,12 +31,11 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.ActorInfo as ActorInfo
@@ -65,8 +64,8 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
     city <- Utils.getContextCity reqV2.selectReqContext
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-    let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+    mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dSelectReq'.bapId) Domain.MOBILITY transporterId moc.id
+    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
 
     if isOndcScheduledRideSupportEnabled
       then do

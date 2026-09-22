@@ -16,25 +16,30 @@ BapMetadata:
     id : Id BapMetadata
     name : Text
     logoUrl : Maybe BaseUrl
-    domain: Maybe Text # TODO: Use Domain type here
+    domain: Text # TODO: Use Domain type here
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     staticTermsUrl : Maybe BaseUrl
     offlineContract : Maybe Bool # OFFLINE_CONTRACT tag echoed on BAP_TERMS/BPP_TERMS -- one fact about this BAP's deal with us, not a per-vehicle-category BecknConfig setting
+    enableOndcScheduledRideSupport : Maybe Bool
     supportEmail : Maybe Text
     supportPhone : Maybe Text
     supportUrl : Maybe BaseUrl
 
   constraints:
     id: PrimaryKey
+    domain: PrimaryKey
+    merchantId: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+
+  default:
+    domain: "'MOBILITY'"
 
   queries:
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-
-    findBySubscriberIdAndDomain:
+    findBySubscriberIdDomainMerchantAndCity:
       kvFunction: findOneWithKV
       where:
-        and: [id, domain]
+        and: [id, domain, merchantId, merchantOperatingCityId]
 
   beamType:
     logoUrl: Maybe Text
@@ -53,5 +58,3 @@ BapMetadata:
 
   sqlType:
     id: character varying(255)
-
-  excludedFields: [merchantOperatingCityId, merchantId]

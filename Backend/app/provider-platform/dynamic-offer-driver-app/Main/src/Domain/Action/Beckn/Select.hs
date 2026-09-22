@@ -86,7 +86,7 @@ data DSelectReq = DSelectReq
     -- | BAP-proposed total fare for the Quote-based /select negotiation flow
     -- (ONDC v2.1.0 Pre-Order Bid). Layer 1 (Beckn.ACL.Select) always sets this
     -- to Nothing; only Beckn.OnDemand.Transformer.OndcScheduledRide.Select.ondcScheduledRideParser fills
-    -- it in, from item.price.value, for enableOndcScheduledRideSupport cities
+    -- it in, from item.price.value, for enableOndcScheduledRideSupport BAPs
     -- pilot merchants. Deliberately a separate field from customerExtraFee,
     -- which is an additive tip/extra-fee delta used by the Estimate-based
     -- dynamic-offer flow -- this one is the bid's absolute proposed total.
@@ -244,7 +244,7 @@ addNammaTags tagData sReq = do
   QSR.updateSearchTags tags sReq.id
 
 -- ONDC scheduled-ride pilot: /select for the new Quote-based (static/scheduled) capability --
--- Dispatched only for cities with enableOndcScheduledRideSupport,
+-- Dispatched only for BAPs with enableOndcScheduledRideSupport in this city,
 -- at the API layer (API.Beckn.Select), when the wire item.id resolves to a Quote
 -- instead of an Estimate.
 

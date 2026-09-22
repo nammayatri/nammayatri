@@ -41,16 +41,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
@@ -87,11 +86,14 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
     -- against its BapMetadata row, so it can be echoed back later at on_init.
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-    let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-    when isOndcScheduledRideSupportEnabled $ do
-      let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
-      OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
+    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id bapId) Domain.MOBILITY transporterId moc.id
+    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
+    mbBapMetadata <-
+      if isOndcScheduledRideSupportEnabled
+        then do
+          let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
+          OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY transporterId moc.id mbBapMetadata' incomingOrderTags
+        else pure mbBapMetadata'
 
     -- Pilot merchants: corrects Layer 1's echo-based fulfillment-id parse (unreliable once our fulfillment.type override runs) and patches in the wire item's add-ons, in one pass.
     dInitReq' <-
@@ -128,7 +130,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
                 -- Pilot merchants get BPP_TERMS and ROUTE_INFO added to the on_init order.
                 onInitMessage <-
                   if isOndcScheduledRideSupportEnabled
-                    then OSROnInit.ondcScheduledRideOnInitMessageBuild dInitRes.booking bapId bppConfig onInitMessage'
+                    then OSROnInit.ondcScheduledRideOnInitMessageBuild dInitRes.booking mbBapMetadata bppConfig onInitMessage'
                     else pure onInitMessage'
                 pure $
                   Spec.OnInitReq
