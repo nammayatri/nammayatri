@@ -101,6 +101,7 @@ import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, get
 import qualified SharedLogic.OTP as SOTP
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverInformation as QDI
@@ -432,12 +433,14 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     castChannelToMedium SOTP.EMAIL = SR.EMAIL
     castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
 createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  mbPrepaidSubsConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing DEP.PREPAID_SUBSCRIPTION
+  let autoEnrollPrepaid = maybe False (fromMaybe False . (.autoEnrollNewDrivers)) mbPrepaidSubsConfig
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -452,7 +455,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             blocked = False,
             numOfLocks = 0,
             verified = False,
-            subscribed = transporterConfig.enableBotFlow /= Just True,
+            subscribed = True,
             isPetModeEnabled = False,
             paymentPending = False,
             autoPayStatus = Nothing,
@@ -517,7 +520,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
-            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            servicesEnabledForSubscription = DEP.YATRI_SUBSCRIPTION : [DEP.PREPAID_SUBSCRIPTION | autoEnrollPrepaid],
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
