@@ -83,7 +83,8 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
     case req.travelMode of
       Just DTrip.Bus -> do
-        vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location
+        let busRiderConfig = riderConfig {DomainRiderConfig.nearbyBusSearchRadius = ((\r -> fromIntegral r.getMeters / 1000) <$> req.radius) <|> riderConfig.nearbyBusSearchRadius}
+        vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id busRiderConfig req.location
         return $
           ND.NearbyDriverRes
             { serviceTierTypeToVehicleVariant = A.Null,
@@ -96,7 +97,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
         ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
         let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
         maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
-        nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (min maxRadiusBucket.radiusInMeters req.radius)
+        nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (maybe maxRadiusBucket.radiusInMeters (min maxRadiusBucket.radiusInMeters) req.radius)
         let vvToSttMapping = getVariantToApplicableServiceTierTypeMapping
         let sttToVvMapping = getServiceTierTypeToVariantMapping
         buckets <- buildBuckets vvToSttMapping sortedRingBucketCfgs nearbyDriverLocations

@@ -12,7 +12,7 @@ module: NearbyDrivers
 types:
   NearbyDriverReq:
     location: LatLong
-    radius: Meters
+    radius: Maybe Meters
     vehicleVariants: Maybe [VehicleVariant]
     travelMode: Maybe MultimodalTravelMode
 

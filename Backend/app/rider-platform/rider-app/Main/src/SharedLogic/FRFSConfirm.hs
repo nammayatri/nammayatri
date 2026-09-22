@@ -946,6 +946,7 @@ buildJourneyAndLeg booking fareParameters = do
 
     let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
         mbRouteStation = listToMaybe =<< mbRouteStations
+        mbLastRouteStation = listToMaybe . reverse =<< mbRouteStations
 
     routeLiveInfo <-
       case (mbRouteStation, booking.vehicleNumber) of
@@ -954,7 +955,7 @@ buildJourneyAndLeg booking fareParameters = do
 
     -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups don't have them),
     -- so fetch the route's example trip and read the per-stop platform code from it.
-    mbTrip <-
+    mbFirstTrip <-
       case mbRouteStation of
         Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
         Nothing -> return Nothing
