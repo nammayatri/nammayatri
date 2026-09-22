@@ -41,25 +41,33 @@ mutualTLSManagerKey integration = "mtls-http-manager:" <> DT.unpack integration
 prepareMutualTLSHttpManager ::
   MonadIO m =>
   Text ->
+  -- | Server hostname. Must be the real host: it is what goes out as SNI, and a
+  -- gateway that routes on SNI (Axis does) fails the handshake without it.
+  Text ->
   Int ->
   BS.ByteString ->
   Maybe BS.ByteString ->
   m (Either Text (HMap.HashMap DT.Text Http.ManagerSettings))
-prepareMutualTLSHttpManager integration timeout certAndKeyPem mbCaPem = do
+prepareMutualTLSHttpManager integration host timeout certAndKeyPem mbCaPem = do
   systemStore <- liftIO getSystemCertificateStore
-  pure $ buildSettings integration timeout certAndKeyPem mbCaPem systemStore
+  pure $ buildSettings integration host timeout certAndKeyPem mbCaPem systemStore
 
 buildSettings ::
+  Text ->
   Text ->
   Int ->
   BS.ByteString ->
   Maybe BS.ByteString ->
   CertificateStore ->
   Either Text (HMap.HashMap DT.Text Http.ManagerSettings)
-buildSettings integration timeout certAndKeyPem mbCaPem systemStore = do
+buildSettings integration host timeout certAndKeyPem mbCaPem systemStore = do
   credential <- loadCredential certAndKeyPem
   caStore <- maybe (Right systemStore) loadCaStore mbCaPem
-  let base = TLS.defaultParamsClient "" ""
+  -- The hostname is load-bearing: `TLSSettings` hands these params to the connection
+  -- verbatim (unlike TLSSettingsSimple, it does NOT fill the host in), so an empty
+  -- name here means no SNI on the wire and no hostname to validate the server cert
+  -- against. Axis rejects the handshake outright in that case.
+  let base = TLS.defaultParamsClient (DT.unpack host) ""
       supported = TLS.clientSupported base
       shared = TLS.clientShared base
       hooks = TLS.clientHooks base

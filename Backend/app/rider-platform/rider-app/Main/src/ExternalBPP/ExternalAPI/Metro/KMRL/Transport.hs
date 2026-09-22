@@ -78,13 +78,15 @@ kmrlManagerCache = unsafePerformIO (newIORef Map.empty)
 kmrlManager :: (MonadFlow m, EncFlow m r, MonadReader r m) => KMRLConfig -> m HTTP.Manager
 kmrlManager config = do
   certPem <- decrypt config.clientCertPem
-  let cacheKey = digestOf (certPem <> fromMaybe "" config.serverCaPem)
+  -- SNI comes from here; the gateway routes on it, so it must be the real host.
+  let host = T.pack (baseUrlHost config.tokenUrl)
+      cacheKey = digestOf (host <> certPem <> fromMaybe "" config.serverCaPem)
   cached <- liftIO (Map.lookup cacheKey <$> readIORef kmrlManagerCache)
   case cached of
     Just manager -> pure manager
     Nothing -> do
       settings <-
-        prepareMutualTLSHttpManager "kmrl" 30000 (TE.encodeUtf8 certPem) (TE.encodeUtf8 <$> config.serverCaPem)
+        prepareMutualTLSHttpManager "kmrl" host 30000 (TE.encodeUtf8 certPem) (TE.encodeUtf8 <$> config.serverCaPem)
           >>= fromEitherM (\err -> InternalError $ "KMRL client certificate unusable: " <> err)
       managerSettings <-
         HMap.lookup (T.pack (mutualTLSManagerKey "kmrl")) settings

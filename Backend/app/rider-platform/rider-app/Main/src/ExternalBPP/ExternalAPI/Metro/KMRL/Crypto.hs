@@ -17,6 +17,8 @@ import qualified Crypto.PubKey.RSA as RSA
 import qualified Crypto.PubKey.RSA.OAEP as OAEP
 import qualified Crypto.PubKey.RSA.PKCS15 as PKCS15
 import Crypto.Random (MonadRandom, getRandomBytes)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import Data.ByteArray (convert)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64.URL as B64U
@@ -92,7 +94,22 @@ verifyAndDecrypt pub priv token = do
   let (plain, aeadFinal) = aeadDecrypt (aeadAppendHeader aead protectedB64) ct
       expected = convert (aeadFinalize aeadFinal 16) :: BS.ByteString
   unless (expected == tag) $ Left "GCM authentication tag mismatch"
-  pure (BL.toStrict . Raw.decompress . BL.fromStrict $ plain)
+  -- Inflate only when the header asks for it. We always send `zip:DEF`, but Axis
+  -- answers WITHOUT a zip member, so decompressing unconditionally turned every real
+  -- response into a zlib "invalid distance too far back". Round-trip tests never saw
+  -- it: our own encoder always compresses, so both sides agreed with each other and
+  -- disagreed with the gateway.
+  protectedHeader <- unb64 protectedB64
+  pure $
+    if isDeflated protectedHeader
+      then BL.toStrict . Raw.decompress . BL.fromStrict $ plain
+      else plain
+
+-- | True when the JWE protected header carries @"zip":"DEF"@ (RFC 7516 s4.1.3).
+isDeflated :: BS.ByteString -> Bool
+isDeflated header = case A.decodeStrict header :: Maybe A.Value of
+  Just (A.Object o) -> AKM.lookup "zip" o == Just (A.String "DEF")
+  _ -> False
 
 type RSAPublicKey = RSA.PublicKey
 
