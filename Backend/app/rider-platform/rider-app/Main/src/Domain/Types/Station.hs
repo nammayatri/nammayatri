@@ -47,6 +47,8 @@ data Station = Station
     -- GTFS location_type: "0" platform, "1" station. Riders are shown stations,
     -- so callers filter on this and send the station code onward.
     locationType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    -- Platform label of a boarding stop, e.g. "Towards Majestic"; Nothing for a station.
+    platform :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clusterId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
