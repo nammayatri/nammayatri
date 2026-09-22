@@ -50,6 +50,7 @@ data ActionVerb
   | ChangeFleetOwner
   | Expire
   | UnlinkDocument
+  | UploadDocument
   | OnboardingFlagMutation
   deriving (Show, Eq, Generic, Enum, Bounded)
 
@@ -290,6 +291,7 @@ liveRideVerbs =
     Expire,
     SetOnboardingAs,
     UnlinkDocument,
+    UploadDocument,
     ChangeFleetOwner,
     Block,
     OnboardingFlagMutation
@@ -505,7 +507,7 @@ onboardingFlow = do
       where
         driverScope driverCtx = ensure (isAssociatedWith actorFleet.afId driverCtx || lookingForFleet driverCtx) "SCOPE-DRIVER" "driver is not part of this fleet"
     noLiveRide :: () -> TargetCtx -> Either GuardViolation ()
-    noLiveRide _ targetCtx = ensure (not targetCtx.tcHasLiveRide) "LIVE-RIDE" "a live ride is in progress, cannot change association"
+    noLiveRide _ targetCtx = ensure (not targetCtx.tcHasLiveRide) "LIVE-RIDE" "a live ride is in progress"
     ensureNoActiveFleetAssociation :: () -> DriverCtx -> Either GuardViolation ()
     ensureNoActiveFleetAssociation _ driverCtx =
       unless (maybe False (\merchant -> merchant.overwriteAssociation == Just True) driverCtx.dcMerchant) $ do

@@ -176,4 +176,5 @@ castActionVerb = \case
   ChangeFleetOwner -> DOnboardingAlertAction.ChangeFleetOwnerAction
   Expire -> DOnboardingAlertAction.ExpireAction
   UnlinkDocument -> DOnboardingAlertAction.UnlinkDocumentAction
+  UploadDocument -> DOnboardingAlertAction.OnboardingFlagMutationAction
   OnboardingFlagMutation -> DOnboardingAlertAction.OnboardingFlagMutationAction

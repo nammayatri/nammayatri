@@ -939,6 +939,11 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy :: DPan.VerifiedBy -> Short
 postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantShortId opCity driverId_ Common.DocumentRegisterReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  person <- QPerson.findById (cast driverId_) >>= fromMaybeM (PersonDoesNotExist driverId_.getId)
+  -- A field-only document registers with no image, so it never passes the upload guard, so checked here.
+  unless (DCommon.checkFleetOwnerRole person.role) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.UploadDocument (SGuard.TargetDriver person.id)
   void $
     case metadata of
       Common.DLData dlReq -> registerDL merchant merchantOpCityId dlReq

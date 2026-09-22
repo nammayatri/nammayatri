@@ -416,6 +416,14 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
               return $ Just rc.id
         Nothing -> throwError $ RCMandatory (show imageType)
       else return Nothing
+  let guardTarget = case mbRcId of
+        Just rcId -> SGuard.TargetVehicleById rcId
+        Nothing
+          | isFleetRole person.role -> SGuard.TargetFleetOwner personId
+          | otherwise -> SGuard.TargetDriver personId
+  -- A driver on a live ride is enabled, so every flag-bearing document is already VALID, making this re-upload case.
+  unless (isFleetRole person.role && isNothing mbRcId) $
+    SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.UploadDocument guardTarget
 
   allImages <- Query.findRecentByPersonIdAndImageType personId imageType
   let images = filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) allImages
@@ -483,12 +491,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
                 fleetDocConfigs >>= (.markImageValidOnValidationSkip)
               )
           else return validationFromDocConfigs
-      let guardTarget = case mbRcId of
-            Just rcId -> SGuard.TargetVehicleById rcId
-            Nothing
-              | isFleetRole person.role -> SGuard.TargetFleetOwner personId
-              | otherwise -> SGuard.TargetDriver personId
-          -- Status writes go through the onboarding-action wrapper: entity lock + flag recompute.
+      let -- Status writes go through the onboarding-action wrapper: entity lock + flag recompute.
           setVerificationStatus status =
             SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve guardTarget $
               Query.updateVerificationStatusOnlyById status imageEntity.id
