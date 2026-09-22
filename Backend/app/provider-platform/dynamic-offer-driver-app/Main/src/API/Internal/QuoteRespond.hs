@@ -10,7 +10,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
@@ -30,7 +29,7 @@ type API =
       :> Header "x-react-bundle-version" Text
       :> Header "x-device" Text
       :> ReqBody '[JSON] DDriver.DriverRespondReq
-      :> Post '[JSON] APISuccess
+      :> Post '[JSON] DDriver.DriverRespondRes
   )
 
 handler :: FlowServer API
@@ -46,5 +45,5 @@ respondQuote ::
   Maybe Text ->
   Maybe Text ->
   DDriver.DriverRespondReq ->
-  FlowHandler APISuccess
+  FlowHandler DDriver.DriverRespondRes
 respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice

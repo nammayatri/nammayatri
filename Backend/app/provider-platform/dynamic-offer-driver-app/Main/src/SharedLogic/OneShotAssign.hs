@@ -21,11 +21,15 @@
 module SharedLogic.OneShotAssign
   ( OneShotAssignReq (..),
     oneShotAssign,
+    buildAssignedDriverRideRes,
   )
 where
 
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Action.UI.Person as SP
+import qualified Domain.Action.UI.Ride as DRideUI
+import qualified Domain.Action.UI.Ride.Common as RideCommon
+import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverQuote as DDQ
@@ -34,16 +38,20 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Domain as BecknDomain
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Booking (cancelBooking)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -52,9 +60,14 @@ import SharedLogic.FareCalculator (mkFareParamsBreakups)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
+import qualified Storage.CachedQueries.BapMetadata as CQSM
+import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -73,7 +86,11 @@ data OneShotAssignReq = OneShotAssignReq
     transporterConfig :: TransporterConfig
   }
 
-oneShotAssign :: OneShotAssignReq -> Flow ()
+-- | Returns the same 'RideCommon.DriverRideRes' the /driver/ride/{rideId} endpoint
+-- would serve for the just-created ride, so respondQuote can hand it back in the
+-- accept response; Nothing only when the assignment succeeded but the response
+-- payload could not be built (the driver app then falls back to fetching the ride).
+oneShotAssign :: OneShotAssignReq -> Flow (Maybe RideCommon.DriverRideRes)
 oneShotAssign OneShotAssignReq {..} = do
   now <- getCurrentTime
   -- Same lock Beckn init takes: a concurrent cancel-search deactivates the quote after
@@ -137,8 +154,17 @@ oneShotAssign OneShotAssignReq {..} = do
           Left err -> do
             logError $ "One-shot assign callback failed for booking " <> booking.id.getId <> ", cancelling: " <> show err
             abortOneShotBooking booking
+      -- Response enrichment only: a failure here must not abort a completed
+      -- assignment, so it degrades to Nothing instead of propagating into the
+      -- booking-cancelling handler below.
+      rideResResult <- withTryCatch "oneShotAssign:driverRideRes" $ buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride rideDetails
+      case rideResResult of
+        Right res -> pure (Just res)
+        Left err -> do
+          logError $ "One-shot assign: building driver ride response failed for ride " <> ride.id.getId <> ": " <> show err
+          pure Nothing
     case postBookingResult of
-      Right _ -> pure ()
+      Right mbRideRes -> pure mbRideRes
       Left err -> do
         logError $ "One-shot assign failed after booking creation for booking " <> booking.id.getId <> ", cancelling: " <> show err
         abortOneShotBooking booking
@@ -227,3 +253,21 @@ buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote = do
         assignedServiceTierName = rideAssignedReq.assignedServiceTierName,
         billingCategory = booking.billingCategory
       }
+
+-- | The same payload getDriverRideById serves for this ride, built from the entities
+-- already in hand: the ride/rideDetails rows were written milliseconds ago, so the
+-- replica reads the shared buildDriverRideResItem does would race replication lag.
+-- Rating is Nothing (the ride was just born) and earnings labels are Nothing
+-- (getDriverRideById only adds them when financeData=true is requested).
+-- Shared by one-shot assign and the static-offer accept path — both create the
+-- ride synchronously inside the driver's accept.
+buildAssignedDriverRideRes :: DPerson.Person -> DDI.DriverInformation -> TransporterConfig -> DRB.Booking -> DRide.Ride -> DRD.RideDetails -> Flow RideCommon.DriverRideRes
+buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride rideDetails = do
+  let driverLanguage = fromMaybe KET.ENGLISH driver.language
+  driverNumber <- RD.getDriverNumber rideDetails
+  mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
+  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) BecknDomain.MOBILITY
+  resolvedCalling <- DRideUI.resolveCallingNumber booking ride transporterConfig.driverCallingOption (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else pure []
+  RideCommon.mkDriverRideRes driverLanguage Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling

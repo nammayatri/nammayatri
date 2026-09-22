@@ -54,10 +54,20 @@ data BetterPointConfig = BetterPointConfig
     minRideDistanceSaving :: Meters,
     -- | Saving must also be at least this fraction of the ride distance.
     minSavingPctOfRide :: Double,
-    -- | Absolute ceiling on the walk, whatever the ride length.
-    maxWalkDistance :: Meters,
-    -- | Walk is additionally capped at this fraction of the ride distance.
-    maxWalkPctOfRide :: Double,
+    -- | Absolute ceiling on the walk to a suggested pickup, whatever the ride length.
+    maxWalkDistanceAtPickup :: Meters,
+    -- | The same ceiling for the drop. Held separately because the two ends are not the
+    -- same ask: at the pickup the walk is spent before a wait the customer has already
+    -- started, at the drop it is the last thing between them and where they are going.
+    maxWalkDistanceAtDrop :: Meters,
+    -- | Walk to a suggested pickup is additionally capped at this fraction of the ride
+    -- distance.
+    maxWalkPctOfRideAtPickup :: Double,
+    -- | The same fraction for the drop. Split alongside the absolute cap rather than
+    -- shared, since the effective cap is the smaller of the two — a shared fraction
+    -- would flatten the two absolute caps back together on any ride short enough for it
+    -- to bind.
+    maxWalkPctOfRideAtDrop :: Double,
     -- | How many metres of riding one metre of walking is worth when ranking candidates.
     -- 1 treats them equally, which always sends the customer to the walk cap; higher
     -- values prefer a shorter walk. Affects ranking only, never qualification.
@@ -175,7 +185,7 @@ savingAtDrop g cum = (g.gPolylineLength - cum) * g.gScale
 --
 -- Note the criterion is self-validating: a candidate only qualifies when its road
 -- distance from the customer (>= 'minRideDistanceSaving') far exceeds the walk to it
--- (<= 'maxWalkDistance'). On a straight road those two are nearly equal, so ordinary
+-- (<= the walk cap for that end). On a straight road those two are nearly equal, so
 -- routes produce no suggestion at all.
 findBetterRoutePoints ::
   BetterPointConfig ->
@@ -192,18 +202,21 @@ findBetterRoutePoints ::
   Maybe BetterRoutePlan
 findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration = do
   g <- mkGeometry pts mbRouteDistance mbRouteDuration
-  -- Scale the thresholds to this ride before using them anywhere.
-  let effMaxWalk = min maxWalkCeilingD (cfg.maxWalkPctOfRide * g.gRoadDistance)
+  -- Scale the thresholds to this ride before using them anywhere. The walk cap is scaled
+  -- once per end, so the two ends are scanned against genuinely different radii.
+  let effMaxWalk absoluteCap pctOfRide = min (fromIntegral $ getMeters absoluteCap) (pctOfRide * g.gRoadDistance)
+      effMaxWalkAtPickup = effMaxWalk cfg.maxWalkDistanceAtPickup cfg.maxWalkPctOfRideAtPickup
+      effMaxWalkAtDrop = effMaxWalk cfg.maxWalkDistanceAtDrop cfg.maxWalkPctOfRideAtDrop
       effMinSaving = max minSavingFloorD (cfg.minSavingPctOfRide * g.gRoadDistance)
       -- A segment that ends before the saving threshold can never qualify — start the
       -- scan past it. Same for the drop, mirrored. This is a strict prune of segments
       -- whose every point fails the saving test, not an approximation, and on a dense
       -- provider polyline it drops most of the work.
       mbPickup =
-        bestCandidate pickup (savingAtPickup g) effMaxWalk effMinSaving $
+        bestCandidate pickup (savingAtPickup g) effMaxWalkAtPickup effMinSaving $
           filter (\seg -> (seg.sCumAtStart + seg.sLength) * g.gScale >= effMinSaving) g.gSegments
       mbDrop =
-        bestCandidate dropPoint (savingAtDrop g) effMaxWalk effMinSaving $
+        bestCandidate dropPoint (savingAtDrop g) effMaxWalkAtDrop effMinSaving $
           filter (\seg -> (g.gPolylineLength - seg.sCumAtStart) * g.gScale >= effMinSaving) g.gSegments
       -- Only a single-sided shape can be the default, so the customer is never quietly
       -- signed up to walk twice: 'BOTH' is offered, never chosen for them. Ranking the
@@ -222,7 +235,6 @@ findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration =
         alternatives = rankRoutes cfg (drop 1 ranked <> maybeToList mbBoth)
       }
   where
-    maxWalkCeilingD = fromIntegral $ getMeters cfg.maxWalkDistance
     minSavingFloorD = fromIntegral $ getMeters cfg.minRideDistanceSaving
 
     -- Three candidate points per segment: the two ends of the walkable window, and the

@@ -693,6 +693,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                     let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
+                    when (updatedVehicle.category /= vehicle.category) $
+                      forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
@@ -802,6 +804,27 @@ removeVehicle isTaxiBoothRequest driverId = do
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
+-- | Put the driver OFFLINE when the linked vehicle/variant changes so they cannot
+-- keep taking rides on a plan that no longer matches. Throws RCVehicleOnRide if
+-- they currently have an active ride. No-ops if already offline.
+forceDriverOffline ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Person.Person ->
+  m ()
+forceDriverOffline driverId = do
+  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
+  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  unless (not driverInfo.active && driverInfo.mode == Just DCommon.OFFLINE) $ do
+    now <- getCurrentTime
+    logInfo $ "Forcing driver offline due to vehicle/variant change: " <> driverId.getId
+    DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
+
 validateRCActivation :: OnboardingFlow m r => Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m Bool
 validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   now <- getCurrentTime
@@ -868,9 +891,12 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
     unless (fromMaybe False rc.approved) $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Vehicle is not approved"
       throwError (InvalidRequest "Vehicle is not approved")
+  mbOldVehicle <- VQuery.findById driverInfo.driverId
   deactivateCurrentRC transporterConfig driverInfo.driverId
-  addVehicleToDriver
+  newVehicle <- addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
+  when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
+    forceDriverOffline driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
@@ -884,6 +910,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
+      pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()
 deactivateCurrentRC transporterConfig driverId = do

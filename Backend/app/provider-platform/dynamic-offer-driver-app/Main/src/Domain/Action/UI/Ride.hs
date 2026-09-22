@@ -21,6 +21,7 @@ module Domain.Action.UI.Ride
     StopAction (..),
     listDriverRides,
     getDriverRideById,
+    resolveCallingNumber,
     arrivedAtPickup,
     arrivedAtDestination,
     otpRideCreate,
