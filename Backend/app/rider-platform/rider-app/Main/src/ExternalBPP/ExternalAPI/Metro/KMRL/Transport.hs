@@ -139,15 +139,17 @@ callKMRLRaw config manager url withToken payloadBytes = do
 freshToken :: (MonadFlow m, EncFlow m r, MonadReader r m) => KMRLConfig -> HTTP.Manager -> m Text
 freshToken config manager = do
   authPassword <- decrypt config.kmrlAuthPassword
+  -- Must go through `envelope` like every other call: the gateway keys on "Data"
+  -- (Go's TokenRequest tags it `json:"Data"`), not "data". Hand-rolling the body here
+  -- sent a lowercase key the gateway does not read, so every KMRL call - all of which
+  -- fetch a token first - failed at the first request.
   let body =
-        A.object
-          [ "data"
-              A..= A.object
-                [ "authUserId" A..= config.kmrlAuthUserId,
-                  "authPassword" A..= authPassword,
-                  "channelId" A..= config.kmrlChannelId
-                ]
-          ]
+        envelope $
+          A.object
+            [ "authUserId" A..= config.kmrlAuthUserId,
+              "authPassword" A..= authPassword,
+              "channelId" A..= config.kmrlChannelId
+            ]
   raw <- callKMRLRaw config manager config.tokenUrl False (BL.toStrict (A.encode body))
   case A.eitherDecodeStrict raw of
     Left err -> throwError (KMRLDecodeError ("token response: " <> T.pack err))
@@ -156,7 +158,9 @@ freshToken config manager = do
 newtype TokenResponse = TokenResponse {tokenResponseData :: TokenData}
 
 instance FromJSON TokenResponse where
-  parseJSON = A.withObject "TokenResponse" $ \o -> TokenResponse <$> o A..: "data"
+  -- "Data" (capital) is the envelope key the gateway answers with; the lowercase
+  -- "data" below is the inner payload inside it.
+  parseJSON = A.withObject "TokenResponse" $ \o -> TokenResponse <$> o A..: "Data"
 
 newtype TokenData = TokenData {tokenDataData :: TokenPayload}
 

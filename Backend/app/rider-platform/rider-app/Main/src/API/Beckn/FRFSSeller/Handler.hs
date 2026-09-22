@@ -44,9 +44,15 @@ claimOnce operator action mbTransactionId mbMessageId work = do
         (Redis.withCrossAppRedis $ Redis.setNxExpire (dedupeKey operator action transactionId messageId) dedupeTtlSeconds True)
         >>= \case
           Right claimed -> pure claimed
+          -- Fail closed. Processing anyway would let a buyer's retry issue a second
+          -- CDAC ticket and a second settlement row, and the claim is the only thing
+          -- standing between a retry and duplicate paid work. Nothing is lost by
+          -- refusing: confirm takes its own Redis lock (@Confirm.hs:160@), so these
+          -- flows cannot complete correctly without Redis regardless -- this just
+          -- fails cleanly and lets the BAP retry instead of double-issuing.
           Left err -> do
-            logWarning $ "FRFS seller " <> action <> " dedupe unavailable, processing anyway: " <> show err
-            pure True
+            logError $ "FRFS seller " <> action <> " dedupe unavailable, refusing: " <> show err
+            throwError . InternalError $ "FRFS seller " <> action <> " dedupe unavailable"
     if isFirst
       then do
         logInfo $ "FRFS seller " <> action <> " accepted: msg=" <> messageId
