@@ -98,6 +98,7 @@ import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Common.AddressDocumentType (castFromCommon, castToCommon)
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -123,6 +124,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
@@ -1094,11 +1096,11 @@ postDriverUpdateVehicleVariant merchantShortId opCity _ req = do
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
       else RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
-  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
+  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier transporterConfig req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
   pure Success
 
-updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
-updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
+updateVehicleVariantAndServiceTier :: DTC.TransporterConfig -> DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
+updateVehicleVariantAndServiceTier transporterConfig variant vehicle vehicleCategory = do
   -- Compute service tiers against the NEW variant: callers pass the vehicle read before the
   -- variant change is persisted, so override it in-memory before fetching eligible tiers.
   let updatedVehicle = vehicle {DVeh.variant = variant} :: DVeh.Vehicle
@@ -1106,8 +1108,9 @@ updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
   serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AutoSelectedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
-  when (vehicle.variant /= variant || vehicle.category /= Just vehicleCategory) $
-    DomainRC.forceDriverOffline vehicle.driverId
+  when (vehicle.category /= Just vehicleCategory) $ do
+    driverInfo <- QDriverInfo.findById (cast vehicle.driverId) >>= fromMaybeM DriverInfoNotFound
+    DDriverMode.forceDriverOfflineOnVehicleChange vehicle.driverId transporterConfig driverInfo
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
 ---------------------------------------------------------------------
@@ -1135,7 +1138,7 @@ postDriverBulkReviewRCVariant merchantShortId opCity req = do
           void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) vehicleRC.id
         else RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
       whenJust mVehicle $ \vehicle -> do
-        whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
+        whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier transporterConfig variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
 
 ---------------------------------------------------------------------
 postDriverUpdateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess
