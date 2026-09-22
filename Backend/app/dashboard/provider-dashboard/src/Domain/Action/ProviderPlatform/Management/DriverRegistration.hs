@@ -45,6 +45,7 @@ import qualified Domain.Action.ProviderPlatform.Management.Account as Common
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import qualified Kernel.External.Payout.Interface.Types as PayoutTypes
@@ -256,8 +257,9 @@ getDriverRegistrationDocumentsCommonList merchantShortId opCity apiTokenInfo lim
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsCommonList) limit offset from to documentType verificationStatus driverId sortByField sortOrder
 
-postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
-postDriverRegistrationDocumentRegister merchantShortId opCity apiTokenInfo driverId req = do
+postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Maybe Bool -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegister merchantShortId opCity apiTokenInfo driverId _clientAutoApprove req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentRegister) driverId req
+  let autoApprove = apiTokenInfo.person.dashboardAccessType == Just DRole.DASHBOARD_ADMIN
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentRegister) driverId (Just autoApprove) req

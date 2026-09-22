@@ -71,6 +71,7 @@ data TransporterConfig = TransporterConfig
     authPhoneNumberCountThreshold2 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     authPhoneNumberCountWindow1 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     authPhoneNumberCountWindow2 :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
+    autoApproveOnAdminUpload :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     automaticRCActivationCutOff :: Kernel.Types.Common.Seconds,
     availableForRidesDailyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     availableForRidesMaxSearchRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

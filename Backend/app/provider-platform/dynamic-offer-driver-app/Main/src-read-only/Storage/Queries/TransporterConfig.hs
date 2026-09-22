@@ -150,6 +150,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.authPhoneNumberCountThreshold2 authPhoneNumberCountThreshold2,
       Se.Set Beam.authPhoneNumberCountWindow1 authPhoneNumberCountWindow1,
       Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
+      Se.Set Beam.autoApproveOnAdminUpload autoApproveOnAdminUpload,
       Se.Set Beam.automaticRCActivationCutOff automaticRCActivationCutOff,
       Se.Set Beam.availableForRidesDailyLimit availableForRidesDailyLimit,
       Se.Set Beam.availableForRidesMaxSearchRequests availableForRidesMaxSearchRequests,
