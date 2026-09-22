@@ -36,6 +36,8 @@ module SharedLogic.BookingDeposit
     executeDepositRefundGateway,
     creditRiderBalance,
     expireOrRepairBookingDeposit,
+    holdGraceSeconds,
+    unpaidFeeGraceSeconds,
   )
 where
 
@@ -100,7 +102,10 @@ type DepositHoldFlow m r =
 -- | How long after booking.startTime a NEVER-STAFFED booking's fee hold is expired by
 --   BookingDepositExpiry. Holds on bookings that actually got a driver never expire on age.
 holdGraceSeconds :: Int
-holdGraceSeconds = 1200
+holdGraceSeconds = 600
+
+unpaidFeeGraceSeconds :: Int
+unpaidFeeGraceSeconds = 1200
 
 -- | Spendable balance: account balance minus every PENDING booking-fee hold.
 getAvailableBalance ::
@@ -185,9 +190,7 @@ data ReserveResult = Reserved | Insufficient
 -- | Outcome of the locked secure-or-plan decision.
 data FeeDecision = FeeSecured | FeeShortfall HighPrecMoney
 
--- | THE single decision point for funding a fee.
---   Fee is either secured (a live hold already exists, or the balance covers it and the hold is
---   placed right here) or the caller must fund the reported shortfall with a payment order.
+-- | Fee is either secured (a live hold already exists, or the balance covers it and the hold is placed right here) or the caller must fund the reported shortfall with a payment order.
 decideAndSecureBookingDeposit ::
   DepositHoldFlow m r =>
   DRB.Booking ->
@@ -248,8 +251,7 @@ holdBookingDeposit_ booking amount = do
         Right (Just entryId, _) ->
           logInfo $ "Held booking fee " <> show amount <> " entry " <> entryId.getId <> " booking " <> bookingId.getId
 
--- | Whether any hold for this booking was settled to revenue -- i.e. the deposit was captured
---   (cancellation forfeit or ride completion). A captured deposit is terminal: it can be
+-- | Whether any hold for this booking was settled to revenue -- i.e. the deposit was captured (cancellation forfeit or ride completion). A captured deposit is terminal: it can be
 --   neither released nor refunded, and the client shows it as FORFEITED.
 depositCaptured :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m Bool
 depositCaptured bookingId =
@@ -286,8 +288,7 @@ releaseBookingDeposit booking =
   when (isJust booking.bookingDepositAmount) $
     withRiderFeeLock booking.riderId $ releaseHolds_ booking.id
 
--- | Release by booking id alone, for the expiry job's orphan case where the booking row was
---   never written and no rider id is to hand.
+-- | Release by booking id alone, for the expiry job's orphan case where the booking row was never written and no rider id is to hand.
 releaseHolds ::
   DepositFlow m r => Id DRB.Booking -> m ()
 releaseHolds bookingId = do
@@ -303,8 +304,7 @@ releaseHolds bookingId = do
           logError $ "Booking fee hold on booking " <> bookingId.getId <> " has no counterparty on its account; releasing unlocked"
           releaseHolds_ bookingId
 
--- | Resolve PENDING holds left on a terminal booking by the booking's outcome: a completed ride
---   keeps the deposit, every other terminal outcome returns it.
+-- | Resolve PENDING holds left on a terminal booking by the booking's outcome: a completed ride keeps the deposit, every other terminal outcome returns it.
 resolveTerminalHolds ::
   DepositFlow m r => DRB.Booking -> m ()
 resolveTerminalHolds booking =
@@ -346,8 +346,7 @@ refundBookingDeposit booking = do
       Left () -> logInfo $ "Deposit refund for order " <> order.id.getId <> " already being processed elsewhere; skipping"
       Right () -> pure ()
 
--- | Ledger half of a deposit refund, shared by the inline cancel path and the dashboard
---   queue. Refuse if the deposit was already captured, void the holds, post the refund legs per paid order
+-- | Ledger half of a deposit refund, shared by the inline cancel path and the dashboard queue. Refuse if the deposit was already captured, void the holds, post the refund legs per paid order
 prepareDepositRefundLedger ::
   DepositFlow m r =>
   DRB.Booking ->
@@ -400,10 +399,7 @@ prepareDepositRefundLedger booking
                     Left err -> Nothing <$ logError ("Booking deposit refund ledger failed for order " <> order.id.getId <> ": " <> show err)
                     Right _ -> pure (Just (row, order))
 
--- | One auto-approved refund_request per deposit order, so every refund -- inline or
---   ops-triggered -- is visible and retryable in the dashboard queue. Reuses a live APPROVED
---   row (crash resume); leaves FAILED rows for ops (retry is an explicit /respond decision,
---   never automatic); skips REFUNDED/REJECTED.
+-- | One auto-approved refund_request per deposit order, so every refund -- inline or ops-triggered -- is visible and retryable in the dashboard queue. Reuses a live APPROVED row (crash resume); leaves FAILED rows for ops (retry is an explicit /respond decision, never automatic); skips REFUNDED/REJECTED.
 findOrCreateDepositRefundRequest ::
   (EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
@@ -453,9 +449,7 @@ findOrCreateDepositRefundRequest booking (_row, order) = do
             QRefundRequest.create reqRow
             pure (Just reqRow)
 
--- | refundPaymentService via makeRefundPayment, so a FAILED attempt is
---   retryable (per-attempt refundsId + retryIfFailed). Records the verdict on
---   both the refund_request and the booking_payment row.
+-- | refundPaymentService via makeRefundPayment, so a FAILED attempt is retryable (per-attempt refundsId + retryIfFailed). Records the verdict on both the refund_request and the booking_payment row.
 executeDepositRefundGateway ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -484,6 +478,9 @@ executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
             refundsId = refundReq.refundsId
           }
   rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   mbResp <- SPayment.makeRefundPaymentByServiceType booking.merchantId booking.merchantOperatingCityId row.paymentServiceType rider.clientSdkVersion gwReq
   case mbResp of
     Nothing -> logInfo $ "Deposit refund gateway skipped for order " <> order.id.getId <> " (in flight elsewhere or attempt already stands); leaving request APPROVED"
@@ -497,9 +494,6 @@ executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
             _ -> DBP.REFUND_INITIATED
       QRefundRequest.updateRefundIdAndStatus (Just (Id resp.refundId)) reqStatus refundReq.id
       QBookingPayment.updateStatusById bpStatus row.id
-      riderConfig <-
-        getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-          >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
         CheckRefundStatusJobData {refundId = resp.refundId, numberOfRetries = 0}
       logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> resp.refundId <> " order " <> order.id.getId
@@ -532,11 +526,17 @@ expireOrRepairBookingDeposit ::
 expireOrRepairBookingDeposit booking = do
   now <- getCurrentTime
   mbRide <- QRide.findActiveByRBId booking.id
-  let repairable =
+  entries <- Ledger.getEntriesByReference bookingDepositHoldRefType booking.id.getId
+  let everHeld = not (null entries)
+      (graceAnchor, graceSeconds) =
+        if everHeld
+          then (booking.startTime, holdGraceSeconds)
+          else (booking.createdAt, unpaidFeeGraceSeconds)
+      repairable =
         isJust booking.bookingDepositAmount
           && booking.status `elem` [DRB.NEW, DRB.CONFIRMED]
           && isNothing mbRide
-          && addUTCTime (fromIntegral holdGraceSeconds) booking.startTime < now
+          && addUTCTime (fromIntegral graceSeconds) graceAnchor < now
   if not repairable
     then do
       logInfo $
@@ -546,7 +546,9 @@ expireOrRepairBookingDeposit booking = do
           <> " activeRide="
           <> show (isJust mbRide)
           <> " graceEnd="
-          <> show (addUTCTime (fromIntegral holdGraceSeconds) booking.startTime)
+          <> show (addUTCTime (fromIntegral graceSeconds) graceAnchor)
+          <> " anchoredOn="
+          <> (if everHeld then "startTime (ever held)" else "createdAt (never held)")
           <> " now="
           <> show now
       pure False
@@ -586,8 +588,7 @@ buildLocalCancellationReason booking = do
         updatedAt = now
       }
 
--- | Money arriving from the payment gateway. Two legs, matching the house pattern: a
---   cash-arrival leg and an allocation leg
+-- | Money arriving from the payment gateway. Two legs, matching the house pattern: a cash-arrival leg and an allocation leg
 creditRiderBalance ::
   DepositFlow m r =>
   Id DP.Person ->

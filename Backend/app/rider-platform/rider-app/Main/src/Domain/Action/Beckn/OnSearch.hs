@@ -59,6 +59,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.NyRegularInstanceLog as DNyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -369,7 +370,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Redis.withLockRedis lockKey 5 $ do
         QEstimate.createMany estimates
         QQuote.createMany quotes
-        QPFS.clearCache searchRequest.riderId
+        -- Same reason as the guard in Domain.Action.UI.Search: a pending booking fee is the
+        -- rider's only route back to the pay-fee screen and nothing re-derives it. on_search
+        -- fires for every search, including one made while a fee is owed, so clearing
+        -- unconditionally here silently undid that guard.
+        mbFlowStatus <- QPFS.getStatus searchRequest.riderId
+        case mbFlowStatus of
+          Just DPFS.WAITING_FOR_BOOKING_FEE_PAYMENT {} -> pure ()
+          _ -> QPFS.clearCache searchRequest.riderId
 
       when (searchRequest.isMeterRideSearch == Just True && not isShadowSearch) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")

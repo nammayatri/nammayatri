@@ -493,7 +493,6 @@ onUpdate = \case
 
     void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimate.id
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
-    void $ withTryCatch "quoteRepetition:releaseBookingDeposit" $ BookingDeposit.releaseBookingDeposit booking
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
     -- make all the booking parties inactive during rellocation
