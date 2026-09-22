@@ -1195,3 +1195,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_a
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_max_amount integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negative_fare_adjustment_congestion_threshold double precision ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_cool_off_period integer  default 30;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auto_approve_on_admin_upload boolean  default false;

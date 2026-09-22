@@ -745,7 +745,18 @@ postDriverRegistrationDocumentsCommon ::
   Id Common.Driver ->
   Common.CommonDocumentCreateReq ->
   Flow Common.CommonDocumentCreateRes
-postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
+postDriverRegistrationDocumentsCommon merchantShortId opCity driverId req = do
+  res <- createCommonDocument merchantShortId opCity driverId req
+  refreshOnboardingFlags (cast driverId)
+  pure res
+
+createCommonDocument ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Common.CommonDocumentCreateReq ->
+  Flow Common.CommonDocumentCreateRes
+createCommonDocument merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   when (mapDocumentType documentType `Set.member` SDO.domainTableDocumentTypes) $
@@ -817,15 +828,6 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
             throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
           createDocumentEntry
       else createDocumentEntry
-  mbPerson <- QPerson.findById driverPersonId
-  void $
-    withTryCatch "refreshDocsStatus:postDriverRegistrationDocumentsCommon" $
-      case mbPerson of
-        Just person
-          | DCommon.checkFleetOwnerRole person.role ->
-            void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) Nothing driverPersonId
-        _ ->
-          void $ SStatus.runRefreshOnboardingFlagsDriver mbPerson Nothing driverPersonId
   pure res
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
@@ -932,34 +934,64 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
     False
     (bool Nothing (Just (cast driverId_)) (isJust isFleetOwner))
 
-postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegister :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Bool -> Common.DocumentRegisterReq -> Flow APISuccess
 postDriverRegistrationDocumentRegister = postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.DASHBOARD
 
-postDriverRegistrationDocumentRegisterWithVerifiedBy :: DPan.VerifiedBy -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentRegisterReq -> Flow APISuccess
-postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantShortId opCity driverId_ Common.DocumentRegisterReq {..} = do
+postDriverRegistrationDocumentRegisterWithVerifiedBy :: DPan.VerifiedBy -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Bool -> Common.DocumentRegisterReq -> Flow APISuccess
+postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantShortId opCity driverId_ mbAutoApprove Common.DocumentRegisterReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  void $
-    case metadata of
-      Common.DLData dlReq -> registerDL merchant merchantOpCityId dlReq
-      Common.RCData rcReq -> registerRC merchant merchantOpCityId rcReq
-      Common.AadhaarData aadhaarReq -> registerAadhaar merchant merchantOpCityId aadhaarReq
-      Common.PanData panReq -> registerPan merchant merchantOpCityId panReq
-      Common.GSTData gstReq -> registerGst merchant merchantOpCityId gstReq
-      Common.UDYAMData udyamReq -> registerUdyam merchantOpCityId udyamReq
-      Common.CommonData commonReq -> do
-        _ <- postDriverRegistrationDocumentsCommon merchantShortId opCity driverId_ commonReq
-        return Success
-      Common.VehiclePermitData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePermit (Just req.rcNumber) (\st -> upsertPermit st req)
-      Common.VehiclePUCData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePUC (Just req.rcNumber) (\st -> upsertPUC st req)
-      Common.VehicleFitnessData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleFitnessCertificate (Just req.rcNumber) (\st -> upsertFitnessCertificate st req)
-      Common.VehicleInsuranceData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleInsurance (Just req.rcNumber) (\st -> upsertInsurance st (insuranceApproveDetails req))
-      Common.VehicleNOCData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleNOC (Just req.rcNumber) (\st -> upsertNOC st req)
-      Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate Nothing (\st -> upsertGST st req)
-      Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense Nothing (\st -> upsertBusinessLicense st req)
-  refreshOnboardingFlags (cast driverId_)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let autoApprove = mbAutoApprove == Just True && transporterConfig.autoApproveOnAdminUpload == Just True
+  mbApproveDetails <- registerDocument merchant merchantOpCityId
+  case (autoApprove, mbApproveDetails) of
+    (True, Just approveDetails) -> void $ postDriverRegistrationDocumentsUpdate merchantShortId opCity (Common.Approve approveDetails)
+    _ -> refreshOnboardingFlags (cast driverId_)
   pure Success
   where
+    registerDocument merchant merchantOpCityId =
+      case metadata of
+        Common.DLData dlReq -> do
+          void $ registerDL merchant merchantOpCityId dlReq
+          pure . Just . Common.DL $
+            Common.DLApproveDetails
+              { documentImageId = dlReq.imageId1,
+                driverLicenseNumber = Just dlReq.driverLicenseNumber,
+                driverDateOfBirth = Just dlReq.driverDateOfBirth,
+                dateOfExpiry = Nothing
+              }
+        Common.RCData rcReq -> do
+          void $ registerRC merchant merchantOpCityId rcReq
+          pure . Just . Common.RC $
+            Common.RCApproveDetails
+              { documentImageId = rcReq.imageId,
+                vehicleNumberPlate = Just rcReq.vehicleRegistrationCertNumber,
+                vehicleManufacturer = (.vehicleManufacturer) <$> rcReq.vehicleDetails,
+                vehicleModel = (.vehicleModel) <$> rcReq.vehicleDetails,
+                vehicleColor = (.vehicleColour) <$> rcReq.vehicleDetails,
+                vehicleVariant = Nothing,
+                vehicleModelYear = (.vehicleModelYear) =<< rcReq.vehicleDetails,
+                vehicleDoors = (.vehicleDoors) =<< rcReq.vehicleDetails,
+                vehicleSeatBelts = (.vehicleSeatBelts) =<< rcReq.vehicleDetails,
+                fitnessExpiry = Nothing,
+                permitExpiry = Nothing
+              }
+        Common.AadhaarData aadhaarReq -> void (registerAadhaar merchant merchantOpCityId aadhaarReq) >> pure Nothing
+        Common.PanData panReq -> void (registerPan merchant merchantOpCityId panReq) >> pure Nothing
+        Common.GSTData gstReq -> void (registerGst merchant merchantOpCityId gstReq) >> pure Nothing
+        Common.UDYAMData udyamReq -> void (registerUdyam merchantOpCityId udyamReq) >> pure Nothing
+        Common.CommonData commonReq -> do
+          res <- createCommonDocument merchantShortId opCity driverId_ commonReq
+          pure . Just . Common.CommonDocument $
+            Common.CommonDocumentApproveDetails {documentId = res.documentId, updatedDocumentData = Nothing}
+        Common.VehiclePermitData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePermit (Just req.rcNumber) (\st -> upsertPermit st req) >> pure (Just (Common.VehiclePermit req))
+        Common.VehiclePUCData req -> registerDocWithData merchant merchantOpCityId DVC.VehiclePUC (Just req.rcNumber) (\st -> upsertPUC st req) >> pure (Just (Common.VehiclePUC req))
+        Common.VehicleFitnessData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleFitnessCertificate (Just req.rcNumber) (\st -> upsertFitnessCertificate st req) >> pure (Just (Common.VehicleFitnessCertificate req))
+        Common.VehicleInsuranceData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleInsurance (Just req.rcNumber) (\st -> upsertInsurance st (insuranceApproveDetails req)) >> pure (Just (Common.VehicleInsurance (insuranceApproveDetails req)))
+        Common.VehicleNOCData req -> registerDocWithData merchant merchantOpCityId DVC.VehicleNOC (Just req.rcNumber) (\st -> upsertNOC st req) >> pure (Just (Common.NOC req))
+        Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate Nothing (\st -> upsertGST st req) >> pure (Just (Common.GSTApprove req))
+        Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense Nothing (\st -> upsertBusinessLicense st req) >> pure (Just (Common.BusinessLicenseImg req))
+
     registerDL merchant merchantOpCityId Common.RegisterDLReq {..} = do
       let verifyBy = case defaultVerifyBy of
             DPan.FRONTEND_SDK -> DPan.FRONTEND_SDK
@@ -1073,7 +1105,6 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
       mbVehicleCategory <- maybe (pure Nothing) rcVehicleCategory mbRcNumber
       docStatus <- docRegisterStatus merchantOpCityId docType mbVehicleCategory
       void $ upsertDoc docStatus merchant.id merchantOpCityId
-      return Success
 
     rcVehicleCategory :: Text -> Flow (Maybe DVCat.VehicleCategory)
     rcVehicleCategory rcNumber = do

@@ -307,12 +307,12 @@ postDriverRegistrationDocumentsCommon a5 a4 a3 a2 a1 =
         Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentsCommon a5 a4 a2 a1
     )
 
-postDriverRegistrationDocumentRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentRegisterReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverRegistrationDocumentRegister a5 a4 a3 a2 a1 =
+postDriverRegistrationDocumentRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentRegisterReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverRegistrationDocumentRegister a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
-        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_REGISTER" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentRegister a5 a4 a2 a1
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_REGISTER" a4 (Kernel.Prelude.Just a1)
+        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentRegister a6 a5 a3 a2 a1
     )
 
 postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

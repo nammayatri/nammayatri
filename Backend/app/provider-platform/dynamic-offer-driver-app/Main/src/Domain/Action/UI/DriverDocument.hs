@@ -29,7 +29,7 @@ postDriverDocumentRegister (mbPersonId, merchantId, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   moc <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  DR.postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.FRONTEND_SDK merchant.shortId moc.city (cast personId) req
+  DR.postDriverRegistrationDocumentRegisterWithVerifiedBy DPan.FRONTEND_SDK merchant.shortId moc.city (cast personId) Nothing req
 
 getDriverDocumentGet ::
   ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

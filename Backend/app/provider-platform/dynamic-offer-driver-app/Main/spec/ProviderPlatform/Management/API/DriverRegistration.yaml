@@ -272,6 +272,8 @@ apis:
   - POST: # DocumentRegisterAPI
       endpoint: /{driverId}/document/register
       auth: ApiAuthV2
+      query:
+        - autoApprove: Bool
       params:
         driverId: Id Driver
       request:
