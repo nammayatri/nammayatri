@@ -23,6 +23,7 @@ module Domain.Action.UI.Driver
     GetNearbySearchRequestsRes (..),
     DriverOfferReq (..),
     DriverRespondReq (..),
+    DriverRespondRes (..),
     DriverStatsRes (..),
     DriverAlternateNumberReq (..),
     ScheduledBookingRes (..),
@@ -139,6 +140,7 @@ import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
+import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -739,6 +741,18 @@ data DriverRespondReq = DriverRespondReq
     notificationSource :: Maybe NotificationSource,
     renderedAt :: Maybe UTCTime,
     respondedAt :: Maybe UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data DriverRespondRes = DriverRespondRes
+  { -- | Always "Success": keeps the wire shape a superset of the legacy APISuccess
+    -- response ({"result":"Success"}), so older app builds keep parsing it.
+    result :: Text,
+    -- | Present only when this call itself created the ride (one-shot assignment);
+    -- exactly the /driver/ride/{rideId} payload. Nothing whenever the ride is
+    -- created later in the Beckn select/confirm relay.
+    ride :: Maybe RideCommon.DriverRideRes
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -1934,9 +1948,10 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
+  void $ respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
+  pure Success
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow APISuccess
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow DriverRespondRes
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
@@ -1952,7 +1967,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
-  case req.response of
+  mbOneShotRideRes <- case req.response of
     Accept -> do
       quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
       lockRespondQuote <- Redis.tryLockRedis (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown
@@ -1982,7 +1997,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-            driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
+            (driverFCMPulledList, mbRideRes) <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
               DTC.EstimateBased _ -> do
                 let oneShotAssignAction driverQuote =
                       OneShot.oneShotAssign
@@ -1998,6 +2013,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                             transporterConfig = transporterConfig
                           }
                 acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
+              -- Static-offer: the booking already exists (created at confirm) and the ride is
+              -- initialized inside the accept, so it returns the assigned-ride payload too.
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
@@ -2007,11 +2024,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
+            pure mbRideRes
           else do
             if not lockEditDestination
               then throwError $ DriverTransactionTryAgain Nothing
               else do
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
+                pure Nothing
     Reject -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
@@ -2052,13 +2071,14 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         searchReq <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) driverId merchantId (searchTry.id.getId <> ":" <> driverId.getId)
       unlockRedisQuoteKeys
+      pure Nothing
     Pulled -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
       throwError UnexpectedResponseValue
-  pure Success
+  pure $ DriverRespondRes {result = "Success", ride = mbOneShotRideRes}
   where
     buildDriverRespondEventPayload searchTryId searchReqId restActiveDriverSearchReqs =
       DST.OnDriverAcceptingSearchRequest
@@ -2169,7 +2189,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
@@ -2194,7 +2214,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     QST.updateStatus DST.COMPLETED searchTry.id
     mSReqFD <- QSRD.findByDriverAndSearchTryId driver.id searchTry.id
     whenJust mSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
-  (ride, _, vehicle) <-
+  (ride, rideDetails, vehicle) <-
     if booking.isScheduled
       then -- per-driver lock: two overlapping scheduled accepts hold different per-booking locks, so serialize
       -- here; 60s TTL covers the worst-case critical section (feasibility legs + initializeRide)
@@ -2229,7 +2249,17 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
           rideId = ride.id
         }
   CS.markBookingAssignmentCompleted uBooking.id
-  return driverFCMPulledList
+  -- Response enrichment only: a failure here must not fail an accept whose ride is
+  -- already created and announced to the BAP, so it degrades to Nothing.
+  rideResResult <- withTryCatch "staticOfferAccept:driverRideRes" $ do
+    driverInfo <- QDriverInformation.findById driver.id >>= fromMaybeM DriverInfoNotFound
+    OneShot.buildAssignedDriverRideRes driver driverInfo transporterConfig uBooking ride rideDetails
+  mbRideRes <- case rideResResult of
+    Right res -> pure (Just res)
+    Left err -> do
+      logError $ "Static-offer accept: building driver ride response failed for ride " <> ride.id.getId <> ": " <> show err
+      pure Nothing
+  return (driverFCMPulledList, mbRideRes)
   where
     -- gate column keeps the earliest future hold (min); first hold collapses to today's overwrite
     updateLatestScheduledAsMin booking = do

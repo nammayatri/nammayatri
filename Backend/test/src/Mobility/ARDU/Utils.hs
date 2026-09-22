@@ -206,7 +206,7 @@ offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.ui.driver.offerQuote driver.token Nothing $ TDriver.DriverOfferReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) bppSearchRequestId
 
-respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
+respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError TDriver.DriverRespondRes)
 respondQuoteEither driver fare bppSearchRequestId response =
   callBppEither $ API.ui.driver.respondQuote driver.token Nothing Nothing Nothing Nothing Nothing Nothing $ TDriver.DriverRespondReq (Just fare) (Just $ PriceAPIEntity (toHighPrecMoney fare) INR) Nothing (Just bppSearchRequestId) response Nothing Nothing Nothing
 

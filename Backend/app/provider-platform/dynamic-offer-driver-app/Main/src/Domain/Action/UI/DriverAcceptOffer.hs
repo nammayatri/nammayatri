@@ -21,6 +21,7 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Person as SP
+import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types as DTC
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
@@ -134,10 +135,11 @@ acceptDynamicOfferDriverRequest ::
   DStats.DriverStats ->
   TransporterConfig ->
   -- | One-shot assignment action (booking + ride + single BAP callback), supplied by
-  -- Flow-level callers (respondQuote); when eligible it replaces sendDriverOffer.
+  -- Flow-level callers (respondQuote); when eligible it replaces sendDriverOffer and
+  -- yields the driver ride response for the ride it created.
   -- Server-side replay paths (silent-assign) pass Nothing and keep the legacy on_select.
-  Maybe (DDrQuote.DriverQuote -> m ()) ->
-  m [SearchRequestForDriver]
+  Maybe (DDrQuote.DriverQuote -> m (Maybe RideCommon.DriverRideRes)) ->
+  m ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
 acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign = do
   let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
   logDebug $ "offered fare: " <> show reqOfferedValue
@@ -229,10 +231,12 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
   -- here too would double-notify them now that the pull loop runs forked.
   when (isNothing mbOneShotAction) $
     pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
-  case mbOneShotAction of
+  mbOneShotRideRes <- case mbOneShotAction of
     Just action -> action driverQuote
-    Nothing -> sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
-  return driverFCMPulledList
+    Nothing -> do
+      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
+      pure Nothing
+  return (driverFCMPulledList, mbOneShotRideRes)
   where
     getQuoteLimit dist vehicleServiceTier tripCategory sr area searchRepeatType searchRepeatCounter = do
       L.setOptionLocal TxnIdKey sr.transactionId

@@ -22,6 +22,7 @@ module API.UI.Driver
     DDriver.GetNearbySearchRequestsRes (..),
     DDriver.DriverOfferReq (..),
     DDriver.DriverRespondReq (..),
+    DDriver.DriverRespondRes (..),
     DDriver.DriverStatsRes (..),
     DDriver.DriverAlternateNumberReq (..),
     DDriver.DriverAlternateNumberRes (..),
@@ -119,7 +120,7 @@ type API =
            :> Header "x-react-bundle-version" Text
            :> Header "x-device" Text
            :> ReqBody '[JSON] DDriver.DriverRespondReq
-           :> Post '[JSON] APISuccess
+           :> Post '[JSON] DDriver.DriverRespondRes
            :<|> "profile"
            :> ( TokenAuth
                   :> Header "x-package" Text
@@ -365,7 +366,7 @@ respondQuote ::
   Maybe Text ->
   Maybe Text ->
   DDriver.DriverRespondReq ->
-  FlowHandler APISuccess
+  FlowHandler DDriver.DriverRespondRes
 respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice
 
 getStats :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DDriver.DriverStatsRes
