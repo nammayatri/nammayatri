@@ -3,7 +3,6 @@ module Domain.Action.Internal.QuoteRespond where
 import qualified Domain.Action.UI.Driver as DDriver
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
@@ -19,7 +18,7 @@ respondQuote ::
   Maybe Text ->
   Maybe Text ->
   DDriver.DriverRespondReq ->
-  Flow APISuccess
+  Flow DDriver.DriverRespondRes
 respondQuote token clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice request = do
   regToken <- fromMaybeM AccessDenied token
   (personId, driverId, merchantOpCityId) <- verifyPerson regToken
