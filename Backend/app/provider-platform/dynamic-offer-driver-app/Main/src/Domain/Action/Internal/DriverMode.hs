@@ -272,3 +272,16 @@ updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newF
     else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime driverId
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode
+
+forceDriverOfflineOnVehicleChange ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  DI.DriverInformation ->
+  m ()
+forceDriverOfflineOnVehicleChange driverId transporterConfig driverInfo = do
+  isOnRide <- QDriverInformation.findByDriverIdActiveRide (cast driverId)
+  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  unless (not driverInfo.active && driverInfo.mode == Just DriverInfo.OFFLINE) $ do
+    now <- getCurrentTime
+    updateDriverModeAndFlowStatus driverId transporterConfig False (Just DriverInfo.OFFLINE) DDFS.OFFLINE driverInfo Nothing (Just now)

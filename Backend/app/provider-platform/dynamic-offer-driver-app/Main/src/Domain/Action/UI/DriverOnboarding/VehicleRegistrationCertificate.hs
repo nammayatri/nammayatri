@@ -28,7 +28,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     removeVehicle,
     endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
-    forceDriverOffline,
     getAllLinkedRCs,
     LinkedRC (..),
     DeleteRCReq (..),
@@ -694,7 +693,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                     let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
-                    when (updatedVehicle.variant /= vehicle.variant || updatedVehicle.category /= vehicle.category) $
+                    when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
@@ -892,10 +891,12 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
     unless (fromMaybe False rc.approved) $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Vehicle is not approved"
       throwError (InvalidRequest "Vehicle is not approved")
+  mbOldVehicle <- VQuery.findById driverInfo.driverId
   deactivateCurrentRC transporterConfig driverInfo.driverId
-  addVehicleToDriver
+  newVehicle <- addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
-  forceDriverOffline driverInfo.driverId
+  when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
+    forceDriverOffline driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
@@ -909,6 +910,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
+      pure vehicle
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()
 deactivateCurrentRC transporterConfig driverId = do
