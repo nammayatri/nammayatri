@@ -661,8 +661,12 @@ calculateFareParametersHandler params = do
             -- Filled in by 'calculateFareParameters' once the full params exist.
             bufferedFare = Nothing
           }
-  KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
-  logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
+  -- The FCBuffer pass re-runs this handler only to price the buffered ceiling;
+  -- skip its info logs so a capped estimate doesn't emit the slab debug trail
+  -- and the full params dump twice per calculation.
+  unless (params.computationPhase == FCBuffer) $ do
+    KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
+    logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
   where
     estimateComponentMap = maybe Map.empty buildComponentMap params.mbEstimateFareParams
@@ -1118,29 +1122,34 @@ calculateFareParameters ::
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
-  -- First, calculate base fare using v1 calculator
-  baseFareParams <- calculateFareParametersHandler params
-  -- Fetch TransporterConfig once (V2 flag + DriverWalletConfig payment-charge knobs)
+  -- Fetch TransporterConfig once (V2 flag + DriverWalletConfig payment-charge
+  -- knobs); shared with the FCBuffer pass below so pricing the buffered
+  -- ceiling doesn't re-fetch it.
   mbTransporterConfig <- case params.merchantOperatingCityId of
     Just merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
     Nothing -> pure Nothing
-  let isV2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) mbTransporterConfig
-  -- Apply configurable charges only if V2 is enabled
-  fareWithV2 <-
-    if isV2Enabled
-      then applyConfiguredCharges params.farePolicy baseFareParams
-      else pure baseFareParams
-  -- Apply airport entry fee (if any) to parkingCharge in FareParameters
-  fareWithAirport <- applyAirportEntryFee params fareWithV2
-  -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
-  let mbDriverWalletConfig = (.driverWalletConfig) <$> mbTransporterConfig
-      fareWithGrossUp = applyPaymentChargeGrossUp mbDriverWalletConfig fareWithAirport
+  fareWithGrossUp <- runFarePipeline mbTransporterConfig params
   bufferedFare <- case (params.computationPhase, params.farePolicy.fareRecomputeCapConfig) of
     (FCEstimate, Just capConfig) -> do
-      bufferedParams <- calculateFareParameters params {computationPhase = FCBuffer, mbCapConfig = Just capConfig}
+      bufferedParams <- runFarePipeline mbTransporterConfig params {computationPhase = FCBuffer, mbCapConfig = Just capConfig}
       pure $ Just (fareSum bufferedParams Nothing)
     _ -> pure Nothing
   pure fareWithGrossUp {bufferedFare = bufferedFare}
+  where
+    runFarePipeline mbTransporterConfig prms = do
+      -- First, calculate base fare using v1 calculator
+      baseFareParams <- calculateFareParametersHandler prms
+      let isV2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) mbTransporterConfig
+      -- Apply configurable charges only if V2 is enabled
+      fareWithV2 <-
+        if isV2Enabled
+          then applyConfiguredCharges prms.farePolicy baseFareParams
+          else pure baseFareParams
+      -- Apply airport entry fee (if any) to parkingCharge in FareParameters
+      fareWithAirport <- applyAirportEntryFee prms fareWithV2
+      -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
+      let mbDriverWalletConfig = (.driverWalletConfig) <$> mbTransporterConfig
+      pure $ applyPaymentChargeGrossUp mbDriverWalletConfig fareWithAirport
 
 -- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
 --
