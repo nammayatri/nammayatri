@@ -101,9 +101,9 @@ deleteDriver merchantShortId reqDriverId = do
           logTagInfo "deleteFleet : " (show reqDriverId)
         DP.DRIVER -> do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-          driverDeleteCheck <- validateDriver merchant person (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
-          when driverDeleteCheck $ throwError $ InvalidRequest "Driver can't be deleted"
           SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetDriver person.id)
+          mbUndeletableReason <- driverUndeletableReason merchant person (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+          whenJust mbUndeletableReason $ throwError . InvalidRequest
           driverInfo <- QDriverInfo.findById (cast person.id) >>= fromMaybeM DriverInfoNotFound
           OF.removeDriverFromOnboardingCounters (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) transporterConfig person driverInfo
           -- this function uses tokens from db, so should be called before transaction
@@ -147,10 +147,19 @@ deleteDriver merchantShortId reqDriverId = do
         _ -> pure ()
       return Success
 
-validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> Bool -> m Bool
-validateDriver merchant driver unifiedRecompute = do
+driverUndeletableReason :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> Bool -> m (Maybe Text)
+driverUndeletableReason merchant driver unifiedRecompute = do
   let personId = driver.id
   ride <- QRide.findOneByDriverId personId
   driverInformation <- QDriverInfo.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let stillActive = driverInformation.enabled && (not unifiedRecompute || isNothing driverInformation.disabledReasonFlag)
-  return (merchant.id /= driver.merchantId || driver.role /= DP.DRIVER || isJust ride || stillActive)
+  let reasons :: [(Text, Bool)]
+      reasons =
+        [ ("Driver has ride history and cannot be permanently deleted", isJust ride),
+          ("Driver is still active, disable the driver before deleting", stillActive),
+          ("Driver can't be deleted", merchant.id /= driver.merchantId || driver.role /= DP.DRIVER)
+        ]
+  return $ fst <$> find snd reasons
+
+validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> Bool -> m Bool
+validateDriver merchant driver unifiedRecompute = isJust <$> driverUndeletableReason merchant driver unifiedRecompute
