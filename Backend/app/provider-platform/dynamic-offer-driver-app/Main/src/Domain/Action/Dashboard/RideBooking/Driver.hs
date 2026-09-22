@@ -39,6 +39,7 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -953,6 +954,11 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   runRequestValidation (Common.validateAddVehicleReq transporterConfig.preProcessDocumentIdentifiers) req
 
+  let skipVehicleCreationAndOffline = transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role
+  unless skipVehicleCreationAndOffline $ do
+    isOnRide <- QDriverInfo.findByDriverIdActiveRide (cast personId)
+    when (isJust isOnRide) $ throwError RCVehicleOnRide
+
   when (requestor.role == DP.DRIVER) $ do
     mbLinkedVehicle <- QVehicle.findById personId
     whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
@@ -1006,11 +1012,11 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           createReminder ODC.VehicleInsurance personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just insuranceValidity) Nothing
         cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
         -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
-        unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
+        unless skipVehicleCreationAndOffline $ do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
           QVehicle.create vehicle
-          DomainRC.forceDriverOffline personId
+          DDriverMode.forceDriverOfflineOnVehicleChange personId transporterConfig driverInfo'
           when (vehicle.variant == DV.SUV) $
             QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
