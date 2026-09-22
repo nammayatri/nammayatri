@@ -1061,6 +1061,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                     pure (planBasedChecks', False)
               let isVehicleVariantDisabledForSubscription = maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
               when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
+              when (isSubscriptionVehicleCategoryChanged && not isOnFreeTrial && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <-
               case mbFleetAssociation of

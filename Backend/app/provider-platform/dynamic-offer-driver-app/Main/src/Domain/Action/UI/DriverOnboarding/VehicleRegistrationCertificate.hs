@@ -28,6 +28,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     removeVehicle,
     endAllRCAssociationsAndRemoveVehicle,
     deleteRC,
+    forceDriverOffline,
     getAllLinkedRCs,
     LinkedRC (..),
     DeleteRCReq (..),
@@ -693,6 +694,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                     let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
+                    when (updatedVehicle.variant /= vehicle.variant || updatedVehicle.category /= vehicle.category) $
+                      forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
@@ -802,6 +805,27 @@ removeVehicle isTaxiBoothRequest driverId = do
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
+-- | Put the driver OFFLINE when the linked vehicle/variant changes so they cannot
+-- keep taking rides on a plan that no longer matches. Throws RCVehicleOnRide if
+-- they currently have an active ride. No-ops if already offline.
+forceDriverOffline ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Person.Person ->
+  m ()
+forceDriverOffline driverId = do
+  isOnRide <- DIQuery.findByDriverIdActiveRide (cast driverId)
+  when (isJust isOnRide) $ throwError RCVehicleOnRide
+  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  unless (not driverInfo.active && driverInfo.mode == Just DCommon.OFFLINE) $ do
+    now <- getCurrentTime
+    logInfo $ "Forcing driver offline due to vehicle/variant change: " <> driverId.getId
+    DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
+
 validateRCActivation :: OnboardingFlow m r => Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m Bool
 validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   now <- getCurrentTime
@@ -871,6 +895,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   deactivateCurrentRC transporterConfig driverInfo.driverId
   addVehicleToDriver
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
+  forceDriverOffline driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
