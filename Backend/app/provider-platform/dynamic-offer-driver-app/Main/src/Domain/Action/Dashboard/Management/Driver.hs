@@ -1106,6 +1106,8 @@ updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
   serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AutoSelectedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
+  when (vehicle.variant /= variant || vehicle.category /= Just vehicleCategory) $
+    DomainRC.forceDriverOffline vehicle.driverId
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
 ---------------------------------------------------------------------

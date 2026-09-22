@@ -1010,6 +1010,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
           QVehicle.create vehicle
+          DomainRC.forceDriverOffline personId
           when (vehicle.variant == DV.SUV) $
             QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
