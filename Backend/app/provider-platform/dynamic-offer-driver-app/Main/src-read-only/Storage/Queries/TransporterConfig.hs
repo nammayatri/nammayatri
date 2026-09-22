@@ -269,7 +269,6 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.enableManualDocumentStatusCheck enableManualDocumentStatusCheck,
       Se.Set Beam.enableMobileNumberValidation enableMobileNumberValidation,
       Se.Set Beam.enableMobilityBilling enableMobilityBilling,
-      Se.Set Beam.enableOndcScheduledRideSupport enableOndcScheduledRideSupport,
       Se.Set Beam.enableOverchargingBlocker (Just enableOverchargingBlocker),
       Se.Set Beam.enablePullPendingDocVerification enablePullPendingDocVerification,
       Se.Set Beam.enableScheduleReallocation enableScheduleReallocation,

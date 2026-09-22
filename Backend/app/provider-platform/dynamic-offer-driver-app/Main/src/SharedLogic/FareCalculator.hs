@@ -547,7 +547,6 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     petCharges :: Maybe HighPrecMoney,
     -- | Charge for the rider add-ons selected at /select, passed through unchanged (outside discounts; VAT/commission via AddOnChargeComponent in the fare policy) -- see FareParameters.addOnCharges.
     addOnCharges :: Maybe HighPrecMoney,
-    -- | Delta of the fare negotiated at /select from the originally quoted fare, passed through unchanged so a recalculation does not drop it -- see FareParameters.negotiatedFareDelta.
     negotiatedFareDelta :: Maybe HighPrecMoney,
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,

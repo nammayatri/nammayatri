@@ -12,26 +12,31 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BapMetadataT f = BapMetadataT
-  { domain :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+  { domain :: B.C f Data.Text.Text,
+    enableOndcScheduledRideSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Data.Text.Text,
     logoUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     name :: B.C f Data.Text.Text,
     offlineContract :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    staticTermsUrl :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    staticTermsUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     supportEmail :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     supportPhone :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    supportUrl :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
+    supportUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table BapMetadataT where
-  data PrimaryKey BapMetadataT f = BapMetadataId (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
-  primaryKey = BapMetadataId . id
+  data PrimaryKey BapMetadataT f
+    = BapMetadataId (B.C f Data.Text.Text) (B.C f Data.Text.Text) (B.C f (Kernel.Prelude.Maybe Data.Text.Text)) (B.C f (Kernel.Prelude.Maybe Data.Text.Text))
+    deriving (Generic, B.Beamable)
+  primaryKey = BapMetadataId <$> domain <*> id <*> merchantId <*> merchantOperatingCityId
 
 type BapMetadata = BapMetadataT Identity
 
-$(enableKVPG ''BapMetadataT ['id] [])
+$(enableKVPG ''BapMetadataT ['domain, 'id, 'merchantId, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''BapMetadataT "bap_metadata")

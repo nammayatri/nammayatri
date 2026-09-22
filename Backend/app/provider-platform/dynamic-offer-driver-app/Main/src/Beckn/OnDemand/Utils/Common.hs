@@ -70,13 +70,12 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
 data Pricing = Pricing
@@ -569,7 +568,7 @@ mkStopsOUS booking ride rideOtp mEndOtp =
 type IsValueAddNP = Bool
 
 -- | ONDC v2.1.0 fulfillments.agent.person.creds. MEMBERSHIP_TIER is only sent for
--- cities piloting the scheduled-category signal (see TransporterConfig.enableOndcScheduledRideSupport).
+-- BAPs piloting the scheduled-category signal (see BapMetadata.enableOndcScheduledRideSupport).
 -- ACHIEVEMENTS/BADGES are intentionally omitted -- no domain source for them yet.
 mkAgentCreds :: UTCTime -> Bool -> SP.Person -> Maybe DDriverStats.DriverStats -> [Spec.Cred]
 mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats =
@@ -620,8 +619,8 @@ mkFulfillmentV2 ::
 mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   now <- getCurrentTime
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
       rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
@@ -1296,8 +1295,8 @@ mkFulfillmentV2SoftUpdate ::
 mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide driverAccountId mbEvent isValueAddNP newDestination isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   now <- getCurrentTime
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
       rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment

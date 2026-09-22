@@ -174,7 +174,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   mbSearchReq <- if isAllocatorBatch then pure Nothing else QSR.findById oldSearchReq.id
   let searchReq = fromMaybe oldSearchReq mbSearchReq
 
-  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchReq.bapId) Domain.MOBILITY
+  bapMetadata <- CQSM.findBySubscriberIdDomainMerchantAndCity (Id searchReq.bapId) Domain.MOBILITY searchReq.providerId searchReq.merchantOperatingCityId
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
   let tripQuoteDetailsHashMap = HashMap.fromList $ (\tqd -> (tqd.vehicleServiceTier, tqd)) <$> tripQuoteDetails

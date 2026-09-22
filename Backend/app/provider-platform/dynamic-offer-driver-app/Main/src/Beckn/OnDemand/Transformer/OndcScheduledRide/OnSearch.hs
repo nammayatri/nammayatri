@@ -24,22 +24,19 @@ import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import EulerHS.Prelude
-import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
 import qualified SharedLogic.AddOn as SAddOn
-import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 -- | Single entry point for API.Beckn.Search.search: fetches beckn_config,
 -- the BAP's BapMetadata, and the add-ons on offer in this city, then applies
 -- every ONDC-scheduled-ride patch to the already-built on_search reply, in order.
-ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
-ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId bapId dSearchRes onSearchReq = do
+ondcScheduledRideOnSearchMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DBapMetadata.BapMetadata -> DSearch.DSearchRes -> Spec.OnSearchReq -> m Spec.OnSearchReq
+ondcScheduledRideOnSearchMessageBuild merchantId merchantOpCityId mbBapMetadata dSearchRes onSearchReq = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
   addOnMap <- SAddOn.getAddOn merchantOpCityId True
   pure $
     ( ondcScheduledRidePatchAddOns addOnMap dSearchRes
