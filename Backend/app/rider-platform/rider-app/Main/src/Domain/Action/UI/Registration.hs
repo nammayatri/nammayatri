@@ -395,7 +395,11 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
-      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      useFakeOtpM =
+        (show <$> useFakeSms smsCfg)
+          <|> person.useFakeOtp
+          <|> (req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing))
+          <|> (req.email >>= (\n -> if n `elem` merchant.fakeOtpEmails then Just "7891" else Nothing))
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
 
@@ -1125,23 +1129,30 @@ resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  let otpCode = authValueHash
-  otpChannel <- getPersonOTPChannel person.id
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
+  smsCfg <- asks (.smsCfg)
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   mobileNumber <- mapM decrypt person.mobileNumber
   receiverEmail <- mapM decrypt person.email
-
-  SOTP.sendOTP
-    otpChannel
-    otpCode
-    person.id
-    person.merchantId
-    person.merchantOperatingCityId
-    person.mobileCountryCode
-    mobileNumber
-    receiverEmail
-    riderConfig.emailOtpConfig
-    mbSenderHash
+  let useFakeOtpM =
+        (show <$> useFakeSms smsCfg)
+          <|> person.useFakeOtp
+          <|> (mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing))
+          <|> (receiverEmail >>= (\n -> if n `elem` merchant.fakeOtpEmails then Just "7891" else Nothing))
+  when (isNothing useFakeOtpM) $ do
+    let otpCode = authValueHash
+    otpChannel <- getPersonOTPChannel person.id
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      person.merchantOperatingCityId
+      person.mobileCountryCode
+      mobileNumber
+      receiverEmail
+      riderConfig.emailOtpConfig
+      mbSenderHash
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing Nothing
