@@ -756,7 +756,10 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     clusterId :: Maybe Text,
     -- GTFS location_type: "0" platform, "1" station. Maybe, so a Nandi build
     -- predating the station layer still parses.
-    locationType :: Maybe Text
+    locationType :: Maybe Text,
+    -- Platform label for a boarding stop (for buses, the direction services leave
+    -- the kerb in). Absent on stations and on stops the feed gives no label.
+    platform :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -784,7 +787,8 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
     regionalName :: Maybe Text,
     parentStopCode :: Maybe Text,
     clusterId :: Maybe Text,
-    locationType :: Maybe Text
+    locationType :: Maybe Text,
+    platform :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
