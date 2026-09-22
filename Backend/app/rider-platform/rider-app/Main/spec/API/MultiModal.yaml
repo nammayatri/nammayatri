@@ -280,6 +280,8 @@ types:
     # in search. psc: the station a platform belongs to, for that grouping.
     lty: Maybe Text
     psc: Maybe Text
+    # pf: platform label of a boarding stop; absent for a station.
+    pf: Maybe Text
     derive': "Generic, ToSchema"
 
   TransportRouteStopMapping:
