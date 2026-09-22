@@ -25,6 +25,8 @@ module Beckn.OnDemand.Utils.OndcScheduledRide.Common
     overrideOrderBreakupTitles,
     overrideOrderFulfillmentId,
     fixItemCompliance,
+    soleOrderItem,
+    extractAddOns,
     overrideOrderItemCompliance,
     overrideOrderStopAuthorizationStatus,
     applyOndcScheduledRideAssignedOrderOverrides,
@@ -358,6 +360,19 @@ overrideOrderFulfillmentId quoteId order =
   where
     patchFulfillment fulfillment = fulfillment {Spec.fulfillmentId = Just quoteId}
     patchItem item = item {Spec.itemFulfillmentIds = Just [quoteId]}
+
+-- Items --------------------------------------------------------
+
+-- | The order's only item, if it has exactly one: every ONDC scheduled-ride wire message this
+-- pilot reads carries a single item, and anything else is not something we can attribute.
+soleOrderItem :: Maybe [Spec.Item] -> Maybe Spec.Item
+soleOrderItem = \case
+  Just [item] -> Just item
+  _ -> Nothing
+
+-- | The add-ons echoed on the wire item (item.add_ons) -- a BAP can select more than one add-on on the same item.
+extractAddOns :: Maybe [Spec.Item] -> [Spec.AddOn]
+extractAddOns mbItems = fromMaybe [] $ soleOrderItem mbItems >>= (.itemAddOns)
 
 -- ItemCompliance --------------------------------------------------------
 
