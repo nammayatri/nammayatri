@@ -20,6 +20,7 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   )
 where
 
+import qualified Dashboard.Common as DC
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
@@ -30,6 +31,8 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
@@ -55,9 +58,10 @@ import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
-import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction, selectedServiceTiersLockKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QPerson
@@ -228,6 +232,26 @@ dispatchConsequence ctx driverId = \case
         tagWithExpiry = Yudhishthira.addTagExpiry tag expiryHours now
         updatedTags = Yudhishthira.replaceTagNameValue driver.driverTag tagWithExpiry
     QPerson.updateDriverTag (Just updatedTags) driverId
+  CET.OptOutAutoAssign params -> do
+    logInfo $ "Opting driver " <> driverId.getId <> " out of auto-assign: " <> params.reason
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    let remainingTags = filter ((/= Just (LYT.TagName "AutoAssign")) . Yudhishthira.parseTagName) (fromMaybe [] driver.driverTag)
+    QPerson.updateDriverTag (Just remainingTags) driverId
+    Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+      mbVehicle <- QVehicle.findById driverId
+      whenJust mbVehicle $ \(vehicle :: DVeh.Vehicle) -> do
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId ctx.merchantOperatingCityId Nothing
+        let remainingServiceTiers = filter (`notElem` autoAcceptOnlyTierTypes cityServiceTiers) vehicle.selectedServiceTiers
+        when (not (null (fromMaybe [] vehicle.selectedAutoAcceptTiers)) || remainingServiceTiers /= vehicle.selectedServiceTiers) $
+          QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers remainingServiceTiers [] driverId
+
+autoAcceptOnlyTierTypes :: [DVST.VehicleServiceTier] -> [DriverInfo.ServiceTierType]
+autoAcceptOnlyTierTypes cityServiceTiers =
+  [ tier.serviceTierType
+    | tier <- cityServiceTiers,
+      Just cfg <- [tier.autoAcceptanceConfig],
+      cfg.enabled && cfg.mode == DC.AutoAcceptOnly
+  ]
 
 -- | Map blockReasonTag text to BlockReasonFlag enum
 parseBlockReasonFlag :: Maybe Text -> BlockReasonFlag

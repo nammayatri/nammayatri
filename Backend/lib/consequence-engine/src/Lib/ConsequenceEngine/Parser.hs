@@ -40,6 +40,7 @@ parseDirective directive =
     "CHARGE_FEE" -> parseParams directive.params ChargeFee
     "INCREMENT_COUNTER" -> parseParams directive.params IncrementCounter
     "ASSIGN_TAG" -> parseParams directive.params AssignTag
+    "OPT_OUT_AUTO_ASSIGN" -> parseParams directive.params OptOutAutoAssign
     unknown -> Left $ "Unknown consequence type: " <> unknown
 
 -- | Parse all directives, collecting successes and errors
