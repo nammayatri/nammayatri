@@ -1239,7 +1239,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                               -- them, so it needs to know which kind each stop is
                               -- and, for a platform, which station owns it.
                               lty = s.locationType,
-                              psc = s.parentStopCode
+                              psc = s.parentStopCode,
+                              pf = s.platform
                             }
                       _ -> Nothing
                   )

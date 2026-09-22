@@ -515,6 +515,7 @@ data TransportStation = TransportStation
     lt :: Kernel.Prelude.Double,
     lty :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nm :: Kernel.Prelude.Text,
+    pf :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     psc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstdDest :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
