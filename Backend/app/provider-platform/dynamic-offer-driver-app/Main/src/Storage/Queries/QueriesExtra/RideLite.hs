@@ -53,6 +53,10 @@ findAllActiveByRBIdsLite bookingIds =
         ]
     ]
 
+findAllByRBIdsLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id Domain.Types.Booking.Booking] -> m [RideLite]
+findAllByRBIdsLite [] = pure []
+findAllByRBIdsLite bookingIds = findAllWithKV [Se.Is Beam.bookingId $ Se.In (Kernel.Types.Id.getId <$> bookingIds)]
+
 findInProgressByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
 findInProgressByDriverId (Kernel.Types.Id.Id driverId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.status $ Se.Eq Domain.Types.Ride.INPROGRESS]]
 

@@ -107,7 +107,12 @@ maxOpsNoteLength = 255
 defaultLookaheadSeconds :: Int
 defaultLookaheadSeconds = 2 * 24 * 60 * 60
 
--- | Default search radius for the ops "nearby eligible drivers" lookup when the dashboard
+defaultHistoryLookbackSeconds :: Int
+defaultHistoryLookbackSeconds = 24 * 60 * 60
+
+maxLookbackSeconds :: Int
+maxLookbackSeconds = 7 * 24 * 60 * 60
+
 -- does not pass one.
 defaultNearbyRadiusKm :: Double
 defaultNearbyRadiusKm = 5.0
@@ -123,30 +128,57 @@ getScheduledBookingList ::
   Context.City ->
   Maybe Common.AssignmentStatus ->
   Maybe UTCTime ->
+  Maybe Bool ->
   Maybe Int ->
   Maybe Int ->
   Maybe UTCTime ->
   Flow Common.ScheduledBookingListRes
-getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbLimit mbOffset mbTo = do
+getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHistory mbLimit mbOffset mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   now <- getCurrentTime
-  let fromTime = fromMaybe (addUTCTime (secondsToNominalDiffTime . Seconds $ negate graceWindowSeconds) now) mbFrom
-      toTime = fromMaybe (addUTCTime (secondsToNominalDiffTime $ Seconds defaultLookaheadSeconds) now) mbTo
+  let isHistory = fromMaybe False mbIsHistory
+      defaultFrom =
+        if isHistory
+          then addUTCTime (secondsToNominalDiffTime . Seconds $ negate defaultHistoryLookbackSeconds) now
+          else addUTCTime (secondsToNominalDiffTime . Seconds $ negate graceWindowSeconds) now
+      defaultTo = if isHistory then now else addUTCTime (secondsToNominalDiffTime $ Seconds defaultLookaheadSeconds) now
+      fromTime = fromMaybe defaultFrom mbFrom
+      toTime = fromMaybe defaultTo mbTo
+      earliestAllowedFrom = addUTCTime (secondsToNominalDiffTime . Seconds $ negate maxLookbackSeconds) now
       limit = min maxLimit $ fromMaybe defaultLimit mbLimit
       offset = fromMaybe 0 mbOffset
-  let statuses = case mbAssignmentStatus of
-        Just Common.ASSIGNED -> [SRB.TRIP_ASSIGNED]
-        Just Common.UNASSIGNED -> [SRB.NEW]
-        Nothing -> [SRB.NEW, SRB.TRIP_ASSIGNED]
-  liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
+  when (fromTime > toTime) $ throwError (InvalidRequest "from must not be after to")
+  when (fromTime < earliestAllowedFrom) $
+    throwError (InvalidRequest $ "from cannot be older than " <> show (maxLookbackSeconds `div` (24 * 60 * 60)) <> " days")
+  -- History is about what happened, so it filters out no status; the live view still shows only actionable ones.
+  let statuses = case (isHistory, mbAssignmentStatus) of
+        (_, Just Common.ASSIGNED) -> [SRB.TRIP_ASSIGNED]
+        (_, Just Common.UNASSIGNED) -> [SRB.NEW]
+        (True, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED, SRB.COMPLETED, SRB.CANCELLED, SRB.REALLOCATED]
+        (False, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED]
+  liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset isHistory
   let pageRows = take limit liteBookings
       hasMorePages = length liteBookings > limit
-  ctx <- buildListPageContext pageRows
-  let bookings = map (buildListItem ctx) pageRows
-  pure Common.ScheduledBookingListRes {totalItems = offset + length pageRows + (if hasMorePages then 1 else 0), bookings}
+  txnBookings <- QBookingLite.findAllByTransactionIdsLite (nub $ map (.transactionId) pageRows)
+  -- Terminal statuses bring every reallocation attempt into the window, so history collapses them per transaction.
+  let rows = if isHistory then toTransactionLevel txnBookings pageRows else pageRows
+  ctx <- buildListPageContext isHistory txnBookings rows
+  let bookings = map (buildListItem ctx) rows
+  pure Common.ScheduledBookingListRes {totalItems = offset + length rows + (if hasMorePages then 1 else 0), bookings}
+
+-- | One row per transactionId, showing its latest booking: reallocation keeps the transactionId but mints a new bookingId.
+toTransactionLevel :: [QBookingLite.BookingLite] -> [QBookingLite.BookingLite] -> [QBookingLite.BookingLite]
+toTransactionLevel txnBookings =
+  nubBy (\a b -> a.transactionId == b.transactionId) . map latestOfTxn
+  where
+    latestByTxnId =
+      HashMap.fromListWith
+        (\new old -> if new.createdAt > old.createdAt then new else old)
+        [(b.transactionId, b) | b <- txnBookings]
+    latestOfTxn row = fromMaybe row $ HashMap.lookup row.transactionId latestByTxnId
 
 -- | Per-page lookups for the list, batched into one read per entity type instead of one per row,
 -- so the response cost is a fixed number of round trips regardless of page size.
@@ -158,14 +190,20 @@ data ListPageContext = ListPageContext
     bookingCountByTxnId :: HashMap.HashMap Text Int
   }
 
-buildListPageContext :: [QBookingLite.BookingLite] -> Flow ListPageContext
-buildListPageContext pageRows = do
+buildListPageContext :: Bool -> [QBookingLite.BookingLite] -> [QBookingLite.BookingLite] -> Flow ListPageContext
+buildListPageContext includeCancelledRides txnBookings pageRows = do
   let bookingIds = map (.id) pageRows
-      txnIds = nub $ map (.transactionId) pageRows
       riderIds = nub $ mapMaybe (.riderId) pageRows
 
-  rides <- QRideLite.findAllActiveByRBIdsLite bookingIds
-  let ridesByBookingId = HashMap.fromList [(ride.bookingId.getId, ride) | ride <- rides]
+  -- History also wants the cancelled ride, but a still-live ride on the same booking wins.
+  rides <-
+    if includeCancelledRides
+      then QRideLite.findAllByRBIdsLite bookingIds
+      else QRideLite.findAllActiveByRBIdsLite bookingIds
+  let ridesByBookingId =
+        HashMap.fromListWith
+          (\new old -> if old.status == DRide.CANCELLED then new else old)
+          [(ride.bookingId.getId, ride) | ride <- rides]
 
   mappings <- QLM.getLatestStartByEntityIds (map (.getId) bookingIds)
   locations <- QL.getBookingLocs (map (.locationId) mappings)
@@ -187,7 +225,6 @@ buildListPageContext pageRows = do
     HashMap.fromList
       <$> forM drivers (\p -> (p.id.getId,) . (personName p,) <$> mapM decrypt p.mobileNumber)
 
-  txnBookings <- QBookingLite.findAllByTransactionIdsLite txnIds
   let bookingCountByTxnId = HashMap.fromListWith (+) [(b.transactionId, 1 :: Int) | b <- txnBookings]
 
   pure ListPageContext {..}
