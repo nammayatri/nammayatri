@@ -25,6 +25,7 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -94,6 +95,8 @@ onCancel ValidatedBookingCancelledReq {..} = do
             _ -> case castedCancellationSource of
               SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
               _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
+  whenJust booking.bookingDepositAmount $ \_ ->
+    void $ withTryCatch "onCancel:reconcileDeposit" $ DPaymentAction.reconcileDepositPayment booking
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
   whenJust customerCancellationNotificationKey $ \pnKey ->

@@ -151,6 +151,9 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
     Right result -> return result
   where
     initiateRetryRefunds refundRequest = do
+      -- A retry can't tell a gateway timeout from a decline, and the retry's status is read off the order's first refund.
+      when (refundRequest.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) $
+        throwError (InvalidRequest "Retrying a booking deposit refund is disabled; settle it manually")
       unless (req.retryRefunds == Just True) $
         throwError (InvalidRequest "Refund was failed. Set retryRefund flag for new attempt")
       initiateRefunds refundRequest
@@ -344,10 +347,13 @@ postPaymentRefundRequestBookingInitiate merchantShortId opCity phantomBookingId 
     throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " is still in status " <> show booking.status <> "; deposit can be refunded only after the booking is terminal")
   when (isNothing booking.bookingDepositAmount) $
     throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " has no booking deposit")
-  depositWasCaptured <- BookingDeposit.depositCaptured booking.id
-  when depositWasCaptured $
-    throwError (InvalidRequest $ "Booking deposit for " <> bookingId.getId <> " was forfeited (captured to revenue); nothing to refund")
+  let refuseIfCaptured = do
+        depositWasCaptured <- fst <$> BookingDeposit.depositHoldState booking.id
+        when depositWasCaptured $
+          throwError (InvalidRequest $ "Booking deposit for " <> bookingId.getId <> " was forfeited (captured to revenue); nothing to refund")
+  refuseIfCaptured
   BookingDeposit.refundBookingDeposit booking
+  refuseIfCaptured
   rows <- QBookingPayment.findAllByBookingIdAndServiceType booking.id DPaymentOrder.BookingDeposit
   reqs <- concat <$> mapM (QRefundRequest.findAllByOrderId . (.paymentOrderId)) rows
   let deposits = filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) reqs

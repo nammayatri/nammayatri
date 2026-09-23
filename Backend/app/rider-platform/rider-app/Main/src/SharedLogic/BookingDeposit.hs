@@ -19,8 +19,15 @@ module SharedLogic.BookingDeposit
     bookingDepositRefundRefType,
     getAvailableBalance,
     findHolds,
-    depositCaptured,
-    holdBookingDeposit,
+    depositHoldState,
+    bookingDepositFulfilLockKey,
+    withBookingDepositFulfilLock,
+    bookingDepositFulfilTriggeredKey,
+    bookingDepositPollSyncLockKey,
+    isBookingDepositConfirmTriggered,
+    depositAttemptVerdict,
+    isDeadDepositOrder,
+    isFailedDepositAttempt,
     reserveBookingDeposit,
     rekeyBookingDepositHold,
     decideAndSecureBookingDeposit,
@@ -28,9 +35,7 @@ module SharedLogic.BookingDeposit
     ReserveResult (..),
     hasCreditForOrder,
     captureBookingDeposit,
-    releaseBookingDeposit,
     releaseHolds,
-    resolveTerminalHolds,
     refundBookingDeposit,
     prepareDepositRefundLedger,
     executeDepositRefundGateway,
@@ -69,6 +74,7 @@ import qualified Lib.Finance.Ledger.Service as Ledger
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPaymentTransaction
+import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.BookingDepositLedger
@@ -148,15 +154,6 @@ mkCtx riderId merchantId merchantOpCityId referenceId =
     Nothing
     Nothing
 
--- | Place the hold AND schedule its expiry
-holdBookingDeposit ::
-  DepositHoldFlow m r =>
-  DRB.Booking ->
-  HighPrecMoney ->
-  m ()
-holdBookingDeposit booking amount =
-  withRiderFeeLock booking.riderId $ holdBookingDeposit_ booking amount
-
 rekeyBookingDepositHold ::
   DepositHoldFlow m r =>
   DRB.Booking ->
@@ -165,21 +162,25 @@ rekeyBookingDepositHold ::
 rekeyBookingDepositHold oldBooking newBooking =
   whenJust newBooking.bookingDepositAmount $ \fee ->
     withRiderFeeLock oldBooking.riderId $ do
-      holdBookingDeposit_ newBooking fee
-      voided <- withTryCatch "rekeyBookingDepositHold:releaseOldHold" $ releaseHolds_ oldBooking.id
-      case voided of
-        Left err -> do
-          releaseHolds_ newBooking.id
-          throwError . InternalError $ "Booking fee rekey could not release the old hold for " <> oldBooking.id.getId <> ": " <> show err
-        Right () -> pure ()
-      rows <- filter (\r -> r.status == DBP.SUCCESS) <$> QBookingPayment.findAllByBookingIdAndServiceType oldBooking.id DOrder.BookingDeposit
+      oldHolds <- findHolds oldBooking.id
+      if null oldHolds
+        then logError $ "Booking fee rekey: old booking " <> oldBooking.id.getId <> " holds no deposit; placing none on " <> newBooking.id.getId
+        else do
+          holdBookingDeposit_ newBooking fee
+          voided <- withTryCatch "rekeyBookingDepositHold:releaseOldHold" $ releaseHolds_ oldBooking.id
+          case voided of
+            Left err -> do
+              releaseHolds_ newBooking.id
+              throwError . InternalError $ "Booking fee rekey could not release the old hold for " <> oldBooking.id.getId <> ": " <> show err
+            Right () -> pure ()
+      -- PENDING and FAILED too: a superseded order can still be CHARGED, and only the new booking is reconciled from here on.
+      rows <- filter (\r -> r.status `elem` [DBP.SUCCESS, DBP.PENDING, DBP.FAILED]) <$> QBookingPayment.findAllByBookingIdAndServiceType oldBooking.id DOrder.BookingDeposit
       forM_ rows $ \row -> do
         newRowId <- generateGUID
         now <- getCurrentTime
         QBookingPayment.create
           row{DBP.id = newRowId,
               DBP.bookingId = newBooking.id,
-              DBP.createdAt = now,
               DBP.updatedAt = now
              }
 
@@ -251,16 +252,43 @@ holdBookingDeposit_ booking amount = do
         Right (Just entryId, _) ->
           logInfo $ "Held booking fee " <> show amount <> " entry " <> entryId.getId <> " booking " <> bookingId.getId
 
--- | Whether any hold for this booking was settled to revenue -- i.e. the deposit was captured (cancellation forfeit or ride completion). A captured deposit is terminal: it can be
---   neither released nor refunded, and the client shows it as FORFEITED.
-depositCaptured :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m Bool
-depositCaptured bookingId =
-  any (\e -> e.status == LE.SETTLED) <$> Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
+bookingDepositFulfilLockKey, bookingDepositFulfilTriggeredKey, bookingDepositPollSyncLockKey :: Text -> Text
+bookingDepositFulfilLockKey bookingIdText = "BookingDeposit:Fulfil:" <> bookingIdText
+bookingDepositFulfilTriggeredKey bookingIdText = "BookingDeposit:FulfilTriggered:" <> bookingIdText
+bookingDepositPollSyncLockKey orderIdText = "BookingDeposit:PollSync:" <> orderIdText
+
+withBookingDepositFulfilLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Id DRB.Booking -> m a -> m a
+withBookingDepositFulfilLock bookingId = Redis.withWaitAndLockRedis (bookingDepositFulfilLockKey bookingId.getId) 60 10000
+
+isBookingDepositConfirmTriggered :: CacheFlow m r => Id DRB.Booking -> m Bool
+isBookingDepositConfirmTriggered bookingId =
+  (== Just "1") <$> Redis.get @Text (bookingDepositFulfilTriggeredKey bookingId.getId)
+
+depositHoldState :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m (Bool, [LE.LedgerEntry])
+depositHoldState bookingId = do
+  entries <- Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
+  pure (any (\e -> e.status == LE.SETTLED) entries, filter (\e -> e.status == LE.PENDING) entries)
+
+-- | (in flight, failed) for the latest attempt, from one read of its order. In flight: still PENDING on our
+--   side but already CHARGED at the gateway. Failed: still PENDING and its last transaction failed; the order
+--   stays live, since a retry on it can still be CHARGED, so this is a retryable failure, not an unpaid verdict.
+depositAttemptVerdict :: (CacheFlow m r, EsqDBFlow m r) => Maybe DBP.BookingPayment -> m (Bool, Bool)
+depositAttemptVerdict = \case
+  Just row
+    | row.status == DBP.PENDING -> do
+      mbOrder <- QPaymentOrder.findById row.paymentOrderId
+      let inFlight = maybe False (\o -> o.status == Payment.CHARGED) mbOrder
+      pure (inFlight, not inFlight && maybe False (isFailedDepositAttempt . (.status)) mbOrder)
+  _ -> pure (False, False)
+
+isDeadDepositOrder :: Payment.TransactionStatus -> Bool
+isDeadDepositOrder = (`elem` [Payment.CANCELLED, Payment.CLIENT_AUTH_TOKEN_EXPIRED])
+
+isFailedDepositAttempt :: Payment.TransactionStatus -> Bool
+isFailedDepositAttempt = (`elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED])
 
 findHolds :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m [LE.LedgerEntry]
-findHolds bookingId = do
-  entries <- Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
-  pure $ filter (\e -> e.status == LE.PENDING) entries
+findHolds bookingId = snd <$> depositHoldState bookingId
 
 captureBookingDeposit ::
   DepositFlow m r =>
@@ -281,13 +309,6 @@ settleHolds_ bookingId = do
     logInfo $ "Captured " <> show (length pending) <> " booking fee hold(s) for booking " <> bookingId.getId
   pure $ sum (map (.amount) (pending <> settled))
 
--- | Re-quoted: nothing moves and the balance returns to spendable
-releaseBookingDeposit ::
-  DepositFlow m r => DRB.Booking -> m ()
-releaseBookingDeposit booking =
-  when (isJust booking.bookingDepositAmount) $
-    withRiderFeeLock booking.riderId $ releaseHolds_ booking.id
-
 -- | Release by booking id alone, for the expiry job's orphan case where the booking row was never written and no rider id is to hand.
 releaseHolds ::
   DepositFlow m r => Id DRB.Booking -> m ()
@@ -296,6 +317,7 @@ releaseHolds bookingId = do
   case holds of
     [] -> pure ()
     (entry : _) -> do
+      logError $ "Orphan booking deposit hold on booking " <> bookingId.getId <> " released to wallet, not refunded"
       mbAcc <- Account.getAccount entry.fromAccountId
       case mbAcc >>= (.counterpartyId) of
         Just riderId ->
@@ -303,15 +325,6 @@ releaseHolds bookingId = do
         Nothing -> do
           logError $ "Booking fee hold on booking " <> bookingId.getId <> " has no counterparty on its account; releasing unlocked"
           releaseHolds_ bookingId
-
--- | Resolve PENDING holds left on a terminal booking by the booking's outcome: a completed ride keeps the deposit, every other terminal outcome returns it.
-resolveTerminalHolds ::
-  DepositFlow m r => DRB.Booking -> m ()
-resolveTerminalHolds booking =
-  withRiderFeeLock booking.riderId $
-    if booking.status == DRB.COMPLETED
-      then void $ settleHolds_ booking.id
-      else releaseHolds_ booking.id
 
 releaseHolds_ :: (CacheFlow m r, EsqDBFlow m r, HasActorInfo m r) => Id DRB.Booking -> m ()
 releaseHolds_ bookingId = do
@@ -340,13 +353,13 @@ refundBookingDeposit booking = do
   toSettle <- prepareDepositRefundLedger booking
   forM_ toSettle $ \pair@(_, order) -> do
     eRes <- Redis.whenWithLockRedisAndReturnValue (SPayment.refundRequestProccessingKey order.id) 60 $ do
-      mbReq <- findOrCreateDepositRefundRequest booking pair
+      mbReq <- withDepositRefundLock order.id $ claimDepositRefundAttempt booking pair
       forM_ mbReq $ \reqRow -> executeDepositRefundGateway booking reqRow False pair
     case eRes of
       Left () -> logInfo $ "Deposit refund for order " <> order.id.getId <> " already being processed elsewhere; skipping"
       Right () -> pure ()
 
--- | Ledger half of a deposit refund, shared by the inline cancel path and the dashboard queue. Refuse if the deposit was already captured, void the holds, post the refund legs per paid order
+-- | Ledger half of a deposit refund, shared by the inline cancel path and the dashboard queue. Capture instead if the booking is COMPLETED, refuse if the deposit was already captured, void the holds, post the refund legs per paid order
 prepareDepositRefundLedger ::
   DepositFlow m r =>
   DRB.Booking ->
@@ -355,11 +368,13 @@ prepareDepositRefundLedger booking
   | isNothing booking.bookingDepositAmount = pure []
   | otherwise =
     withRiderFeeLock booking.riderId $ do
-      entries <- Ledger.getEntriesByReference bookingDepositHoldRefType booking.id.getId
-      let holds = filter (\e -> e.status == LE.PENDING) entries
-      if any (\e -> e.status == LE.SETTLED) entries
-        then -- The deposit was settled to revenue already (cancellation forfeit, or ride completion).
-          [] <$ logError ("Booking deposit for booking " <> booking.id.getId <> " is already captured; refusing to refund")
+      bookingNow <- QRB.findById booking.id >>= fromMaybeM (BookingDoesNotExist booking.id.getId)
+      when (bookingNow.status == DRB.COMPLETED) $ do
+        captured <- settleHolds_ booking.id
+        logWarning $ "Refund requested for COMPLETED booking " <> booking.id.getId <> "; captured its deposit (" <> show captured <> ") instead"
+      (alreadyCaptured, holds) <- depositHoldState booking.id
+      if alreadyCaptured
+        then [] <$ logError ("Booking deposit for booking " <> booking.id.getId <> " is already captured; refusing to refund")
         else do
           rows <-
             filter (\r -> r.status `elem` [DBP.SUCCESS, DBP.REFUND_PENDING, DBP.REFUND_FAILED])
@@ -383,21 +398,27 @@ prepareDepositRefundLedger booking
           if not (null byOrder)
             then pure (Just (row, order))
             else do
+              -- Only money that entered the wallet may leave through it. An order refunded straight
+              -- to source was never credited; refunding it here would spend another order's credit.
+              credited <- hasCreditForOrder order.id.getId
               available <- getAvailableBalance booking.riderId
-              if available < order.amount
-                then
-                  Nothing
-                    <$ logError
-                      ("Booking deposit refund skipped for order " <> order.id.getId <> ": available balance " <> show available <> " < refund amount " <> show order.amount <> " (credit re-spent on a live booking); ops can retry after that booking settles")
-                else do
-                  QBookingPayment.updateStatusById DBP.REFUND_PENDING row.id
-                  let ctx = mkCtx booking.riderId booking.merchantId booking.merchantOperatingCityId order.id.getId
-                  result <- runFinance ctx $ do
-                    void $ transferPending OwnerLiability BuyerExternal order.amount bookingDepositRefundRefType
-                    void $ transferPending BuyerExternal BuyerAsset order.amount bookingDepositRefundRefType
-                  case result of
-                    Left err -> Nothing <$ logError ("Booking deposit refund ledger failed for order " <> order.id.getId <> ": " <> show err)
-                    Right _ -> pure (Just (row, order))
+              if not credited
+                then Nothing <$ logError ("Booking deposit refund skipped for order " <> order.id.getId <> ": never credited to the wallet, so it is not refundable from it")
+                else
+                  if available < order.amount
+                    then
+                      Nothing
+                        <$ logError
+                          ("Booking deposit refund skipped for order " <> order.id.getId <> ": available balance " <> show available <> " < refund amount " <> show order.amount <> " (credit re-spent on a live booking); ops can retry after that booking settles")
+                    else do
+                      QBookingPayment.updateStatusById DBP.REFUND_PENDING row.id
+                      let ctx = mkCtx booking.riderId booking.merchantId booking.merchantOperatingCityId order.id.getId
+                      result <- runFinance ctx $ do
+                        void $ transferPending OwnerLiability BuyerExternal order.amount bookingDepositRefundRefType
+                        void $ transferPending BuyerExternal BuyerAsset order.amount bookingDepositRefundRefType
+                      case result of
+                        Left err -> Nothing <$ logError ("Booking deposit refund ledger failed for order " <> order.id.getId <> ": " <> show err)
+                        Right _ -> pure (Just (row, order))
 
 -- | One auto-approved refund_request per deposit order, so every refund -- inline or ops-triggered -- is visible and retryable in the dashboard queue. Reuses a live APPROVED row (crash resume); leaves FAILED rows for ops (retry is an explicit /respond decision, never automatic); skips REFUNDED/REJECTED.
 findOrCreateDepositRefundRequest ::
@@ -449,7 +470,43 @@ findOrCreateDepositRefundRequest booking (_row, order) = do
             QRefundRequest.create reqRow
             pure (Just reqRow)
 
--- | refundPaymentService via makeRefundPayment, so a FAILED attempt is retryable (per-attempt refundsId + retryIfFailed). Records the verdict on both the refund_request and the booking_payment row.
+-- | Run under withDepositRefundLock: returns the request only to the one caller that may call the gateway.
+claimDepositRefundAttempt ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    HasActorInfo m r,
+    MonadMask m,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  DRB.Booking ->
+  (DBP.BookingPayment, DOrder.PaymentOrder) ->
+  m (Maybe DRefundRequest.RefundRequest)
+claimDepositRefundAttempt booking pair@(_, order) = do
+  mbReq <- findOrCreateDepositRefundRequest booking pair
+  case mbReq of
+    Nothing -> pure Nothing
+    Just req
+      | isJust req.refundsId -> Nothing <$ logInfo ("Deposit refund request " <> req.id.getId <> " already has a gateway attempt; not calling again")
+      | otherwise -> do
+        linked <- mapMaybe (.refundsId) <$> QRefundRequest.findAllByOrderId order.id
+        attempts <- HQRefunds.findAllByOrderId order.shortId
+        -- An unlinked attempt made after the request means the caller died before recording it.
+        case find (\a -> a.createdAt >= req.createdAt && a.id `notElem` linked) attempts of
+          Just attempt -> do
+            logError $ "Deposit refund request " <> req.id.getId <> " lost its attempt " <> attempt.id.getId <> "; recording it instead of calling the gateway again"
+            applyDepositRefundResult booking req pair attempt.id.getId attempt.status attempt.errorCode
+            pure Nothing
+          Nothing -> do
+            claimed <- claimDepositRefundCall req.id.getId
+            if claimed
+              then pure (Just req)
+              else Nothing <$ logInfo ("Deposit refund for request " <> req.id.getId <> " is being sent elsewhere; skipping")
+
+-- | Calls the gateway without the deposit refund lock, then records the verdict under it unless someone already did.
 executeDepositRefundGateway ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -466,7 +523,7 @@ executeDepositRefundGateway ::
   Bool ->
   (DBP.BookingPayment, DOrder.PaymentOrder) ->
   m ()
-executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
+executeDepositRefundGateway booking refundReq retryIfFailed pair@(row, order) = do
   let gwReq =
         DPayment.RefundPaymentServiceReq
           { orderId = order.id,
@@ -478,33 +535,60 @@ executeDepositRefundGateway booking refundReq retryIfFailed (row, order) = do
             refundsId = refundReq.refundsId
           }
   rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-      >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   mbResp <- SPayment.makeRefundPaymentByServiceType booking.merchantId booking.merchantOperatingCityId row.paymentServiceType rider.clientSdkVersion gwReq
   case mbResp of
     Nothing -> logInfo $ "Deposit refund gateway skipped for order " <> order.id.getId <> " (in flight elsewhere or attempt already stands); leaving request APPROVED"
-    Just resp -> do
-      resolveDepositRefundLegs booking.riderId order.id resp.status
-      let reqStatus = SPayment.refundStatusToRequestStatus resp.status
-          bpStatus = case resp.status of
-            Payment.REFUND_SUCCESS -> DBP.REFUNDED
-            Payment.REFUND_FAILURE -> DBP.REFUND_FAILED
-            Payment.REFUND_CANCELED -> DBP.REFUND_FAILED
-            _ -> DBP.REFUND_INITIATED
-      QRefundRequest.updateRefundIdAndStatus (Just (Id resp.refundId)) reqStatus refundReq.id
-      QBookingPayment.updateStatusById bpStatus row.id
-      createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
-        CheckRefundStatusJobData {refundId = resp.refundId, numberOfRetries = 0}
-      logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> resp.refundId <> " order " <> order.id.getId
-      when (reqStatus == DRefundRequest.FAILED) $
-        logError $
-          "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId
-            <> " amount "
-            <> show order.amount
-            <> " (code "
-            <> show resp.errorCode
-            <> "); refund legs voided, amount back in the rider's wallet. Retry from the dashboard refund queue with retryRefunds=true."
+    Just resp -> withDepositRefundLock order.id $ do
+      mbReqNow <- QRefundRequest.findById refundReq.id
+      case mbReqNow of
+        Just reqNow
+          | reqNow.status == DRefundRequest.APPROVED && maybe True (== Id resp.refundId) reqNow.refundsId ->
+            applyDepositRefundResult booking reqNow pair resp.refundId resp.status resp.errorCode
+        _ -> logInfo $ "Deposit refund " <> resp.refundId <> " for order " <> order.id.getId <> " was already recorded; not overwriting it"
+
+-- | Settles or voids the refund legs and records the attempt on the refund request and the booking_payment row.
+applyDepositRefundResult ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    HasActorInfo m r,
+    MonadMask m,
+    SchedulerFlow r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    HasField "blackListedJobs" r [Text]
+  ) =>
+  DRB.Booking ->
+  DRefundRequest.RefundRequest ->
+  (DBP.BookingPayment, DOrder.PaymentOrder) ->
+  Text ->
+  Payment.RefundStatus ->
+  Maybe Text ->
+  m ()
+applyDepositRefundResult booking refundReq (row, order) refundId refundStatus errorCode = do
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  resolveDepositRefundLegs booking.riderId order.id refundStatus
+  let reqStatus = SPayment.refundStatusToRequestStatus refundStatus
+      bpStatus = case refundStatus of
+        Payment.REFUND_SUCCESS -> DBP.REFUNDED
+        Payment.REFUND_FAILURE -> DBP.REFUND_FAILED
+        Payment.REFUND_CANCELED -> DBP.REFUND_FAILED
+        _ -> DBP.REFUND_INITIATED
+  QRefundRequest.updateRefundIdAndStatus (Just (Id refundId)) reqStatus refundReq.id
+  QBookingPayment.updateStatusById bpStatus row.id
+  createJobIn @_ @'CheckRefundStatus (Just booking.merchantId) (Just booking.merchantOperatingCityId) riderConfig.refundStatusUpdateInterval $
+    CheckRefundStatusJobData {refundId = refundId, numberOfRetries = 0}
+  logInfo $ "Scheduled CheckRefundStatus for deposit refund " <> refundId <> " order " <> order.id.getId
+  when (reqStatus == DRefundRequest.FAILED) $
+    logError $
+      "Booking deposit gateway refund FAILED for booking " <> booking.id.getId <> " order " <> order.id.getId
+        <> " amount "
+        <> show order.amount
+        <> " (code "
+        <> show errorCode
+        <> "); refund legs voided, amount back in the rider's wallet. Deposit refund retries are disabled; settle it manually."
 
 -- | Resolve a fee-bearing booking that was never staffed: cancel it BAP-locally and settle the fee
 expireOrRepairBookingDeposit ::
@@ -554,18 +638,29 @@ expireOrRepairBookingDeposit booking = do
       pure False
     else do
       outcome <- withTryCatch "expireOrRepairBookingDeposit:cancellationLock" $ do
-        SharedCancel.tryCancellationLock booking.transactionId $ do
-          refundBookingDeposit booking
-          QRB.updateStatus booking.riderId booking.id DRB.CANCELLED
-          QBPL.makeAllInactiveByBookingId booking.id
-          QBCR.upsert =<< buildLocalCancellationReason booking
+        cancelled <- SharedCancel.tryCancellationLock booking.transactionId $ do
+          bookingNow <- QRB.findById booking.id >>= fromMaybeM (BookingDoesNotExist booking.id.getId)
+          rideNow <- QRide.findActiveByRBId booking.id
+          let stillRepairable = bookingNow.status `elem` [DRB.NEW, DRB.CONFIRMED] && isNothing rideNow
+          when stillRepairable $ do
+            QRB.updateStatus booking.riderId booking.id DRB.CANCELLED
+            QBPL.makeAllInactiveByBookingId booking.id
+            QBCR.upsert =<< buildLocalCancellationReason booking
+          pure stillRepairable
         SharedCancel.releaseCancellationLock booking.transactionId
+        pure cancelled
       case outcome of
         Left err -> do
           logInfo $ "Booking deposit repair skipped for " <> booking.id.getId <> "; cancellation in progress elsewhere: " <> show err
           pure False
-        Right _ -> do
-          logInfo $ "Repaired never-staffed booking " <> booking.id.getId <> " and settled its booking fee"
+        Right False -> do
+          logInfo $ "Booking deposit repair skipped for " <> booking.id.getId <> "; it was assigned or settled meanwhile"
+          pure False
+        Right True -> do
+          refunded <- withTryCatch "expireOrRepairBookingDeposit:refund" $ refundBookingDeposit booking
+          case refunded of
+            Left err -> logError $ "Booking " <> booking.id.getId <> " is cancelled but its deposit refund failed; settle it manually: " <> show err
+            Right () -> logInfo $ "Repaired never-staffed booking " <> booking.id.getId <> " and settled its booking fee"
           pure True
 
 buildLocalCancellationReason :: MonadFlow m => DRB.Booking -> m SBCR.BookingCancellationReason

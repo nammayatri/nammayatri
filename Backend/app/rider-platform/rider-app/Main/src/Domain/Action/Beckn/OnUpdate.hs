@@ -571,8 +571,15 @@ onUpdate = \case
     void $ QRB.createBooking newBooking
     QRB.addActiveBookingAvailableInCache newBooking.riderId newBooking.id
     void $ QBPL.createMany newBookingParties
-    void $ withTryCatch "reallocation:rekeyBookingDepositHold" $ BookingDeposit.rekeyBookingDepositHold booking newBooking
-    void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
+    let markReallocated = void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED
+    if isJust booking.bookingDepositAmount
+      then BookingDeposit.withBookingDepositFulfilLock booking.id $ do
+        rekeyed <- withTryCatch "reallocation:rekeyBookingDepositHold" $ BookingDeposit.rekeyBookingDepositHold booking newBooking
+        case rekeyed of
+          Left err -> logError $ "Booking fee rekey failed; old booking " <> booking.id.getId <> ", new booking " <> newBooking.id.getId <> ": " <> show err
+          Right () -> pure ()
+        markReallocated
+      else markReallocated
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus
     SharedCancel.releaseCancellationLock booking.transactionId

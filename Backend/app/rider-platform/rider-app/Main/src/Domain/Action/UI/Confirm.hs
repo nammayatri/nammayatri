@@ -120,12 +120,12 @@ cancelBooking booking = do
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the function.
   SharedCancel.tryCancellationLock booking.transactionId $ do
-    void $ withTryCatch "confirmFailed:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
     _ <- QRideB.updateStatus booking.riderId booking.id DRB.CANCELLED
     _ <- QBPL.makeAllInactiveByBookingId booking.id
-    _ <- QBCR.upsert bookingCancellationReason
-    Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing otherRelatedParties
+    QBCR.upsert bookingCancellationReason
   SharedCancel.releaseCancellationLock booking.transactionId
+  void $ withTryCatch "confirmFailed:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing otherRelatedParties
   where
     buildBookingCancellationReason = do
       now <- getCurrentTime
