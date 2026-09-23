@@ -518,7 +518,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     numberOfLuggages :: Maybe Int,
     govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
     pickupGateId :: Maybe Text, -- Optional airport pickup gate id; used by V2 to apply airport entry fee
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    isParkingFeeExempt :: Bool
   }
 
 calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -613,7 +614,7 @@ calculateFareParametersHandler params = do
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             shouldApplyPersonalDiscount = params.shouldApplyPersonalDiscount,
             serviceCharge = fp.serviceCharge,
-            parkingCharge = fp.parkingCharge,
+            parkingCharge = if params.isParkingFeeExempt && fromMaybe False fp.parkingFeeExemptionEnabled then Nothing else fp.parkingCharge,
             baseFare = baseFare,
             petCharges = params.petCharges,
             driverAllowance = fp.driverAllowance,

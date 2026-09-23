@@ -300,7 +300,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     congestionChargeData :: Maybe CongestionChargeData,
     driverCancellationNotAllowed :: Maybe Bool,
     mbArea :: Maybe SL.Area,
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    parkingFeeExemptionEnabled :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -360,6 +361,7 @@ farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellat
     { merchantId = merchantId',
       mbArea = Nothing,
       fareSettlementType = Nothing,
+      parkingFeeExemptionEnabled = Nothing,
       ..
     }
 

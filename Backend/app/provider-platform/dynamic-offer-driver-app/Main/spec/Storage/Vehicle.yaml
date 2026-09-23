@@ -57,6 +57,7 @@ Vehicle:
     vehicleTags: Maybe [Text]
     ruleBasedUpgradeTiers: Maybe [UpgradedTier]
     vehicleImageId: Maybe (Id MediaFile)
+    exemptParkingFee: Maybe Bool # ops-set; drops fp.parkingCharge for this vehicle in zones that opted into the exemption
 
   beamType:
     ruleBasedUpgradeTiers: Maybe Value
@@ -68,6 +69,7 @@ Vehicle:
     ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
   default:
     selectedServiceTiers: "'{}'"
+    exemptParkingFee: "false"
 
   sqlType:
     selectedServiceTiers: text[]
@@ -128,3 +130,7 @@ Vehicle:
       kvFunction: updateOneWithKV
       params: [vehicleImageId]
       where: driverId
+    updateExemptParkingFeeByRegistrationNo:
+      kvFunction: updateWithKV
+      params: [exemptParkingFee]
+      where: registrationNo

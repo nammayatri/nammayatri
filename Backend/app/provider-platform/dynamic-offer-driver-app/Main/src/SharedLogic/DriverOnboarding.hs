@@ -428,6 +428,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       energyType = rc.vehicleEnergyType,
       registrationNo = certificateNumber,
       registrationCategory = Nothing,
+      exemptParkingFee = Nothing,
       vehicleClass = fromMaybe "Unknown" rc.vehicleClass,
       merchantOperatingCityId = Just merchantOpCityId,
       vehicleName = Nothing,
