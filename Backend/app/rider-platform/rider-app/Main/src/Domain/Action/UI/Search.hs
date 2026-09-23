@@ -42,6 +42,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RiderConfig
@@ -490,7 +491,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         fromLocation.lon
         ((.lat) <$> searchRequest.toLocation)
         ((.lon) <$> searchRequest.toLocation)
-  QPFS.clearCache person.id
+  -- A pending booking fee is the rider's only route back to the pay-fee screen and cannot be
+  -- re-derived once gone (Confirm.hs sets it once, at confirm). Clearing it here stranded them on
+  -- ACTIVE_BOOKINGS with the fee still owed -- for a search whose results are refused anyway,
+  -- since the unpaid booking is still active (Quote.hs:294-295 -> processActiveBooking). Every
+  -- other status is transient screen state and is still reset.
+  mbFlowStatus <- QPFS.getStatus person.id
+  case mbFlowStatus of
+    Just DPFS.WAITING_FOR_BOOKING_FEE_PAYMENT {} -> pure ()
+    _ -> QPFS.clearCache person.id
   fork "updating search counters" $ unless isDashboardRequest_ $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
   reservePricingTag <-
