@@ -70,6 +70,14 @@ jobs:
         working-directory: Backend/dev/local-stack
         run: node tests/auth-guard-signup.test.js
 
+      # The money path. A fake Moorsyl counts what it is asked to send, so this
+      # proves the global budget actually stops texts going out and that one
+      # host rotating phone numbers is capped -- the two controls added on
+      # 2026-09-23 after an audit found nothing bounded the SMS bill.
+      - name: auth-guard limits
+        working-directory: Backend/dev/local-stack
+        run: node tests/auth-guard-limits.test.js
+
       # Fake Firebase and a fake APNs on http2 with a self-signed certificate:
       # proves an Android token is forwarded byte for byte, an iPhone token is
       # sent to Apple in the app's own words, and Apple's refusal is reported

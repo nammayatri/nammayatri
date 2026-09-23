@@ -123,6 +123,55 @@ const MAX_STARTS = Number(process.env.MAX_STARTS || 5);
 const START_WINDOW_MS = Number(process.env.START_WINDOW_MS || 60 * 60 * 1000);
 
 /**
+ * How many sign-ins one *address* may start per window.
+ *
+ * ── The hole MAX_STARTS does not close ──────────────────────────────────────
+ * That counter is keyed on the number, and an attacker does not reuse a
+ * number, he rotates them. Measured 2026-09-23: nothing else stood between one
+ * host and the gateway except nginx's 20 requests a minute on the auth zone,
+ * which is **1,200 texts an hour from a single address**, every one of them
+ * billed to us. This is the counter that makes rotating numbers pointless.
+ *
+ * ── Why it is this generous, and must stay generous ─────────────────────────
+ * Mauritanian mobile networks are behind carrier-grade NAT: thousands of real
+ * handsets share a handful of public addresses, so a tight per-IP cap does not
+ * hit an attacker, it hits a whole city. Thirty an hour is far above what any
+ * one person does and far below what a flood needs, and the global budget
+ * below is the control that actually bounds the bill.
+ *
+ * If it ever does bite a real launch surge the fix is `MAX_STARTS_PER_IP` and
+ * a restart -- no build, no APK.
+ */
+const MAX_STARTS_PER_IP = Number(process.env.MAX_STARTS_PER_IP || 30);
+
+/**
+ * The whole fleet's SMS budget, and the reason this file has one at all.
+ *
+ * Per-number and per-address counters both answer "is this one caller abusive".
+ * Neither answers "are we about to spend a month's credit tonight", and that is
+ * the question that costs money: the counters above are ceilings per key, and
+ * an attacker's supply of keys is not ours to limit.
+ *
+ * So this is an absolute floor under the bill. Past it the guard stops texting
+ * and says so, loudly, in the log and on /healthz.
+ *
+ * ── Why refusing is the right failure ───────────────────────────────────────
+ * The alternative is spending until Moorsyl's credit is gone, and Moorsyl
+ * publishes no balance route (measured 2026-09-23: /api/balance, /api/account
+ * and /api/me all 404). So an exhausted account cannot be detected from here --
+ * it would show up as every registration failing, silently, on launch week.
+ * A budget we enforce ourselves is the only warning we get.
+ *
+ * Enrolled drivers keep their personal codes throughout, exactly as during a
+ * gateway outage: this must never be the thing that grounds the fleet.
+ *
+ * Sized for the pilot -- a few dozen drivers a day -- with room to spare.
+ * Raise with `MAX_SMS_PER_HOUR` / `MAX_SMS_PER_DAY` and a restart.
+ */
+const MAX_SMS_PER_HOUR = Number(process.env.MAX_SMS_PER_HOUR || 60);
+const MAX_SMS_PER_DAY = Number(process.env.MAX_SMS_PER_DAY || 400);
+
+/**
  * Resends allowed per session.
  *
  * A resend legitimately clears the wrong-code count -- a new code was sent, so
@@ -203,6 +252,57 @@ const SMS_TIMEOUT_MS = Number(process.env.SMS_TIMEOUT_MS || 15000);
 /** For /healthz. Never holds the key or a code. */
 let lastSmsError = null;
 let smsSent = 0;
+
+/**
+ * When each accepted text went out, newest last — the budget's whole memory.
+ *
+ * Timestamps and not two counters, because a counter reset on the hour lets an
+ * attacker spend the next hour's allowance the second it rolls over. A rolling
+ * window has no such edge.
+ *
+ * Only *accepted* sends are recorded: Moorsyl bills for those, a refusal costs
+ * nothing, and a budget that counted failures would let a broken gateway lock
+ * out a fleet that had spent nothing at all.
+ *
+ * Bounded by MAX_SMS_PER_DAY, so it cannot grow: entries older than a day are
+ * dropped every time it is read.
+ */
+const smsTimes = [];
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Drops anything older than a day and reports what the window holds now. */
+function smsSpend() {
+  const now = Date.now();
+  while (smsTimes.length && now - smsTimes[0] > DAY_MS) smsTimes.shift();
+  let hour = 0;
+  for (let i = smsTimes.length - 1; i >= 0; i--) {
+    if (now - smsTimes[i] > HOUR_MS) break;
+    hour += 1;
+  }
+  return { hour, day: smsTimes.length };
+}
+
+/** Is there room in the budget for one more text? */
+function smsBudgetLeft() {
+  const { hour, day } = smsSpend();
+  if (hour >= MAX_SMS_PER_HOUR) return { ok: false, reason: `${hour}/${MAX_SMS_PER_HOUR} this hour` };
+  if (day >= MAX_SMS_PER_DAY) return { ok: false, reason: `${day}/${MAX_SMS_PER_DAY} today` };
+  return { ok: true };
+}
+
+/** Called where the gateway has said yes, and nowhere else. */
+function recordSms() {
+  smsTimes.push(Date.now());
+  const { hour, day } = smsSpend();
+  // Warned at four fifths, so the day it matters there is something in the log
+  // from before everything started failing rather than only after.
+  if (hour * 5 >= MAX_SMS_PER_HOUR * 4 || day * 5 >= MAX_SMS_PER_DAY * 4) {
+    console.warn(`[guard] SMS budget running low: ${hour}/${MAX_SMS_PER_HOUR} this hour, ` +
+      `${day}/${MAX_SMS_PER_DAY} today`);
+  }
+}
 
 /**
  * Numbers that skip the gateway entirely and keep the fixed code.
@@ -313,6 +413,7 @@ async function sendSms(number, code) {
   }
 
   smsSent += 1;
+  recordSms();
   console.log(`[guard] sms to ${number} accepted by the gateway`);
   return { ok: true };
 }
@@ -360,6 +461,7 @@ async function verifySend(number) {
     return { ok: false };
   }
   smsSent += 1;
+  recordSms();
   console.log(`[guard] verify to ${number} accepted by the gateway`);
   return { ok: true, verificationId: id };
 }
@@ -392,6 +494,18 @@ async function verifyCheck(verificationId, code) {
  * a driver out of his own account.
  */
 async function issueCode(route, s, number) {
+  /* The budget, checked here rather than at each call site: this is the one
+     door every text goes through, in both modes, so nothing can be added later
+     that spends credit without passing it. Refused the same shape a gateway
+     failure is refused, so the caller's existing handling applies unchanged --
+     an enrolled driver keeps his personal code, a rider is told plainly. */
+  const budget = smsBudgetLeft();
+  if (!budget.ok) {
+    lastSmsError = `budget reached (${budget.reason})`;
+    console.error(`[guard] REFUSING to text ${number}: SMS budget reached -- ${budget.reason}. ` +
+      'Raise MAX_SMS_PER_HOUR / MAX_SMS_PER_DAY and restart if this is real traffic.');
+    return { ok: false };
+  }
   if (SMS_MODE === 'verify') {
     const sent = await verifySend(number);
     if (sent.ok) {
@@ -524,6 +638,9 @@ const sessions = new Map();
 /** `${route}:${number}` -> [timestamps of sign-ins started] */
 const starts = new Map();
 
+/** `address` -> [timestamps of sign-ins started]. See MAX_STARTS_PER_IP. */
+const ipStarts = new Map();
+
 // Sweep, so a long-running process does not accumulate dead sessions. Cheap:
 // these maps hold one entry per sign-in attempt in the last few minutes.
 setInterval(() => {
@@ -531,20 +648,50 @@ setInterval(() => {
   for (const [id, s] of sessions) {
     if (now - s.born > AUTH_TTL_MS && now > (s.lockedUntil || 0)) sessions.delete(id);
   }
-  for (const [key, times] of starts) {
-    const live = times.filter((t) => now - t < START_WINDOW_MS);
-    if (live.length) starts.set(key, live);
-    else starts.delete(key);
+  for (const map of [starts, ipStarts]) {
+    for (const [key, times] of map) {
+      const live = times.filter((t) => now - t < START_WINDOW_MS);
+      if (live.length) map.set(key, live);
+      else map.delete(key);
+    }
   }
 }, 60_000).unref();
 
+/** Records a start against `key` in `map` and says whether it is over `max`. */
+function overStartLimit(map, key, max) {
+  const now = Date.now();
+  const times = (map.get(key) || []).filter((t) => now - t < START_WINDOW_MS);
+  times.push(now);
+  map.set(key, times);
+  return times.length > max;
+}
+
 /** Records a sign-in start and says whether this number has had too many. */
 function tooManyStarts(key) {
-  const now = Date.now();
-  const times = (starts.get(key) || []).filter((t) => now - t < START_WINDOW_MS);
-  times.push(now);
-  starts.set(key, times);
-  return times.length > MAX_STARTS;
+  return overStartLimit(starts, key, MAX_STARTS);
+}
+
+/** The same question for the address the request came from. */
+function tooManyStartsFromIp(ip) {
+  return overStartLimit(ipStarts, ip, MAX_STARTS_PER_IP);
+}
+
+/**
+ * Who is asking, as nginx saw them.
+ *
+ * `X-Real-IP` is set by the edge from `$remote_addr` (edge/proxy-common.inc)
+ * and a client cannot choose it. `X-Forwarded-For` deliberately is NOT read:
+ * it is caller-supplied, so keying a limit on it would let an attacker mint a
+ * fresh allowance per request by changing one header.
+ *
+ * Falls back to the socket, which is only ever reached when something talks to
+ * this process directly -- and only the box itself can, since the port is not
+ * published.
+ */
+function callerIp(req) {
+  const real = req.headers['x-real-ip'];
+  if (typeof real === 'string' && real.trim()) return real.trim();
+  return req.socket.remoteAddress || 'unknown';
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -720,6 +867,17 @@ async function handle(req, res) {
         // is used and this is ignored.
         sender: SMS_MODE === 'sms' ? SMS_SENDER : null,
         sent: smsSent,
+        /* The budget, as a number somebody can watch. Moorsyl publishes no
+           balance route (measured 2026-09-23: /api/balance, /api/account and
+           /api/me all 404), so this counter is the only view of the spend
+           there is -- worth a cron and an alert, not just a glance. */
+        budget: {
+          hour: smsSpend().hour,
+          hourMax: MAX_SMS_PER_HOUR,
+          day: smsSpend().day,
+          dayMax: MAX_SMS_PER_DAY,
+          exhausted: !smsBudgetLeft().ok,
+        },
         lastError: lastSmsError,
         // Counted, not listed: enough to notice the exemption exists without
         // publishing which numbers can be signed into with a known code.
@@ -782,6 +940,17 @@ async function handle(req, res) {
 
     if (number && tooManyStarts(key(number))) {
       console.warn(`[guard] ${route.name}: throttled sign-ins for ${number}`);
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
+    }
+
+    /* Rotating numbers from one host is what the counter above cannot see, and
+       it is the expensive attack -- see MAX_STARTS_PER_IP. Exempt numbers are
+       not counted: they send nothing, so they cost nothing, and counting them
+       would let our own testing use up a real caller's allowance. */
+    if (number && !SMS_BYPASS.has(number) && tooManyStartsFromIp(callerIp(req))) {
+      console.warn(`[guard] ${route.name}: throttled sign-ins from ${callerIp(req)} ` +
+        `(${MAX_STARTS_PER_IP}/${START_WINDOW_MS / 60000} min)`);
       return send(res, 429, refusal('TOO_MANY_REQUESTS'),
         { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
     }
@@ -1077,7 +1246,14 @@ http.createServer((req, res) => {
     `auth-guard on :${PORT}  ` +
     `${MAX_ATTEMPTS} attempts, session ${AUTH_TTL_MS / 60000} min, lock ${LOCK_MS / 60000} min, ` +
     `${MAX_STARTS} sign-ins per number per ${START_WINDOW_MS / 60000} min, ` +
+    `${MAX_STARTS_PER_IP} per address, ` +
     `${MAX_RESENDS} resends, body ${Math.round(MAX_BODY / 1024)} kB`,
+  );
+  // The bill's ceiling, said out loud at startup: the one line that answers
+  // "what is the worst tonight can cost" without reading this file.
+  console.log(
+    `auth-guard  SMS budget ${MAX_SMS_PER_HOUR}/hour, ${MAX_SMS_PER_DAY}/day ` +
+    '(rolling; refuses past it and says so)',
   );
   // Loud, because without a key the rider side refuses every sign-in rather
   // than falling back to something -- there is nothing to fall back to.
