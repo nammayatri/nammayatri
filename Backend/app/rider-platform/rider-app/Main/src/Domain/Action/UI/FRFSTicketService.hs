@@ -66,6 +66,7 @@ import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -759,7 +760,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   return $ FRFSSearchAPIRes quotes searchReqId
 
 enrichQuotesWithPassOverride ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CoreMetrics m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r) =>
   DIBC.IntegratedBPPConfig ->
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Domain.Types.FRFSSearch.FRFSSearch ->
@@ -775,7 +776,9 @@ enrichQuotesWithPassOverride integratedBppConfig personId search mbClientHasPass
         mbKnownHasPass = if mbClientHasPasses == Just True then Just True else search.hasApplicablePass
     QP.findById personId >>= \case
       Nothing -> pure []
-      Just person -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBppConfig person search.vehicleType tripTime mbKnownHasPass
+      Just person -> do
+        mbLegStations <- Just <$> FRFSPassOverride.resolveLegStations integratedBppConfig search.fromStationCode search.toStationCode
+        FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBppConfig person search.vehicleType tripTime mbKnownHasPass mbLegStations
 
 getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
 getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = do

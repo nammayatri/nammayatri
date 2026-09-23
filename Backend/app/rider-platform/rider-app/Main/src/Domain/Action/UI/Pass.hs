@@ -180,8 +180,8 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
       return (passType, passes)
 
     passesWithPricing <- forM (concatMap snd allPasses) $ \pass -> (pass,) <$> FRFSPassOverride.dynamicPricingFromPass pass
-    let dynamicPasses = [pass | (pass, Just _) <- passesWithPricing]
-        fixedPasses = [pass | (pass, Nothing) <- passesWithPricing]
+    let dynamicPasses = [pass | (pass, FRFSPassOverride.DynamicallyPriced _) <- passesWithPricing]
+        fixedPasses = [pass | (pass, FRFSPassOverride.NotDynamicallyPriced) <- passesWithPricing]
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
     passAPIEntities <- flip mapMaybeM fixedPasses $ \pass ->
       withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
@@ -213,9 +213,11 @@ postMultimodalPassCalculatePrice (mbPersonId, _merchantId) passId req = do
   calculateDynamicPassPrice personId pass req
 
 calculateDynamicPassPrice :: Id.Id DP.Person -> DPass.Pass -> PassAPI.PassCalculatePriceReq -> Environment.Flow PassAPI.PassCalculatePriceResp
-calculateDynamicPassPrice riderId pass req = do
-  pricing <- FRFSPassOverride.dynamicPricingFromPass pass >>= fromMaybeM (InvalidRequest $ "Pass is not dynamically priced, passId=" <> pass.id.getId)
-  dynamicPassPrice riderId pass pricing req
+calculateDynamicPassPrice riderId pass req =
+  FRFSPassOverride.dynamicPricingFromPass pass >>= \case
+    FRFSPassOverride.DynamicallyPriced pricing -> dynamicPassPrice riderId pass pricing req
+    FRFSPassOverride.DynamicPricingBroken reason -> throwError (InvalidRequest $ "Pass pricing config is invalid, passId=" <> pass.id.getId <> ": " <> reason)
+    FRFSPassOverride.NotDynamicallyPriced -> throwError (InvalidRequest $ "Pass is not dynamically priced, passId=" <> pass.id.getId)
 
 dynamicPassPrice :: Id.Id DP.Person -> DPass.Pass -> FRFSPassOverride.DynamicPricingConfig -> PassAPI.PassCalculatePriceReq -> Environment.Flow PassAPI.PassCalculatePriceResp
 dynamicPassPrice riderId pass pricing req = do
@@ -307,11 +309,17 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
-  mbPricing <- FRFSPassOverride.dynamicPricingFromPass pass
-  mbDynamicPurchase <- forM mbPricing $ \pricing -> do
-    routeSelection <- mbRouteSelection & fromMaybeM (InvalidRequest "sourceStopCode, destinationStopCode and numberOfTrips are required for this pass")
-    priced <- dynamicPassPrice personId pass pricing routeSelection
-    pure (routeSelection, priced)
+  mbDynamicPurchase <-
+    FRFSPassOverride.dynamicPricingFromPass pass >>= \case
+      FRFSPassOverride.NotDynamicallyPriced -> pure Nothing
+      FRFSPassOverride.DynamicPricingBroken reason -> throwError (InvalidRequest $ "Pass pricing config is invalid, passId=" <> passId.getId <> ": " <> reason)
+      FRFSPassOverride.DynamicallyPriced pricing -> do
+        routeSelection <- mbRouteSelection & fromMaybeM (InvalidRequest "sourceStopCode, destinationStopCode and numberOfTrips are required for this pass")
+        priced <- dynamicPassPrice personId pass pricing routeSelection
+        integratedBPPConfig <- passIntegratedBPPConfig pass
+        (sourceStation, destinationStation) <- FRFSPassOverride.resolveLegStations integratedBPPConfig routeSelection.sourceStopCode routeSelection.destinationStopCode
+        let resolvedSelection = PassAPI.PassCalculatePriceReq {sourceStopCode = sourceStation, destinationStopCode = destinationStation, numberOfTrips = routeSelection.numberOfTrips}
+        pure $ Just (resolvedSelection, priced)
 
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
@@ -975,8 +983,7 @@ buildDynamicPricedPassAPIEntity ::
   Environment.Flow (Maybe PassAPI.DynamicPricedPassAPIEntity)
 buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
   FRFSPassOverride.dynamicPricingFromPass pass >>= \case
-    Nothing -> pure Nothing
-    Just pricing -> do
+    FRFSPassOverride.DynamicallyPriced pricing -> do
       listing <- buildPassListing mbLanguage person eligibilityLogics pass
       pure . Just $
         PassAPI.DynamicPricedPassAPIEntity
@@ -1000,6 +1007,7 @@ buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
             minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
             timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
           }
+    _ -> pure Nothing
 
 buildPassAPIEntity ::
   Maybe Lang.Language ->
@@ -1181,7 +1189,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
           <$> QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
   mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbPayment >>= (.passId))
   mbBenefit <- case (mbPayment, mbOverridePass) of
-    (Just payment, Just overridePass) -> FRFSPassOverride.benefitForPayment payment overridePass
+    (Just payment, Just overridePass)
+      | FRFSPassOverride.isOverridePayment payment overridePass -> FRFSPassOverride.benefitForPayment payment overridePass
     _ -> pure Nothing
   availableTripCount <- case (mbPayment, mbBenefit) of
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
@@ -1974,7 +1983,9 @@ availableTripCountForPayment ::
   m (Maybe Int)
 availableTripCountForPayment payment = do
   mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
-  mbBenefit <- maybe (pure Nothing) (FRFSPassOverride.benefitForPayment payment) mbPass
+  mbBenefit <- case mbPass of
+    Just pass | FRFSPassOverride.isOverridePayment payment pass -> FRFSPassOverride.benefitForPayment payment pass
+    _ -> pure Nothing
   maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
 
 -- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
