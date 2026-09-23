@@ -79,6 +79,7 @@ data RiderConfig = RiderConfig
     emailBusinessVerificationConfig :: Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig,
     emailMagicLinkConfig :: Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableAdjacentGeoHashPlaceNameLookup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableAutoJourneyRefund :: Kernel.Prelude.Bool,
     enableBetterRoutePointSuggestion :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableBoardingProximityCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
