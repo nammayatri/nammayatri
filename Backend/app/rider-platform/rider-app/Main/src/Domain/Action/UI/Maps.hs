@@ -30,6 +30,7 @@ module Domain.Action.UI.Maps
 where
 
 import qualified Data.Geohash as DG
+import Data.List (nub)
 import Data.Text (pack)
 import qualified Data.Text as T
 import qualified Data.Time as DT
@@ -52,6 +53,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.PlaceNameCache as QPlaceNameCache
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -121,7 +123,16 @@ getPlaceName (personId, merchantId) entityId req = do
       let myGeohash = DG.encode merchant.geoHashPrecisionValue (lat, lon)
       case myGeohash of
         Just geoHash -> do
-          placeNameCache' <- CM.findPlaceByGeoHash (pack geoHash)
+          exactHit <- CM.findPlaceByGeoHash (pack geoHash)
+          placeNameCache' <-
+            if null (fst exactHit)
+              then do
+                riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+                let adjacentLookupEnabled = fromMaybe False (riderConfig >>= (.enableAdjacentGeoHashPlaceNameLookup))
+                if adjacentLookupEnabled
+                  then findPlaceInNeighbouringGeoHashes merchant.geoHashPrecisionValue lat lon
+                  else pure exactHit
+              else pure exactHit
           let placeNameCache = fst placeNameCache'
               source = snd placeNameCache'
           fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
@@ -138,6 +149,40 @@ getPlaceName (personId, merchantId) entityId req = do
       if null placeNameCache
         then callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
         else pure $ map (convertToGetPlaceNameResp source) placeNameCache
+
+-- | Fallback when the exact geohash cell has nothing cached: fetch all eight
+-- adjacent cells in one query and return the rows of the nearest cell that has any.
+findPlaceInNeighbouringGeoHashes ::
+  ServiceFlow m r =>
+  Int ->
+  Double ->
+  Double ->
+  m ([PlaceNameCache], CM.Source)
+findPlaceInNeighbouringGeoHashes precision lat lon = do
+  let candidateGeoHashes = neighbouringGeoHashes precision lat lon
+  if null candidateGeoHashes
+    then pure ([], CM.DB)
+    else do
+      places <- QPlaceNameCache.findAllByGeoHashes (map Just candidateGeoHashes)
+      let placesIn geoHash = filter ((== Just geoHash) . (.geoHash)) places
+      pure (fromMaybe [] (find (not . null) (map placesIn candidateGeoHashes)), CM.DB)
+
+-- | The eight geohash cells adjacent to the one containing (lat, lon), at the same
+-- precision, nearest first.
+neighbouringGeoHashes :: Int -> Double -> Double -> [Text]
+neighbouringGeoHashes precision lat lon = fromMaybe [] $ do
+  geoHash <- DG.encode precision (lat, lon)
+  bounds <- DG.decode_ geoHash :: Maybe ((Double, Double), (Double, Double))
+  let ((latMin, latMax), (lonMin, lonMax)) = bounds
+      latDelta = latMax - latMin
+      lonDelta = lonMax - lonMin
+      centreLat = latMin + latDelta / 2
+      centreLon = lonMin + lonDelta / 2
+      offsets = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)] :: [(Int, Int)]
+  pure . filter (/= pack geoHash) . nub $
+    mapMaybe
+      (\(i, j) -> pack <$> DG.encode precision (centreLat + fromIntegral i * latDelta, centreLon + fromIntegral j * lonDelta))
+      offsets
 
 callMapsApi :: (MonadFlow m, ServiceFlow m r, HasKafkaProducer r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOperatingCityId entityId req geoHashPrecisionValue = do

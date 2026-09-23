@@ -29,6 +29,10 @@ PlaceNameCache:
     findPlaceByGeoHash:
       kvFunction: findAllWithKV
       where: geoHash
+    findAllByGeoHashes:
+      kvFunction: findAllWithKV
+      where:
+        in: [geoHash]
     findPlaceByPlaceId:
       kvFunction: findAllWithKV
       where: placeId
