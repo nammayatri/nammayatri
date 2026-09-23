@@ -1285,6 +1285,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           DomainRC.endAllRCAssociationsAndRemoveVehicle personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
+        unlinkedDriver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+        SOnboardingComms.setOnboardingAs transporterConfig unlinkedDriver DI.INDIVIDUAL
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
@@ -2979,6 +2981,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       deviceToken <- fromMaybeM DeviceTokenNotFound $ req.deviceToken
+      SOnboardingComms.setOnboardingAs transporterConfig person DI.FLEET_DRIVER
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
@@ -3008,6 +3011,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
       -- onboarded operator required only for new drivers
+      SOnboardingComms.setOnboardingAs transporterConfig person DI.FLEET_DRIVER
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
@@ -4739,6 +4743,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
     _ -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
         QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+      SOnboardingComms.setOnboardingAs transporterConfig driver DI.INDIVIDUAL
       pure
         ( "FLEET_REQUEST_REJECTED",
           \pn -> pn.body <> maybe "" (" " <>) req.reason

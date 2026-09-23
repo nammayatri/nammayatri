@@ -29,6 +29,7 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Alert
 import Domain.Types.Common
+import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
@@ -202,6 +203,9 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         return $ Just conductorBadge
       Nothing -> pure Nothing
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId)
+  qrStartTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  qrStartDriver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  SOnboardingComms.setOnboardingAs qrStartTransporterConfig qrStartDriver DDI.FLEET_DRIVER
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
@@ -485,8 +489,9 @@ postFleetConsentDecline (mbDriverId, _merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetDriverAssociation.fleetOwnerId) (cast driverId)) SGuard.DeactivateFromFleet (SGuard.TargetDriver (cast driverId)) $
     FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
-  fork "Driver fleet unlink notification" $ do
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  SOnboardingComms.setOnboardingAs transporterConfig driver DDI.INDIVIDUAL
+  fork "Driver fleet unlink notification" $
     SOnboardingComms.notifyOnDriverFleetUnlink merchantOperatingCityId driver fleetDriverAssociation.fleetOwnerId SOnboardingComms.ByDriverConsentDecline
   pure Success
 
