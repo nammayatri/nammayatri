@@ -64,6 +64,7 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
@@ -162,6 +163,11 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
             DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
           } ::
           DFarePolicy.FullFarePolicy
+  -- Only look the RC up when the pickup zone has opted in, so ordinary rides pay nothing for this.
+  rcParkingFeeExempt <-
+    if fromMaybe False farePolicy'.parkingFeeExemptionEnabled
+      then SPFE.isParkingFeeExemptForDriver driver.id
+      else pure False
   fareParams <- do
     FC.calculateFareParameters
       CalculateFareParametersParams
@@ -198,6 +204,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
           pickupGateId = searchReq.pickupGateId,
           fareSettlementType = farePolicy'.fareSettlementType,
+          isParkingFeeExempt = rcParkingFeeExempt,
           isScheduled = searchTry.isScheduled,
           ..
         }

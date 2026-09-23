@@ -63,6 +63,7 @@ import qualified Domain.Types.MorthVerification as MorthDomain
 import qualified Domain.Types.Person as Person
 import Domain.Types.RCValidationRules
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
@@ -692,7 +693,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                    let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
+                    let updatedVehicle = (makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle

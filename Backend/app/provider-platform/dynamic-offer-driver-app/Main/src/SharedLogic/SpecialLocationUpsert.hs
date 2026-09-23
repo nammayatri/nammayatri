@@ -83,6 +83,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
+    parkingFeeExemptionEnabled :: Maybe Text,
     supportNumber :: Maybe Text,
     gateInfoMinDriverThreshold :: Maybe Text,
     gateInfoDemandThreshold :: Maybe Text,
@@ -136,6 +137,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     dropPriority <- r .: "drop_priority"
     specialLocationId <- r .: "special_location_id"
     isQueueEnabled <- optional (r .: "is_queue_enabled")
+    parkingFeeExemptionEnabled <- optional (r .: "parking_fee_exemption_enabled")
     supportNumber <- optional (r .: "support_number")
     gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
     gateInfoDemandThreshold <- optional (r .: "gate_info_demand_threshold")
@@ -310,6 +312,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   enabled :: Bool <- readCSVField idx row.enabled "Enabled"
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+      mbParkingFeeExemptionEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.parkingFeeExemptionEnabled) "Parking Fee Exemption Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       boothSpecificFleet :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.boothSpecificFleet) "Booth Specific Fleet"
       mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
@@ -359,6 +362,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             createdAt = now,
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
+            parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled,
             enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
             fetchAllGateFareProduct = mbFetchAllGateFareProduct,
@@ -506,6 +510,7 @@ mergeSpecialLocationWithExisting new Nothing =
   new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
 mergeSpecialLocationWithExisting new (Just old) =
   new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+      DSL.parkingFeeExemptionEnabled = new.parkingFeeExemptionEnabled <|> old.parkingFeeExemptionEnabled,
       DSL.paymentModes = new.paymentModes <|> old.paymentModes,
       DSL.fetchAllGateFareProduct = new.fetchAllGateFareProduct <|> old.fetchAllGateFareProduct,
       DSL.render = new.render <|> old.render,

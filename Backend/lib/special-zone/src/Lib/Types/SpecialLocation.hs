@@ -101,6 +101,7 @@ data SpecialLocation = SpecialLocation
     enabled :: Bool,
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
+    parkingFeeExemptionEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
     render :: Maybe RenderType,
     fetchAllGateFareProduct :: Maybe Bool,
