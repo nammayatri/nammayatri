@@ -24,6 +24,7 @@ import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Action.Internal.OneShotOndcLogs as OneShotOndcLogs
 import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
@@ -169,8 +170,11 @@ processAssignment req = do
   -- Resume-safe: a previous attempt may have crashed after booking creation; the BPP
   -- retry must continue from the ride step instead of failing on the duplicate guard.
   mbExistingBooking <- QRideB.findByBPPBookingId (Id req.bppBookingId)
-  booking <- case mbExistingBooking of
-    Just existingBooking -> pure existingBooking
+  -- DConfirmRes is carried out solely for the ONDC log stash below; on the
+  -- resume path (booking pre-existed) it is gone and the init/confirm logs are
+  -- the only casualty.
+  (booking, mbDConfirmRes) <- case mbExistingBooking of
+    Just existingBooking -> pure (existingBooking, Nothing)
     Nothing -> do
       -- Same mutual exclusion the legacy auto-assign/UI-confirm pair uses — it stays,
       -- as the only searchRequest-level guard against a double booking. But for
@@ -222,9 +226,9 @@ processAssignment req = do
                         paymentChargeBearer = req.paymentChargeBearer
                       }
               }
-        pure dConfirmRes.booking
+        pure dConfirmRes
       case creationResult of
-        Right booking' -> pure booking'
+        Right dConfirmRes -> pure (dConfirmRes.booking, Just dConfirmRes)
         Left err -> do
           -- Failed before the booking row exists: release the init-trigger gate we just
           -- took, or the BPP's retry (arriving well inside the 10s TTL) dies on our own
@@ -237,6 +241,13 @@ processAssignment req = do
   -- too; the underlying FareBreakupInfo upsert replaces rather than appends, so this
   -- is idempotent.
   DOnInit.createFareBreakup booking dFareBreakups
+  -- ONDC log synthesis: capture the init/confirm payloads the legacy relay would
+  -- have sent while DConfirmRes is still in scope. A fork this response never
+  -- waits on; the BPP collects the stash via internal/oneShotOndcLogs from its
+  -- own background thread after the assignment callback returns.
+  whenJust mbDConfirmRes $ \dConfirmRes ->
+    fork "one-shot ondc log payload stash" $
+      OneShotOndcLogs.stashOneShotBecknPayloads dConfirmRes booking
   DCommon.rideAssignedReqHandler (mkValidatedRideAssignedReq booking)
   logInfo $ "One-shot assign completed for booking " <> booking.id.getId <> ", bppRideId " <> req.bppRideId
   where

@@ -40,6 +40,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
@@ -58,6 +59,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OneShotOndcLogs as OneShotOndcLogs
 import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -75,6 +77,9 @@ import qualified Tools.Metrics as Metrics
 data OneShotAssignReq = OneShotAssignReq
   { merchant :: DM.Merchant,
     searchReq :: DSR.SearchRequest,
+    -- | Needed only by the ONDC log synthesis (the on_select payload builder);
+    -- the assignment itself never reads it.
+    srfd :: DSRFD.SearchRequestForDriver,
     searchTry :: DST.SearchTry,
     driverQuote :: DDQ.DriverQuote,
     driver :: DPerson.Person,
@@ -150,7 +155,16 @@ oneShotAssign OneShotAssignReq {..} = do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           void $ withQuickRetry $ CallBAPInternal.oneShotAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
         case callbackResult of
-          Right _ -> logInfo $ "One-shot assign callback delivered for booking " <> booking.id.getId
+          Right _ -> do
+            logInfo $ "One-shot assign callback delivered for booking " <> booking.id.getId
+            -- ONDC still expects transaction logs for the relay one-shot skipped.
+            -- Strictly after the assignment callback succeeded and still inside this
+            -- background fork: zero work on any critical path, and a failure here
+            -- loses logs, never a ride.
+            ondcLogsResult <- withTryCatch "oneShotOndcLogs" $ OneShotOndcLogs.pushOneShotOndcLogs merchant searchReq srfd searchTry driverQuote booking ride driver vehicle
+            case ondcLogsResult of
+              Right _ -> pure ()
+              Left err -> logError $ "One-shot ONDC log synthesis failed for booking " <> booking.id.getId <> ": " <> show err
           Left err -> do
             logError $ "One-shot assign callback failed for booking " <> booking.id.getId <> ", cancelling: " <> show err
             abortOneShotBooking booking

@@ -720,6 +720,7 @@ library
       SharedLogic.MobileNumberValidation
       SharedLogic.OndcCancellationReason
       SharedLogic.OneShotAssign
+      SharedLogic.OneShotOndcLogs
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.PayoutStatusCheck

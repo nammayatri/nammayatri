@@ -17,6 +17,7 @@ module SharedLogic.CallBAPInternal where
 import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
+import Data.Aeson (Value)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -379,6 +380,63 @@ oneShotAssign apiKey internalUrl request = do
   logInfo $ "CallBAPInternal: oneShotAssign for txn: " <> request.transactionId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (oneShotAssignClient (Just apiKey) request) "OneShotAssign" oneShotAssignAPI
+
+-- One-shot assignment skips the on_select/init/on_init/confirm/on_confirm relay, but
+-- ONDC still expects both NPs to push transaction logs for the full flow. This call —
+-- made only from a background fork after the assignment callback succeeded, never on
+-- any critical path — carries the BPP-built callback payloads (plus the message ids
+-- and flow-ordered timestamps both sides must agree on) so the BAP can push its
+-- receive-side logs; the response returns the BAP-built init/confirm payloads so the
+-- BPP can push those as received.
+type OneShotOndcLogsAPI =
+  "internal"
+    :> "oneShotOndcLogs"
+    :> Header "token" Text
+    :> ReqBody '[JSON] OneShotOndcLogsReq
+    :> Post '[JSON] OneShotOndcLogsRes
+
+-- NOTE: field names (and JSON encoding) must stay in sync with the BAP handler type
+-- in rider-app Domain.Action.Internal.OneShotOndcLogs.
+data OneShotOndcLogsReq = OneShotOndcLogsReq
+  { transactionId :: Text,
+    bppBookingId :: Text,
+    -- | on_init/on_confirm must carry the same message_id as the init/confirm they
+    -- answer; the BPP mints both and the BAP patches its payloads to match.
+    initMessageId :: Text,
+    confirmMessageId :: Text,
+    initTimestamp :: UTCTime,
+    confirmTimestamp :: UTCTime,
+    onSelectPayload :: Value,
+    onInitPayload :: Value,
+    onConfirmPayload :: Value
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+data OneShotOndcLogsRes = OneShotOndcLogsRes
+  { initPayload :: Maybe Value,
+    confirmPayload :: Maybe Value
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+oneShotOndcLogsClient :: Maybe Text -> OneShotOndcLogsReq -> EulerClient OneShotOndcLogsRes
+oneShotOndcLogsClient = client (Proxy @OneShotOndcLogsAPI)
+
+oneShotOndcLogsAPI :: Proxy OneShotOndcLogsAPI
+oneShotOndcLogsAPI = Proxy
+
+oneShotOndcLogs ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  OneShotOndcLogsReq ->
+  m OneShotOndcLogsRes
+oneShotOndcLogs apiKey internalUrl request = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (oneShotOndcLogsClient (Just apiKey) request) "OneShotOndcLogs" oneShotOndcLogsAPI
 
 type EKDLiveCallFeedbackAPI =
   "internal"

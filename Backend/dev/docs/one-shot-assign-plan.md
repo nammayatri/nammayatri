@@ -247,6 +247,45 @@ is one predicate.
 4. Integration test via the testing framework: dynamic-offer happy path with flag on/off,
    cancel-search race, callback-failure cancel path.
 
+## ONDC log synthesis (added 2026-09-22)
+
+One-shot skips the on_select/init/on_init/confirm/on_confirm relay, but ONDC still expects
+both NPs to push transaction logs (`pushLogs`: Kafka + per-merchant ONDC log endpoint) for the
+full flow. The five skipped payloads are synthesized with the same ACL builders the legacy
+relay uses and pushed by both sides, with **zero added work on any critical path** — nothing
+runs before the driver-respond response, the assignment internal call, or the assignment
+handler's response:
+
+1. **BPP** (`SharedLogic/OneShotOndcLogs.hs`): invoked from the existing assignment fork only
+   AFTER `CallBAPInternal.oneShotAssign` succeeded. Mints the init/confirm message ids (each
+   on_X pair must share the request's message_id) and five flow-ordered timestamps (1s apart —
+   the payloads are built out of order on two services, so every context timestamp is
+   overwritten via `ContextV2.setContextMessageIdAndTimestamp`). Builds on_select via
+   `BP.buildDriverOfferPayload` (extracted from `sendDriverOffer`/`callOnSelectV2` so the
+   legacy relay and the log synthesis share one builder; `srfd` now travels through
+   `OneShotAssignReq` for it), on_init via a synthetic `DInit.InitRes` (rider phone from
+   `RiderDetails`, payment id a fresh GUID exactly as the legacy init handler mints it,
+   `cancellationFee = Nothing` — a known divergence), and on_confirm via the now-exported
+   `BP.buildOnConfirmMessage booking ride driver vehicle`. Pushes its three send-side logs
+   (same requestType strings the legacy paths use), then calls the new
+   `internal/oneShotOndcLogs` BAP endpoint with the three bodies + ids/timestamps, and pushes
+   the returned init/confirm as received.
+2. **BAP stash** (`Domain/Action/Internal/OneShotAssign.hs`): a fork (the response never waits
+   on it) captures `init` via `ACL.buildInitReqV2 dConfirmRes` — `processAssignment` now keeps
+   the `DConfirmRes` instead of discarding it — and `confirm` via
+   `DOnInit.buildOnInitResFromBooking` + `ACL.buildConfirmReqV2`, stashing both JSON bodies in
+   Redis (30 min TTL) keyed by bppBookingId. On the resume path (booking pre-existed) there is
+   no `DConfirmRes`, so no stash: the init/confirm pair is the only log casualty.
+3. **BAP endpoint** (`Domain/Action/Internal/OneShotOndcLogs.hs`, route
+   `internal/oneShotOndcLogs`): patches the stashed init/confirm with the BPP-minted
+   message ids/timestamps, pushes all five BAP-side logs (received callbacks verbatim as the
+   BPP built them — byte-identical on both sides — plus its two sends), deduped by a Redis
+   `setNxExpire` guard against BPP redelivery, and returns the patched init/confirm bodies.
+
+Everything is best-effort: any failure only loses logs (with an error log), never touches the
+ride. Known gaps, accepted: the Fabric/unsigned send path never pushed ONDC logs even in the
+legacy relay; the synthetic on_init carries no real payment order or cancellation fee.
+
 ## File touch list
 
 | # | File | Change |

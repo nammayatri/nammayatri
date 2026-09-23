@@ -22,6 +22,7 @@ module BecknV2.OnDemand.Utils.Context
     mapToCbAction,
     mutateFabricContext,
     mutateFabricContextBpp,
+    setContextMessageIdAndTimestamp,
     validateContext,
   )
 where
@@ -98,6 +99,19 @@ buildContextV2_1' now action domain messageId transactionId bapId bapUri bppId b
       contextTransactionId = UUID.fromText =<< transactionId,
       contextTtl = ttl,
       contextVersion = Just "2.1.0"
+    }
+
+-- | Override a built context's message_id\/timestamp. For synthesized transaction
+-- logs of Beckn messages that were never sent on the wire (one-shot assignment):
+-- both NPs must log the same message_id per request\/callback pair, and the
+-- timestamps must respect the on_select -> init -> on_init -> confirm ->
+-- on_confirm flow order even though the payloads are built out of order on two
+-- different services. Nothing keeps the message_id the context was built with.
+setContextMessageIdAndTimestamp :: Maybe Text -> KP.UTCTime -> Spec.Context -> Spec.Context
+setContextMessageIdAndTimestamp mbMessageId timestamp context =
+  context
+    { Spec.contextMessageId = maybe (Spec.contextMessageId context) UUID.fromText mbMessageId,
+      Spec.contextTimestamp = Just $ UTCTimeRFC3339 timestamp
     }
 
 buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> Maybe Text -> m Spec.Context

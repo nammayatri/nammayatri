@@ -29,6 +29,8 @@ module SharedLogic.CallBAP
     sendUpdateEditDestErrToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
+    buildDriverOfferPayload,
+    buildOnConfirmMessage,
     callOnConfirmV2,
     callOnStatusV2,
     callOnSelectV2ForQuote,
@@ -195,24 +197,13 @@ callOnSelectV2 ::
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
-  DSRFD.SearchRequestForDriver ->
-  DST.SearchTry ->
-  Spec.OnSelectReqMessage ->
+  Spec.OnSelectReq ->
   m ()
-callOnSelectV2 transporter searchRequest srfd searchTry content = do
-  let bapId = searchRequest.bapId
-      bapUri = searchRequest.bapUri
+callOnSelectV2 transporter searchRequest onSelectReq = do
+  let bapUri = searchRequest.bapUri
       bppSubscriberId = getShortId $ transporter.subscriberId
-  bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-
-  msgId <- getMsgIdByTxnId searchRequest.transactionId
-  let vehicleCategory = Utils.mapServiceTierToCategory srfd.vehicleServiceTier
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-  ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
-  logDebug $ "on_selectV2 request bpp: " <> show content
-  let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
+  logDebug $ "on_selectV2 request bpp: " <> show onSelectReq.onSelectReqMessage
   res <-
     GatewayDispatch.dispatchAction
       transporter.id
@@ -224,12 +215,6 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
       (\url mappedAction jsonBody -> withShortRetry $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
-  where
-    getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
-    getMsgIdByTxnId txnId = do
-      Hedis.safeGet (mkTxnIdKey txnId) >>= \case
-        Nothing -> pure (fromMaybe searchTry.estimateId srfd.estimateId)
-        Just a -> pure a
 
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
@@ -1087,6 +1072,34 @@ sendDriverOffer ::
   DDQ.DriverQuote ->
   m ()
 sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
+  onSelectReq <- buildDriverOfferPayload transporter searchReq srfd searchTry driverQuote
+  callOnSelectV2 transporter searchReq onSelectReq
+
+-- | Builds the complete on_select payload (context + message) for a driver's
+-- dynamic-offer bid without sending it. Shared by 'sendDriverOffer' (the legacy
+-- relay) and the one-shot ONDC log synthesis (SharedLogic.OneShotOndcLogs),
+-- which only logs it — one-shot replaces the wire call with the internal
+-- assignment callback, but ONDC still expects the transaction logs.
+buildDriverOfferPayload ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasPrettyLogger m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  DSRFD.SearchRequestForDriver ->
+  DST.SearchTry ->
+  DDQ.DriverQuote ->
+  m Spec.OnSelectReq
+buildDriverOfferPayload transporter searchReq srfd searchTry driverQuote = do
   logDebug $ "on_select ttl request driver:-" <> show driverQuote.validTill
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
@@ -1110,8 +1123,22 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
       -- MSILFulfillmentId here too.
       fixMsg msg = msg {Spec.onSelectReqMessageOrder = (MSILItemCompliance.overrideOrderItemCompliance . MSILBreakup.overrideOrderBreakupTitles) <$> Spec.onSelectReqMessageOrder msg}
       onSelectMsg = if isOndcScheduledRideSupportEnabled then fixMsg onSelectMsg' else onSelectMsg'
-  callOnSelectV2 transporter searchReq srfd searchTry onSelectMsg
+  msgId <- getMsgIdByTxnId searchReq.transactionId
+  -- Kept as a second lookup (srfd tier vs driverQuote tier above) to preserve the
+  -- exact pre-refactor behavior; both are cached reads.
+  ttlBppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory srfd.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttl <- ttlBppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  bppUri <- buildBppUrl transporter.id
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchReq.transactionId) searchReq.bapId searchReq.bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchReq.bapCity) (fromMaybe Context.India searchReq.bapCountry) (Just ttl)
+  pure $ Spec.OnSelectReq context Nothing (Just onSelectMsg)
   where
+    getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
+    getMsgIdByTxnId txnId = do
+      Hedis.safeGet (mkTxnIdKey txnId) >>= \case
+        Nothing -> pure (fromMaybe searchTry.estimateId srfd.estimateId)
+        Just a -> pure a
+
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->

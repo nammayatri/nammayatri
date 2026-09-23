@@ -2004,6 +2004,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                         OneShot.OneShotAssignReq
                           { merchant = merchant,
                             searchReq = searchReq,
+                            srfd = sReqFD,
                             searchTry = searchTry,
                             driverQuote = driverQuote,
                             driver = driver,
