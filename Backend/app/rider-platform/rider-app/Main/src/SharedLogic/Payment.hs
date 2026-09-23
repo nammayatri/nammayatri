@@ -252,7 +252,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
             logError $ "Error in payment fullfillment status handler: " <> show err
             return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
       Payment.AUTO_REFUNDED -> do
-        return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentRefundInitiated) Nothing
+        return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentRefundInitiated) paymentOrder.domainEntityId
       _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
   -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
@@ -607,10 +607,12 @@ refundStatusHandler paymentOrder paymentServiceType = do
       case depositReqs of
         [] -> pure ()
         _ ->
-          Redis.withWaitAndLockRedis (refundRequestProccessingKey paymentOrder.id) 60 10000 $
+          -- Waits for an in-flight refund call on this order, so the request it links is visible here.
+          BookingDepositLedger.withDepositRefundCallLock paymentOrder.id . BookingDepositLedger.withDepositRefundLock paymentOrder.id $
             QRefundRequest.findByRefundsId (Just refund.id) >>= \mbReq ->
               whenJust mbReq $ \req ->
-                when (req.status == DRefundRequest.APPROVED && refund.status `elem` [Payment.REFUND_SUCCESS, Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $ do
+                -- A thrown refund call is not a decline: only CheckRefundStatus's gateway answer may resolve it.
+                when (req.status == DRefundRequest.APPROVED && refund.status `elem` [Payment.REFUND_SUCCESS, Payment.REFUND_FAILURE, Payment.REFUND_CANCELED] && not (BookingDepositLedger.unknownRefundOutcome refund)) $ do
                   BookingDepositLedger.resolveDepositRefundLegs req.personId paymentOrder.id refund.status
                   QRefundRequest.updateRefundStatus (refundStatusToRequestStatus refund.status) req.id
       rows <- QBookingPayment.findAllByOrderId paymentOrder.id
