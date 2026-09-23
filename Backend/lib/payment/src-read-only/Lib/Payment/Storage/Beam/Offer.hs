@@ -31,6 +31,7 @@ data OfferT f = OfferT
     offerCode :: B.C f Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     offerType :: B.C f Lib.Payment.Domain.Types.Offer.OfferType,
+    showMilestoneCard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     sponsoredBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

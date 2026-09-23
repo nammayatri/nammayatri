@@ -246,6 +246,7 @@ confirm DConfirmReq {..} = do
                     frequencyType = offerDetails.frequencyType,
                     appliedCount = offerDetails.appliedCount,
                     maxApplyCount = offerDetails.maxApplyCount,
+                    showMilestoneCard = offerDetails.showMilestoneCard,
                     merchantId = searchRequest.merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
                     createdAt = now,

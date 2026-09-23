@@ -1281,7 +1281,7 @@ buildDomainOfferList orderAmount eligible =
             }
 
     mkUiConfigs offer =
-      if isNothing offer.autoApply && isNothing offer.isHidden
+      if isNothing offer.autoApply && isNothing offer.isHidden && isNothing offer.showMilestoneCard
         then Nothing
         else
           Just
@@ -1289,7 +1289,8 @@ buildDomainOfferList orderAmount eligible =
               { offerDisplayPriority = Nothing,
                 autoApply = offer.autoApply,
                 shouldValidate = Nothing,
-                isHidden = offer.isHidden
+                isHidden = offer.isHidden,
+                showMilestoneCard = offer.showMilestoneCard
               }
 
     buildBestOfferCombination amt resps offers =

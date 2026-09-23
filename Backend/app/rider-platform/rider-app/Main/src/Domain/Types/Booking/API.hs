@@ -704,7 +704,8 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                           minimumAmount = Nothing,
                           frequencyType = offerEntity.frequencyType,
                           appliedCount = offerEntity.appliedCount,
-                          maxApplyCount = offerEntity.maxApplyCount
+                          maxApplyCount = offerEntity.maxApplyCount,
+                          showMilestoneCard = offerEntity.showMilestoneCard
                         }
                     ],
                   totalAmountSaved = offerEntity.amountSaved,

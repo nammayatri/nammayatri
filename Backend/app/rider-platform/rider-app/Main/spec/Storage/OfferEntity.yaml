@@ -26,6 +26,7 @@ OfferEntity:
     frequencyType: Maybe OfferFrequency
     appliedCount: Maybe Int
     maxApplyCount: Maybe Int
+    showMilestoneCard: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
