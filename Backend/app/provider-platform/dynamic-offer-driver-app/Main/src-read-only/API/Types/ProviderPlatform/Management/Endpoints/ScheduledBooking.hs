@@ -181,12 +181,17 @@ data ScheduledBookingListRes = ScheduledBookingListRes {totalItems :: Kernel.Pre
 type API = ("scheduledBooking" :> (GetScheduledBookingList :<|> GetScheduledBookingInfo :<|> GetScheduledBookingDriverDistance :<|> GetScheduledBookingNearbyDrivers :<|> PostScheduledBookingAssignHelper :<|> PostScheduledBookingUnassignHelper :<|> PostScheduledBookingOpsNoteHelper))
 
 type GetScheduledBookingList =
-  ( "list" :> QueryParam "assignmentStatus" AssignmentStatus :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "limit" Kernel.Prelude.Int
+  ( "list" :> QueryParam "assignmentStatus" AssignmentStatus :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "isHistory" Kernel.Prelude.Bool
       :> QueryParam
-           "offset"
+           "limit"
            Kernel.Prelude.Int
-      :> QueryParam "to" Kernel.Prelude.UTCTime
-      :> Get '[JSON] ScheduledBookingListRes
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> Get
+           '[JSON]
+           ScheduledBookingListRes
   )
 
 type GetScheduledBookingInfo = (Capture "transactionId" Kernel.Prelude.Text :> "info" :> Get '[JSON] ScheduledBookingInfoRes)
@@ -223,7 +228,7 @@ type PostScheduledBookingOpsNoteHelper =
   )
 
 data ScheduledBookingAPIs = ScheduledBookingAPIs
-  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
+  { getScheduledBookingList :: Kernel.Prelude.Maybe AssignmentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient ScheduledBookingListRes,
     getScheduledBookingInfo :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledBookingInfoRes,
     getScheduledBookingDriverDistance :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverDistanceRes,
     getScheduledBookingNearbyDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> EulerHS.Types.EulerClient NearbyDriversRes,

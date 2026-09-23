@@ -29,10 +29,10 @@ import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Merchant
 
-getScheduledBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.ScheduledBooking.AssignmentStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingListRes)
-getScheduledBookingList merchantShortId opCity apiTokenInfo assignmentStatus from limit offset to = do
+getScheduledBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.ScheduledBooking.AssignmentStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingListRes)
+getScheduledBookingList merchantShortId opCity apiTokenInfo assignmentStatus from isHistory limit offset to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.scheduledBookingDSL.getScheduledBookingList) assignmentStatus from limit offset to
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.scheduledBookingDSL.getScheduledBookingList) assignmentStatus from isHistory limit offset to
 
 getScheduledBookingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingInfoRes)
 getScheduledBookingInfo merchantShortId opCity apiTokenInfo transactionId = do
