@@ -3466,34 +3466,62 @@ the bill that exists. Worth a cron and an alert, not just a glance.
 
     MAX_SMS_PER_HOUR=120 MAX_SMS_PER_DAY=800   # raise, restart, no build
 
-### Telling the validator — `registration-notify.sh`, since 2026-09-23
+### The bot — `movin-bot.py`, since 2026-09-23
 
-Drivers enrol themselves, and the console shows them at once — but a page
-gives nobody a reason to open it. Audited on 2026-09-23: the queue held two
-registrations, six and two days old, and the last decision on the whole system
-was three weeks before that. Nothing was broken; nobody had been told.
+The console holds twelve screens and none of it reaches anybody who is not
+looking at it. Audited on 2026-09-23: the validation queue held two
+registrations six and two days old, and the last decision on the whole system
+was three weeks before that. Nothing was broken. Nobody had been told.
 
-A `systemd` timer (`movin-registrations.timer`, every five minutes) messages
-the person who validates when somebody appears, and **once more** if that
-driver is still waiting after `PATIENCE_HOURS` — then leaves them alone. A
-notifier that repeats itself is one people mute, and a muted notifier is worse
-than none because everyone believes it is working.
+`movin-bot.service` is a long-running Python process on the host — the same
+shape as `server-state.py`, and for the same reasons: there is no Node here,
+Postgres needs either a client library or the docker socket from a container,
+and an admin service account would hand a chat process a console session. The
+standard library covers all of it, so **nothing is installed for this**.
 
-**Telegram, because the obvious channel cannot work:** Moorsyl only delivers
-to `+222` and the validator has an Algerian number — the same constraint the
-guard's `SMS_BYPASS` exists for — and there is no SMTP on this box.
+**It reads and it tells, and it has no write anywhere.** The owner chose
+read-only commands on 2026-09-23; validating, messaging the fleet and the
+tariff stay in the console behind a login. A bot in a pocket that can enable a
+driver is a mistake waiting for a thumb.
 
-    TELEGRAM_BOT_TOKEN=...   # @BotFather
-    TELEGRAM_CHAT_ID=...     # your own chat with that bot
+Nineteen checks, grouped by what they are for:
 
-Both go in `.env`, which is not in git and is in the backup set. **With
-neither set the script exits 0 and does nothing**, so the timer is safe to
-enable before the bot exists — which is how it was installed.
+| | |
+|---|---|
+| **Money** | SMS budget at 80% and exhausted; the gateway refusing; wallets negative; top-ups |
+| **Law** | a deletion request arrives; its `delete_by` deadline approaching or passed |
+| **Silence** | no rides; searches returning no offer; driver positions stale; nobody online |
+| **Machine** | a container not `running`; the API unreachable from outside; disk; TLS expiry; a failed backup |
+| **Rhythm** | a daily digest, a weekly one |
+| **Quality** | a one or two star rating with a written complaint; a run of cancellations; a driver blocked |
 
-State lives in `registration-notify.state`: one line per driver already
-announced, pruned as the queue empties. A Telegram failure is deliberately
-*not* recorded, so the next run retries rather than silently deciding that
-driver was dealt with.
+The *Silence* group is the point. This stack's documented faults — stale
+positions, the BECKN negative coordinate, Redis-cached merchant rows — each
+produced **no error anywhere** and each cost an afternoon. A check that
+notices nothing happening is worth more here than one that reads a log.
+
+Commands, all read-only: `/file`, `/jour`, `/semaine`, `/chauffeur <numéro>`,
+`/flotte`, `/serveur`, `/budget`, `/aide`. Only the configured chat id is ever
+obeyed.
+
+Four things about it are deliberate:
+
+- **It seeds on first run.** A bot switched on beside a fleet that has been
+  running for weeks would otherwise open with a wall of history, so the first
+  pass records what is already true and says nothing.
+- **It says a thing once**, and only again once the cause has cleared and come
+  back. A notifier that repeats itself is one people mute.
+- **Quiet hours hold everything but money, law and a dead stack.**
+- **A database that does not answer is never reported as zero.** That
+  distinction is how a monitoring system invents an outage, and there is a
+  test for it.
+
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` go in `.env`, which is not in git
+and is in the backup set. Without them the process exits 0 and does nothing,
+so the unit is safe to enable before the bot exists. Thresholds are all `BOT_*`
+environment variables — change and restart, no rebuild.
+
+*It replaces `registration-notify.sh`, which did the registration half only.*
 
 ## Tests, and what CI actually runs
 

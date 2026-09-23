@@ -78,6 +78,14 @@ jobs:
         working-directory: Backend/dev/local-stack
         run: node tests/auth-guard-limits.test.js
 
+      # The bot. psql, Telegram and the host are all stubbed, so this needs no
+      # database and no network: it proves an alert is sent once, can fire
+      # again after its cause clears, and -- the one that matters -- that a
+      # database which does not answer is never reported as an outage.
+      - name: movin bot
+        working-directory: Backend/dev/local-stack
+        run: python3 tests/movin-bot.test.py
+
       # Fake Firebase and a fake APNs on http2 with a self-signed certificate:
       # proves an Android token is forwarded byte for byte, an iPhone token is
       # sent to Apple in the app's own words, and Apple's refusal is reported
