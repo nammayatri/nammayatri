@@ -4,6 +4,7 @@ module Beckn.OnDemand.Transformer.OndcScheduledRide.OnInit
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.BapMetadata as DBapMetadata
@@ -16,5 +17,5 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 ondcScheduledRideOnInitMessageBuild :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => DRB.Booking -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.ConfirmReqMessage -> m Spec.ConfirmReqMessage
 ondcScheduledRideOnInitMessageBuild booking mbBapMetadata bppConfig msg = do
   let orderWithBreakupTitles = OSRCommon.overrideOrderBreakupTitles msg.confirmReqMessageOrder
-  orderWithOverrides <- OSRCommon.applyOnInitOrderOverrides booking.transactionId booking.addOnData mbBapMetadata bppConfig orderWithBreakupTitles
+  orderWithOverrides <- OSRCommon.applyOnInitOrderOverrides booking.transactionId (BUtils.ondcFulfillmentId booking) booking.addOnData mbBapMetadata bppConfig orderWithBreakupTitles
   pure msg {Spec.confirmReqMessageOrder = orderWithOverrides}

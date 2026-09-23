@@ -82,7 +82,12 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
 mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
 mkFulfillmentV2 dReq quote isValueAddNP = do
   emptyFulfillment
-    { Spec.fulfillmentId = Just quote.id.getId,
+    { -- ONDC requires fulfillment.id to stay the value announced at selection, and every later
+      -- callback re-announces it via Beckn.OnDemand.Utils.Common.bookingFulfillmentId. For an
+      -- ONDC (non-value-add) BAP that value is the estimate id, so /init's echo carries it too
+      -- and Domain.Action.Beckn.Init.validateRequest resolves it back to this DriverQuote.
+      -- A value-add NP keeps the DriverQuote's own id, the behaviour it has always had.
+      Spec.fulfillmentId = Just $ if isValueAddNP then quote.id.getId else quote.estimateId.getId,
       Spec.fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing Nothing (Just dReq.searchRequest.startTime) (Utils.mkScheduledPickupDuration dReq.searchRequest.isScheduled),
       Spec.fulfillmentVehicle = Just $ mkVehicleV2 quote,
       Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,

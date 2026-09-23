@@ -152,6 +152,25 @@ mkStops origin mbDestination intermediateStops startTime mbScheduledPickupDurati
 mkScheduledPickupDuration :: Bool -> Maybe T.Text
 mkScheduledPickupDuration = Utils.mkScheduledPickupDuration
 
+-- | The fulfillment id announced for a booking on every BPP callback (on_init,
+-- on_confirm, on_status, on_update, on_cancel). ONDC requires fulfillment.id to
+-- stay the value announced at selection, and for a non-value-add (ONDC) BAP that
+-- value is the estimate id -- see Beckn.ACL.OnSelect.mkFulfillmentV2, which is
+-- what the BAP then echoes back on /init. A value-add NP keeps the quote id, the
+-- behaviour it has always had. A Quote-based (scheduled) booking never went
+-- through an estimate, so it falls back to the quote id for both.
+bookingFulfillmentId :: Bool -> DBooking.Booking -> Text
+bookingFulfillmentId isValueAddNP booking
+  | isValueAddNP = booking.quoteId
+  | otherwise = ondcFulfillmentId booking
+
+-- | The ONDC-facing half of 'bookingFulfillmentId', for the call sites that are ONDC-only by
+-- construction (the OndcScheduledRide Layer 2 overrides) and so have no isValueAddNP flag to
+-- consult. A booking that never went through an estimate -- a Quote-based scheduled one -- has
+-- no estimateId, and its quote id is what on_select announced, so that is the fallback.
+ondcFulfillmentId :: DBooking.Booking -> Text
+ondcFulfillmentId booking = maybe booking.quoteId (.getId) booking.estimateId
+
 parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
   case T.splitOn "," a of
@@ -624,7 +643,10 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
       rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
-      { fulfillmentId = Just ride.id.getId,
+      { -- An ONDC BAP requires fulfillment.id to stay the value announced at selection, so these
+        -- pushes re-announce it rather than switching to the ride id mid-order. A value-add NP
+        -- keeps the ride id, the behaviour it has always had.
+        fulfillmentId = Just $ if isValueAddNP then ride.id.getId else ondcFulfillmentId booking,
         fulfillmentStops = mkStopsOUS booking ride rideOtp ride.endOtp,
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
@@ -1300,7 +1322,10 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
       rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
-      { fulfillmentId = Just ride.id.getId,
+      { -- An ONDC BAP requires fulfillment.id to stay the value announced at selection, so these
+        -- pushes re-announce it rather than switching to the ride id mid-order. A value-add NP
+        -- keeps the ride id, the behaviour it has always had.
+        fulfillmentId = Just $ if isValueAddNP then ride.id.getId else ondcFulfillmentId booking,
         fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp) ride.endOtp (Just booking.startTime) (mkScheduledPickupDuration booking.isScheduled),
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =

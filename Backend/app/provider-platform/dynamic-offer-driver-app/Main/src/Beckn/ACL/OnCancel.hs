@@ -52,6 +52,7 @@ import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Person as QPerson
@@ -98,7 +99,10 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   let driverName = DP.getPersonFullName =<< mbPerson
       driverGender = mbPerson <&> \p -> show p.gender -- ONDC v2.1.0: extract driver gender
   driverPhone <- maybe (pure Nothing) DP.getPersonNumber mbPerson
-  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey
+  -- Resolved here rather than threaded in from the callers: every on_cancel path already has the
+  -- booking, and this is the only field it is needed for (fulfillment.id, below).
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey isValueAddNP
 
 buildOnCancelReq ::
   (MonadFlow m, EncFlow m r) =>
@@ -122,8 +126,9 @@ buildOnCancelReq ::
   Maybe Text ->
   Maybe DCDD.CancellationDuesDetails ->
   Maybe Text ->
+  Bool ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey isValueAddNP = do
   ttl <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
@@ -131,25 +136,25 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCustomerNotificationKey isValueAddNP
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Bool -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey isValueAddNP = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey isValueAddNP
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Spec.Order
-tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Bool -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCustomerNotificationKey isValueAddNP = do
   Spec.Order
     { orderId = Just booking.id.getId,
       -- Cancellation-consequence handoff to the BAP: how the fee is collected
       -- (matrix collectionMode, persisted on the dues row) + the rider notification key
       orderTags = Tags.convertToTagGroup [(Tags.CANCELLATION_COLLECTION_MODE, mbCancellationDuesDetails' >>= (.cancellationCollectionMode)), (Tags.CUSTOMER_CANCELLATION_NOTIFICATION_KEY, mbCustomerNotificationKey)],
       orderStatus = Just cancelStatus,
-      orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone,
+      orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone isValueAddNP,
       orderCancellation = tfCancellation (fromMaybe False becknConfig.sendOndcCancellationCodes) cancellationSource cancellationReasonCode,
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
@@ -161,12 +166,12 @@ tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReas
       orderUpdatedAt = Just booking.updatedAt
     }
 
-tfFulfillments :: DRB.Booking -> Maybe Text -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe Text -> Maybe [Spec.Fulfillment]
-tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone = do
+tfFulfillments :: DRB.Booking -> Maybe Text -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe Text -> Bool -> Maybe [Spec.Fulfillment]
+tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone isValueAddNP = do
   let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.stops booking.specialZoneOtpCode Nothing (Just booking.startTime) (BUtils.mkScheduledPickupDuration booking.isScheduled)
   Just
     [ emptyFulfillment
-        { Spec.fulfillmentId = Just booking.quoteId,
+        { Spec.fulfillmentId = Just $ BUtils.bookingFulfillmentId isValueAddNP booking,
           Spec.fulfillmentState = mkFulfillmentState rideStatus,
           Spec.fulfillmentStops = stops,
           Spec.fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,

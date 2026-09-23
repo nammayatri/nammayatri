@@ -135,13 +135,19 @@ dispatchOne mId body action fn = case A.fromJSON body of
     logError $ "OnixBppWebhook " <> action <> " decode failed: " <> T.pack err
     pure Ack
 
+-- | Only ever used for Search.handler, whose API now takes the
+-- X-Gateway-Authorization/Beckn-Body-Hash headers as plain optional Text
+-- (verified internally by Search.verifyOrSkipGatewayAuth) rather than a
+-- second SignatureAuthResult. This webhook path has no real HTTP headers to
+-- draw from -- same reasoning as buildWebhookAuth's dummy signature -- so
+-- both are passed as Nothing.
 dispatchDual ::
   forall req.
   (FromJSON req, HasContext req) =>
   Id DM.Merchant ->
   A.Value ->
   Text ->
-  (Id DM.Merchant -> SignatureAuthResult -> SignatureAuthResult -> req -> FlowHandler AckResponse) ->
+  (Id DM.Merchant -> SignatureAuthResult -> Maybe Text -> Maybe Text -> req -> FlowHandler AckResponse) ->
   FlowHandler AckResponse
 dispatchDual mId body action fn = case A.fromJSON body of
   A.Success req -> do
@@ -152,7 +158,7 @@ dispatchDual mId body action fn = case A.fromJSON body of
     if gate
       then do
         auth <- withFlowHandlerAPI $ buildWebhookAuth ctx
-        fn mId auth auth req
+        fn mId auth Nothing Nothing req
       else withFlowHandlerAPI $ do
         Metrics.incrementGenericMetrics $ "beckn_webhook_bpp_dropped_" <> action
         pure Ack

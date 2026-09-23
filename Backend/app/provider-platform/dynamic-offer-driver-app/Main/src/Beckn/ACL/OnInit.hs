@@ -45,7 +45,7 @@ tfOrder isValueAddNP res becknConfig mbFarePolicy = do
     { orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms res.cancellationFee,
-      orderFulfillments = tfFulfillments res,
+      orderFulfillments = tfFulfillments isValueAddNP res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
       orderPayments = tfPayments res becknConfig,
@@ -67,12 +67,12 @@ mkCommissionTagGroup mbCommission mbPaymentCharge mbPaymentChargeBearer =
           ]
    in if null tags then Nothing else Tags.buildTagGroups tags
 
-tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
-tfFulfillments res =
+tfFulfillments :: Bool -> DInit.InitRes -> Maybe [Spec.Fulfillment]
+tfFulfillments isValueAddNP res =
   Just
     [ emptyFulfillment
         { Spec.fulfillmentCustomer = tfCustomer res,
-          Spec.fulfillmentId = Just res.booking.quoteId,
+          Spec.fulfillmentId = Just $ Utils.bookingFulfillmentId isValueAddNP res.booking,
           Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing Nothing (Just res.booking.startTime) (Utils.mkScheduledPickupDuration res.booking.isScheduled),
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           Spec.fulfillmentVehicle = tfVehicle res

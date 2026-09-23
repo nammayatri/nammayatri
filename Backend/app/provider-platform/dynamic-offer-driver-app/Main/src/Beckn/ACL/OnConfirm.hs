@@ -133,7 +133,7 @@ tfOrder isValueAddNP res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
     { orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms res,
-      orderFulfillments = tfFulfillments res,
+      orderFulfillments = tfFulfillments isValueAddNP res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
       orderPayments = tfPayments res bppConfig,
@@ -145,12 +145,12 @@ tfOrder isValueAddNP res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
       orderUpdatedAt = Just res.booking.updatedAt
     }
 
-tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
-tfFulfillments res =
+tfFulfillments :: Bool -> DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
+tfFulfillments isValueAddNP res =
   Just
     [ emptyFulfillment
         { Spec.fulfillmentCustomer = tfCustomer res,
-          Spec.fulfillmentId = Just res.booking.quoteId,
+          Spec.fulfillmentId = Just $ Utils.bookingFulfillmentId isValueAddNP res.booking,
           Spec.fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
           Spec.fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops res.booking.specialZoneOtpCode Nothing (Just res.booking.startTime) Nothing,
           Spec.fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,

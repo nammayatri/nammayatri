@@ -16,7 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow)
 
 -- | Re-wraps an on_update message as on_status; overrides fulfillment.type and vehicle.energy_type, and echoes back the selected add-ons.
 ondcScheduledRideOnStatusMessageBuild :: (EsqDBFlow m r, CacheFlow m r) => Bool -> Text -> [DAddOnConfig.AddOnData] -> Spec.OnUpdateReq -> m Spec.OnStatusReq
-ondcScheduledRideOnStatusMessageBuild isScheduled quoteId addOnData req = do
+ondcScheduledRideOnStatusMessageBuild isScheduled fulfillmentId addOnData req = do
   onStatusReqMessage <- traverse patchOrder req.onUpdateReqMessage
   pure
     Spec.OnStatusReq
@@ -26,7 +26,7 @@ ondcScheduledRideOnStatusMessageBuild isScheduled quoteId addOnData req = do
       }
   where
     patchOrder msg = do
-      patchedOrder <- OSRCommon.applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId False addOnData msg.confirmReqMessageOrder
+      patchedOrder <- OSRCommon.applyOndcScheduledRideAssignedOrderOverrides isScheduled fulfillmentId False addOnData msg.confirmReqMessageOrder
       pure msg {Spec.confirmReqMessageOrder = patchedOrder}
 
 -- | Patches an already-built /status order with the same ONDC overrides the on_confirm/on_update

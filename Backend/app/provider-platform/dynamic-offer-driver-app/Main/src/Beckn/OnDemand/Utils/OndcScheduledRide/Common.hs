@@ -283,15 +283,17 @@ applyOnConfirmOrderOverrides isScheduled transactionId addOnData mbBapMetadata b
     . applyOrderCategoryAndFulfillmentStateOverrides isScheduled
 
 -- | The full ONDC-scheduled-ride on_init order patch: BPP_TERMS only,
--- fulfillment.type, vehicle.energy_type, ROUTE_INFO, then the selected add-ons.
-applyOnInitOrderOverrides :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Text -> [DAddOnConfig.AddOnData] -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
-applyOnInitOrderOverrides transactionId addOnData mbBapMetadata bppConfig =
+-- fulfillment.type, vehicle.energy_type, ROUTE_INFO, the selected add-ons, and the
+-- fulfillment id -- pinned to the same value on_select announced, like every later push.
+applyOnInitOrderOverrides :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Text -> Text -> [DAddOnConfig.AddOnData] -> Maybe DBapMetadata.BapMetadata -> DBC.BecknConfig -> Spec.Order -> m Spec.Order
+applyOnInitOrderOverrides transactionId fulfillmentId addOnData mbBapMetadata bppConfig =
   join
     . fmap (patchOrderAddOns addOnData)
     . patchOrderRouteInfo transactionId
     . patchOrderVehicleEnergyType
     . patchOrderFulfillmentTypes
     . patchOrderTags False mbBapMetadata bppConfig
+    . overrideOrderFulfillmentId fulfillmentId
 
 -- | The ONDC-scheduled-ride on_select order patch: fulfillment.type,
 -- vehicle.energy_type, ROUTE_INFO, then the selected add-ons.
@@ -350,16 +352,16 @@ overrideOrderBreakupTitles order = order {Spec.orderQuote = fixQuote <$> Spec.or
 
 -- FulfillmentId --------------------------------------------------------
 
--- Overrides order.fulfillments[*].id and item.fulfillment_ids to the quote id on every later push, since ONDC Workbench requires fulfillment.id to stay the value announced at on_confirm (booking.quoteId).
+-- Overrides order.fulfillments[*].id and item.fulfillment_ids on every push, since ONDC requires fulfillment.id to stay the value announced at selection -- Beckn.OnDemand.Utils.Common.ondcFulfillmentId (the estimate id, or the quote id for a Quote-based scheduled booking).
 overrideOrderFulfillmentId :: Text -> Spec.Order -> Spec.Order
-overrideOrderFulfillmentId quoteId order =
+overrideOrderFulfillmentId fulfillmentId order =
   order
     { Spec.orderFulfillments = map patchFulfillment <$> order.orderFulfillments,
       Spec.orderItems = map patchItem <$> order.orderItems
     }
   where
-    patchFulfillment fulfillment = fulfillment {Spec.fulfillmentId = Just quoteId}
-    patchItem item = item {Spec.itemFulfillmentIds = Just [quoteId]}
+    patchFulfillment fulfillment = fulfillment {Spec.fulfillmentId = Just fulfillmentId}
+    patchItem item = item {Spec.itemFulfillmentIds = Just [fulfillmentId]}
 
 -- Items --------------------------------------------------------
 
@@ -430,7 +432,7 @@ overrideOrderStopAuthorizationStatus isRideStarted order
 -- Applies fulfillment-state, category-id, breakup, tag, fulfillment-type, vehicle-energy-type, fulfillment-id and stop-authorization overrides together, plus the selected add-ons, since the on_confirm and on_update ride-assigned pushes both build through the same Layer 1 path and need the identical ONDC fix.
 -- The energy-type patch is part of this set rather than bolted on per caller: it is a no-op when the value is already an ONDC-valid code and when the order carries no vehicle, so every push can run it safely.
 applyOndcScheduledRideAssignedOrderOverrides :: (EsqDBFlow m r, CacheFlow m r) => Bool -> Text -> Bool -> [DAddOnConfig.AddOnData] -> Spec.Order -> m Spec.Order
-applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted addOnData =
+applyOndcScheduledRideAssignedOrderOverrides isScheduled fulfillmentId isRideStarted addOnData =
   patchOrderAddOns addOnData
     . dropNonConformingOrderTags
     . patchOrderVehicleEnergyType
@@ -438,7 +440,7 @@ applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted a
     . overrideOrderCategoryIds isScheduled
     . overrideOrderFulfillmentState
     . overrideOrderBreakupTitles
-    . overrideOrderFulfillmentId quoteId
+    . overrideOrderFulfillmentId fulfillmentId
     . overrideOrderStopAuthorizationStatus isRideStarted
 
 -- Fetches the pilot gate and applies applyOndcScheduledRideAssignedOrderOverrides only when enabled, replacing the fetch+check+apply every on_update/on_status push needing this override used to duplicate.
@@ -453,7 +455,7 @@ applyOndcScheduledRideOrderOverridesIfEnabled ::
   [DAddOnConfig.AddOnData] ->
   Maybe Spec.ConfirmReqMessage ->
   m (Maybe Spec.ConfirmReqMessage)
-applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantId merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
+applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantId merchantOperatingCityId isScheduled fulfillmentId isRideStarted addOnData mbMsg = do
   mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity bapSubscriberId Domain.MOBILITY merchantId merchantOperatingCityId
   let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
   if isOndcScheduledRideSupportEnabled
@@ -461,5 +463,5 @@ applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantId merchan
     else pure mbMsg
   where
     patchMsg msg = do
-      orderWithOverrides <- applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted addOnData msg.confirmReqMessageOrder
+      orderWithOverrides <- applyOndcScheduledRideAssignedOrderOverrides isScheduled fulfillmentId isRideStarted addOnData msg.confirmReqMessageOrder
       pure msg {Spec.confirmReqMessageOrder = orderWithOverrides}

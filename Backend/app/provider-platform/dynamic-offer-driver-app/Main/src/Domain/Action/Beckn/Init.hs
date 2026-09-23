@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.Init where
 
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified Control.Concurrent
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
@@ -484,7 +485,8 @@ validateRequest ::
 validateRequest _merchantId req isOndcScheduledRideSupportEnabled = do
   now <- getCurrentTime
   case req.fulfillmentId of
-    DriverQuoteId driverQuoteId -> do
+    DriverQuoteId fulfillmentId -> do
+      driverQuoteId <- resolveDriverQuoteId fulfillmentId
       driverQuote <- QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       validatePaymentMode searchRequest
@@ -516,6 +518,28 @@ validateRequest _merchantId req isOndcScheduledRideSupportEnabled = do
         SAddOn.verifyAddOnEcho quote.addOnData searchRequest.merchantOperatingCityId (Just quote.vehicleServiceTier) req.addOns
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
+    -- The fulfillment id a BAP echoes on /init is the one we announced at on_select, which for
+    -- an ONDC (non-value-add) BAP is the estimate id, not the DriverQuote's own id -- see
+    -- Beckn.ACL.OnSelect.mkFulfillmentV2. Layer 1's parse picks the DriverQuoteId constructor
+    -- correctly (the trip category is estimate-based either way) but carries that estimate id,
+    -- so resolve it to the estimate's currently-active DriverQuote. A value-add NP's echo is
+    -- already a DriverQuote id and takes the first branch without the extra lookup.
+    resolveDriverQuoteId driverQuoteId =
+      QDQuote.findById driverQuoteId >>= \case
+        Just _ -> pure driverQuoteId
+        Nothing -> do
+          -- The DriverQuote this estimate resolves to may have been created milliseconds ago
+          -- (the driver's own accept) and not yet synced from Redis to the DB: estimateId is not
+          -- a registered KV secondary key, so findActiveByEstimateId cannot read through the mesh.
+          let findWithRetry attemptsLeft =
+                QDQuote.findActiveByEstimateId (Id driverQuoteId.getId) >>= \case
+                  Just dq -> pure (Just dq)
+                  Nothing
+                    | attemptsLeft <= 0 -> pure Nothing
+                    | otherwise -> liftIO (Control.Concurrent.threadDelay 300000) >> findWithRetry (attemptsLeft - 1)
+          driverQuote <- findWithRetry (20 :: Int) >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
+          pure driverQuote.id
+
     callWithErrorHandling transactionId action = do
       exep <- withTryCatch "init:validateRequest:callWithErrorHandling" action
       case exep of

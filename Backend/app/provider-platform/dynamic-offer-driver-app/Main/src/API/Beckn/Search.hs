@@ -40,7 +40,9 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
+import qualified Kernel.Types.Error as KernelError
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
@@ -57,7 +59,8 @@ import qualified Tools.ActorInfo as ActorInfo
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> SignatureAuth 'Domain.MOBILITY "X-Gateway-Authorization"
+    :> Header "X-Gateway-Authorization" Text
+    :> Header "Beckn-Body-Hash" Text
     :> Search.SearchAPI
 
 handler :: FlowServer API
@@ -67,10 +70,11 @@ forwardSearchToBpp ::
   BaseUrl ->
   Id DM.Merchant ->
   SignatureAuthResult ->
-  SignatureAuthResult ->
+  Maybe SignatureAuthResult ->
   Search.SearchReqV2 ->
   Flow AckResponse
-forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2 = do
+forwardSearchToBpp redirectBaseUrl merchantId authResult mbGatewayAuthResult reqV2 = do
+  gatewayAuthResult <- mbGatewayAuthResult & fromMaybeM (InternalError "Cannot forward search: no verified gateway signature")
   let basePath = Kernel.baseUrlPath redirectBaseUrl
       becknPath = basePath <> "/beckn/" <> T.unpack merchantId.getId
       redirectedUrl = redirectBaseUrl {Kernel.baseUrlPath = becknPath}
@@ -88,17 +92,43 @@ forwardSearchToBpp redirectBaseUrl merchantId authResult gatewayAuthResult reqV2
     callAPI redirectedUrl clientWithHeaders "search" Search.searchAPI
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_FORWARD_SEARCH") redirectedUrl)
 
+-- | Verifying: the Gateway signature is required and fully verified as
+-- normal for everyone. It's only skipped when both (a) the header is
+-- entirely absent and (b) the BAP (already verified via Authorization) is a
+-- whitelisted noSignatureSubscribers test subscriber -- exactly ONDC
+-- Workbench's direct-to-BPP test mode, which never simulates the Gateway
+-- hop and so never sends this header at all. Any BAP not on that list still
+-- gets the same MissingHeader failure as before.
+verifyOrSkipGatewayAuth ::
+  Id DM.Merchant ->
+  SignatureAuthResult ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow (Maybe SignatureAuthResult)
+verifyOrSkipGatewayAuth transporterId authResult mbGatewayAuthHeader mbBodyHashHeader =
+  case mbGatewayAuthHeader of
+    Just gatewayAuthHeader -> do
+      result <- authCheck "X-Gateway-Authorization" (Just (encodeUtf8 gatewayAuthHeader)) (encodeUtf8 <$> mbBodyHashHeader) transporterId.getId Subscriber.BG Domain.MOBILITY
+      pure (Just result)
+    Nothing -> do
+      noSignatureSubscribers <- asks (.noSignatureSubscribers)
+      if authResult.subscriber.subscriber_id `elem` noSignatureSubscribers
+        then pure Nothing
+        else throwError (KernelError.MissingHeader "X-Gateway-Authorization")
+
 search ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  SignatureAuthResult ->
+  Maybe Text ->
+  Maybe Text ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+search transporterId authResult mbGatewayAuthHeader mbBodyHashHeader reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+  mbGatewayAuthResult <- verifyOrSkipGatewayAuth transporterId authResult mbGatewayAuthHeader mbBodyHashHeader
   bapUri <- Utils.getContextBapUri reqV2.searchReqContext
   redirectMap <- asks (.bapHostRedirectMap)
   case shouldRedirectBapHost redirectMap bapUri of
-    Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
+    Just (Just url) -> forwardSearchToBpp url transporterId authResult mbGatewayAuthResult reqV2
     _ -> do
       -- Process locally
       transactionId <- Utils.getTransactionId reqV2.searchReqContext

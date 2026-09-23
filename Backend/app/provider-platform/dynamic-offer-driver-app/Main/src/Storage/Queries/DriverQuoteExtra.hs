@@ -57,6 +57,23 @@ setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.I
 setInactiveBySRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m ()
 setInactiveBySRId (Id searchReqId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
 
+-- | /init's fulfillment id for the estimate-based flow is the estimate id for an ONDC
+-- (non-value-add) BAP -- that is what Beckn.ACL.OnSelect.mkFulfillmentV2 announced -- not the
+-- DriverQuote's own id. This resolves it back to the DriverQuote /init actually needs; see
+-- Domain.Action.Beckn.Init.validateRequest. At most one Active DriverQuote exists per estimate
+-- at a time -- setInactiveAllDQByEstId invalidates any prior one before a new one is created at
+-- select-time -- so no tie-break is needed here.
+findActiveByEstimateId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DEstimate.Estimate -> m (Maybe Domain.DriverQuote)
+findActiveByEstimateId (Id estimateId) =
+  listToMaybe
+    <$> findAllWithKVAndConditionalDB
+      [ Se.And
+          [ Se.Is BeamDQ.estimateId $ Se.Eq estimateId,
+            Se.Is BeamDQ.status $ Se.Eq Domain.Active
+          ]
+      ]
+      Nothing
+
 findActiveQuotesByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
