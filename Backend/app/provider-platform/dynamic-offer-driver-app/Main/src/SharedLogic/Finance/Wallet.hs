@@ -880,7 +880,7 @@ makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 createWalletHold ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney ->
@@ -892,56 +892,23 @@ createWalletHold ::
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   m (Either FinanceError ())
 createWalletHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId mbConcernedDriverId metadata = do
-  let walletInput =
-        AccountInput
-          { accountType = Liability,
-            counterpartyType = Just counterpartyType,
-            counterpartyId = Just ownerId,
-            subLedger = Nothing,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-      platformInput =
-        AccountInput
-          { accountType = Asset,
-            counterpartyType = Just SELLER,
-            counterpartyId = Just merchantId,
-            subLedger = Nothing,
-            currency = currency,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOperatingCityId
-          }
-  mbOwnerAccount <- getOrCreateAccount walletInput
-  mbPlatformAccount <- getOrCreateAccount platformInput
-  case (mbOwnerAccount, mbPlatformAccount) of
-    (Right ownerAccount, Right platformAccount) -> do
-      mbExistingHold <- findPendingWalletHoldByReference ownerAccount.id referenceId
-      case mbExistingHold of
-        Just _ -> pure $ Right ()
-        Nothing -> do
-          let entryInput =
-                LedgerEntryInput
-                  { fromAccountId = ownerAccount.id,
-                    toAccountId = platformAccount.id,
-                    concernedIndividualId = mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing),
-                    amount = amount,
-                    currency = currency,
-                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                    status = PENDING,
-                    referenceType = walletReferenceStatutoryHold,
-                    referenceId = referenceId,
-                    entityReferenceId = Nothing,
-                    entityReferenceType = Nothing,
-                    metadata = metadata,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
-                  }
-          entryRes <- createEntry entryInput
-          pure $ void entryRes
-    (Left err, _) -> pure $ Left err
-    (_, Left err) -> pure $ Left err
+  -- Idempotent per reference: keep an already-recorded PENDING hold as-is.
+  mbExistingHold <- do
+    mbAcc <- getWalletAccountByOwner counterpartyType ownerId
+    maybe (pure Nothing) (\acc -> findPendingWalletHoldByReference acc.id referenceId) mbAcc
+  case mbExistingHold of
+    Just _ -> pure $ Right ()
+    Nothing -> do
+      -- Same minimal ctx as driver-side charges ('OwnerLiability'/'PlatformAsset'
+      -- resolve to the same accounts the previous hand-rolled inputs built).
+      -- walletGateEnabled=False keeps post-action behaviour identical to the old
+      -- direct createEntry (no tier recheck on hold creation).
+      let ctx =
+            (buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId False)
+              { concernedIndividualId = mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
+              }
+      result <- runFinance ctx $ void $ transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata OwnerLiability PlatformAsset amount walletReferenceStatutoryHold
+      pure $ void result
 
 findPendingWalletHoldByReference ::
   (BeamFlow m r) =>
@@ -1040,7 +1007,7 @@ removeOfferHolds ownerId searchTryId = do
 --   statutory deductions (net of other outstanding offer holds), create the
 --   authoritative PENDING ledger hold, and release this search try's offer hold.
 reserveWalletForCashRide ::
-  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m, Lib.Finance.HasActorInfo m r) =>
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m, Lib.Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   DTC.TransporterConfig ->
   DP.Person ->
   SRB.Booking ->
