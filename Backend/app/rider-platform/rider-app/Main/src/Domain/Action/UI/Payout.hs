@@ -145,7 +145,7 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
           callPayoutService payoutOrder payoutConfig person
       Just DPayment.RIDE_OFFER_CASHBACK -> do
         let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-        whenJust mbPayoutRequestId $ \prId -> Redis.withWaitAndLockMasterCloudCrossAppRedis (payoutSettlementLockKey prId) 60 100 $ do
+        whenJust mbPayoutRequestId $ \prId -> Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForSettlementLock" (payoutSettlementLockKey prId) 60 100 $ do
           mbPayoutReq <- QPR.findById (Id prId)
           whenJust mbPayoutReq $ \payoutReq -> do
             let ctx =

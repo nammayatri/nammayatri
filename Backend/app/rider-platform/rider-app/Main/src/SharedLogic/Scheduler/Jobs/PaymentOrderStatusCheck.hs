@@ -68,6 +68,8 @@ paymentOrderStatusCheckJob ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasMasterCloudForwarder r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     MonadMask m
   ) =>
   Job 'PaymentOrderStatusCheck ->
@@ -129,6 +131,8 @@ processPaymentOrder ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasMasterCloudForwarder r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     MonadMask m
   ) =>
   Id DM.Merchant ->

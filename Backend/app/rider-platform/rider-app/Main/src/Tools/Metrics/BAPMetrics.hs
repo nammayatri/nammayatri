@@ -66,6 +66,15 @@ finishMetrics action merchantName txnId merchantOperatingCityId = do
   version <- asks (.version)
   finishMetrics' bmContainer action merchantName version txnId merchantOperatingCityId
 
+withTimeFRFSMerchant :: (MonadIO m, MonadTime m, HasBAPMetrics m r) => Text -> Text -> Text -> m a -> m a
+withTimeFRFSMerchant storeType operationName merchantId action = do
+  startTime <- getCurrentTime
+  result <- action
+  endTime <- getCurrentTime
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.frfsOperationDurationByMerchant (storeType, operationName, merchantId) (`P.observe` realToFrac (diffUTCTime endTime startTime))
+  pure result
+
 incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
 incrementRideCreatedRequestCount merchantId merchantOperatingCityId category = do
   bmContainer <- asks (.bapMetrics)
