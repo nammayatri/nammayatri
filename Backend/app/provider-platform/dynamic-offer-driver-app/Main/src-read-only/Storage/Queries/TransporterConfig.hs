@@ -433,6 +433,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.toNotifyDriverForExtraKmsLimitExceed toNotifyDriverForExtraKmsLimitExceed,
       Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
+      Se.Set Beam.tripCategoriesForNoRecalc tripCategoriesForNoRecalc,
       Se.Set Beam.tripEndGeofenceRadius tripEndGeofenceRadius,
       Se.Set Beam.tripStartGeofenceRadius tripStartGeofenceRadius,
       Se.Set Beam.tripStartLeadTime tripStartLeadTime,

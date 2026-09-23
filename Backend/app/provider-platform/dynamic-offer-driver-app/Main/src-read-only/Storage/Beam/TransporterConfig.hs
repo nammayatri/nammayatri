@@ -10,6 +10,7 @@ import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.TransporterConfig
+import qualified Domain.Types.Trip
 import qualified Domain.Types.UtilsTH
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -351,6 +352,7 @@ data TransporterConfigT f = TransporterConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     toNotifyDriverForExtraKmsLimitExceed :: B.C f Kernel.Prelude.Bool,
     trackingShortUrlPattern :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tripCategoriesForNoRecalc :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Trip.TripCategory]),
     tripEndGeofenceRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripStartGeofenceRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripStartLeadTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
