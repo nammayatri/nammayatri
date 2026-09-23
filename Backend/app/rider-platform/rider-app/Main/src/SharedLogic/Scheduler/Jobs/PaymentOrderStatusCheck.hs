@@ -161,5 +161,5 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
-      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler orderId mId paymentStatusResp
+      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler False orderId mId paymentStatusResp
       _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp

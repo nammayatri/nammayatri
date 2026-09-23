@@ -179,7 +179,7 @@ orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrd
     "waitForOrderStatusHandlerLock"
     makePaymentOrderStatusHandlerLockKey
     60
-    100
+    1000
     ( do
         let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
         orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
@@ -605,7 +605,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       case depositReqs of
         [] -> pure ()
         _ ->
-          Redis.withWaitAndLockRedis (refundRequestProccessingKey paymentOrder.id) 60 10000 $
+          BookingDepositLedger.withDepositRefundLock paymentOrder.id $
             QRefundRequest.findByRefundsId (Just refund.id) >>= \mbReq ->
               whenJust mbReq $ \req ->
                 when (req.status == DRefundRequest.APPROVED && refund.status `elem` [Payment.REFUND_SUCCESS, Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $ do

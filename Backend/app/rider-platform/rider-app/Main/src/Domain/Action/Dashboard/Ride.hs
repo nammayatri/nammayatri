@@ -593,12 +593,12 @@ bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
   bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
-  void $ withTryCatch "dashboardCancelRide:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.riderId booking.id DTB.CANCELLED
   _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QBCReason.upsert bookingCancellationReason
+  void $ withTryCatch "dashboardCancelRide:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   where
     isBookingCancellable booking =
       booking.status `elem` [DTB.NEW, DTB.CONFIRMED, DTB.AWAITING_REASSIGNMENT, DTB.TRIP_ASSIGNED]

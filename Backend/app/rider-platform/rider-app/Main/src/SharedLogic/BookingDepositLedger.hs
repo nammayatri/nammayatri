@@ -2,6 +2,8 @@
 module SharedLogic.BookingDepositLedger
   ( bookingDepositRefundRefType,
     withRiderFeeLock,
+    withDepositRefundLock,
+    claimDepositRefundCall,
     resolveDepositRefundLegs,
   )
 where
@@ -10,6 +12,7 @@ import qualified Domain.Types.Person as DP
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
@@ -29,6 +32,23 @@ feeBalanceLockKey riderId = "BookingDeposit:Balance:" <> riderId.getId
 withRiderFeeLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Id DP.Person -> m a -> m a
 withRiderFeeLock riderId =
   Redis.withMasterRedis . Redis.withWaitAndLockRedis (feeBalanceLockKey riderId) feeLockTtlSeconds 10000
+
+-- | Shared by server and scheduler; only the lock is cross-app, so keys used inside keep their prefix.
+withDepositRefundLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Id DOrder.PaymentOrder -> m a -> m a
+withDepositRefundLock orderId =
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "bookingDeposit" "waitForDepositRefundLock" ("BookingDeposit:RefundRequest:" <> orderId.getId) 60 10000
+
+claimDepositRefundCall :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Bool
+claimDepositRefundCall refundRequestId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = "BookingDeposit:RefundCall:" <> refundRequestId
+  won <- Redis.setNxExpire key 400 ("1" :: Text)
+  if won
+    then pure True
+    else do
+      holder <- Redis.get @Text key
+      when (isNothing holder) $
+        throwError $ InternalError ("Could not record the refund-call claim for refund request " <> refundRequestId)
+      pure False
 
 -- | PENDING legs only: voidEntry would also void a SETTLED leg.
 resolveDepositRefundLegs ::
