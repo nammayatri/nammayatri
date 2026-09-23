@@ -262,8 +262,8 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig _driver = do
   let driverId = cast ride.driverId
-      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
+  -- releaseLien gates itself on prepaid-or-wallet being enabled.
+  releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $

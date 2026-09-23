@@ -702,7 +702,7 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
     result <- PayoutRequest.submitPayoutRequest submission payoutCall
     case result of
       PayoutRequest.PayoutInitiated pr _ -> do
-        let mkPayoutHold = createWalletHold (counterpartyFromRole ctx.person.role) ctx.driverId.getId payoutableBalance ctx.transporterConfig.currency ctx.merchantId.getId ctx.mocId.getId pr.id.getId (Just ctx.driverId.getId) Nothing
+        let mkPayoutHold = createWalletHold (counterpartyFromRole ctx.person.role) ctx.driverId.getId payoutableBalance ctx.transporterConfig.currency ctx.merchantId ctx.mocId pr.id.getId (Just ctx.driverId) Nothing
         holdResult <- mkPayoutHold >>= either (const mkPayoutHold) (pure . Right)
         case holdResult of
           Left err -> logError $ "Failed to create payout hold for payoutRequest " <> pr.id.getId <> " after retry; payout proceeds, payoutable balance unprotected until settlement: " <> show err

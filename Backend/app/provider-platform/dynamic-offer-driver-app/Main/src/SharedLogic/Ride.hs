@@ -72,6 +72,7 @@ import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
@@ -311,18 +312,27 @@ releaseLien booking ride = do
     let (counterpartyType, ownerId) = case ride.fleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, ride.driverId.getId)
+    mbMerchant <- CQM.findById booking.providerId
     mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-    let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
-        mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
-    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
-      voidPrepaidHold
-        counterpartyType
-        ownerId
-        booking.id.getId
-        "Ride cancelled"
-        mbVehicleCategory
-    Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ownerId) 10 10 $
-      voidWalletHoldByReference counterpartyType ownerId booking.id.getId "Ride cancelled"
+    -- Holds are created for prepaid rides AND for wallet cash-ride deductions
+    -- (reserveWalletForCashRide gates on enableDriverWallet, not the prepaid
+    -- flag) -- release must cover the same union, or a wallet-only merchant's
+    -- cancelled rides leak PENDING holds that never expire. The gate lives here
+    -- so every cancel path inherits it.
+    let prepaidEnabled = fromMaybe False (mbMerchant >>= (.prepaidSubscriptionAndWalletEnabled))
+        walletEnabled = maybe False (.driverWalletConfig.enableDriverWallet) mbTransporterConfig
+    when (prepaidEnabled || walletEnabled) $ do
+      let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
+          mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+        voidPrepaidHold
+          counterpartyType
+          ownerId
+          booking.id.getId
+          "Ride cancelled"
+          mbVehicleCategory
+      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ownerId) 10 10 $
+        voidWalletHoldByReference counterpartyType ownerId booking.id.getId "Ride cancelled"
   case result of
     Left (e :: SomeException) ->
       logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)

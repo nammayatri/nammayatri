@@ -202,6 +202,7 @@ import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -882,13 +883,13 @@ makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> per
 createWalletHold ::
   (BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   CounterpartyType ->
-  Text -> -- Owner ID
+  Text -> -- Owner ID: driver or fleet owner depending on counterparty, hence untyped
   HighPrecMoney ->
   Currency ->
-  Text -> -- Merchant ID
-  Text -> -- Merchant operating city ID
-  Text -> -- Reference ID (rideId / bookingId)
-  Maybe Text -> -- Concerned driver ID: the individual driver the hold is for, even when the wallet is the fleet's
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text -> -- Reference ID (rideId / bookingId / payoutRequestId)
+  Maybe (Id DP.Person) -> -- Concerned driver: the individual the hold is for, even when the wallet is the fleet's
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
   m (Either FinanceError ())
 createWalletHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId mbConcernedDriverId metadata = do
@@ -904,8 +905,8 @@ createWalletHold counterpartyType ownerId amount currency merchantId merchantOpe
       -- walletGateEnabled=False keeps post-action behaviour identical to the old
       -- direct createEntry (no tier recheck on hold creation).
       let ctx =
-            (buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId False)
-              { concernedIndividualId = mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
+            (buildDriverChargeCtx counterpartyType ownerId merchantId.getId merchantOperatingCityId.getId currency referenceId False)
+              { concernedIndividualId = fmap (.getId) mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
               }
       result <- runFinance ctx $ void $ transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata OwnerLiability PlatformAsset amount walletReferenceStatutoryHold
       pure $ void result
@@ -1042,7 +1043,7 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
           throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
         when (holdAmount > 0) $ do
           _ <-
-            createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId.getId booking.merchantOperatingCityId.getId booking.id.getId (Just driver.id.getId) Nothing
+            createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId booking.merchantOperatingCityId booking.id.getId (Just driver.id) Nothing
               >>= fromEitherM (\err -> InternalError ("Failed to create wallet hold: " <> show err))
           whenJust mbSearchTryId $ removeWalletOfferHold walletOwnerId
 

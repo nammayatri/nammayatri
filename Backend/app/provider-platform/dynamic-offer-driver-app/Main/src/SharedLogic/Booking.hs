@@ -77,12 +77,12 @@ cancelBooking booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason Nothing mbRide transporterId'
     Just driver -> buildBookingCancellationReason (Just driver.id) mbRide transporterId'
-  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled
 
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
   SharedCancel.tryCancellationLock booking.transactionId $ do
-    when isPrepaidSubscriptionAndWalletEnabled $ whenJust mbRide $ \ride -> releaseLien booking ride
+    -- releaseLien gates itself on prepaid-or-wallet being enabled.
+    whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbDriver $ \driver ->
       updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
     QRB.updateStatus booking.id DRB.CANCELLED

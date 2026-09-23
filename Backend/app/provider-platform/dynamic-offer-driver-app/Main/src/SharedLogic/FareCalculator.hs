@@ -1442,6 +1442,16 @@ detailComponentMap fareParametersDetails =
 componentAmount :: ComponentMap -> FareChargeComponent -> HighPrecMoney
 componentAmount mp key = Map.findWithDefault 0 key mp
 
+-- | Calculate commission separately (not part of fare)
+--
+-- This function calculates commission based on fare_policy.commission_charge_config
+-- and FareParameters. Commission is NOT included in the fare sum - it's stored
+-- separately in booking and ride tables for transparency.
+--
+-- Example: If fare_policy has commission_charge_config = {"value":"8%","appliesOn":["RideFare"]},
+-- then commission will be calculated as 8% of RideFare.
+--
+-- Returns Nothing if commission is not configured or if amount is 0.
 calculateCommission ::
   MonadFlow m =>
   FareParameters ->
@@ -1458,6 +1468,12 @@ calculateCommission fareParams mbFarePolicy = do
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
 
+-- | Commission on the CustomerCancellationChargeComponent alone — a past cancellation due folded
+--   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
+--   Config invariant: the component must appear in exactly one of the two commission configs —
+--   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
+--   Controlled entirely by the (Maybe) cancellationCommissionChargeConfig on the fare policy:
+--   absent config => Nothing, so estimate, payout, stored values and the ledger booking stay consistent.
 calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
 calculateCancellationCommission fareParams mbFarePolicy = do
   case mbFarePolicy of
