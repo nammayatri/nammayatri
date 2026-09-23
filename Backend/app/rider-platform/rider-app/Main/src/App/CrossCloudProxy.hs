@@ -46,7 +46,7 @@ resolveOwner token = do
     Nothing -> fmap (\sr -> (merchantIdFallback (Id sr.merchantId), Id sr.merchantOperatingCityId)) <$> QRT.findByToken token
   case mbIds of
     Nothing -> pure Nothing
-    Just (merchantId, mocId) -> IM.withInMemCache ["crossCloudProxy:mocCloud", mocId.getId] 60 $ do
+    Just (merchantId, mocId) -> IM.withInMemCache (CQMOC.crossCloudProxyCacheKeyParts mocId) 60 $ do
       mbMoc :: Maybe DMOC.MerchantOperatingCity <- CQMOC.findById mocId
       let mocPair = mbMoc >>= \moc -> (,) <$> moc.cloudType <*> moc.cloudBaseUrl
       case mocPair of
