@@ -19,6 +19,7 @@ data CachedRouteResponse = CachedRouteResponse
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     dropGeohash :: Kernel.Prelude.Text,
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    durationStaticDurationDiff :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     hourOfDay :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.CachedRouteResponse.CachedRouteResponse,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

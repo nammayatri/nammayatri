@@ -855,3 +855,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  defaul
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN max_walk_distance_for_better_point_at_drop integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride_at_drop double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN route_cache_max_duration_deviation integer ;

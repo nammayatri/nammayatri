@@ -19,6 +19,7 @@ CachedRouteResponse:
     avoidToll: Maybe Bool
     distance: Maybe Meters
     duration: Maybe Seconds
+    durationStaticDurationDiff: Maybe Seconds
     routes: "[RouteInfo]"
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
