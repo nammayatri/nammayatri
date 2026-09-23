@@ -2055,52 +2055,49 @@ postMultimodalRouteServiceability ::
     API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
-postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes req =
-  JMU.measureLatency
-    ( do
-        person <- authenticate mbPersonId
-        -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA
-        -- poll, ~5s) rather than running a second independent polling loop just to keep the
-        -- proximity-check history fresh -- only fires when a caller actually sends both.
-        whenJust ((,) <$> req.journeyId <*> req.latLong) $ \(journeyIdText, latLong) -> do
-          now <- getCurrentTime
-          fork "RouteServiceability: record rider location" $
-            addPoint (Id journeyIdText) (ApiTypes.RiderLocationReq {latLong, currTime = fromMaybe now req.timestamp}) req.vehicleNumber
-        integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
-        let routeServiceabilityContext =
-              RouteServiceabilityContext
-                { integratedBPPConfig,
-                  merchantOperatingCityId = person.merchantOperatingCityId,
-                  merchantId = person.merchantId,
-                  maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
-                  maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
-                  allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips
-                }
-        let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
-        case req.vehicleNumber of
-          Just vno -> do
-            routeId <- extractRouteCode req.routeCodes
-            JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
-          Nothing -> do
-            (srcCode, mbDestCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-            case mbDestCode of
-              Nothing -> JMU.measureLatency (handleAllPassingRoutes routeServiceabilityContext userRequestedCodes srcCode) ("handleAllPassingRoutes src=" <> srcCode)
-              Just destCode -> do
-                mbClusterRoutes <-
-                  if fromMaybe False req.allowClusteredStops
-                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                    else pure Nothing
-                case mbClusterRoutes of
-                  Just clusterRoutes@(_ : _) ->
-                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
-                  _ -> do
-                    directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                    if not (null directRouteCodes)
-                      then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
-                      else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-    )
-    ("FULL_API postMultimodalRouteServiceability req=" <> show req)
+postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
+  BAPMetrics.withTimeFRFSMerchant "routeServiceability" "total" merchantId.getId $ do
+    person <- authenticate mbPersonId
+    -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA
+    -- poll, ~5s) rather than running a second independent polling loop just to keep the
+    -- proximity-check history fresh -- only fires when a caller actually sends both.
+    whenJust ((,) <$> req.journeyId <*> req.latLong) $ \(journeyIdText, latLong) -> do
+      now <- getCurrentTime
+      fork "RouteServiceability: record rider location" $
+        addPoint (Id journeyIdText) (ApiTypes.RiderLocationReq {latLong, currTime = fromMaybe now req.timestamp}) req.vehicleNumber
+    integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+    let routeServiceabilityContext =
+          RouteServiceabilityContext
+            { integratedBPPConfig,
+              merchantOperatingCityId = person.merchantOperatingCityId,
+              merchantId = person.merchantId,
+              maxLiveVehiclesPerRoute = riderConfig.maxLiveVehiclesPerRoute,
+              maxAlternateRouteVehicles = riderConfig.maxAlternateRouteVehicles,
+              allowUpcomingTrips = fromMaybe False req.allowUpcomingTrips
+            }
+    let userRequestedCodes = maybe [] (concatMap (.routeCodes)) req.routeCodes
+    case req.vehicleNumber of
+      Just vno -> do
+        routeId <- extractRouteCode req.routeCodes
+        BAPMetrics.withTimeFRFSMerchant "routeServiceability" "handleSingleVehicleRoute" merchantId.getId $ handleSingleVehicleRoute routeServiceabilityContext vno routeId
+      Nothing -> do
+        (srcCode, mbDestCode) <- BAPMetrics.withTimeFRFSMerchant "routeServiceability" "resolveSrcAndDestCode" merchantId.getId $ resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext
+        case mbDestCode of
+          Nothing -> BAPMetrics.withTimeFRFSMerchant "routeServiceability" "handleAllPassingRoutes" merchantId.getId $ handleAllPassingRoutes routeServiceabilityContext userRequestedCodes srcCode
+          Just destCode -> do
+            mbClusterRoutes <-
+              if fromMaybe False req.allowClusteredStops
+                then BAPMetrics.withTimeFRFSMerchant "routeServiceability" "getClusterRoutesFromTo" merchantId.getId $ JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig
+                else pure Nothing
+            case mbClusterRoutes of
+              Just clusterRoutes@(_ : _) ->
+                BAPMetrics.withTimeFRFSMerchant "routeServiceability" "handleClusterRoute" merchantId.getId $ handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes
+              _ -> do
+                directRouteCodes <- BAPMetrics.withTimeFRFSMerchant "routeServiceability" "getRouteCodesFromTo" merchantId.getId $ JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+                if not (null directRouteCodes)
+                  then BAPMetrics.withTimeFRFSMerchant "routeServiceability" "handleDirectRoute" merchantId.getId $ handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes
+                  else BAPMetrics.withTimeFRFSMerchant "routeServiceability" "handleOtpRoute" merchantId.getId $ handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode
   where
     authenticate :: Maybe (Id Domain.Types.Person.Person) -> Environment.Flow Domain.Types.Person.Person
     authenticate mbPersonId' = do
@@ -2119,7 +2116,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) mbAllPassingRoutes r
       | isJust mSrc && isNothing mDest && null (maybe [] (concatMap (.routeCodes)) routeCodes) && fromMaybe False mbAllPassingRoutes =
         pure (fromJust mSrc, Nothing)
       | otherwise = do
-        (firstStop, lastStop) <- JMU.measureLatency (fetchRouteBoundaryStops routeCodes ctx) ("fetchRouteBoundaryStops routeCodes=" <> show routeCodes)
+        (firstStop, lastStop) <- BAPMetrics.withTimeFRFSMerchant "routeServiceability" "fetchRouteBoundaryStops" merchantId.getId $ fetchRouteBoundaryStops routeCodes ctx
         pure (fromMaybe firstStop mSrc, Just (fromMaybe lastStop mDest))
 
     fetchRouteBoundaryStops ::

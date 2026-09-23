@@ -71,7 +71,9 @@ checkRefundStatusJob ::
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -119,7 +121,9 @@ processRefundStatus ::
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasMasterCloudForwarder r
+    HasMasterCloudForwarder r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   DRefunds.Refunds ->
   DP.Person ->

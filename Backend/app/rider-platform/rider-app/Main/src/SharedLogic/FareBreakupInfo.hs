@@ -100,7 +100,7 @@ upsertFareBreakupInfo ::
   Maybe (Id DMOC.MerchantOperatingCity) ->
   m ()
 upsertFareBreakupInfo entityId entityType items mbMerchantId mbMocId =
-  Redis.withWaitAndLockMasterCloudCrossAppRedis (upsertLockKey entityId entityType) 10 100 $ do
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "fareBreakupInfo" "waitForUpsertLock" (upsertLockKey entityId entityType) 10 100 $ do
     mbExisting <- QFareBreakupInfo.findByEntityIdAndEntityType entityId entityType
     case mbExisting of
       Just _ -> QFareBreakupInfo.updateFareBreakupsByEntityIdAndEntityType items entityId entityType
@@ -115,7 +115,7 @@ addFareBreakupInfoItems ::
   Maybe (Id DMOC.MerchantOperatingCity) ->
   m ()
 addFareBreakupInfoItems entityId entityType newItems mbMerchantId mbMocId =
-  Redis.withWaitAndLockMasterCloudCrossAppRedis (upsertLockKey entityId entityType) 10 100 $ do
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "fareBreakupInfo" "waitForUpsertLock" (upsertLockKey entityId entityType) 10 100 $ do
     mbExisting <- QFareBreakupInfo.findByEntityIdAndEntityType entityId entityType
     case mbExisting of
       Just existing -> QFareBreakupInfo.updateFareBreakupsByEntityIdAndEntityType (mergeItemsByDescription existing.fareBreakups newItems) entityId entityType

@@ -53,7 +53,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     frfsPassPaymentCounter :: FRFSPassPaymentCounterMetric,
     frfsBookingPaymentCounter :: FRFSBookingPaymentCounterMetric,
     frfsExternalBppCounter :: FRFSExternalBppCounterMetric,
-    externalBppApiCallCounter :: ExternalBppApiCallCounterMetric
+    externalBppApiCallCounter :: ExternalBppApiCallCounterMetric,
+    frfsOperationDurationByMerchant :: FRFSOperationDurationByMerchantMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -93,6 +94,9 @@ type FRFSExternalBppCounterMetric = P.Vector P.Label7 P.Counter
 
 type ExternalBppApiCallCounterMetric = P.Vector P.Label4 P.Counter
 
+-- storeType, operationName, merchantId
+type FRFSOperationDurationByMerchantMetric = P.Vector P.Label3 P.Histogram
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
@@ -120,6 +124,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
   confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
   createOrderDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_create_order_frfs_round_trip" "beckn_create_order_frfs_round_trip_failure_counter"
+  frfsOperationDurationByMerchant <- registerFRFSOperationDurationByMerchantMetric
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
@@ -186,3 +191,12 @@ registerDurationMetric durationTimeout merchantName version merchantOperatingCit
   durationHistogram <- P.register . P.vector (merchantName, version, merchantOperatingCityId) . P.histogram (P.Info roundTrip "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector (merchantName, version, merchantOperatingCityId) $ P.counter $ P.Info roundTripFailureCounter ""
   return (durationHistogram, failureCounter)
+
+frfsOperationDurationBuckets :: [Double]
+frfsOperationDurationBuckets = P.defaultBuckets ++ [15.0, 20.0, 30.0, 60.0]
+
+registerFRFSOperationDurationByMerchantMetric :: IO FRFSOperationDurationByMerchantMetric
+registerFRFSOperationDurationByMerchantMetric =
+  P.register . P.vector ("storeType", "operationName", "merchantId") . P.histogram info $ frfsOperationDurationBuckets
+  where
+    info = P.Info "frfs_operation_duration_seconds" "FRFS/multimodal operation latency by merchant, seconds."

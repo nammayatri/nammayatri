@@ -532,85 +532,86 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       Nothing -> return stations
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = withTimeAPI "frfsSearch" "total" $ do
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  let platformType = fromMaybe DIBC.APPLICATION req.platformType
-  merchantOperatingCityId <-
-    case mbCity of
-      Just city ->
-        CQMOC.findByMerchantIdAndCity merchantId city
-          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-          >>= return . (.id)
-      Nothing ->
-        CQP.findCityInfoById personId
-          >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
-          >>= return . (.merchantOperatingCityId)
+postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = withTimeAPI "frfsSearch" "total" $
+  Metrics.withTimeFRFSMerchant "frfsSearch" "total" merchantId.getId $ do
+    personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+    let platformType = fromMaybe DIBC.APPLICATION req.platformType
+    merchantOperatingCityId <-
+      case mbCity of
+        Just city ->
+          CQMOC.findByMerchantIdAndCity merchantId city
+            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
+            >>= return . (.id)
+        Nothing ->
+          CQP.findCityInfoById personId
+            >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+            >>= return . (.merchantOperatingCityId)
 
-  merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+    merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
+    integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
 
-  -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
-  mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
-    (Just vehicleNumber, Nothing) -> do
-      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
-      return $ mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
-    _ -> return Nothing
+    -- If vehicle number is provided and serviceTier is not provided in request, try to get the service tier from OTP REST
+    mbServiceTierFromVehicle <- case (req.vehicleNumber, req.serviceTier) of
+      (Just vehicleNumber, Nothing) -> do
+        mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
+        return $ mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
+      _ -> return Nothing
 
-  -- Use service tier from vehicle if available, otherwise use from request
-  let finalServiceTier = mbServiceTierFromVehicle <|> req.serviceTier
-      requestedRouteDetails =
-        [ FRFSRouteDetails
-            { routeCode = req.routeCode,
-              startStationCode = req.fromStationCode,
-              endStationCode = req.toStationCode,
-              serviceTier = finalServiceTier
-            }
-        ]
-      (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
+    -- Use service tier from vehicle if available, otherwise use from request
+    let finalServiceTier = mbServiceTierFromVehicle <|> req.serviceTier
+        requestedRouteDetails =
+          [ FRFSRouteDetails
+              { routeCode = req.routeCode,
+                startStationCode = req.fromStationCode,
+                endStationCode = req.toStationCode,
+                serviceTier = finalServiceTier
+              }
+          ]
+        (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters Nothing mbNewServiceTiers
 
-  -- A metro journey needing a change of line is several seated rides, and the hopper index in
-  -- the in-memory GTFS server plans them from the feed's service calendar. Each ride becomes
-  -- its own route detail; the rest of the search flow already handles a multi-element list and
-  -- quotes them as one journey carrying several route stations.
-  --
-  -- Only for a search that names no route: one that does has already chosen it, and passes it
-  -- down to have its fare refreshed. Anything that stops the hopper answering -- disabled,
-  -- unknown stop, or nothing connecting the two today -- falls back to the request's own
-  -- single route detail, so behaviour is exactly as before.
-  frfsRouteDetails <-
-    if vehicleType_ == Spec.METRO && isNothing req.routeCode
-      then do
-        mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
-        if fromMaybe False (mbRiderConfig >>= (.enableMetroFrfsSearch))
-          then do
-            eHopLegs <- try @_ @SomeException $ OTPRest.getMetroHop integratedBPPConfig req.fromStationCode req.toStationCode
-            case eHopLegs of
-              Right (Just hopLegs@(_ : _)) -> do
-                logInfo $ "Metro hop legs for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ": " <> show (map (.routeCode) hopLegs)
-                pure
-                  [ FRFSRouteDetails
-                      { routeCode = Just hopLeg.routeCode,
-                        startStationCode = hopLeg.srcStopCode,
-                        endStationCode = hopLeg.destStopCode,
-                        serviceTier = finalServiceTier
-                      }
-                    | hopLeg <- hopLegs
-                  ]
-              Right _ -> pure requestedRouteDetails
-              Left err -> do
-                logError $ "Metro hop lookup failed for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ", falling back to the requested route: " <> show err
-                pure requestedRouteDetails
-          else pure requestedRouteDetails
-      else pure requestedRouteDetails
-  logInfo $
-    "FRFS Search params → "
-      <> "vehicleNumber="
-      <> show req.vehicleNumber
-      <> ", serviceTier="
-      <> show finalServiceTier
-      <> ", routeCode="
-      <> show req.routeCode
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
+    -- A metro journey needing a change of line is several seated rides, and the hopper index in
+    -- the in-memory GTFS server plans them from the feed's service calendar. Each ride becomes
+    -- its own route detail; the rest of the search flow already handles a multi-element list and
+    -- quotes them as one journey carrying several route stations.
+    --
+    -- Only for a search that names no route: one that does has already chosen it, and passes it
+    -- down to have its fare refreshed. Anything that stops the hopper answering -- disabled,
+    -- unknown stop, or nothing connecting the two today -- falls back to the request's own
+    -- single route detail, so behaviour is exactly as before.
+    frfsRouteDetails <-
+      if vehicleType_ == Spec.METRO && isNothing req.routeCode
+        then do
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+          if fromMaybe False (mbRiderConfig >>= (.enableMetroFrfsSearch))
+            then do
+              eHopLegs <- try @_ @SomeException $ OTPRest.getMetroHop integratedBPPConfig req.fromStationCode req.toStationCode
+              case eHopLegs of
+                Right (Just hopLegs@(_ : _)) -> do
+                  logInfo $ "Metro hop legs for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ": " <> show (map (.routeCode) hopLegs)
+                  pure
+                    [ FRFSRouteDetails
+                        { routeCode = Just hopLeg.routeCode,
+                          startStationCode = hopLeg.srcStopCode,
+                          endStationCode = hopLeg.destStopCode,
+                          serviceTier = finalServiceTier
+                        }
+                      | hopLeg <- hopLegs
+                    ]
+                Right _ -> pure requestedRouteDetails
+                Left err -> do
+                  logError $ "Metro hop lookup failed for " <> req.fromStationCode <> " -> " <> req.toStationCode <> ", falling back to the requested route: " <> show err
+                  pure requestedRouteDetails
+            else pure requestedRouteDetails
+        else pure requestedRouteDetails
+    logInfo $
+      "FRFS Search params → "
+        <> "vehicleNumber="
+        <> show req.vehicleNumber
+        <> ", serviceTier="
+        <> show finalServiceTier
+        <> ", routeCode="
+        <> show req.routeCode
+    postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -750,9 +751,9 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   upsertJourneyLegAction searchReqId.getId
   QFRFSSearch.create searchReq
   Metrics.incrementFRFSSearchCount merchantId.getId searchReq.merchantOperatingCityId.getId (show vehicleType_)
-  withTimeAPI "frfsSearch" "callExternalBPPSearch" $ JMU.measureLatency (CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq mbFare frfsRouteDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId) "CallExternalBPP.search postFrfsSearchHandler"
+  withTimeAPI "frfsSearch" "callExternalBPPSearch" $ Metrics.withTimeFRFSMerchant "frfsSearch" "callExternalBPPSearch" merchantId.getId $ CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq mbFare frfsRouteDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
   quotes <-
-    withTimeAPI "frfsSearch" "getFrfsSearchQuote" (JMU.measureLatency (withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId mbHasPasses tripTime)) "getFrfsSearchQuote postFrfsSearchHandler")
+    withTimeAPI "frfsSearch" "getFrfsSearchQuote" (Metrics.withTimeFRFSMerchant "frfsSearch" "getFrfsSearchQuote" merchantId.getId (withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId mbHasPasses tripTime)))
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
@@ -914,7 +915,8 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId mbIsMockPayment req =
   withTimeAPI "frfsConfirm" "quoteV2Confirm" $
-    ActorInfo.withMbPersonIdActorInfo mbPersonId $ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment req
+    Metrics.withTimeFRFSMerchant "frfsConfirm" "quoteV2Confirm" merchantId.getId $
+      ActorInfo.withMbPersonIdActorInfo mbPersonId $ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment req
 
 postFrfsQuoteV2ConfirmWithActor :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment req = do
@@ -980,8 +982,9 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment =
   withTimeAPI "frfsConfirm" "quoteConfirm" $
-    ActorInfo.withMbPersonIdActorInfo mbPersonId $
-      postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing, isSpotBooking = Nothing, purchasedPassPaymentId = Nothing})
+    Metrics.withTimeFRFSMerchant "frfsConfirm" "quoteConfirm" merchantId_.getId $
+      ActorInfo.withMbPersonIdActorInfo mbPersonId $
+        postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing, isSpotBooking = Nothing, purchasedPassPaymentId = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
