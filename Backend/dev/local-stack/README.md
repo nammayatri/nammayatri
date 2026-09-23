@@ -3466,6 +3466,35 @@ the bill that exists. Worth a cron and an alert, not just a glance.
 
     MAX_SMS_PER_HOUR=120 MAX_SMS_PER_DAY=800   # raise, restart, no build
 
+### Telling the validator — `registration-notify.sh`, since 2026-09-23
+
+Drivers enrol themselves, and the console shows them at once — but a page
+gives nobody a reason to open it. Audited on 2026-09-23: the queue held two
+registrations, six and two days old, and the last decision on the whole system
+was three weeks before that. Nothing was broken; nobody had been told.
+
+A `systemd` timer (`movin-registrations.timer`, every five minutes) messages
+the person who validates when somebody appears, and **once more** if that
+driver is still waiting after `PATIENCE_HOURS` — then leaves them alone. A
+notifier that repeats itself is one people mute, and a muted notifier is worse
+than none because everyone believes it is working.
+
+**Telegram, because the obvious channel cannot work:** Moorsyl only delivers
+to `+222` and the validator has an Algerian number — the same constraint the
+guard's `SMS_BYPASS` exists for — and there is no SMTP on this box.
+
+    TELEGRAM_BOT_TOKEN=...   # @BotFather
+    TELEGRAM_CHAT_ID=...     # your own chat with that bot
+
+Both go in `.env`, which is not in git and is in the backup set. **With
+neither set the script exits 0 and does nothing**, so the timer is safe to
+enable before the bot exists — which is how it was installed.
+
+State lives in `registration-notify.state`: one line per driver already
+announced, pruned as the queue empties. A Telegram failure is deliberately
+*not* recorded, so the next run retries rather than silently deciding that
+driver was dealt with.
+
 ## Tests, and what CI actually runs
 
 Three workflows, none of which deploys anything:
