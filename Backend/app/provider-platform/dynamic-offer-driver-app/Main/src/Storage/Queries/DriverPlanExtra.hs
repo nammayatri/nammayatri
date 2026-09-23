@@ -23,6 +23,31 @@ import Storage.Queries.OrphanInstances.DriverPlan ()
 
 -- Extra code goes here --
 
+findAllByDriverIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  m [DriverPlan]
+findAllByDriverIds driverIds =
+  if null driverIds
+    then pure []
+    else findAllWithKV [Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)]
+
+findAllByDriverIdsAndMerchantOpCityId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  Id MOC.MerchantOperatingCity ->
+  m [DriverPlan]
+findAllByDriverIdsAndMerchantOpCityId driverIds merchantOpCityId =
+  if null driverIds
+    then pure []
+    else
+      findAllWithKV
+        [ Se.And
+            [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+              Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOpCityId.getId)
+            ]
+        ]
+
 findAllDriversToSendManualPaymentLinkWithLimit ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   DPlan.ServiceNames ->
@@ -192,6 +217,22 @@ updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVeh
     [ Se.And
         [ Se.Is BeamDF.driverId (Se.Eq driverId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
+
+bulkUpdatePlanIdByDriverIdsAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> Id DPlan.Plan -> DPlan.ServiceNames -> Maybe VC.VehicleCategory -> Id MOC.MerchantOperatingCity -> m ()
+bulkUpdatePlanIdByDriverIdsAndServiceName driverIds (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.planId planId,
+      Se.Set BeamDF.vehicleCategory mbVehicleCategory,
+      Se.Set BeamDF.merchantOpCityId (Just merchantOperatingCity.getId),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId)
         ]
     ]
 
