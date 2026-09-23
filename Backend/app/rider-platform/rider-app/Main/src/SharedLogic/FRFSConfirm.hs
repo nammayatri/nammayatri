@@ -101,7 +101,7 @@ data RescheduleCtx = RescheduleCtx
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
-  Hedis.withWaitAndLockMasterCloudCrossAppRedis (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $ do
+  Hedis.withWaitAndLockMasterCloudCrossAppRedis "frfsConfirm" "waitForConfirmLock" (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $ do
     quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
     mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
     riderConfig <-

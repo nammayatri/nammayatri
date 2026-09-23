@@ -175,6 +175,8 @@ orderStatusHandler ::
   m DPayment.PaymentStatusResp
 orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall = do
   Redis.withWaitAndLockMasterCloudCrossAppRedis
+    "payment"
+    "waitForOrderStatusHandlerLock"
     makePaymentOrderStatusHandlerLockKey
     60
     100
