@@ -10,6 +10,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.FleetDriverAssociation as FDV
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -25,6 +26,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
+import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -97,6 +99,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
     QFDV.create assoc
+    fleetLinkDriver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
+    SOnboardingComms.setOnboardingAs transporterConfig fleetLinkDriver DDI.FLEET_DRIVER
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
