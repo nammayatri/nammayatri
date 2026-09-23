@@ -231,7 +231,7 @@ data SpecialZoneGateInfo = SpecialZoneGateInfo
 
 mkSpecialZoneGateInfo :: Maybe Text -> Maybe SpecialZoneGateInfo
 mkSpecialZoneGateInfo mbPickupArea = do
-  area <- mbPickupArea >>= SL.parsePickupDropFromText
+  area <- mbPickupArea >>= Kernel.Prelude.readMaybe . T.unpack
   let specialLocationId = SL.pickupSpecialZoneIdFromArea area
       gateId = SL.pickupGateIdFromArea area
   if isNothing specialLocationId && isNothing gateId
