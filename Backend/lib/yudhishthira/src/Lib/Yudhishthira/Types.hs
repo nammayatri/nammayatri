@@ -760,7 +760,8 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     shouldUpdateRule :: Maybe Bool,
     updatePassword :: Maybe Text,
     verifyOutput :: Maybe Bool,
-    domain :: LogicDomain
+    domain :: LogicDomain,
+    skipPasswordCheck :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -945,8 +946,10 @@ type AppDynamicLogicDomainResp = [LogicDomain]
 
 type ChakraQueryResp = [ChakraQueriesAPIEntity]
 
+-- | The audit row for @appDynamicLogic/verify@ carries the whole request, so the
+-- update password must not travel into it.
 instance HideSecrets AppDynamicLogicReq where
-  hideSecrets = identity
+  hideSecrets req = req {updatePassword = Nothing}
 
 data UpdateKaalBasedTagsJobReq = UpdateKaalBasedTagsJobReq
   { eventId :: Id Event,

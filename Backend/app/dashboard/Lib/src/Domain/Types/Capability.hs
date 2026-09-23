@@ -98,6 +98,11 @@ dashboardAdminTier = "DASHBOARD_ADMIN"
 userTier :: Text
 userTier = "USER"
 
+-- | Holding this lets an operator update an app dynamic logic rule through
+-- @nammaTag\/appDynamicLogic\/verify@
+dynamicLogicPasswordExemptCapability :: Text
+dynamicLogicPasswordExemptCapability = "system-config.dynamic_logic.write_without_password"
+
 data PersonTier = PersonTier
   { id :: Id DP.Person,
     adminTier :: Text
