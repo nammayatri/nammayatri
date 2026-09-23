@@ -57,6 +57,8 @@ imports:
   AvailabilityCheckConfig: Dashboard.Common
   AutoAcceptanceConfig: Dashboard.Common
   Language: Kernel.External.Types
+  MerchantCloudUpdateReq: Dashboard.Common.Merchant
+  MerchantCloudUpdateRes: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -742,6 +744,16 @@ apis:
       auth: NoAuth
       response:
         type: CityListResp
+
+  - POST:
+      endpoint: /cloud/update
+      auth: ApiAuthV2
+      request:
+        type: MerchantCloudUpdateReq
+      response:
+        type: MerchantCloudUpdateRes
+      migrate:
+        capability: system-config.merchant.write
 
 types:
   MerchantUpdateReq:

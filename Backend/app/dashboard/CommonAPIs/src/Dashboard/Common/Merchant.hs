@@ -45,6 +45,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Id as Id
 import Kernel.Types.Predicate
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
+import qualified Kernel.Types.Version as Version
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Lib.Types.SpecialLocation as SLT
@@ -1153,3 +1154,35 @@ data SetFareProductEnabledReq = SetFareProductEnabledReq
 
 instance HideSecrets SetFareProductEnabledReq where
   hideSecrets = identity
+
+data MerchantCloudUpdateReq = MerchantCloudUpdateReq
+  { merchantShortId :: Maybe (Id.ShortId Merchant),
+    cloudType :: Version.CloudType,
+    cloudBaseUrl :: Maybe BaseUrl,
+    password :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantCloudUpdateTReq = MerchantCloudUpdateTReq
+  { merchantShortId :: Maybe (Id.ShortId Merchant),
+    cloudType :: Version.CloudType,
+    cloudBaseUrl :: Maybe BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MerchantCloudUpdateReq where
+  type ReqWithoutSecrets MerchantCloudUpdateReq = MerchantCloudUpdateTReq
+  hideSecrets MerchantCloudUpdateReq {..} = MerchantCloudUpdateTReq {..}
+
+data MerchantCloudUpdateRes = MerchantCloudUpdateRes
+  { merchantId :: Text,
+    merchantShortId :: Text,
+    previousCloudType :: Maybe Version.CloudType,
+    previousCloudBaseUrl :: Maybe Text,
+    updatedCloudType :: Version.CloudType,
+    updatedCloudBaseUrl :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
