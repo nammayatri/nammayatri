@@ -3422,6 +3422,50 @@ and one environment variable away — it sends our own French wording under
 an Algerian number, and Moorsyl only delivers to `+222`. The chain is proven as
 far as the gateway accepting the message and no further.
 
+### What bounds the bill — since 2026-09-23
+
+Starting a sign-in is the only request on this box that spends money, and
+before this date nothing capped the total. `MAX_STARTS` keys on the phone
+number, and an attacker does not reuse a number, he rotates them; the only
+other thing in the way was nginx's 20 requests a minute on the `auth` zone —
+**1,200 texts an hour from one address**, all billed to us.
+
+It compounds with a second fact: **Moorsyl publishes no balance route.**
+`/api/balance`, `/api/account` and `/api/me` all answer 404, so an emptied
+account cannot be detected from here. It would appear as every registration
+failing, silently, with nothing in any log to say why.
+
+Three controls, in the order they bite:
+
+| Control | Where | Default |
+|---|---|---|
+| `signin` zone, 6r/m burst 3 | `edge/nginx.conf`, sign-in **start** only | — |
+| `MAX_STARTS_PER_IP` | guard, per address per hour | 30 |
+| `MAX_SMS_PER_HOUR` / `MAX_SMS_PER_DAY` | guard, rolling, all numbers | 60 / 400 |
+
+Three things about them are deliberate and should not be "tidied":
+
+- **The tight zone is on the start, not on `/auth/{id}/verify`.** Typing a
+  wrong code is normal and costs nothing; a rider on his third guess must not
+  be refused by the edge before the guard can tell him the code was wrong.
+- **`auth` itself was left at 20r/m.** The same zone carries
+  `/driver/documents`, and lowering it would throttle a driver halfway through
+  sending five photographs.
+- **`MAX_STARTS_PER_IP` is generous on purpose.** Mauritanian mobile networks
+  are behind carrier-grade NAT, so thousands of real handsets share a few
+  public addresses: a tight per-address cap does not hit an attacker, it hits a
+  city. The global budget is the control that actually bounds the bill.
+
+Past the budget the guard refuses and logs why; **enrolled drivers keep their
+personal codes throughout**, exactly as during a gateway outage, because this
+must never be the thing that grounds the fleet. Exempt numbers count against
+neither new counter — they send nothing, so they cost nothing.
+
+The spend is on `/healthz` under `gateway.budget`, and it is the only view of
+the bill that exists. Worth a cron and an alert, not just a glance.
+
+    MAX_SMS_PER_HOUR=120 MAX_SMS_PER_DAY=800   # raise, restart, no build
+
 ## Tests, and what CI actually runs
 
 Three workflows, none of which deploys anything:
