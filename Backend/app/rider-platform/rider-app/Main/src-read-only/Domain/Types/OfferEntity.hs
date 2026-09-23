@@ -36,12 +36,13 @@ data OfferEntity = OfferEntity
     offerTnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutAmount :: Kernel.Types.Common.HighPrecMoney,
     postOfferAmount :: Kernel.Types.Common.HighPrecMoney,
+    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
-data EntityType = BOOKING | RIDE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data EntityType = BOOKING | RIDE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''EntityType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''EntityType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''EntityType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''EntityType)

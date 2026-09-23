@@ -69,7 +69,8 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     minimumAmount :: Maybe HighPrecMoney,
     frequencyType :: Maybe DOffer.OfferFrequency,
     appliedCount :: Maybe Int,
-    maxApplyCount :: Maybe Int
+    maxApplyCount :: Maybe Int,
+    showMilestoneCard :: Maybe Bool
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
