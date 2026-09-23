@@ -569,6 +569,7 @@ onUpdate = \case
         oldBookingParties
     QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
+    QRB.addActiveBookingAvailableInCache newBooking.riderId newBooking.id
     void $ QBPL.createMany newBookingParties
     void $ withTryCatch "reallocation:rekeyBookingDepositHold" $ BookingDeposit.rekeyBookingDepositHold booking newBooking
     void $ QRB.updateStatus booking.riderId booking.id DRB.REALLOCATED

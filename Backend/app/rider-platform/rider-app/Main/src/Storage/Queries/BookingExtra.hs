@@ -2,6 +2,7 @@ module Storage.Queries.BookingExtra where
 
 import Control.Applicative
 import Data.List.Extra (notNull)
+import qualified Data.Time as T
 import qualified Database.Beam as B
 import Domain.Types
 import Domain.Types.Booking as Domain
@@ -73,14 +74,36 @@ createBooking booking = do
 mkActiveRidePersonIdCacheKey :: Text -> Text
 mkActiveRidePersonIdCacheKey personId = "ACBL:" <> personId
 
-addActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r) => Id Person -> Id Booking -> m ()
+defaultActiveBookingCacheTtl :: Int
+defaultActiveBookingCacheTtl = 86400
+
+scheduledActiveBookingCacheGrace :: T.NominalDiffTime
+scheduledActiveBookingCacheGrace = 86400
+
+activeBookingCacheTtl :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m Int
+activeBookingCacheTtl bookingIds = do
+  now <- getCurrentTime
+  bookings <- catMaybes <$> mapM findById bookingIds
+  let scheduledExpiries = map (T.addUTCTime scheduledActiveBookingCacheGrace . (.startTime)) $ filter (.isScheduled) bookings
+  pure $
+    if null scheduledExpiries
+      then defaultActiveBookingCacheTtl
+      else max defaultActiveBookingCacheTtl (ceiling (T.diffUTCTime (maximum scheduledExpiries) now))
+
+addActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
 addActiveBookingAvailableInCache personId rbId = do
   let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
   getActiveRideAvailableFromCacheKey personId >>= \case
-    Just existingBookingIds -> when (not (rbId `elem` existingBookingIds)) $ Hedis.set cacheKey (rbId : existingBookingIds)
-    Nothing -> Hedis.setExp cacheKey [(getId rbId)] 86400
+    Just existingBookingIds ->
+      when (not (rbId `elem` existingBookingIds)) $ do
+        let updatedIds = rbId : existingBookingIds
+        ttl <- activeBookingCacheTtl updatedIds
+        Hedis.setExp cacheKey (getId <$> updatedIds) ttl
+    Nothing -> do
+      ttl <- activeBookingCacheTtl [rbId]
+      Hedis.setExp cacheKey [(getId rbId)] ttl
 
-removeActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r) => Id Person -> Id Booking -> m ()
+removeActiveBookingAvailableInCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> m ()
 removeActiveBookingAvailableInCache personId rbId = do
   let cacheKey = mkActiveRidePersonIdCacheKey (getId personId)
   getActiveRideAvailableFromCacheKey personId >>= \case
@@ -88,7 +111,9 @@ removeActiveBookingAvailableInCache personId rbId = do
       let remainingIds = (filter (/= rbId) existingBookingIds)
       if null remainingIds
         then Hedis.del cacheKey
-        else Hedis.setExp cacheKey remainingIds 86400
+        else do
+          ttl <- activeBookingCacheTtl remainingIds
+          Hedis.setExp cacheKey (getId <$> remainingIds) ttl
     Nothing -> return ()
 
 getActiveRideAvailableFromCacheKey :: (MonadFlow m, CacheFlow m r) => Id Person -> m (Maybe [Id Booking])
