@@ -2722,30 +2722,15 @@ fetchTranslatedTemplates merchantOpCityId language titleKey bodyKey = do
     lookupTranslation key =
       getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = key, language = Just language}) (Just (QTranslations.findByErrorAndLanguage key language))
 
-constructTitle :: DocumentDecision -> Text -> Text -> Text
-constructTitle decision translatedDocType template
-  | not (T.null template) = template
-  | otherwise = case decision of
-    DocumentRejected _ -> "Attention: Your " <> translatedDocType <> " is invalid."
-    DocumentApproved -> "Your " <> translatedDocType <> " has been approved."
+-- | Text comes only from the configured templates; an empty template means the city has not
+--   configured that channel, and the caller skips it.
+buildPushMessages :: Text -> Text -> (Text, Text) -> (Text, Text)
+buildPushMessages translatedDocType reason (titleTemplate, bodyTemplate) =
+  (replacePlaceholders translatedDocType reason titleTemplate, replacePlaceholders translatedDocType reason bodyTemplate)
 
-constructBody :: DocumentDecision -> Text -> Text -> Text
-constructBody decision translatedDocType template
-  | not (T.null template) = template
-  | otherwise = case decision of
-    DocumentRejected reason -> translatedDocType <> " rejected - " <> reason <> ". Please reupload the correct document."
-    DocumentApproved -> translatedDocType <> " has been verified and approved. No further action is needed."
-
-buildPushMessages :: DocumentDecision -> Text -> Text -> (Text, Text) -> (Text, Text)
-buildPushMessages decision translatedDocType reason (titleTemplate, bodyTemplate) =
-  let title = constructTitle decision translatedDocType $ replacePlaceholders translatedDocType reason titleTemplate
-      body = constructBody decision translatedDocType $ replacePlaceholders translatedDocType reason bodyTemplate
-   in (title, body)
-
-buildSmsMessage :: DocumentDecision -> Text -> Text -> (Text, Text) -> Text
-buildSmsMessage decision translatedDocType reason (titleTemplate, bodyTemplate) =
-  let smsTemplate = if T.null bodyTemplate then titleTemplate else bodyTemplate
-   in constructBody decision translatedDocType $ replacePlaceholders translatedDocType reason smsTemplate
+buildSmsMessage :: Text -> Text -> (Text, Text) -> Text
+buildSmsMessage translatedDocType reason (titleTemplate, bodyTemplate) =
+  replacePlaceholders translatedDocType reason (if T.null bodyTemplate then titleTemplate else bodyTemplate)
 
 sendDocumentSms :: (CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig]) => Id DMOC.MerchantOperatingCity -> Text -> DP.Person -> m ()
 sendDocumentSms merchantOpCityId smsBody driver = do
@@ -2776,12 +2761,16 @@ sendDocumentDecisionNotification merchantOpCityId docType decision driver = do
   translatedDocType <- translateDocumentType language docType
   pushTemplates <- fetchDocumentPushTemplates merchantOpCityId language driver.language messageKey
   smsTemplates <- fetchDocumentSmsTemplates merchantOpCityId language messageKey
-  let (title, body) = buildPushMessages decision translatedDocType reason pushTemplates
-      smsBody = buildSmsMessage decision translatedDocType reason smsTemplates
-  Notify.notifyDriver merchantOpCityId fcmType title body driver driver.deviceToken
+  let (title, body) = buildPushMessages translatedDocType reason pushTemplates
+      smsBody = buildSmsMessage translatedDocType reason smsTemplates
+  if T.null body
+    then logInfo $ "Skipping " <> show messageKey <> " push for " <> driver.id.getId <> ": no template configured"
+    else Notify.notifyDriver merchantOpCityId fcmType title body driver driver.deviceToken
   smsEnabled <- isDashboardSmsEnabled merchantOpCityId
-  when smsEnabled $ do
-    sendDocumentSms merchantOpCityId smsBody driver
+  when smsEnabled $
+    if T.null smsBody
+      then logInfo $ "Skipping " <> show messageKey <> " SMS for " <> driver.id.getId <> ": no template configured"
+      else sendDocumentSms merchantOpCityId smsBody driver
 
 postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow Common.UpdateDocumentResp
 postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do

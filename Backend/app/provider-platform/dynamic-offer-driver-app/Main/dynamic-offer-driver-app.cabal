@@ -634,6 +634,7 @@ library
       SharedLogic.DriverIdentityInfo
       SharedLogic.DriverIdleTime
       SharedLogic.DriverOnboarding
+      SharedLogic.DriverOnboarding.ApprovalComms
       SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.DocumentIdentifier

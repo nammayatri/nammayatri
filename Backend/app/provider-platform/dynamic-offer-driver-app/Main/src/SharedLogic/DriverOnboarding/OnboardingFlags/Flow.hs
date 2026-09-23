@@ -42,6 +42,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.ApprovalComms as ApprovalComms
 import SharedLogic.DriverOnboarding.Common
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Checks as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
@@ -225,6 +226,8 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           else newApproved
   when (verifiedToWrite /= driverInfo.verified || approvedToWrite /= driverInfo.approved) $
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) verifiedToWrite approvedToWrite
+  when (approvalSupported && driverInfo.approved /= Just True && approvedToWrite == Just True) $
+    ApprovalComms.notifyPersonApproved merchantOpCityId person
   consentGateOk <-
     if effectiveOnboardingAs == DI.FLEET_DRIVER
       then hasActiveFleetAssociation person.id
@@ -333,6 +336,8 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
       approvedToWrite = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.approved else newApproved
   when (verifiedToWrite /= fleetOwnerInfo.verified || approvedToWrite /= fleetOwnerInfo.approved) $
     QFOI.updateFleetOwnerVerifiedAndApprovedStatus verifiedToWrite approvedToWrite person.id
+  when (approvalSupported && fleetOwnerInfo.approved /= Just True && approvedToWrite == Just True) $
+    ApprovalComms.notifyPersonApproved person.merchantOperatingCityId person
   let approvedGateOk = approvedToWrite == Just True
       newEnabled = if holdEnabledWithoutDocsVerifiedEnabledOrApproved then fleetOwnerInfo.enabled else allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
@@ -386,6 +391,8 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
                 other -> other
       when (newVerified /= rc.verified || newApproved /= rc.approved) $
         VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
+      when (approvalSupported && rc.approved /= Just True && newApproved == Just True) $
+        ApprovalComms.notifyVehicleApproved rc registrationNo
       -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
       when (useUnifiedOnboardingFlagsRecompute && rc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) rc.id
       whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
