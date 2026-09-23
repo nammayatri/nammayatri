@@ -93,6 +93,8 @@ data MessageKey
   | DOCUMENT_VALID
   | DRIVER_ONBOARDING_DEEPLINK_MESSAGE
   | FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
+  | ONBOARDING_APPROVED
+  | VEHICLE_APPROVED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 type MerchantMessage = MerchantMessageD ('Safe)
