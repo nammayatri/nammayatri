@@ -1243,6 +1243,7 @@ TransporterConfig:
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
     enableDownwardRecomputeForDifferentDestination: Maybe Bool
+    tripCategoriesForNoRecalc: "Maybe [TripCategory]"
     upwardsRecomputeBuffer: HighPrecMeters
     upwardsRecomputeBufferPercentage: Maybe Int
     approxRideDistanceDiffThreshold: HighPrecMeters
@@ -1925,6 +1926,7 @@ TransporterConfig:
     arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
+    tripCategoriesForNoRecalc: "text[]"
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     issueBreachConfig: json

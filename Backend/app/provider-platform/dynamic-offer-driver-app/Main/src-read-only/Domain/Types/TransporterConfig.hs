@@ -13,6 +13,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Trip
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -354,6 +355,7 @@ data TransporterConfig = TransporterConfig
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     toNotifyDriverForExtraKmsLimitExceed :: Kernel.Prelude.Bool,
     trackingShortUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tripCategoriesForNoRecalc :: Kernel.Prelude.Maybe [Domain.Types.Trip.TripCategory],
     tripEndGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
