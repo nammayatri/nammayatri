@@ -20,7 +20,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingPayment as DBP
 import qualified Domain.Types.BookingStatus as DRB
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -30,18 +29,14 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
-import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingPayment as QBookingPayment
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types (KeyConfig, TokenConfig)
 import qualified UrlShortner.Common as UrlShortner
@@ -92,7 +87,7 @@ bookingDepositExpiryJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
           unless (null holds) $ do
             logError $ "BookingDepositExpiry: resolving stranded hold on terminal booking " <> bookingId.getId <> " (status " <> show booking.status <> ")"
             if booking.status == DRB.COMPLETED
-              then BookingDeposit.resolveTerminalHolds booking
+              then void $ BookingDeposit.captureBookingDeposit booking
               else
                 void . withTryCatch "bookingDepositExpiry:refundStrandedHold" $
                   BookingDeposit.refundBookingDeposit booking
@@ -101,15 +96,6 @@ bookingDepositExpiryJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
           void . withTryCatch "bookingDepositExpiry:notifyBpp" $ do
             cancelRes <- DCancel.buildLocalCancelRes booking bppBookingId
             withShortRetry $ CallBPP.cancelV2 booking.merchantId booking.providerUrl =<< CancelACL.buildCancelReqV2 cancelRes Nothing
-      when repaired $ do
-        mbAttempt <- QBookingPayment.findLatestByBookingIdAndServiceType booking.id DOrder.BookingDeposit
-        whenJust mbAttempt $ \attempt ->
-          when (attempt.status == DBP.PENDING) $ do
-            mbOrder <- QOrder.findById attempt.paymentOrderId
-            whenJust mbOrder $ \paymentOrder -> do
-              let fulfillmentHandler resp =
-                    DPaymentAction.bookingDepositOrderStatusHandler paymentOrder.id booking.merchantId resp
-              void . withTryCatch "bookingDepositExpiry:syncPendingAttempt" $
-                SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
+      when repaired $ DPaymentAction.reconcileDepositPayment booking
       -- Never reschedules itself: one hold, one expiry decision.
       pure Complete

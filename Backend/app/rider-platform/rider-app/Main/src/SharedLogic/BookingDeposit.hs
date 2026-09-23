@@ -20,7 +20,12 @@ module SharedLogic.BookingDeposit
     getAvailableBalance,
     findHolds,
     depositCaptured,
-    holdBookingDeposit,
+    depositHoldState,
+    bookingDepositFulfilTriggeredKey,
+    bookingDepositPollSyncLockKey,
+    isBookingDepositConfirmTriggered,
+    isBookingDepositPaymentInFlight,
+    isDepositAttemptInFlight,
     reserveBookingDeposit,
     rekeyBookingDepositHold,
     decideAndSecureBookingDeposit,
@@ -28,9 +33,7 @@ module SharedLogic.BookingDeposit
     ReserveResult (..),
     hasCreditForOrder,
     captureBookingDeposit,
-    releaseBookingDeposit,
     releaseHolds,
-    resolveTerminalHolds,
     refundBookingDeposit,
     prepareDepositRefundLedger,
     executeDepositRefundGateway,
@@ -148,15 +151,6 @@ mkCtx riderId merchantId merchantOpCityId referenceId =
     Nothing
     Nothing
 
--- | Place the hold AND schedule its expiry
-holdBookingDeposit ::
-  DepositHoldFlow m r =>
-  DRB.Booking ->
-  HighPrecMoney ->
-  m ()
-holdBookingDeposit booking amount =
-  withRiderFeeLock booking.riderId $ holdBookingDeposit_ booking amount
-
 rekeyBookingDepositHold ::
   DepositHoldFlow m r =>
   DRB.Booking ->
@@ -257,6 +251,31 @@ depositCaptured :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m Bool
 depositCaptured bookingId =
   any (\e -> e.status == LE.SETTLED) <$> Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
 
+-- | (captured, pending holds) from one ledger read; same answers as 'depositCaptured' and 'findHolds'.
+bookingDepositFulfilTriggeredKey, bookingDepositPollSyncLockKey :: Text -> Text
+bookingDepositFulfilTriggeredKey bookingIdText = "BookingDeposit:FulfilTriggered:" <> bookingIdText
+bookingDepositPollSyncLockKey orderIdText = "BookingDeposit:PollSync:" <> orderIdText
+
+isBookingDepositConfirmTriggered :: CacheFlow m r => Id DRB.Booking -> m Bool
+isBookingDepositConfirmTriggered bookingId =
+  (== Just "1") <$> Redis.get @Text (bookingDepositFulfilTriggeredKey bookingId.getId)
+
+depositHoldState :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m (Bool, [LE.LedgerEntry])
+depositHoldState bookingId = do
+  entries <- Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
+  pure (any (\e -> e.status == LE.SETTLED) entries, filter (\e -> e.status == LE.PENDING) entries)
+
+isBookingDepositPaymentInFlight :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m Bool
+isBookingDepositPaymentInFlight booking =
+  QBookingPayment.findLatestByBookingIdAndServiceType booking.id DOrder.BookingDeposit >>= isDepositAttemptInFlight
+
+-- | Latest attempt still PENDING on our side but already CHARGED at the gateway: fulfilment in flight.
+isDepositAttemptInFlight :: (CacheFlow m r, EsqDBFlow m r) => Maybe DBP.BookingPayment -> m Bool
+isDepositAttemptInFlight = \case
+  Just row
+    | row.status == DBP.PENDING -> maybe False (\o -> o.status == Payment.CHARGED) <$> QPaymentOrder.findById row.paymentOrderId
+  _ -> pure False
+
 findHolds :: (CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> m [LE.LedgerEntry]
 findHolds bookingId = do
   entries <- Ledger.getEntriesByReference bookingDepositHoldRefType bookingId.getId
@@ -281,13 +300,6 @@ settleHolds_ bookingId = do
     logInfo $ "Captured " <> show (length pending) <> " booking fee hold(s) for booking " <> bookingId.getId
   pure $ sum (map (.amount) (pending <> settled))
 
--- | Re-quoted: nothing moves and the balance returns to spendable
-releaseBookingDeposit ::
-  DepositFlow m r => DRB.Booking -> m ()
-releaseBookingDeposit booking =
-  when (isJust booking.bookingDepositAmount) $
-    withRiderFeeLock booking.riderId $ releaseHolds_ booking.id
-
 -- | Release by booking id alone, for the expiry job's orphan case where the booking row was never written and no rider id is to hand.
 releaseHolds ::
   DepositFlow m r => Id DRB.Booking -> m ()
@@ -296,6 +308,7 @@ releaseHolds bookingId = do
   case holds of
     [] -> pure ()
     (entry : _) -> do
+      logError $ "Orphan booking deposit hold on booking " <> bookingId.getId <> " released to wallet, not refunded"
       mbAcc <- Account.getAccount entry.fromAccountId
       case mbAcc >>= (.counterpartyId) of
         Just riderId ->
@@ -303,15 +316,6 @@ releaseHolds bookingId = do
         Nothing -> do
           logError $ "Booking fee hold on booking " <> bookingId.getId <> " has no counterparty on its account; releasing unlocked"
           releaseHolds_ bookingId
-
--- | Resolve PENDING holds left on a terminal booking by the booking's outcome: a completed ride keeps the deposit, every other terminal outcome returns it.
-resolveTerminalHolds ::
-  DepositFlow m r => DRB.Booking -> m ()
-resolveTerminalHolds booking =
-  withRiderFeeLock booking.riderId $
-    if booking.status == DRB.COMPLETED
-      then void $ settleHolds_ booking.id
-      else releaseHolds_ booking.id
 
 releaseHolds_ :: (CacheFlow m r, EsqDBFlow m r, HasActorInfo m r) => Id DRB.Booking -> m ()
 releaseHolds_ bookingId = do
