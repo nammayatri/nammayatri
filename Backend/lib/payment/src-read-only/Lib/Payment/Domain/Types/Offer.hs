@@ -29,6 +29,7 @@ data Offer = Offer
     offerCode :: Kernel.Prelude.Text,
     offerEligibilityJsonLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
     offerType :: Lib.Payment.Domain.Types.Offer.OfferType,
+    showMilestoneCard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sponsoredBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

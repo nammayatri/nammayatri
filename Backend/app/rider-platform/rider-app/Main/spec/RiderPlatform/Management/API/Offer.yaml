@@ -77,6 +77,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - showMilestoneCard: Maybe Bool
     - derive: "'HideSecrets"
 
   UpdateOfferReq:
@@ -95,6 +96,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - showMilestoneCard: Maybe Bool
     - derive: "'HideSecrets"
 
   OfferResp:
@@ -118,6 +120,7 @@ types:
     - isHidden: Maybe Bool
     - frequencyType: Maybe OfferFrequency
     - maxApplyCount: Maybe Int
+    - showMilestoneCard: Maybe Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
 

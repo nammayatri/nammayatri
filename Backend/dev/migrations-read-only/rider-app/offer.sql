@@ -46,3 +46,8 @@ ALTER TABLE atlas_app.offer ADD COLUMN max_apply_count integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.offer ADD COLUMN valid_from timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN show_milestone_card boolean ;
