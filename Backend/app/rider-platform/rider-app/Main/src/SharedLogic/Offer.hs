@@ -353,6 +353,7 @@ processRideOffer mbOfferStatsInput booking person ride offerBasePrice mbFareCtx 
                       frequencyType = offerDetails.frequencyType,
                       appliedCount = if computed.amountSaved > 0 then (+ 1) <$> offerDetails.appliedCount else offerDetails.appliedCount,
                       maxApplyCount = offerDetails.maxApplyCount,
+                      showMilestoneCard = offerDetails.showMilestoneCard,
                       merchantId = booking.merchantId,
                       merchantOperatingCityId = booking.merchantOperatingCityId,
                       createdAt = now,
@@ -487,7 +488,8 @@ applyAutoApplyOverride autoApplyOfferCodes offer
           { Payment.offerDisplayPriority = Nothing,
             Payment.autoApply = Just True,
             Payment.shouldValidate = Nothing,
-            Payment.isHidden = Nothing
+            Payment.isHidden = Nothing,
+            Payment.showMilestoneCard = Nothing
           }
 
 listOffersForPerson ::
@@ -611,7 +613,8 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         minimumAmount = minimumAmount,
         frequencyType = counters >>= (.frequencyType) >>= readMaybe . T.unpack,
         appliedCount = counters >>= (.appliedCount),
-        maxApplyCount = counters >>= (.maxApplyCount)
+        maxApplyCount = counters >>= (.maxApplyCount),
+        showMilestoneCard = uiConfigs >>= (.showMilestoneCard)
       }
 
 -- | Replace each offer's display text (title/description/tnc) with the rider's

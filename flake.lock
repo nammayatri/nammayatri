@@ -4021,11 +4021,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1790176420,
-        "narHash": "sha256-UAhjD0MVIZYelw5COWt/FZf2wYrTsZUrSgvTK2jJtU8=",
+        "lastModified": 1790339072,
+        "narHash": "sha256-5YOXBtQRRwLFBq8V9MuIPYlJdMf5HoNuOdIzEwLLep4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "22d6d9efcd0110b969bc5e60739e2519aa0dd5a8",
+        "rev": "4e772bdf6e29297fdbe906710b7cb9874c753a15",
         "type": "github"
       },
       "original": {

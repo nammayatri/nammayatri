@@ -36,6 +36,7 @@ Offer:
     isHidden: Maybe Bool
     frequencyType: Maybe OfferFrequency
     maxApplyCount: Maybe Int
+    showMilestoneCard: Maybe Bool
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime

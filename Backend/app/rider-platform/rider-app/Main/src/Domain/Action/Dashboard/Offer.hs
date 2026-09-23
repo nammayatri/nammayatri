@@ -64,6 +64,7 @@ postOfferCreate merchantShortId opCity req = do
             isHidden = req.isHidden,
             frequencyType = req.frequencyType,
             maxApplyCount = req.maxApplyCount,
+            showMilestoneCard = req.showMilestoneCard,
             merchantId = merchant.id.getId,
             merchantOperatingCityId = merchantOpCity.id.getId,
             createdAt = now,
@@ -102,6 +103,7 @@ postOfferUpdate merchantShortId opCity offerId req = do
             DOffer.isHidden = req.isHidden <|> offer.isHidden,
             DOffer.frequencyType = req.frequencyType <|> offer.frequencyType,
             DOffer.maxApplyCount = req.maxApplyCount <|> offer.maxApplyCount,
+            DOffer.showMilestoneCard = req.showMilestoneCard <|> offer.showMilestoneCard,
             DOffer.updatedAt = now
           }
   validateValidityWindow updatedOffer.validFrom updatedOffer.validTill
@@ -157,6 +159,7 @@ mkOfferResp offer =
       isHidden = offer.isHidden,
       frequencyType = offer.frequencyType,
       maxApplyCount = offer.maxApplyCount,
+      showMilestoneCard = offer.showMilestoneCard,
       createdAt = offer.createdAt,
       updatedAt = offer.updatedAt
     }
