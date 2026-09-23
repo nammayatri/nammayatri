@@ -42,6 +42,8 @@ imports:
   VehicleServiceTierOrderConfig: Dashboard.Common
   ServiceTierType: Dashboard.Common
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
+  MerchantCloudUpdateReq: Dashboard.Common.Merchant
+  MerchantCloudUpdateRes: Dashboard.Common.Merchant
   Value: Data.Aeson
 
 module: Merchant
@@ -368,6 +370,16 @@ apis:
       response:
         type: APISuccess
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_RIDER_MERCHANT_MESSAGE
+
+  - POST:
+      endpoint: /cloud/update
+      auth: ApiAuthV2
+      request:
+        type: MerchantCloudUpdateReq
+      response:
+        type: MerchantCloudUpdateRes
+      migrate:
+        capability: system-config.merchant.write
 
 types:
   MerchantUpdateReq:
