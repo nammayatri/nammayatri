@@ -467,6 +467,14 @@ mkNotificationEntity merchantOpCityId category mbRideId dataSend =
     _ ->
       Notification.Entity Notification.Merchant merchantOpCityId.getId dataSend
 
+-- | Entity payload of the DRIVER_ASSIGNMENT push. The driver never tapped accept on an
+-- auto-accepted ride, so the app needs the flag at notification time rather than waiting
+-- for the ride screen to mount.
+data RideAssignedNotificationData = RideAssignedNotificationData
+  { isAutoAccepted :: Bool
+  }
+  deriving (Generic, ToJSON, Show)
+
 notifyDriverWithProviders ::
   ( ServiceFlow m r,
     CacheFlow m r,
