@@ -31,6 +31,12 @@ data FlowStatus
         fareProductType :: Maybe DFPT.FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
         tripCategory :: Maybe TripCategory
       }
+  | WAITING_FOR_BOOKING_FEE_PAYMENT
+      { bookingId :: Id DB.Booking,
+        validTill :: UTCTime,
+        fareProductType :: Maybe DFPT.FareProductType,
+        tripCategory :: Maybe TripCategory
+      }
   | ACTIVE_BOOKINGS
       { list :: [SRB.BookingAPIEntity]
       }

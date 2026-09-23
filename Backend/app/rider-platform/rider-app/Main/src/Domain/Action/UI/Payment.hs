@@ -70,6 +70,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import Environment
@@ -116,6 +117,7 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
@@ -317,11 +319,21 @@ fireWithheldConfirm ::
     CallFRFSBPP.BecknAPICallFlow m r
   ) =>
   Id DRB.Booking ->
+  Id DP.Person ->
   m ()
-fireWithheldConfirm bookingId = do
+fireWithheldConfirm bookingId riderId = do
   onInitRes <- DOnInit.buildOnInitResFromBooking bookingId
   confirmReq <- ACL.buildConfirmReqV2 onInitRes
   void . withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl confirmReq onInitRes.merchant.id
+  -- Clear only if the slot is still OUR fee wait. The flow status is one key per rider
+  -- (PersonFlowStatus.hs:44-45) and clearCache is an unguarded del, so a confirm that lands late --
+  -- after the rider abandoned this booking and started a new search -- would otherwise wipe that
+  -- search's WAITING_FOR_DRIVER_OFFERS and drop them to IDLE. Mirrors the opposite-direction guards
+  -- in Search.hs:499-502 and OnSearch.hs:377-380, which stop other flows clearing the fee status.
+  QPFS.getStatus riderId >>= \case
+    Just DPFS.WAITING_FOR_BOOKING_FEE_PAYMENT {bookingId = feeBookingId}
+      | feeBookingId == bookingId -> QPFS.clearCache riderId
+    _ -> pure ()
   Redis.setExp (bookingDepositFulfilTriggeredKey bookingId.getId) ("1" :: Text) 86400
 
 isBookingDepositPaymentInFlight :: DRB.Booking -> Flow Bool
@@ -368,21 +380,29 @@ createBookingDepositPaymentOrder booking isMockPayment = do
     mint shortfall attempts =
       case listToMaybe attempts of
         Just row | row.status == DBP.PENDING -> do
-          mbResp <- callCreateOrder row.paymentOrderId.getId shortfall
-          case mbResp of
-            Just orderResp -> pure (BookingDepositOrderReady orderResp)
-            Nothing -> do
-              mbOrd <- QOrder.findById row.paymentOrderId
-              let orderIsDead = maybe False (\o -> isTerminalStatus o.status && o.status /= Payment.CHARGED) mbOrd
-              if orderIsDead
-                then do
-                  QBookingPayment.updateStatusById DBP.FAILED row.id
-                  logInfo $ "Booking fee order " <> row.paymentOrderId.getId <> " is dead at gateway; minting fresh order for " <> booking.id.getId
-                  freshMint shortfall
-                else do
-                  logError $ "Booking fee order " <> row.paymentOrderId.getId <> " gave no SDK payload but is not dead (" <> show ((.status) <$> mbOrd) <> "); not minting a second order for " <> booking.id.getId
-                  pure BookingDepositOrderUnavailable
+          mbExisting <- QOrder.findById row.paymentOrderId
+          if maybe False (\o -> o.status /= Payment.CHARGED && o.amount /= shortfall) mbExisting
+            then do
+              QBookingPayment.updateStatusById DBP.FAILED row.id
+              logInfo $ "Booking fee order " <> row.paymentOrderId.getId <> " is for " <> show ((.amount) <$> mbExisting) <> " but the shortfall is now " <> show shortfall <> "; minting fresh order for " <> booking.id.getId
+              freshMint shortfall
+            else reuseOrMint shortfall row
         _ -> freshMint shortfall
+    reuseOrMint shortfall row = do
+      mbResp <- callCreateOrder row.paymentOrderId.getId shortfall
+      case mbResp of
+        Just orderResp -> pure (BookingDepositOrderReady orderResp)
+        Nothing -> do
+          mbOrd <- QOrder.findById row.paymentOrderId
+          let orderIsDead = maybe False (\o -> isTerminalStatus o.status && o.status /= Payment.CHARGED) mbOrd
+          if orderIsDead
+            then do
+              QBookingPayment.updateStatusById DBP.FAILED row.id
+              logInfo $ "Booking fee order " <> row.paymentOrderId.getId <> " is dead at gateway; minting fresh order for " <> booking.id.getId
+              freshMint shortfall
+            else do
+              logError $ "Booking fee order " <> row.paymentOrderId.getId <> " gave no SDK payload but is not dead (" <> show ((.status) <$> mbOrd) <> "); not minting a second order for " <> booking.id.getId
+              pure BookingDepositOrderUnavailable
     freshMint shortfall = do
       orderIdText <- generateGUID
       mbResp <- callCreateOrder orderIdText shortfall
@@ -510,7 +530,7 @@ bookingDepositOrderStatusHandler orderId _merchantId paymentStatusResp = do
                       pure False
               when secured $ do
                 void $ booking.bppBookingId & fromMaybeM (InvalidRequest $ "Booking fee paid but on_init not yet processed for " <> bookingIdText <> "; deferring confirm")
-                fireWithheldConfirm bookingId
+                fireWithheldConfirm bookingId booking.riderId
             pure False
       case ranToCompletion of
         Left () -> do
@@ -553,7 +573,7 @@ resumeBookingDepositConfirm bookingId = do
         then logInfo $ "Booking " <> bookingIdText <> " already " <> show booking.status <> "; not resuming confirm"
         else case booking.bppBookingId of
           Nothing -> logError $ "Booking fee confirm resume for " <> bookingIdText <> " deferred: on_init not yet processed"
-          Just _ -> fireWithheldConfirm bookingId
+          Just _ -> fireWithheldConfirm bookingId booking.riderId
   case result of
     Left () -> logInfo $ "Booking fee confirm resume for " <> bookingIdText <> " skipped: another resumer holds the lock"
     Right () -> pure ()

@@ -140,7 +140,8 @@ handleConfirmTtlExpiry booking = do
   let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
       ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
-  when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
+      isFeePending = booking.requiresPaymentBeforeConfirm && isJust booking.bookingDepositAmount
+  when (booking.status == SRB.NEW && (ttlUtcTime < now) && not isFeePending) do
     dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
     void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"

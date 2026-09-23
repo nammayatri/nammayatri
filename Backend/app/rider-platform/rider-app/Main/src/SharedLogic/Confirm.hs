@@ -279,6 +279,9 @@ confirm DConfirmReq {..} = do
           }
   when (needsFeePayment && not booking0.requiresPaymentBeforeConfirm) $
     QRideB.updateRequiresPaymentBeforeConfirm booking.id True
+  when needsFeePayment $
+    createJobIn @_ @'BookingDepositExpiry (Just searchRequest.merchantId) (Just merchantOperatingCityId) (fromIntegral BookingDeposit.unpaidFeeGraceSeconds) $
+      BookingDepositExpiryJobData {bookingId = booking.id}
   when isScheduled $ do
     let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
     let scheduleAfter = diffUTCTime scheduledRideReminderTime now
@@ -302,8 +305,21 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   whenJust mbBookingOfferEntity $ \bookingOfferEntity -> do
     QOfferEntity.create bookingOfferEntity
-  unless isScheduled $
-    void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
+  if needsFeePayment
+    then
+      void $
+        QPFS.updateStatusWithTtl
+          personId
+          DPFS.WAITING_FOR_BOOKING_FEE_PAYMENT
+            { bookingId = booking.id,
+              validTill = addUTCTime (fromIntegral BookingDeposit.unpaidFeeGraceSeconds) booking.createdAt,
+              fareProductType = Just (QTB.getFareProductType booking.bookingDetails),
+              tripCategory = booking.tripCategory
+            }
+          (BookingDeposit.unpaidFeeGraceSeconds + 60)
+    else
+      unless isScheduled $
+        void $ QPFS.updateStatus personId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   whenJust mbEsimateId $ QEstimate.updateStatus DEstimate.COMPLETED
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
@@ -501,7 +517,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           estimatedFare = quote.estimatedFare,
           discount = quote.discount,
           estimatedTotalFare = quote.estimatedTotalFare,
-          bookingDepositAmount = if supportsBookingDeposit == Just True then mfilter (> 0) quote.bookingDeposit else Nothing,
+          bookingDepositAmount = if supportsBookingDeposit == Just True && isScheduled then mfilter (> 0) quote.bookingDeposit else Nothing,
           estimatedDistance = searchRequest.distance,
           estimatedDuration = searchRequest.estimatedRideDuration,
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,

@@ -29,8 +29,10 @@ getStatus personId =
     Nothing -> pure $ Just IDLE
 
 updateStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
-updateStatus personId flowStatus = do
-  let expTime = 3 * 60 -- 3 minutes
+updateStatus personId flowStatus = updateStatusWithTtl personId flowStatus (3 * 60)
+
+updateStatusWithTtl :: CacheFlow m r => Id Person -> FlowStatus -> Int -> m ()
+updateStatusWithTtl personId flowStatus expTime = do
   let personIdKey = makeFlowStatusKey personId
   Hedis.setExp personIdKey flowStatus expTime
 
