@@ -1,0 +1,130 @@
+imports:
+  UTCTime: Kernel.Prelude
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  VehicleTrip: Domain.Types.VehicleTrip
+  ServiceTierType: BecknV2.FRFS.Enums
+  SessionStatus: SharedLogic.SharedCab.SessionState
+  PauseReason: SharedLogic.SharedCab.SessionState
+
+module: SharedCabInternal
+
+types:
+  SharedCabRouteResp:
+    code: Text
+    shortName: Text
+    longName: Text
+    distanceMeters: Double
+
+  SharedCabSelectReq:
+    driverId: Text
+    vehicleNumber: Text
+    integratedBppConfigId: Id IntegratedBPPConfig
+    routeCode: Text
+    serviceTierType: ServiceTierType
+    capacity: Maybe Int
+    walkupCount: Maybe Int
+
+  SharedCabDriverReq:
+    driverId: Text
+    vehicleNumber: Text
+
+  SharedCabSeatsReq:
+    driverId: Text
+    vehicleNumber: Text
+    walkupCount: Int
+    version: Int
+
+  SharedCabChangeRouteReq:
+    driverId: Text
+    vehicleNumber: Text
+    routeCode: Text
+
+  SharedCabEndNext:
+    enum: "RETURN, CHANGE, END"
+
+  SharedCabEndReq:
+    driverId: Text
+    vehicleNumber: Text
+    next: SharedCabEndNext
+    routeCode: Maybe Text
+
+  SharedCabSessionResp:
+    vehicleNumber: Text
+    routeCode: Text
+    queuedRouteCode: Maybe Text
+    status: SessionStatus
+    pauseReason: Maybe PauseReason
+    capacity: Int
+    walkupCount: Int
+    available: Int
+    version: Int
+    startedAt: UTCTime
+    vehicleTripId: Id VehicleTrip
+
+apis:
+  - GET:
+      endpoint: /sharedCab/routes
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        integratedBppConfigId: Text
+        lat: Double
+        lon: Double
+      response:
+        type: "[API.Types.UI.SharedCabInternal.SharedCabRouteResp]"
+  - POST:
+      endpoint: /sharedCab/route/select
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabSelectReq
+      response:
+        type: SharedCabSessionResp
+  - GET:
+      endpoint: /sharedCab/session
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        driverId: Text
+        vehicleNumber: Text
+      response:
+        type: SharedCabSessionResp
+  - POST:
+      endpoint: /sharedCab/seats
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabSeatsReq
+      response:
+        type: SharedCabSessionResp
+  - POST:
+      endpoint: /sharedCab/route/change
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabChangeRouteReq
+      response:
+        type: SharedCabSessionResp
+  - POST:
+      endpoint: /sharedCab/route/end
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabEndReq
+      response:
+        type: SharedCabSessionResp
+  - POST:
+      endpoint: /sharedCab/resume
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSessionResp

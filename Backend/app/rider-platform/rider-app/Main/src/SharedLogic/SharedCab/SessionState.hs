@@ -32,10 +32,10 @@ import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import Tools.Error (SharedCabSessionError (..))
 
 data SessionStatus = ACTIVE | PAUSED | ENDED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PauseReason = NO_LOCATION | DRIVER_OFFLINE | ABSENT | OFF_ROUTE
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Session = Session
   { driverId :: Text,
@@ -69,7 +69,8 @@ data OpenSessionReq = OpenSessionReq
   }
   deriving (Show, Eq, Generic)
 
-data EndRouteAction = StartReturn Text | EndRoute | EndForNow
+-- | `StartReturn Nothing` runs the same route code back: the feed models both directions as one route (direction_id 0/1).
+data EndRouteAction = StartReturn (Maybe Text) | EndRoute | EndForNow
   deriving (Show, Eq)
 
 data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session

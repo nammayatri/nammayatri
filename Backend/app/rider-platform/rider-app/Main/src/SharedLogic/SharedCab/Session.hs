@@ -98,7 +98,7 @@ endRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> 
 endRoute driver rawPlate action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   case action of
-    StartReturn reverseRoute -> switchTo DVT.RETURN reverseRoute s
+    StartReturn mbRoute -> switchTo DVT.RETURN (fromMaybe s.routeCode mbRoute) s
     _ -> do
       now <- getCurrentTime
       closeLiveTrip plate (endActionReason action) now

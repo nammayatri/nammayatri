@@ -9,6 +9,7 @@ import qualified API.Action.UI.AssetReleaseInternal as AssetReleaseInternal
 import qualified API.Action.UI.FRFSInternal as FRFSInternal
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
+import qualified API.Action.UI.SharedCabInternal as SharedCabInternal
 import qualified API.Action.UI.ZendeskWebhook as ZendeskWebhook
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
@@ -61,6 +62,7 @@ type API =
            :<|> InMemManagement.API
            :<|> FRFSInternal.API
            :<|> AssetReleaseInternal.API
+           :<|> SharedCabInternal.API
            :<|> ZendeskWebhook.API
            :<|> XyneWebhook.API
            :<|> NotificationWebhook.API
@@ -94,6 +96,7 @@ handler =
     :<|> InMemManagement.handler
     :<|> FRFSInternal.handler
     :<|> AssetReleaseInternal.handler
+    :<|> SharedCabInternal.handler
     :<|> ZendeskWebhook.handler
     :<|> XyneWebhook.handler
     :<|> NotificationWebhook.handler
