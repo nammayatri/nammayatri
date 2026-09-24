@@ -32,6 +32,7 @@ import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideStatus as SRide
+import qualified Domain.Types.RiderConfig as DRC
 import Environment
 import Environment ()
 import Kernel.Beam.Functions
@@ -80,20 +81,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  -- Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
-  -- When the flag is true we capture the fee now; when false the fee becomes a pending due.
-  -- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).
-  let immediateCharge =
-        isJust cancellationFee
-          && case collectionMode of
-            -- The BPP's consequence matrix decided the collection mode (carried on the
-            -- on_cancel order tags) — it is authoritative when present.
-            Just "ImmediateCapture" -> True
-            Just "NextRideDues" -> False
-            -- Old BPP (no mode on the wire): legacy rider-config flags decide.
-            _ -> case castedCancellationSource of
-              SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
-              _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
+  let immediateCharge = isJust cancellationFee && resolveImmediateCapture riderConfig collectionMode castedCancellationSource
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
   whenJust customerCancellationNotificationKey $ \pnKey ->
@@ -114,9 +102,26 @@ onSoftCancel ValidatedBookingCancelledReq {..} =
     Just fee -> do
       let cancellationFeeToBeSettled = Just (fee.amount + maybe 0 (.amount) cancellationFeeTax)
       whenJust mbRide $ \ride -> do
-        let rideId = ride.id
-        QRide.updateCancellationFeeIfCancelledField cancellationFeeToBeSettled rideId
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+        -- Soft cancel is always rider-initiated; tells the UI whether the fee would be captured now or carried to the next ride
+        let immediateCapture = resolveImmediateCapture riderConfig collectionMode SBCR.ByUser
+        QRide.updateCancellationFeeIfCancelledField cancellationFeeToBeSettled (Just immediateCapture) ride.id
     _ -> pure ()
+
+-- | Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
+-- When true we capture the fee now; when false the fee becomes a pending due.
+-- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).
+resolveImmediateCapture :: DRC.RiderConfig -> Maybe Text -> SBCR.CancellationSource -> Bool
+resolveImmediateCapture riderConfig collectionMode cancellationSource =
+  case collectionMode of
+    -- The BPP's consequence matrix decided the collection mode (carried on the
+    -- on_cancel order tags) — it is authoritative when present.
+    Just "ImmediateCapture" -> True
+    Just "NextRideDues" -> False
+    -- Old BPP (no mode on the wire): legacy rider-config flags decide.
+    _ -> case cancellationSource of
+      SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
+      _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
 
 validateRequest ::
   ( CacheFlow m r,

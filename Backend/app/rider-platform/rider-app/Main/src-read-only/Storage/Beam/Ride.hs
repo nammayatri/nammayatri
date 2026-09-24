@@ -33,6 +33,7 @@ data RideT f = RideT
     bppRideId :: (B.C f Kernel.Prelude.Text),
     cancellationChargesOnCancel :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     cancellationFeeIfCancelled :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    cancellationFeeImmediateCapture :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     cancellationFeeStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus)),
     chargeableDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters)),
     chargeableDistanceValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance)),

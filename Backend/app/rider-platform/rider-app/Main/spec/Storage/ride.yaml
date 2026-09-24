@@ -125,6 +125,7 @@ Ride:
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
     cancellationFeeIfCancelled: Maybe HighPrecMoney
+    cancellationFeeImmediateCapture: Maybe Bool
     cancellationFeeStatus: Maybe CancellationFeeStatus
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
@@ -330,7 +331,7 @@ Ride:
       where: id
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
-      params: [cancellationFeeIfCancelled]
+      params: [cancellationFeeIfCancelled, cancellationFeeImmediateCapture]
       where: id
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
