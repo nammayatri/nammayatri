@@ -19,11 +19,11 @@ type API = ("penalty" :> PostPenaltyTriggerJobCancellationPenaltyServiceName)
 type PostPenaltyTriggerJobCancellationPenaltyServiceName =
   ( "trigger" :> "job" :> "cancellationPenalty" :> "serviceName" :> Capture "serviceName" Dashboard.Common.ServiceNames
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-newtype PenaltyAPIs = PenaltyAPIs {postPenaltyTriggerJobCancellationPenaltyServiceName :: (Dashboard.Common.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype PenaltyAPIs = PenaltyAPIs {postPenaltyTriggerJobCancellationPenaltyServiceName :: Dashboard.Common.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkPenaltyAPIs :: (Client EulerHS.Types.EulerClient API -> PenaltyAPIs)
 mkPenaltyAPIs penaltyClient = (PenaltyAPIs {..})
@@ -36,10 +36,10 @@ data PenaltyUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON PenaltyUserActionType where
-  toJSON (POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME) = Data.Aeson.String "POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME"
+  toJSON POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME = Data.Aeson.String "POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME"
 
 instance FromJSON PenaltyUserActionType where
   parseJSON (Data.Aeson.String "POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME") = pure POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME
   parseJSON _ = fail "POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME expected"
 
-$(Data.Singletons.TH.genSingletons [(''PenaltyUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PenaltyUserActionType])

@@ -27,17 +27,17 @@ handler merchantId city = postPayoutAccount merchantId city :<|> postPayoutAccou
 
 type PostPayoutAccount =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.PAYOUT_ACCOUNT) / ('API.Types.ProviderPlatform.Fleet.PayoutAccount.POST_PAYOUT_ACCOUNT))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.PAYOUT_ACCOUNT / 'API.Types.ProviderPlatform.Fleet.PayoutAccount.POST_PAYOUT_ACCOUNT)
       :> API.Types.ProviderPlatform.Fleet.PayoutAccount.PostPayoutAccount
   )
 
 type PostPayoutAccountStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.PAYOUT_ACCOUNT) / ('API.Types.ProviderPlatform.Fleet.PayoutAccount.POST_PAYOUT_ACCOUNT_STATUS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.PAYOUT_ACCOUNT / 'API.Types.ProviderPlatform.Fleet.PayoutAccount.POST_PAYOUT_ACCOUNT_STATUS)
       :> API.Types.ProviderPlatform.Fleet.PayoutAccount.PostPayoutAccountStatus
   )
 

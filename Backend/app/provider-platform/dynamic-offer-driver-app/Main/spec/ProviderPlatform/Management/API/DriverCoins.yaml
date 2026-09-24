@@ -16,8 +16,6 @@ apis:
       type: BulkUploadCoinsReq
     response:
       type: BulkUploadCoinRes
-    migrate:
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
 - POST:
     # BulkUploadCoinsAPIV2
     endpoint: bulkUploadCoinsV2
@@ -27,8 +25,6 @@ apis:
       type: BulkUploadCoinsReqV2
     response:
       type: BulkUploadCoinRes
-    migrate:
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
 - GET:
     # CoinHistoryAPI
     endpoint: coinHistory/{driverId}
@@ -40,8 +36,6 @@ apis:
     - offset: Integer
     response:
       type: CoinHistoryRes
-    migrate:
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
 - POST:
     # UpdateBlacklistedCoinEventsAPI
     endpoint: blacklistedEvents/{driverId}/update
@@ -53,8 +47,6 @@ apis:
       type: UpdateBlacklistedCoinEventsReq
     response:
       type: APISuccess
-    migrate:
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BLACKLIST_EVENTS_UPDATE
 
 types:
   BulkUploadCoinsReq:

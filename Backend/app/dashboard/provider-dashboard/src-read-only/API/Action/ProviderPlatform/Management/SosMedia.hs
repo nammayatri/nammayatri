@@ -28,9 +28,9 @@ handler merchantId city = getSosMediaSosMedia merchantId city
 
 type GetSosMediaSosMedia =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.SOS_MEDIA) / ('API.Types.ProviderPlatform.Management.SosMedia.GET_SOS_MEDIA_SOS_MEDIA))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SOS_MEDIA / 'API.Types.ProviderPlatform.Management.SosMedia.GET_SOS_MEDIA_SOS_MEDIA)
       :> API.Types.ProviderPlatform.Management.SosMedia.GetSosMediaSosMedia
   )
 

@@ -64,7 +64,7 @@ type GetLiveMapDrivers =
            "driverIdForRadius"
            (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam "point" Kernel.External.Maps.Types.LatLong
-      :> Get ('[JSON]) [MapDriverInfoRes]
+      :> Get '[JSON] [MapDriverInfoRes]
   )
 
 type GetLiveMapDriversHelper =
@@ -77,11 +77,11 @@ type GetLiveMapDriversHelper =
            "point"
            Kernel.External.Maps.Types.LatLong
       :> Get
-           ('[JSON])
+           '[JSON]
            [MapDriverInfoRes]
   )
 
-newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: (Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> EulerHS.Types.EulerClient [MapDriverInfoRes])}
+newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient [MapDriverInfoRes]}
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
 mkLiveMapAPIs liveMapClient = (LiveMapAPIs {..})
@@ -94,10 +94,10 @@ data LiveMapUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON LiveMapUserActionType where
-  toJSON (GET_LIVE_MAP_DRIVERS) = Data.Aeson.String "GET_LIVE_MAP_DRIVERS"
+  toJSON GET_LIVE_MAP_DRIVERS = Data.Aeson.String "GET_LIVE_MAP_DRIVERS"
 
 instance FromJSON LiveMapUserActionType where
   parseJSON (Data.Aeson.String "GET_LIVE_MAP_DRIVERS") = pure GET_LIVE_MAP_DRIVERS
   parseJSON _ = fail "GET_LIVE_MAP_DRIVERS expected"
 
-$(Data.Singletons.TH.genSingletons [(''LiveMapUserActionType)])
+$(Data.Singletons.TH.genSingletons [''LiveMapUserActionType])

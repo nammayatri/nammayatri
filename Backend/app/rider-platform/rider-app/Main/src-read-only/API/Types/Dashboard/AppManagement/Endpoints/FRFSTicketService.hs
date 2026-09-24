@@ -30,7 +30,7 @@ type GetFRFSTicketServiceCustomerFrfsConfig =
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
-      :> Get ('[JSON]) API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+      :> Get '[JSON] API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
   )
 
 type GetFRFSTicketServiceCustomerFrfsAutocomplete =
@@ -55,7 +55,7 @@ type GetFRFSTicketServiceCustomerFrfsAutocomplete =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.AutocompleteRes
   )
 
@@ -72,7 +72,7 @@ type GetFRFSTicketServiceCustomerFrfsRoutes =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
   )
 
@@ -101,7 +101,7 @@ type GetFRFSTicketServiceCustomerFrfsStations =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
 
@@ -121,10 +121,10 @@ type PostFRFSTicketServiceCustomerFrfsStationsPossibleStops =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq
       :> Post
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
 
@@ -146,7 +146,7 @@ type GetFRFSTicketServiceCustomerFrfsRoute =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSRouteAPI
   )
 
@@ -165,10 +165,10 @@ type PostFRFSTicketServiceCustomerFrfsSearch =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
 
@@ -179,7 +179,7 @@ type GetFRFSTicketServiceCustomerFrfsSearchQuote =
            (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
       :> "quote"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
   )
 
@@ -193,10 +193,10 @@ type PostFRFSTicketServiceCustomerFrfsQuoteV2Confirm =
            "isMockPayment"
            Kernel.Prelude.Bool
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 
@@ -213,10 +213,10 @@ type PostFRFSTicketServiceCustomerFrfsQuoteV2ConfirmHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 
@@ -227,7 +227,7 @@ type GetFRFSTicketServiceCustomerFrfsBookingStatus =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "status"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 
@@ -241,7 +241,7 @@ type GetFRFSTicketServiceCustomerFrfsBookingStatusHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
   )
 
@@ -252,7 +252,7 @@ type GetFRFSTicketServiceCustomerFrfsBookingPaymentAttempts =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "paymentAttempts"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes
   )
 
@@ -263,7 +263,7 @@ type GetFRFSTicketServiceCustomerFrfsPaymentAttempts =
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes
   )
 
@@ -275,7 +275,7 @@ type GetFRFSTicketServiceCustomerFrfsRouteSeatLayout =
       :> "seatLayout"
       :> QueryParam "vehicleNumber" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
   )
 
@@ -297,7 +297,7 @@ type GetFRFSTicketServiceCustomerFrfsTripRouteSeats =
            "vehicleNumber"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.SeatLayoutResp
   )
 
@@ -308,10 +308,10 @@ type PostFRFSTicketServiceCustomerFrfsRouteServiceability =
            Kernel.Prelude.Text
       :> "serviceability"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
   )
 
@@ -323,9 +323,9 @@ type PostFRFSTicketServiceCustomerFrfsFleetOperatorTripAction =
       :> "frfs"
       :> "fleetOperator"
       :> "tripAction"
-      :> ReqBody ('[JSON]) API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
+      :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
   )
 
@@ -338,31 +338,31 @@ type PostFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation =
       :> "fleetOperator"
       :> "currentOperation"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 
 data FRFSTicketServiceAPIs = FRFSTicketServiceAPIs
-  { getFRFSTicketServiceCustomerFrfsConfig :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Beckn.Context.City -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSConfigAPIRes),
-    getFRFSTicketServiceCustomerFrfsAutocomplete :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> Kernel.Types.Beckn.Context.City -> Kernel.External.Maps.Types.LatLong -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.AutocompleteRes),
-    getFRFSTicketServiceCustomerFrfsRoutes :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Types.Beckn.Context.City -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSRouteAPI]),
-    getFRFSTicketServiceCustomerFrfsStations :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSStationAPI]),
-    postFRFSTicketServiceCustomerFrfsStationsPossibleStops :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSStationAPI]),
-    getFRFSTicketServiceCustomerFrfsRoute :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> Kernel.Types.Beckn.Context.City -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSRouteAPI),
-    postFRFSTicketServiceCustomerFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe ([BecknV2.FRFS.Enums.ServiceTierType]) -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSSearchAPIRes),
-    getFRFSTicketServiceCustomerFrfsSearchQuote :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]),
-    postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes),
-    getFRFSTicketServiceCustomerFrfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes),
-    getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes),
-    getFRFSTicketServiceCustomerFrfsPaymentAttempts :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes),
-    getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp),
-    getFRFSTicketServiceCustomerFrfsTripRouteSeats :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutResp),
-    postFRFSTicketServiceCustomerFrfsRouteServiceability :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> EulerHS.Types.EulerClient API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle),
-    postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp),
-    postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp)
+  { getFRFSTicketServiceCustomerFrfsConfig :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Beckn.Context.City -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSConfigAPIRes,
+    getFRFSTicketServiceCustomerFrfsAutocomplete :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> Kernel.Types.Beckn.Context.City -> Kernel.External.Maps.Types.LatLong -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.AutocompleteRes,
+    getFRFSTicketServiceCustomerFrfsRoutes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Beckn.Context.City -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSRouteAPI],
+    getFRFSTicketServiceCustomerFrfsStations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSStationAPI],
+    postFRFSTicketServiceCustomerFrfsStationsPossibleStops :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSStationAPI],
+    getFRFSTicketServiceCustomerFrfsRoute :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> Kernel.Types.Beckn.Context.City -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSRouteAPI,
+    postFRFSTicketServiceCustomerFrfsSearch :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSSearchAPIRes,
+    getFRFSTicketServiceCustomerFrfsSearchQuote :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> EulerHS.Types.EulerClient [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes],
+    postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
+    getFRFSTicketServiceCustomerFrfsBookingStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes,
+    getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes,
+    getFRFSTicketServiceCustomerFrfsPaymentAttempts :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FRFSPaymentAttemptsListAPIRes,
+    getFRFSTicketServiceCustomerFrfsRouteSeatLayout :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp,
+    getFRFSTicketServiceCustomerFrfsTripRouteSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.SeatLayoutResp,
+    postFRFSTicketServiceCustomerFrfsRouteServiceability :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq -> EulerHS.Types.EulerClient API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorTripAction :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp,
+    postFRFSTicketServiceCustomerFrfsFleetOperatorCurrentOperation :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   }
 
 mkFRFSTicketServiceAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketServiceAPIs)
@@ -391,4 +391,4 @@ data FRFSTicketServiceUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''FRFSTicketServiceUserActionType)])
+$(Data.Singletons.TH.genSingletons [''FRFSTicketServiceUserActionType])

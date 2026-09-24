@@ -4,7 +4,6 @@ imports:
   GetQuotesRes: Domain.Action.UI.Quote
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.SearchRequest: "rider-app"
   Domain.Action.UI.Quote: "rider-app"
@@ -20,7 +19,5 @@ apis:
         customerId: Id Person
       response:
         type: GetQuotesRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS GETQUOTE
 
 types: {}

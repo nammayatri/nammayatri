@@ -25,24 +25,24 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "driver" :> "areaPreference" :> "getInfo"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
       :<|> TokenAuth
       :> "driver"
       :> "areaPreference"
       :> "updateInfo"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
       :<|> TokenAuth
       :> "driver"
       :> "areaPreference"
       :> "list"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.DriverAreaPreference.GeohashAreaItem]
   )
 

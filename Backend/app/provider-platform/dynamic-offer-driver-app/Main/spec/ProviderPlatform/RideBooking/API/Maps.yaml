@@ -23,9 +23,6 @@ apis:
         type: AutoCompleteReq
       response:
         type: AutoCompleteResp
-      migrate:
-        endpoint: MapAPI AutoCompleteEndPoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS AUTOCOMPLETE
   - POST: # RideGetPlaceNameAPI
       endpoint: /getPlaceName/{driverId}
       auditRequestBody: false
@@ -36,7 +33,4 @@ apis:
         type: GetPlaceNameReq
       response:
         type: GetPlaceNameResp
-      migrate:
-        endpoint: MapAPI GetPlaceNameEndPoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS PLACENAME
 types: {}

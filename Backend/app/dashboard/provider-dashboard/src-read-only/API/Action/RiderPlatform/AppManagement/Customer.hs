@@ -32,41 +32,41 @@ handler merchantId city = postCustomerSosCreate merchantId city :<|> postCustome
 
 type PostCustomerSosCreate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.CUSTOMER) / ('API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_SOS_CREATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.CUSTOMER / 'API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_SOS_CREATE)
       :> API.Types.Dashboard.AppManagement.Customer.PostCustomerSosCreate
   )
 
 type PostCustomerDeletedPerson =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.CUSTOMER) / ('API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_DELETED_PERSON))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.CUSTOMER / 'API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_DELETED_PERSON)
       :> API.Types.Dashboard.AppManagement.Customer.PostCustomerDeletedPerson
   )
 
 type GetCustomerSavedLocations =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.CUSTOMER) / ('API.Types.Dashboard.AppManagement.Customer.GET_CUSTOMER_SAVED_LOCATIONS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.CUSTOMER / 'API.Types.Dashboard.AppManagement.Customer.GET_CUSTOMER_SAVED_LOCATIONS)
       :> API.Types.Dashboard.AppManagement.Customer.GetCustomerSavedLocations
   )
 
 type PostCustomerSavedLocations =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.CUSTOMER) / ('API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_SAVED_LOCATIONS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.CUSTOMER / 'API.Types.Dashboard.AppManagement.Customer.POST_CUSTOMER_SAVED_LOCATIONS)
       :> API.Types.Dashboard.AppManagement.Customer.PostCustomerSavedLocations
   )
 
 type DeleteCustomerSavedLocations =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.CUSTOMER) / ('API.Types.Dashboard.AppManagement.Customer.DELETE_CUSTOMER_SAVED_LOCATIONS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.CUSTOMER / 'API.Types.Dashboard.AppManagement.Customer.DELETE_CUSTOMER_SAVED_LOCATIONS)
       :> API.Types.Dashboard.AppManagement.Customer.DeleteCustomerSavedLocations
   )
 

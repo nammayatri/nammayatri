@@ -17,9 +17,9 @@ import Servant.Client
 
 type API = ("meterRide" :> GetMeterRidePrice)
 
-type GetMeterRidePrice = ("price" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get ('[JSON]) API.Types.UI.PriceBreakup.MeterRidePriceRes)
+type GetMeterRidePrice = ("price" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get '[JSON] API.Types.UI.PriceBreakup.MeterRidePriceRes)
 
-newtype MeterRideAPIs = MeterRideAPIs {getMeterRidePrice :: (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> EulerHS.Types.EulerClient API.Types.UI.PriceBreakup.MeterRidePriceRes)}
+newtype MeterRideAPIs = MeterRideAPIs {getMeterRidePrice :: Kernel.Types.Id.Id Domain.Types.Ride.Ride -> EulerHS.Types.EulerClient API.Types.UI.PriceBreakup.MeterRidePriceRes}
 
 mkMeterRideAPIs :: (Client EulerHS.Types.EulerClient API -> MeterRideAPIs)
 mkMeterRideAPIs meterRideClient = (MeterRideAPIs {..})
@@ -32,10 +32,10 @@ data MeterRideUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON MeterRideUserActionType where
-  toJSON (GET_METER_RIDE_PRICE) = Data.Aeson.String "GET_METER_RIDE_PRICE"
+  toJSON GET_METER_RIDE_PRICE = Data.Aeson.String "GET_METER_RIDE_PRICE"
 
 instance FromJSON MeterRideUserActionType where
   parseJSON (Data.Aeson.String "GET_METER_RIDE_PRICE") = pure GET_METER_RIDE_PRICE
   parseJSON _ = fail "GET_METER_RIDE_PRICE expected"
 
-$(Data.Singletons.TH.genSingletons [(''MeterRideUserActionType)])
+$(Data.Singletons.TH.genSingletons [''MeterRideUserActionType])

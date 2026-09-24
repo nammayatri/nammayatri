@@ -30,17 +30,17 @@ handler merchantId city = getProfileDetail merchantId city :<|> postProfileUpdat
 
 type GetProfileDetail =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.PROFILE) / ('API.Types.Dashboard.RideBooking.Profile.GET_PROFILE_DETAIL))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PROFILE / 'API.Types.Dashboard.RideBooking.Profile.GET_PROFILE_DETAIL)
       :> API.Types.Dashboard.RideBooking.Profile.GetProfileDetail
   )
 
 type PostProfileUpdate =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.PROFILE) / ('API.Types.Dashboard.RideBooking.Profile.POST_PROFILE_UPDATE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.PROFILE / 'API.Types.Dashboard.RideBooking.Profile.POST_PROFILE_UPDATE)
       :> API.Types.Dashboard.RideBooking.Profile.PostProfileUpdate
   )
 

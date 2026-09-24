@@ -25,27 +25,27 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "payment" :> "methods" :> Get ('[JSON]) API.Types.UI.RidePayment.PaymentMethodsResponse :<|> TokenAuth :> "payment" :> "methods"
+  ( TokenAuth :> "payment" :> "methods" :> Get '[JSON] API.Types.UI.RidePayment.PaymentMethodsResponse :<|> TokenAuth :> "payment" :> "methods"
       :> Capture
            "paymentMethodId"
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "makeDefault"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "intent"
       :> "setup"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.SetupIntentResponse
       :<|> TokenAuth
       :> "payment"
       :> "intent"
       :> "payment"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.PaymentIntentResponse
       :<|> TokenAuth
       :> "payment"
@@ -58,7 +58,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "update"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -68,7 +68,7 @@ type API =
            Kernel.External.Payment.Interface.Types.PaymentMethodId
       :> "delete"
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -77,16 +77,16 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "addTip"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.AddTipRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "customer"
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateCustomerResp
       :<|> TokenAuth
       :> "payment"
@@ -96,10 +96,10 @@ type API =
       :> "refundRequest"
       :> "create"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.RefundRequestReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -108,7 +108,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "refundRequest"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.RefundRequestListResp
       :<|> TokenAuth
       :> "payment"
@@ -117,22 +117,22 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "fareBreakup"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.FareBreakupRes
       :<|> TokenAuth
       :> "payment"
       :> "getDueAmount"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.GetDueAmountResp
       :<|> TokenAuth
       :> "payment"
       :> "clearDues"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.ClearDuesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.ClearDuesResp
       :<|> TokenAuth
       :> "payment"
@@ -142,7 +142,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "capture"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
@@ -151,13 +151,13 @@ type API =
            "vpa"
            Kernel.Prelude.Text
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "payment"
       :> "vpaFromNumber"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.RidePayment.VpaFromNumberResp
   )
 

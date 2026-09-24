@@ -52,17 +52,17 @@ data OperatorRegisterTReq = OperatorRegisterTReq {firstName :: Kernel.Prelude.Te
 
 type API = ("operator" :> (PostRegistrationRegisterHelper :<|> PostRegistrationDashboardRegisterHelper))
 
-type PostOperatorRegister = ("register" :> ReqBody ('[JSON]) OperatorRegisterReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostOperatorRegister = ("register" :> ReqBody '[JSON] OperatorRegisterReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRegistrationRegisterHelper = ("register" :> ReqBody ('[JSON]) OperatorRegisterReq :> Post ('[JSON]) OperatorRegisterResp)
+type PostRegistrationRegisterHelper = ("register" :> ReqBody '[JSON] OperatorRegisterReq :> Post '[JSON] OperatorRegisterResp)
 
-type PostRegistrationDashboardRegister = ("dashboard" :> "register" :> ReqBody ('[JSON]) CreateDashboardOperatorReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostRegistrationDashboardRegister = ("dashboard" :> "register" :> ReqBody '[JSON] CreateDashboardOperatorReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRegistrationDashboardRegisterHelper = ("dashboard" :> "register" :> ReqBody ('[JSON]) CreateDashboardOperatorReq :> Post ('[JSON]) OperatorRegisterResp)
+type PostRegistrationDashboardRegisterHelper = ("dashboard" :> "register" :> ReqBody '[JSON] CreateDashboardOperatorReq :> Post '[JSON] OperatorRegisterResp)
 
 data RegistrationAPIs = RegistrationAPIs
-  { postOperatorRegister :: (OperatorRegisterReq -> EulerHS.Types.EulerClient OperatorRegisterResp),
-    postRegistrationDashboardRegister :: (CreateDashboardOperatorReq -> EulerHS.Types.EulerClient OperatorRegisterResp)
+  { postOperatorRegister :: OperatorRegisterReq -> EulerHS.Types.EulerClient OperatorRegisterResp,
+    postRegistrationDashboardRegister :: CreateDashboardOperatorReq -> EulerHS.Types.EulerClient OperatorRegisterResp
   }
 
 mkRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> RegistrationAPIs)
@@ -76,4 +76,4 @@ data RegistrationUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''RegistrationUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RegistrationUserActionType])

@@ -9,7 +9,6 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
 
 importPackageOverrides:
-  API.Types.Dashboard.AppManagement: "rider-app"
   API.Types.UI.Sos: "rider-app"
   Domain.Types.Person: "rider-app"
   API.Types.UI.DeletedPerson: "rider-app"
@@ -48,9 +47,6 @@ apis:
         type: SosReq
       response:
         type: SosRes
-      migrate:
-        endpoint: SosAPI CreateSosEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_SOS
   - POST:
       endpoint: /{customerId}/deleted/person
       auth: ApiAuthV2
@@ -60,9 +56,6 @@ apis:
         type: DeletedPersonReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: DeletedPersonAPI CreateDeletedPersonEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_DELETED_PERSON
   - GET:
       endpoint: /{customerId}/savedLocations
       auth: ApiAuthV2

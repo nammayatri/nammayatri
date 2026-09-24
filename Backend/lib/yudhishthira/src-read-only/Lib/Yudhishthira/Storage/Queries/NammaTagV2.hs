@@ -30,12 +30,12 @@ deleteByPrimaryKey merchantOperatingCityId name = do deleteWithKV [Se.And [Se.Is
 
 findAllByMerchantOperatingCityId ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ([Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]))
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByPrimaryKeys ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ([Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2]))
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2])
 findAllByPrimaryKeys name merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.name $ Se.Eq name, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByPrimaryKey ::

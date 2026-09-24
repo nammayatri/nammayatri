@@ -26,7 +26,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "ride" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "getCancellationReasons"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.CancellationReasonLookup.CancellationReasonResp]
   )
 

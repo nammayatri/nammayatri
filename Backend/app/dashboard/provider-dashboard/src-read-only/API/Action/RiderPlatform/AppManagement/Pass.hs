@@ -41,126 +41,126 @@ handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> ge
 
 type GetPassCustomerAvailablePasses =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_AVAILABLE_PASSES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_AVAILABLE_PASSES)
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerAvailablePasses
   )
 
 type GetPassCustomerPurchasedPasses =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PURCHASED_PASSES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PURCHASED_PASSES)
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerPurchasedPasses
   )
 
 type GetPassCustomerTransactions =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_TRANSACTIONS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_TRANSACTIONS)
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerTransactions
   )
 
 type PostPassCustomerActivateToday =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_ACTIVATE_TODAY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_ACTIVATE_TODAY)
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerActivateToday
   )
 
 type PostPassCustomerPassSelect =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_SELECT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_SELECT)
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassSelect
   )
 
 type GetPassCustomerPaymentStatus =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PAYMENT_STATUS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PAYMENT_STATUS)
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerPaymentStatus
   )
 
 type PostPassCustomerPassResetDeviceSwitchCount =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_RESET_DEVICE_SWITCH_COUNT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_RESET_DEVICE_SWITCH_COUNT)
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassResetDeviceSwitchCount
   )
 
 type PostPassCustomerPassUpdateProfilePicture =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_UPDATE_PROFILE_PICTURE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_UPDATE_PROFILE_PICTURE)
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassUpdateProfilePicture
   )
 
 type GetPassCustomerPassPhoto =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PASS_PHOTO))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PASS_PHOTO)
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerPassPhoto
   )
 
 type PostPassCustomerPassRestore =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_RESTORE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_RESTORE)
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassRestore
   )
 
 type ListPassCatalog =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.LIST_PASS_CATALOG))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.LIST_PASS_CATALOG)
       :> API.Types.Dashboard.AppManagement.Pass.ListPassCatalog
   )
 
 type CreatePass =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.CREATE_PASS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.CREATE_PASS)
       :> API.Types.Dashboard.AppManagement.Pass.CreatePass
   )
 
 type UpdatePass =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.UPDATE_PASS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.UPDATE_PASS)
       :> API.Types.Dashboard.AppManagement.Pass.UpdatePass
   )
 
 type DeletePass =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.DELETE_PASS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.DELETE_PASS)
       :> API.Types.Dashboard.AppManagement.Pass.DeletePass
   )
 
-getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
+getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language
 
-getPassCustomerPurchasedPasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Domain.Types.PurchasedPass.StatusType) -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity])
+getPassCustomerPurchasedPasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity])
 getPassCustomerPurchasedPasses merchantShortId opCity apiTokenInfo customerId language status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerPurchasedPasses merchantShortId opCity apiTokenInfo customerId language status
 
-getPassCustomerTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])
+getPassCustomerTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])
 getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset status
 
-postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe Data.Time.Day -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber purchasedPassPaymentId startDay = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber purchasedPassPaymentId startDay
 
 postPassCustomerPassSelect :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PurchasedPassSelectReq -> Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity)
@@ -181,7 +181,7 @@ getPassCustomerPassPhoto merchantShortId opCity apiTokenInfo customerId mediaId 
 postPassCustomerPassRestore :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassRestore merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerPassRestore merchantShortId opCity apiTokenInfo customerId
 
-listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
+listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
 listPassCatalog merchantShortId opCity apiTokenInfo enable passTypeId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.listPassCatalog merchantShortId opCity apiTokenInfo enable passTypeId
 
 createPass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.Pass.PassCreateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassCreateResp)

@@ -29,17 +29,17 @@ handler merchantId city = getVolunteerBooking merchantId city :<|> postVolunteer
 
 type GetVolunteerBooking =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.VOLUNTEER) / ('API.Types.Dashboard.RideBooking.Volunteer.GET_VOLUNTEER_BOOKING))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.VOLUNTEER / 'API.Types.Dashboard.RideBooking.Volunteer.GET_VOLUNTEER_BOOKING)
       :> API.Types.Dashboard.RideBooking.Volunteer.GetVolunteerBooking
   )
 
 type PostVolunteerAssignStartOtpRide =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.VOLUNTEER) / ('API.Types.Dashboard.RideBooking.Volunteer.POST_VOLUNTEER_ASSIGN_START_OTP_RIDE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.VOLUNTEER / 'API.Types.Dashboard.RideBooking.Volunteer.POST_VOLUNTEER_ASSIGN_START_OTP_RIDE)
       :> API.Types.Dashboard.RideBooking.Volunteer.PostVolunteerAssignStartOtpRide
   )
 

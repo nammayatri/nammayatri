@@ -29,25 +29,25 @@ handler merchantId city = postMapsAutoComplete merchantId city :<|> postMapsGetP
 
 type PostMapsAutoComplete =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE)
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsAutoComplete
   )
 
 type PostMapsGetPlaceDetails =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_DETAILS))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_DETAILS)
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceDetails
   )
 
 type PostMapsGetPlaceName =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME)
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceName
   )
 

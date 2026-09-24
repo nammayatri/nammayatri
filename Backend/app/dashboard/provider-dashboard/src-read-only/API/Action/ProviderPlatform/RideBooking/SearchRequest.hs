@@ -29,25 +29,25 @@ handler merchantId city = postSearchRequestSearchrequests merchantId city :<|> g
 
 type PostSearchRequestSearchrequests =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SEARCH_REQUEST) / ('API.Types.Dashboard.RideBooking.SearchRequest.POST_SEARCH_REQUEST_SEARCHREQUESTS))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SEARCH_REQUEST / 'API.Types.Dashboard.RideBooking.SearchRequest.POST_SEARCH_REQUEST_SEARCHREQUESTS)
       :> API.Types.Dashboard.RideBooking.SearchRequest.PostSearchRequestSearchrequests
   )
 
 type GetSearchRequestList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SEARCH_REQUEST) / ('API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_LIST))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SEARCH_REQUEST / 'API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_LIST)
       :> API.Types.Dashboard.RideBooking.SearchRequest.GetSearchRequestList
   )
 
 type GetSearchRequestInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SEARCH_REQUEST) / ('API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_INFO))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SEARCH_REQUEST / 'API.Types.Dashboard.RideBooking.SearchRequest.GET_SEARCH_REQUEST_INFO)
       :> API.Types.Dashboard.RideBooking.SearchRequest.GetSearchRequestInfo
   )
 
