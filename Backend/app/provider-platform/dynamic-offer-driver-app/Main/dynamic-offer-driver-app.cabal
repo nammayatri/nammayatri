@@ -263,6 +263,7 @@ library
       Domain.Action.Dashboard.Management.PolicyDocument
       Domain.Action.Dashboard.Management.Pricing
       Domain.Action.Dashboard.Management.PricingAdjustment
+      Domain.Action.Dashboard.Management.RadarTickets
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.ScheduledBooking
@@ -1203,6 +1204,7 @@ library
       API.Action.Dashboard.Management.PolicyDocument
       API.Action.Dashboard.Management.Pricing
       API.Action.Dashboard.Management.PricingAdjustment
+      API.Action.Dashboard.Management.RadarTickets
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.ScheduledBooking
@@ -1275,6 +1277,7 @@ library
       API.Action.DashboardAuth.Management.PolicyDocument
       API.Action.DashboardAuth.Management.Pricing
       API.Action.DashboardAuth.Management.PricingAdjustment
+      API.Action.DashboardAuth.Management.RadarTickets
       API.Action.DashboardAuth.Management.Revenue
       API.Action.DashboardAuth.Management.Ride
       API.Action.DashboardAuth.Management.ScheduledBooking
@@ -1440,6 +1443,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.PolicyDocument
       API.Types.ProviderPlatform.Management.Endpoints.Pricing
       API.Types.ProviderPlatform.Management.Endpoints.PricingAdjustment
+      API.Types.ProviderPlatform.Management.Endpoints.RadarTickets
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
@@ -1468,6 +1472,7 @@ library
       API.Types.ProviderPlatform.Management.PolicyDocument
       API.Types.ProviderPlatform.Management.Pricing
       API.Types.ProviderPlatform.Management.PricingAdjustment
+      API.Types.ProviderPlatform.Management.RadarTickets
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.ScheduledBooking

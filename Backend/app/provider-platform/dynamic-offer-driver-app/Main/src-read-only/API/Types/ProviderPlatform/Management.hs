@@ -32,6 +32,7 @@ import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.PolicyDocument
 import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified API.Types.ProviderPlatform.Management.PricingAdjustment
+import qualified API.Types.ProviderPlatform.Management.RadarTickets
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.ScheduledBooking
@@ -80,6 +81,7 @@ data ManagementUserActionType
   | POLICY_DOCUMENT API.Types.ProviderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
   | PRICING_ADJUSTMENT API.Types.ProviderPlatform.Management.PricingAdjustment.PricingAdjustmentUserActionType
+  | RADAR_TICKETS API.Types.ProviderPlatform.Management.RadarTickets.RadarTicketsUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
   | SCHEDULED_BOOKING API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingUserActionType
@@ -125,6 +127,7 @@ instance Text.Show.Show ManagementUserActionType where
     POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     PRICING e -> "PRICING/" <> show e
     PRICING_ADJUSTMENT e -> "PRICING_ADJUSTMENT/" <> show e
+    RADAR_TICKETS e -> "RADAR_TICKETS/" <> show e
     REVENUE e -> "REVENUE/" <> show e
     RIDE e -> "RIDE/" <> show e
     SCHEDULED_BOOKING e -> "SCHEDULED_BOOKING/" <> show e
@@ -387,6 +390,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PRICING_ADJUSTMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( RADAR_TICKETS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "RADAR_TICKETS/" r,
                    ( v1,
                      r2
                      ) <-

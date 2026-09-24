@@ -33,6 +33,7 @@ import qualified API.Types.ProviderPlatform.Management.PlanManagement
 import qualified API.Types.ProviderPlatform.Management.PolicyDocument
 import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified API.Types.ProviderPlatform.Management.PricingAdjustment
+import qualified API.Types.ProviderPlatform.Management.RadarTickets
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.ScheduledBooking
@@ -82,6 +83,7 @@ data ManagementAPIs = ManagementAPIs
     policyDocumentDSL :: API.Types.ProviderPlatform.Management.PolicyDocument.PolicyDocumentAPIs,
     pricingDSL :: API.Types.ProviderPlatform.Management.Pricing.PricingAPIs,
     pricingAdjustmentDSL :: API.Types.ProviderPlatform.Management.PricingAdjustment.PricingAdjustmentAPIs,
+    radarTicketsDSL :: API.Types.ProviderPlatform.Management.RadarTickets.RadarTicketsAPIs,
     revenueDSL :: API.Types.ProviderPlatform.Management.Revenue.RevenueAPIs,
     rideDSL :: API.Types.ProviderPlatform.Management.Ride.RideAPIs,
     scheduledBookingDSL :: API.Types.ProviderPlatform.Management.ScheduledBooking.ScheduledBookingAPIs,
@@ -126,6 +128,7 @@ mkManagementAPIs merchantId city token = do
   let policyDocumentDSL = API.Types.ProviderPlatform.Management.PolicyDocument.mkPolicyDocumentAPIs policyDocumentClientDSL
   let pricingDSL = API.Types.ProviderPlatform.Management.Pricing.mkPricingAPIs pricingClientDSL
   let pricingAdjustmentDSL = API.Types.ProviderPlatform.Management.PricingAdjustment.mkPricingAdjustmentAPIs pricingAdjustmentClientDSL
+  let radarTicketsDSL = API.Types.ProviderPlatform.Management.RadarTickets.mkRadarTicketsAPIs radarTicketsClientDSL
   let revenueDSL = API.Types.ProviderPlatform.Management.Revenue.mkRevenueAPIs revenueClientDSL
   let rideDSL = API.Types.ProviderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let scheduledBookingDSL = API.Types.ProviderPlatform.Management.ScheduledBooking.mkScheduledBookingAPIs scheduledBookingClientDSL
@@ -139,7 +142,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> cancellationConsequenceClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> farePolicyV2ClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> geohashAreaClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> policyDocumentClientDSL :<|> pricingClientDSL :<|> pricingAdjustmentClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> scheduledBookingClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> cancellationConsequenceClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> farePolicyV2ClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> geohashAreaClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> policyDocumentClientDSL :<|> pricingClientDSL :<|> pricingAdjustmentClientDSL :<|> radarTicketsClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> scheduledBookingClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
