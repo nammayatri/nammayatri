@@ -130,6 +130,11 @@ LedgerEntry:
       kvFunction: findAllWithKV
       where: fromAccountId
 
+    findByFromAccountAndStatusAndReferenceType:
+      kvFunction: findAllWithKV
+      where:
+        and: [fromAccountId, status, referenceType]
+
     findByToAccount:
       kvFunction: findAllWithKV
       where: toAccountId

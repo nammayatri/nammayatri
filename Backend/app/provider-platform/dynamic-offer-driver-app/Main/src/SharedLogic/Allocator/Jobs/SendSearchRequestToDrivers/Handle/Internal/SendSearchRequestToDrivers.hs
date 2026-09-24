@@ -88,6 +88,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
@@ -260,6 +261,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
     DriverIdleTime.resetIdleOnRequestSent personId
 
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
+  let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
@@ -269,6 +271,8 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
             else searchReq
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
+    let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
+    addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge tripQuoteDetail.bufferedFare validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
     let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig)
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
@@ -323,6 +327,9 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
     Fare.calculateFareParameters
       Fare.CalculateFareParametersParams
         { farePolicy = farePolicy',
+          computationPhase = Fare.FCEstimate,
+          mbCapConfig = Nothing,
+          mbEstimateFareParams = Nothing,
           actualDistance = searchReq.estimatedDistance,
           estimatedDistance = searchReq.estimatedDistance,
           rideTime = searchReq.startTime,

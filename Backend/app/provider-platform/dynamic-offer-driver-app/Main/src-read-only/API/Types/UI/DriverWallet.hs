@@ -98,6 +98,7 @@ data WalletSummaryResponse = WalletSummaryResponse
     agg :: [WalletAggregateBucket],
     currentBalance :: Kernel.Types.Common.HighPrecMoney,
     deductions :: WalletItemGroup,
+    holdBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     netEarningsBalance :: Kernel.Types.Common.HighPrecMoney,
     nonRedeemableBalance :: Kernel.Types.Common.HighPrecMoney,
     payoutConfig :: WalletPayoutConfig,

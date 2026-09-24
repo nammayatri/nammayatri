@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -65,7 +66,8 @@ cancelBooking ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -91,7 +93,8 @@ cancelBooking' ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r
   ) =>
   Bool ->
   DRB.Booking ->
@@ -106,12 +109,12 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason Nothing mbRide transporterId'
     Just driver -> buildBookingCancellationReason (Just driver.id) mbRide transporterId'
-  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled
 
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
   SharedCancel.tryCancellationLock booking.transactionId $ do
-    when isPrepaidSubscriptionAndWalletEnabled $ whenJust mbRide $ \ride -> releaseLien booking ride
+    -- releaseLien gates itself on prepaid-or-wallet being enabled.
+    whenJust mbRide $ \ride -> releaseLien booking ride
     -- Only for the no-ride case: when a ride exists, the whenJust mbRide block below
     -- performs this same driver release via ride.driverId — and the ride lock inside
     -- updateOnRideStatusWithAdvancedRideCheck is taken with a 10s TTL and never

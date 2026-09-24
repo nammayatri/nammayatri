@@ -8,6 +8,7 @@ import qualified Data.List as DL
 import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
+import qualified Domain.Types as DVST
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverPoolConfig
@@ -100,6 +101,12 @@ assignTagsToDrivers driverIds driverTag =
               }
           else dp
     )
+
+-- | 'bufferedFare' keyed by service tier. The recompute cap config lives on
+--   FarePolicy, which resolves per tier, so one tier's ceiling must never be
+--   applied to another tier's drivers.
+bufferedFareByTierOf :: [TripQuoteDetail] -> Map.Map DVST.ServiceTierType HighPrecMoney
+bufferedFareByTierOf tqds = Map.fromList [(tqd.vehicleServiceTier, v) | tqd <- tqds, Just v <- [tqd.bufferedFare]]
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -245,11 +252,13 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     scheduledPickupTime = Just searchTry.startTime,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
+                    bufferedFareByTier = bufferedFareByTierOf tripQuoteDetails,
                     tollCharges = tollCharges_,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     paymentMode = searchReq.paymentMode,
                     excludeDriverIds = excludeDriverIds,
                     prevAttemptedDriverIds = prevAttemptedDriverIds,
+                    mbSearchTryId = Just searchTry.id.getId,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -400,11 +409,13 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         scheduledPickupTime = Just searchTry.startTime,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
+                        bufferedFareByTier = bufferedFareByTierOf tripQuoteDetails,
                         tollCharges = tollCharges_,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         paymentMode = searchReq.paymentMode,
                         excludeDriverIds = [],
                         prevAttemptedDriverIds = [],
+                        mbSearchTryId = Just searchTry.id.getId,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq onRideDrivers poolType currentSearchInfo

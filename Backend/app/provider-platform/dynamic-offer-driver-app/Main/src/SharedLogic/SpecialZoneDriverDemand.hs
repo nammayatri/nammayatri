@@ -265,6 +265,9 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
         SFC.calculateFareParameters
           SFC.CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
+              computationPhase = SFC.FCEstimate,
+              mbCapConfig = Nothing,
+              mbEstimateFareParams = Nothing,
               actualDistance = Just representativeMeters,
               rideTime = now,
               returnTime = Nothing,

@@ -988,6 +988,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     transporterConfig :: DTC.TransporterConfig,
     rideFare :: Maybe HighPrecMoney,
+    -- | 'bufferedFare' per service tier -- see 'NearestDriversReq'.
+    bufferedFareByTier :: Map.Map DVST.ServiceTierType HighPrecMoney,
     govtCharges :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
@@ -1004,7 +1006,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     paymentMode :: Maybe MP.PaymentMode,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     excludeDriverIds :: [Id DP.Driver],
-    prevAttemptedDriverIds :: [Id DP.Driver]
+    prevAttemptedDriverIds :: [Id DP.Driver],
+    mbSearchTryId :: Maybe Text
   }
 
 isScheduledOpenToAll :: Maybe Minutes -> UTCTime -> UTCTime -> Bool
@@ -1051,11 +1054,11 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
+            driverWalletConfig = transporterConfig.driverWalletConfig,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = poolStage == DriverSelection,
             maxParallelSearchRequests = driverPoolCfg.maxParallelSearchRequests,
-            searchTryId = Nothing,
             ..
           }
         fetchPoolData
@@ -1141,6 +1144,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
+            driverWalletConfig = transporterConfig.driverWalletConfig,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = True,
@@ -1163,7 +1167,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             onlinePayment,
             now,
             paymentMode,
-            searchTryId = Just currentSearchInfo.searchTry.id.getId
+            mbSearchTryId,
+            bufferedFareByTier
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates

@@ -8,7 +8,6 @@ module SharedLogic.Finance.WalletPayout
   )
 where
 
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -150,8 +149,12 @@ findWalletPayoutAmount ctx params = do
   eligibility <- case mbAccountId of
     Nothing -> pure emptyWalletPayoutEligibility
     Just accountId -> getPayoutEligibilityData counterparty ctx.driverId.getId accountId walletBalance cutoff now
-  let payoutableBalance = eligibility.redeemableBalance
-  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show params.minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
+  -- PENDING ride holds do not reduce the wallet balance, so they come off redeemable
+  -- here. Offer holds are Redis-only until accept.
+  dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ctx.driverId.getId
+  offerHoldBalance <- getWalletOfferHoldTotal ctx.driverId.getId
+  let payoutableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
+  logInfo $ "Payout eligibility for " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show eligibility.nonRedeemableBalance <> ", processingPayout=" <> show eligibility.processingPayoutBalance <> ", rideHold=" <> show dbHoldBalance <> ", offerHold=" <> show offerHoldBalance <> ", payoutableBalance=" <> show payoutableBalance <> ", minimum=" <> show params.minimumPayoutAmount <> ", redeemableEntryIds=" <> show eligibility.redeemableEntryIds
   if payoutableBalance < params.minimumPayoutAmount
     then do
       when params.throwOnBelowMinimum $ throwError $ InvalidRequest ("Minimum payout amount is " <> show params.minimumPayoutAmount)

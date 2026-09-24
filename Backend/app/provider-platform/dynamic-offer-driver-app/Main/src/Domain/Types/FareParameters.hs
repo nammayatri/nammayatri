@@ -101,7 +101,11 @@ data FareParameters = FareParameters
     -- /select (ONDC v2.1.0 Pre-Order Bid, MSIL pilot only) -- kept as its
     -- own field rather than folded into baseFare, so how much was
     -- negotiated for this transaction stays visible on its own.
-    negotiatedFareDelta :: Maybe HighPrecMoney
+    negotiatedFareDelta :: Maybe HighPrecMoney,
+    -- | This estimate raised to its per-component fare-recompute ceiling,
+    -- computed once in 'calculateFareParameters' when the fare policy has a
+    -- cap config. Used to size holds and balance checks at offer/accept time.
+    bufferedFare :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
