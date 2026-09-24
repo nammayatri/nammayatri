@@ -7,11 +7,11 @@ module API.Action.RiderPlatform.Management.Merchant
   )
 where
 
-import "rider-app" Domain.Types.AccessMatrix
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.RiderPlatform.Management.Merchant
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -217,17 +217,17 @@ type PostMerchantConfigOperatingCityWhiteList =
 
 type PostMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MERCHANT) / ('API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantConfigAllowedDestinationStates
   )
 
 type GetMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MERCHANT) / ('API.Types.RiderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.RiderPlatform.Management.Merchant.GetMerchantConfigAllowedDestinationStates
   )
 

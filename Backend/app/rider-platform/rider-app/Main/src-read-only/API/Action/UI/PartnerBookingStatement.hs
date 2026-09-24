@@ -18,9 +18,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "corporate" :> "bookingStatement" :> Header "X-Partner-API-Key" Kernel.Prelude.Text :> ReqBody ('[JSON]) API.Types.UI.PartnerBookingStatement.BookingStatementReq
+  ( "corporate" :> "bookingStatement" :> Header "X-Partner-API-Key" Kernel.Prelude.Text :> ReqBody '[JSON] API.Types.UI.PartnerBookingStatement.BookingStatementReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PartnerBookingStatement.BookingStatementRes
       :<|> "corporate"
       :> "invoiceData"
@@ -28,18 +28,18 @@ type API =
            "X-Partner-API-Key"
            Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PartnerBookingStatement.InvoiceDataReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PartnerBookingStatement.InvoiceDataRes
   )
 
 handler :: Environment.FlowServer API
 handler = postCorporateBookingStatement :<|> postCorporateInvoiceData
 
-postCorporateBookingStatement :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.PartnerBookingStatement.BookingStatementReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.BookingStatementRes)
+postCorporateBookingStatement :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.BookingStatementReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.BookingStatementRes)
 postCorporateBookingStatement a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PartnerBookingStatement.postCorporateBookingStatement a2 a1
 
-postCorporateInvoiceData :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.PartnerBookingStatement.InvoiceDataReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.InvoiceDataRes)
+postCorporateInvoiceData :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.InvoiceDataReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.InvoiceDataRes)
 postCorporateInvoiceData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PartnerBookingStatement.postCorporateInvoiceData a2 a1

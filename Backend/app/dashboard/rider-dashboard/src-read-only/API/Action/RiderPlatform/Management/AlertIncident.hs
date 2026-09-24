@@ -28,11 +28,11 @@ handler merchantId city = getAlertIncidentAlertsIncidents merchantId city
 
 type GetAlertIncidentAlertsIncidents =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.ALERT_INCIDENT) / ('API.Types.RiderPlatform.Management.AlertIncident.GET_ALERT_INCIDENT_ALERTS_INCIDENTS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.ALERT_INCIDENT / 'API.Types.RiderPlatform.Management.AlertIncident.GET_ALERT_INCIDENT_ALERTS_INCIDENTS)
       :> API.Types.RiderPlatform.Management.AlertIncident.GetAlertIncidentAlertsIncidents
   )
 
-getAlertIncidentAlertsIncidents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentsResponse)
+getAlertIncidentAlertsIncidents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.AlertIncident.AlertIncidentsResponse)
 getAlertIncidentAlertsIncidents merchantShortId opCity apiTokenInfo fromTime toTime = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.AlertIncident.getAlertIncidentAlertsIncidents merchantShortId opCity apiTokenInfo fromTime toTime

@@ -30,21 +30,21 @@ handler merchantId city = getFrontendFlowStatus merchantId city :<|> postFronten
 
 type GetFrontendFlowStatus =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.FRONTEND) / ('API.Types.Dashboard.RideBooking.Frontend.GET_FRONTEND_FLOW_STATUS))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.FRONTEND / 'API.Types.Dashboard.RideBooking.Frontend.GET_FRONTEND_FLOW_STATUS)
       :> API.Types.Dashboard.RideBooking.Frontend.GetFrontendFlowStatus
   )
 
 type PostFrontendNotifyEvent =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.FRONTEND) / ('API.Types.Dashboard.RideBooking.Frontend.POST_FRONTEND_NOTIFY_EVENT))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.FRONTEND / 'API.Types.Dashboard.RideBooking.Frontend.POST_FRONTEND_NOTIFY_EVENT)
       :> API.Types.Dashboard.RideBooking.Frontend.PostFrontendNotifyEvent
   )
 
-getFrontendFlowStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler Domain.Action.UI.Frontend.GetPersonFlowStatusRes)
+getFrontendFlowStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler Domain.Action.UI.Frontend.GetPersonFlowStatusRes)
 getFrontendFlowStatus merchantShortId opCity apiTokenInfo customerId isPolling checkForActiveBooking = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Frontend.getFrontendFlowStatus merchantShortId opCity apiTokenInfo customerId isPolling checkForActiveBooking
 
 postFrontendNotifyEvent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Frontend.NotifyEventReq -> Environment.FlowHandler Domain.Action.UI.Frontend.NotifyEventResp)

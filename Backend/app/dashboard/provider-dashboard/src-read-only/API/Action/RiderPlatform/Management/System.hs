@@ -28,9 +28,9 @@ handler merchantId city = postSystemRunQuery merchantId city
 
 type PostSystemRunQuery =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.SYSTEM) / ('API.Types.RiderPlatform.Management.System.POST_SYSTEM_RUN_QUERY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SYSTEM / 'API.Types.RiderPlatform.Management.System.POST_SYSTEM_RUN_QUERY)
       :> API.Types.RiderPlatform.Management.System.PostSystemRunQuery
   )
 

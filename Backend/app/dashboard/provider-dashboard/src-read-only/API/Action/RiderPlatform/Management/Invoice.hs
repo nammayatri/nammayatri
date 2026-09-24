@@ -29,9 +29,9 @@ handler merchantId city = getInvoiceInvoice merchantId city
 
 type GetInvoiceInvoice =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.INVOICE) / ('API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_INVOICE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.INVOICE / 'API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_INVOICE)
       :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceInvoice
   )
 

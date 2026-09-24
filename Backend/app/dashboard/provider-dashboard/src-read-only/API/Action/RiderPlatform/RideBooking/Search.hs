@@ -29,9 +29,9 @@ handler merchantId city = postSearchRide merchantId city
 
 type PostSearchRide =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SEARCH) / ('API.Types.Dashboard.RideBooking.Search.POST_SEARCH_RIDE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SEARCH / 'API.Types.Dashboard.RideBooking.Search.POST_SEARCH_RIDE)
       :> API.Types.Dashboard.RideBooking.Search.PostSearchRide
   )
 

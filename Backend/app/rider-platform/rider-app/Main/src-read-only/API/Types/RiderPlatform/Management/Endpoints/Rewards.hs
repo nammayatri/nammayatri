@@ -215,18 +215,18 @@ data ValidateCohortEligibilityResp = ValidateCohortEligibilityResp {eligible :: 
 
 type API = ("rewards" :> (PostRewardsCampaign :<|> PutRewardsCampaign :<|> PostRewardsCampaignCohort :<|> PutRewardsCampaignCohort :<|> PostRewardsCampaignCohortCodes :<|> PostRewardsCampaignStatus :<|> GetRewardsCampaign :<|> GetRewardsCampaigns :<|> GetRewardsCampaignStats :<|> PostRewardsTriggerEval :<|> PostRewardsCohortValidateEligibility))
 
-type PostRewardsCampaign = ("campaign" :> ReqBody ('[JSON]) CreateCampaignReq :> Post ('[JSON]) CreateCampaignResp)
+type PostRewardsCampaign = ("campaign" :> ReqBody '[JSON] CreateCampaignReq :> Post '[JSON] CreateCampaignResp)
 
-type PutRewardsCampaign = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> ReqBody ('[JSON]) EditCampaignReq :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PutRewardsCampaign = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> ReqBody '[JSON] EditCampaignReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRewardsCampaignCohort = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort" :> ReqBody ('[JSON]) CreateCohortReq :> Post ('[JSON]) CreateCohortResp)
+type PostRewardsCampaignCohort = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort" :> ReqBody '[JSON] CreateCohortReq :> Post '[JSON] CreateCohortResp)
 
 type PutRewardsCampaignCohort =
   ( "campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "cohort" :> Capture "cohortId" (Kernel.Types.Id.Id RewardCohort)
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            EditCohortReq
-      :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostRewardsCampaignCohortCodes =
@@ -239,46 +239,45 @@ type PostRewardsCampaignCohortCodes =
            Kernel.ServantMultipart.Tmp
            Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            UploadCodesResp
   )
 
 type PostRewardsCampaignStatus =
-  ( "campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "status" :> ReqBody ('[JSON]) SetStatusReq
+  ( "campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "status" :> ReqBody '[JSON] SetStatusReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetRewardsCampaign = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> Get ('[JSON]) CampaignDetails)
+type GetRewardsCampaign = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> Get '[JSON] CampaignDetails)
 
-type GetRewardsCampaigns = ("campaigns" :> Get ('[JSON]) [CampaignDetails])
+type GetRewardsCampaigns = ("campaigns" :> Get '[JSON] [CampaignDetails])
 
-type GetRewardsCampaignStats = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "stats" :> Get ('[JSON]) CampaignStats)
+type GetRewardsCampaignStats = ("campaign" :> Capture "campaignId" (Kernel.Types.Id.Id RewardCampaign) :> "stats" :> Get '[JSON] CampaignStats)
 
-type PostRewardsTriggerEval = ("triggerEval" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostRewardsTriggerEval = ("triggerEval" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRewardsCohortValidateEligibility = ("cohort" :> "validateEligibility" :> ReqBody ('[JSON]) ValidateCohortEligibilityReq :> Post ('[JSON]) ValidateCohortEligibilityResp)
+type PostRewardsCohortValidateEligibility = ("cohort" :> "validateEligibility" :> ReqBody '[JSON] ValidateCohortEligibilityReq :> Post '[JSON] ValidateCohortEligibilityResp)
 
 data RewardsAPIs = RewardsAPIs
-  { postRewardsCampaign :: (CreateCampaignReq -> EulerHS.Types.EulerClient CreateCampaignResp),
-    putRewardsCampaign :: (Kernel.Types.Id.Id RewardCampaign -> EditCampaignReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postRewardsCampaignCohort :: (Kernel.Types.Id.Id RewardCampaign -> CreateCohortReq -> EulerHS.Types.EulerClient CreateCohortResp),
-    putRewardsCampaignCohort :: (Kernel.Types.Id.Id RewardCampaign -> Kernel.Types.Id.Id RewardCohort -> EditCohortReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+  { postRewardsCampaign :: CreateCampaignReq -> EulerHS.Types.EulerClient CreateCampaignResp,
+    putRewardsCampaign :: Kernel.Types.Id.Id RewardCampaign -> EditCampaignReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRewardsCampaignCohort :: Kernel.Types.Id.Id RewardCampaign -> CreateCohortReq -> EulerHS.Types.EulerClient CreateCohortResp,
+    putRewardsCampaignCohort :: Kernel.Types.Id.Id RewardCampaign -> Kernel.Types.Id.Id RewardCohort -> EditCohortReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRewardsCampaignCohortCodes ::
-      ( Kernel.Types.Id.Id RewardCampaign ->
-        Kernel.Types.Id.Id RewardCohort ->
-        ( Data.ByteString.Lazy.ByteString,
-          Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq
-        ) ->
-        EulerHS.Types.EulerClient UploadCodesResp
-      ),
-    postRewardsCampaignStatus :: (Kernel.Types.Id.Id RewardCampaign -> SetStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getRewardsCampaign :: (Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignDetails),
-    getRewardsCampaigns :: (EulerHS.Types.EulerClient [CampaignDetails]),
-    getRewardsCampaignStats :: (Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignStats),
-    postRewardsTriggerEval :: (Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postRewardsCohortValidateEligibility :: (ValidateCohortEligibilityReq -> EulerHS.Types.EulerClient ValidateCohortEligibilityResp)
+      Kernel.Types.Id.Id RewardCampaign ->
+      Kernel.Types.Id.Id RewardCohort ->
+      ( Data.ByteString.Lazy.ByteString,
+        Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq
+      ) ->
+      EulerHS.Types.EulerClient UploadCodesResp,
+    postRewardsCampaignStatus :: Kernel.Types.Id.Id RewardCampaign -> SetStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getRewardsCampaign :: Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignDetails,
+    getRewardsCampaigns :: EulerHS.Types.EulerClient [CampaignDetails],
+    getRewardsCampaignStats :: Kernel.Types.Id.Id RewardCampaign -> EulerHS.Types.EulerClient CampaignStats,
+    postRewardsTriggerEval :: Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRewardsCohortValidateEligibility :: ValidateCohortEligibilityReq -> EulerHS.Types.EulerClient ValidateCohortEligibilityResp
   }
 
 mkRewardsAPIs :: (Client EulerHS.Types.EulerClient API -> RewardsAPIs)
@@ -301,4 +300,4 @@ data RewardsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''RewardsUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RewardsUserActionType])

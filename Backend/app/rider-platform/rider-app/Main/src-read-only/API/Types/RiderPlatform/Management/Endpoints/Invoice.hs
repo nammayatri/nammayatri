@@ -43,10 +43,10 @@ type GetInvoiceInvoice =
       :> MandatoryQueryParam
            "to"
            Kernel.Prelude.UTCTime
-      :> Get ('[JSON]) [InvoiceRes]
+      :> Get '[JSON] [InvoiceRes]
   )
 
-newtype InvoiceAPIs = InvoiceAPIs {getInvoiceInvoice :: (Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes])}
+newtype InvoiceAPIs = InvoiceAPIs {getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]}
 
 mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
 mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})
@@ -59,10 +59,10 @@ data InvoiceUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON InvoiceUserActionType where
-  toJSON (GET_INVOICE_INVOICE) = Data.Aeson.String "GET_INVOICE_INVOICE"
+  toJSON GET_INVOICE_INVOICE = Data.Aeson.String "GET_INVOICE_INVOICE"
 
 instance FromJSON InvoiceUserActionType where
   parseJSON (Data.Aeson.String "GET_INVOICE_INVOICE") = pure GET_INVOICE_INVOICE
   parseJSON _ = fail "GET_INVOICE_INVOICE expected"
 
-$(Data.Singletons.TH.genSingletons [(''InvoiceUserActionType)])
+$(Data.Singletons.TH.genSingletons [''InvoiceUserActionType])

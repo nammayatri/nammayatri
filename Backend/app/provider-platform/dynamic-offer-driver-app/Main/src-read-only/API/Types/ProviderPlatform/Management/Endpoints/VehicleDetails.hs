@@ -19,9 +19,9 @@ data VehicleMakeModelsItem = VehicleMakeModelsItem {make :: Kernel.Prelude.Text,
 
 type API = ("vehicleDetails" :> GetVehicleDetailsVehicleModels)
 
-type GetVehicleDetailsVehicleModels = ("vehicleModels" :> Get ('[JSON]) [VehicleMakeModelsItem])
+type GetVehicleDetailsVehicleModels = ("vehicleModels" :> Get '[JSON] [VehicleMakeModelsItem])
 
-newtype VehicleDetailsAPIs = VehicleDetailsAPIs {getVehicleDetailsVehicleModels :: (EulerHS.Types.EulerClient [VehicleMakeModelsItem])}
+newtype VehicleDetailsAPIs = VehicleDetailsAPIs {getVehicleDetailsVehicleModels :: EulerHS.Types.EulerClient [VehicleMakeModelsItem]}
 
 mkVehicleDetailsAPIs :: (Client EulerHS.Types.EulerClient API -> VehicleDetailsAPIs)
 mkVehicleDetailsAPIs vehicleDetailsClient = (VehicleDetailsAPIs {..})
@@ -34,10 +34,10 @@ data VehicleDetailsUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON VehicleDetailsUserActionType where
-  toJSON (GET_VEHICLE_DETAILS_VEHICLE_MODELS) = Data.Aeson.String "GET_VEHICLE_DETAILS_VEHICLE_MODELS"
+  toJSON GET_VEHICLE_DETAILS_VEHICLE_MODELS = Data.Aeson.String "GET_VEHICLE_DETAILS_VEHICLE_MODELS"
 
 instance FromJSON VehicleDetailsUserActionType where
   parseJSON (Data.Aeson.String "GET_VEHICLE_DETAILS_VEHICLE_MODELS") = pure GET_VEHICLE_DETAILS_VEHICLE_MODELS
   parseJSON _ = fail "GET_VEHICLE_DETAILS_VEHICLE_MODELS expected"
 
-$(Data.Singletons.TH.genSingletons [(''VehicleDetailsUserActionType)])
+$(Data.Singletons.TH.genSingletons [''VehicleDetailsUserActionType])

@@ -28,7 +28,7 @@ type API =
       :> Header
            "x-language"
            Kernel.External.Types.Language
-      :> Get ('[JSON]) [API.Types.UI.CancellationReasons.CancellationReasonEntity]
+      :> Get '[JSON] [API.Types.UI.CancellationReasons.CancellationReasonEntity]
   )
 
 handler :: Environment.FlowServer API
@@ -39,7 +39,7 @@ getRideBookingCancellationReasons ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
-    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
+    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler [API.Types.UI.CancellationReasons.CancellationReasonEntity]
   )
 getRideBookingCancellationReasons a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CancellationReasons.getRideBookingCancellationReasons (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -10,13 +10,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data InvoiceLedgerLinkT f = InvoiceLedgerLinkT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    invoiceId :: (B.C f Kernel.Prelude.Text),
-    ledgerEntryId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    invoiceId :: B.C f Kernel.Prelude.Text,
+    ledgerEntryId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table InvoiceLedgerLinkT where
 
 type InvoiceLedgerLink = InvoiceLedgerLinkT Identity
 
-$(enableKVPG (''InvoiceLedgerLinkT) [('id)] [[('invoiceId)], [('ledgerEntryId)]])
+$(enableKVPG ''InvoiceLedgerLinkT ['id] [['invoiceId], ['ledgerEntryId]])
 
-$(mkTableInstancesGenericSchema (''InvoiceLedgerLinkT) "finance_invoice_ledger_link")
+$(mkTableInstancesGenericSchema ''InvoiceLedgerLinkT "finance_invoice_ledger_link")

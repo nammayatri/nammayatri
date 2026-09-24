@@ -30,9 +30,9 @@ data QueryType
 
 type API = ("system" :> PostSystemRunQuery)
 
-type PostSystemRunQuery = ("runQuery" :> ReqBody ('[JSON]) QueryData :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostSystemRunQuery = ("runQuery" :> ReqBody '[JSON] QueryData :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: (QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkSystemAPIs :: (Client EulerHS.Types.EulerClient API -> SystemAPIs)
 mkSystemAPIs systemClient = (SystemAPIs {..})
@@ -45,10 +45,10 @@ data SystemUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON SystemUserActionType where
-  toJSON (POST_SYSTEM_RUN_QUERY) = Data.Aeson.String "POST_SYSTEM_RUN_QUERY"
+  toJSON POST_SYSTEM_RUN_QUERY = Data.Aeson.String "POST_SYSTEM_RUN_QUERY"
 
 instance FromJSON SystemUserActionType where
   parseJSON (Data.Aeson.String "POST_SYSTEM_RUN_QUERY") = pure POST_SYSTEM_RUN_QUERY
   parseJSON _ = fail "POST_SYSTEM_RUN_QUERY expected"
 
-$(Data.Singletons.TH.genSingletons [(''SystemUserActionType)])
+$(Data.Singletons.TH.genSingletons [''SystemUserActionType])

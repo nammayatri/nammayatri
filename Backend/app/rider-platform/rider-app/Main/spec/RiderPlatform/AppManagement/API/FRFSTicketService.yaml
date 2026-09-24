@@ -31,7 +31,6 @@ imports:
   FRFSPaymentAttemptsListAPIRes: API.Types.UI.FRFSTicketService
 
 importPackageOverrides:
-  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.FRFSSearch: "rider-app"
   Domain.Types.FRFSQuote: "rider-app"

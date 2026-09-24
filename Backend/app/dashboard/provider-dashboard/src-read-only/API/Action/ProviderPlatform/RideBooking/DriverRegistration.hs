@@ -30,17 +30,17 @@ handler merchantId city = postDriverRegistrationAuth merchantId city :<|> postDr
 
 type PostDriverRegistrationAuth =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER_REGISTRATION) / ('API.Types.Dashboard.RideBooking.DriverRegistration.POST_DRIVER_REGISTRATION_AUTH))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER_REGISTRATION / 'API.Types.Dashboard.RideBooking.DriverRegistration.POST_DRIVER_REGISTRATION_AUTH)
       :> API.Types.Dashboard.RideBooking.DriverRegistration.PostDriverRegistrationAuth
   )
 
 type PostDriverRegistrationVerify =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER_REGISTRATION) / ('API.Types.Dashboard.RideBooking.DriverRegistration.POST_DRIVER_REGISTRATION_VERIFY))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER_REGISTRATION / 'API.Types.Dashboard.RideBooking.DriverRegistration.POST_DRIVER_REGISTRATION_VERIFY)
       :> API.Types.Dashboard.RideBooking.DriverRegistration.PostDriverRegistrationVerify
   )
 

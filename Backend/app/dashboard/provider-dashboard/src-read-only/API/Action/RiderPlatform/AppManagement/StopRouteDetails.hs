@@ -31,37 +31,37 @@ handler merchantId city = stopRouteDetailsGetStops merchantId city :<|> stopRout
 
 type StopRouteDetailsGetStops =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS) / ('API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_STOPS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS / 'API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_STOPS)
       :> API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsGetStops
   )
 
 type StopRouteDetailsGetStop =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS) / ('API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_STOP))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS / 'API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_STOP)
       :> API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsGetStop
   )
 
 type StopRouteDetailsGetRouteStopMappingByStop =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS) / ('API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_STOP))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS / 'API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_STOP)
       :> API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsGetRouteStopMappingByStop
   )
 
 type StopRouteDetailsGetRouteStopMappingByRoute =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS) / ('API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_ROUTE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.STOP_ROUTE_DETAILS / 'API.Types.Dashboard.AppManagement.StopRouteDetails.STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_ROUTE)
       :> API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsGetRouteStopMappingByRoute
   )
 
-stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.Station.Station])
+stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.Station.Station])
 stopRouteDetailsGetStops merchantShortId opCity apiTokenInfo includeClusterId vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.StopRouteDetails.stopRouteDetailsGetStops merchantShortId opCity apiTokenInfo includeClusterId vehicleCategory
 
 stopRouteDetailsGetStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler API.Types.Dashboard.AppManagement.StopRouteDetails.StationResp)

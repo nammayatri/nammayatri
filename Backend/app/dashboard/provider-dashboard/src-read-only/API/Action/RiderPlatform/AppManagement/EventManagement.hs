@@ -35,121 +35,121 @@ handler merchantId city = getEventManagementTicketdashboardTicketplaceDef mercha
 
 type GetEventManagementTicketdashboardTicketplaceDef =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEF))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEF)
       :> API.Types.Dashboard.AppManagement.EventManagement.GetEventManagementTicketdashboardTicketplaceDef
   )
 
 type PostEventManagementTicketdashboardTicketplaceCleardraft =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CLEARDRAFT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CLEARDRAFT)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceCleardraft
   )
 
 type PostEventManagementTicketdashboardTicketplaceSubmitDraft =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SUBMIT_DRAFT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SUBMIT_DRAFT)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceSubmitDraft
   )
 
 type PostEventManagementTicketdashboardTicketplaceCancelSubmitDraft =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CANCEL_SUBMIT_DRAFT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CANCEL_SUBMIT_DRAFT)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceCancelSubmitDraft
   )
 
 type PostEventManagementTicketdashboardTicketplaceReviewDraft =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_REVIEW_DRAFT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_REVIEW_DRAFT)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceReviewDraft
   )
 
 type PostEventManagementTicketdashboardTicketplaceCreate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CREATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CREATE)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceCreate
   )
 
 type PostEventManagementTicketdashboardTicketplaceUpdateBasicInfo =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_BASIC_INFO))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_BASIC_INFO)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceUpdateBasicInfo
   )
 
 type PostEventManagementTicketdashboardTicketplaceUpdateService =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_SERVICE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_SERVICE)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceUpdateService
   )
 
 type PostEventManagementTicketdashboardTicketplaceDelService =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEL_SERVICE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEL_SERVICE)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceDelService
   )
 
 type PostEventManagementTicketdashboardTicketplaceServiceUpdateCategory =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_UPDATE_CATEGORY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_UPDATE_CATEGORY)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceServiceUpdateCategory
   )
 
 type PostEventManagementTicketdashboardTicketplaceServiceDelCategory =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_DEL_CATEGORY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_DEL_CATEGORY)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceServiceDelCategory
   )
 
 type PostEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_UPDATE_PEOPLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_UPDATE_PEOPLE)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople
   )
 
 type PostEventManagementTicketdashboardTicketPlaceCategoryDelPeople =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_DEL_PEOPLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_DEL_PEOPLE)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketPlaceCategoryDelPeople
   )
 
 type GetEventManagementTicketdashboardTicketplaceDrafts =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DRAFTS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DRAFTS)
       :> API.Types.Dashboard.AppManagement.EventManagement.GetEventManagementTicketdashboardTicketplaceDrafts
   )
 
 type PostEventManagementTicketdashboardTicketplaceRecommend =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EVENT_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EventManagement.POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND)
       :> API.Types.Dashboard.AppManagement.EventManagement.PostEventManagementTicketdashboardTicketplaceRecommend
   )
 

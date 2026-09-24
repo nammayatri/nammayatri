@@ -24,9 +24,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "driver" :> "profile" :> "updateAuthData" :> "triggerOTP" :> ReqBody ('[JSON]) API.Types.UI.DriverProfile.TriggerUpdateAuthOTPReq
+  ( TokenAuth :> "driver" :> "profile" :> "updateAuthData" :> "triggerOTP" :> ReqBody '[JSON] API.Types.UI.DriverProfile.TriggerUpdateAuthOTPReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
@@ -34,10 +34,10 @@ type API =
       :> "updateAuthData"
       :> "verifyOTP"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverProfile.VerifyUpdateAuthOTPReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

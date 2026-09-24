@@ -29,7 +29,7 @@ type GetChangeServiceTierQuotes =
            "customerId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> "quotes"
-      :> Get ('[JSON]) Domain.Action.UI.Quote.GetQuotesRes
+      :> Get '[JSON] Domain.Action.UI.Quote.GetQuotesRes
   )
 
 type PostChangeServiceTierConfirm =
@@ -38,15 +38,15 @@ type PostChangeServiceTierConfirm =
            "customerId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> "confirm"
-      :> ReqBody ('[JSON]) ChangeServiceTierConfirmReq
+      :> ReqBody '[JSON] ChangeServiceTierConfirmReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data ChangeServiceTierAPIs = ChangeServiceTierAPIs
-  { getChangeServiceTierQuotes :: (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Quote.GetQuotesRes),
-    postChangeServiceTierConfirm :: (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeServiceTierConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getChangeServiceTierQuotes :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Quote.GetQuotesRes,
+    postChangeServiceTierConfirm :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> ChangeServiceTierConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkChangeServiceTierAPIs :: (Client EulerHS.Types.EulerClient API -> ChangeServiceTierAPIs)
@@ -60,4 +60,4 @@ data ChangeServiceTierUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''ChangeServiceTierUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ChangeServiceTierUserActionType])

@@ -30,21 +30,21 @@ handler merchantId city = getNotificationNotificationList merchantId city :<|> p
 
 type GetNotificationNotificationList =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.NOTIFICATION) / ('API.Types.RiderPlatform.Management.Notification.GET_NOTIFICATION_NOTIFICATION_LIST))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NOTIFICATION / 'API.Types.RiderPlatform.Management.Notification.GET_NOTIFICATION_NOTIFICATION_LIST)
       :> API.Types.RiderPlatform.Management.Notification.GetNotificationNotificationList
   )
 
 type PostNotificationNotificationRespond =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.NOTIFICATION) / ('API.Types.RiderPlatform.Management.Notification.POST_NOTIFICATION_NOTIFICATION_RESPOND))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.NOTIFICATION / 'API.Types.RiderPlatform.Management.Notification.POST_NOTIFICATION_NOTIFICATION_RESPOND)
       :> API.Types.RiderPlatform.Management.Notification.PostNotificationNotificationRespond
   )
 
-getNotificationNotificationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp)
+getNotificationNotificationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp)
 getNotificationNotificationList merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Notification.getNotificationNotificationList merchantShortId opCity apiTokenInfo mbLimit mbOffset
 
 postNotificationNotificationRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.Management.Notification.RespondReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

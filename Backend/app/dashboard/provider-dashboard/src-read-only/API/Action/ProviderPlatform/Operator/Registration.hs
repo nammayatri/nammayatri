@@ -28,17 +28,17 @@ handler merchantId city = postOperatorRegister merchantId city :<|> postRegistra
 
 type PostOperatorRegister =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.REGISTRATION) / ('API.Types.ProviderPlatform.Operator.Registration.POST_OPERATOR_REGISTER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.REGISTRATION / 'API.Types.ProviderPlatform.Operator.Registration.POST_OPERATOR_REGISTER)
       :> API.Types.ProviderPlatform.Operator.Registration.PostOperatorRegister
   )
 
 type PostRegistrationDashboardRegister =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.REGISTRATION) / ('API.Types.ProviderPlatform.Operator.Registration.POST_REGISTRATION_DASHBOARD_REGISTER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.REGISTRATION / 'API.Types.ProviderPlatform.Operator.Registration.POST_REGISTRATION_DASHBOARD_REGISTER)
       :> API.Types.ProviderPlatform.Operator.Registration.PostRegistrationDashboardRegister
   )
 

@@ -32,40 +32,40 @@ handler merchantId city = assignEDCMachine merchantId city :<|> listEDCMachine m
 
 type AssignEDCMachine =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EDC_MACHINE) / ('API.Types.Dashboard.AppManagement.EDCMachine.ASSIGN_EDC_MACHINE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EDC_MACHINE / 'API.Types.Dashboard.AppManagement.EDCMachine.ASSIGN_EDC_MACHINE)
       :> API.Types.Dashboard.AppManagement.EDCMachine.AssignEDCMachine
   )
 
 type ListEDCMachine =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EDC_MACHINE) / ('API.Types.Dashboard.AppManagement.EDCMachine.LIST_EDC_MACHINE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EDC_MACHINE / 'API.Types.Dashboard.AppManagement.EDCMachine.LIST_EDC_MACHINE)
       :> API.Types.Dashboard.AppManagement.EDCMachine.ListEDCMachine
   )
 
 type UpdateEDCMachine =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EDC_MACHINE) / ('API.Types.Dashboard.AppManagement.EDCMachine.UPDATE_EDC_MACHINE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EDC_MACHINE / 'API.Types.Dashboard.AppManagement.EDCMachine.UPDATE_EDC_MACHINE)
       :> API.Types.Dashboard.AppManagement.EDCMachine.UpdateEDCMachine
   )
 
 type DeleteEDCMachine =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.EDC_MACHINE) / ('API.Types.Dashboard.AppManagement.EDCMachine.DELETE_EDC_MACHINE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.EDC_MACHINE / 'API.Types.Dashboard.AppManagement.EDCMachine.DELETE_EDC_MACHINE)
       :> API.Types.Dashboard.AppManagement.EDCMachine.DeleteEDCMachine
   )
 
 assignEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.EDCMachine.AssignEDCMachineReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.EDCMachine.AssignEDCMachineResp)
 assignEDCMachine merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.EDCMachine.assignEDCMachine merchantShortId opCity apiTokenInfo req
 
-listEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Data.Bool.Bool) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineMappingListResp)
+listEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Data.Bool.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineMappingListResp)
 listEDCMachine merchantShortId opCity apiTokenInfo isActive personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.EDCMachine.listEDCMachine merchantShortId opCity apiTokenInfo isActive personId
 
 updateEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> API.Types.Dashboard.AppManagement.EDCMachine.UpdateEDCMachineReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

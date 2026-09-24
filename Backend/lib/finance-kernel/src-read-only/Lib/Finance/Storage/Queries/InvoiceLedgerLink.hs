@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.InvoiceLedgerLink.InvoiceLedgerLink] -> m ())
 createMany = traverse_ create
 
-findByInvoice :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ([Lib.Finance.Domain.Types.InvoiceLedgerLink.InvoiceLedgerLink]))
+findByInvoice :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m [Lib.Finance.Domain.Types.InvoiceLedgerLink.InvoiceLedgerLink])
 findByInvoice invoiceId = do findAllWithKV [Se.Is Beam.invoiceId $ Se.Eq (Kernel.Types.Id.getId invoiceId)]
 
 findByLedgerEntry ::

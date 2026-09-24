@@ -31,118 +31,118 @@ handler merchantId city = getFarePolicyV2List merchantId city :<|> getFarePolicy
 
 type GetFarePolicyV2List =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_LIST)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.GetFarePolicyV2List
   )
 
 type GetFarePolicyV2Policy =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_POLICY))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_POLICY)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.GetFarePolicyV2Policy
   )
 
 type PostFarePolicyV2PolicyReplace =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_POLICY_REPLACE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_POLICY_REPLACE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2PolicyReplace
   )
 
 type PostFarePolicyV2BulkReplace =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_BULK_REPLACE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_BULK_REPLACE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2BulkReplace
   )
 
 type PostFarePolicyV2Preview =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PREVIEW))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PREVIEW)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2Preview
   )
 
 type PostFarePolicyV2ProductCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_CREATE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2ProductCreate
   )
 
 type PostFarePolicyV2ProductUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_UPDATE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2ProductUpdate
   )
 
 type PostFarePolicyV2ProductRemove =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_REMOVE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_PRODUCT_REMOVE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2ProductRemove
   )
 
 type GetFarePolicyV2ChangeRequestList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_CHANGE_REQUEST_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_CHANGE_REQUEST_LIST)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.GetFarePolicyV2ChangeRequestList
   )
 
 type PostFarePolicyV2ChangeRequestDecide =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_CHANGE_REQUEST_DECIDE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_CHANGE_REQUEST_DECIDE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2ChangeRequestDecide
   )
 
 type GetFarePolicyV2AlertsSubscriptions =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_ALERTS_SUBSCRIPTIONS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.GET_FARE_POLICY_V2_ALERTS_SUBSCRIPTIONS)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.GetFarePolicyV2AlertsSubscriptions
   )
 
 type PostFarePolicyV2AlertsSubscribe =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_ALERTS_SUBSCRIBE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_ALERTS_SUBSCRIBE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2AlertsSubscribe
   )
 
 type PostFarePolicyV2AlertsUnsubscribe =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.FARE_POLICY_V2) / ('API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_ALERTS_UNSUBSCRIBE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FARE_POLICY_V2 / 'API.Types.ProviderPlatform.Management.FarePolicyV2.POST_FARE_POLICY_V2_ALERTS_UNSUBSCRIBE)
       :> API.Types.ProviderPlatform.Management.FarePolicyV2.PostFarePolicyV2AlertsUnsubscribe
   )
 
-getFarePolicyV2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Dashboard.Common.TripCategory) -> Kernel.Prelude.Maybe (Lib.Types.SpecialLocation.Area) -> Kernel.Prelude.Maybe (Dashboard.Common.ServiceTierType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ProductListRes)
+getFarePolicyV2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Dashboard.Common.TripCategory -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ProductListRes)
 getFarePolicyV2List merchantShortId opCity apiTokenInfo tripCategory area serviceTier enabled = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2List merchantShortId opCity apiTokenInfo tripCategory area serviceTier enabled
 
 getFarePolicyV2Policy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PolicyRes)
 getFarePolicyV2Policy merchantShortId opCity apiTokenInfo farePolicyId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2Policy merchantShortId opCity apiTokenInfo farePolicyId
 
-postFarePolicyV2PolicyReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceRes)
+postFarePolicyV2PolicyReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ReplaceRes)
 postFarePolicyV2PolicyReplace merchantShortId opCity apiTokenInfo farePolicyId dryRun req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2PolicyReplace merchantShortId opCity apiTokenInfo farePolicyId dryRun req
 
-postFarePolicyV2BulkReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceRes)
+postFarePolicyV2BulkReplace :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2BulkReplaceRes)
 postFarePolicyV2BulkReplace merchantShortId opCity apiTokenInfo dryRun req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2BulkReplace merchantShortId opCity apiTokenInfo dryRun req
 
 postFarePolicyV2Preview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2PreviewRes)
@@ -157,7 +157,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity apiTokenInfo fareProductId 
 postFarePolicyV2ProductRemove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2RemoveProductReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestRes)
 postFarePolicyV2ProductRemove merchantShortId opCity apiTokenInfo fareProductId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.postFarePolicyV2ProductRemove merchantShortId opCity apiTokenInfo fareProductId req
 
-getFarePolicyV2ChangeRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestStatus) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestListRes)
+getFarePolicyV2ChangeRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestStatus -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestListRes)
 getFarePolicyV2ChangeRequestList merchantShortId opCity apiTokenInfo status = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FarePolicyV2.getFarePolicyV2ChangeRequestList merchantShortId opCity apiTokenInfo status
 
 postFarePolicyV2ChangeRequestDecide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2DecideChangeRequestReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

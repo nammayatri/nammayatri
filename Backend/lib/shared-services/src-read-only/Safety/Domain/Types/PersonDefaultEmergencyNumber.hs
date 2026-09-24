@@ -26,9 +26,9 @@ data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
   }
   deriving (Generic)
 
-type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE ('AsEncrypted)
+type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE 'AsEncrypted
 
-type DecryptedPersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE ('AsUnencrypted)
+type DecryptedPersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberE 'AsUnencrypted
 
 instance EncryptedItem PersonDefaultEmergencyNumber where
   type Unencrypted PersonDefaultEmergencyNumber = (DecryptedPersonDefaultEmergencyNumber, HashSalt)
