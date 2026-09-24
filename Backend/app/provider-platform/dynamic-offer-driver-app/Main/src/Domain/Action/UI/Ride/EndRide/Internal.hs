@@ -725,7 +725,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                     ]
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
-                [ mkAdjustment "Tip" Tip tipAmount,
+                [ -- Customer copy mirrors the BAP rider invoice: pre-discount fare/tax
+                  -- lines above, the offer discount as a deduction here.
+                  if issuedToType == CUSTOMER then mkAdjustment "Discount" OfferDiscount (negate customerDiscountAmount) else Nothing,
+                  mkAdjustment "Tip" Tip tipAmount,
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
