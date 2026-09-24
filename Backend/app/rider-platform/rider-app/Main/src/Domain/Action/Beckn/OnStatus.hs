@@ -344,6 +344,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       driverAlternateNumber = driverAlternateNumber'
       onlinePayment = SPayment.isOnlinePayment mbMerchant booking
       cancellationFeeIfCancelled = Nothing
+      cancellationFeeImmediateCapture = Nothing
       cancellationFeeStatus = Nothing
       isAlreadyFav = Just False
       favCount = Just 0

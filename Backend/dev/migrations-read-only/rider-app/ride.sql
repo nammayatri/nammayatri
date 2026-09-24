@@ -470,3 +470,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN ride_tags text[] ;
 
 ALTER TABLE atlas_app.ride ADD COLUMN payment_charge_bearer text ;
 ALTER TABLE atlas_app.ride ADD COLUMN payment_charge double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_immediate_capture boolean ;

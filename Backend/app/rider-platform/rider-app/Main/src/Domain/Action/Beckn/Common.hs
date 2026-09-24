@@ -430,6 +430,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         refundRequestStatus = Nothing,
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
+        cancellationFeeImmediateCapture = Nothing,
         cancellationFeeStatus = Nothing,
         isAlreadyFav = Just isAlreadyFav,
         safetyJourneyStatus = Nothing,
