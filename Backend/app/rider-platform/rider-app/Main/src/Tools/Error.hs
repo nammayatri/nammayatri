@@ -1457,3 +1457,41 @@ instance IsHTTPError WhatsappBotTranslationError where
     WhatsappBotTranslationNotFound _ _ -> E500
 
 instance IsAPIError WhatsappBotTranslationError
+
+data SharedCabSessionError
+  = SessionHeldByAnotherDriver
+  | SessionNotFound
+  | SessionNotActive
+  | SessionNotPaused
+  | SessionVersionMismatch
+  | InvalidWalkupCount
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabSessionError
+
+instance IsBaseError SharedCabSessionError where
+  toMessage = \case
+    SessionHeldByAnotherDriver -> Just "Another driver has a live shared-cab session on this vehicle."
+    SessionNotFound -> Just "No live shared-cab session for this vehicle."
+    SessionNotActive -> Just "Shared-cab session is not active."
+    SessionNotPaused -> Just "Shared-cab session is not paused."
+    SessionVersionMismatch -> Just "Shared-cab session changed; refresh and retry."
+    InvalidWalkupCount -> Just "Walk-up count must be between 0 and the vehicle capacity."
+
+instance IsHTTPError SharedCabSessionError where
+  toErrorCode = \case
+    SessionHeldByAnotherDriver -> "SHARED_CAB_SESSION_HELD_BY_ANOTHER_DRIVER"
+    SessionNotFound -> "SHARED_CAB_SESSION_NOT_FOUND"
+    SessionNotActive -> "SHARED_CAB_SESSION_NOT_ACTIVE"
+    SessionNotPaused -> "SHARED_CAB_SESSION_NOT_PAUSED"
+    SessionVersionMismatch -> "SHARED_CAB_SESSION_VERSION_MISMATCH"
+    InvalidWalkupCount -> "SHARED_CAB_INVALID_WALKUP_COUNT"
+  toHttpCode = \case
+    SessionHeldByAnotherDriver -> E409
+    SessionNotFound -> E404
+    SessionNotActive -> E400
+    SessionNotPaused -> E400
+    SessionVersionMismatch -> E409
+    InvalidWalkupCount -> E400
+
+instance IsAPIError SharedCabSessionError
