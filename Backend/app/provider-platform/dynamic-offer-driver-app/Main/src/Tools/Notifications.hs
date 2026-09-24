@@ -695,6 +695,41 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
     []
     Nothing
 
+data SharedCabAllocationEntityData = SharedCabAllocationEntityData
+  { bookingId :: Text,
+    driverId :: Text,
+    seats :: Maybe Int,
+    boardingCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, Eq, FromJSON, Show)
+
+-- Shared-cab allocation offer pushed by the internal FCM endpoint. Reuses the
+-- ALLOCATION_REQUEST notification channel; priority defaults to HIGH via FCMReq def.
+notifySharedCabAllocation ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Language ->
+  SharedCabAllocationEntityData ->
+  m ()
+notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityData = do
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    personId
+    mbDeviceToken
+    lang
+    Nothing
+    (createFCMReq "ALLOCATION_REQUEST" entityData.bookingId FCM.Product identity)
+    (Just entityData)
+    [ ("seats", maybe "" show entityData.seats),
+      ("boardingCode", fromMaybe "" entityData.boardingCode)
+    ]
+    Nothing
+
 -- FCM.ALLOCATION_REQUEST
 -- title = FCM.FCMNotificationTitle "New allocation request."
 -- body =

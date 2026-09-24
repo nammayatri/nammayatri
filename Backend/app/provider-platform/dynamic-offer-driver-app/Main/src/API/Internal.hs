@@ -40,6 +40,7 @@ import qualified API.Internal.Ride as Ride
 import qualified API.Internal.SearchTryPoolStats as SearchTryPoolStats
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
+import qualified API.Internal.SharedCabAllocation as SharedCabAllocation
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
@@ -102,6 +103,7 @@ type API =
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
+           :<|> SharedCabAllocation.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -153,3 +155,4 @@ handler env =
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
+    :<|> SharedCabAllocation.handler

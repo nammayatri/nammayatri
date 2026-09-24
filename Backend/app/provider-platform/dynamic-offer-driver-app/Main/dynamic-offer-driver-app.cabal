@@ -91,6 +91,7 @@ library
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
+      API.Internal.SharedCabAllocation
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
@@ -341,6 +342,7 @@ library
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
+      Domain.Action.Internal.SharedCabAllocation
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.TollUpsert
