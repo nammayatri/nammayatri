@@ -1,5 +1,9 @@
 imports:
   UTCTime: Kernel.Prelude
+  Day: Data.Time
+  VehicleTrip: Domain.Types.VehicleTrip
+  VehicleTripStatus: Domain.Types.VehicleTrip
+  VehicleTripEndReason: Domain.Types.VehicleTrip
   HighPrecMoney: Kernel.Types.Common
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   ServiceTierType: BecknV2.FRFS.Enums
@@ -125,6 +129,18 @@ types:
     driverId: Text
     vehicleNumber: Text
 
+  SharedCabTrip:
+    id: Id VehicleTrip
+    routeCode: Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    endReason: Maybe VehicleTripEndReason
+    offlineBoardings: Int
+
+  SharedCabTripsResp:
+    trips: "[SharedCabTrip]"
+
 apis:
   - GET:
       endpoint: /sharedCab/routes
@@ -183,3 +199,13 @@ apis:
         type: SharedCabDriverReq
       response:
         type: SharedCabSession
+  - GET:
+      endpoint: /sharedCab/trips
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        driverId: Text
+        date: Day
+      response:
+        type: SharedCabTripsResp

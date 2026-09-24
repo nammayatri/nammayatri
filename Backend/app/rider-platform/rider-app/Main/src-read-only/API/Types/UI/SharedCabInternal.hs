@@ -5,6 +5,7 @@ module API.Types.UI.SharedCabInternal where
 import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -131,5 +132,21 @@ data SharedCabSession = SharedCabSession
     version :: Kernel.Prelude.Int,
     walkupCount :: Kernel.Prelude.Int
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabTrip = SharedCabTrip
+  { endReason :: Kernel.Prelude.Maybe Domain.Types.VehicleTrip.VehicleTripEndReason,
+    endedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    id :: Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip,
+    offlineBoardings :: Kernel.Prelude.Int,
+    routeCode :: Kernel.Prelude.Text,
+    startedAt :: Kernel.Prelude.UTCTime,
+    status :: Domain.Types.VehicleTrip.VehicleTripStatus
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabTripsResp = SharedCabTripsResp {trips :: [SharedCabTrip]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

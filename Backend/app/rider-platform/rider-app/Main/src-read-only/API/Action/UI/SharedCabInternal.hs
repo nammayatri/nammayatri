@@ -8,6 +8,7 @@ module API.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal
+import qualified Data.Time
 import qualified Domain.Action.UI.SharedCabInternal
 import qualified Environment
 import EulerHS.Prelude
@@ -86,10 +87,24 @@ type API =
       :> Post
            ('[JSON])
            API.Types.UI.SharedCabInternal.SharedCabSession
+      :<|> "sharedCab"
+      :> "trips"
+      :> MandatoryQueryParam
+           "date"
+           Data.Time.Day
+      :> MandatoryQueryParam
+           "driverId"
+           Kernel.Prelude.Text
+      :> Header
+           "token"
+           Kernel.Prelude.Text
+      :> Get
+           ('[JSON])
+           API.Types.UI.SharedCabInternal.SharedCabTripsResp
   )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutes :<|> postSharedCabRouteSelect :<|> getSharedCabSession :<|> postSharedCabSeats :<|> postSharedCabRouteEnd :<|> postSharedCabResume
+handler = getSharedCabRoutes :<|> postSharedCabRouteSelect :<|> getSharedCabSession :<|> postSharedCabSeats :<|> postSharedCabRouteEnd :<|> postSharedCabResume :<|> getSharedCabTrips
 
 getSharedCabRoutes :: (Kernel.Prelude.Text -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabRoutesResp)
 getSharedCabRoutes a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.getSharedCabRoutes a4 a3 a2 a1
@@ -108,3 +123,6 @@ postSharedCabRouteEnd a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInt
 
 postSharedCabResume :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabSession)
 postSharedCabResume a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabResume a2 a1
+
+getSharedCabTrips :: (Data.Time.Day -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabTripsResp)
+getSharedCabTrips a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.getSharedCabTrips a3 a2 a1

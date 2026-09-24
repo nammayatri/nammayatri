@@ -5,14 +5,17 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabSeats,
     postSharedCabRouteEnd,
     postSharedCabResume,
+    getSharedCabTrips,
   )
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
 import Data.List (sortOn)
+import Data.Time (Day, UTCTime (..), addUTCTime)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
+import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
@@ -23,6 +26,7 @@ import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error
 
 -- rider_config.defaultCapacity default (Alto); read from config once that field exists.
@@ -126,6 +130,26 @@ postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow 
 postSharedCabResume mbToken req = do
   checkToken mbToken
   Session.resume req.driverId req.vehicleNumber >>= mkSessionResp
+
+-- | The driver's runs that started on `date` (IST). App riders and cash per run join here once boarding sets
+-- frfs_ticket_booking.vehicleTripId.
+getSharedCabTrips :: Day -> Text -> Maybe Text -> Environment.Flow API.SharedCabTripsResp
+getSharedCabTrips date driver mbToken = do
+  checkToken mbToken
+  let istMidnight = addUTCTime (-19800) (UTCTime date 0)
+  trips <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver istMidnight (addUTCTime 86399 istMidnight)
+  pure API.SharedCabTripsResp {trips = map mkTrip trips}
+  where
+    mkTrip (trip :: DVT.VehicleTrip) =
+      API.SharedCabTrip
+        { id = trip.id,
+          routeCode = trip.routeCode,
+          status = trip.status,
+          startedAt = trip.startedAt,
+          endedAt = trip.endedAt,
+          endReason = trip.endReason,
+          offlineBoardings = trip.offlineBoardings
+        }
 
 sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow API.SessionRoute
 sessionRoute integratedBppConfig code = do
