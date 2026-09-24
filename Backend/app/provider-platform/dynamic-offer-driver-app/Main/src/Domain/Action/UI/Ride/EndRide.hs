@@ -903,9 +903,8 @@ determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
         toMetro = destTag == Just sureMetro || destTag == Just sureWarriorMetro
     Nothing -> DCT.None
 
-getTripCategoriesForNoRecalc :: DTConf.TransporterConfig -> [DTC.TripCategory]
-getTripCategoriesForNoRecalc thresholdConfig =
-  fromMaybe [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer] thresholdConfig.tripCategoriesForNoRecalc
+tripCategoriesForNoRecalc :: [DTC.TripCategory]
+tripCategoriesForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
@@ -916,7 +915,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let actualDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime tripEndTime startTime
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
-  let (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` getTripCategoriesForNoRecalc thresholdConfig && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
+  let (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoriesForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams Nothing
       destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> pure tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
@@ -1084,7 +1083,7 @@ getDistanceDiff booking distance = do
 
 isDownwardRecomputeEnabledForRide :: SRB.Booking -> DTConf.TransporterConfig -> Bool
 isDownwardRecomputeEnabledForRide booking thresholdConfig =
-  booking.tripCategory `notElem` getTripCategoriesForNoRecalc thresholdConfig || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
+  booking.tripCategory `notElem` tripCategoriesForNoRecalc || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
 
 calculateFinalValuesForCorrectDistanceCalculations ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
