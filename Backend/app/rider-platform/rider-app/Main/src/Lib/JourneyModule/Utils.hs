@@ -65,7 +65,6 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
-import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Utils as SLUtils
@@ -1555,9 +1554,9 @@ buildExternalOrderCreationReq ::
   Maybe Bool ->
   m JuspayCreateOrder.CreateOrderReq
 buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType mbEnableOffer = do
+  bookings <- filterM (fmap not . FRFSUtils.noPaymentDue) allJourneyBookings
   let merchantId = person.merchantId
       merchantOperatingCityId = maybe person.merchantOperatingCityId cast paymentOrder.merchantOperatingCityId
-      bookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
       isSingleMode = case bookings of
         [_] -> True
         _ -> False

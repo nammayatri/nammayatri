@@ -128,7 +128,8 @@ validateRequest DOrder {..} = do
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
-  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+  isFree <- FRFSUtils.noPaymentDue booking
+  unless (isJust mbBookingPayment || isFree) $
     throwError (FRFSTicketBookingPaymentNotFound booking.id.getId)
   now <- getCurrentTime
   if booking.validTill < now
@@ -183,7 +184,8 @@ onConfirmFailure bapConfig ticketBooking = do
   merchant <- QMerch.findById ticketBooking.merchantId >>= fromMaybeM (MerchantNotFound ticketBooking.merchantId.getId)
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
   mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking
-  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered ticketBooking.overriddenAmount) $
+  isFree <- FRFSUtils.noPaymentDue ticketBooking
+  unless (isJust mbBookingPayment || isFree) $
     throwError (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ FRFSUtils.markFRFSBookingStatus Booking.FAILED "on_confirm_failure" ticketBooking
   -- The only release left in the codebase, and it is guarded on CONFIRMED for a reason: this is
@@ -390,7 +392,8 @@ onConfirm merchant booking' quoteCategories dOrder = do
                   void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
             -- Last, after everything that can throw: a throw above returns Left to the direct confirm flow,
             -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
-            when (FRFSPassOverride.fullyCoveredByPass booking) $
+            isPayOnBoardLeg <- FRFSUtils.isPayOnBoard booking
+            when (FRFSPassOverride.fullyCoveredByPass booking || isPayOnBoardLeg) $
               whenJust mbJourneyId $ \journeyId ->
                 void $
                   withTryCatch "onConfirm:markJourneyPaid" $ do
@@ -464,6 +467,7 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let isPassCovered = FRFSPassOverride.isFullyPassCovered booking.overriddenAmount
+  cashOnBoard <- FRFSUtils.isPayOnBoard booking
   -- A pass-covered booking took no payment here, but money did move -- when the pass was bought.
   -- The txn columns point at that purchase's charge, so they keep holding payment transactions
   -- rather than a purchasedPassPaymentId; which pass was applied is carried by the override
@@ -475,13 +479,17 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
   mbTxn <-
     if isPassCovered
       then maybe (pure Nothing) (\passPayment -> runInReplica $ HQPaymentTransaction.findEarliestChargedTransactionByOrderId passPayment.orderId) mbPassPayment
-      else do
-        transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
-        Just <$> (runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId"))
+      else
+        if cashOnBoard
+          then pure Nothing -- cash on board, no transaction
+          else do
+            transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
+            Just <$> (runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId"))
   mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
   -- Only a pass-covered booking is allowed to have no payment row; for anything else a missing one
-  -- is still a hard error, as it was before the override work.
-  unless (isJust mbPaymentBooking || isPassCovered) $
+  -- is still a hard error, as it was before the override work. Since the payOnBoard work, a
+  -- cash-on-board leg joins that exemption: it is born with no payment row by design.
+  unless (isJust mbPaymentBooking || isPassCovered || cashOnBoard) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let transactionRefNumber' = if isPassCovered then (.id.getId) <$> mbTxn else booking.paymentTxnId
   now <- getCurrentTime

@@ -82,6 +82,7 @@ import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
@@ -579,8 +580,9 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
       -- until validTill swept it to FAILED and the rider would get no ticket and no error. Issuing
       -- the pass ticket early is the lesser fault until there is a trigger that can fire for a
       -- taxi-funded journey. See the known-limitations note in the PR description.
+      legsFree <- mapM FRFSUtils.noPaymentDue legBookings
       let journeyHasPayableLeg =
-            any (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) legBookings
+            not (and legsFree)
               || any (\plan -> plan.shouldBookLater && plan.legInfo.bookingAllowed) plans
       unless journeyHasPayableLeg $ FRFSPassConfirm.confirmPassCoveredLegs legBookings
   where
