@@ -15,9 +15,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
-  { containsUrlButton :: Kernel.Prelude.Bool,
+  { channel :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MediaChannel,
+    containsUrlButton :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,
@@ -28,6 +30,8 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
+
+data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data MessageKey
   = INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER
@@ -77,5 +81,7 @@ instance ToJSON (MerchantMessageD 'Unsafe)
 instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

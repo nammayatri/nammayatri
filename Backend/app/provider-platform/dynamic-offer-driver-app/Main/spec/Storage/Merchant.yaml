@@ -241,6 +241,7 @@ MerchantMessage:
     domain: Maybe MessageDomain
     templateName: Maybe Text
     channel: Maybe MediaChannel
+    mediaUrl: Maybe Text
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -252,6 +253,7 @@ MerchantMessage:
     templateName: character varying(255)
     domain: character varying(255)
     channel: character varying(255)
+    mediaUrl: text
   default:
     containsUrlButton: "false"
   beamType:
@@ -293,6 +295,10 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, domain, channel]
+    findByMerchantOpCityIdAndTemplateId:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, templateId]
     deleteByMerchantOpCityIdAndMessageKeyVehicleCategory:
       kvFunction: deleteWithKV
       where:
