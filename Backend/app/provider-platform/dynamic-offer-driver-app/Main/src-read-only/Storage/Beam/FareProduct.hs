@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data FareProductT f = FareProductT
   { area :: (B.C f Lib.Types.SpecialLocation.Area),
+    disableDownwardRecompute :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     disableRecompute :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     enabled :: (B.C f Kernel.Prelude.Bool),
     farePolicyId :: (B.C f Kernel.Prelude.Text),
