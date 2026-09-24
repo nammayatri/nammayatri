@@ -66,6 +66,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     fleetOwnerId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     fromLocGeohash :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     goHomeRequestId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    hasApplicablePreferences :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     hasAvailableForRidesTag :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     id :: (B.C f Kernel.Prelude.Text),
     isAutoAccepted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),

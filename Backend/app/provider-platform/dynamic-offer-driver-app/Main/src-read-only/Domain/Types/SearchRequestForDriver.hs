@@ -60,6 +60,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     fleetOwnerId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
+    hasApplicablePreferences :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasAvailableForRidesTag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
     isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -99,6 +99,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId <$> fleetOwnerId),
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.goHomeRequestId (Kernel.Types.Id.getId <$> goHomeRequestId),
+      Se.Set Beam.hasApplicablePreferences hasApplicablePreferences,
       Se.Set Beam.hasAvailableForRidesTag hasAvailableForRidesTag,
       Se.Set Beam.isAutoAccepted isAutoAccepted,
       Se.Set Beam.isFavourite isFavourite,
