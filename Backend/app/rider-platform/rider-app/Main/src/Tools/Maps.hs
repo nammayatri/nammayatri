@@ -30,6 +30,7 @@ module Tools.Maps
     getMerchantOperatingCityId,
     getMultimodalWalkDistance,
     getMultimodalJourneyDistances,
+    getBetterPointWalkDistance,
     getInstructionRoute,
     getMapsServiceOverrideFromTags,
     getRoutesForService,
@@ -148,6 +149,22 @@ getMultimodalJourneyDistances ::
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getMultimodalJourneyDistances = runWithServiceConfig Maps.getDistances (.getMultimodalWalkDistance)
+
+-- | The walk to a walk-and-save pickup/drop, on its own provider slot so a city can pick
+-- which provider pays for it.
+getBetterPointWalkDistance ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getBetterPointWalkDistance = runWithServiceConfig Maps.getDistance (.getBetterPointWalkDistance)
 
 getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
 getRoutes isAvoidToll personId merchantId mbMOCId entityId req = do

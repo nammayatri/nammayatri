@@ -68,6 +68,7 @@ updateByPrimaryKey (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsage
       Se.Set Beam.enableDashboardSms enableDashboardSms,
       Se.Set Beam.eventTrackingOverrides (Data.Aeson.toJSON <$> eventTrackingOverrides),
       Se.Set Beam.eventTrackingProviders (Kernel.Prelude.Just eventTrackingProviders),
+      Se.Set Beam.getBetterPointWalkDistance (Kernel.Prelude.Just getBetterPointWalkDistance),
       Se.Set Beam.getCardList getCardList,
       Se.Set Beam.getDistances getDistances,
       Se.Set Beam.getDistancesForCancelRide getDistancesForCancelRide,

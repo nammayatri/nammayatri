@@ -120,3 +120,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN additional_issue_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN event_tracking_overrides jsonb ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_better_point_walk_distance text  default 'OSRM';

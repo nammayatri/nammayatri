@@ -86,7 +86,7 @@ data SuggestedSearchBuild = SuggestedSearchBuild
 -- reason about, or no point clears the configured thresholds — all of which are the
 -- normal case, so callers should treat 'Nothing' as unremarkable.
 buildSuggestedSearchRes ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceFlow m r =>
   DRC.RiderConfig ->
   SLS.SearchRes ->
   m (Maybe SuggestedSearchBuild)
@@ -94,7 +94,12 @@ buildSuggestedSearchRes riderConfig parentRes = do
   -- `$!` matters here: without it the timing would be meaningless, because a lazy Maybe
   -- is not evaluated until used. Forcing to WHNF is enough — deciding Just vs Nothing is
   -- exactly what runs both segment scans.
-  mbPlan <- JMU.measureLatency (pure $! detectBetterRoute riderConfig parentRes) "betterRoutePoint.detect"
+  mbDetected <- JMU.measureLatency (pure $! detectBetterRoute riderConfig parentRes) "betterRoutePoint.detect"
+  -- A provider failure here escapes to the caller, which drops the suggestion rather than
+  -- offer a walk it could not measure. Nothing has been persisted yet at this point.
+  mbPlan <- case mbDetected of
+    Nothing -> pure Nothing
+    Just detected -> JMU.measureLatency (measurePlanWalks riderConfig parentRes.searchRequest detected) "betterRoutePoint.measureWalks"
   case mbPlan of
     Nothing -> pure Nothing
     Just plan -> JMU.measureLatency (Just <$> buildFromPlan plan) "betterRoutePoint.buildShadow"
@@ -304,8 +309,10 @@ resolveBetterRoute riderConfig parentRes mbPickup mbDrop = do
       parentPickup = LatLong parent.fromLocation.lat parent.fromLocation.lon
   parentDropLoc <- parent.toLocation & fromMaybeM (InvalidRequest "Cannot suggest a better route point for a search without a destination")
   let parentDrop = LatLong parentDropLoc.lat parentDropLoc.lon
-  validateWalk "pickup" (maxWalkAtPickup riderConfig) parentPickup mbPickup
-  validateWalk "drop" (maxWalkAtDrop riderConfig) parentDrop mbDrop
+  mbPickupWalk <- traverse (measureWalk riderConfig parent parentPickup) mbPickup
+  mbDropWalk <- traverse (\chosen -> measureWalk riderConfig parent chosen parentDrop) mbDrop
+  validateWalk "pickup" (maxWalkAtPickup riderConfig) mbPickupWalk
+  validateWalk "drop" (maxWalkAtDrop riderConfig) mbDropWalk
   let mbTrimmed = do
         routeInfo <- parentRes.shortestRouteInfo
         BRP.betterRouteForCustomPoints
@@ -317,12 +324,20 @@ resolveBetterRoute riderConfig parentRes mbPickup mbDrop = do
           routeInfo.duration
           mbPickup
           mbDrop
-  case mbTrimmed of
+  betterRoute <- case mbTrimmed of
     Just betterRoute -> pure betterRoute
     Nothing -> do
       logInfo $ "better_route_point: chosen point is off the route of " <> getId parent.id <> ", resolving a fresh one"
       freshBetterRoute parentRes parentPickup parentDrop mbPickup mbDrop
+  -- Report the walk that was validated, whichever way the city measures it.
+  pure
+    betterRoute
+      { BRP.betterPickup = withWalk mbPickupWalk <$> betterRoute.betterPickup,
+        BRP.betterDrop = withWalk mbDropWalk <$> betterRoute.betterDrop
+      }
   where
+    withWalk mbWalk betterPoint = maybe betterPoint (\walk -> betterPoint {BRP.walkDistance = walk}) mbWalk
+
     -- A point the customer can walk to is the entire premise; anything further is a
     -- different ride, and belongs in a search of its own rather than a shadow of this one.
     --
@@ -330,10 +345,9 @@ resolveBetterRoute riderConfig parentRes mbPickup mbDrop = do
     -- offers points within. That headroom is deliberate: a customer nudging a marker that
     -- was already placed at the scaled cap has to be able to move it, and the point they
     -- land on is one they chose to walk to rather than one we talked them into.
-    validateWalk end maxWalk own = \case
+    validateWalk end maxWalk = \case
       Nothing -> pure ()
-      Just chosen -> do
-        let walk = highPrecMetersToMeters $ distanceBetweenInMeters own chosen
+      Just walk ->
         when (walk > maxWalk) $
           throwError (InvalidRequest $ "Suggested " <> end <> " is " <> show walk <> " away, further than the " <> show maxWalk <> " a customer is asked to walk at that end")
 
@@ -381,6 +395,61 @@ freshBetterRoute parentRes parentPickup parentDrop mbPickup mbDrop = do
       }
   where
     walkFrom own chosen = highPrecMetersToMeters $ distanceBetweenInMeters own chosen
+
+-- | The plan with its walks measured the way the city asks. The scan already used straight
+-- lines, so only a city measuring on the map has anything to redo.
+measurePlanWalks ::
+  ServiceFlow m r =>
+  DRC.RiderConfig ->
+  DSearchReq.SearchRequest ->
+  BRP.BetterRoutePlan ->
+  m (Maybe BRP.BetterRoutePlan)
+measurePlanWalks riderConfig parent plan = case walkDistanceSource riderConfig of
+  DRC.STRAIGHT_LINE -> pure (Just plan)
+  DRC.MAPS -> do
+    -- Every shape moves an end to the same point, so each end is measured once.
+    let routes = plan.best : plan.alternatives
+        mbPickupPoint = listToMaybe $ mapMaybe (fmap (.point) . (.betterPickup)) routes
+        mbDropPoint = listToMaybe $ mapMaybe (fmap (.point) . (.betterDrop)) routes
+        parentPickup = LatLong parent.fromLocation.lat parent.fromLocation.lon
+    mbPickupWalk <- traverse (measureWalk riderConfig parent parentPickup) mbPickupPoint
+    mbDropWalk <- case (mbDropPoint, parent.toLocation) of
+      (Just dropPoint, Just toLoc) -> Just <$> measureWalk riderConfig parent dropPoint (LatLong toLoc.lat toLoc.lon)
+      _ -> pure Nothing
+    let mbRestated = do
+          cfg <- betterPointConfig riderConfig
+          BRP.restateWalks cfg mbPickupWalk mbDropWalk plan
+    when (isNothing mbRestated) $
+      logInfo $ "better_route_point: suggestion for " <> getId parent.id <> " dropped, walk on the map is past the cap; pickup " <> show mbPickupWalk <> ", drop " <> show mbDropWalk
+    pure mbRestated
+
+-- | The walk between two points: a straight line, or on foot by the provider set in
+-- 'MerchantServiceUsageConfig.getBetterPointWalkDistance'.
+measureWalk ::
+  ServiceFlow m r =>
+  DRC.RiderConfig ->
+  DSearchReq.SearchRequest ->
+  LatLong ->
+  LatLong ->
+  m Meters
+measureWalk riderConfig parent from to = case walkDistanceSource riderConfig of
+  DRC.STRAIGHT_LINE -> pure . highPrecMetersToMeters $ distanceBetweenInMeters from to
+  DRC.MAPS ->
+    (.distance)
+      <$> Maps.getBetterPointWalkDistance
+        parent.merchantId
+        parent.merchantOperatingCityId
+        (Just parent.id.getId)
+        Maps.GetDistanceReq
+          { origin = from,
+            destination = to,
+            travelMode = Just Maps.FOOT,
+            sourceDestinationMapping = Nothing,
+            distanceUnit = Meter
+          }
+
+walkDistanceSource :: DRC.RiderConfig -> DRC.BetterPointWalkDistanceSource
+walkDistanceSource riderConfig = fromMaybe DRC.STRAIGHT_LINE riderConfig.betterPointWalkDistanceSource
 
 defaultMaxOffRouteDistance :: Meters
 defaultMaxOffRouteDistance = Meters 60
