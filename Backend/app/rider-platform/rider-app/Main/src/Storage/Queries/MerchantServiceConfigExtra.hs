@@ -168,6 +168,7 @@ getServiceNameConfigJSON = \case
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
     Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
     Ticket.XyneSpacesConfig cfg -> (Domain.IssueTicketService Ticket.XyneSpaces, toJSON cfg)
+    Ticket.RadarXyneSpacesConfig cfg -> (Domain.IssueTicketService Ticket.RadarXyneSpaces, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> (Domain.IncidentReportService IncidentReport.ERSS, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

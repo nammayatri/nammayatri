@@ -1,0 +1,234 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: RadarTickets
+
+apis:
+  - GET: # RadarTicketsListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - pageSize: Int
+        - cursor: Text
+        - priority: Text
+        - stageName: Text
+        - reporterEmail: Text
+      response:
+        type: RadarTicketListRes
+      migrate:
+        capability: support.radar.read
+
+  - GET: # RadarTicketsSummaryAPI
+      endpoint: /summary
+      auth: ApiAuthV2
+      response:
+        type: RadarSummaryRes
+      migrate:
+        capability: support.radar.read
+
+  - GET: # RadarTicketsReportersAPI
+      endpoint: /reporters
+      auth: ApiAuthV2
+      response:
+        type: RadarReportersRes
+      migrate:
+        capability: support.radar.read
+
+  - GET: # RadarTicketsTicketAPI
+      endpoint: /ticket/{ticketId}
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+      response:
+        type: RadarTicketDetailRes
+      migrate:
+        capability: support.radar.read
+
+  - GET: # RadarTicketsTicketConversationAPI
+      endpoint: /ticket/{ticketId}/conversation
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+      response:
+        type: RadarConversationRes
+      migrate:
+        capability: support.radar.read
+
+  - GET: # RadarTicketsTicketAttachmentAPI
+      endpoint: /ticket/{ticketId}/attachment/{attachmentId}
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+        attachmentId: Text
+      response:
+        type: RadarAttachmentUrlRes
+      migrate:
+        capability: support.radar.read
+
+  - POST: # RadarTicketsTicketReplyAPI
+      endpoint: /ticket/{ticketId}/reply
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+      request:
+        type: RadarReplyReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: support.radar.write
+
+  - POST: # RadarTicketsUploadAPI
+      endpoint: /upload
+      auth: ApiAuthV2
+      request:
+        type: RadarUploadReq
+      response:
+        type: RadarUploadRes
+      migrate:
+        capability: support.radar.write
+
+  - POST: # RadarTicketsCreateAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: RadarCreateTicketReq
+      response:
+        type: RadarCreateTicketRes
+      migrate:
+        capability: support.radar.write
+
+  - POST: # RadarTicketsTicketUpdateStatusAPI
+      endpoint: /ticket/{ticketId}/updateStatus
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+      request:
+        type: RadarUpdateStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: support.radar.write
+
+  - POST: # RadarTicketsTicketCsatAPI
+      endpoint: /ticket/{ticketId}/csat
+      auth: ApiAuthV2
+      params:
+        ticketId: Text
+      request:
+        type: RadarCsatReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: support.radar.write
+
+types:
+  RadarTicketItem:
+    - id: Text
+    - xyneId: Text
+    - subject: Text
+    - priority: Text
+    - statusV2: Text
+    - stageName: Maybe Text
+    - createdAt: Text
+    - lastEmailAt: Maybe Text
+  RadarTicketListRes:
+    - items: [RadarTicketItem]
+    - hasMore: Bool
+    - nextCursor: Maybe Text
+  RadarSummaryTiles:
+    - total: Int
+    - backlog: Int
+    - inProgress: Int
+    - completed: Int
+    - notRequired: Int
+  RadarCategoryCount:
+    - category: Text
+    - count: Int
+  RadarSummaryRes:
+    - tiles: RadarSummaryTiles
+    - recent: [RadarTicketItem]
+    - byCategory: [RadarCategoryCount]
+  RadarReporter:
+    - email: Text
+    - name: Text
+  RadarReportersRes:
+    - reporters: [RadarReporter]
+  RadarAttachmentInfo:
+    - id: Text
+    - name: Text
+    - mimeType: Maybe Text
+    - size: Maybe Int
+  RadarMessage:
+    - id: Text
+    - from: Maybe Text
+    - createdAt: Maybe Text
+    - bodyHtml: Text
+    - attachments: [RadarAttachmentInfo]
+  RadarTicketEvent:
+    - id: Text
+    - eventType: Text
+    - label: Text
+    - at: Text
+    - actor: Maybe Text
+    - from: Maybe Text
+    - to: Maybe Text
+  RadarTicketDetailRes:
+    - id: Text
+    - xyneId: Text
+    - subject: Text
+    - priority: Text
+    - statusV2: Text
+    - stageName: Maybe Text
+    - createdAt: Text
+    - lastEmailAt: Maybe Text
+    - description: Text
+    - updatedAt: Maybe Text
+    - reporterEmail: Maybe Text
+    - emailCount: Maybe Int
+    - history: [RadarTicketEvent]
+    - messages: [RadarMessage]
+  RadarConversationRes:
+    - messages: [RadarMessage]
+    - hasMore: Bool
+  RadarAttachmentUrlRes:
+    - url: Text
+  RadarReplyReq:
+    - body: Text
+    - senderEmail: Maybe Text
+    - senderName: Maybe Text
+    - derive: "'HideSecrets"
+  RadarKV:
+    - key: Text
+    - value: Text
+  RadarCreateTicketReq:
+    - category: Text
+    - subCategory: Text
+    - title: Text
+    - citiesAffected: [Text]
+    - whereSeen: Text
+    - stillHappening: Text
+    - urgency: Text
+    - body: Text
+    - context: [RadarKV]
+    - attachmentFileIds: [Text]
+    - senderEmail: Maybe Text
+    - senderName: Maybe Text
+    - derive: "'HideSecrets"
+  RadarCreateTicketRes:
+    - ticketId: Text
+    - xyneId: Text
+  RadarUploadReq:
+    - fileBase64: Text
+    - mimeType: Text
+    - fileName: Text
+    - derive: "'HideSecrets"
+  RadarUploadRes:
+    - fileId: Text
+  RadarUpdateStatusReq:
+    - stageName: Text
+    - derive: "'HideSecrets"
+  RadarCsatReq:
+    - rating: Text
+    - score: Int
+    - comment: Maybe Text
+    - derive: "'HideSecrets"
