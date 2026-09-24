@@ -6,6 +6,7 @@ where
 
 import qualified Control.Exception as E
 import qualified Data.Text as T
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Email.Flow as Email
@@ -100,8 +101,13 @@ listMerchantMessages' channel opCityId = do
           channel = Just channel,
           templateId = m.templateId,
           message = m.message,
-          senderHeader = m.senderHeader
+          senderHeader = m.senderHeader,
+          category = fmap toMessageCategory m.category
         }
+    toMessageCategory = \case
+      DMM.SYSTEM -> Webhook.SYSTEM
+      DMM.PROMOTIONAL -> Webhook.PROMOTIONAL
+      DMM.MARKETING -> Webhook.MARKETING
 
 sendPush' :: Webhook.Contact -> Notification.NotificationReq Value () -> Flow ()
 sendPush' contact req =

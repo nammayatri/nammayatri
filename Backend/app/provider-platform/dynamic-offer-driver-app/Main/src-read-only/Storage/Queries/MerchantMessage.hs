@@ -40,7 +40,7 @@ deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId mes
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
@@ -71,7 +71,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.channel channel,
+    [ Se.Set Beam.category category,
+      Se.Set Beam.channel channel,
       Se.Set Beam.containsUrlButton containsUrlButton,
       Se.Set Beam.domain domain,
       Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
@@ -91,7 +92,8 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
     pure $
       Just
         Domain.Types.MerchantMessage.MerchantMessage
-          { channel = channel,
+          { category = category,
+            channel = channel,
             containsUrlButton = containsUrlButton,
             createdAt = createdAt,
             domain = domain,
@@ -111,7 +113,8 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
 instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   toTType' (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
     Beam.MerchantMessageT
-      { Beam.channel = channel,
+      { Beam.category = category,
+        Beam.channel = channel,
         Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
         Beam.domain = domain,

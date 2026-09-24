@@ -5488,7 +5488,8 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
                 templateName = req.templateName,
                 vehicleCategory = req.vehicleCategory,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                category = Nothing
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory

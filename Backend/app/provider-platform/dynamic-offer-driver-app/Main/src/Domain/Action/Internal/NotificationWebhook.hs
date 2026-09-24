@@ -103,12 +103,17 @@ listMerchantMessages' channel opCityId = do
           channel = Just channel,
           templateId = m.templateId,
           message = m.message,
-          senderHeader = m.senderHeader
+          senderHeader = m.senderHeader,
+          category = fmap toMessageCategory m.category
         }
     toNotifyChannel = \case
       DMM.SMS -> Just Webhook.SMS
       DMM.WHATSAPP -> Just Webhook.WHATSAPP
       _ -> Nothing
+    toMessageCategory = \case
+      DMM.SYSTEM -> Webhook.SYSTEM
+      DMM.PROMOTIONAL -> Webhook.PROMOTIONAL
+      DMM.MARKETING -> Webhook.MARKETING
 
 sendPush' :: Webhook.Contact -> Notification.NotificationReq Value () -> Flow ()
 sendPush' contact req = do
