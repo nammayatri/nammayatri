@@ -2105,6 +2105,50 @@ def cmd_import(args):
                 uq_count = sum(1 for (_, _, t) in constraint_info if t == 'UNIQUE')
                 print(f"    Dropped {pk_count} PK + {uq_count} UNIQUE constraints")
 
+            # Ensure serial sequences exist for integer id columns that lack
+            # a DEFAULT.  Read-only migrations create "id integer NOT NULL" but
+            # config-sync INSERT files omit id, relying on DEFAULT nextval.
+            # Only check tables that have an insert file in this batch, and
+            # only integer-family types (int2/int4/int8) — skip text/uuid ids.
+            insert_tables = list(set(
+                f.split("/")[1].rsplit("_insert_", 1)[0]
+                for f in files if "_insert_" in f
+            ))
+            if insert_tables:
+                cursor.execute("""
+                    SELECT c.relname, a.attname, pg_catalog.pg_get_userbyid(c.relowner) as tbl_owner
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                    JOIN pg_type t ON t.oid = a.atttypid
+                    WHERE n.nspname = %s AND c.relname = ANY(%s)
+                      AND a.attname = 'id'
+                      AND a.attnotnull
+                      AND t.typname IN ('int2', 'int4', 'int8')
+                      AND pg_get_serial_sequence(quote_ident(n.nspname) || '.' || quote_ident(c.relname), a.attname) IS NULL
+                      AND NOT EXISTS (SELECT 1 FROM pg_attrdef d WHERE d.adrelid = c.oid AND d.adnum = a.attnum)
+                """, (db_schema, insert_tables))
+                needs_seq = cursor.fetchall()
+                created_seqs = []
+                for tname, col, tbl_owner in needs_seq:
+                    seq_name = f"{db_schema}.{tname}_id_seq"
+                    cursor.execute("SAVEPOINT seq_create;")
+                    try:
+                        cursor.execute(f'CREATE SEQUENCE IF NOT EXISTS {seq_name};')
+                        cursor.execute(f'ALTER SEQUENCE {seq_name} OWNER TO "{tbl_owner}";')
+                        cursor.execute(f'ALTER SEQUENCE {seq_name} OWNED BY "{db_schema}"."{tname}"."{col}";')
+                        cursor.execute(f'ALTER TABLE "{db_schema}"."{tname}" ALTER COLUMN "{col}" SET DEFAULT nextval(\'{seq_name}\');')
+                        cursor.execute(f'SELECT setval(\'{seq_name}\', COALESCE((SELECT MAX("{col}")::bigint FROM "{db_schema}"."{tname}"), 0) + 1, false);')
+                        cursor.execute("RELEASE SAVEPOINT seq_create;")
+                        created_seqs.append(tname)
+                    except Exception as seq_err:
+                        cursor.execute("ROLLBACK TO SAVEPOINT seq_create;")
+                        print(f"    WARNING: sequence for {db_schema}.{tname} failed: {seq_err}")
+                if created_seqs:
+                    print(f"    Created {len(created_seqs)} serial sequence(s): {', '.join(created_seqs)}")
+                if not needs_seq:
+                    print(f"    (no integer id columns need sequences among {len(insert_tables)} insert tables)")
+
             for i, rel_path in enumerate(files):
                 sql_file = sql_dir / rel_path
                 sql = sql_file.read_text()

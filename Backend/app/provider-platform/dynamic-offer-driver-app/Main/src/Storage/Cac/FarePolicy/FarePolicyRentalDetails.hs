@@ -16,10 +16,11 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.FarePolicy.FarePolicyRentalDetails as BeamFPRD
+import qualified SharedLogic.FarePolicy.Conversions as Domain
+import Storage.Beam.FarePolicyRentalDetails as BeamFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as CQFPRDB
 import qualified Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as CQFPRDPS
-import Storage.Queries.FarePolicy.FarePolicyRentalDetails (fromTTypeFarePolicyRentalDetails)
+import Storage.Queries.FarePolicyRentalDetailsExtra (fromTTypeFarePolicyRentalDetails)
 import Utils.Common.CacUtils
 
 findFarePolicyRentalDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m (Maybe Domain.FullFarePolicyRentalDetails)

@@ -24,15 +24,18 @@ import Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
-import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
-import Storage.Queries.FarePolicy.DriverExtraFeeBounds ()
+import qualified Storage.Beam.FarePolicyDriverExtraFeeBounds as BeamDEFB
+import Storage.Queries.FarePolicyDriverExtraFeeBounds ()
+import qualified Storage.Queries.FarePolicyDriverExtraFeeBoundsExtra as Extra
 import Utils.Common.CacUtils
 
-getDriverExtraFeeBoundsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [DFP.FullDriverExtraFeeBounds]
+getDriverExtraFeeBoundsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Extra.FullDriverExtraFeeBounds]
 getDriverExtraFeeBoundsFromCAC context tenant id toss = do
-  res :: (Maybe [BeamDEFB.DriverExtraFeeBounds]) <- getConfigListFromCac context tenant toss FarePolicyDriverExtraFeeBounds (Text.unpack id.getId)
+  res :: (Maybe [BeamDEFB.FarePolicyDriverExtraFeeBounds]) <- getConfigListFromCac context tenant toss FarePolicyDriverExtraFeeBounds (Text.unpack id.getId)
   config <- mapM KBF.fromCacType (fromMaybe [] res)
   pure $ catMaybes config
 
-instance FromCacType BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds where
-  fromCacType = KBF.fromTType'
+instance FromCacType BeamDEFB.FarePolicyDriverExtraFeeBounds Extra.FullDriverExtraFeeBounds where
+  fromCacType beam = do
+    result <- KBF.fromTType' beam
+    pure $ Extra.toFullType <$> result

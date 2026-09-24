@@ -253,10 +253,10 @@ import qualified Storage.Queries.DocumentVerificationConfig as QDVC
 import qualified Storage.Queries.DriverIntelligentPoolConfig as QDIPC
 import qualified Storage.Queries.DriverPoolConfig as QDPC
 import qualified Storage.Queries.Exophone as QExophone
-import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
-import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
-import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
-import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
+import qualified Storage.Queries.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
+import qualified Storage.Queries.FarePolicyDriverExtraFeeBounds as QFPEFB
+import qualified Storage.Queries.FarePolicyProgressiveDetails as QFPPD
+import qualified Storage.Queries.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
@@ -3522,7 +3522,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             Left validationErr -> throwError $ InvalidRequest ("Fare Recompute Cap Config invalid (row " <> show idx <> ") :: " <> validationErr)
             Right () -> return (Just config)
 
-      return (((Just . mapToBool) row.disableRecompute, (Just . mapToBool) row.disableDownwardRecompute), city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, schedulingCharge = schedulingCharge, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, fareRecomputeCapConfig = fareRecomputeCapConfig, ..})
+      return (((Just . mapToBool) row.disableRecompute, (Just . mapToBool) row.disableDownwardRecompute), city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, schedulingCharge = schedulingCharge, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, fareRecomputeCapConfig = fareRecomputeCapConfig, govtCharges = Nothing, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"

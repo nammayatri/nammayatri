@@ -1,0 +1,33 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersInterCityDetails:
+  tableName: fare_parameters_inter_city_details
+
+  fields:
+    fareParametersId: Text
+    timeFare: HighPrecMoney
+    distanceFare: HighPrecMoney
+    pickupCharge: HighPrecMoney
+    currency: Currency
+    extraDistanceFare: HighPrecMoney
+    stateEntryPermitCharges: Maybe HighPrecMoney
+    extraTimeFare: HighPrecMoney
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

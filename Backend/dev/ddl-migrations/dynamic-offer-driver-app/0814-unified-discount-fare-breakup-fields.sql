@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 -- Unified Discount & VAT refactor: canonical ten-slot ProjectFareParamsBreakup on FareParameters.
 --
 -- Adds nine slot columns that partition the ride fare into:
@@ -12,12 +13,13 @@
 -- for backward compatibility with existing rows.
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters
-ADD COLUMN discount_applicable_ride_fare_tax_exclusive double precision,
-ADD COLUMN discount_applicable_ride_fare_tax double precision,
-ADD COLUMN non_discount_applicable_ride_fare_tax_exclusive double precision,
-ADD COLUMN non_discount_applicable_ride_fare_tax double precision,
-ADD COLUMN toll_fare_tax_exclusive double precision,
-ADD COLUMN cancellation_fee_tax_exclusive double precision,
-ADD COLUMN cancellation_tax double precision,
-ADD COLUMN parking_charge_tax_exclusive double precision,
-ADD COLUMN parking_charge_tax double precision;
+ADD COLUMN IF NOT EXISTS discount_applicable_ride_fare_tax_exclusive double precision,
+ADD COLUMN IF NOT EXISTS discount_applicable_ride_fare_tax double precision,
+ADD COLUMN IF NOT EXISTS non_discount_applicable_ride_fare_tax_exclusive double precision,
+ADD COLUMN IF NOT EXISTS non_discount_applicable_ride_fare_tax double precision,
+ADD COLUMN IF NOT EXISTS toll_fare_tax_exclusive double precision,
+ADD COLUMN IF NOT EXISTS cancellation_fee_tax_exclusive double precision,
+ADD COLUMN IF NOT EXISTS cancellation_tax double precision,
+ADD COLUMN IF NOT EXISTS parking_charge_tax_exclusive double precision,
+ADD COLUMN IF NOT EXISTS parking_charge_tax double precision;
+-- NOTE: dont need to run these queries

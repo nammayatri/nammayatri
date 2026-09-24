@@ -16,15 +16,18 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as BeamFPRDPS
-import Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs ()
+import qualified Storage.Beam.FarePolicyRentalDetailsPricingSlabs as BeamFPRDPS
+import Storage.Queries.FarePolicyRentalDetailsPricingSlabs ()
+import qualified Storage.Queries.FarePolicyRentalDetailsPricingSlabsExtra as Extra
 import Utils.Common.CacUtils
 
-findFarePolicyRentalDetailsPricingSlabsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPRDPS.FullFarePolicyRentalDetailsPricingSlabs]
+findFarePolicyRentalDetailsPricingSlabsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Extra.FullFarePolicyRentalDetailsPricingSlabs]
 findFarePolicyRentalDetailsPricingSlabsFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPRDPS.FarePolicyRentalDetailsPricingSlabs]) <- getConfigListFromCac context tenant toss FarePolicyRentalDetailsPricingSlabs (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)
   catMaybes <$> config
 
-instance FromCacType BeamFPRDPS.FarePolicyRentalDetailsPricingSlabs BeamFPRDPS.FullFarePolicyRentalDetailsPricingSlabs where
-  fromCacType = fromTType'
+instance FromCacType BeamFPRDPS.FarePolicyRentalDetailsPricingSlabs Extra.FullFarePolicyRentalDetailsPricingSlabs where
+  fromCacType beam = do
+    result <- fromTType' beam
+    pure $ Extra.toFullType <$> result

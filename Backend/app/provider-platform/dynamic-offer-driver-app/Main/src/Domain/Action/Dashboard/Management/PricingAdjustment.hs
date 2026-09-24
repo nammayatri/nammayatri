@@ -61,6 +61,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareAdjustment as SFA
+import qualified SharedLogic.FarePolicy.Conversions as DFP
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.CachedQueries.FareAdjustment as CQFA

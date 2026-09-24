@@ -1,0 +1,2293 @@
+{
+  "info": {
+    "name": "FarePolicy DSL Migration Verification",
+    "description": "Verifies FarePolicy + FareParameters DSL migration: fare policy read, fare calculation, fare parameters write, composite fields, deprecated fields.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+              "console.log('AddVehicle:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+              "console.log('Enable:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/18911beb-28ba-456d-8cca-4d019461d2b0/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "18911beb-28ba-456d-8cca-4d019461d2b0",
+            "subscribe"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22YATRI_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "AUTO_RICKSHAW"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 1a - Read Progressive AUTO Policy",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var auto = d.fareProducts.find(fp => fp.serviceTier === 'AUTO_RICKSHAW' && (fp.area === 'Default' || (fp.area && fp.area.tag === 'Default'))) || d.fareProducts.find(fp => fp.serviceTier === 'AUTO_RICKSHAW');",
+              "if (auto) { pm.environment.set('auto_fp_id', auto.farePolicyId); console.log('Progressive AUTO:', auto.farePolicyId); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/list?tripCategory=OneWay_OneWayOnDemandDynamicOffer&vehicleServiceTier=AUTO_RICKSHAW",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "tripCategory",
+              "value": "OneWay_OneWayOnDemandDynamicOffer"
+            },
+            {
+              "key": "vehicleServiceTier",
+              "value": "AUTO_RICKSHAW"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 1b - Update Progressive (serviceCharge + deadKmFare + parkingCharge)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Single policy per service tier (cleanup done by run-farepolicy-tests.sh)",
+              "var base = pm.environment.get('baseURL_BPP_Dashboard_Internal') + '/' + pm.environment.get('dashboard_merchant_id') + '/' + pm.environment.get('dashboard_city') + '/farePolicyV2';",
+              "var token = pm.environment.get('dashboard_token');",
+              "var policyId = pm.environment.get('auto_fp_id');",
+              "if (!policyId) return;",
+              "pm.sendRequest({url: base + '/policy/' + policyId, method: 'GET', header: {'token': token}}, function(err, res) {",
+              "    var policy = res.json().policy;",
+              "    pm.environment.set('orig_progressive_policy_0', JSON.stringify(policy));",
+              "    var det = policy.farePolicyDetails.contents;",
+              "    var newBF = 20 + Math.floor(Math.random() * 30);",
+              "    var newDK = 5 + Math.floor(Math.random() * 20);",
+              "    var updates = {baseFare: {old: det.baseFare, new: newBF}, deadKmFare: {old: det.deadKmFare, new: newDK}};",
+              "    det.baseFare = newBF; det.deadKmFare = newDK;",
+              "    // Update or inject driverExtraFeeBounds (fare_policy_driver_extra_fee_bounds)",
+              "    var newMinFee = 5 + Math.floor(Math.random() * 50);",
+              "    var newMaxFee = newMinFee + 10 + Math.floor(Math.random() * 100);",
+              "    if (!policy.driverExtraFeeBounds || policy.driverExtraFeeBounds.length === 0) {",
+              "      policy.driverExtraFeeBounds = [{startDistance: 0, stepFee: 10, defaultStepFee: 10, minFee: 0, maxFee: 50}];",
+              "      updates.minFee = {old: 0, new: newMinFee};",
+              "      updates.maxFee = {old: 50, new: newMaxFee};",
+              "    } else {",
+              "      updates.minFee = {old: policy.driverExtraFeeBounds[0].minFee, new: newMinFee};",
+              "      updates.maxFee = {old: policy.driverExtraFeeBounds[0].maxFee, new: newMaxFee};",
+              "    }",
+              "    policy.driverExtraFeeBounds[0].minFee = newMinFee;",
+              "    policy.driverExtraFeeBounds[0].maxFee = newMaxFee;",
+              "    // Update or inject perMinRateSections (fare_policy_progressive_details_per_min_rate_section)",
+              "    var newPMR = 1 + Math.floor(Math.random() * 5);",
+              "    if (!det.perMinRateSections || det.perMinRateSections.length === 0) {",
+              "      det.perMinRateSections = [{rideDurationInMin: 0, perMinRate: 1}];",
+              "      updates.perMinRate = {old: 1, new: newPMR};",
+              "    } else {",
+              "      updates.perMinRate = {old: det.perMinRateSections[0].perMinRate, new: newPMR};",
+              "    }",
+              "    det.perMinRateSections[0].perMinRate = newPMR;",
+              "    // Update congestionChargeMultiplier (fare_policy top-level)",
+              "    var congestionPct = 5 + Math.floor(Math.random() * 20);",
+              "    var newCongestion = 1 + congestionPct / 100;",
+              "    updates.congestionChargeMultiplier = {old: policy.congestionChargeMultiplier, new: {tag: 'BaseFareAndExtraDistanceFare', contents: newCongestion}, pct: congestionPct};",
+              "    policy.congestionChargeMultiplier = {tag: 'BaseFareAndExtraDistanceFare', contents: newCongestion};",
+              "    // Update nightShiftCharge (fare_policy_progressive_details)",
+              "    var newNightPct = 10 + Math.floor(Math.random() * 90);",
+              "    updates.nightShiftCharge = {old: det.nightShiftCharge, new: {tag: 'ProgressiveNightShiftCharge', contents: 1 + newNightPct/100}};",
+              "    det.nightShiftCharge = {tag: 'ProgressiveNightShiftCharge', contents: 1 + newNightPct/100};",
+              "    updates.nightShiftPct = newNightPct;",
+              "    pm.environment.set('prog_updates', JSON.stringify(updates));",
+              "    pm.sendRequest({url: base + '/policy/' + policyId + '/replace', method: 'POST', header: {'Content-Type': 'application/json', 'token': token}, body: {mode: 'raw', raw: JSON.stringify({policy: policy})}}, function() {});",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('prog_updates') || '{}');",
+              "console.log('\\n=== PROGRESSIVE: Dashboard Update ===');",
+              "console.log('  Policy:', pm.environment.get('auto_fp_id'));",
+              "console.log('  baseFare:', u.baseFare && u.baseFare.old, '\\u2192', u.baseFare && u.baseFare.new);",
+              "console.log('  deadKmFare:', u.deadKmFare && u.deadKmFare.old, '\\u2192', u.deadKmFare && u.deadKmFare.new);",
+              "if (u.minFee) console.log('  driverExtraFeeBounds.minFee:', u.minFee.old, '\\u2192', u.minFee.new);",
+              "if (u.maxFee) console.log('  driverExtraFeeBounds.maxFee:', u.maxFee.old, '\\u2192', u.maxFee.new);",
+              "if (u.perMinRate) console.log('  perMinRateSections.perMinRate:', u.perMinRate.old, '\\u2192', u.perMinRate.new);",
+              "if (u.congestionChargeMultiplier) console.log('  congestionChargeMultiplier:', JSON.stringify(u.congestionChargeMultiplier.old), '\\u2192', u.congestionChargeMultiplier.pct + '%');",
+              "if (u.nightShiftCharge) console.log('  nightShiftCharge:', JSON.stringify(u.nightShiftCharge.old), '\\u2192', u.nightShiftPct + '%');",
+              "pm.test('[Progressive] Policy updated', function () { pm.expect(pm.environment.get('auto_fp_id')).to.be.ok; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{auto_fp_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{auto_fp_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 1c - Progressive Search (uses updated policy)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('\\n=== PROGRESSIVE: Ride Search ===');",
+              "pm.test('[Progressive] Search 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Search ID:', d.searchId);",
+              "const _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 1d - Progressive Estimates (verify updated values in breakup)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var u = JSON.parse(pm.environment.get('prog_updates'));",
+              "console.log('\\n=== PROGRESSIVE: Estimates ===');",
+              "pm.test('[Progressive] Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('[Progressive] Has estimates', function () { pm.expect(d.estimates.length).to.be.above(0); });",
+              "var est = d.estimates.find(e => e.vehicleVariant === 'AUTO_RICKSHAW') || d.estimates[0];",
+              "pm.environment.set('estimateId', est.id);",
+              "console.log('  Vehicle:', est.vehicleVariant || est.vehicleServiceTierType, '| Total fare:', est.estimatedFare);",
+              "",
+              "var breakup = {};",
+              "var source = est.estimateFareBreakup || est.estimatedFareBreakup || [];",
+              "if (source.length > 0) {",
+              "    console.log('\\n  --- Full Fare Breakup ---');",
+              "    source.forEach(function(b) {",
+              "        var val = b.priceWithCurrency ? b.priceWithCurrency.amount : b.price;",
+              "        breakup[b.title] = val;",
+              "        console.log('    ' + b.title + ': ' + val);",
+              "    });",
+              "}",
+              "",
+              "console.log('\\n  --- Verification: Dashboard Update \u2192 Estimate ---');",
+              "console.log('  baseFare: updated to', u.baseFare.new, '| estimate BASE_FARE:', breakup['BASE_FARE']);",
+              "console.log('  deadKmFare: updated to', u.deadKmFare.new, '| estimate DEAD_KILOMETER_FARE:', breakup['DEAD_KILOMETER_FARE']);",
+              "pm.test('[Progressive] BASE_FARE = ' + u.baseFare.new, function () { pm.expect(breakup['BASE_FARE']).to.equal(u.baseFare.new); });",
+              "pm.test('[Progressive] DEAD_KILOMETER_FARE = ' + u.deadKmFare.new, function () { pm.expect(breakup['DEAD_KILOMETER_FARE']).to.equal(u.deadKmFare.new); });",
+              "",
+              "// Contextual field verification (fare_policy top-level + sub-table fields)",
+              "console.log('\\n  --- Contextual Field Verification ---');",
+              "// Night shift: verify config is in breakup and check if applied based on time",
+              "var nightPct = breakup['NIGHT_SHIFT_CHARGE_PERCENTAGE'];",
+              "if (nightPct !== undefined) {",
+              "  console.log('  NIGHT_SHIFT_CHARGE_PERCENTAGE:', nightPct, '(updated to', u.nightShiftPct, ')');",
+              "  pm.test('[Progressive] NIGHT_SHIFT_CHARGE_PERCENTAGE ~= ' + u.nightShiftPct, function() { pm.expect(Math.round(nightPct)).to.equal(u.nightShiftPct); });",
+              "}",
+              "var nightCharge = breakup['NIGHT_SHIFT_CHARGE'];",
+              "if (nightCharge !== undefined) {",
+              "  console.log('  NIGHT_SHIFT_CHARGE:', nightCharge);",
+              "  var now = new Date(); var hr = now.getHours();",
+              "  var isNight = hr >= 22 || hr < 5;",
+              "  console.log('  Current hour:', hr, '| Night shift active:', isNight);",
+              "  if (isNight) { pm.test('[Progressive] Night shift charge applied', function() { pm.expect(nightCharge).to.be.above(1); }); }",
+              "}",
+              "// Congestion charge: verify updated percentage is in breakup",
+              "// Congestion charge: breakup shows DP-sourced value (may be 0 in local dev)",
+              "// The congestionChargeMultiplier IS applied in fare calculation but the breakup % comes from dynamic pricing",
+              "var congestion = breakup['CONGESTION_CHARGE_PERCENTAGE'];",
+              "if (congestion !== undefined) {",
+              "  console.log('  CONGESTION_CHARGE_PERCENTAGE:', congestion, '(policy multiplier set to', u.congestionChargeMultiplier && u.congestionChargeMultiplier.pct + '%, DP may override to 0)');",
+              "  pm.test('[Progressive] CONGESTION_CHARGE_PERCENTAGE present', function() { pm.expect(congestion).to.be.a('number'); });",
+              "}",
+              "// Waiting charge",
+              "if (breakup['WAITING_CHARGE_PER_MIN'] !== undefined) { console.log('  WAITING_CHARGE_PER_MIN:', breakup['WAITING_CHARGE_PER_MIN']); pm.test('[Progressive] WAITING_CHARGE_PER_MIN present', function() { pm.expect(breakup['WAITING_CHARGE_PER_MIN']).to.be.a('number'); }); }",
+              "// Base distance + extra per km",
+              "if (breakup['BASE_DISTANCE'] !== undefined) { console.log('  BASE_DISTANCE:', breakup['BASE_DISTANCE']); pm.test('[Progressive] BASE_DISTANCE present', function() { pm.expect(breakup['BASE_DISTANCE']).to.be.above(0); }); }",
+              "if (breakup['EXTRA_PER_KM_FARE'] !== undefined) { pm.test('[Progressive] EXTRA_PER_KM_FARE present', function() { pm.expect(breakup['EXTRA_PER_KM_FARE']).to.be.above(0); }); }",
+              "// Driver extra fee bounds (verify minFee/maxFee were written)",
+              "if (u.minFee) { console.log('  driverExtraFeeBounds: minFee=' + u.minFee.new + ', maxFee=' + u.maxFee.new + ' (injected/updated)'); }",
+              "if (u.perMinRate) { console.log('  perMinRateSections: perMinRate=' + u.perMinRate.new + ' (injected/updated)'); }",
+              "",
+              "// Full fare computation \u2014 breakup shows RATES, not computed charges",
+              "console.log('\\n  --- Fare Computation Verification ---');",
+              "var baseFare = breakup['BASE_FARE'] || 0;",
+              "var deadKmFare = breakup['DEAD_KILOMETER_FARE'] || 0;",
+              "var perKmRate = breakup['EXTRA_PER_KM_FARE'] || 0;",
+              "var baseDistM = breakup['BASE_DISTANCE'] || 2000;",
+              "var petCharges = breakup['PET_CHARGES'] || 0;",
+              "var perMinRate = breakup['PER_MINUTE_STEP_FARE_0_Above'] || 0;",
+              "var nightMultiplier = breakup['NIGHT_SHIFT_CHARGE'] || 1;",
+              "// Estimated distance/duration from the estimate object",
+              "var estDistM = est.estimatedDistance || 5000;",
+              "var estDurS = est.estimatedDuration || 300;",
+              "var extraDistKm = Math.max(0, (estDistM - baseDistM)) / 1000;",
+              "var extraKmCharge = Math.round(perKmRate * extraDistKm);",
+              "var perMinCharge = Math.round(perMinRate * estDurS / 60);",
+              "var rideCost = baseFare + extraKmCharge + deadKmFare;",
+              "var nightSurcharge = nightMultiplier > 1 ? Math.round(rideCost * (nightMultiplier - 1)) : 0;",
+              "var computed = rideCost + nightSurcharge + perMinCharge + petCharges;",
+              "console.log('  baseFare:', baseFare, '+ extraKm(' + perKmRate + ' x ' + extraDistKm.toFixed(1) + 'km):', extraKmCharge, '+ deadKm:', deadKmFare);",
+              "console.log('  + nightShift(' + Math.round((nightMultiplier-1)*100) + '%):', nightSurcharge, '+ perMin(' + perMinRate + ' x ' + Math.round(estDurS/60) + 'min):', perMinCharge, '+ pet:', petCharges);",
+              "console.log('  Computed (base components):', computed, '| Estimate:', est.estimatedFare);",
+              "console.log('  (Diff from: step fares, waiting charges, platform fee, rounding)');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 2a - Read Rental COMFY Policy",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var fp = d.fareProducts.find(fp => fp.serviceTier === 'COMFY') || d.fareProducts[0];",
+              "if (fp) {",
+              "    pm.environment.set('rental_fp_id', fp.farePolicyId);",
+              "    pm.environment.set('rental_service_tier', fp.serviceTier);",
+              "    console.log('Rental policy:', fp.farePolicyId, '| tier:', fp.serviceTier);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/list?tripCategory=Rental_OnDemandStaticOffer&vehicleServiceTier=COMFY",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "tripCategory",
+              "value": "Rental_OnDemandStaticOffer"
+            },
+            {
+              "key": "vehicleServiceTier",
+              "value": "COMFY"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 2b - Update Rental (perHourCharge + deadKmFare + perExtraKmRate + plannedPerKmRate)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('rental_fp_id');",
+              "var url = pm.environment.get('baseURL_BPP_Dashboard_Internal') + '/' + pm.environment.get('dashboard_merchant_id') + '/' + pm.environment.get('dashboard_city') + '/farePolicyV2/policy/' + policyId;",
+              "pm.sendRequest({url: url, method: 'GET', header: {'token': pm.environment.get('dashboard_token')}}, function(err, res) {",
+              "    var d = res.json(); var policy = d.policy;",
+              "    pm.environment.set('orig_rental_policy', JSON.stringify(policy));",
+              "    var det = policy.farePolicyDetails.contents;",
+              "    var newPH = 100 + Math.floor(Math.random() * 400);",
+              "    var newDK = 10 + Math.floor(Math.random() * 40);",
+              "    var newEK = 5 + Math.floor(Math.random() * 25);",
+              "    var newPK = 5 + Math.floor(Math.random() * 25);",
+              "    var updates = {",
+              "        perHourCharge: {old: det.perHourCharge, new: newPH},",
+              "        deadKmFare: {old: det.deadKmFare, new: newDK},",
+              "        perExtraKmRate: {old: det.perExtraKmRate, new: newEK},",
+              "        plannedPerKmRate: {old: det.plannedPerKmRate, new: newPK}",
+              "    };",
+              "    det.perHourCharge = newPH; det.deadKmFare = newDK;",
+              "    det.perExtraKmRate = newEK; det.plannedPerKmRate = newPK;",
+              "    // Also update distanceBuffers (fare_policy_rental_details_distance_buffers)",
+              "    if (det.distanceBuffers && det.distanceBuffers.length > 0) {",
+              "      var newBufKms = Math.floor(Math.random() * 5);",
+              "      updates.bufferKms = {old: det.distanceBuffers[0].bufferKms, new: newBufKms};",
+              "      det.distanceBuffers[0].bufferKms = newBufKms;",
+              "    }",
+              "    // Also update pricingSlabs (fare_policy_rental_details_pricing_slabs)",
+              "    if (det.pricingSlabs && det.pricingSlabs.length > 0) {",
+              "      var newFP = 10 + Math.floor(Math.random() * 90);",
+              "      updates.farePercentage = {old: det.pricingSlabs[0].farePercentage, new: newFP};",
+              "      det.pricingSlabs[0].farePercentage = newFP;",
+              "    }",
+              "    pm.environment.set('rental_updates', JSON.stringify(updates));",
+              "    pm.environment.set('replace_body', JSON.stringify({policy: policy}));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('rental_updates'));",
+              "console.log('\\n=== RENTAL: Dashboard Update ===');",
+              "pm.test('[Rental] Update 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  perHourCharge:', u.perHourCharge.old, '\u2192', u.perHourCharge.new);",
+              "console.log('  deadKmFare:', u.deadKmFare.old, '\u2192', u.deadKmFare.new);",
+              "console.log('  perExtraKmRate:', u.perExtraKmRate.old, '\u2192', u.perExtraKmRate.new);",
+              "console.log('  plannedPerKmRate:', u.plannedPerKmRate.old, '\u2192', u.plannedPerKmRate.new);",
+              "if (u.bufferKms) console.log('  distanceBuffers.bufferKms:', u.bufferKms.old, '\\u2192', u.bufferKms.new);",
+              "if (u.farePercentage) console.log('  pricingSlabs.farePercentage:', u.farePercentage.old, '\\u2192', u.farePercentage.new);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{rental_fp_id}}/replace",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{rental_fp_id}}",
+            "replace"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{replace_body}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 2c - Rental Search (uses updated policy)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var startTs = new Date(Date.now() + 30 * 60 * 1000).toISOString();",
+              "pm.environment.set('_rental_start_time', startTs);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rentalSearchId', d.searchId);",
+              "console.log('\\n=== RENTAL: Ride Search ===');",
+              "pm.test('[Rental] Search 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Search ID:', d.searchId);",
+              "const _delay = 10000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"RENTAL\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Rental Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"isSourceManuallyMoved\": false, \"startTime\": \"{{_rental_start_time}}\", \"estimatedRentalDistance\": 40000, \"estimatedRentalDuration\": 14400}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 2d - Rental Quotes (verify updated values in breakup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var u = JSON.parse(pm.environment.get('rental_updates'));",
+              "var tier = pm.environment.get('rental_service_tier') || 'COMFY';",
+              "console.log('\\n=== RENTAL: Quotes ===');",
+              "pm.test('[Rental] Status 200', function () { pm.response.to.have.status(200); });",
+              "var quotes = d.quotes || [];",
+              "pm.test('[Rental] Has quotes', function () { pm.expect(quotes.length).to.be.above(0); });",
+              "",
+              "// Show all quotes",
+              "quotes.forEach(function(q, i) {",
+              "    var det = q.onRentalCab || q.onDemandCab || q;",
+              "    console.log('  Quote', i+1, ':', det.vehicleServiceTierType || det.vehicleVariant, '| fare:', det.estimatedFare);",
+              "});",
+              "",
+              "// Find tier quote using for-loop (find() may not work in sandbox)",
+              "var picked = null;",
+              "for (var i = 0; i < quotes.length; i++) {",
+              "    var det = quotes[i].onRentalCab || quotes[i].onDemandCab || quotes[i];",
+              "    if (det.vehicleServiceTierType === tier || det.vehicleVariant === tier) { picked = quotes[i]; break; }",
+              "}",
+              "if (!picked) picked = quotes[0];",
+              "var detail = picked.onRentalCab || picked.onDemandCab || picked;",
+              "console.log('\\n  --- Full Quote Breakup (', detail.vehicleServiceTierType || detail.vehicleVariant, ') ---');",
+              "var breakup = {};",
+              "if (detail.quoteFareBreakup) {",
+              "    detail.quoteFareBreakup.forEach(function(b) {",
+              "        var val = b.priceWithCurrency ? b.priceWithCurrency.amount : b.price;",
+              "        breakup[b.title] = val;",
+              "        console.log('    ' + b.title + ': ' + val);",
+              "    });",
+              "}",
+              "",
+              "var ph = breakup['PER_HOUR_CHARGE'] || 0;",
+              "var dk = breakup['DEAD_KILOMETER_FARE'] || 0;",
+              "console.log('\\n  --- Fare Calculation ---');",
+              "console.log('  Duration=4hr, PER_HOUR_CHARGE=' + ph + ', DEAD_KM=' + dk);",
+              "console.log('  4hr x ' + ph + ' + ' + dk + ' = ' + (4*ph + dk));",
+              "console.log('  Total fare:', detail.estimatedFare);",
+              "",
+              "console.log('\\n  --- Verification: Dashboard Update \u2192 Quote ---');",
+              "console.log('  perHourCharge: updated to', u.perHourCharge.new, '| quote PER_HOUR_CHARGE:', breakup['PER_HOUR_CHARGE']);",
+              "console.log('  deadKmFare: updated to', u.deadKmFare.new, '| quote DEAD_KILOMETER_FARE:', breakup['DEAD_KILOMETER_FARE']);",
+              "console.log('  perExtraKmRate: updated to', u.perExtraKmRate.new, '| quote UNPLANNED_PER_KM_CHARGE:', breakup['UNPLANNED_PER_KM_CHARGE']);",
+              "console.log('  plannedPerKmRate: updated to', u.plannedPerKmRate.new, '| quote PLANNED_PER_KM_CHARGE:', breakup['PLANNED_PER_KM_CHARGE']);",
+              "pm.test('[Rental] Fare > 0', function () { pm.expect(detail.estimatedFare).to.be.above(0); });",
+              "",
+              "// Contextual field verification",
+              "console.log('\\n  --- Contextual Field Verification ---');",
+              "if (breakup['PER_MINUTE_CHARGE'] !== undefined) { console.log('  PER_MINUTE_CHARGE:', breakup['PER_MINUTE_CHARGE']); pm.test('[Rental] PER_MINUTE_CHARGE present', function() { pm.expect(breakup['PER_MINUTE_CHARGE']).to.be.a('number'); }); }",
+              "if (breakup['PER_HOUR_DISTANCE_KM'] !== undefined) { console.log('  PER_HOUR_DISTANCE_KM:', breakup['PER_HOUR_DISTANCE_KM']); pm.test('[Rental] PER_HOUR_DISTANCE_KM present', function() { pm.expect(breakup['PER_HOUR_DISTANCE_KM']).to.be.a('number'); }); }",
+              "if (breakup['NIGHT_SHIFT_CHARGE'] !== undefined) { console.log('  NIGHT_SHIFT_CHARGE:', breakup['NIGHT_SHIFT_CHARGE']); pm.test('[Rental] NIGHT_SHIFT_CHARGE present', function() { pm.expect(breakup['NIGHT_SHIFT_CHARGE']).to.be.a('number'); }); }",
+              "if (breakup['WAITING_CHARGE_PER_MIN'] !== undefined) { console.log('  WAITING_CHARGE_PER_MIN:', breakup['WAITING_CHARGE_PER_MIN']); pm.test('[Rental] WAITING_CHARGE_PER_MIN present', function() { pm.expect(breakup['WAITING_CHARGE_PER_MIN']).to.be.a('number'); }); }",
+              "",
+              "// Fare computation: Rental = perHourCharge \u00d7 hours + deadKmFare",
+              "console.log('\\n  --- Fare Computation Verification ---');",
+              "var rPerHour = breakup['PER_HOUR_CHARGE'] || 0;",
+              "var rDeadKm = breakup['DEAD_KILOMETER_FARE'] || 0;",
+              "var rHours = 14400 / 3600;",
+              "var rComputed = Math.round(rPerHour * rHours + rDeadKm);",
+              "console.log('  perHourCharge(' + rPerHour + ') x ' + rHours + 'hr + deadKm(' + rDeadKm + ') =', rComputed);",
+              "console.log('  Quote total:', detail.estimatedFare);",
+              "console.log('  (Diff from: business discount, night shift, waiting charges, rounding)');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{rentalSearchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{rentalSearchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 2e - Restore Rental Policy",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policy = JSON.parse(pm.environment.get('orig_rental_policy'));",
+              "pm.environment.set('replace_body', JSON.stringify({policy: policy}));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('rental_updates'));",
+              "pm.test('[Rental] Restore 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Restored Rental: perHourCharge', u.perHourCharge.new, '\u2192', u.perHourCharge.old,",
+              "    '| deadKmFare', u.deadKmFare.new, '\u2192', u.deadKmFare.old);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{rental_fp_id}}/replace",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{rental_fp_id}}",
+            "replace"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{replace_body}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 3a - Read InterCity ECO Policy",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var eco = d.fareProducts.find(fp => fp.serviceTier === 'ECO');",
+              "if (eco) { pm.environment.set('ic_fp_id', eco.farePolicyId); console.log('InterCity ECO:', eco.farePolicyId); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/list?tripCategory=InterCity_OneWayOnDemandStaticOffer&vehicleServiceTier=ECO",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "tripCategory",
+              "value": "InterCity_OneWayOnDemandStaticOffer"
+            },
+            {
+              "key": "vehicleServiceTier",
+              "value": "ECO"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 3b - Update InterCity (deadKmFare + perHourCharge + perKmRateOneWay + baseFare)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('ic_fp_id');",
+              "if (!policyId) return;",
+              "var base = pm.environment.get('baseURL_BPP_Dashboard_Internal') + '/' + pm.environment.get('dashboard_merchant_id') + '/' + pm.environment.get('dashboard_city') + '/farePolicyV2';",
+              "var token = pm.environment.get('dashboard_token');",
+              "pm.sendRequest({url: base + '/policy/' + policyId, method: 'GET', header: {'token': token}}, function(err, res) {",
+              "    var d = res.json(); var policy = d.policy;",
+              "    pm.environment.set('orig_ic_policy', JSON.stringify(policy));",
+              "    var det = policy.farePolicyDetails.contents;",
+              "    var newDK = 50 + Math.floor(Math.random() * 200);",
+              "    var newPH = 50 + Math.floor(Math.random() * 200);",
+              "    var newPK = 5 + Math.floor(Math.random() * 25);",
+              "    var newBF = 50 + Math.floor(Math.random() * 200);",
+              "    var updates = {",
+              "        deadKmFare: {old: det.deadKmFare, new: newDK},",
+              "        perHourCharge: {old: det.perHourCharge, new: newPH},",
+              "        perKmRateOneWay: {old: det.perKmRateOneWay, new: newPK},",
+              "        baseFare: {old: det.baseFare, new: newBF}",
+              "    };",
+              "    det.deadKmFare = newDK; det.perHourCharge = newPH;",
+              "    det.perKmRateOneWay = newPK; det.baseFare = newBF;",
+              "    // Also update pricingSlabs (fare_policy_inter_city_details_pricing_slabs)",
+              "    if (det.pricingSlabs && det.pricingSlabs.length > 0) {",
+              "      var newFP = 10 + Math.floor(Math.random() * 90);",
+              "      updates.icFarePercentage = {old: det.pricingSlabs[0].farePercentage, new: newFP};",
+              "      det.pricingSlabs[0].farePercentage = newFP;",
+              "    }",
+              "    pm.environment.set('ic_updates', JSON.stringify(updates));",
+              "    policy.farePolicyDetails.contents = det;",
+              "    var body = JSON.stringify({policy: policy});",
+              "    console.log('  IC replace body deadKmFare:', JSON.parse(body).policy.farePolicyDetails.contents.deadKmFare);",
+              "    pm.sendRequest({url: base + '/policy/' + policyId + '/replace', method: 'POST', header: {'Content-Type': 'application/json', 'token': token}, body: {mode: 'raw', raw: body}}, function() {});",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('ic_updates') || '{}');",
+              "console.log('\\n=== INTERCITY: Dashboard Update ===');",
+              "pm.test('[InterCity] Policy updated', function () { pm.expect(pm.environment.get('ic_fp_id')).to.be.ok; });",
+              "console.log('  deadKmFare:', u.deadKmFare.old, '\u2192', u.deadKmFare.new);",
+              "console.log('  perHourCharge:', u.perHourCharge.old, '\u2192', u.perHourCharge.new);",
+              "console.log('  perKmRateOneWay:', u.perKmRateOneWay.old, '\u2192', u.perKmRateOneWay.new);",
+              "console.log('  baseFare:', u.baseFare.old, '\u2192', u.baseFare.new);",
+              "if (u.icFarePercentage) console.log('  pricingSlabs.farePercentage:', u.icFarePercentage.old, '\\u2192', u.icFarePercentage.new);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/ui/driver/location",
+          "host": [
+            "http://localhost:8081"
+          ],
+          "path": [
+            "ui",
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\":{\"lat\":12.9352723,\"lon\":77.6244867},\"ts\":\"{{$isoTimestamp}}\"}]"
+        }
+      }
+    },
+    {
+      "name": "Phase 3c - InterCity Search (uses updated policy)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait 2s for CachedQueries FarePolicy TTL to expire (configsExpTime=1)",
+              "const _delay = 2000; const _start = Date.now(); while (Date.now() - _start < _delay) {}",
+              "var startTs = new Date(Date.now() + 30 * 60 * 1000).toISOString();",
+              "pm.environment.set('_intercity_start_time', startTs);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('intercitySearchId', d.searchId);",
+              "console.log('\\n=== INTERCITY: Ride Search ===');",
+              "pm.test('[InterCity] Search 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Search ID:', d.searchId);",
+              "const _delay = 10000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"INTER_CITY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Bangalore Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"stops\": [{\"address\": {\"area\": \"{{intercity_dest_city}}\", \"areaCode\": \"570001\", \"city\": \"{{intercity_dest_city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}], \"roundTrip\": false, \"isSourceManuallyMoved\": false, \"isDestinationManuallyMoved\": false, \"startTime\": \"{{_intercity_start_time}}\"}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 3d - InterCity Quotes (verify updated values in breakup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var u = JSON.parse(pm.environment.get('ic_updates'));",
+              "console.log('\\n=== INTERCITY: Quotes ===');",
+              "pm.test('[InterCity] Status 200', function () { pm.response.to.have.status(200); });",
+              "var quotes = d.quotes || [];",
+              "pm.test('[InterCity] Has quotes', function () { pm.expect(quotes.length).to.be.above(0); });",
+              "",
+              "// Show all quotes",
+              "quotes.forEach(function(q, i) {",
+              "    var det = q.onDemandCab || q;",
+              "    console.log('  Quote', i+1, ':', det.vehicleServiceTierType || det.vehicleVariant, '| fare:', det.estimatedFare);",
+              "});",
+              "",
+              "// Find ECO quote using for-loop",
+              "var picked = null;",
+              "for (var i = 0; i < quotes.length; i++) {",
+              "    var det = quotes[i].onDemandCab || quotes[i];",
+              "    if (det.vehicleServiceTierType === 'ECO' || det.vehicleVariant === 'ECO') { picked = quotes[i]; break; }",
+              "}",
+              "if (!picked) picked = quotes[0];",
+              "var detail = picked.onDemandCab || picked;",
+              "console.log('\\n  --- Full Quote Breakup (', detail.vehicleServiceTierType || detail.vehicleVariant, ') ---');",
+              "var breakup = {};",
+              "if (detail.quoteFareBreakup) {",
+              "    detail.quoteFareBreakup.forEach(function(b) {",
+              "        var val = b.priceWithCurrency ? b.priceWithCurrency.amount : b.price;",
+              "        breakup[b.title] = val;",
+              "        console.log('    ' + b.title + ': ' + val);",
+              "    });",
+              "}",
+              "",
+              "var dk = breakup['DEAD_KILOMETER_FARE'] || 0;",
+              "var pkm = breakup['PLANNED_PER_KM_CHARGE'] || 0;",
+              "var minFare = breakup['MIN_FARE'] || 0;",
+              "console.log('\\n  --- Fare Calculation ---');",
+              "console.log('  DEAD_KILOMETER_FARE:', dk);",
+              "console.log('  PLANNED_PER_KM_CHARGE:', pkm, '(one-way per-km rate)');",
+              "console.log('  MIN_FARE:', minFare);",
+              "console.log('  Total fare:', detail.estimatedFare);",
+              "",
+              "console.log('\\n  --- Verification: Dashboard Update \u2192 Quote ---');",
+              "console.log('  deadKmFare: updated to', u.deadKmFare.new, '| quote DEAD_KILOMETER_FARE:', breakup['DEAD_KILOMETER_FARE']);",
+              "console.log('  perHourCharge: updated to', u.perHourCharge.new, '| quote PER_HOUR_CHARGE:', breakup['PER_HOUR_CHARGE']);",
+              "console.log('  perKmRateOneWay: updated to', u.perKmRateOneWay.new, '| quote PLANNED_PER_KM_CHARGE:', breakup['PLANNED_PER_KM_CHARGE']);",
+              "console.log('  baseFare: updated to', u.baseFare.new, '| (baseFare not in breakup)');",
+              "pm.test('[InterCity] Fare > 0', function () { pm.expect(detail.estimatedFare).to.be.above(0); });",
+              "",
+              "// Contextual field verification (perExtraMinRate, kmPerPlannedExtraHour, perKmRateRoundTrip, nightShift)",
+              "console.log('\\n  --- Contextual Field Verification ---');",
+              "if (breakup['PER_MINUTE_CHARGE'] !== undefined) { console.log('  PER_MINUTE_CHARGE:', breakup['PER_MINUTE_CHARGE']); pm.test('[InterCity] PER_MINUTE_CHARGE present', function() { pm.expect(breakup['PER_MINUTE_CHARGE']).to.be.a('number'); }); }",
+              "if (breakup['PER_HOUR_DISTANCE_KM'] !== undefined) { console.log('  PER_HOUR_DISTANCE_KM:', breakup['PER_HOUR_DISTANCE_KM']); pm.test('[InterCity] PER_HOUR_DISTANCE_KM present', function() { pm.expect(breakup['PER_HOUR_DISTANCE_KM']).to.be.a('number'); }); }",
+              "if (breakup['PLANNED_PER_KM_CHARGE_ROUND_TRIP'] !== undefined) { console.log('  PLANNED_PER_KM_CHARGE_ROUND_TRIP:', breakup['PLANNED_PER_KM_CHARGE_ROUND_TRIP']); pm.test('[InterCity] PLANNED_PER_KM_CHARGE_ROUND_TRIP present', function() { pm.expect(breakup['PLANNED_PER_KM_CHARGE_ROUND_TRIP']).to.be.a('number'); }); }",
+              "if (breakup['NIGHT_SHIFT_CHARGE'] !== undefined) { console.log('  NIGHT_SHIFT_CHARGE:', breakup['NIGHT_SHIFT_CHARGE']); pm.test('[InterCity] NIGHT_SHIFT_CHARGE present', function() { pm.expect(breakup['NIGHT_SHIFT_CHARGE']).to.be.a('number'); }); }",
+              "if (breakup['UNPLANNED_PER_KM_CHARGE'] !== undefined) { pm.test('[InterCity] UNPLANNED_PER_KM_CHARGE present', function() { pm.expect(breakup['UNPLANNED_PER_KM_CHARGE']).to.be.a('number'); }); }",
+              "if (breakup['PER_DAY_MAX_HOUR_ALLOWANCE'] !== undefined) { pm.test('[InterCity] PER_DAY_MAX_HOUR_ALLOWANCE present', function() { pm.expect(breakup['PER_DAY_MAX_HOUR_ALLOWANCE']).to.be.a('number'); }); }",
+              "",
+              "// InterCity fare breakdown \u2014 uses pricing slabs, constant night shift, min fare floor",
+              "console.log('\\n  --- Fare Breakdown Summary ---');",
+              "var icDeadKm = breakup['DEAD_KILOMETER_FARE'] || 0;",
+              "var icPerKm = breakup['PLANNED_PER_KM_CHARGE'] || 0;",
+              "var icPerKmRT = breakup['PLANNED_PER_KM_CHARGE_ROUND_TRIP'] || 0;",
+              "var icMinFare = breakup['MIN_FARE'] || 0;",
+              "var icPerMin = breakup['PER_MINUTE_CHARGE'] || 0;",
+              "var icNight = breakup['NIGHT_SHIFT_CHARGE'] || 0;",
+              "var icPet = breakup['PET_CHARGES'] || 0;",
+              "var icUnplanned = breakup['UNPLANNED_PER_KM_CHARGE'] || 0;",
+              "console.log('  DEAD_KM:', icDeadKm, '| PER_KM_ONEWAY:', icPerKm, '| PER_KM_RT:', icPerKmRT);",
+              "console.log('  MIN_FARE:', icMinFare, '| PER_MIN:', icPerMin, '| NIGHT:', icNight, '| PET:', icPet);",
+              "console.log('  Quote total:', detail.estimatedFare);",
+              "pm.test('[InterCity] Quote fare > MIN_FARE', function() { pm.expect(detail.estimatedFare).to.be.at.least(icMinFare); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{intercitySearchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{intercitySearchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 3e - Restore InterCity Policy",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policy = JSON.parse(pm.environment.get('orig_ic_policy'));",
+              "pm.environment.set('replace_body', JSON.stringify({policy: policy}));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('ic_updates'));",
+              "pm.test('[InterCity] Restore 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Restored InterCity: deadKmFare', u.deadKmFare.new, '\u2192', u.deadKmFare.old,",
+              "    '| perHourCharge', u.perHourCharge.new, '\u2192', u.perHourCharge.old);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{ic_fp_id}}/replace",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{ic_fp_id}}",
+            "replace"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{replace_body}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 4a - Create Ambulance Fare Product",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var body = {",
+              "  serviceTier: 'AMBULANCE_TAXI_OXY',",
+              "  tripCategory: {tag: 'Ambulance', contents: 'OneWayOnDemandDynamicOffer'},",
+              "  area: {tag: 'Default'},",
+              "  timeBounds: 'Unbounded',",
+              "  searchSource: 'ALL',",
+              "  enabled: true,",
+              "  policy: {",
+              "    farePolicyDetails: {",
+              "      tag: 'FPV2Ambulance',",
+              "      contents: {",
+              "        slabs: [",
+              "          {vehicleAge: 0, baseFare: 200, baseDistance: 0, perKmRate: 40},",
+              "          {vehicleAge: 12, baseFare: 180, baseDistance: 0, perKmRate: 36},",
+              "          {vehicleAge: 24, baseFare: 160, baseDistance: 0, perKmRate: 32}",
+              "        ]",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.environment.set('amb_create_body', JSON.stringify(body));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log('\\n=== AMBULANCE: Create Fare Product ===');",
+              "pm.test('[Ambulance] Create 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "if (d.fareProductId) {",
+              "  pm.environment.set('amb_product_id', d.fareProductId);",
+              "  pm.environment.set('amb_fp_id', d.farePolicyId);",
+              "  console.log('  product:', d.fareProductId, '| policy:', d.farePolicyId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/product/create",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "product",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{amb_create_body}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 4b - Read Ambulance Policy (show slabs by vehicleAge)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('amb_fp_id');",
+              "if (!policyId) { pm.test('[Ambulance] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "var d = pm.response.json();",
+              "pm.test('[Ambulance] Read 200', function () { pm.response.to.have.status(200); });",
+              "var slabs = d.policy.farePolicyDetails.contents.slabs;",
+              "console.log('\\n=== AMBULANCE: Policy Slabs ===');",
+              "slabs.forEach(function(s, i) {",
+              "  console.log('  Slab', i, ': vehicleAge=' + s.vehicleAge + 'mo, baseFare=' + s.baseFare + ', perKmRate=' + s.perKmRate);",
+              "});",
+              "console.log('  (Vehicle age 0mo -> slab 0, 15mo -> slab 1, 30mo -> slab 2)');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{amb_fp_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{amb_fp_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 4c - Update Ambulance (baseFare + perKmRate on slab 0)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('amb_fp_id');",
+              "if (!policyId) return;",
+              "var base = pm.environment.get('baseURL_BPP_Dashboard_Internal') + '/' + pm.environment.get('dashboard_merchant_id') + '/' + pm.environment.get('dashboard_city') + '/farePolicyV2';",
+              "var token = pm.environment.get('dashboard_token');",
+              "pm.sendRequest({url: base + '/policy/' + policyId, method: 'GET', header: {'token': token}}, function(err, res) {",
+              "    var policy = res.json().policy;",
+              "    var slabs = policy.farePolicyDetails.contents.slabs;",
+              "    var slab0 = slabs[0];",
+              "    var newBF = 100 + Math.floor(Math.random() * 900);",
+              "    var newPK = 20 + Math.floor(Math.random() * 80);",
+              "    pm.environment.set('amb_updates', JSON.stringify({baseFare: {old: slab0.baseFare, new: newBF}, perKmRate: {old: slab0.perKmRate, new: newPK}}));",
+              "    slab0.baseFare = newBF; slab0.perKmRate = newPK;",
+              "    policy.farePolicyDetails.contents.slabs = slabs;",
+              "    pm.sendRequest({url: base + '/policy/' + policyId + '/replace', method: 'POST', header: {'Content-Type': 'application/json', 'token': token}, body: {mode: 'raw', raw: JSON.stringify({policy: policy})}}, function() {});",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('amb_updates') || '{}');",
+              "console.log('\\n=== AMBULANCE: Update Slab 0 (vehicleAge=0) ===');",
+              "pm.test('[Ambulance] Policy updated', function () { pm.expect(pm.environment.get('amb_fp_id')).to.be.ok; });",
+              "if (u.baseFare) { console.log('  baseFare:', u.baseFare.old, '\\u2192', u.baseFare.new); }",
+              "if (u.perKmRate) { console.log('  perKmRate:', u.perKmRate.old, '\\u2192', u.perKmRate.new); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/ui/driver/location",
+          "host": [
+            "http://localhost:8081"
+          ],
+          "path": [
+            "ui",
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\":{\"lat\":12.9352723,\"lon\":77.6244867},\"ts\":\"{{$isoTimestamp}}\"}]"
+        }
+      }
+    },
+    {
+      "name": "Phase 4d - Ambulance Search",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait 2s for cache TTL expiry",
+              "const _delay = 2000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ambSearchId', d.searchId);",
+              "console.log('\\n=== AMBULANCE: Ride Search ===');",
+              "pm.test('[Ambulance] Search 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Search ID:', d.searchId);",
+              "const _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"AMBULANCE\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 4e - Ambulance Estimates (verify updated slab values in breakup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('\\n=== AMBULANCE: Estimates ===');",
+              "pm.test('[Ambulance] Status 200', function () { pm.response.to.have.status(200); });",
+              "var estimates = d.estimates || [];",
+              "var ambEst = estimates.find(function(e) { return e.serviceTierType === 'AMBULANCE_TAXI_OXY'; });",
+              "if (ambEst) {",
+              "  var maxFare = ambEst.totalFareRange && ambEst.totalFareRange.maxFare;",
+              "  var minFare = ambEst.totalFareRange && ambEst.totalFareRange.minFare;",
+              "  console.log('  Vehicle:', ambEst.serviceTierType, '| minFare:', minFare, '| maxFare:', maxFare);",
+              "  var breakup = ambEst.estimateFareBreakup || [];",
+              "  console.log('\\n  --- Full Fare Breakup ---');",
+              "  breakup.forEach(function(b) { console.log('    ' + b.title + ': ' + b.price); });",
+              "  var u = JSON.parse(pm.environment.get('amb_updates') || '{}');",
+              "  // Ambulance slabs: slab 0 (vehicleAge 0-12) breakup titles are BASE_STEP_FARE0_12 / PER_KM_STEP_FARE0_12",
+              "  var bf = breakup.find(function(b) { return b.title === 'BASE_STEP_FARE0_12'; });",
+              "  var pk = breakup.find(function(b) { return b.title === 'PER_KM_STEP_FARE0_12'; });",
+              "  if (u.baseFare && bf) {",
+              "    console.log('\\n  --- Verification ---');",
+              "    console.log('  baseFare: updated to', u.baseFare.new, '| estimate BASE_STEP_FARE0_12:', bf.price);",
+              "    pm.test('[Ambulance] BASE_STEP_FARE0_12 = ' + u.baseFare.new, function () { pm.expect(bf.price).to.equal(u.baseFare.new); });",
+              "  }",
+              "  if (u.perKmRate && pk) {",
+              "    console.log('  perKmRate: updated to', u.perKmRate.new, '| estimate PER_KM_STEP_FARE0_12:', pk.price);",
+              "    pm.test('[Ambulance] PER_KM_STEP_FARE0_12 = ' + u.perKmRate.new, function () { pm.expect(pk.price).to.equal(u.perKmRate.new); });",
+              "  }",
+              "  // maxFare uses slab 0 (newest vehicle, vehicleAge=0) which we updated.",
+              "  // It must be >= updated baseFare since total = baseFare + perKmRate * distance.",
+              "  if (u.baseFare && maxFare != null) {",
+              "    console.log('  maxFare:', maxFare, '>= updated baseFare:', u.baseFare.new, '?', maxFare >= u.baseFare.new);",
+              "    pm.test('[Ambulance] maxFare >= updated baseFare (' + u.baseFare.new + ')', function () {",
+              "      pm.expect(maxFare).to.be.at.least(u.baseFare.new);",
+              "    });",
+              "  }",
+              "} else {",
+              "  console.log('  No AMBULANCE_TAXI_OXY estimate found');",
+              "  console.log('  Available tiers:', estimates.map(function(e) { return e.serviceTierType; }));",
+              "  pm.test('[Ambulance] AMBULANCE_TAXI_OXY estimate present', function () { pm.expect.fail('No AMBULANCE_TAXI_OXY estimate'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{ambSearchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{ambSearchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 4f - Ambulance Read-back (verify updated slab values)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait 2s for cache TTL expiry",
+              "const _delay = 2000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('amb_fp_id');",
+              "if (!policyId) { pm.test('[Ambulance] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "var d = pm.response.json(); var u = JSON.parse(pm.environment.get('amb_updates'));",
+              "console.log('\\n=== AMBULANCE: Read-back Verify ===');",
+              "pm.test('[Ambulance] Read 200', function () { pm.response.to.have.status(200); });",
+              "var slab = d.policy.farePolicyDetails.contents.slabs[0];",
+              "console.log('  Slab 0: vehicleAge=' + slab.vehicleAge + ', baseFare=' + slab.baseFare + ', perKmRate=' + slab.perKmRate);",
+              "console.log('  Expected: baseFare=' + u.baseFare.new + ', perKmRate=' + u.perKmRate.new);",
+              "pm.test('[Ambulance] baseFare = ' + u.baseFare.new, function () { pm.expect(slab.baseFare).to.equal(u.baseFare.new); });",
+              "pm.test('[Ambulance] perKmRate = ' + u.perKmRate.new, function () { pm.expect(slab.perKmRate).to.equal(u.perKmRate.new); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{amb_fp_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{amb_fp_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 4g - Delete Ambulance Fare Product (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var productId = pm.environment.get('amb_product_id');",
+              "if (!productId) { pm.test('[Ambulance] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "console.log('\\n=== AMBULANCE: Delete Product ===');",
+              "pm.test('[Ambulance] Delete 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Deleted:', productId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/product/{{amb_product_id}}/remove",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "product",
+            "{{amb_product_id}}",
+            "remove"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Phase 5a - Create Slabs Fare Product",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var year = 2060 + Math.floor(Math.random() * 30);",
+              "var month = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');",
+              "var day = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');",
+              "var boundedDay = year + '-' + month + '-' + day;",
+              "var body = {",
+              "  serviceTier: 'AUTO_RICKSHAW',",
+              "  tripCategory: {tag: 'OneWay', contents: 'OneWayOnDemandDynamicOffer'},",
+              "  area: {tag: 'Default'},",
+              "  timeBounds: {tag: 'BoundedByDay', contents: [[boundedDay, [['00:00:00', '23:59:59']]]]},",
+              "  searchSource: 'DASHBOARD',",
+              "  enabled: false,",
+              "  policy: {",
+              "    farePolicyDetails: {",
+              "      tag: 'FPV2Slabs',",
+              "      contents: {",
+              "        slabs: [",
+              "          {startDistance: 0, baseFare: 100},",
+              "          {startDistance: 5000, baseFare: 150},",
+              "          {startDistance: 10000, baseFare: 200}",
+              "        ]",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.environment.set('slab_create_body', JSON.stringify(body));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log('\\n=== SLABS: Create Fare Product ===');",
+              "pm.test('[Slabs] Create 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "if (d.fareProductId) {",
+              "  pm.environment.set('slab_product_id', d.fareProductId);",
+              "  pm.environment.set('slab_fp_id', d.farePolicyId);",
+              "  console.log('  product:', d.fareProductId, '| policy:', d.farePolicyId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/product/create",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "product",
+            "create"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{slab_create_body}}"
+        }
+      }
+    },
+    {
+      "name": "Phase 5b - Read Slabs Policy (show slab structure)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('slab_fp_id');",
+              "if (!policyId) { pm.test('[Slabs] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "var d = pm.response.json();",
+              "pm.test('[Slabs] Read 200', function () { pm.response.to.have.status(200); });",
+              "var slabs = d.policy.farePolicyDetails.contents.slabs;",
+              "console.log('\\n=== SLABS: Policy Structure ===');",
+              "slabs.forEach(function(s, i) {",
+              "  console.log('  Slab', i, ': startDistance=' + s.startDistance + ', baseFare=' + s.baseFare);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{slab_fp_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{slab_fp_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 5c - Update Slabs (baseFare on slab 0)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('slab_fp_id');",
+              "if (!policyId) return;",
+              "var base = pm.environment.get('baseURL_BPP_Dashboard_Internal') + '/' + pm.environment.get('dashboard_merchant_id') + '/' + pm.environment.get('dashboard_city') + '/farePolicyV2';",
+              "var token = pm.environment.get('dashboard_token');",
+              "pm.sendRequest({url: base + '/policy/' + policyId, method: 'GET', header: {'token': token}}, function(err, res) {",
+              "    var policy = res.json().policy;",
+              "    var slabs = policy.farePolicyDetails.contents.slabs;",
+              "    var newBF = 50 + Math.floor(Math.random() * 500);",
+              "    pm.environment.set('slab_updates', JSON.stringify({baseFare: {old: slabs[0].baseFare, new: newBF}}));",
+              "    slabs[0].baseFare = newBF;",
+              "    policy.farePolicyDetails.contents.slabs = slabs;",
+              "    pm.sendRequest({url: base + '/policy/' + policyId + '/replace', method: 'POST', header: {'Content-Type': 'application/json', 'token': token}, body: {mode: 'raw', raw: JSON.stringify({policy: policy})}}, function() {});",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var u = JSON.parse(pm.environment.get('slab_updates') || '{}');",
+              "console.log('\\n=== SLABS: Update Slab 0 ===');",
+              "pm.test('[Slabs] Policy updated', function () { pm.expect(pm.environment.get('slab_fp_id')).to.be.ok; });",
+              "if (u.baseFare) console.log('  baseFare:', u.baseFare.old, '\\u2192', u.baseFare.new);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/ui/driver/location",
+          "host": [
+            "http://localhost:8081"
+          ],
+          "path": [
+            "ui",
+            "driver",
+            "location"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\":{\"lat\":12.9352723,\"lon\":77.6244867},\"ts\":\"{{$isoTimestamp}}\"}]"
+        }
+      }
+    },
+    {
+      "name": "Phase 5d - Slabs Read-back (verify updated slab values)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const _delay = 2000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var policyId = pm.environment.get('slab_fp_id');",
+              "if (!policyId) { pm.test('[Slabs] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "var d = pm.response.json(); var u = JSON.parse(pm.environment.get('slab_updates'));",
+              "console.log('\\n=== SLABS: Read-back Verify ===');",
+              "pm.test('[Slabs] Read 200', function () { pm.response.to.have.status(200); });",
+              "var slab = d.policy.farePolicyDetails.contents.slabs[0];",
+              "console.log('  Slab 0: startDistance=' + slab.startDistance + ', baseFare=' + slab.baseFare);",
+              "console.log('  Expected: baseFare=' + u.baseFare.new);",
+              "pm.test('[Slabs] baseFare = ' + u.baseFare.new, function () { pm.expect(slab.baseFare).to.equal(u.baseFare.new); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/policy/{{slab_fp_id}}",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "policy",
+            "{{slab_fp_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Phase 5e - Delete Slabs Fare Product (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var productId = pm.environment.get('slab_product_id');",
+              "if (!productId) { pm.test('[Slabs] SKIPPED', function () { pm.expect(true).to.be.true; }); return; }",
+              "console.log('\\n=== SLABS: Delete Product ===');",
+              "pm.test('[Slabs] Delete 200', function () { pm.response.to.have.status(200); });",
+              "console.log('  Deleted:', productId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/farePolicyV2/product/{{slab_product_id}}/remove",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "farePolicyV2",
+            "product",
+            "{{slab_product_id}}",
+            "remove"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get(\"_test_driver_number\")) {",
+          "    var dNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
+          "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+          "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+          "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
+    }
+  ]
+}

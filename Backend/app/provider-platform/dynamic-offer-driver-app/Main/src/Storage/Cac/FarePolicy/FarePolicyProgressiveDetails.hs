@@ -23,10 +23,11 @@ import Kernel.Prelude as KP
 import Kernel.Types.App
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
+import qualified SharedLogic.FarePolicy.Conversions as DFP
+import qualified Storage.Beam.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as CQueriesFPPDP
 import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as CQueriesFPPDPM
-import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails (fromTTypeFarePolicyProgressiveDetails)
+import Storage.Queries.FarePolicyProgressiveDetailsExtra (fromTTypeFarePolicyProgressiveDetails)
 import Utils.Common.CacUtils
 
 getFPProgressiveDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m (Maybe DFP.FullFarePolicyProgressiveDetails)

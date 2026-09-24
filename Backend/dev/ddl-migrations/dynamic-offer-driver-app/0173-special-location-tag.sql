@@ -1,7 +1,8 @@
+-- NOTE: dont need to run these queries
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD column special_location_tag text;
 ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone ADD column "area" text;
---ALTER TABLE atlas_driver_offer_bpp.booking ADD column "area" text;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD column "description" text;
+--ALTER TABLE atlas_driver_offer_bpp.booking ADD column IF NOT EXISTS "area" text;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD column IF NOT EXISTS "description" text;
 CREATE TABLE atlas_driver_offer_bpp.special_location_priority (
   id character(36) NOT NULL PRIMARY KEY,
   merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id),
@@ -23,5 +24,6 @@ CREATE TEMPORARY TABLE pickup_drop_table (
 ------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------DROP------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP column vehicle_variant;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP column merchant_id;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP column IF EXISTS vehicle_variant;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP column IF EXISTS merchant_id;-- NOTE: dont need to run these queries
+-- NOTE: dont need to run these queries

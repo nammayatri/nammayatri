@@ -40,7 +40,6 @@ import qualified BecknV2.OnDemand.Utils.Context as CU
 import Domain.Types.Beckn.Status as DStatus
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -50,6 +49,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildOnStatusMessage ::

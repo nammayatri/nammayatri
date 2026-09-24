@@ -1,35 +1,69 @@
+-- NOTE: dont need to run these queries
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_min_extra_fee DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_max_extra_fee DROP NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN fare_policy_type DROP NOT NULL;
 
-CREATE TABLE atlas_driver_offer_bpp.fare_parameters_progressive_details (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_parameters_progressive_details (
   fare_parameters_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_driver_offer_bpp.fare_parameters(id),
   dead_km_fare integer NOT NULL,
   extra_km_fare integer
 );
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters_progressive_details OWNER TO atlas_driver_offer_bpp_user;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters_progressive_details OWNER TO atlas_driver_offer_bpp_user;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN fare_parameters_type character varying(50);
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_parameters_type SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS fare_parameters_type character varying(50);
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_parameters_type SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN govt_charges integer;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN waiting_charge integer;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN night_shift_charge integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS govt_charges integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS waiting_charge integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS night_shift_charge integer;
+DO $$ BEGIN
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN dead_km_fare DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN extra_km_fare DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN night_shift_rate DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN night_coef_included DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN waiting_charge_per_min DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN waiting_or_pickup_charges DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_policy_type DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN govt_charges_perc DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN extra_km_fare DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN night_shift_rate DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN night_coef_included DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN waiting_charge_per_min DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN waiting_or_pickup_charges DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN fare_policy_type DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_parameters ALTER COLUMN govt_charges_perc DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy
   ADD CONSTRAINT unique_fare_policy_id UNIQUE (id);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_progressive_details (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy_progressive_details (
   fare_policy_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_driver_offer_bpp.fare_policy(id),
   base_distance integer NOT NULL,
   base_fare integer NOT NULL,
@@ -38,9 +72,12 @@ CREATE TABLE atlas_driver_offer_bpp.fare_policy_progressive_details (
   waiting_charge JSON,
   night_shift_charge JSON
 );
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details OWNER TO atlas_driver_offer_bpp_user;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details OWNER TO atlas_driver_offer_bpp_user;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy_slabs_details_slab (
   id serial PRIMARY KEY,
   fare_policy_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_policy(id),
   start_distance integer NOT NULL,
@@ -48,23 +85,56 @@ CREATE TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab (
   waiting_charge JSON,
   night_shift_charge JSON
 );
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab OWNER TO atlas_driver_offer_bpp_user;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab OWNER TO atlas_driver_offer_bpp_user;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_min_extra_fee DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_max_extra_fee DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_max_extra_fee DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN service_charge integer;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN govt_charges float;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN fare_policy_type character varying(50);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN fare_policy_type SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN IF NOT EXISTS service_charge integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN IF NOT EXISTS govt_charges float;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN IF NOT EXISTS fare_policy_type character varying(50);
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN fare_policy_type SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN base_distance_meters SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN base_distance_fare SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN per_extra_km_fare SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN dead_km_fare SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_charge_per_min SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN night_shift_rate SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimated_threshold SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN base_distance_fare SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN per_extra_km_fare SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN dead_km_fare SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_charge_per_min SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN night_shift_rate SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimated_threshold SET NOT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- INSERT INTO atlas_driver_offer_bpp.fare_policy (
 --   T1.id,
@@ -95,23 +165,24 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimat
 -------------------------------DROPS-------------------------------------------------------
 -------------------------------------------------------------------------------------------
 
-ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN fare_policy_type;
+ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN IF EXISTS fare_policy_type;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN dead_km_fare;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN extra_km_fare;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN night_shift_rate;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN night_coef_included;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN waiting_charge_per_min;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN waiting_or_pickup_charges;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN fare_policy_type;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN govt_charges_perc;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS dead_km_fare;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS extra_km_fare;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS night_shift_rate;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS night_coef_included;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS waiting_charge_per_min;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS waiting_or_pickup_charges;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS fare_policy_type;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN IF EXISTS govt_charges_perc;
 
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN base_distance_meters;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN base_distance_fare;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN per_extra_km_fare;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN dead_km_fare;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN waiting_charge_per_min;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN night_shift_rate;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN waiting_time_estimated_threshold;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS base_distance_meters;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS base_distance_fare;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS per_extra_km_fare;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS dead_km_fare;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS waiting_charge_per_min;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS night_shift_rate;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN IF EXISTS waiting_time_estimated_threshold;
 
-DROP TABLE atlas_driver_offer_bpp.slab_fare_policy;
+DROP TABLE atlas_driver_offer_bpp.slab_fare_policy;-- NOTE: dont need to run these queries
+-- NOTE: dont need to run these queries

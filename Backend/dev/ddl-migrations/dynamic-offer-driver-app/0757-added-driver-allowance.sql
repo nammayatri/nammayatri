@@ -1,7 +1,8 @@
+-- NOTE: dont need to run these queries
 ALTER TABLE atlas_driver_offer_bpp.fare_policy
-ADD COLUMN driver_allowance double precision;
+ADD COLUMN IF NOT EXISTS driver_allowance double precision;
 
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters
-ADD COLUMN driver_allowance double precision;
-
+ADD COLUMN IF NOT EXISTS driver_allowance double precision;
+-- NOTE: dont need to run these queries

@@ -1,0 +1,71 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersRentalDetails:
+  tableName: fare_parameters_rental_details
+
+  fields:
+    fareParametersId: Text
+    timeBasedFare: HighPrecMoney
+    distBasedFare: HighPrecMoney
+    deadKmFare: HighPrecMoney
+    extraDistance: Meters
+    extraDuration: Seconds
+    currency: Currency
+    distanceUnit: DistanceUnit
+
+  beamFields:
+    timeBasedFare:
+      timeBasedFare: Maybe HighPrecMoney
+      timeBasedFareAmount: Maybe HighPrecMoney
+    distBasedFare:
+      distBasedFare: Maybe HighPrecMoney
+      distBasedFareAmount: Maybe HighPrecMoney
+    deadKmFare:
+      deadKmFare: Maybe HighPrecMoney
+    extraDistance:
+      extraDistance: Maybe Meters
+    extraDuration:
+      extraDuration: Maybe Int
+    currency:
+      currency: Maybe Currency
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    timeBasedFare: Kernel.Prelude.fromMaybe (Kernel.Prelude.fromMaybe 0 timeBasedFare) timeBasedFareAmount|E
+    distBasedFare: Kernel.Prelude.fromMaybe (Kernel.Prelude.fromMaybe 0 distBasedFare) distBasedFareAmount|E
+    deadKmFare: Kernel.Prelude.fromMaybe 0 deadKmFare|E
+    extraDistance: Kernel.Prelude.fromMaybe 0|I
+    extraDuration: Kernel.Types.Common.Seconds . Kernel.Prelude.fromMaybe 0|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    timeBasedFare: Kernel.Prelude.Just|I
+    timeBasedFareAmount: Kernel.Prelude.Just|I
+    distBasedFare: Kernel.Prelude.Just|I
+    distBasedFareAmount: Kernel.Prelude.Just|I
+    deadKmFare: Kernel.Prelude.Just|I
+    extraDistance: Kernel.Prelude.Just|I
+    extraDuration: Kernel.Prelude.Just . Kernel.Types.Common.getSeconds|I
+    currency: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

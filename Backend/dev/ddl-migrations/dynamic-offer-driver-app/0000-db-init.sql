@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 CREATE TABLE atlas_driver_offer_bpp.driver_location (
 driver_id character(36) NOT NULL,
 lat double precision NOT NULL,
@@ -11,7 +12,7 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ALTER TABLE atlas_driver_offer_bpp.driver_location OWNER TO atlas_driver_offer_bpp_user;
 
 -- fare policy
-CREATE TABLE atlas_driver_offer_bpp.fare_policy (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy (
 id character(36) NOT NULL,
 organization_id character (36) NOT NULL,
 base_fare double precision,
@@ -21,9 +22,12 @@ night_shift_rate double precision,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
-ALTER TABLE atlas_driver_offer_bpp.fare_policy OWNER TO atlas_driver_offer_bpp_user;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy OWNER TO atlas_driver_offer_bpp_user;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy_per_extra_km_rate (
 id character(36) NOT NULL,
 organization_id character(36) NOT NULL,
 distance_range_start double precision NOT NULL,
@@ -31,7 +35,10 @@ fare double precision NOT NULL
 ,CONSTRAINT  fare_policy_extra_km_rate_unique_extra_distance_range_start UNIQUE (organization_id, distance_range_start)
 ,CONSTRAINT  fare_policy_per_extra_km_rate_pkey PRIMARY KEY (id)
 );
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate OWNER TO atlas_driver_offer_bpp_user;
+DO $$ BEGIN
+  ALTER TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate OWNER TO atlas_driver_offer_bpp_user;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 
 -- Ensure uniqueness when both trip_category and fcm_sub_category are not null
@@ -87,3 +94,4 @@ ON atlas_driver_offer_bpp.merchant_push_notification (
     language
 )
 WHERE trip_category IS NULL AND fcm_sub_category IS NULL;
+-- NOTE: dont need to run these queries

@@ -87,6 +87,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.FarePolicy.Conversions (FullFarePolicy)
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -763,7 +764,8 @@ calculateFareParametersHandler params = do
             negotiatedFareDelta = params.negotiatedFareDelta,
             addOnCharges = params.addOnCharges,
             -- Filled in by 'calculateFareParameters' once the full params exist.
-            bufferedFare = Nothing
+            bufferedFare = Nothing,
+            commission = Nothing
           }
   -- The FCBuffer pass re-runs this handler only to price the buffered ceiling;
   -- skip its info logs so a capped estimate doesn't emit the slab debug trail

@@ -22,15 +22,18 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
-import Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
+import qualified Storage.Beam.FarePolicySlabsDetailsSlab as BeamFPSS
+import Storage.Queries.FarePolicySlabsDetailsSlab ()
+import qualified Storage.Queries.FarePolicySlabsDetailsSlabExtra as Extra
 import Utils.Common.CacUtils
 
-getFarePolicySlabsDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
+getFarePolicySlabsDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Extra.FullFarePolicySlabsDetailsSlab]
 getFarePolicySlabsDetailsSlabFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPSS.FarePolicySlabsDetailsSlab]) <- getConfigListFromCac context tenant toss FarePolicySlabsDetailsSlab (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)
   catMaybes <$> config
 
-instance FromCacType BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where
-  fromCacType = fromTType'
+instance FromCacType BeamFPSS.FarePolicySlabsDetailsSlab Extra.FullFarePolicySlabsDetailsSlab where
+  fromCacType beam = do
+    result <- fromTType' beam
+    pure $ Extra.toFullType <$> result
