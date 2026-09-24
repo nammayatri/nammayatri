@@ -119,6 +119,7 @@ data DriverInformationT f = DriverInformationT
     rideRequestVolumeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ruleBasedUpgradeTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     servicesEnabledForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.Plan.ServiceNames]),
+    sharedCabSessionActive :: B.C f Kernel.Prelude.Bool,
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     softBlockStiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),

@@ -343,6 +343,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.rideRequestVolumeEnabled rideRequestVolumeEnabled,
       Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers),
       Se.Set Beam.servicesEnabledForSubscription (Kernel.Prelude.Just servicesEnabledForSubscription),
+      Se.Set Beam.sharedCabSessionActive sharedCabSessionActive,
       Se.Set Beam.softBlockExpiryTime softBlockExpiryTime,
       Se.Set Beam.softBlockReasonFlag softBlockReasonFlag,
       Se.Set Beam.softBlockStiers softBlockStiers,

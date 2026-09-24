@@ -263,6 +263,12 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
   -- check. Solo drivers, and fleet drivers on non-prepaid merchants, still gate on `subscribed`.
   guard $ dpd.subscribed || (isPrepaidEnabled && isJust dpd.fleetOwnerId)
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
+  -- Shared-cab taxi-pool exclusion: a driver committed to a shared-cab session
+  -- must not be pooled for plain taxi search requests. Fail-closed: a driver with
+  -- no pool-data entry never reaches this point (HashMap.lookup above), and the
+  -- writer sets the flag True before the session starts, so ambiguity can never
+  -- resolve to dispatch.
+  guard $ not dpd.sharedCabSessionActive
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
   guard $ not (shouldCheckCashWallet paymentInstrument) || fromMaybe True dpd.enableCashRide

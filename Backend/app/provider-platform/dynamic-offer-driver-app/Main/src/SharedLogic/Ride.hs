@@ -749,6 +749,14 @@ throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
   let checkOnRide = if includeDriverCurrentlyOnRide && isForwardRequest then driverInfo.hasAdvanceBooking else driverInfo.onRide
   when checkOnRide $ throwError DriverOnRide
 
+-- | DB-authoritative accept-time gate for the shared-cab taxi-pool exclusion. Mirrors
+-- 'throwErrorOnRide' but checks the dedicated flag: a driver who entered a shared-cab
+-- session after the search request was dispatched (TOCTOU between LTS pool fetch and
+-- the driver's Accept) must not be able to accept a plain taxi request.
+throwErrorSharedCabSession :: (MonadFlow m) => DDI.DriverInformation -> m ()
+throwErrorSharedCabSession driverInfo =
+  when driverInfo.sharedCabSessionActive $ throwError DriverInSharedCabSession
+
 calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe DRide.EstimatedEndTimeRange
 calculateEstimatedEndTimeRange currTime tripEstimatedDuration bufferJson serviceTier =
   case getArrivalTimeBufferOfVehicle bufferJson serviceTier of

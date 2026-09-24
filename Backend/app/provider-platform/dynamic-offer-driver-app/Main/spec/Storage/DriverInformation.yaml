@@ -173,6 +173,7 @@ DriverInformation:
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
     isNew: Maybe Bool
+    sharedCabSessionActive: Bool
     preferredMapProvider: Maybe MapProvider
     docsVerificationStatus: Maybe DocsVerificationStatus
     address: Maybe Text # deprecated: moved to driver_identity_info;
@@ -201,6 +202,7 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable: "false"
+    sharedCabSessionActive: "false"
     onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
     driverId: PrimaryKey

@@ -493,6 +493,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             acUsageRestrictionType = DriverInfo.NoRestriction,
             lastACStatusCheckedAt = Nothing,
             hasAdvanceBooking = False,
+            sharedCabSessionActive = False,
             tollRelatedIssueCount = Nothing,
             drunkAndDriveViolationCount = Nothing,
             extraFareMitigationFlag = Nothing,

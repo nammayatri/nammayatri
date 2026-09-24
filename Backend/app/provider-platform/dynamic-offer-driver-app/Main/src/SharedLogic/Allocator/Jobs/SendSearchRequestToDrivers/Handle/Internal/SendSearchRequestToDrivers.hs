@@ -656,6 +656,9 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
                 onRide = maybe True (.onRide) mbFreshPoolData
+                -- Shared-cab taxi-pool exclusion, same fail-closed convention:
+                -- missing pool data reads as in-session.
+                inSharedCabSession = maybe True (.sharedCabSessionActive) mbFreshPoolData
                 -- Post-ride cool-off: skip silent-assign only, broadcast unaffected.
                 coolOffPeriod = secondsToNominalDiffTime (fromMaybe 0 transporterConfig.driverCoolOffPeriod)
                 inCoolOff = maybe False (\d -> maybe False (\endedAt -> diffUTCTime now endedAt < coolOffPeriod) d.lastRideEndedAt) mbFreshPoolData
@@ -668,7 +671,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
               if DTC.isDynamicOfferTrip searchTry.tripCategory
                 then runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
                 else pure Nothing
-            if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
+            if onRide || inSharedCabSession || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
                 sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True dp

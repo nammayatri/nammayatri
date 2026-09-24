@@ -1996,6 +1996,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
             throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo sReqFD.isForwardRequest
+            throwErrorSharedCabSession driverInfo
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)

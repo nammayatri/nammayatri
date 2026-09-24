@@ -135,6 +135,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             merchantOperatingCityId = di.merchantOperatingCityId,
             mode = di.mode,
             onRide = di.onRide,
+            sharedCabSessionActive = di.sharedCabSessionActive,
             onRideTripCategory = show <$> di.onRideTripCategory,
             hasAdvanceBooking = Just di.hasAdvanceBooking,
             latestScheduledBooking = di.latestScheduledBooking,

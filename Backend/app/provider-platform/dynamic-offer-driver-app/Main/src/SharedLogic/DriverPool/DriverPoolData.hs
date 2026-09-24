@@ -45,6 +45,13 @@ data DriverPoolData = DriverPoolData
     active :: Bool,
     mode :: Maybe DriverMode,
     onRide :: Bool,
+    -- | Shared-cab taxi-pool session exclusion flag. Mirrored from
+    -- driver_information.shared_cab_session_active via 'LTSSync.syncDriverPoolDataToLTS'.
+    -- True means "do not dispatch plain taxi search requests to this driver" — checked
+    -- fail-closed in 'GetNearestDrivers.buildDriverResult' and in the direct-assign
+    -- recheck; the DB is authoritative at accept time. Writer contract: session start
+    -- sets True before pooled trips are accepted; only session end/reconcile clears it.
+    sharedCabSessionActive :: Bool,
     onRideTripCategory :: Maybe Text,
     hasAdvanceBooking :: Maybe Bool,
     latestScheduledBooking :: Maybe UTCTime,
@@ -192,6 +199,7 @@ defaultDriverPoolData dId =
       active = False,
       mode = Nothing,
       onRide = False,
+      sharedCabSessionActive = False,
       onRideTripCategory = Nothing,
       hasAdvanceBooking = Nothing,
       latestScheduledBooking = Nothing,

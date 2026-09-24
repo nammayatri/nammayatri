@@ -69,7 +69,8 @@ migrations =
     MigrationEntry 3 backfillCloudType,
     MigrationEntry 4 backfillEnableForAirport,
     MigrationEntry 5 backfillEnableCashRide,
-    MigrationEntry 6 backfillMerchantOperatingCityId
+    MigrationEntry 6 backfillMerchantOperatingCityId,
+    MigrationEntry 7 backfillSharedCabSessionActive
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -203,6 +204,24 @@ backfillMerchantOperatingCityId entries = do
   pure $
     map
       (\e -> e {merchantOperatingCityId = HashMap.lookupDefault e.merchantOperatingCityId (cast e.driverId :: Id Person.Person) cityMap})
+      entries
+
+-- | v7: backfill the new 'sharedCabSessionActive' exclusion flag from
+-- driver_information. Legacy entries predate the column and decode with the
+-- False default, which happens to be the correct value for every pre-existing
+-- driver (the column itself defaults false), but backfilling from the DB keeps
+-- this entry's contract identical to the other Class-1 driver_information fields:
+-- the DB remains the single authority.
+backfillSharedCabSessionActive ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillSharedCabSessionActive entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let flagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.sharedCabSessionActive)) dis
+  pure $
+    map
+      (\e -> e {sharedCabSessionActive = HashMap.lookupDefault e.sharedCabSessionActive (cast e.driverId :: Id Person.Person) flagMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

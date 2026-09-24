@@ -314,6 +314,7 @@ otpRideCreate driver otpCode booking clientId = do
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
+  unless booking.isDashboardRequest $ throwErrorSharedCabSession driverInfo
   now <- getCurrentTime
   AirportEntryFee.ensureDriverEnabledForAirportPickup booking.area now driverInfo
   -- Verify the driver has enough liability balance to cover the airport entry

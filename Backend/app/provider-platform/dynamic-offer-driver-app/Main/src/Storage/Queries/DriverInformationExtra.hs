@@ -626,6 +626,18 @@ updateOnRide onRide driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
 
+-- | Flip the shared-cab taxi-pool session flag. DB is the authority (used by the
+-- accept-time guard); LTS is synched via the same choke point as 'updateOnRide' so the
+-- pool-fetch and direct-assign guards see it. The flag is fail-closed by contract:
+-- session start writes True BEFORE pooled trips are accepted on it, and only an
+-- explicit session-end/reconcile path writes False.
+updateSharedCabSessionActive :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
+updateSharedCabSessionActive sharedCabSessionActive driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.sharedCabSessionActive sharedCabSessionActive, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.sharedCabSessionActive = LTSSync.Set sharedCabSessionActive}
+
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
